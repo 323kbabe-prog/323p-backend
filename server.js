@@ -1,4 +1,4 @@
-// server.js — Render backend for 323drop
+// server.js — 323p backend
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -8,25 +8,25 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // later you can lock this to your domain
+    origin: "*",
     methods: ["GET", "POST"]
   }
 });
 
-// serve static files from public/
-app.use(express.static(path.join(__dirname, "public")));
+// ✅ Serve index.html directly from root
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
 
-// handle socket.io chat
+// ✅ Socket.io chat logic
 io.on("connection", (socket) => {
   console.log("🔌 user connected:", socket.id);
 
-  // join room from client
   socket.on("joinRoom", (roomId) => {
     socket.join(roomId);
     console.log(`👥 ${socket.id} joined room ${roomId}`);
   });
 
-  // broadcast chat message to room
   socket.on("chatMessage", ({ roomId, user, text }) => {
     io.to(roomId).emit("chatMessage", { user, text });
   });
