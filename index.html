@@ -81,15 +81,13 @@ const t=document.getElementById("r-title"),
 const voicePlayer = new Audio();
 let autoMode = true;
 let chatMode = false;
-let currentDropText = "";
 let currentDropVoice = "";
 
-// --- Fetch drop (includes voice) ---
+// --- Fetch synced drop (room-aware) ---
 async function loadDrop(){
-  if(!autoMode && !chatMode) return;
   try{
     log("📡 fetching drop…");
-    const r=await fetch("/api/trend",{cache:"no-store"});
+    const r=await fetch(`/api/trend?room=${roomId}`,{cache:"no-store"});
     const j=await r.json();
 
     t.textContent = j.product || "—";
@@ -100,8 +98,7 @@ async function loadDrop(){
     if(j.image){ img.src=j.image; img.style.display="block"; fb.style.display="none"; }
     else { img.style.display="none"; fb.style.display="block"; }
 
-    if(j.description){
-      currentDropText = j.description;
+    if(j.voice){
       currentDropVoice = j.voice;
       playVoice(j.voice, "drop");
     }
@@ -110,21 +107,13 @@ async function loadDrop(){
   }
 }
 
-// --- Play voice (base64/mp3) ---
+// --- Play voice ---
 async function playVoice(voiceData, source="drop"){
   try{
     if(!voiceData) return;
     voicePlayer.src = voiceData;
     await voicePlayer.play();
     log(`🔊 ${source} playing`);
-    voicePlayer.onended=()=>{
-      if(source==="drop" && autoMode){
-        setTimeout(loadDrop,3000);
-      }
-      if(source==="chat" && chatMode && currentDropVoice){
-        playVoice(currentDropVoice, "drop"); // resume drop
-      }
-    };
   }catch(e){
     log("🔇 voice error");
   }
@@ -159,7 +148,6 @@ socket.on("chatMessage",async ({user:textUser,text})=>{
   if(chatMode){
     voicePlayer.pause();
     voicePlayer.currentTime=0;
-
     try{
       const r=await fetch(`/api/voice?text=${encodeURIComponent(textUser+" says "+text)}`);
       const blob=await r.blob();
