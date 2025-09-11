@@ -8,6 +8,7 @@
   body { margin:0; background:#111; color:#fff; font-family:'Inter',sans-serif; display:flex; flex-direction:column; align-items:center; }
   .card { background:rgba(20,20,20,0.8); border-radius:24px; padding:24px; margin:40px auto; max-width:600px; width:100%; box-shadow:0 0 25px rgba(0,255,204,.4); }
   .title { font-size:26px; font-weight:800; color:#00ffcc; }
+  .artist { font-size:20px; font-weight:600; color:#fff; }
   .desc { margin:1em 0; font-size:15px; line-height:1.5; color:#eee; }
   #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:16px; font-weight:bold; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; margin:10px 0; }
   .panel { font-family:monospace; background:#111; border-radius:16px; padding:12px; max-height:200px; overflow:auto; border:1px solid #222; font-size:13px; color:#0ff; width:100%; box-sizing:border-box; }
@@ -18,10 +19,11 @@
 </head>
 <body>
   <section class="card">
-    <div class="title">🍜 323 instant noodle social</div>
-    <p class="desc">share this unique link with friends to join your private hangout</p>
+    <div class="title" id="r-title">—</div>
+    <div class="artist" id="r-artist">—</div>
+    <p class="desc" id="r-desc">—</p>
 
-    <button id="social-btn">join chat</button>
+    <button id="social-btn">323 instant noodle social</button>
 
     <!-- Chat -->
     <div id="chat-container" style="display:none;">
@@ -47,6 +49,7 @@ const socket = io();
 const user = "323-noodle-" + Math.floor(100 + Math.random()*900);
 socket.emit("joinRoom", roomId);
 
+// log box
 const logEl=document.getElementById("log");
 function log(msg){
   const p=document.createElement("p");
@@ -55,16 +58,73 @@ function log(msg){
   logEl.scrollTop=logEl.scrollHeight;
 }
 
+// UI elements
+const t=document.getElementById("r-title"),
+      a=document.getElementById("r-artist"),
+      d=document.getElementById("r-desc"),
+      chatBox=document.getElementById("chat-box"),
+      input=document.getElementById("chat-input"),
+      chatContainer=document.getElementById("chat-container"),
+      socialBtn=document.getElementById("social-btn");
+
+// voice player
+const voicePlayer = new Audio();
+let autoMode = true;     // before chat button
+let chatMode = false;    // after chat button
+let currentDropText = ""; // remember current drop description
+
+// --- Fetch drop from your backend ---
+async function loadDrop(){
+  if(!autoMode && !chatMode) return;
+  try{
+    log("📡 fetching drop…");
+    const r=await fetch("https://three23cosmetics-backend.onrender.com/api/trend",{cache:"no-store"});
+    const j=await r.json();
+
+    t.textContent = j.product || "—";
+    a.textContent = j.brand || "—";
+    d.textContent = j.description || "—";
+
+    if(j.description){
+      currentDropText = j.description;
+      playVoice(j.description, "drop");
+    }
+  }catch(e){
+    log("❌ error fetching drop");
+  }
+}
+
+// --- Play AI voice ---
+async function playVoice(text, source="drop"){
+  try{
+    log(`🎤 ${source} voice loading…`);
+    const url=`https://three23cosmetics-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}`;
+    voicePlayer.src=url;
+    await voicePlayer.play();
+    log(`🔊 ${source} playing`);
+    voicePlayer.onended=()=>{
+      if(source==="drop" && autoMode){
+        setTimeout(loadDrop,3000);
+      }
+      if(source==="chat" && chatMode && currentDropText){
+        playVoice(currentDropText, "drop"); // resume drop
+      }
+    };
+  }catch(e){
+    log("🔇 voice error");
+  }
+}
+
+// --- Start button ---
 document.getElementById("social-btn").addEventListener("click",()=>{
-  document.getElementById("social-btn").style.display="none";
-  document.getElementById("chat-container").style.display="block";
-  log(`🍜 joined room: ${roomId}`);
+  socialBtn.style.display="none";
+  chatContainer.style.display="block";
+  chatMode = true;
+  autoMode = false; // stop auto-refresh loop
+  log(`🍜 joined 323 instant noodle social — room ${roomId}`);
 });
 
-// --- Send chat messages ---
-const chatBox=document.getElementById("chat-box");
-const input=document.getElementById("chat-input");
-
+// --- Chat send ---
 input.addEventListener("keydown",e=>{
   if(e.key==="Enter" && input.value.trim()!==""){
     const text=input.value.trim();
@@ -73,14 +133,24 @@ input.addEventListener("keydown",e=>{
   }
 });
 
-// --- Receive messages ---
+// --- Chat receive ---
 socket.on("chatMessage",({user,text})=>{
   const msg=document.createElement("div");
   msg.className="chat-msg";
   msg.innerHTML=`<span class="chat-user">${user}:</span> ${text}`;
   chatBox.appendChild(msg);
   chatBox.scrollTop=chatBox.scrollHeight;
+
+  if(chatMode){
+    // interrupt drop
+    voicePlayer.pause();
+    voicePlayer.currentTime=0;
+    playVoice(`${user} says ${text}`, "chat");
+  }
 });
+
+// start app
+loadDrop();
 </script>
 </body>
 </html>
