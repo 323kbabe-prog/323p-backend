@@ -6,22 +6,30 @@
 <script src="/socket.io/socket.io.js"></script>
 <style>
   body { margin:0; background:#111; color:#fff; font-family:'Inter',sans-serif; display:flex; flex-direction:column; align-items:center; }
-  .card { background:rgba(20,20,20,0.8); border-radius:24px; padding:24px; margin:40px auto; max-width:600px; width:100%; box-shadow:0 0 25px rgba(0,255,204,.4); }
-  .title { font-size:26px; font-weight:800; color:#00ffcc; }
-  .artist { font-size:20px; font-weight:600; color:#fff; }
-  .desc { margin:1em 0; font-size:15px; line-height:1.5; color:#eee; }
-  #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:16px; font-weight:bold; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; margin:10px 0; }
+  .card { background:rgba(20,20,20,0.85); border-radius:24px; padding:24px; margin:40px auto; max-width:700px; width:100%; box-shadow:0 0 25px rgba(0,255,204,.4); }
+  .title { font-size:28px; font-weight:800; color:#00ffcc; text-transform:lowercase; margin-bottom:8px; }
+  .brand { font-size:20px; font-weight:600; color:#fff; margin-bottom:12px; text-transform:lowercase; }
+  .desc { font-size:16px; line-height:1.6; color:#eee; margin:12px 0; text-transform:lowercase; }
+  #hashtags { margin:12px 0; }
+  .badge { display:inline-block; margin:4px; padding:6px 12px; background:linear-gradient(135deg,#ff00ff,#00ffff); border-radius:20px; font-size:13px; font-weight:bold; color:#000; text-transform:lowercase; box-shadow:0 0 12px rgba(255,0,255,.6); }
+  #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:16px; font-weight:bold; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; margin:10px 0; box-shadow:0 0 15px rgba(255,0,255,.6); text-transform:lowercase; }
   .panel { font-family:monospace; background:#111; border-radius:16px; padding:12px; max-height:200px; overflow:auto; border:1px solid #222; font-size:13px; color:#0ff; width:100%; box-sizing:border-box; }
   #chat-input { border:none; padding:8px; margin-top:6px; font-size:14px; width:100%; border-radius:8px; outline:none; }
   .chat-msg { margin:4px 0; }
   .chat-user { color:#00ffcc; font-weight:bold; }
+  img.drop-img { width:100%; border-radius:16px; margin-top:12px; display:none; }
 </style>
 </head>
 <body>
   <section class="card">
     <div class="title" id="r-title">—</div>
-    <div class="artist" id="r-artist">—</div>
+    <div class="brand" id="r-artist">—</div>
     <p class="desc" id="r-desc">—</p>
+    <div id="hashtags"></div>
+    <img id="r-img" class="drop-img" alt="trend image" />
+    <div id="r-fallback" style="color:#aaa; border:2px dashed #333; border-radius:16px; padding:12px; text-align:center; font-style:italic; margin-top:12px;">
+      no image yet
+    </div>
 
     <button id="social-btn">323 instant noodle social</button>
 
@@ -62,28 +70,35 @@ function log(msg){
 const t=document.getElementById("r-title"),
       a=document.getElementById("r-artist"),
       d=document.getElementById("r-desc"),
+      hashtags=document.getElementById("hashtags"),
+      img=document.getElementById("r-img"),
+      fb=document.getElementById("r-fallback"),
       chatBox=document.getElementById("chat-box"),
       input=document.getElementById("chat-input"),
       chatContainer=document.getElementById("chat-container"),
       socialBtn=document.getElementById("social-btn");
 
-// voice player
 const voicePlayer = new Audio();
-let autoMode = true;     // before chat button
-let chatMode = false;    // after chat button
-let currentDropText = ""; // remember current drop description
+let autoMode = true;
+let chatMode = false;
+let currentDropText = "";
 
-// --- Fetch drop from your backend ---
+// --- Fetch drop from backend ---
 async function loadDrop(){
   if(!autoMode && !chatMode) return;
   try{
     log("📡 fetching drop…");
-    const r=await fetch("https://three23cosmetics-backend.onrender.com/api/trend",{cache:"no-store"});
+    const r=await fetch("/api/trend",{cache:"no-store"});
     const j=await r.json();
 
     t.textContent = j.product || "—";
     a.textContent = j.brand || "—";
     d.textContent = j.description || "—";
+
+    hashtags.innerHTML = (j.hashtags||[]).map(x=>`<span class="badge">${x}</span>`).join("");
+
+    if(j.image){ img.src=j.image; img.style.display="block"; fb.style.display="none"; }
+    else { img.style.display="none"; fb.style.display="block"; }
 
     if(j.description){
       currentDropText = j.description;
@@ -94,11 +109,11 @@ async function loadDrop(){
   }
 }
 
-// --- Play AI voice ---
+// --- Play voice ---
 async function playVoice(text, source="drop"){
   try{
     log(`🎤 ${source} voice loading…`);
-    const url=`https://three23cosmetics-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}`;
+    const url=`/api/voice?text=${encodeURIComponent(text)}`;
     voicePlayer.src=url;
     await voicePlayer.play();
     log(`🔊 ${source} playing`);
@@ -115,16 +130,16 @@ async function playVoice(text, source="drop"){
   }
 }
 
-// --- Start button ---
-document.getElementById("social-btn").addEventListener("click",()=>{
+// --- Chat join ---
+socialBtn.addEventListener("click",()=>{
   socialBtn.style.display="none";
   chatContainer.style.display="block";
   chatMode = true;
-  autoMode = false; // stop auto-refresh loop
+  autoMode = false; // stop auto loop
   log(`🍜 joined 323 instant noodle social — room ${roomId}`);
 });
 
-// --- Chat send ---
+// --- Send chat ---
 input.addEventListener("keydown",e=>{
   if(e.key==="Enter" && input.value.trim()!==""){
     const text=input.value.trim();
@@ -133,7 +148,7 @@ input.addEventListener("keydown",e=>{
   }
 });
 
-// --- Chat receive ---
+// --- Receive chat ---
 socket.on("chatMessage",({user,text})=>{
   const msg=document.createElement("div");
   msg.className="chat-msg";
@@ -142,7 +157,6 @@ socket.on("chatMessage",({user,text})=>{
   chatBox.scrollTop=chatBox.scrollHeight;
 
   if(chatMode){
-    // interrupt drop
     voicePlayer.pause();
     voicePlayer.currentTime=0;
     playVoice(`${user} says ${text}`, "chat");
