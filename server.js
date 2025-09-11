@@ -1,4 +1,4 @@
-// server.js — unified 323drop backend (frontend + APIs + chat + OpenAI, room-synced drops)
+// server.js — unified 323drop backend (frontend + APIs + chat + OpenAI, pre-gen model)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -69,54 +69,70 @@ async function generateVoice(text) {
   }
 }
 
+async function generateDrop(brand, product) {
+  const descriptionPromise = makeDescription(brand, product);
+  const imagePromise = generateImageUrl(brand, product);
+  const description = await descriptionPromise;
+  const [imageUrl, audioBuffer] = await Promise.all([
+    imagePromise,
+    generateVoice(description)
+  ]);
+
+  let voiceBase64 = null;
+  if (audioBuffer) {
+    voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
+  }
+
+  return {
+    brand,
+    product,
+    description,
+    hashtags: ["#TikTokMadeMeBuyIt", "#BeautyTok", "#NowTrending"],
+    image: imageUrl,
+    voice: voiceBase64,
+    refresh: 30000 // 30s
+  };
+}
+
 /* ---------------- Serve Frontend ---------------- */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
 /* ---------------- APIs ---------------- */
-
-// Room-based cache
-const roomCache = {}; // { roomId: { drop: {...}, expires: timestamp } }
+const roomCache = {}; // { roomId: { current, next } }
 
 app.get("/api/trend", async (req, res) => {
   try {
     const roomId = req.query.room || "global";
-    const now = Date.now();
-
-    if (roomCache[roomId] && roomCache[roomId].expires > now) {
-      return res.json(roomCache[roomId].drop);
+    if (!roomCache[roomId]) {
+      roomCache[roomId] = { current: null, next: null };
     }
 
-    const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-
-    const descriptionPromise = makeDescription(pick.brand, pick.product);
-    const imagePromise = generateImageUrl(pick.brand, pick.product);
-
-    const description = await descriptionPromise;
-    const [imageUrl, audioBuffer] = await Promise.all([
-      imagePromise,
-      generateVoice(description)
-    ]);
-
-    let voiceBase64 = null;
-    if (audioBuffer) {
-      voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
+    // Generate initial drop if none exists
+    if (!roomCache[roomId].current) {
+      const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+      roomCache[roomId].current = await generateDrop(pick.brand, pick.product);
     }
 
-    const drop = {
-      brand: pick.brand,
-      product: pick.product,
-      description,
-      hashtags: ["#TikTokMadeMeBuyIt", "#BeautyTok", "#NowTrending"],
-      image: imageUrl,
-      voice: voiceBase64,
-      refresh: 30000
-    };
+    // Trigger background pre-gen if not already queued
+    if (!roomCache[roomId].next) {
+      const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+      generateDrop(pick.brand, pick.product).then(drop => {
+        roomCache[roomId].next = drop;
+      }).catch(err => console.error("❌ Pre-gen error:", err.message));
+    }
 
-    roomCache[roomId] = { drop, expires: now + 30000 };
+    // Serve instantly
+    const result = roomCache[roomId].current;
 
-    res.json(drop);
+    // Prepare next for next call
+    if (roomCache[roomId].next) {
+      roomCache[roomId].current = roomCache[roomId].next;
+      roomCache[roomId].next = null;
+    }
+
+    return res.json(result);
 
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
