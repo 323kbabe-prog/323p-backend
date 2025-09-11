@@ -13,13 +13,11 @@
   #hashtags { margin:12px 0; }
   .badge { display:inline-block; margin:4px; padding:6px 12px; background:linear-gradient(135deg,#ff00ff,#00ffff); border-radius:20px; font-size:13px; font-weight:bold; color:#000; text-transform:lowercase; box-shadow:0 0 12px rgba(255,0,255,.6); }
   #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:16px; font-weight:bold; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; margin:10px 0; box-shadow:0 0 15px rgba(255,0,255,.6); text-transform:lowercase; }
-  .panel { font-family:monospace; background:#111; border-radius:16px; padding:12px; max-height:200px; overflow:auto; border:1px solid #222; font-size:13px; color:#0ff; width:100%; box-sizing:border-box; }
+  .panel { font-family:monospace; background:#111; border-radius:16px; padding:12px; max-height:200px; overflow:auto; border:1px solid #222; font-size:18px; color:#0ff; width:100%; box-sizing:border-box; }
   #chat-input { border:none; padding:12px; margin-top:8px; font-size:18px; width:100%; border-radius:8px; outline:none; }
   .chat-msg { margin:6px 0; font-size:18px; line-height:1.6; }
   .chat-user { color:#00ffcc; font-weight:bold; font-size:18px; }
   img.drop-img { width:100%; border-radius:16px; margin-top:12px; display:none; }
-
-  /* Spinner animation */
   @keyframes spin { from {transform:rotate(0deg);} to {transform:rotate(360deg);} }
 </style>
 </head>
@@ -27,23 +25,13 @@
   <!-- Loading overlay -->
   <div id="loading" style="
     display:none; 
-    position:fixed; 
-    top:0; left:0; right:0; bottom:0; 
+    position:fixed; top:0; left:0; right:0; bottom:0; 
     background:rgba(0,0,0,0.85); 
-    display:flex; 
-    justify-content:center; 
-    align-items:center; 
-    flex-direction:column;
-    font-family:'Inter',sans-serif;
-    z-index:9999;">
+    display:flex; justify-content:center; align-items:center; flex-direction:column;
+    font-family:'Inter',sans-serif; z-index:9999;">
     <div class="spinner" style="
-      border:6px solid #222;
-      border-top:6px solid #00ffcc;
-      border-radius:50%;
-      width:60px;
-      height:60px;
-      animation:spin 1s linear infinite;
-      margin-bottom:20px;"></div>
+      border:6px solid #222; border-top:6px solid #00ffcc; border-radius:50%;
+      width:60px; height:60px; animation:spin 1s linear infinite; margin-bottom:20px;"></div>
     <div style="color:#00ffcc; font-size:20px; font-weight:bold; text-transform:lowercase;">
       searching323kbabe...
     </div>
@@ -87,14 +75,9 @@ socket.emit("joinRoom", roomId);
 
 // log box
 const logEl=document.getElementById("log");
-function log(msg){
-  const p=document.createElement("p");
-  p.textContent=msg;
-  logEl.appendChild(p);
-  logEl.scrollTop=logEl.scrollHeight;
-}
+function log(msg){ const p=document.createElement("p"); p.textContent=msg; logEl.appendChild(p); logEl.scrollTop=logEl.scrollHeight; }
 
-// UI elements
+// UI
 const t=document.getElementById("r-title"),
       a=document.getElementById("r-artist"),
       d=document.getElementById("r-desc"),
@@ -107,16 +90,12 @@ const t=document.getElementById("r-title"),
       socialBtn=document.getElementById("social-btn");
 
 const voicePlayer = new Audio();
-let autoMode = true;
 let chatMode = false;
-let currentDropVoice = "";
 
-// --- Fetch synced drop (room-aware) ---
+// --- Fetch synced drop (room-aware, pre-gen) ---
 async function loadDrop(){
   try{
-    document.getElementById("loading").style.display="flex"; // show overlay
-    log("📡 fetching drop…");
-
+    document.getElementById("loading").style.display="flex";
     const r=await fetch(`/api/trend?room=${roomId}`,{cache:"no-store"});
     const j=await r.json();
 
@@ -128,44 +107,23 @@ async function loadDrop(){
     if(j.image){ img.src=j.image; img.style.display="block"; fb.style.display="none"; }
     else { img.style.display="none"; fb.style.display="block"; }
 
-    if(j.voice){
-      currentDropVoice = j.voice;
-      playVoice(j.voice, "drop");
-    }
-  }catch(e){
-    log("❌ error fetching drop");
-  } finally {
-    document.getElementById("loading").style.display="none"; // hide overlay
-  }
+    if(j.voice){ voicePlayer.src = j.voice; voicePlayer.play(); }
+
+    setTimeout(loadDrop, j.refresh || 30000); // auto-refresh feed
+
+  }catch(e){ log("❌ error fetching drop"); }
+  finally { document.getElementById("loading").style.display="none"; }
 }
 
-// --- Play voice ---
-async function playVoice(voiceData, source="drop"){
-  try{
-    if(!voiceData) return;
-    voicePlayer.src = voiceData;
-    await voicePlayer.play();
-    log(`🔊 ${source} playing`);
-  }catch(e){
-    log("🔇 voice error");
-  }
-}
-
-// --- Open chat function ---
+// --- Open chat ---
 function openChat() {
   socialBtn.style.display = "none";
   chatContainer.style.display = "block";
   chatMode = true;
-  autoMode = false;
   log(`🍜 joined 323 instant noodle social — room ${roomId}`);
 }
-
 socialBtn.addEventListener("click", openChat);
-
-// ✅ Auto-open chat if user already has ?room=xxx
-if (roomId) {
-  openChat();
-}
+if (roomId) { openChat(); }
 
 // --- Send chat ---
 input.addEventListener("keydown",e=>{
@@ -185,20 +143,18 @@ socket.on("chatMessage",async ({user:textUser,text})=>{
   chatBox.scrollTop=chatBox.scrollHeight;
 
   if(chatMode){
-    voicePlayer.pause();
-    voicePlayer.currentTime=0;
+    voicePlayer.pause(); voicePlayer.currentTime=0;
     try{
       const r=await fetch(`/api/voice?text=${encodeURIComponent(textUser+" says "+text)}`);
       const blob=await r.blob();
       const voiceData=URL.createObjectURL(blob);
-      playVoice(voiceData, "chat");
-    }catch(e){
-      log("❌ chat voice error");
-    }
+      voicePlayer.src = voiceData;
+      voicePlayer.play();
+    }catch(e){ log("❌ chat voice error"); }
   }
 });
 
-// start app
+// start
 loadDrop();
 </script>
 </body>
