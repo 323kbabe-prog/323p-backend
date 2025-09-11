@@ -18,9 +18,37 @@
   .chat-msg { margin:6px 0; font-size:18px; line-height:1.6; }
   .chat-user { color:#00ffcc; font-weight:bold; font-size:18px; }
   img.drop-img { width:100%; border-radius:16px; margin-top:12px; display:none; }
+
+  /* Spinner animation */
+  @keyframes spin { from {transform:rotate(0deg);} to {transform:rotate(360deg);} }
 </style>
 </head>
 <body>
+  <!-- Loading overlay -->
+  <div id="loading" style="
+    display:none; 
+    position:fixed; 
+    top:0; left:0; right:0; bottom:0; 
+    background:rgba(0,0,0,0.85); 
+    display:flex; 
+    justify-content:center; 
+    align-items:center; 
+    flex-direction:column;
+    font-family:'Inter',sans-serif;
+    z-index:9999;">
+    <div class="spinner" style="
+      border:6px solid #222;
+      border-top:6px solid #00ffcc;
+      border-radius:50%;
+      width:60px;
+      height:60px;
+      animation:spin 1s linear infinite;
+      margin-bottom:20px;"></div>
+    <div style="color:#00ffcc; font-size:20px; font-weight:bold; text-transform:lowercase;">
+      searching323kbabe...
+    </div>
+  </div>
+
   <section class="card">
     <div class="title" id="r-title">—</div>
     <div class="brand" id="r-artist">—</div>
@@ -86,7 +114,9 @@ let currentDropVoice = "";
 // --- Fetch synced drop (room-aware) ---
 async function loadDrop(){
   try{
+    document.getElementById("loading").style.display="flex"; // show overlay
     log("📡 fetching drop…");
+
     const r=await fetch(`/api/trend?room=${roomId}`,{cache:"no-store"});
     const j=await r.json();
 
@@ -104,6 +134,8 @@ async function loadDrop(){
     }
   }catch(e){
     log("❌ error fetching drop");
+  } finally {
+    document.getElementById("loading").style.display="none"; // hide overlay
   }
 }
 
