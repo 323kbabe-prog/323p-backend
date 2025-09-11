@@ -1,4 +1,4 @@
-// server.js — unified 323drop backend (frontend + APIs + chat + OpenAI)
+// server.js — unified 323drop backend (frontend + APIs + chat + OpenAI, room-synced drops)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -76,21 +76,24 @@ app.get("/", (req, res) => {
 
 /* ---------------- APIs ---------------- */
 
-// ✅ Optimized Trend API (parallel generation)
+// Room-based cache
+const roomCache = {}; // { roomId: { drop: {...}, expires: timestamp } }
+
 app.get("/api/trend", async (req, res) => {
   try {
+    const roomId = req.query.room || "global";
+    const now = Date.now();
+
+    if (roomCache[roomId] && roomCache[roomId].expires > now) {
+      return res.json(roomCache[roomId].drop);
+    }
+
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
 
-    // Description first
     const descriptionPromise = makeDescription(pick.brand, pick.product);
-
-    // While description is loading, also request image
     const imagePromise = generateImageUrl(pick.brand, pick.product);
 
-    // Wait for description, then use it for voice
     const description = await descriptionPromise;
-
-    // Generate voice + finish image in parallel
     const [imageUrl, audioBuffer] = await Promise.all([
       imagePromise,
       generateVoice(description)
@@ -101,15 +104,19 @@ app.get("/api/trend", async (req, res) => {
       voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
     }
 
-    res.json({
+    const drop = {
       brand: pick.brand,
       product: pick.product,
       description,
       hashtags: ["#TikTokMadeMeBuyIt", "#BeautyTok", "#NowTrending"],
       image: imageUrl,
       voice: voiceBase64,
-      refresh: 3000
-    });
+      refresh: 30000
+    };
+
+    roomCache[roomId] = { drop, expires: now + 30000 };
+
+    res.json(drop);
 
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
@@ -125,7 +132,6 @@ app.get("/api/trend", async (req, res) => {
   }
 });
 
-// Voice API for chat messages
 app.get("/api/voice", async (req, res) => {
   try {
     const text = req.query.text || "";
@@ -139,22 +145,7 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
-// Health check
 app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
-
-// Test OpenAI key
-app.get("/api/test", async (req, res) => {
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: "Say OK in one word." }]
-    });
-    const reply = completion.choices[0].message.content.trim();
-    res.json({ ok: true, reply });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
 
 /* ---------------- Chat (Socket.IO) ---------------- */
 io.on("connection", (socket) => {
