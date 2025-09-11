@@ -7,9 +7,9 @@
 <style>
   body { margin:0; background:#111; color:#fff; font-family:'Inter',sans-serif; display:flex; flex-direction:column; align-items:center; }
   .card { background:rgba(20,20,20,0.85); border-radius:24px; padding:24px; margin:40px auto; max-width:700px; width:100%; box-shadow:0 0 25px rgba(0,255,204,.4); }
-  .title { font-size:28px; font-weight:800; color:#00ffcc; text-transform:lowercase; margin-bottom:8px; }
-  .brand { font-size:20px; font-weight:600; color:#fff; margin-bottom:12px; text-transform:lowercase; }
-  .desc { font-size:16px; line-height:1.6; color:#eee; margin:12px 0; text-transform:lowercase; }
+  .title { font-size:28px; font-weight:800; color:#00ffcc; margin-bottom:8px; }
+  .brand { font-size:20px; font-weight:600; color:#fff; margin-bottom:12px; }
+  .desc { font-size:16px; line-height:1.6; color:#eee; margin:12px 0; }
   #hashtags { margin:12px 0; }
   .badge { display:inline-block; margin:4px; padding:6px 12px; background:linear-gradient(135deg,#ff00ff,#00ffff); border-radius:20px; font-size:13px; font-weight:bold; color:#000; text-transform:lowercase; box-shadow:0 0 12px rgba(255,0,255,.6); }
   #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:16px; font-weight:bold; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; margin:10px 0; box-shadow:0 0 15px rgba(255,0,255,.6); text-transform:lowercase; }
@@ -82,8 +82,9 @@ const voicePlayer = new Audio();
 let autoMode = true;
 let chatMode = false;
 let currentDropText = "";
+let currentDropVoice = "";
 
-// --- Fetch drop from backend ---
+// --- Fetch drop (includes voice) ---
 async function loadDrop(){
   if(!autoMode && !chatMode) return;
   try{
@@ -94,7 +95,6 @@ async function loadDrop(){
     t.textContent = j.product || "—";
     a.textContent = j.brand || "—";
     d.textContent = j.description || "—";
-
     hashtags.innerHTML = (j.hashtags||[]).map(x=>`<span class="badge">${x}</span>`).join("");
 
     if(j.image){ img.src=j.image; img.style.display="block"; fb.style.display="none"; }
@@ -102,27 +102,27 @@ async function loadDrop(){
 
     if(j.description){
       currentDropText = j.description;
-      playVoice(j.description, "drop");
+      currentDropVoice = j.voice;
+      playVoice(j.voice, "drop");
     }
   }catch(e){
     log("❌ error fetching drop");
   }
 }
 
-// --- Play voice ---
-async function playVoice(text, source="drop"){
+// --- Play voice (base64/mp3) ---
+async function playVoice(voiceData, source="drop"){
   try{
-    log(`🎤 ${source} voice loading…`);
-    const url=`/api/voice?text=${encodeURIComponent(text)}`;
-    voicePlayer.src=url;
+    if(!voiceData) return;
+    voicePlayer.src = voiceData;
     await voicePlayer.play();
     log(`🔊 ${source} playing`);
     voicePlayer.onended=()=>{
       if(source==="drop" && autoMode){
         setTimeout(loadDrop,3000);
       }
-      if(source==="chat" && chatMode && currentDropText){
-        playVoice(currentDropText, "drop"); // resume drop
+      if(source==="chat" && chatMode && currentDropVoice){
+        playVoice(currentDropVoice, "drop"); // resume drop
       }
     };
   }catch(e){
@@ -135,7 +135,7 @@ socialBtn.addEventListener("click",()=>{
   socialBtn.style.display="none";
   chatContainer.style.display="block";
   chatMode = true;
-  autoMode = false; // stop auto loop
+  autoMode = false;
   log(`🍜 joined 323 instant noodle social — room ${roomId}`);
 });
 
@@ -149,17 +149,25 @@ input.addEventListener("keydown",e=>{
 });
 
 // --- Receive chat ---
-socket.on("chatMessage",({user,text})=>{
+socket.on("chatMessage",async ({user:textUser,text})=>{
   const msg=document.createElement("div");
   msg.className="chat-msg";
-  msg.innerHTML=`<span class="chat-user">${user}:</span> ${text}`;
+  msg.innerHTML=`<span class="chat-user">${textUser}:</span> ${text}`;
   chatBox.appendChild(msg);
   chatBox.scrollTop=chatBox.scrollHeight;
 
   if(chatMode){
     voicePlayer.pause();
     voicePlayer.currentTime=0;
-    playVoice(`${user} says ${text}`, "chat");
+
+    try{
+      const r=await fetch(`/api/voice?text=${encodeURIComponent(textUser+" says "+text)}`);
+      const blob=await r.blob();
+      const voiceData=URL.createObjectURL(blob);
+      playVoice(voiceData, "chat");
+    }catch(e){
+      log("❌ chat voice error");
+    }
   }
 });
 
