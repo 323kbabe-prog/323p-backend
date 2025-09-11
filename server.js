@@ -1,4 +1,4 @@
-// server.js — unified 323drop backend (chat + drops + OpenAI voice)
+// server.js — unified 323drop backend (serves frontend + APIs + chat)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -16,15 +16,10 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 let nextPickCache = null;
 let generatingNext = false;
 
-/* ---------------- TikTok Top 50 Cosmetics ---------------- */
+/* ---------------- TikTok Top 50 Cosmetics (shortlist) ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
   { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
-  { brand: "Anastasia Beverly Hills", product: "Clear Brow Gel" },
-  { brand: "YSL", product: "Make Me Blush Baby Doll" },
-  { brand: "Laura Mercier", product: "Loose Setting Powder" },
-  { brand: "Beautyblender", product: "Blending Sponge" },
-  { brand: "Givenchy", product: "Prisme Libre Blush" },
   { brand: "Dior", product: "Lip Glow Oil" },
   { brand: "Rare Beauty", product: "Liquid Blush" },
   { brand: "Glow Recipe", product: "Watermelon Dew Drops" },
@@ -36,7 +31,6 @@ async function makeDescription(brand, product) {
     const prompt = `
       Write a 70+ word first-person description of using "${product}" by ${brand}.
       Make it sensory (feel, look, vibe), authentic, and Gen-Z relatable.
-      Current time: ${new Date().toISOString()}.
     `;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -49,27 +43,15 @@ async function makeDescription(brand, product) {
     return completion.choices[0].message.content.trim();
   } catch (e) {
     console.error("❌ Description error:", e.message);
-    return `Using ${product} by ${brand} feels unforgettable and addictive.`;
+    return `Using ${product} by ${brand} feels unforgettable.`;
   }
-}
-
-function imagePrompt(brand, product) {
-  return `
-    Create a photocard-style image.
-    Subject: young female Korean idol, Gen-Z aesthetic.
-    She is holding and applying ${product} by ${brand}.
-    Pastel gradient background (milk pink, baby blue, lilac).
-    Glitter bokeh, glossy K-beauty skin glow.
-    Sticker shapes only (hearts, stars, sparkles).
-    Square 1:1 format. No text/logos.
-  `;
 }
 
 async function generateImageUrl(brand, product) {
   try {
     const out = await openai.images.generate({
       model: "gpt-image-1",
-      prompt: imagePrompt(brand, product),
+      prompt: `Young female idol applying ${product} by ${brand}, pastel background, photocard style, glitter bokeh.`,
       size: "1024x1024"
     });
     const d = out?.data?.[0];
@@ -85,7 +67,7 @@ async function generateVoice(text) {
   try {
     const out = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
-      voice: "alloy", // options: alloy, verse, coral
+      voice: "alloy",
       input: text,
     });
     return Buffer.from(await out.arrayBuffer());
@@ -124,36 +106,21 @@ async function generateNextPick() {
   }
 }
 
-/* ---------------- API Routes ---------------- */
+/* ---------------- Serve Frontend ---------------- */
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+/* ---------------- APIs ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    if (!nextPickCache) {
-      console.log("⏳ First drop generating…");
-      await generateNextPick();
-    }
-    const result = nextPickCache || {
-      brand: "Loading",
-      product: "Beauty Product",
-      description: "AI is warming up… please wait.",
-      hashtags: ["#BeautyTok"],
-      image: "https://placehold.co/600x600?text=Loading",
-      voice: null,
-      refresh: 5000
-    };
+    if (!nextPickCache) await generateNextPick();
+    const result = nextPickCache;
     nextPickCache = null;
     generateNextPick();
     res.json(result);
   } catch (e) {
-    console.error("❌ Trend API error:", e);
-    res.json({
-      brand: "Error",
-      product: "System",
-      description: "Something went wrong. Retrying soon…",
-      hashtags: ["#Error"],
-      image: "https://placehold.co/600x600?text=Error",
-      voice: null,
-      refresh: 5000
-    });
+    res.json({ error: "Trend failed" });
   }
 });
 
@@ -161,14 +128,11 @@ app.get("/api/voice", async (req, res) => {
   try {
     const text = req.query.text || "";
     if (!text) return res.status(400).json({ error: "Missing text" });
-
     const audioBuffer = await generateVoice(text);
     if (!audioBuffer) return res.status(500).json({ error: "No audio generated" });
-
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
   } catch (e) {
-    console.error("❌ Voice API error:", e.message);
     res.status(500).json({ error: "Voice TTS failed" });
   }
 });
