@@ -1,4 +1,4 @@
-// server.js — unified 323drop backend (serves frontend + APIs + chat)
+// server.js — unified 323drop backend (frontend + APIs + chat + OpenAI)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -12,11 +12,7 @@ const io = new Server(httpServer, { cors: { origin: "*", methods: ["GET", "POST"
 /* ---------------- OpenAI ---------------- */
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- State ---------------- */
-let nextPickCache = null;
-let generatingNext = false;
-
-/* ---------------- TikTok Top 50 Cosmetics (shortlist) ---------------- */
+/* ---------------- TikTok Top 50 Cosmetics (shortlist for demo) ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
   { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
@@ -28,16 +24,12 @@ const TOP50_COSMETICS = [
 /* ---------------- Helpers ---------------- */
 async function makeDescription(brand, product) {
   try {
-    const prompt = `
-      Write a 70+ word first-person description of using "${product}" by ${brand}.
-      Make it sensory (feel, look, vibe), authentic, and Gen-Z relatable.
-    `;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
       messages: [
         { role: "system", content: "You are a beauty lover speaking in first person." },
-        { role: "user", content: prompt }
+        { role: "user", content: `Write a 70+ word first-person description of using "${product}" by ${brand}. Make it sensory, authentic, and Gen-Z relatable.` }
       ]
     });
     return completion.choices[0].message.content.trim();
@@ -77,22 +69,42 @@ async function generateVoice(text) {
   }
 }
 
-async function generateNextPick() {
-  if (generatingNext) return;
-  generatingNext = true;
+/* ---------------- Serve Frontend ---------------- */
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+/* ---------------- APIs ---------------- */
+
+// Safer Trend API
+app.get("/api/trend", async (req, res) => {
   try {
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-    const description = await makeDescription(pick.brand, pick.product);
-    const imageUrl = await generateImageUrl(pick.brand, pick.product);
-    const audioBuffer = await generateVoice(description);
 
-    let voiceBase64 = null;
-    if (audioBuffer) {
-      console.log("✅ OpenAI TTS voice generated");
-      voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
+    // Description
+    let description = await makeDescription(pick.brand, pick.product);
+
+    // Image
+    let imageUrl;
+    try {
+      imageUrl = await generateImageUrl(pick.brand, pick.product);
+    } catch (err) {
+      console.error("❌ Image fail:", err.message);
+      imageUrl = "https://placehold.co/600x600?text=No+Image";
     }
 
-    nextPickCache = {
+    // Voice
+    let voiceBase64 = null;
+    try {
+      const audioBuffer = await generateVoice(description);
+      if (audioBuffer) {
+        voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
+      }
+    } catch (err) {
+      console.error("❌ Voice fail:", err.message);
+    }
+
+    res.json({
       brand: pick.brand,
       product: pick.product,
       description,
@@ -100,30 +112,23 @@ async function generateNextPick() {
       image: imageUrl,
       voice: voiceBase64,
       refresh: 3000
-    };
-  } finally {
-    generatingNext = false;
-  }
-}
+    });
 
-/* ---------------- Serve Frontend ---------------- */
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-/* ---------------- APIs ---------------- */
-app.get("/api/trend", async (req, res) => {
-  try {
-    if (!nextPickCache) await generateNextPick();
-    const result = nextPickCache;
-    nextPickCache = null;
-    generateNextPick();
-    res.json(result);
   } catch (e) {
-    res.json({ error: "Trend failed" });
+    console.error("❌ Trend API error:", e.message);
+    res.json({
+      brand: "Error",
+      product: "System",
+      description: "Something went wrong. Retrying soon…",
+      hashtags: ["#Error"],
+      image: "https://placehold.co/600x600?text=Error",
+      voice: null,
+      refresh: 5000
+    });
   }
 });
 
+// Voice API for chat messages
 app.get("/api/voice", async (req, res) => {
   try {
     const text = req.query.text || "";
@@ -137,7 +142,22 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
+// Health check
 app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
+
+// Test OpenAI key
+app.get("/api/test", async (req, res) => {
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "Say OK in one word." }]
+    });
+    const reply = completion.choices[0].message.content.trim();
+    res.json({ ok: true, reply });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 /* ---------------- Chat (Socket.IO) ---------------- */
 io.on("connection", (socket) => {
@@ -161,7 +181,6 @@ io.on("connection", (socket) => {
 
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, async () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 323drop backend live on :${PORT}`);
-  await generateNextPick();
 });
