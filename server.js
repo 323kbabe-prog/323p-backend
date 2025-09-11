@@ -76,32 +76,29 @@ app.get("/", (req, res) => {
 
 /* ---------------- APIs ---------------- */
 
-// Safer Trend API
+// ✅ Optimized Trend API (parallel generation)
 app.get("/api/trend", async (req, res) => {
   try {
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
 
-    // Description
-    let description = await makeDescription(pick.brand, pick.product);
+    // Description first
+    const descriptionPromise = makeDescription(pick.brand, pick.product);
 
-    // Image
-    let imageUrl;
-    try {
-      imageUrl = await generateImageUrl(pick.brand, pick.product);
-    } catch (err) {
-      console.error("❌ Image fail:", err.message);
-      imageUrl = "https://placehold.co/600x600?text=No+Image";
-    }
+    // While description is loading, also request image
+    const imagePromise = generateImageUrl(pick.brand, pick.product);
 
-    // Voice
+    // Wait for description, then use it for voice
+    const description = await descriptionPromise;
+
+    // Generate voice + finish image in parallel
+    const [imageUrl, audioBuffer] = await Promise.all([
+      imagePromise,
+      generateVoice(description)
+    ]);
+
     let voiceBase64 = null;
-    try {
-      const audioBuffer = await generateVoice(description);
-      if (audioBuffer) {
-        voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
-      }
-    } catch (err) {
-      console.error("❌ Voice fail:", err.message);
+    if (audioBuffer) {
+      voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
     }
 
     res.json({
