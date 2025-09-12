@@ -1,4 +1,4 @@
-// server.js — unified 323drop backend (chat + drops + OpenAI voice)
+// server.js — unified 323drop backend + frontend
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -85,7 +85,7 @@ async function generateVoice(text) {
   try {
     const out = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
-      voice: "alloy", // options: alloy, verse, coral
+      voice: "alloy",
       input: text,
     });
     return Buffer.from(await out.arrayBuffer());
@@ -195,9 +195,15 @@ io.on("connection", (socket) => {
   });
 });
 
+/* ---------------- Static frontend ---------------- */
+app.use(express.static(path.join(__dirname)));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-  console.log(`🚀 323drop backend live on :${PORT}`);
+  console.log(`🚀 323drop backend+frontend live on :${PORT}`);
   await generateNextPick();
 });
