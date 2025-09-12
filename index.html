@@ -11,7 +11,7 @@
   .brand { font-size:18px; font-weight:600; color:#fff; margin-bottom:10px; }
   .desc { font-size:16px; line-height:1.6; color:#eee; margin:10px 0; }
   .voice-status { font-size:14px; color:#0ff; margin-top:6px; font-family:monospace; }
-  img.drop-img { width:100%; border-radius:16px; margin-top:14px; }
+  img.drop-img { width:100%; border-radius:16px; margin-top:14px; display:none; }
   .badge { display:inline-block; margin:4px; padding:8px 14px; background:linear-gradient(135deg,#ff00ff,#00ffff); border-radius:20px; font-size:14px; font-weight:bold; color:#000; text-transform:lowercase; box-shadow:0 0 12px rgba(255,0,255,.6); }
 
   #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:18px; font-weight:bold; padding:14px 22px; border:none; border-radius:24px; cursor:pointer; margin:20px auto; display:block; box-shadow:0 0 15px rgba(255,0,255,.6); text-transform:lowercase; }
@@ -22,7 +22,7 @@
   .chat-user { color:#00ffcc; font-weight:bold; }
   #chat-input { border:none; padding:12px; font-size:18px; width:100%; border-radius:8px; outline:none; }
 
-  #log { max-height:150px; overflow:auto; font-family:monospace; background:#000; color:#0ff; padding:10px; border-top:1px solid #222; font-size:14px; display:none; }
+  #log { display:none; max-height:150px; overflow:auto; font-family:monospace; background:#000; color:#0ff; padding:10px; border-top:1px solid #222; font-size:14px; }
   #toggle-log { font-size:14px; color:#0ff; background:none; border:none; cursor:pointer; margin-top:5px; }
 
   @keyframes spin { from {transform:rotate(0deg);} to {transform:rotate(360deg);} }
@@ -33,10 +33,8 @@
 <body>
   <div id="loading"><div class="spinner"></div><div style="color:#00ffcc; font-size:20px; font-weight:bold;">searching323kbabe...</div></div>
 
-  <!-- Entry button -->
   <button id="social-btn">323 instant noodle social</button>
 
-  <!-- Single drop card -->
   <div class="card" id="drop-card">
     <div class="title" id="r-title">—</div>
     <div class="brand" id="r-artist">—</div>
@@ -46,7 +44,6 @@
     <div class="voice-status" id="voice-status">🎤 waiting</div>
   </div>
 
-  <!-- Chat -->
   <div id="chat-container">
     <div id="chat-box"></div>
     <input id="chat-input" placeholder="type a message…" />
@@ -78,6 +75,9 @@ const t=document.getElementById("r-title"),
       logEl=document.getElementById("log"),
       voicePlayer=new Audio();
 
+let autoMode = true; // default = autoplay
+let socialMode = false;
+
 function log(msg){
   const p=document.createElement("div");
   p.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
@@ -85,38 +85,39 @@ function log(msg){
 }
 
 document.getElementById("toggle-log").addEventListener("click",()=>{
-  logEl.style.display = logEl.style.display==="none" ? "block" : "none";
+  if(logEl.style.display==="none"){ logEl.style.display="block"; event.target.textContent="hide console log"; }
+  else { logEl.style.display="none"; event.target.textContent="show console log"; }
 });
 
-// --- Update single card ---
 function updateDrop(j){
   t.textContent = j.product || "—";
   a.textContent = j.brand || "—";
   d.textContent = j.description || "—";
   hashtags.innerHTML = (j.hashtags||[]).map(x=>`<span class="badge">${x}</span>`).join("");
-  if(j.image){ img.src=j.image; img.style.display="block"; }
-  else { img.style.display="none"; }
+  if(j.image){ img.src=j.image; img.style.display="block"; } else { img.style.display="none"; }
   if(j.voice){
     voiceStatus.textContent="🎤 loading voice…";
     voicePlayer.src=j.voice;
-    voicePlayer.play().then(()=>{ voiceStatus.textContent="🔊 playing voice"; log("🔊 drop voice playing"); })
-    .catch(()=>{ voiceStatus.textContent="❌ voice error"; log("❌ drop voice error"); });
+    voicePlayer.play().then(()=>{
+      voiceStatus.textContent="🔊 playing voice";
+      log("🔊 drop voice playing");
+    }).catch(()=>{ voiceStatus.textContent="❌ voice error"; log("❌ drop voice error"); });
   }
 }
 
-// --- Fetch new drop ---
 async function loadDrop(){
   try{
     loading.style.display="flex";
     const r=await fetch(`/api/trend?room=${roomId}`,{cache:"no-store"});
     const j=await r.json();
     updateDrop(j);
-    setTimeout(loadDrop, j.refresh||30000);
+    if(autoMode){ // only loop in autoplay
+      setTimeout(loadDrop, j.refresh||30000);
+    }
   }catch(e){ log("❌ drop fetch error"); }
   finally{ loading.style.display="none"; }
 }
 
-// --- Chat ---
 input.addEventListener("keydown",e=>{
   if(e.key==="Enter" && input.value.trim()!==""){
     const text=input.value.trim();
@@ -137,20 +138,26 @@ socket.on("chatMessage",async ({user:textUser,text})=>{
     const blob=await r.blob(); const voiceData=URL.createObjectURL(blob);
     voicePlayer.src=voiceData;
     log(`🔊 chat voice: ${textUser} says ${text}`);
-    voicePlayer.play();
+    voicePlayer.play().then(()=>{
+      if(socialMode){ // resume drop only in social mode
+        voiceStatus.textContent="🔊 resuming drop voice";
+        log("🔊 resuming drop voice");
+        voicePlayer.src=j.voice;
+      }
+    });
   }catch(err){ log("❌ chat voice error"); }
 });
 
-// --- Entry button ---
 document.getElementById("social-btn").addEventListener("click",()=>{
   document.getElementById("social-btn").style.display="none";
-  log(`🍜 joined 323 instant noodle social — room ${roomId}`);
+  autoMode = false; // stop auto-refresh
+  socialMode = true;
+  log(`🍜 entered social mode — auto-refresh stopped`);
   loadDrop();
 });
 
-// Auto-skip button if already in room
-if(roomId){ 
-  document.getElementById("social-btn").style.display="none"; 
+// start in autoplay
+if(roomId){
   loadDrop();
 }
 </script>
