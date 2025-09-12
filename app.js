@@ -1,63 +1,83 @@
-// ✅ Auto-generate random room if none in URL
-const params = new URLSearchParams(window.location.search);
-if (!params.get("room")) {
-  const newRoom = Math.random().toString(36).substring(2, 8);
-  window.location.replace(`${window.location.origin}/?room=${newRoom}`);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  const API_BASE = "https://three23p-backend.onrender.com"; 
-  const roomId = new URLSearchParams(window.location.search).get("room");
-
-  const socket = io(API_BASE);
-  socket.emit("joinRoom", roomId);
-
-  const startBtn = document.getElementById("start-btn");
-  const socialBtn = document.getElementById("social-btn");
-  const chatBox = document.getElementById("chat-box");
-  const roomLabel = document.getElementById("room-label");
-
-  // ✅ Show full sharable room URL
-  const fullUrl = `${window.location.origin}/?room=${roomId}`;
-  roomLabel.textContent = fullUrl;
-  roomLabel.onclick = () => navigator.clipboard.writeText(fullUrl);
-
-  // start button
-  startBtn.onclick = () => {
-    document.getElementById("start-screen").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    loadTrend();
-  };
-
-  // 🍜 button → show chat
-  socialBtn.onclick = () => { chatBox.style.display = "block"; };
-
-  // fetch trend
-  async function loadTrend() {
-    const r = await fetch(`${API_BASE}/api/trend`);
-    const j = await r.json();
-    document.getElementById("r-title").textContent = j.product;
-    document.getElementById("r-artist").textContent = j.brand;
-    document.getElementById("r-desc").textContent = j.description;
-    if (j.image) {
-      const img = document.getElementById("r-img");
-      img.src = j.image;
-      img.style.display = "block";
-    }
+<style>
+  body {
+    margin:0;
+    color:#fff;
+    font-family: 'Inter', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background: linear-gradient(-45deg, #ff00cc, #3333ff, #00ffee, #ff9900);
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 
-  // send chat
-  document.getElementById("chat-send").onclick = () => {
-    const text = document.getElementById("chat-input").value.trim();
-    if (!text) return;
-    socket.emit("chatMessage", { roomId, user:"anon", text });
-    document.getElementById("chat-input").value = "";
-  };
+  #start-btn {
+    background:linear-gradient(90deg,#00ffcc,#00aaff);
+    color:#000;font-size:22px;font-weight:bold;
+    padding:16px 32px;border:none;border-radius:30px;cursor:pointer;
+    box-shadow:0 0 20px rgba(0,255,204,.5);
+    transition:transform .2s ease;
+    text-transform:lowercase;
+  }
+  #start-btn:hover { transform:scale(1.05); }
 
-  // receive chat
-  socket.on("chatMessage", ({ user, text }) => {
-    const msg = document.createElement("p");
-    msg.textContent = `${user}: ${text}`;
-    document.getElementById("messages").appendChild(msg);
-  });
-});
+  .card {
+    background:rgba(20,20,20,0.8);
+    border-radius:24px; padding:24px; margin:20px auto; max-width:600px;
+    backdrop-filter: blur(10px);
+    border:2px solid transparent;
+    box-shadow:0 0 25px rgba(0,255,204,.4);
+    animation: pulseBorder 3s infinite alternate;
+  }
+  @keyframes pulseBorder {
+    0% { box-shadow:0 0 15px rgba(255,0,255,.5); }
+    100% { box-shadow:0 0 35px rgba(0,255,255,.7); }
+  }
+
+  .social-btn {
+    display:inline-block;
+    padding:16px 32px;
+    background:linear-gradient(90deg,#ff00ff,#00ffff);
+    color:#000; font-size:18px; font-weight:bold;
+    border-radius:30px;
+    box-shadow:0 0 15px rgba(255,0,255,.6);
+    font-family:'Inter',sans-serif;
+    text-transform:lowercase;
+    margin:10px 0;
+    cursor:pointer;
+  }
+</style>
+
+<div id="start-screen">
+  <button id="start-btn">🔊 tap in w/ voice rn</button>
+</div>
+
+<div id="app" style="display:none; max-width:700px;">
+  <section class="card">
+    <div class="title" id="r-title">—</div>
+    <div class="artist" id="r-artist">—</div>
+
+    <button id="social-btn" class="social-btn">🍜 enter 323 instant noodle social</button>
+
+    <p class="desc" id="r-desc">—</p>
+    <div id="voice-status"></div>
+    <img id="r-img" alt="trend image" style="display:none;" />
+    <div id="r-fallback">no image yet</div>
+
+    <div id="chat-box" style="display:none;">
+      <div id="messages"></div>
+      <input id="chat-input" type="text" placeholder="type a message..." />
+      <button id="chat-send">send</button>
+      <p id="room-label"></p>
+    </div>
+  </section>
+</div>
+
+<!-- Load logic from Render -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://three23p-backend.onrender.com/app.js"></script>
