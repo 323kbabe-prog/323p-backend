@@ -16,6 +16,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const socialBtn = document.getElementById("social-btn");
   const chatBox = document.getElementById("chat-box");
   const roomLabel = document.getElementById("room-label");
+  const voicePlayer = new Audio();
+
+  let currentDescription = "";
+  let chatMode = false;
+  let loopInterval;
 
   // show sharable link
   const fullUrl = `${window.location.origin}/?room=${roomId}`;
@@ -29,7 +34,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   socialBtn.onclick = () => {
+    chatMode = true;
     chatBox.style.display = "block";
+    if (currentDescription) playLoop(currentDescription);
   };
 
   async function loadTrend() {
@@ -39,16 +46,42 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("r-title").textContent = j.product;
       document.getElementById("r-artist").textContent = j.brand;
       document.getElementById("r-desc").textContent = j.description;
+      currentDescription = j.description;
+
       if (j.image) {
         const img = document.getElementById("r-img");
         img.src = j.image;
         img.style.display = "block";
       }
+
+      if (chatMode && currentDescription) playLoop(currentDescription);
     } catch (e) {
       console.error("❌ trend fetch failed", e);
     }
   }
 
+  // play looped description voice
+  async function playLoop(text) {
+    clearInterval(loopInterval);
+    await playVoice(text);
+    loopInterval = setInterval(() => playVoice(text), 12000); // every ~12s
+  }
+
+  // play single voice clip
+  async function playVoice(text) {
+    return new Promise(async (resolve) => {
+      try {
+        voicePlayer.src = `${API_BASE}/api/voice?text=${encodeURIComponent(text)}`;
+        await voicePlayer.play();
+        voicePlayer.onended = () => resolve();
+      } catch (e) {
+        console.error("🔇 voice error", e);
+        resolve();
+      }
+    });
+  }
+
+  // send chat
   document.getElementById("chat-send").onclick = () => {
     const text = document.getElementById("chat-input").value.trim();
     if (!text) return;
@@ -56,9 +89,20 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("chat-input").value = "";
   };
 
-  socket.on("chatMessage", ({ user, text }) => {
+  // receive chat
+  socket.on("chatMessage", async ({ user, text }) => {
     const msg = document.createElement("p");
     msg.textContent = `${user}: ${text}`;
     document.getElementById("messages").appendChild(msg);
+
+    // interrupt voice
+    clearInterval(loopInterval);
+    voicePlayer.pause();
+
+    // play chat TTS
+    await playVoice(`${user} says ${text}`);
+
+    // resume looping desc
+    if (chatMode && currentDescription) playLoop(currentDescription);
   });
 });
