@@ -1,8 +1,9 @@
-// server.js — 323drop backend (API + chat only)
+// server.js — 323drop backend (API + chat + static app.js)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const OpenAI = require("openai");
+const path = require("path");
 
 const app = express();
 const httpServer = createServer(app);
@@ -193,6 +194,10 @@ io.on("connection", (socket) => {
     console.log(`❌ User disconnected: ${socket.id} (room ${socket.roomId || "none"})`);
   });
 });
+
+/* ---------------- Serve static app.js ---------------- */
+app.use(express.static(path.join(__dirname))); 
+// this makes https://three23p-backend.onrender.com/app.js available
 
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
