@@ -1,108 +1,83 @@
-// Redirect if no room param
-const params = new URLSearchParams(window.location.search);
-if (!params.get("room")) {
-  const newRoom = Math.random().toString(36).substring(2, 8);
-  window.location.replace(`${window.location.origin}/?room=${newRoom}`);
+// app.js — refined voice loop + chat interrupts
+
+let audioPlayer = null;
+let voiceLoopActive = false;
+let chatInterrupting = false;
+let voiceUrl = ""; // backend-provided TTS URL
+let loopTimeout = null;
+
+/* ---------------- Play Voice ---------------- */
+async function playVoice(url) {
+  // stop any current audio
+  if (audioPlayer) {
+    audioPlayer.pause();
+    audioPlayer = null;
+  }
+
+  return new Promise((resolve) => {
+    audioPlayer = new Audio(url);
+    audioPlayer.onended = () => resolve();
+    audioPlayer.onerror = () => resolve();
+    audioPlayer.play();
+  });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const API_BASE = "https://three23p-backend.onrender.com";
-  const roomId = new URLSearchParams(window.location.search).get("room");
+/* ---------------- Start Voice Loop ---------------- */
+async function startVoiceLoop(url) {
+  voiceUrl = url;
+  voiceLoopActive = true;
 
-  const socket = io(API_BASE);
-  socket.emit("joinRoom", roomId);
-
-  const startBtn = document.getElementById("start-btn");
-  const socialBtn = document.getElementById("social-btn");
-  const chatBox = document.getElementById("chat-box");
-  const roomLabel = document.getElementById("room-label");
-  const voicePlayer = new Audio();
-
-  let currentDescription = "";
-  let chatMode = false;
-  let loopInterval;
-
-  // show sharable link
-  const fullUrl = `${window.location.origin}/?room=${roomId}`;
-  roomLabel.textContent = fullUrl;
-  roomLabel.onclick = () => navigator.clipboard.writeText(fullUrl);
-
-  startBtn.onclick = () => {
-    document.getElementById("start-screen").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    loadTrend();
-  };
-
-  socialBtn.onclick = () => {
-    chatMode = true;
-    chatBox.style.display = "block";
-    if (currentDescription) playLoop(currentDescription);
-  };
-
-  async function loadTrend() {
-    try {
-      const r = await fetch(`${API_BASE}/api/trend`);
-      const j = await r.json();
-      document.getElementById("r-title").textContent = j.product;
-      document.getElementById("r-artist").textContent = j.brand;
-      document.getElementById("r-desc").textContent = j.description;
-      currentDescription = j.description;
-
-      if (j.image) {
-        const img = document.getElementById("r-img");
-        img.src = j.image;
-        img.style.display = "block";
-      }
-
-      if (chatMode && currentDescription) playLoop(currentDescription);
-    } catch (e) {
-      console.error("❌ trend fetch failed", e);
+  while (voiceLoopActive) {
+    if (chatInterrupting) {
+      // wait until chat is finished
+      await new Promise(r => setTimeout(r, 500));
+      continue;
     }
+
+    await playVoice(voiceUrl);
+
+    // wait a little before looping
+    await new Promise(r => setTimeout(r, 500));
   }
+}
 
-  // play looped description voice
-  async function playLoop(text) {
-    clearInterval(loopInterval);
-    await playVoice(text);
-    loopInterval = setInterval(() => playVoice(text), 12000); // every ~12s
+/* ---------------- Stop Voice Loop ---------------- */
+function stopVoiceLoop() {
+  voiceLoopActive = false;
+  if (audioPlayer) {
+    audioPlayer.pause();
+    audioPlayer = null;
   }
-
-  // play single voice clip
-  async function playVoice(text) {
-    return new Promise(async (resolve) => {
-      try {
-        voicePlayer.src = `${API_BASE}/api/voice?text=${encodeURIComponent(text)}`;
-        await voicePlayer.play();
-        voicePlayer.onended = () => resolve();
-      } catch (e) {
-        console.error("🔇 voice error", e);
-        resolve();
-      }
-    });
+  if (loopTimeout) {
+    clearTimeout(loopTimeout);
+    loopTimeout = null;
   }
+}
 
-  // send chat
-  document.getElementById("chat-send").onclick = () => {
-    const text = document.getElementById("chat-input").value.trim();
-    if (!text) return;
-    socket.emit("chatMessage", { roomId, user: "anon", text });
-    document.getElementById("chat-input").value = "";
-  };
+/* ---------------- Handle Chat Interrupt ---------------- */
+async function handleChatMessage(message) {
+  chatInterrupting = true;
+  stopVoiceLoop();
 
-  // receive chat
-  socket.on("chatMessage", async ({ user, text }) => {
-    const msg = document.createElement("p");
-    msg.textContent = `${user}: ${text}`;
-    document.getElementById("messages").appendChild(msg);
+  // read chat message out loud (or show in UI)
+  const chatVoiceUrl = `/api/voice?text=${encodeURIComponent(message)}`;
+  await playVoice(chatVoiceUrl);
 
-    // interrupt voice
-    clearInterval(loopInterval);
-    voicePlayer.pause();
+  // resume loop
+  chatInterrupting = false;
+  if (!voiceLoopActive) {
+    startVoiceLoop(voiceUrl);
+  }
+}
 
-    // play chat TTS
-    await playVoice(`${user} says ${text}`);
-
-    // resume looping desc
-    if (chatMode && currentDescription) playLoop(currentDescription);
-  });
+/* ---------------- Example Usage ---------------- */
+// Start looping after first drop is loaded
+document.getElementById("startBtn").addEventListener("click", () => {
+  const url = "/api/voice?text=" + encodeURIComponent("Your drop description here.");
+  startVoiceLoop(url);
 });
+
+// Handle incoming chat
+function onChat(message) {
+  handleChatMessage(message);
+}
