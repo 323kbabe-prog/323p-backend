@@ -48,6 +48,23 @@
 
   .title { font-size:26px; font-weight:800; margin:0.3em 0; color:#00ffcc; text-transform:lowercase; }
   .artist { font-size:20px; font-weight:600; opacity:.95; color:#fff; text-transform:lowercase; }
+
+  .social-btn {
+    background:linear-gradient(90deg,#ff9900,#ff3366);
+    color:#fff;
+    font-size:16px;
+    font-weight:bold;
+    padding:10px 20px;
+    border:none;
+    border-radius:20px;
+    cursor:pointer;
+    margin:10px 0;
+    box-shadow:0 0 15px rgba(255,153,0,.6);
+    transition:transform .2s ease;
+    text-transform:lowercase;
+  }
+  .social-btn:hover { transform:scale(1.05); }
+
   .desc { margin:1em 0; font-size:15px; line-height:1.5; color:#eee; text-transform:lowercase; }
 
   .badge {
@@ -114,6 +131,10 @@
   <section class="card">
     <div class="title" id="r-title">—</div>
     <div class="artist" id="r-artist">—</div>
+
+    <!-- New button -->
+    <button id="social-btn" class="social-btn">🍜 323 instant noodle social</button>
+
     <p class="desc" id="r-desc">—</p>
     <div id="voice-status"></div>
     <div id="r-tags"></div>
@@ -131,81 +152,8 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  // ✅ auto-detect backend origin
   const API_BASE = window.location.origin;
   const voicePlayer = new Audio();
 
   const t=document.getElementById("r-title"),
-        a=document.getElementById("r-artist"),
-        d=document.getElementById("r-desc"),
-        g=document.getElementById("r-tags"),
-        img=document.getElementById("r-img"),
-        fb=document.getElementById("r-fallback"),
-        voiceStatus=document.getElementById("voice-status"),
-        logEl=document.getElementById("log"),
-        overlay=document.getElementById("loading-overlay");
-
-  function ts(){return new Date().toLocaleTimeString([], {hour12:false});}
-  function line(msg){const p=document.createElement("p");p.innerHTML=`<span>[${ts()}]</span> ${msg}`;logEl.appendChild(p);logEl.scrollTop=logEl.scrollHeight;}
-  function info(m){line(m);}function ok(m){line(m);}function err(m){line(m);}
-
-  function showOverlay(){ overlay.style.display="flex"; overlay.style.opacity="1"; }
-  function hideOverlay(){ overlay.style.opacity="0"; setTimeout(()=>overlay.style.display="none",300); }
-
-  async function loadTrend(){
-    try{
-      info("📡 scanning vibes rn...");
-      showOverlay();
-
-      const r=await fetch(`${API_BASE}/api/trend`,{cache:"no-store"});
-      const j=await r.json();
-
-      t.textContent = `💄✨ ${j.product?.toLowerCase() || "untitled"} 🌸🔥`;
-      a.textContent = `👩‍🎤💎 ${j.brand?.toLowerCase() || "unknown"} 🌍💖`;
-      d.textContent = `💖🔥🦋 ${j.description?.toLowerCase() || ""} ✨🌈💅`;
-
-      g.innerHTML=(j.hashtags||[]).slice(0,3).map(x=>
-        `<span class="badge">✨${String(x).toLowerCase()}🔥</span>`).join("");
-
-      if(j.image){
-        img.src=j.image; img.style.display="block"; fb.style.display="none";
-        ok("🖼️✨ image ready");
-      } else {
-        img.style.display="none"; fb.style.display="block";
-      }
-
-      if(j.description) playVoice(j.description);
-    }catch(e){
-      err("❌ fetch flopped… retry soon");
-    }finally{
-      hideOverlay();
-    }
-  }
-
-  async function playVoice(text){
-    try{
-      voiceStatus.textContent="🎤🔊✨ ai voice loading…";
-      const url=`${API_BASE}/api/voice?text=${encodeURIComponent(text)}`;
-      voicePlayer.src=url;
-      await voicePlayer.play();
-      ok("🎤💖 voice playing");
-      voicePlayer.onended=()=>{
-        voiceStatus.textContent="";
-        setTimeout(loadTrend, 3000);
-      };
-    }catch(e){
-      err("🔇💔 voice error");
-      voiceStatus.textContent="";
-      setTimeout(loadTrend, 3000);
-    }
-  }
-
-  document.getElementById("start-btn").addEventListener("click",()=>{
-    document.getElementById("start-screen").style.display="none";
-    document.getElementById("app").style.display="block";
-    loadTrend();
-  });
-});
-</script>
-</body>
-</html>
+        a=docu
