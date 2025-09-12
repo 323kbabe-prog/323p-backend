@@ -1,4 +1,4 @@
-// server.js — 323drop backend (queue pre-gen, history, chat, dual-mode, safe drop gen)
+// server.js — unified 323drop backend (frontend + APIs + chat + OpenAI, room-synced drops)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -12,7 +12,7 @@ const io = new Server(httpServer, { cors: { origin: "*", methods: ["GET", "POST"
 /* ---------------- OpenAI ---------------- */
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- Demo product pool ---------------- */
+/* ---------------- TikTok Top 50 Cosmetics (shortlist for demo) ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
   { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
@@ -52,7 +52,7 @@ async function generateImageUrl(brand, product) {
   } catch (e) {
     console.error("❌ Image error:", e.message);
   }
-  return null;
+  return "https://placehold.co/600x600?text=No+Image";
 }
 
 async function generateVoice(text) {
@@ -69,90 +69,67 @@ async function generateVoice(text) {
   }
 }
 
-/* ---------------- Safe Drop Generator ---------------- */
-async function generateDrop(brand, product) {
-  const description = await makeDescription(brand, product);
-
-  // Run image + voice in parallel, allow failures
-  const [imageResult, voiceResult] = await Promise.allSettled([
-    generateImageUrl(brand, product),
-    generateVoice(description)
-  ]);
-
-  let imageUrl = null;
-  if (imageResult.status === "fulfilled") {
-    imageUrl = imageResult.value;
-  }
-
-  let voiceBase64 = null;
-  if (voiceResult.status === "fulfilled" && voiceResult.value) {
-    voiceBase64 = `data:audio/mpeg;base64,${voiceResult.value.toString("base64")}`;
-  }
-
-  return {
-    brand,
-    product,
-    description,
-    hashtags: ["#TikTokMadeMeBuyIt", "#BeautyTok", "#NowTrending"],
-    image: imageUrl,
-    voice: voiceBase64,
-    refresh: 30000
-  };
-}
-
-/* ---------------- Room cache with queue ---------------- */
-const roomCache = {}; 
-
-async function fillQueue(roomId, targetSize = 3) {
-  if (!roomCache[roomId]) {
-    roomCache[roomId] = { queue: [], history: [] };
-  }
-  while (roomCache[roomId].queue.length < targetSize) {
-    const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-    const drop = await generateDrop(pick.brand, pick.product);
-    roomCache[roomId].queue.push(drop);
-    roomCache[roomId].history.push(drop);
-    if (roomCache[roomId].history.length > 20) {
-      roomCache[roomId].history.shift();
-    }
-  }
-}
-
-/* ---------------- Serve frontend ---------------- */
+/* ---------------- Serve Frontend ---------------- */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
 /* ---------------- APIs ---------------- */
+
+// Room-based cache
+const roomCache = {}; // { roomId: { drop: {...}, expires: timestamp } }
+
 app.get("/api/trend", async (req, res) => {
   try {
     const roomId = req.query.room || "global";
-    await fillQueue(roomId, 3);
+    const now = Date.now();
 
-    const drop = roomCache[roomId].queue.shift();
+    if (roomCache[roomId] && roomCache[roomId].expires > now) {
+      return res.json(roomCache[roomId].drop);
+    }
 
-    // Background refill
-    fillQueue(roomId, 3).catch(err=>console.error("❌ refill error:", err.message));
+    const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
 
-    return res.json(drop);
+    const descriptionPromise = makeDescription(pick.brand, pick.product);
+    const imagePromise = generateImageUrl(pick.brand, pick.product);
+
+    const description = await descriptionPromise;
+    const [imageUrl, audioBuffer] = await Promise.all([
+      imagePromise,
+      generateVoice(description)
+    ]);
+
+    let voiceBase64 = null;
+    if (audioBuffer) {
+      voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
+    }
+
+    const drop = {
+      brand: pick.brand,
+      product: pick.product,
+      description,
+      hashtags: ["#TikTokMadeMeBuyIt", "#BeautyTok", "#NowTrending"],
+      image: imageUrl,
+      voice: voiceBase64,
+      refresh: 30000
+    };
+
+    roomCache[roomId] = { drop, expires: now + 30000 };
+
+    res.json(drop);
+
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
     res.json({
       brand: "Error",
       product: "System",
-      description: "Retry soon…",
-      hashtags:["#Error"],
-      image:null,
-      voice:null,
-      refresh:5000
+      description: "Something went wrong. Retrying soon…",
+      hashtags: ["#Error"],
+      image: "https://placehold.co/600x600?text=Error",
+      voice: null,
+      refresh: 5000
     });
   }
-});
-
-app.get("/api/history", (req, res) => {
-  const roomId = req.query.room || "global";
-  if (!roomCache[roomId]) return res.json([]);
-  res.json(roomCache[roomId].history || []);
 });
 
 app.get("/api/voice", async (req, res) => {
@@ -168,18 +145,23 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
-/* ---------------- Chat ---------------- */
+app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
+
+/* ---------------- Chat (Socket.IO) ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
+
   socket.on("joinRoom", (roomId) => {
     socket.join(roomId);
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
   });
+
   socket.on("chatMessage", ({ roomId, user, text }) => {
     console.log(`💬 [${roomId}] ${user}: ${text}`);
     io.to(roomId).emit("chatMessage", { user, text });
   });
+
   socket.on("disconnect", () => {
     console.log(`❌ User disconnected: ${socket.id} (room ${socket.roomId || "none"})`);
   });
