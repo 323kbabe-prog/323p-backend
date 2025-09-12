@@ -1,4 +1,4 @@
-// server.js — 323 instant noodle backend (Social Mode enabled)
+// server.js — 323 instant noodle backend with Social Mode + static serving
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -12,8 +12,8 @@ const io = new Server(httpServer, { cors: { origin: "*", methods: ["GET", "POST"
 /* ---------------- OpenAI ---------------- */
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- Demo drop pool ---------------- */
-const TOP5 = [
+/* ---------------- TikTok Top 50 Cosmetics (shortlist) ---------------- */
+const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
   { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
   { brand: "Dior", product: "Lip Glow Oil" },
@@ -23,15 +23,20 @@ const TOP5 = [
 
 /* ---------------- Helpers ---------------- */
 async function makeDescription(brand, product) {
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.9,
-    messages: [
-      { role: "system", content: "You are a beauty lover speaking in first person." },
-      { role: "user", content: `Write a 70+ word first-person description of using "${product}" by ${brand}. Make it sensory, authentic, and Gen-Z relatable.` }
-    ]
-  });
-  return completion.choices[0].message.content.trim();
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [
+        { role: "system", content: "You are a beauty lover speaking in first person." },
+        { role: "user", content: `Write a 70+ word first-person description of using "${product}" by ${brand}. Make it sensory, authentic, and Gen-Z relatable.` }
+      ]
+    });
+    return completion.choices[0].message.content.trim();
+  } catch (e) {
+    console.error("❌ Description error:", e.message);
+    return `Using ${product} by ${brand} feels unforgettable.`;
+  }
 }
 
 async function generateImageUrl(brand, product) {
@@ -67,8 +72,15 @@ async function generateVoice(text) {
 /* ---------------- Room cache ---------------- */
 const roomCache = {}; // { roomId: { drop, chatHistory } }
 
-/* ---------------- Serve Frontend ---------------- */
+/* ---------------- Serve static frontend ---------------- */
+app.use(express.static(path.join(__dirname)));
+
+// Explicitly serve index.html at both / and /index.html
 app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.get("/index.html", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
@@ -76,11 +88,12 @@ app.get("/", (req, res) => {
 app.get("/api/trend", async (req, res) => {
   try {
     const roomId = req.query.room || "global";
+
     if (roomCache[roomId]?.drop) {
       return res.json(roomCache[roomId].drop);
     }
 
-    const pick = TOP5[Math.floor(Math.random() * TOP5.length)];
+    const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
     const description = await makeDescription(pick.brand, pick.product);
     const [imageUrl, audioBuffer] = await Promise.all([
       generateImageUrl(pick.brand, pick.product),
@@ -133,7 +146,6 @@ io.on("connection", (socket) => {
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
 
-    // send chat history if exists
     if (roomCache[roomId]?.chatHistory) {
       socket.emit("chatHistory", roomCache[roomId].chatHistory);
     }
@@ -156,4 +168,3 @@ const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 323 instant noodle backend live on :${PORT}`);
 });
-
