@@ -1,4 +1,4 @@
-// server.js — 323drop backend with multi-drop pre-generation queue
+// server.js — 323drop backend (queue pre-gen, history, chat, dual-mode)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -44,7 +44,7 @@ async function generateImageUrl(brand, product) {
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `Young female idol applying ${product} by ${brand}, pastel background, photocard style, glitter bokeh.`,
-      size: "512x512" // smaller for speed
+      size: "512x512" // faster for pre-gen
     });
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
@@ -52,7 +52,7 @@ async function generateImageUrl(brand, product) {
   } catch (e) {
     console.error("❌ Image error:", e.message);
   }
-  return "https://placehold.co/512x512?text=No+Image";
+  return null;
 }
 
 async function generateVoice(text) {
@@ -96,16 +96,19 @@ async function generateDrop(brand, product) {
 
 /* ---------------- Room cache with queue ---------------- */
 const roomCache = {}; 
-// Example: { roomId: { queue: [drop, drop, drop] } }
 
 async function fillQueue(roomId, targetSize = 3) {
   if (!roomCache[roomId]) {
-    roomCache[roomId] = { queue: [] };
+    roomCache[roomId] = { queue: [], history: [] };
   }
   while (roomCache[roomId].queue.length < targetSize) {
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
     const drop = await generateDrop(pick.brand, pick.product);
     roomCache[roomId].queue.push(drop);
+    roomCache[roomId].history.push(drop);
+    if (roomCache[roomId].history.length > 20) {
+      roomCache[roomId].history.shift();
+    }
   }
 }
 
@@ -118,11 +121,8 @@ app.get("/", (req, res) => {
 app.get("/api/trend", async (req, res) => {
   try {
     const roomId = req.query.room || "global";
-
-    // Make sure queue is filled (3 drops by default)
     await fillQueue(roomId, 3);
 
-    // Serve the first ready drop instantly
     const drop = roomCache[roomId].queue.shift();
 
     // Background refill
@@ -135,12 +135,10 @@ app.get("/api/trend", async (req, res) => {
   }
 });
 
-// History API (last 20 drops served in the room)
 app.get("/api/history", (req, res) => {
   const roomId = req.query.room || "global";
   if (!roomCache[roomId]) return res.json([]);
-  const history = roomCache[roomId].queue || [];
-  res.json(history);
+  res.json(roomCache[roomId].history || []);
 });
 
 app.get("/api/voice", async (req, res) => {
@@ -156,7 +154,7 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
-/* ---------------- Chat (Socket.IO) ---------------- */
+/* ---------------- Chat ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
   socket.on("joinRoom", (roomId) => {
