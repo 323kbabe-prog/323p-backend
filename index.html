@@ -12,9 +12,12 @@
   .desc { font-size:16px; line-height:1.6; color:#eee; margin:10px 0; }
   .voice-status { font-size:14px; color:#0ff; margin-top:6px; font-family:monospace; }
   img.drop-img { width:100%; border-radius:16px; margin-top:14px; display:none; }
+  #img-fallback { background:#222; color:#aaa; text-align:center; padding:20px; border-radius:10px; margin-top:14px; font-size:14px; }
   .badge { display:inline-block; margin:4px; padding:8px 14px; background:linear-gradient(135deg,#ff00ff,#00ffff); border-radius:20px; font-size:14px; font-weight:bold; color:#000; text-transform:lowercase; box-shadow:0 0 12px rgba(255,0,255,.6); }
 
-  #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:18px; font-weight:bold; padding:14px 22px; border:none; border-radius:24px; cursor:pointer; margin:20px auto; display:block; box-shadow:0 0 15px rgba(255,0,255,.6); text-transform:lowercase; }
+  #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:18px; font-weight:bold; padding:10px 18px; border:none; border-radius:20px; cursor:pointer; margin:10px 0; display:inline-block; box-shadow:0 0 15px rgba(255,0,255,.6); text-transform:lowercase; }
+
+  #retry-voice { background:#222; color:#ff4444; font-size:14px; padding:6px 12px; border:none; border-radius:8px; margin-top:8px; cursor:pointer; display:none; }
 
   #chat-container { position:fixed; bottom:0; left:0; right:0; background:#111; border-top:1px solid #333; padding:10px; z-index:1000; }
   #chat-box { max-height:120px; overflow:auto; font-size:18px; margin-bottom:8px; }
@@ -22,32 +25,47 @@
   .chat-user { color:#00ffcc; font-weight:bold; }
   #chat-input { border:none; padding:12px; font-size:18px; width:100%; border-radius:8px; outline:none; }
 
-  #log { display:none; max-height:150px; overflow:auto; font-family:monospace; background:#000; color:#0ff; padding:10px; border-top:1px solid #222; font-size:14px; }
-  #toggle-log { font-size:14px; color:#0ff; background:none; border:none; cursor:pointer; margin-top:5px; }
+  /* Console always visible */
+  #log { max-height:150px; overflow:auto; font-family:monospace; background:#000; color:#0ff; padding:10px; border-top:1px solid #222; font-size:14px; margin-top:6px; }
 
+  /* Loading overlay */
   @keyframes spin { from {transform:rotate(0deg);} to {transform:rotate(360deg);} }
   #loading { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; flex-direction:column; font-family:'Inter',sans-serif; z-index:9999; }
-  .spinner { border:6px solid #222; border-top:6px solid #00ffcc; border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite; margin-bottom:20px; }
+  .spinner { border:6px solid #222; border-top:6px solid #00ffcc; border-radius:50%; width:80px; height:80px; animation:spin 1s linear infinite; margin-bottom:20px; }
+  @media (max-width:480px) {
+    .spinner { width:120px; height:120px; border-width:10px; }
+    #loading div { font-size:24px; }
+  }
 </style>
 </head>
 <body>
+  <!-- Loading overlay -->
   <div id="loading"><div class="spinner"></div><div style="color:#00ffcc; font-size:20px; font-weight:bold;">searching323kbabe...</div></div>
 
-  <button id="social-btn">323 instant noodle social</button>
-
+  <!-- Single drop card -->
   <div class="card" id="drop-card">
     <div class="title" id="r-title">—</div>
     <div class="brand" id="r-artist">—</div>
+
+    <!-- Button inside card -->
+    <button id="social-btn">323 instant noodle social</button>
+
     <p class="desc" id="r-desc">—</p>
     <div id="hashtags"></div>
-    <img id="r-img" class="drop-img" alt="trend image" />
+
+    <div id="image-wrapper">
+      <img id="r-img" class="drop-img" alt="trend image" />
+      <div id="img-fallback" style="display:none;">image unavailable</div>
+    </div>
+
     <div class="voice-status" id="voice-status">🎤 waiting</div>
+    <button id="retry-voice">🔄 retry voice</button>
   </div>
 
+  <!-- Chat + Console -->
   <div id="chat-container">
     <div id="chat-box"></div>
     <input id="chat-input" placeholder="type a message…" />
-    <button id="toggle-log">show console log</button>
     <div id="log"></div>
   </div>
 
@@ -68,15 +86,18 @@ const t=document.getElementById("r-title"),
       d=document.getElementById("r-desc"),
       hashtags=document.getElementById("hashtags"),
       img=document.getElementById("r-img"),
+      imgFallback=document.getElementById("img-fallback"),
       voiceStatus=document.getElementById("voice-status"),
+      retryVoice=document.getElementById("retry-voice"),
       chatBox=document.getElementById("chat-box"),
       input=document.getElementById("chat-input"),
       loading=document.getElementById("loading"),
       logEl=document.getElementById("log"),
       voicePlayer=new Audio();
 
-let autoMode = true; // default = autoplay
+let autoMode = true;
 let socialMode = false;
+let currentDrop = null;
 
 function log(msg){
   const p=document.createElement("div");
@@ -84,40 +105,67 @@ function log(msg){
   logEl.appendChild(p); logEl.scrollTop=logEl.scrollHeight;
 }
 
-document.getElementById("toggle-log").addEventListener("click",()=>{
-  if(logEl.style.display==="none"){ logEl.style.display="block"; event.target.textContent="hide console log"; }
-  else { logEl.style.display="none"; event.target.textContent="show console log"; }
-});
-
+// --- Update card ---
 function updateDrop(j){
+  currentDrop = j;
   t.textContent = j.product || "—";
   a.textContent = j.brand || "—";
   d.textContent = j.description || "—";
   hashtags.innerHTML = (j.hashtags||[]).map(x=>`<span class="badge">${x}</span>`).join("");
-  if(j.image){ img.src=j.image; img.style.display="block"; } else { img.style.display="none"; }
+  if(j.image){ img.src=j.image; img.style.display="block"; imgFallback.style.display="none"; }
+  else { img.style.display="none"; imgFallback.style.display="block"; }
   if(j.voice){
-    voiceStatus.textContent="🎤 loading voice…";
-    voicePlayer.src=j.voice;
-    voicePlayer.play().then(()=>{
-      voiceStatus.textContent="🔊 playing voice";
-      log("🔊 drop voice playing");
-    }).catch(()=>{ voiceStatus.textContent="❌ voice error"; log("❌ drop voice error"); });
+    playVoice(j.voice);
+  } else {
+    voiceStatus.textContent="❌ voice error"; retryVoice.style.display="inline-block";
   }
 }
 
+// --- Play voice ---
+function playVoice(voiceData){
+  retryVoice.style.display="none";
+  voiceStatus.textContent="🎤 loading voice…";
+  log("🎤 loading voice…");
+  voicePlayer.src=voiceData;
+  voicePlayer.play().then(()=>{
+    voiceStatus.textContent="🔊 playing voice";
+    log("🔊 drop voice playing");
+  }).catch(()=>{
+    voiceStatus.textContent="❌ voice error";
+    retryVoice.style.display="inline-block";
+    log("❌ drop voice error");
+  });
+}
+
+// --- Retry voice button ---
+retryVoice.addEventListener("click",()=>{
+  if(currentDrop && currentDrop.description){
+    log("🔄 retrying voice...");
+    fetch(`/api/voice?text=${encodeURIComponent(currentDrop.description)}`)
+      .then(r=>r.blob())
+      .then(blob=>{
+        const url=URL.createObjectURL(blob);
+        playVoice(url);
+      })
+      .catch(()=>{ voiceStatus.textContent="❌ voice error"; log("❌ retry voice error"); });
+  }
+});
+
+// --- Load drop ---
 async function loadDrop(){
   try{
     loading.style.display="flex";
     const r=await fetch(`/api/trend?room=${roomId}`,{cache:"no-store"});
     const j=await r.json();
     updateDrop(j);
-    if(autoMode){ // only loop in autoplay
+    if(autoMode){
       setTimeout(loadDrop, j.refresh||30000);
     }
   }catch(e){ log("❌ drop fetch error"); }
   finally{ loading.style.display="none"; }
 }
 
+// --- Chat ---
 input.addEventListener("keydown",e=>{
   if(e.key==="Enter" && input.value.trim()!==""){
     const text=input.value.trim();
@@ -136,30 +184,21 @@ socket.on("chatMessage",async ({user:textUser,text})=>{
   try{
     const r=await fetch(`/api/voice?text=${encodeURIComponent(textUser+" says "+text)}`);
     const blob=await r.blob(); const voiceData=URL.createObjectURL(blob);
-    voicePlayer.src=voiceData;
-    log(`🔊 chat voice: ${textUser} says ${text}`);
-    voicePlayer.play().then(()=>{
-      if(socialMode){ // resume drop only in social mode
-        voiceStatus.textContent="🔊 resuming drop voice";
-        log("🔊 resuming drop voice");
-        voicePlayer.src=j.voice;
-      }
-    });
+    playVoice(voiceData);
   }catch(err){ log("❌ chat voice error"); }
 });
 
+// --- Social button ---
 document.getElementById("social-btn").addEventListener("click",()=>{
-  document.getElementById("social-btn").style.display="none";
-  autoMode = false; // stop auto-refresh
+  autoMode = false;
   socialMode = true;
+  document.getElementById("social-btn").style.display="none";
   log(`🍜 entered social mode — auto-refresh stopped`);
   loadDrop();
 });
 
-// start in autoplay
-if(roomId){
-  loadDrop();
-}
+// Start in autoplay
+if(roomId){ loadDrop(); }
 </script>
 </body>
 </html>
