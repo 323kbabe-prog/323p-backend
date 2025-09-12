@@ -5,23 +5,129 @@
 <title>323 instant noodle social</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-  body { margin:0; background:#111; color:#fff; font-family:'Inter',sans-serif; display:flex; flex-direction:column; align-items:center; }
-  .card { background:rgba(20,20,20,0.85); border-radius:24px; padding:24px; margin:40px auto; max-width:700px; width:100%; box-shadow:0 0 25px rgba(0,255,204,.4); }
-  .title { font-size:28px; font-weight:800; color:#00ffcc; margin-bottom:8px; }
-  .brand { font-size:20px; font-weight:600; color:#fff; margin-bottom:12px; }
-  .desc { font-size:16px; line-height:1.6; color:#eee; margin:12px 0; }
+  body {
+    margin:0;
+    font-family:'Inter',sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background: linear-gradient(-45deg, #ff00cc, #3333ff, #00ffee, #ff9900);
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
+    color:#fff;
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Feed-style card */
+  .card {
+    background:rgba(20,20,20,0.8);
+    border-radius:24px;
+    padding:24px;
+    margin:40px auto;
+    width:100%;
+    max-width:900px;
+    box-shadow:0 0 25px rgba(0,255,204,.4);
+    border:2px solid transparent;
+    backdrop-filter: blur(10px);
+  }
+
+  .title {
+    font-size:26px;
+    font-weight:800;
+    margin:0.3em 0;
+    color:#00ffcc;
+    text-transform:lowercase;
+  }
+  .brand {
+    font-size:20px;
+    font-weight:600;
+    opacity:.95;
+    color:#fff;
+    text-transform:lowercase;
+  }
+  .desc {
+    margin:1em 0;
+    font-size:15px;
+    line-height:1.6;
+    color:#eee;
+    text-transform:lowercase;
+  }
+
   #hashtags { margin:12px 0; }
-  .badge { display:inline-block; margin:4px; padding:6px 12px; background:linear-gradient(135deg,#ff00ff,#00ffff); border-radius:20px; font-size:13px; font-weight:bold; color:#000; text-transform:lowercase; box-shadow:0 0 12px rgba(255,0,255,.6); }
-  #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:16px; font-weight:bold; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; margin:10px 0; box-shadow:0 0 15px rgba(255,0,255,.6); text-transform:lowercase; }
-  .panel { font-family:monospace; background:#111; border-radius:16px; padding:12px; max-height:200px; overflow:auto; border:1px solid #222; font-size:13px; color:#0ff; width:100%; box-sizing:border-box; }
-  #chat-input { border:none; padding:8px; margin-top:6px; font-size:14px; width:100%; border-radius:8px; outline:none; }
+  .badge {
+    display:inline-block;
+    margin:6px;
+    padding:6px 14px;
+    background:linear-gradient(135deg,#ff00ff,#00ffff);
+    border-radius:20px;
+    font-size:13px;
+    font-weight:bold;
+    color:#000;
+    text-transform:lowercase;
+    box-shadow:0 0 20px rgba(255,0,255,.6);
+  }
+
+  #social-btn {
+    background:linear-gradient(90deg,#ff00ff,#00ffff);
+    color:#000;
+    font-size:16px;
+    font-weight:bold;
+    padding:10px 20px;
+    border:none;
+    border-radius:20px;
+    cursor:pointer;
+    margin:10px 0;
+    box-shadow:0 0 15px rgba(255,0,255,.6);
+    text-transform:lowercase;
+  }
+
+  img.drop-img {
+    width:100%;
+    border-radius:20px;
+    margin-top:12px;
+    display:none;
+  }
+
+  /* Panels for chat + console */
+  #social-panels {
+    max-width:900px;
+    width:100%;
+    margin-bottom:40px;
+  }
+
+  .panel {
+    font-family:monospace;
+    background:#111;
+    border-radius:16px;
+    padding:12px;
+    max-height:200px;
+    overflow:auto;
+    border:1px solid #222;
+    font-size:13px;
+    color:#0ff;
+    box-sizing:border-box;
+    margin-top:20px;
+  }
+
+  #chat-input {
+    border:none;
+    padding:8px;
+    margin-top:6px;
+    font-size:14px;
+    width:100%;
+    border-radius:8px;
+    outline:none;
+  }
   .chat-msg { margin:4px 0; }
   .chat-user { color:#00ffcc; font-weight:bold; }
-  img.drop-img { width:100%; border-radius:16px; margin-top:12px; display:none; }
 </style>
 </head>
 <body>
-  <!-- Drop feed card (always same size as base mode) -->
+  <!-- Drop feed card (styled like base mode) -->
   <section class="card">
     <div class="title" id="r-title">—</div>
     <div class="brand" id="r-artist">—</div>
@@ -31,20 +137,16 @@
     <div id="r-fallback" style="color:#aaa; border:2px dashed #333; border-radius:16px; padding:12px; text-align:center; font-style:italic; margin-top:12px;">
       no image yet
     </div>
-
     <button id="social-btn">323 instant noodle social</button>
   </section>
 
-  <!-- Social panels (stacked below card in social mode) -->
-  <div id="social-panels" style="display:none; max-width:700px; width:100%; margin-bottom:40px;">
-    <!-- Chat -->
-    <div id="chat-container" style="margin-top:20px;">
+  <!-- Social panels (stacked below, not squeezing feed) -->
+  <div id="social-panels" style="display:none;">
+    <div id="chat-container">
       <div class="panel" id="chat-box"></div>
       <input id="chat-input" placeholder="type a message…" />
     </div>
-
-    <!-- Console -->
-    <div class="panel" id="log" style="margin-top:20px;"></div>
+    <div class="panel" id="log"></div>
   </div>
 
 <script>
@@ -110,7 +212,7 @@ async function loadDrop(){
   }
 }
 
-// --- Play voice (with interrupt + resume) ---
+// --- Play voice ---
 async function playVoice(voiceData, source="drop"){
   try{
     if(!voiceData) return;
@@ -131,7 +233,7 @@ async function playVoice(voiceData, source="drop"){
 socialBtn.addEventListener("click",()=>{
   socialMode = true;
   socialBtn.style.display="none";
-  socialPanels.style.display="block"; // show chat + console stacked below
+  socialPanels.style.display="block";
   log(`🍜 entered 323 instant noodle social — room ${roomId}`);
 });
 
@@ -144,9 +246,9 @@ input.addEventListener("keydown",e=>{
   }
 });
 
-// --- Receive chat history when joining ---
+// --- Chat history (on join) ---
 socket.on("chatHistory", (history) => {
-  chatBox.innerHTML = ""; // clear existing
+  chatBox.innerHTML = "";
   history.forEach(({ user: textUser, text }) => {
     const msg=document.createElement("div");
     msg.className="chat-msg";
