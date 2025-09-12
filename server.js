@@ -44,7 +44,7 @@ async function generateImageUrl(brand, product) {
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `Young female idol applying ${product} by ${brand}, pastel background, photocard style, glitter bokeh.`,
-      size: "512x512" // faster for pre-gen
+      size: "1024x1024" // ✅ fixed: valid size
     });
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
