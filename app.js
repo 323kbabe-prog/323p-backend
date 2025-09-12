@@ -1,4 +1,4 @@
-// ✅ Auto-generate random room if none in URL
+// Redirect if no room param
 const params = new URLSearchParams(window.location.search);
 if (!params.get("room")) {
   const newRoom = Math.random().toString(36).substring(2, 8);
@@ -6,7 +6,7 @@ if (!params.get("room")) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const API_BASE = "https://three23p-backend.onrender.com"; 
+  const API_BASE = "https://three23p-backend.onrender.com";
   const roomId = new URLSearchParams(window.location.search).get("room");
 
   const socket = io(API_BASE);
@@ -17,44 +17,45 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatBox = document.getElementById("chat-box");
   const roomLabel = document.getElementById("room-label");
 
-  // ✅ Show full sharable room URL
+  // show sharable link
   const fullUrl = `${window.location.origin}/?room=${roomId}`;
   roomLabel.textContent = fullUrl;
   roomLabel.onclick = () => navigator.clipboard.writeText(fullUrl);
 
-  // start button
   startBtn.onclick = () => {
     document.getElementById("start-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
     loadTrend();
   };
 
-  // 🍜 button → show chat
-  socialBtn.onclick = () => { chatBox.style.display = "block"; };
+  socialBtn.onclick = () => {
+    chatBox.style.display = "block";
+  };
 
-  // fetch trend
   async function loadTrend() {
-    const r = await fetch(`${API_BASE}/api/trend`);
-    const j = await r.json();
-    document.getElementById("r-title").textContent = j.product;
-    document.getElementById("r-artist").textContent = j.brand;
-    document.getElementById("r-desc").textContent = j.description;
-    if (j.image) {
-      const img = document.getElementById("r-img");
-      img.src = j.image;
-      img.style.display = "block";
+    try {
+      const r = await fetch(`${API_BASE}/api/trend`);
+      const j = await r.json();
+      document.getElementById("r-title").textContent = j.product;
+      document.getElementById("r-artist").textContent = j.brand;
+      document.getElementById("r-desc").textContent = j.description;
+      if (j.image) {
+        const img = document.getElementById("r-img");
+        img.src = j.image;
+        img.style.display = "block";
+      }
+    } catch (e) {
+      console.error("❌ trend fetch failed", e);
     }
   }
 
-  // send chat
   document.getElementById("chat-send").onclick = () => {
     const text = document.getElementById("chat-input").value.trim();
     if (!text) return;
-    socket.emit("chatMessage", { roomId, user:"anon", text });
+    socket.emit("chatMessage", { roomId, user: "anon", text });
     document.getElementById("chat-input").value = "";
   };
 
-  // receive chat
   socket.on("chatMessage", ({ user, text }) => {
     const msg = document.createElement("p");
     msg.textContent = `${user}: ${text}`;
