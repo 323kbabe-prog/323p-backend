@@ -21,6 +21,7 @@
 </style>
 </head>
 <body>
+  <!-- Drop feed card (always same size as base mode) -->
   <section class="card">
     <div class="title" id="r-title">—</div>
     <div class="brand" id="r-artist">—</div>
@@ -32,16 +33,19 @@
     </div>
 
     <button id="social-btn">323 instant noodle social</button>
+  </section>
 
+  <!-- Social panels (stacked below card in social mode) -->
+  <div id="social-panels" style="display:none; max-width:700px; width:100%; margin-bottom:40px;">
     <!-- Chat -->
-    <div id="chat-container" style="display:none;">
+    <div id="chat-container" style="margin-top:20px;">
       <div class="panel" id="chat-box"></div>
       <input id="chat-input" placeholder="type a message…" />
     </div>
 
     <!-- Console -->
-    <div class="panel" id="log"></div>
-  </section>
+    <div class="panel" id="log" style="margin-top:20px;"></div>
+  </div>
 
 <script>
 // --- Room setup ---
@@ -66,9 +70,9 @@ const t=document.getElementById("r-title"),
       fb=document.getElementById("r-fallback"),
       chatBox=document.getElementById("chat-box"),
       input=document.getElementById("chat-input"),
-      chatContainer=document.getElementById("chat-container"),
       socialBtn=document.getElementById("social-btn"),
-      logEl=document.getElementById("log");
+      logEl=document.getElementById("log"),
+      socialPanels=document.getElementById("social-panels");
 
 const voicePlayer = new Audio();
 let socialMode = false;
@@ -115,7 +119,6 @@ async function playVoice(voiceData, source="drop"){
     log(`🔊 ${source} playing`);
     voicePlayer.onended = ()=>{
       if(source !== "drop" && socialMode){
-        // resume drop voice after chat ends
         playVoice(currentDropVoice, "drop");
       }
     };
@@ -128,7 +131,7 @@ async function playVoice(voiceData, source="drop"){
 socialBtn.addEventListener("click",()=>{
   socialMode = true;
   socialBtn.style.display="none";
-  chatContainer.style.display="block";
+  socialPanels.style.display="block"; // show chat + console stacked below
   log(`🍜 entered 323 instant noodle social — room ${roomId}`);
 });
 
