@@ -1,8 +1,7 @@
-// server.js — unified 323drop backend + frontend
+// server.js — 323drop backend (API + chat only)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
 const OpenAI = require("openai");
 
 const app = express();
@@ -195,15 +194,9 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- Static frontend ---------------- */
-app.use(express.static(path.join(__dirname)));
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-  console.log(`🚀 323drop backend+frontend live on :${PORT}`);
+  console.log(`🚀 323drop backend live on :${PORT}`);
   await generateNextPick();
 });
