@@ -75,7 +75,6 @@
     font-size:13px; color:#0ff; text-transform:lowercase;
   }
 
-  /* Loading overlay */
   #loading-overlay {
     display:none;
     position:fixed;
@@ -132,8 +131,8 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  // ✅ Point this to your cosmetics backend
-  const API_BASE = "https://three23cosmetics-backend.onrender.com"; 
+  // ✅ auto-detect backend origin
+  const API_BASE = window.location.origin;
   const voicePlayer = new Audio();
 
   const t=document.getElementById("r-title"),
@@ -161,7 +160,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const r=await fetch(`${API_BASE}/api/trend`,{cache:"no-store"});
       const j=await r.json();
 
-      // ✅ Cosmetics backend fields with emojis
       t.textContent = `💄✨ ${j.product?.toLowerCase() || "untitled"} 🌸🔥`;
       a.textContent = `👩‍🎤💎 ${j.brand?.toLowerCase() || "unknown"} 🌍💖`;
       d.textContent = `💖🔥🦋 ${j.description?.toLowerCase() || ""} ✨🌈💅`;
