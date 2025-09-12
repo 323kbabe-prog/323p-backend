@@ -2,153 +2,104 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>323 instant noodle social</title>
+<title>323drop — gen z vibes (social mode)</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
   body {
     margin:0;
-    font-family:'Inter',sans-serif;
-    background: linear-gradient(-45deg,#ff00cc,#3333ff,#00ffee,#ff9900);
-    background-size:400% 400%;
-    animation:gradientShift 12s ease infinite;
+    color:#fff;
+    font-family: 'Inter', sans-serif;
     display:flex;
     flex-direction:column;
     align-items:center;
-    color:#fff;
+    background: linear-gradient(-45deg, #ff00cc, #3333ff, #00ffee, #ff9900);
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
   }
   @keyframes gradientShift {
-    0% {background-position:0% 50%}
-    50% {background-position:100% 50%}
-    100% {background-position:0% 50%}
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 
-  /* Feed card styled like base mode */
-  .feed-card {
-    width:100%;
-    max-width:900px;
-    margin:40px auto;
-    padding:24px;
-    border-radius:24px;
-    background:rgba(20,20,20,0.85);
+  .card {
+    background:rgba(20,20,20,0.8);
+    border-radius:24px; padding:24px; margin:20px auto; max-width:700px;
+    backdrop-filter: blur(10px);
     border:2px solid transparent;
     box-shadow:0 0 25px rgba(0,255,204,.4);
-    backdrop-filter:blur(10px);
+    animation: pulseBorder 3s infinite alternate;
+  }
+  @keyframes pulseBorder {
+    0% { box-shadow:0 0 15px rgba(255,0,255,.5); }
+    100% { box-shadow:0 0 35px rgba(0,255,255,.7); }
   }
 
-  .title {
-    font-size:20px;
-    font-weight:700;
-    color:#00ffcc;
-    margin-bottom:8px;
-    text-transform:lowercase;
-  }
-  .brand {
-    font-size:16px;
-    font-weight:600;
-    color:#fff;
-    margin-bottom:12px;
-    text-transform:lowercase;
-    opacity:.9;
-  }
-  .desc {
-    font-size:15px;
-    line-height:1.6;
-    color:#eee;
-    margin:12px 0;
-    text-transform:lowercase;
-  }
+  .title { font-size:26px; font-weight:800; margin:0.3em 0; color:#00ffcc; text-transform:lowercase; }
+  .artist { font-size:20px; font-weight:600; opacity:.95; color:#fff; text-transform:lowercase; }
+  .desc { margin:1em 0; font-size:15px; line-height:1.5; color:#eee; text-transform:lowercase; }
 
-  #hashtags {margin:12px 0;}
   .badge {
-    display:inline-block;
-    margin:4px;
-    padding:6px 14px;
+    display:inline-block; margin:6px; padding:6px 14px;
     background:linear-gradient(135deg,#ff00ff,#00ffff);
-    border-radius:20px;
-    font-size:13px;
-    font-weight:bold;
-    color:#000;
-    text-transform:lowercase;
+    border-radius:20px; font-size:13px; font-weight:bold; color:#000;
     box-shadow:0 0 20px rgba(255,0,255,.6);
+    text-transform:lowercase;
+    animation: floaty 2s ease-in-out infinite alternate;
   }
+  @keyframes floaty {
+    from { transform:translateY(0px); }
+    to { transform:translateY(-4px); }
+  }
+
+  .fallback {
+    color:#aaa; border:2px dashed #333; border-radius:20px; padding:20px; text-align:center;
+    font-style:italic; text-transform:lowercase;
+  }
+
+  .console {
+    font-family:monospace; background:#111; border-radius:16px; padding:12px;
+    margin:20px; max-height:200px; overflow:auto;
+    border:1px solid #222; box-shadow:inset 0 0 10px rgba(0,255,204,.2);
+    font-size:13px; color:#0ff; text-transform:lowercase;
+  }
+
+  /* Chat panels */
+  #social-panels { max-width:700px; width:100%; display:none; margin-bottom:40px; }
+  #chat-box { max-height:200px; overflow:auto; }
+  #chat-input { border:none; padding:8px; margin-top:6px; font-size:14px; width:100%; border-radius:8px; outline:none; }
+  .chat-msg { margin:4px 0; }
+  .chat-user { color:#00ffcc; font-weight:bold; }
 
   #social-btn {
     background:linear-gradient(90deg,#ff00ff,#00ffff);
-    color:#000;
-    font-size:14px;
-    font-weight:bold;
-    padding:8px 16px;
-    border:none;
-    border-radius:20px;
-    cursor:pointer;
-    margin-top:12px;
+    color:#000; font-size:14px; font-weight:bold;
+    padding:8px 16px; border:none; border-radius:20px;
+    cursor:pointer; margin-top:12px;
     box-shadow:0 0 15px rgba(255,0,255,.6);
     text-transform:lowercase;
   }
-
-  img.drop-img {
-    width:100%;
-    border-radius:20px;
-    margin-top:12px;
-    display:none;
-  }
-
-  /* Chat + console panels stacked below */
-  #social-panels {
-    max-width:900px;
-    width:100%;
-    margin-bottom:40px;
-    display:none;
-  }
-  .panel {
-    font-family:monospace;
-    background:#111;
-    border-radius:16px;
-    padding:12px;
-    max-height:200px;
-    overflow:auto;
-    border:1px solid #222;
-    font-size:13px;
-    color:#0ff;
-    box-sizing:border-box;
-    margin-top:20px;
-  }
-  #chat-input {
-    border:none;
-    padding:8px;
-    margin-top:6px;
-    font-size:14px;
-    width:100%;
-    border-radius:8px;
-    outline:none;
-  }
-  .chat-msg {margin:4px 0;}
-  .chat-user {color:#00ffcc; font-weight:bold;}
 </style>
 </head>
 <body>
 
-  <!-- Drop feed card identical to Base Mode -->
-  <section class="feed-card">
+<div id="app" style="width:100%;max-width:700px;">
+  <section class="card">
     <div class="title" id="r-title">—</div>
-    <div class="brand" id="r-artist">—</div>
+    <div class="artist" id="r-artist">—</div>
     <p class="desc" id="r-desc">—</p>
-    <div id="hashtags"></div>
-    <img id="r-img" class="drop-img" alt="trend image" />
-    <div id="r-fallback" style="color:#aaa; border:2px dashed #333; border-radius:16px; padding:12px; text-align:center; font-style:italic; margin-top:12px;">
-      no image yet
-    </div>
+    <div id="r-tags"></div>
+    <img id="r-img" alt="trend image" style="width:100%;display:none;border-radius:20px;margin-top:12px;" />
+    <div id="r-fallback" class="fallback">no image yet</div>
     <button id="social-btn">323 instant noodle social</button>
   </section>
 
-  <!-- Social mode panels stacked below -->
   <div id="social-panels">
-    <div id="chat-container">
-      <div class="panel" id="chat-box"></div>
-      <input id="chat-input" placeholder="type a message…" />
-    </div>
-    <div class="panel" id="log"></div>
+    <div class="console" id="chat-box"></div>
+    <input id="chat-input" placeholder="type a message…" />
+    <div class="console" id="log"></div>
   </div>
+</div>
 
 <script>
 // --- Room setup ---
@@ -164,17 +115,17 @@ const socket = io();
 const user = "323-noodle-" + Math.floor(100 + Math.random()*900);
 socket.emit("joinRoom", roomId);
 
-// --- UI elements ---
+// --- UI ---
 const t=document.getElementById("r-title"),
       a=document.getElementById("r-artist"),
       d=document.getElementById("r-desc"),
-      hashtags=document.getElementById("hashtags"),
+      tags=document.getElementById("r-tags"),
       img=document.getElementById("r-img"),
       fb=document.getElementById("r-fallback"),
       chatBox=document.getElementById("chat-box"),
       input=document.getElementById("chat-input"),
-      socialBtn=document.getElementById("social-btn"),
       logEl=document.getElementById("log"),
+      socialBtn=document.getElementById("social-btn"),
       socialPanels=document.getElementById("social-panels");
 
 const voicePlayer = new Audio();
@@ -199,7 +150,7 @@ async function loadDrop(){
     t.textContent = j.product || "—";
     a.textContent = j.brand || "—";
     d.textContent = j.description || "—";
-    hashtags.innerHTML = (j.hashtags||[]).map(x=>`<span class="badge">${x}</span>`).join("");
+    tags.innerHTML = (j.hashtags||[]).map(x=>`<span class="badge">${x}</span>`).join("");
 
     if(j.image){ img.src=j.image; img.style.display="block"; fb.style.display="none"; }
     else { img.style.display="none"; fb.style.display="block"; }
@@ -230,7 +181,7 @@ async function playVoice(voiceData, source="drop"){
   }
 }
 
-// --- Enter Social Mode ---
+// --- Social Mode trigger ---
 socialBtn.addEventListener("click",()=>{
   socialMode = true;
   socialBtn.style.display="none";
@@ -238,22 +189,12 @@ socialBtn.addEventListener("click",()=>{
   log(`🍜 entered 323 instant noodle social — room ${roomId}`);
 });
 
-// --- Send chat ---
-input.addEventListener("keydown",e=>{
-  if(e.key==="Enter" && input.value.trim()!==""){
-    const text=input.value.trim();
-    socket.emit("chatMessage",{roomId,user,text});
-    input.value="";
-  }
-});
-
 // --- Chat history (on join) ---
 socket.on("chatHistory", (history) => {
   chatBox.innerHTML = "";
   history.forEach(({ user: textUser, text }) => {
     const msg=document.createElement("div");
-    msg.className="chat-msg";
-    msg.innerHTML=`<span class="chat-user">${textUser}:</span> ${text}`;
+    msg.textContent=`${textUser}: ${text}`;
     chatBox.appendChild(msg);
   });
   chatBox.scrollTop=chatBox.scrollHeight;
@@ -262,8 +203,7 @@ socket.on("chatHistory", (history) => {
 // --- Receive chat ---
 socket.on("chatMessage",async ({user:textUser,text})=>{
   const msg=document.createElement("div");
-  msg.className="chat-msg";
-  msg.innerHTML=`<span class="chat-user">${textUser}:</span> ${text}`;
+  msg.textContent=`${textUser}: ${text}`;
   chatBox.appendChild(msg);
   chatBox.scrollTop=chatBox.scrollHeight;
 
@@ -278,6 +218,15 @@ socket.on("chatMessage",async ({user:textUser,text})=>{
     }catch(e){
       log("❌ chat voice error");
     }
+  }
+});
+
+// --- Send chat ---
+input.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && input.value.trim()!==""){
+    const text=input.value.trim();
+    socket.emit("chatMessage",{roomId,user,text});
+    input.value="";
   }
 });
 
