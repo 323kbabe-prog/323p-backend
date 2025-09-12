@@ -1,4 +1,4 @@
-// server.js — 323drop backend (queue pre-gen, history, chat, dual-mode)
+// server.js — 323drop backend (queue pre-gen, history, chat, dual-mode, safe drop gen)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -44,7 +44,7 @@ async function generateImageUrl(brand, product) {
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `Young female idol applying ${product} by ${brand}, pastel background, photocard style, glitter bokeh.`,
-      size: "1024x1024" // ✅ fixed: valid size
+      size: "1024x1024"
     });
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
@@ -69,18 +69,24 @@ async function generateVoice(text) {
   }
 }
 
+/* ---------------- Safe Drop Generator ---------------- */
 async function generateDrop(brand, product) {
-  const descriptionPromise = makeDescription(brand, product);
-  const imagePromise = generateImageUrl(brand, product);
-  const description = await descriptionPromise;
-  const [imageUrl, audioBuffer] = await Promise.all([
-    imagePromise,
+  const description = await makeDescription(brand, product);
+
+  // Run image + voice in parallel, allow failures
+  const [imageResult, voiceResult] = await Promise.allSettled([
+    generateImageUrl(brand, product),
     generateVoice(description)
   ]);
 
+  let imageUrl = null;
+  if (imageResult.status === "fulfilled") {
+    imageUrl = imageResult.value;
+  }
+
   let voiceBase64 = null;
-  if (audioBuffer) {
-    voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
+  if (voiceResult.status === "fulfilled" && voiceResult.value) {
+    voiceBase64 = `data:audio/mpeg;base64,${voiceResult.value.toString("base64")}`;
   }
 
   return {
@@ -131,7 +137,15 @@ app.get("/api/trend", async (req, res) => {
     return res.json(drop);
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
-    res.json({ brand: "Error", product: "System", description: "Retry soon…", hashtags:["#Error"], image:null, voice:null, refresh:5000 });
+    res.json({
+      brand: "Error",
+      product: "System",
+      description: "Retry soon…",
+      hashtags:["#Error"],
+      image:null,
+      voice:null,
+      refresh:5000
+    });
   }
 });
 
