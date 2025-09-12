@@ -1,7 +1,7 @@
 {
-  "name": "323p-backend",
+  "name": "323drop-backend",
   "version": "1.0.0",
-  "description": "323drop unified backend + frontend (cosmetics feed, GPT image/voice, auto-refresh)",
+  "description": "323drop backend (API + chat only, HTML served separately on GoDaddy)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
