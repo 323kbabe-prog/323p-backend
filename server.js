@@ -1,4 +1,4 @@
-// server.js — unified 323drop backend (frontend + APIs + chat + OpenAI, pre-gen + history)
+// server.js — 323drop backend with multi-drop pre-generation queue
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -44,7 +44,7 @@ async function generateImageUrl(brand, product) {
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `Young female idol applying ${product} by ${brand}, pastel background, photocard style, glitter bokeh.`,
-      size: "512x512" // smaller for faster
+      size: "512x512" // smaller for speed
     });
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
@@ -94,26 +94,19 @@ async function generateDrop(brand, product) {
   };
 }
 
-/* ---------------- Room cache with history ---------------- */
+/* ---------------- Room cache with queue ---------------- */
 const roomCache = {}; 
-// Example: { roomId: { history: [...], current, next } }
+// Example: { roomId: { queue: [drop, drop, drop] } }
 
-async function generateAndStoreDrop(roomId) {
-  const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-  const drop = await generateDrop(pick.brand, pick.product);
-
+async function fillQueue(roomId, targetSize = 3) {
   if (!roomCache[roomId]) {
-    roomCache[roomId] = { history: [], current: null, next: null };
+    roomCache[roomId] = { queue: [] };
   }
-
-  roomCache[roomId].current = drop;
-  roomCache[roomId].history.push(drop);
-
-  if (roomCache[roomId].history.length > 20) {
-    roomCache[roomId].history.shift(); // keep last 20
+  while (roomCache[roomId].queue.length < targetSize) {
+    const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+    const drop = await generateDrop(pick.brand, pick.product);
+    roomCache[roomId].queue.push(drop);
   }
-
-  return drop;
 }
 
 /* ---------------- Serve frontend ---------------- */
@@ -125,44 +118,29 @@ app.get("/", (req, res) => {
 app.get("/api/trend", async (req, res) => {
   try {
     const roomId = req.query.room || "global";
-    if (!roomCache[roomId]) {
-      roomCache[roomId] = { history: [], current: null, next: null };
-    }
 
-    if (!roomCache[roomId].current) {
-      await generateAndStoreDrop(roomId);
-    }
+    // Make sure queue is filled (3 drops by default)
+    await fillQueue(roomId, 3);
 
-    if (!roomCache[roomId].next) {
-      const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-      generateDrop(pick.brand, pick.product).then(drop => {
-        roomCache[roomId].next = drop;
-      });
-    }
+    // Serve the first ready drop instantly
+    const drop = roomCache[roomId].queue.shift();
 
-    const result = roomCache[roomId].current;
+    // Background refill
+    fillQueue(roomId, 3).catch(err=>console.error("❌ refill error:", err.message));
 
-    if (roomCache[roomId].next) {
-      roomCache[roomId].current = roomCache[roomId].next;
-      roomCache[roomId].history.push(roomCache[roomId].next);
-      if (roomCache[roomId].history.length > 20) {
-        roomCache[roomId].history.shift();
-      }
-      roomCache[roomId].next = null;
-    }
-
-    return res.json(result);
+    return res.json(drop);
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
     res.json({ brand: "Error", product: "System", description: "Retry soon…", hashtags:["#Error"], image:null, voice:null, refresh:5000 });
   }
 });
 
-// ✅ New history endpoint
+// History API (last 20 drops served in the room)
 app.get("/api/history", (req, res) => {
   const roomId = req.query.room || "global";
   if (!roomCache[roomId]) return res.json([]);
-  res.json(roomCache[roomId].history || []);
+  const history = roomCache[roomId].queue || [];
+  res.json(history);
 });
 
 app.get("/api/voice", async (req, res) => {
