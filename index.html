@@ -144,6 +144,18 @@ input.addEventListener("keydown",e=>{
   }
 });
 
+// --- Receive chat history when joining ---
+socket.on("chatHistory", (history) => {
+  chatBox.innerHTML = ""; // clear existing
+  history.forEach(({ user: textUser, text }) => {
+    const msg=document.createElement("div");
+    msg.className="chat-msg";
+    msg.innerHTML=`<span class="chat-user">${textUser}:</span> ${text}`;
+    chatBox.appendChild(msg);
+  });
+  chatBox.scrollTop=chatBox.scrollHeight;
+});
+
 // --- Receive chat ---
 socket.on("chatMessage",async ({user:textUser,text})=>{
   const msg=document.createElement("div");
