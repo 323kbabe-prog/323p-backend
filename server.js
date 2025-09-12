@@ -2,12 +2,12 @@
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
-const OpenAI = require("openai");
 const path = require("path");
+const OpenAI = require("openai");
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*", methods: ["GET", "POST"] } });
+const io = new Server(httpServer, { cors: { origin: "*" } });
 
 /* ---------------- OpenAI ---------------- */
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -16,18 +16,13 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 let nextPickCache = null;
 let generatingNext = false;
 
-/* ---------------- TikTok Top 50 Cosmetics ---------------- */
+/* ---------------- Sample products ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
   { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
-  { brand: "Anastasia Beverly Hills", product: "Clear Brow Gel" },
-  { brand: "YSL", product: "Make Me Blush Baby Doll" },
-  { brand: "Laura Mercier", product: "Loose Setting Powder" },
-  { brand: "Beautyblender", product: "Blending Sponge" },
-  { brand: "Givenchy", product: "Prisme Libre Blush" },
-  { brand: "Dior", product: "Lip Glow Oil" },
   { brand: "Rare Beauty", product: "Liquid Blush" },
   { brand: "Glow Recipe", product: "Watermelon Dew Drops" },
+  { brand: "Dior", product: "Lip Glow Oil" }
 ];
 
 /* ---------------- Helpers ---------------- */
@@ -53,27 +48,14 @@ async function makeDescription(brand, product) {
   }
 }
 
-function imagePrompt(brand, product) {
-  return `
-    Create a photocard-style image.
-    Subject: young female Korean idol, Gen-Z aesthetic.
-    She is holding and applying ${product} by ${brand}.
-    Pastel gradient background (milk pink, baby blue, lilac).
-    Glitter bokeh, glossy K-beauty skin glow.
-    Sticker shapes only (hearts, stars, sparkles).
-    Square 1:1 format. No text/logos.
-  `;
-}
-
 async function generateImageUrl(brand, product) {
   try {
     const out = await openai.images.generate({
       model: "gpt-image-1",
-      prompt: imagePrompt(brand, product),
+      prompt: `Photocard of young Korean idol applying ${product} by ${brand}, pastel gradient background, glitter bokeh, glossy skin glow, K-beauty style.`,
       size: "1024x1024"
     });
     const d = out?.data?.[0];
-    if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
   } catch (e) {
     console.error("❌ Image error:", e.message);
@@ -102,21 +84,13 @@ async function generateNextPick() {
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
     const description = await makeDescription(pick.brand, pick.product);
     const imageUrl = await generateImageUrl(pick.brand, pick.product);
-    const audioBuffer = await generateVoice(description);
-
-    let voiceBase64 = null;
-    if (audioBuffer) {
-      console.log("✅ OpenAI TTS voice generated");
-      voiceBase64 = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
-    }
 
     nextPickCache = {
       brand: pick.brand,
       product: pick.product,
       description,
-      hashtags: ["#TikTokMadeMeBuyIt", "#BeautyTok", "#NowTrending"],
+      hashtags: ["#BeautyTok", "#NowTrending"],
       image: imageUrl,
-      voice: voiceBase64,
       refresh: 3000
     };
   } finally {
@@ -128,20 +102,18 @@ async function generateNextPick() {
 app.get("/api/trend", async (req, res) => {
   try {
     if (!nextPickCache) {
-      console.log("⏳ First drop generating…");
       await generateNextPick();
     }
     const result = nextPickCache || {
       brand: "Loading",
       product: "Beauty Product",
-      description: "AI is warming up… please wait.",
-      hashtags: ["#BeautyTok"],
+      description: "AI is warming up…",
+      hashtags: ["#Loading"],
       image: "https://placehold.co/600x600?text=Loading",
-      voice: null,
       refresh: 5000
     };
     nextPickCache = null;
-    generateNextPick();
+    generateNextPick(); // prepare next one in background
     res.json(result);
   } catch (e) {
     console.error("❌ Trend API error:", e);
@@ -151,7 +123,6 @@ app.get("/api/trend", async (req, res) => {
       description: "Something went wrong. Retrying soon…",
       hashtags: ["#Error"],
       image: "https://placehold.co/600x600?text=Error",
-      voice: null,
       refresh: 5000
     });
   }
@@ -195,9 +166,8 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- Serve static app.js ---------------- */
-app.use(express.static(path.join(__dirname))); 
-// this makes https://three23p-backend.onrender.com/app.js available
+/* ---------------- Serve static (app.js etc.) ---------------- */
+app.use(express.static(path.join(__dirname)));
 
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
