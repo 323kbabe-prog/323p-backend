@@ -14,9 +14,9 @@
   .badge { display:inline-block; margin:4px; padding:6px 12px; background:linear-gradient(135deg,#ff00ff,#00ffff); border-radius:20px; font-size:13px; font-weight:bold; color:#000; text-transform:lowercase; box-shadow:0 0 12px rgba(255,0,255,.6); }
   #social-btn { background:linear-gradient(90deg,#ff00ff,#00ffff); color:#000; font-size:16px; font-weight:bold; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; margin:10px 0; box-shadow:0 0 15px rgba(255,0,255,.6); text-transform:lowercase; }
   .panel { font-family:monospace; background:#111; border-radius:16px; padding:12px; max-height:200px; overflow:auto; border:1px solid #222; font-size:13px; color:#0ff; width:100%; box-sizing:border-box; }
-  #chat-input { border:none; padding:12px; margin-top:8px; font-size:18px; width:100%; border-radius:8px; outline:none; }
-  .chat-msg { margin:6px 0; font-size:18px; line-height:1.6; }
-  .chat-user { color:#00ffcc; font-weight:bold; font-size:18px; }
+  #chat-input { border:none; padding:8px; margin-top:6px; font-size:14px; width:100%; border-radius:8px; outline:none; }
+  .chat-msg { margin:4px 0; }
+  .chat-user { color:#00ffcc; font-weight:bold; }
   img.drop-img { width:100%; border-radius:16px; margin-top:12px; display:none; }
 </style>
 </head>
@@ -119,21 +119,14 @@ async function playVoice(voiceData, source="drop"){
   }
 }
 
-// --- Open chat function ---
-function openChat() {
-  socialBtn.style.display = "none";
-  chatContainer.style.display = "block";
+// --- Chat join ---
+socialBtn.addEventListener("click",()=>{
+  socialBtn.style.display="none";
+  chatContainer.style.display="block";
   chatMode = true;
   autoMode = false;
   log(`🍜 joined 323 instant noodle social — room ${roomId}`);
-}
-
-socialBtn.addEventListener("click", openChat);
-
-// ✅ Auto-open chat if user already has ?room=xxx
-if (roomId) {
-  openChat();
-}
+});
 
 // --- Send chat ---
 input.addEventListener("keydown",e=>{
