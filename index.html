@@ -44,7 +44,7 @@
   </section>
 
 <script>
-// --- Auto-generate private room ---
+// --- Room setup ---
 const urlParams = new URLSearchParams(window.location.search);
 if (!urlParams.has("room")) {
   const newRoom = Math.random().toString(36).substring(2, 8);
@@ -52,21 +52,12 @@ if (!urlParams.has("room")) {
 }
 const roomId = urlParams.get("room");
 
-// --- Connect to backend ---
+// --- Socket.io ---
 const socket = io();
 const user = "323-noodle-" + Math.floor(100 + Math.random()*900);
 socket.emit("joinRoom", roomId);
 
-// log box
-const logEl=document.getElementById("log");
-function log(msg){
-  const p=document.createElement("p");
-  p.textContent=msg;
-  logEl.appendChild(p);
-  logEl.scrollTop=logEl.scrollHeight;
-}
-
-// UI elements
+// --- UI elements ---
 const t=document.getElementById("r-title"),
       a=document.getElementById("r-artist"),
       d=document.getElementById("r-desc"),
@@ -76,14 +67,22 @@ const t=document.getElementById("r-title"),
       chatBox=document.getElementById("chat-box"),
       input=document.getElementById("chat-input"),
       chatContainer=document.getElementById("chat-container"),
-      socialBtn=document.getElementById("social-btn");
+      socialBtn=document.getElementById("social-btn"),
+      logEl=document.getElementById("log");
 
 const voicePlayer = new Audio();
-let autoMode = true;
-let chatMode = false;
+let socialMode = false;
 let currentDropVoice = "";
 
-// --- Fetch synced drop (room-aware) ---
+// --- Console log helper ---
+function log(msg){
+  const p=document.createElement("p");
+  p.textContent=msg;
+  logEl.appendChild(p);
+  logEl.scrollTop=logEl.scrollHeight;
+}
+
+// --- Load drop ---
 async function loadDrop(){
   try{
     log("📡 fetching drop…");
@@ -107,25 +106,30 @@ async function loadDrop(){
   }
 }
 
-// --- Play voice ---
+// --- Play voice (with interrupt + resume) ---
 async function playVoice(voiceData, source="drop"){
   try{
     if(!voiceData) return;
     voicePlayer.src = voiceData;
     await voicePlayer.play();
     log(`🔊 ${source} playing`);
+    voicePlayer.onended = ()=>{
+      if(source !== "drop" && socialMode){
+        // resume drop voice after chat ends
+        playVoice(currentDropVoice, "drop");
+      }
+    };
   }catch(e){
     log("🔇 voice error");
   }
 }
 
-// --- Chat join ---
+// --- Enter Social Mode ---
 socialBtn.addEventListener("click",()=>{
+  socialMode = true;
   socialBtn.style.display="none";
   chatContainer.style.display="block";
-  chatMode = true;
-  autoMode = false;
-  log(`🍜 joined 323 instant noodle social — room ${roomId}`);
+  log(`🍜 entered 323 instant noodle social — room ${roomId}`);
 });
 
 // --- Send chat ---
@@ -145,7 +149,7 @@ socket.on("chatMessage",async ({user:textUser,text})=>{
   chatBox.appendChild(msg);
   chatBox.scrollTop=chatBox.scrollHeight;
 
-  if(chatMode){
+  if(socialMode){
     voicePlayer.pause();
     voicePlayer.currentTime=0;
     try{
@@ -159,7 +163,7 @@ socket.on("chatMessage",async ({user:textUser,text})=>{
   }
 });
 
-// start app
+// --- Initial load ---
 loadDrop();
 </script>
 </body>
