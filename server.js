@@ -54,12 +54,12 @@ async function generateImageUrl(brand, product) {
       model: "gpt-image-1",
       prompt: `Photocard of young Korean idol applying ${product} by ${brand}, pastel gradient background, glitter bokeh, glossy skin glow, K-beauty style.`,
       size: "1024x1024",
-      response_format: "b64_json" // ✅ force base64 response
+      response_format: "b64_json" // ✅ force base64 output
     });
 
     const d = out?.data?.[0];
     if (d?.b64_json) {
-      return `data:image/png;base64,${d.b64_json}`; // ✅ browser-friendly data URL
+      return `data:image/png;base64,${d.b64_json}`; // ✅ usable in <img src="">
     }
     if (d?.url) return d.url;
     console.warn("⚠️ Image response had no URL or base64:", out);
