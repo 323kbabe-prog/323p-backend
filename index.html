@@ -45,7 +45,7 @@
   .title { font-size:26px; font-weight:800; margin:0.3em 0; color:#00ffcc; text-transform:lowercase; }
   .artist { font-size:20px; font-weight:600; opacity:.95; color:#fff; text-transform:lowercase; }
 
-  /* 🍜 button */
+  /* 🍜 button style */
   .social-btn {
     display:inline-block;
     padding:16px 32px;
@@ -59,8 +59,8 @@
     font-family:'Inter',sans-serif;
     text-transform:lowercase;
     margin:10px 0;
+    cursor:default; /* looks disabled */
   }
-  .social-btn:hover { transform:scale(1.05); }
 
   .desc { margin:1em 0; font-size:15px; line-height:1.5; color:#eee; text-transform:lowercase; }
 
@@ -123,9 +123,11 @@
     <div class="title" id="r-title">—</div>
     <div class="artist" id="r-artist">—</div>
 
-    <!-- 🍜 social button -->
+    <!-- 🍜 button (does nothing) -->
     <div style="display:flex; justify-content:center; align-items:center; height:200px;">
-      <a id="social-link" class="social-btn" target="_blank">🍜 enter 323 instant noodle social</a>
+      <a href="javascript:void(0);" class="social-btn">
+        🍜 enter 323 instant noodle social
+      </a>
     </div>
 
     <p class="desc" id="r-desc">—</p>
@@ -143,8 +145,6 @@
   323cosmetics searching...
 </div>
 
-<!-- Socket.IO client -->
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const API_BASE = window.location.origin;
@@ -213,25 +213,6 @@ document.addEventListener("DOMContentLoaded", () => {
       voiceStatus.textContent="";
       setTimeout(loadTrend, 3000);
     }
-  }
-
-  // ✅ Auto-join room if ?room=xxxx is in URL
-  const params = new URLSearchParams(window.location.search);
-  const roomId = params.get("room");
-  if (roomId) {
-    const socket = io(API_BASE);
-    socket.emit("joinRoom", roomId);
-  }
-
-  // ✅ 🍜 button generates fresh random room each click
-  const socialLink = document.getElementById("social-link");
-  if (socialLink) {
-    socialLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      const newRoom = Math.random().toString(36).substring(2, 8);
-      const newUrl = `${API_BASE}/?room=${newRoom}`;
-      window.open(newUrl, "_blank");
-    });
   }
 
   document.getElementById("start-btn").addEventListener("click",()=>{
