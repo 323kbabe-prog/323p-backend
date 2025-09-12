@@ -1,6 +1,7 @@
 {
   "name": "323p-backend",
   "version": "1.0.0",
+  "description": "323drop unified backend + frontend (cosmetics feed, GPT image/voice, auto-refresh)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,7 +11,7 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "socket.io": "^4.7.5",
-    "openai": "^4.0.0"
+    "openai": "^4.0.0",
+    "socket.io": "^4.7.5"
   }
 }
