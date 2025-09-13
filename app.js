@@ -1,6 +1,6 @@
-// app.js — force emit lockTrend + debug logs
+// app.js — add brand+product to URL when 🍜 is clicked
 const socket = io("https://three23p-backend.onrender.com", {
-  transports: ["polling"]   // ✅ force polling for stability
+  transports: ["polling"]   // stable transport
 });
 
 let audioPlayer = null;
@@ -23,9 +23,18 @@ async function playAndWaitVoice(url) {
 
 /* Load trend */
 async function loadTrend() {
-  const url = `https://three23p-backend.onrender.com/api/trend${roomId ? "?room=" + roomId : ""}`;
-  console.log("🌐 Fetching trend from:", url);
+  let params = new URLSearchParams(window.location.search);
+  let brand = params.get("brand");
+  let product = params.get("product");
 
+  // If brand+product provided → freeze to that
+  let url = "https://three23p-backend.onrender.com/api/trend";
+  if (roomId) url += "?room=" + roomId;
+  if (brand && product) {
+    url += (roomId ? "&" : "?") + "brand=" + encodeURIComponent(brand) + "&product=" + encodeURIComponent(product);
+  }
+
+  console.log("🌐 Fetching trend from:", url);
   const res = await fetch(url);
   currentTrend = await res.json();
 
@@ -88,23 +97,24 @@ document.getElementById("chat-send").addEventListener("click", () => {
   document.getElementById("chat-input").value = "";
 });
 
-/* 🍜 button → lock trend */
+/* 🍜 button → lock brand+product in URL */
 document.getElementById("social-btn").addEventListener("click", () => {
   console.log("🍜 Button clicked by host");
 
   socialMode = true;
   document.getElementById("bottom-panel").style.display = "flex";
 
-  const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
+  // Add brand+product to URL so guests see same product
+  const brand = currentTrend?.brand?.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "Unknown";
+  const product = currentTrend?.product?.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "Unknown";
+
+  const newUrl = window.location.origin + window.location.pathname +
+    "?room=" + roomId +
+    "&brand=" + encodeURIComponent(brand) +
+    "&product=" + encodeURIComponent(product);
+
   window.history.replaceState({}, "", newUrl);
   console.log("🔗 Updated URL to:", newUrl);
-
-  // ✅ Force emit lockTrend even if currentTrend is null
-  console.log("🔐 Forcing lockTrend emit with:", roomId, currentTrend);
-  socket.emit("lockTrend", {
-    roomId: roomId || "unknown",
-    trend: currentTrend || { brand: "Unknown", product: "Unknown", description: "No trend loaded" }
-  });
 
   const btn = document.getElementById("social-btn");
   btn.disabled = true;
