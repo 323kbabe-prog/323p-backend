@@ -19,10 +19,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 let nextPickCache = null;
 let generatingNext = false;
 
-// Per-room state
-const roomTrend = {}; // roomId -> frozen trend
-const roomChats = {}; // roomId -> array of { user, text }
-
 /* ---------------- Products ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
@@ -66,9 +62,12 @@ async function makeDescription(brand, product) {
 
     let desc = completion.choices[0].message.content.trim();
 
-    // Add emojis
+    // Add emojis to brand + product mentions
+    const decoratedBrandProduct = decorateTextWithEmojis(`${brand} ${product}`);
     desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
     desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
+
+    // Add emojis at the end
     desc = `${desc} ${randomEmojis(3)}`;
 
     return desc;
@@ -97,6 +96,8 @@ async function generateImageUrl(brand, product) {
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
+
+    console.warn("⚠️ Image response had no URL or base64:", out);
   } catch (e) {
     console.error("❌ Image error:", e.response?.data || e.message);
   }
@@ -125,6 +126,7 @@ async function generateNextPick() {
     const description = await makeDescription(pick.brand, pick.product);
     const imageUrl = await generateImageUrl(pick.brand, pick.product);
 
+    // Decorate brand + product with emojis
     const decoratedBrand = decorateTextWithEmojis(pick.brand);
     const decoratedProduct = decorateTextWithEmojis(pick.product);
 
@@ -145,7 +147,10 @@ async function generateNextPick() {
 /* ---------------- API Routes ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    if (!nextPickCache) await generateNextPick();
+    if (!nextPickCache) {
+      console.log("⏳ Generating first drop...");
+      await generateNextPick();
+    }
     const result = nextPickCache || {
       brand: decorateTextWithEmojis("Loading"),
       product: decorateTextWithEmojis("Beauty Product"),
@@ -155,7 +160,7 @@ app.get("/api/trend", async (req, res) => {
       refresh: 5000
     };
     nextPickCache = null;
-    generateNextPick(); // prepare next one
+    generateNextPick(); // prepare next one in background
     res.json(result);
   } catch (e) {
     console.error("❌ Trend API error:", e.response?.data || e.message);
@@ -186,7 +191,20 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
-/* ---------------- Chat + Social Mode ---------------- */
+app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
+
+// 🔎 Debug route to verify API key
+app.get("/test-openai", async (req, res) => {
+  try {
+    const result = await openai.models.list();
+    res.json({ ok: true, modelCount: result.data.length });
+  } catch (e) {
+    console.error("❌ Test OpenAI failed:", e.response?.data || e.message);
+    res.status(500).json({ ok: false, error: e.response?.data || e.message });
+  }
+});
+
+/* ---------------- Chat (Socket.IO) ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
 
@@ -194,37 +212,11 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
-
-    if (!roomChats[roomId]) roomChats[roomId] = [];
-
-    // Send chat history
-    socket.emit("chatHistory", roomChats[roomId]);
-
-    // Send frozen trend if exists
-    if (roomTrend[roomId]) {
-      socket.emit("trendFreeze", roomTrend[roomId]);
-    }
   });
 
   socket.on("chatMessage", ({ roomId, user, text }) => {
-    if (!roomChats[roomId]) roomChats[roomId] = [];
-    roomChats[roomId].push({ user, text });
+    console.log(`💬 [${roomId}] ${user}: ${text}`);
     io.to(roomId).emit("chatMessage", { user, text });
-  });
-
-  socket.on("freezeTrend", (trend) => {
-    if (socket.roomId) {
-      roomTrend[socket.roomId] = trend;
-      console.log(`📌 Room ${socket.roomId} trend frozen.`);
-      io.to(socket.roomId).emit("trendFreeze", trend); // broadcast
-    }
-  });
-
-  // 🚩 New: respond to requestTrend
-  socket.on("requestTrend", (roomId) => {
-    if (roomTrend[roomId]) {
-      socket.emit("trendFreeze", roomTrend[roomId]);
-    }
   });
 
   socket.on("disconnect", () => {
@@ -232,7 +224,7 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- Serve static ---------------- */
+/* ---------------- Serve static (app.js etc.) ---------------- */
 app.use(express.static(path.join(__dirname)));
 
 /* ---------------- Start ---------------- */
