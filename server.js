@@ -56,12 +56,12 @@ async function generateImageUrl(brand, product) {
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `
-        Photocard-style image.
+        Create a photocard-style image.
         Subject: young female Korean idol, Gen-Z aesthetic.
         She is holding and applying ${product} by ${brand}.
         Pastel gradient background (milk pink, baby blue, lilac).
         Glitter bokeh, glossy K-beauty skin glow.
-        Sticker shapes only (hearts, stars, sparkles).
+        Sticker shapes only (hearts, stars, sparkles, emoji, text emoticon).
         Square 1:1 format. No text/logos.
       `,
       size: "1024x1024"
