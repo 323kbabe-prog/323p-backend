@@ -1,4 +1,4 @@
-// server.js — 323drop backend (description + image + voice + chat)
+// server.js — 323drop backend (description + image + voice + chat + emojis)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -7,7 +7,7 @@ const OpenAI = require("openai");
 const cors = require("cors");
 
 const app = express();
-app.use(cors({ origin: "*" })); // allow requests from anywhere
+app.use(cors({ origin: "*" }));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
@@ -28,6 +28,21 @@ const TOP50_COSMETICS = [
   { brand: "Dior", product: "Lip Glow Oil" }
 ];
 
+/* ---------------- Emoji Helper ---------------- */
+const EMOJI_POOL = ["✨", "💖", "🔥", "👀", "😍", "💅", "🌈", "🌸", "😎", "🤩", "🫶", "🥹", "🧃", "🌟", "💋"];
+
+function randomEmojis(count = 2) {
+  let out = [];
+  for (let i = 0; i < count; i++) {
+    out.push(EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]);
+  }
+  return out.join(" ");
+}
+
+function decorateTextWithEmojis(text) {
+  return `${randomEmojis(2)} ${text} ${randomEmojis(2)}`;
+}
+
 /* ---------------- Helpers ---------------- */
 async function makeDescription(brand, product) {
   try {
@@ -44,10 +59,21 @@ async function makeDescription(brand, product) {
         { role: "user", content: prompt }
       ]
     });
-    return completion.choices[0].message.content.trim();
+
+    let desc = completion.choices[0].message.content.trim();
+
+    // Add emojis to brand + product mentions
+    const decoratedBrandProduct = decorateTextWithEmojis(`${brand} ${product}`);
+    desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
+    desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
+
+    // Add emojis at the end
+    desc = `${desc} ${randomEmojis(3)}`;
+
+    return desc;
   } catch (e) {
     console.error("❌ Description error:", e.response?.data || e.message);
-    return `Using ${product} by ${brand} feels unforgettable and addictive.`;
+    return decorateTextWithEmojis(`Using ${product} by ${brand} feels unforgettable and addictive.`);
   }
 }
 
@@ -100,9 +126,13 @@ async function generateNextPick() {
     const description = await makeDescription(pick.brand, pick.product);
     const imageUrl = await generateImageUrl(pick.brand, pick.product);
 
+    // Decorate brand + product with emojis
+    const decoratedBrand = decorateTextWithEmojis(pick.brand);
+    const decoratedProduct = decorateTextWithEmojis(pick.product);
+
     nextPickCache = {
-      brand: pick.brand,
-      product: pick.product,
+      brand: decoratedBrand,
+      product: decoratedProduct,
       description,
       hashtags: ["#BeautyTok", "#NowTrending"],
       image: imageUrl,
@@ -122,9 +152,9 @@ app.get("/api/trend", async (req, res) => {
       await generateNextPick();
     }
     const result = nextPickCache || {
-      brand: "Loading",
-      product: "Beauty Product",
-      description: "AI is warming up… please wait.",
+      brand: decorateTextWithEmojis("Loading"),
+      product: decorateTextWithEmojis("Beauty Product"),
+      description: decorateTextWithEmojis("AI is warming up… please wait."),
       hashtags: ["#Loading"],
       image: "https://placehold.co/600x600?text=Loading",
       refresh: 5000
@@ -135,9 +165,9 @@ app.get("/api/trend", async (req, res) => {
   } catch (e) {
     console.error("❌ Trend API error:", e.response?.data || e.message);
     res.json({
-      brand: "Error",
-      product: "System",
-      description: "Something went wrong. Retrying soon…",
+      brand: decorateTextWithEmojis("Error"),
+      product: decorateTextWithEmojis("System"),
+      description: decorateTextWithEmojis("Something went wrong. Retrying soon…"),
       hashtags: ["#Error"],
       image: "https://placehold.co/600x600?text=Error",
       refresh: 5000
