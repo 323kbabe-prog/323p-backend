@@ -1,4 +1,4 @@
-// app.js — trend feed + chat + room locking
+// app.js — trend feed + chat + room locking (with debug logs)
 const socket = io("https://three23p-backend.onrender.com");
 
 let audioPlayer = null;
@@ -24,6 +24,8 @@ async function loadTrend() {
   const res = await fetch(`https://three23p-backend.onrender.com/api/trend${roomId ? "?room=" + roomId : ""}`);
   currentTrend = await res.json();
 
+  console.log("🎶 Trend loaded:", currentTrend); // DEBUG
+
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
   document.getElementById("r-desc").innerText = currentTrend.description;
@@ -41,7 +43,6 @@ async function loadTrend() {
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(currentTrend.description);
   await playAndWaitVoice(url);
 
-  // Only auto-cycle if not frozen in social mode
   if (!socialMode) loadTrend();
 }
 
@@ -81,24 +82,25 @@ document.getElementById("chat-send").addEventListener("click", () => {
 
 /* 🍜 button → lock trend */
 document.getElementById("social-btn").addEventListener("click", () => {
+  console.log("🍜 button clicked"); // DEBUG
+
   socialMode = true;
   document.getElementById("bottom-panel").style.display = "flex";
 
-  // Update URL so it can be shared
   const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
   window.history.replaceState({}, "", newUrl);
 
-  // Tell backend to lock this trend for the room
   if (currentTrend) {
+    console.log("🔐 Emitting lockTrend:", roomId, currentTrend); // DEBUG
     socket.emit("lockTrend", { roomId, trend: currentTrend });
+  } else {
+    console.warn("⚠️ No currentTrend to lock!");
   }
 
-  // Disable button so it can't be clicked again
   const btn = document.getElementById("social-btn");
   btn.disabled = true;
   btn.style.cursor = "default";
   btn.textContent = "share the url to your shopping companion and chat";
 
-  // Reload to ensure everyone sees the frozen feed
   if (currentTrend) loadTrend();
 });
