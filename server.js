@@ -19,6 +19,10 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 let nextPickCache = null;
 let generatingNext = false;
 
+// Per-room state
+const roomTrend = {}; // roomId -> frozen trend
+const roomChats = {}; // roomId -> array of { user, text }
+
 /* ---------------- Products ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
@@ -29,10 +33,16 @@ const TOP50_COSMETICS = [
 ];
 
 /* ---------------- Emoji Helper ---------------- */
-const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
+const EMOJI_POOL = ["✨", "💖", "🔥", "👀", "😍", "💅", "🌈", "🌸", "😎", "🤩", "🫶", "🥹", "🧃", "🌟", "💋"];
+
 function randomEmojis(count = 2) {
-  return Array.from({length:count},()=>EMOJI_POOL[Math.floor(Math.random()*EMOJI_POOL.length)]).join(" ");
+  let out = [];
+  for (let i = 0; i < count; i++) {
+    out.push(EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]);
+  }
+  return out.join(" ");
 }
+
 function decorateTextWithEmojis(text) {
   return `${randomEmojis(2)} ${text} ${randomEmojis(2)}`;
 }
@@ -53,10 +63,16 @@ async function makeDescription(brand, product) {
         { role: "user", content: prompt }
       ]
     });
+
     let desc = completion.choices[0].message.content.trim();
+
+    // Add emojis to brand + product mentions
     desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
     desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
+
+    // Add emojis at the end
     desc = `${desc} ${randomEmojis(3)}`;
+
     return desc;
   } catch (e) {
     console.error("❌ Description error:", e.response?.data || e.message);
@@ -79,9 +95,12 @@ async function generateImageUrl(brand, product) {
       `,
       size: "1024x1024"
     });
+
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
+
+    console.warn("⚠️ Image response had no URL or base64:", out);
   } catch (e) {
     console.error("❌ Image error:", e.response?.data || e.message);
   }
@@ -109,9 +128,13 @@ async function generateNextPick() {
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
     const description = await makeDescription(pick.brand, pick.product);
     const imageUrl = await generateImageUrl(pick.brand, pick.product);
+
+    const decoratedBrand = decorateTextWithEmojis(pick.brand);
+    const decoratedProduct = decorateTextWithEmojis(pick.product);
+
     nextPickCache = {
-      brand: decorateTextWithEmojis(pick.brand),
-      product: decorateTextWithEmojis(pick.product),
+      brand: decoratedBrand,
+      product: decoratedProduct,
       description,
       hashtags: ["#BeautyTok", "#NowTrending"],
       image: imageUrl,
@@ -126,7 +149,10 @@ async function generateNextPick() {
 /* ---------------- API Routes ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    if (!nextPickCache) await generateNextPick();
+    if (!nextPickCache) {
+      console.log("⏳ Generating first drop...");
+      await generateNextPick();
+    }
     const result = nextPickCache || {
       brand: decorateTextWithEmojis("Loading"),
       product: decorateTextWithEmojis("Beauty Product"),
@@ -136,7 +162,7 @@ app.get("/api/trend", async (req, res) => {
       refresh: 5000
     };
     nextPickCache = null;
-    generateNextPick();
+    generateNextPick(); // prepare next one in background
     res.json(result);
   } catch (e) {
     console.error("❌ Trend API error:", e.response?.data || e.message);
@@ -155,8 +181,10 @@ app.get("/api/voice", async (req, res) => {
   try {
     const text = req.query.text || "";
     if (!text) return res.status(400).json({ error: "Missing text" });
+
     const audioBuffer = await generateVoice(text);
     if (!audioBuffer) return res.status(500).json({ error: "No audio generated" });
+
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
   } catch (e) {
@@ -166,19 +194,18 @@ app.get("/api/voice", async (req, res) => {
 });
 
 app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
+
 app.get("/test-openai", async (req, res) => {
   try {
     const result = await openai.models.list();
     res.json({ ok: true, modelCount: result.data.length });
   } catch (e) {
+    console.error("❌ Test OpenAI failed:", e.response?.data || e.message);
     res.status(500).json({ ok: false, error: e.response?.data || e.message });
   }
 });
 
-/* ---------------- Room Data ---------------- */
-const roomData = {}; // { roomId: { history:[], trend:null } }
-
-/* ---------------- Chat (Socket.IO) ---------------- */
+/* ---------------- Chat + Social Mode ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
 
@@ -186,21 +213,33 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
-    if(roomData[roomId]){
-      socket.emit("chatHistory",{ history:roomData[roomId].history, trend:roomData[roomId].trend });
+
+    // Send existing chat history if any
+    if (roomChats[roomId]) {
+      socket.emit("chatHistory", roomChats[roomId]);
+    } else {
+      roomChats[roomId] = [];
+    }
+
+    // Send frozen trend if exists
+    if (roomTrend[roomId]) {
+      socket.emit("trendFreeze", roomTrend[roomId]);
     }
   });
 
-  socket.on("lockTrend", ({roomId,trend})=>{
-    if(!roomData[roomId]) roomData[roomId] = { history:[], trend:null };
-    roomData[roomId].trend = trend;
-    console.log(`🔒 Feed locked for room ${roomId}`);
+  socket.on("chatMessage", ({ roomId, user, text }) => {
+    console.log(`💬 [${roomId}] ${user}: ${text}`);
+    if (!roomChats[roomId]) roomChats[roomId] = [];
+    roomChats[roomId].push({ user, text });
+    io.to(roomId).emit("chatMessage", { user, text });
   });
 
-  socket.on("chatMessage", ({ roomId, user, text }) => {
-    if(!roomData[roomId]) roomData[roomId]={ history:[], trend:null };
-    roomData[roomId].history.push({ user, text });
-    io.to(roomId).emit("chatMessage", { user, text });
+  socket.on("freezeTrend", (trend) => {
+    // Save trend for this room
+    if (socket.roomId) {
+      roomTrend[socket.roomId] = trend;
+      console.log(`📌 Room ${socket.roomId} trend frozen.`);
+    }
   });
 
   socket.on("disconnect", () => {
@@ -208,7 +247,7 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- Serve static ---------------- */
+/* ---------------- Serve static (app.js etc.) ---------------- */
 app.use(express.static(path.join(__dirname)));
 
 /* ---------------- Start ---------------- */
