@@ -11,13 +11,20 @@ let voiceUrl = "";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function playVoice(url) {
   if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+  document.getElementById("social-btn").style.display = "none"; // hide before
   return new Promise((resolve) => {
     audioPlayer = new Audio(url);
     audioPlayer.onplay = () => {
-      document.getElementById("social-btn").style.display = "block"; // 👈 Show 🍜
+      document.getElementById("social-btn").style.display = "block"; // show when start
     };
-    audioPlayer.onended = () => resolve();
-    audioPlayer.onerror = () => resolve();
+    audioPlayer.onended = () => {
+      document.getElementById("social-btn").style.display = "none"; // hide after
+      resolve();
+    };
+    audioPlayer.onerror = () => {
+      document.getElementById("social-btn").style.display = "none"; // hide on error
+      resolve();
+    };
     audioPlayer.play();
   });
 }
