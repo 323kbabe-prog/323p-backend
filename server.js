@@ -1,13 +1,13 @@
-// server.js — 323drop backend (API + chat + static app.js)
+// server.js — 323drop backend (description + image + voice + chat)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 const OpenAI = require("openai");
-const cors = require("cors"); // ✅ add CORS
+const cors = require("cors");
 
 const app = express();
-app.use(cors({ origin: "*" })); // ✅ allow requests from anywhere
+app.use(cors({ origin: "*" })); // allow requests from anywhere
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
@@ -55,14 +55,20 @@ async function generateImageUrl(brand, product) {
   try {
     const out = await openai.images.generate({
       model: "gpt-image-1",
-      prompt: `Photocard of young Korean idol applying ${product} by ${brand}, pastel gradient background, glitter bokeh, glossy skin glow, K-beauty style.`,
+      prompt: `
+        Photocard-style image.
+        Subject: young female Korean idol, Gen-Z aesthetic.
+        She is holding and applying ${product} by ${brand}.
+        Pastel gradient background (milk pink, baby blue, lilac).
+        Glitter bokeh, glossy K-beauty skin glow.
+        Sticker shapes only (hearts, stars, sparkles).
+        Square 1:1 format. No text/logos.
+      `,
       size: "1024x1024"
     });
 
     const d = out?.data?.[0];
-    if (d?.b64_json) {
-      return `data:image/png;base64,${d.b64_json}`;
-    }
+    if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
 
     console.warn("⚠️ Image response had no URL or base64:", out);
