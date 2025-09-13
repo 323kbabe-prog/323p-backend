@@ -63,7 +63,7 @@ async function loadTrend() {
   }
 
   const url = `/api/voice?text=${encodeURIComponent(currentTrend.description)}`;
-  startVoiceLoop(url,true); // mark as real trend voice
+  startVoiceLoop(url,true); // real trend voice only
 }
 
 /* Chat handling */
@@ -74,7 +74,7 @@ async function handleChatMessage({ user, text }) {
   document.getElementById("messages").appendChild(msgEl);
 
   const chatVoiceUrl = `/api/voice?text=${encodeURIComponent(text)}`;
-  await playVoice(chatVoiceUrl,false); // chats don’t trigger 🍜
+  await playVoice(chatVoiceUrl,false); // chat voice never triggers 🍜
 
   chatInterrupting = false;
   if (currentTrend) {
