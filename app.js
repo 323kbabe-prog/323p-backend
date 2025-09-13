@@ -1,47 +1,33 @@
-// app.js — auto trend + random room in URL
+// app.js — auto trend + social lock
 const socket = io("https://three23p-backend.onrender.com");
 
 let audioPlayer = null;
-let voiceLoopActive = false;
-let chatInterrupting = false;
 let currentTrend = null;
-let voiceUrl = "";
+let roomId = null;
+let socialMode = false;
 
-/* Helpers */
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-async function playVoice(url) {
-  if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
-  return new Promise((resolve) => {
+/* Voice */
+async function playAndWaitVoice(url) {
+  return new Promise(resolve => {
+    if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+    document.getElementById("voice-status").textContent = "🔄 loading voice…";
     audioPlayer = new Audio(url);
-    audioPlayer.onended = () => resolve();
-    audioPlayer.onerror = () => resolve();
+    audioPlayer.onplay = () => { document.getElementById("voice-status").textContent = "🔊 reading…"; };
+    audioPlayer.onended = () => { document.getElementById("voice-status").textContent = "⏸ done"; resolve(); };
+    audioPlayer.onerror = () => { document.getElementById("voice-status").textContent = "⚠️ voice error"; resolve(); };
     audioPlayer.play();
   });
 }
 
-/* Voice loop */
-async function startVoiceLoop(url) {
-  voiceUrl = url;
-  voiceLoopActive = true;
-  while (voiceLoopActive) {
-    if (chatInterrupting) { await sleep(500); continue; }
-    await playVoice(voiceUrl);
-    await sleep(500);
-  }
-}
-function stopVoiceLoop() {
-  voiceLoopActive = false;
-  if (audioPlayer) audioPlayer.pause();
-}
-
-/* Trend loader */
+/* Load trend */
 async function loadTrend() {
-  const res = await fetch("/api/trend");
+  const res = await fetch(`https://three23p-backend.onrender.com/api/trend${roomId ? "?room=" + roomId : ""}`);
   currentTrend = await res.json();
 
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
   document.getElementById("r-desc").innerText = currentTrend.description;
+  document.getElementById("social-btn").style.display = "block";
 
   if (currentTrend.image) {
     document.getElementById("r-img").src = currentTrend.image;
@@ -52,52 +38,61 @@ async function loadTrend() {
     document.getElementById("r-fallback").style.display = "block";
   }
 
-  const url = `/api/voice?text=${encodeURIComponent(currentTrend.description)}`;
-  startVoiceLoop(url);
+  const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(currentTrend.description);
+  await playAndWaitVoice(url);
+  if (!socialMode) loadTrend();
 }
 
-/* Chat handling */
-async function handleChatMessage({ user, text }) {
-  chatInterrupting = true; stopVoiceLoop();
+/* Chat */
+function addChatLine(user, text) {
   const msgEl = document.createElement("p");
-  msgEl.textContent = `${user}: ${text}`;
+  msgEl.textContent = user + ": " + text;
   document.getElementById("messages").appendChild(msgEl);
-
-  const chatVoiceUrl = `/api/voice?text=${encodeURIComponent(text)}`;
-  await playVoice(chatVoiceUrl);
-
-  chatInterrupting = false;
-  if (currentTrend) {
-    const url = `/api/voice?text=${encodeURIComponent(currentTrend.description)}`;
-    startVoiceLoop(url);
-  }
 }
+socket.on("chatMessage", (msg) => addChatLine(msg.user, msg.text));
 
-/* Socket.IO */
-socket.on("connect", () => {
+/* Start button */
+document.getElementById("start-btn").addEventListener("click", () => {
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+
   let params = new URLSearchParams(window.location.search);
-  let roomId = params.get("room");
-  if (!roomId) {
-    roomId = "default-" + Math.floor(Math.random() * 9999);
-    const newUrl = window.location.origin + "?room=" + roomId;
-    window.history.replaceState({}, "", newUrl);
-  }
-
+  roomId = params.get("room");
+  if (!roomId) { roomId = "default-" + Math.floor(Math.random() * 9999); }
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
-  document.getElementById("chat-box").style.display = "block";
 
-  // 🔥 Load trend immediately after joining room
+  if (params.get("room")) {
+    socialMode = true;
+    document.getElementById("bottom-panel").style.display = "flex";
+  }
   loadTrend();
 });
 
-socket.on("chatMessage", (msg) => handleChatMessage(msg));
-
-/* Chat send */
+/* Send chat */
 document.getElementById("chat-send").addEventListener("click", () => {
   const text = document.getElementById("chat-input").value;
   if (!text.trim()) return;
-  const room = document.getElementById("room-label").innerText.replace("room: ", "");
-  socket.emit("chatMessage", { roomId: room, user: "anon", text });
+  socket.emit("chatMessage", { roomId: roomId, user: "anon", text });
   document.getElementById("chat-input").value = "";
+});
+
+/* 🍜 button → lock trend */
+document.getElementById("social-btn").addEventListener("click", () => {
+  socialMode = true;
+  document.getElementById("bottom-panel").style.display = "flex";
+
+  const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
+  window.history.replaceState({}, "", newUrl);
+
+  if (currentTrend) {
+    socket.emit("lockTrend", { roomId, trend: currentTrend });
+  }
+
+  const btn = document.getElementById("social-btn");
+  btn.disabled = true;
+  btn.style.cursor = "default";
+  btn.textContent = "share the url to your shopping companion and chat";
+
+  if (currentTrend) loadTrend();
 });
