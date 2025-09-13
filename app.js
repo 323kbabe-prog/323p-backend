@@ -1,4 +1,4 @@
-// app.js — add brand+product to URL when 🍜 is clicked
+// app.js — add brand+product to URL correctly
 const socket = io("https://three23p-backend.onrender.com", {
   transports: ["polling"]   // stable transport
 });
@@ -27,7 +27,7 @@ async function loadTrend() {
   let brand = params.get("brand");
   let product = params.get("product");
 
-  // If brand+product provided → freeze to that
+  // Build API URL
   let url = "https://three23p-backend.onrender.com/api/trend";
   if (roomId) url += "?room=" + roomId;
   if (brand && product) {
@@ -104,9 +104,9 @@ document.getElementById("social-btn").addEventListener("click", () => {
   socialMode = true;
   document.getElementById("bottom-panel").style.display = "flex";
 
-  // Add brand+product to URL so guests see same product
-  const brand = currentTrend?.brand?.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "Unknown";
-  const product = currentTrend?.product?.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "Unknown";
+  // ✅ Use brand+product directly, including emojis
+  const brand = currentTrend?.brand || "Unknown";
+  const product = currentTrend?.product || "Unknown";
 
   const newUrl = window.location.origin + window.location.pathname +
     "?room=" + roomId +
