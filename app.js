@@ -1,4 +1,4 @@
-// app.js — trend feed + chat + room locking (with debug logs)
+// app.js — with loud debug logs for 🍜 testing
 const socket = io("https://three23p-backend.onrender.com");
 
 let audioPlayer = null;
@@ -21,10 +21,13 @@ async function playAndWaitVoice(url) {
 
 /* Load trend */
 async function loadTrend() {
-  const res = await fetch(`https://three23p-backend.onrender.com/api/trend${roomId ? "?room=" + roomId : ""}`);
+  const url = `https://three23p-backend.onrender.com/api/trend${roomId ? "?room=" + roomId : ""}`;
+  console.log("🌐 Fetching trend from:", url);
+
+  const res = await fetch(url);
   currentTrend = await res.json();
 
-  console.log("🎶 Trend loaded:", currentTrend); // DEBUG
+  console.log("🎶 Trend loaded:", currentTrend);
 
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
@@ -40,8 +43,8 @@ async function loadTrend() {
     document.getElementById("r-fallback").style.display = "block";
   }
 
-  const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(currentTrend.description);
-  await playAndWaitVoice(url);
+  const voiceUrl = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(currentTrend.description);
+  await playAndWaitVoice(voiceUrl);
 
   if (!socialMode) loadTrend();
 }
@@ -56,6 +59,8 @@ socket.on("chatMessage", (msg) => addChatLine(msg.user, msg.text));
 
 /* Start button */
 document.getElementById("start-btn").addEventListener("click", () => {
+  console.log("▶️ Start button clicked");
+
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
 
@@ -76,25 +81,31 @@ document.getElementById("start-btn").addEventListener("click", () => {
 document.getElementById("chat-send").addEventListener("click", () => {
   const text = document.getElementById("chat-input").value;
   if (!text.trim()) return;
+  console.log("💬 Sending chat:", text);
   socket.emit("chatMessage", { roomId: roomId, user: "anon", text });
   document.getElementById("chat-input").value = "";
 });
 
 /* 🍜 button → lock trend */
 document.getElementById("social-btn").addEventListener("click", () => {
-  console.log("🍜 button clicked"); // DEBUG
+  console.log("🍜 Button clicked by host");
 
   socialMode = true;
   document.getElementById("bottom-panel").style.display = "flex";
 
   const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
   window.history.replaceState({}, "", newUrl);
+  console.log("🔗 Updated URL to:", newUrl);
 
   if (currentTrend) {
-    console.log("🔐 Emitting lockTrend:", roomId, currentTrend); // DEBUG
-    socket.emit("lockTrend", { roomId, trend: currentTrend });
+    if (socket.connected) {
+      console.log("🔐 Emitting lockTrend for room:", roomId, currentTrend);
+      socket.emit("lockTrend", { roomId, trend: currentTrend });
+    } else {
+      console.warn("⚠️ Socket not connected, cannot emit lockTrend");
+    }
   } else {
-    console.warn("⚠️ No currentTrend to lock!");
+    console.warn("⚠️ No currentTrend available to lock");
   }
 
   const btn = document.getElementById("social-btn");
