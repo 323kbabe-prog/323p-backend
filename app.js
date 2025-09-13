@@ -1,6 +1,6 @@
-// app.js — with polling-only transport + debug logs
+// app.js — force emit lockTrend + debug logs
 const socket = io("https://three23p-backend.onrender.com", {
-  transports: ["polling"]   // ✅ Force polling (more reliable on GoDaddy/Render)
+  transports: ["polling"]   // ✅ force polling for stability
 });
 
 let audioPlayer = null;
@@ -99,16 +99,12 @@ document.getElementById("social-btn").addEventListener("click", () => {
   window.history.replaceState({}, "", newUrl);
   console.log("🔗 Updated URL to:", newUrl);
 
-  if (currentTrend) {
-    if (socket.connected) {
-      console.log("🔐 Emitting lockTrend for room:", roomId, currentTrend);
-      socket.emit("lockTrend", { roomId, trend: currentTrend });
-    } else {
-      console.warn("⚠️ Socket not connected, cannot emit lockTrend");
-    }
-  } else {
-    console.warn("⚠️ No currentTrend available to lock");
-  }
+  // ✅ Force emit lockTrend even if currentTrend is null
+  console.log("🔐 Forcing lockTrend emit with:", roomId, currentTrend);
+  socket.emit("lockTrend", {
+    roomId: roomId || "unknown",
+    trend: currentTrend || { brand: "Unknown", product: "Unknown", description: "No trend loaded" }
+  });
 
   const btn = document.getElementById("social-btn");
   btn.disabled = true;
