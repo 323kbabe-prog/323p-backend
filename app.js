@@ -1,7 +1,38 @@
 // app.js — auto trend + random room in URL
 const socket = io("https://three23p-backend.onrender.com");
 
+let audioPlayer = null;
+let voiceLoopActive = false;
+let chatInterrupting = false;
 let currentTrend = null;
+let voiceUrl = "";
+
+/* Helpers */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+async function playVoice(url) {
+  if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+  return new Promise((resolve) => {
+    audioPlayer = new Audio(url);
+    audioPlayer.onended = () => resolve();
+    audioPlayer.onerror = () => resolve();
+    audioPlayer.play();
+  });
+}
+
+/* Voice loop */
+async function startVoiceLoop(url) {
+  voiceUrl = url;
+  voiceLoopActive = true;
+  while (voiceLoopActive) {
+    if (chatInterrupting) { await sleep(500); continue; }
+    await playVoice(voiceUrl);
+    await sleep(500);
+  }
+}
+function stopVoiceLoop() {
+  voiceLoopActive = false;
+  if (audioPlayer) audioPlayer.pause();
+}
 
 /* Trend loader */
 async function loadTrend() {
@@ -13,30 +44,32 @@ async function loadTrend() {
   document.getElementById("r-desc").innerText = currentTrend.description;
 
   if (currentTrend.image) {
-    const img = document.getElementById("r-img");
-    img.src = currentTrend.image;
-    img.style.display = "none";
+    document.getElementById("r-img").src = currentTrend.image;
+    document.getElementById("r-img").style.display = "block";
     document.getElementById("r-fallback").style.display = "none";
-    document.getElementById("social-btn").style.display = "none";
-
-    img.onload = () => {
-      img.style.display = "block";
-      if (
-        !/loading/i.test(currentTrend.brand) &&
-        !/loading/i.test(currentTrend.product) &&
-        !/warming up/i.test(currentTrend.description)
-      ) {
-        document.getElementById("social-btn").style.display = "block";
-      }
-    };
-    img.onerror = () => {
-      document.getElementById("r-fallback").style.display = "block";
-      document.getElementById("social-btn").style.display = "none";
-    };
   } else {
     document.getElementById("r-img").style.display = "none";
     document.getElementById("r-fallback").style.display = "block";
-    document.getElementById("social-btn").style.display = "none";
+  }
+
+  const url = `/api/voice?text=${encodeURIComponent(currentTrend.description)}`;
+  startVoiceLoop(url);
+}
+
+/* Chat handling */
+async function handleChatMessage({ user, text }) {
+  chatInterrupting = true; stopVoiceLoop();
+  const msgEl = document.createElement("p");
+  msgEl.textContent = `${user}: ${text}`;
+  document.getElementById("messages").appendChild(msgEl);
+
+  const chatVoiceUrl = `/api/voice?text=${encodeURIComponent(text)}`;
+  await playVoice(chatVoiceUrl);
+
+  chatInterrupting = false;
+  if (currentTrend) {
+    const url = `/api/voice?text=${encodeURIComponent(currentTrend.description)}`;
+    startVoiceLoop(url);
   }
 }
 
@@ -54,14 +87,11 @@ socket.on("connect", () => {
   document.getElementById("room-label").innerText = "room: " + roomId;
   document.getElementById("chat-box").style.display = "block";
 
+  // 🔥 Load trend immediately after joining room
   loadTrend();
 });
 
-socket.on("chatMessage", (msg) => {
-  const msgEl = document.createElement("p");
-  msgEl.textContent = `${msg.user}: ${msg.text}`;
-  document.getElementById("messages").appendChild(msgEl);
-});
+socket.on("chatMessage", (msg) => handleChatMessage(msg));
 
 /* Chat send */
 document.getElementById("chat-send").addEventListener("click", () => {
