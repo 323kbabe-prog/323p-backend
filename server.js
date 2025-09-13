@@ -214,7 +214,7 @@ io.on("connection", (socket) => {
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
 
-    // Send existing chat history if any
+    // Send existing chat history
     if (roomChats[roomId]) {
       socket.emit("chatHistory", roomChats[roomId]);
     } else {
@@ -235,10 +235,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("freezeTrend", (trend) => {
-    // Save trend for this room
     if (socket.roomId) {
       roomTrend[socket.roomId] = trend;
       console.log(`📌 Room ${socket.roomId} trend frozen.`);
+      // 🚩 broadcast to everyone in the room
+      io.to(socket.roomId).emit("trendFreeze", trend);
     }
   });
 
@@ -247,7 +248,7 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- Serve static (app.js etc.) ---------------- */
+/* ---------------- Serve static ---------------- */
 app.use(express.static(path.join(__dirname)));
 
 /* ---------------- Start ---------------- */
