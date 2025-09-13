@@ -77,13 +77,26 @@ async function makeDescription(brand, product) {
   }
 }
 
+/* ---------------- Persona Generator ---------------- */
+function randomPersona() {
+  const genders = ["female", "male"];
+  const ethnicities = ["Korean", "Black", "Latina", "Asian-American", "Mixed"];
+  const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
+
+  const g = genders[Math.floor(Math.random() * genders.length)];
+  const e = ethnicities[Math.floor(Math.random() * ethnicities.length)];
+  const v = vibes[Math.floor(Math.random() * vibes.length)];
+
+  return `a ${g} ${e} ${v}`;
+}
+
 async function generateImageUrl(brand, product) {
   try {
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `
         Create a photocard-style image.
-        Subject: young female Korean idol, Gen-Z aesthetic.
+        Subject: ${persona}, Gen-Z aesthetic.
         She is holding and applying ${product} by ${brand}.
         Pastel gradient background (milk pink, baby blue, lilac).
         Glitter bokeh, glossy K-beauty skin glow.
@@ -233,3 +246,4 @@ httpServer.listen(PORT, async () => {
   console.log(`🚀 323drop backend live on :${PORT}`);
   await generateNextPick();
 });
+
