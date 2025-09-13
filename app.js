@@ -90,9 +90,9 @@ socket.on("connect", () => {
   }
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
-  warmUp();
 });
 
+// Chat receive
 socket.on("chatMessage", (msg) => {
   const msgEl = document.createElement("p");
   msgEl.textContent = `${msg.user}: ${msg.text}`;
@@ -121,4 +121,11 @@ document.getElementById("social-btn").addEventListener("click", () => {
   btn.disabled = true;
   btn.style.cursor = "default";
   btn.textContent = "share the url to your shopping companion and chat";
+});
+
+// 🔊 start button
+document.getElementById("start-btn").addEventListener("click", () => {
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  warmUp();
 });
