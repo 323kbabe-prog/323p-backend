@@ -1,4 +1,4 @@
-// server.js — 323drop backend (description + image + voice + chat + emojis)
+// server.js — 323drop backend (room-locked feed + description + image + voice + chat)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -16,8 +16,9 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- State ---------------- */
-let nextPickCache = null;
+let globalNextPickCache = null; // base mode global feed
 let generatingNext = false;
+let roomFeedCache = {}; // 🔒 lock feed per room { roomId: drop }
 
 /* ---------------- Products ---------------- */
 const TOP50_COSMETICS = [
@@ -30,7 +31,6 @@ const TOP50_COSMETICS = [
 
 /* ---------------- Emoji Helper ---------------- */
 const EMOJI_POOL = ["✨", "💖", "🔥", "👀", "😍", "💅", "🌈", "🌸", "😎", "🤩", "🫶", "🥹", "🧃", "🌟", "💋"];
-
 function randomEmojis(count = 2) {
   let out = [];
   for (let i = 0; i < count; i++) {
@@ -38,7 +38,6 @@ function randomEmojis(count = 2) {
   }
   return out.join(" ");
 }
-
 function decorateTextWithEmojis(text) {
   return `${randomEmojis(2)} ${text} ${randomEmojis(2)}`;
 }
@@ -61,15 +60,10 @@ async function makeDescription(brand, product) {
     });
 
     let desc = completion.choices[0].message.content.trim();
-
-    // Add emojis to brand + product mentions
-    const decoratedBrandProduct = decorateTextWithEmojis(`${brand} ${product}`);
+    // Add emojis to brand/product and at the end
     desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
     desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
-
-    // Add emojis at the end
     desc = `${desc} ${randomEmojis(3)}`;
-
     return desc;
   } catch (e) {
     console.error("❌ Description error:", e.response?.data || e.message);
@@ -96,8 +90,6 @@ async function generateImageUrl(brand, product) {
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
-
-    console.warn("⚠️ Image response had no URL or base64:", out);
   } catch (e) {
     console.error("❌ Image error:", e.response?.data || e.message);
   }
@@ -118,27 +110,26 @@ async function generateVoice(text) {
   }
 }
 
+async function generateDrop() {
+  const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+  const description = await makeDescription(pick.brand, pick.product);
+  const imageUrl = await generateImageUrl(pick.brand, pick.product);
+  return {
+    brand: decorateTextWithEmojis(pick.brand),
+    product: decorateTextWithEmojis(pick.product),
+    description,
+    hashtags: ["#BeautyTok", "#NowTrending"],
+    image: imageUrl,
+    refresh: 3000
+  };
+}
+
 async function generateNextPick() {
   if (generatingNext) return;
   generatingNext = true;
   try {
-    const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-    const description = await makeDescription(pick.brand, pick.product);
-    const imageUrl = await generateImageUrl(pick.brand, pick.product);
-
-    // Decorate brand + product with emojis
-    const decoratedBrand = decorateTextWithEmojis(pick.brand);
-    const decoratedProduct = decorateTextWithEmojis(pick.product);
-
-    nextPickCache = {
-      brand: decoratedBrand,
-      product: decoratedProduct,
-      description,
-      hashtags: ["#BeautyTok", "#NowTrending"],
-      image: imageUrl,
-      refresh: 3000
-    };
-    console.log("✅ Next pick ready:", nextPickCache.brand, "-", nextPickCache.product);
+    globalNextPickCache = await generateDrop();
+    console.log("✅ Next global pick ready:", globalNextPickCache.brand, "-", globalNextPickCache.product);
   } finally {
     generatingNext = false;
   }
@@ -147,21 +138,33 @@ async function generateNextPick() {
 /* ---------------- API Routes ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    if (!nextPickCache) {
-      console.log("⏳ Generating first drop...");
-      await generateNextPick();
+    const roomId = req.query.roomId;
+
+    if (roomId) {
+      // Social mode: lock feed per room
+      if (!roomFeedCache[roomId]) {
+        console.log(`⏳ Generating drop for room ${roomId}...`);
+        roomFeedCache[roomId] = await generateDrop();
+      }
+      res.json(roomFeedCache[roomId]);
+    } else {
+      // Base mode: global rotating feed
+      if (!globalNextPickCache) {
+        console.log("⏳ Generating first global drop...");
+        await generateNextPick();
+      }
+      const result = globalNextPickCache || {
+        brand: decorateTextWithEmojis("Loading"),
+        product: decorateTextWithEmojis("Beauty Product"),
+        description: decorateTextWithEmojis("AI is warming up… please wait."),
+        hashtags: ["#Loading"],
+        image: "https://placehold.co/600x600?text=Loading",
+        refresh: 5000
+      };
+      globalNextPickCache = null;
+      generateNextPick();
+      res.json(result);
     }
-    const result = nextPickCache || {
-      brand: decorateTextWithEmojis("Loading"),
-      product: decorateTextWithEmojis("Beauty Product"),
-      description: decorateTextWithEmojis("AI is warming up… please wait."),
-      hashtags: ["#Loading"],
-      image: "https://placehold.co/600x600?text=Loading",
-      refresh: 5000
-    };
-    nextPickCache = null;
-    generateNextPick(); // prepare next one in background
-    res.json(result);
   } catch (e) {
     console.error("❌ Trend API error:", e.response?.data || e.message);
     res.json({
@@ -193,13 +196,12 @@ app.get("/api/voice", async (req, res) => {
 
 app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
 
-// 🔎 Debug route to verify API key
+// Debug route
 app.get("/test-openai", async (req, res) => {
   try {
     const result = await openai.models.list();
     res.json({ ok: true, modelCount: result.data.length });
   } catch (e) {
-    console.error("❌ Test OpenAI failed:", e.response?.data || e.message);
     res.status(500).json({ ok: false, error: e.response?.data || e.message });
   }
 });
@@ -224,7 +226,7 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- Serve static (app.js etc.) ---------------- */
+/* ---------------- Serve static ---------------- */
 app.use(express.static(path.join(__dirname)));
 
 /* ---------------- Start ---------------- */
