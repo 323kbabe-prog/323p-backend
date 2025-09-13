@@ -60,7 +60,6 @@ async function makeDescription(brand, product) {
     });
 
     let desc = completion.choices[0].message.content.trim();
-    // Add emojis to brand/product and at the end
     desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
     desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
     desc = `${desc} ${randomEmojis(3)}`;
