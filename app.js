@@ -9,20 +9,20 @@ let voiceUrl = "";
 
 /* Helpers */
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-async function playVoice(url) {
+async function playVoice(url, isTrend=false) {
   if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
-  document.getElementById("social-btn").style.display = "none"; // hide before
+  document.getElementById("social-btn").style.display = "none";
   return new Promise((resolve) => {
     audioPlayer = new Audio(url);
     audioPlayer.onplay = () => {
-      document.getElementById("social-btn").style.display = "block"; // show when start
+      if(isTrend){ document.getElementById("social-btn").style.display = "block"; }
     };
     audioPlayer.onended = () => {
-      document.getElementById("social-btn").style.display = "none"; // hide after
+      document.getElementById("social-btn").style.display = "none";
       resolve();
     };
     audioPlayer.onerror = () => {
-      document.getElementById("social-btn").style.display = "none"; // hide on error
+      document.getElementById("social-btn").style.display = "none";
       resolve();
     };
     audioPlayer.play();
@@ -30,12 +30,12 @@ async function playVoice(url) {
 }
 
 /* Voice loop */
-async function startVoiceLoop(url) {
+async function startVoiceLoop(url, isTrend=false) {
   voiceUrl = url;
   voiceLoopActive = true;
   while (voiceLoopActive) {
     if (chatInterrupting) { await sleep(500); continue; }
-    await playVoice(voiceUrl);
+    await playVoice(voiceUrl,isTrend);
     await sleep(500);
   }
 }
@@ -63,7 +63,7 @@ async function loadTrend() {
   }
 
   const url = `/api/voice?text=${encodeURIComponent(currentTrend.description)}`;
-  startVoiceLoop(url);
+  startVoiceLoop(url,true); // mark as real trend voice
 }
 
 /* Chat handling */
@@ -74,12 +74,12 @@ async function handleChatMessage({ user, text }) {
   document.getElementById("messages").appendChild(msgEl);
 
   const chatVoiceUrl = `/api/voice?text=${encodeURIComponent(text)}`;
-  await playVoice(chatVoiceUrl);
+  await playVoice(chatVoiceUrl,false); // chats don’t trigger 🍜
 
   chatInterrupting = false;
   if (currentTrend) {
     const url = `/api/voice?text=${encodeURIComponent(currentTrend.description)}`;
-    startVoiceLoop(url);
+    startVoiceLoop(url,true);
   }
 }
 
