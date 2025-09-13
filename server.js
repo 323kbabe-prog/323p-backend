@@ -1,4 +1,4 @@
-// server.js — 323drop backend (with per-room frozen feeds + debug log)
+// server.js — add brand+product query support
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -18,9 +18,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 /* ---------------- State ---------------- */
 let nextPickCache = null;
 let generatingNext = false;
-
-// Frozen feed storage per room
-let roomFeeds = {}; // { roomId: trendData }
 
 /* ---------------- Products ---------------- */
 const TOP50_COSMETICS = [
@@ -65,7 +62,6 @@ async function makeDescription(brand, product) {
     desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
     desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
     desc = `${desc} ${randomEmojis(3)}`;
-
     return desc;
   } catch (e) {
     console.error("❌ Description error:", e.response?.data || e.message);
@@ -98,72 +94,49 @@ async function generateImageUrl(brand, product) {
   return "https://placehold.co/600x600?text=No+Image";
 }
 
-async function generateVoice(text) {
-  try {
-    const out = await openai.audio.speech.create({
-      model: "gpt-4o-mini-tts",
-      voice: "alloy",
-      input: text,
-    });
-    return Buffer.from(await out.arrayBuffer());
-  } catch (e) {
-    console.error("❌ Voice error:", e.response?.data || e.message);
-    return null;
-  }
-}
-
 async function generateNextPick() {
-  if (generatingNext) return;
-  generatingNext = true;
-  try {
-    const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-    const description = await makeDescription(pick.brand, pick.product);
-    const imageUrl = await generateImageUrl(pick.brand, pick.product);
-
-    const decoratedBrand = decorateTextWithEmojis(pick.brand);
-    const decoratedProduct = decorateTextWithEmojis(pick.product);
-
-    nextPickCache = {
-      brand: decoratedBrand,
-      product: decoratedProduct,
-      description,
-      hashtags: ["#BeautyTok", "#NowTrending"],
-      image: imageUrl,
-      refresh: 3000
-    };
-    console.log("✅ Next pick ready:", nextPickCache.brand, "-", nextPickCache.product);
-  } finally {
-    generatingNext = false;
-  }
+  const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+  const description = await makeDescription(pick.brand, pick.product);
+  const imageUrl = await generateImageUrl(pick.brand, pick.product);
+  return {
+    brand: decorateTextWithEmojis(pick.brand),
+    product: decorateTextWithEmojis(pick.product),
+    description,
+    hashtags: ["#BeautyTok", "#NowTrending"],
+    image: imageUrl,
+    refresh: 3000
+  };
 }
 
 /* ---------------- API Routes ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    const roomId = req.query.room;
+    const { brand, product } = req.query;
 
-    // If room has a frozen feed, return it
-    if (roomId && roomFeeds[roomId]) {
-      return res.json(roomFeeds[roomId]);
+    // ✅ If brand+product provided → generate for those
+    if (brand && product) {
+      console.log(`🎯 Locked to brand=${brand}, product=${product}`);
+      const description = await makeDescription(brand, product);
+      const imageUrl = await generateImageUrl(brand, product);
+      return res.json({
+        brand: decorateTextWithEmojis(brand),
+        product: decorateTextWithEmojis(product),
+        description,
+        hashtags: ["#BeautyTok", "#NowTrending"],
+        image: imageUrl,
+        refresh: 3000
+      });
     }
 
+    // otherwise random
     if (!nextPickCache) {
       console.log("⏳ Generating first drop...");
-      await generateNextPick();
+      nextPickCache = await generateNextPick();
     }
 
-    const result = nextPickCache || {
-      brand: decorateTextWithEmojis("Loading"),
-      product: decorateTextWithEmojis("Beauty Product"),
-      description: decorateTextWithEmojis("AI is warming up… please wait."),
-      hashtags: ["#Loading"],
-      image: "https://placehold.co/600x600?text=Loading",
-      refresh: 5000
-    };
-
+    const result = nextPickCache;
     nextPickCache = null;
-    generateNextPick();
-
+    generateNextPick().then(p => nextPickCache = p);
     res.json(result);
   } catch (e) {
     console.error("❌ Trend API error:", e.response?.data || e.message);
@@ -182,10 +155,8 @@ app.get("/api/voice", async (req, res) => {
   try {
     const text = req.query.text || "";
     if (!text) return res.status(400).json({ error: "Missing text" });
-
     const audioBuffer = await generateVoice(text);
     if (!audioBuffer) return res.status(500).json({ error: "No audio generated" });
-
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
   } catch (e) {
@@ -194,39 +165,26 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
-app.get("/health", (_req, res) => res.json({ ok: true, time: Date.now() }));
+async function generateVoice(text) {
+  try {
+    const out = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "alloy",
+      input: text,
+    });
+    return Buffer.from(await out.arrayBuffer());
+  } catch (e) {
+    console.error("❌ Voice error:", e.response?.data || e.message);
+    return null;
+  }
+}
 
 /* ---------------- Socket.IO ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
-
-  // 🔎 Debug: log every event this socket sends
-  socket.onAny((event, ...args) => {
-    console.log("📡 Received event:", event, args);
-  });
-
-  socket.on("joinRoom", (roomId) => {
-    socket.join(roomId);
-    socket.roomId = roomId;
-    console.log(`👥 ${socket.id} joined room: ${roomId}`);
-  });
-
-  socket.on("lockTrend", ({ roomId, trend }) => {
-    if (roomId && trend) {
-      roomFeeds[roomId] = trend;
-      console.log(`🔒 Locked trend for room ${roomId}`);
-    } else {
-      console.warn("⚠️ lockTrend called without roomId or trend:", roomId, trend);
-    }
-  });
-
   socket.on("chatMessage", ({ roomId, user, text }) => {
     console.log(`💬 [${roomId}] ${user}: ${text}`);
     io.to(roomId).emit("chatMessage", { user, text });
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`❌ User disconnected: ${socket.id} (room ${socket.roomId || "none"})`);
   });
 });
 
@@ -237,5 +195,5 @@ app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
   console.log(`🚀 323drop backend live on :${PORT}`);
-  await generateNextPick();
+  nextPickCache = await generateNextPick();
 });
