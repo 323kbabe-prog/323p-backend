@@ -17,10 +17,17 @@ async function loadTrend() {
     img.src = currentTrend.image;
     img.style.display = "none";
     document.getElementById("r-fallback").style.display = "none";
+    document.getElementById("social-btn").style.display = "none";
 
     img.onload = () => {
       img.style.display = "block";
-      document.getElementById("social-btn").style.display = "block"; // 🍜 only when image loads
+      if (
+        !/loading/i.test(currentTrend.brand) &&
+        !/loading/i.test(currentTrend.product) &&
+        !/warming up/i.test(currentTrend.description)
+      ) {
+        document.getElementById("social-btn").style.display = "block";
+      }
     };
     img.onerror = () => {
       document.getElementById("r-fallback").style.display = "block";
