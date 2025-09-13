@@ -16,7 +16,7 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- State ---------------- */
-let globalNextPickCache = null; // base mode global feed
+let globalNextPickCache = null; // Base Mode global feed
 let generatingNext = false;
 let roomFeedCache = {}; // 🔒 lock feed per room { roomId: drop }
 
@@ -137,7 +137,8 @@ async function generateNextPick() {
 /* ---------------- API Routes ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    const roomId = req.query.roomId;
+    // ✅ Accept both room and roomId
+    const roomId = req.query.room || req.query.roomId;
 
     if (roomId) {
       // Social mode: lock feed per room
