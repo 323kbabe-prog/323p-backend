@@ -1,5 +1,7 @@
-// app.js — with loud debug logs for 🍜 testing
-const socket = io("https://three23p-backend.onrender.com");
+// app.js — with polling-only transport + debug logs
+const socket = io("https://three23p-backend.onrender.com", {
+  transports: ["polling"]   // ✅ Force polling (more reliable on GoDaddy/Render)
+});
 
 let audioPlayer = null;
 let currentTrend = null;
