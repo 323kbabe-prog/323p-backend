@@ -4,8 +4,11 @@ const { createServer } = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 const OpenAI = require("openai");
+const cors = require("cors"); // ✅ add CORS
 
 const app = express();
+app.use(cors({ origin: "*" })); // ✅ allow requests from anywhere
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
