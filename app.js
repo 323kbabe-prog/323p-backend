@@ -13,6 +13,9 @@ async function playVoice(url) {
   if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
   return new Promise((resolve) => {
     audioPlayer = new Audio(url);
+    audioPlayer.onplay = () => {
+      document.getElementById("social-btn").style.display = "block"; // 👈 Show 🍜
+    };
     audioPlayer.onended = () => resolve();
     audioPlayer.onerror = () => resolve();
     audioPlayer.play();
@@ -87,7 +90,6 @@ socket.on("connect", () => {
   document.getElementById("room-label").innerText = "room: " + roomId;
   document.getElementById("chat-box").style.display = "block";
 
-  // 🔥 Load trend immediately after joining room
   loadTrend();
 });
 
