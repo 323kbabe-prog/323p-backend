@@ -77,8 +77,12 @@ async function makeDescription(brand, product) {
     });
 
     let desc = completion.choices[0].message.content.trim();
+
+    // Add emojis to brand + product mentions
     desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
     desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
+
+    // Add emojis at the end
     desc = `${desc} ${randomEmojis(3)}`;
 
     return desc;
@@ -107,10 +111,26 @@ async function generateImageUrl(brand, product, persona) {
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
+
+    console.warn("⚠️ Image response had no URL or base64:", out);
   } catch (e) {
     console.error("❌ Image error:", e.response?.data || e.message);
   }
   return "https://placehold.co/600x600?text=No+Image";
+}
+
+async function generateVoice(text) {
+  try {
+    const out = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "alloy",
+      input: text,
+    });
+    return Buffer.from(await out.arrayBuffer());
+  } catch (e) {
+    console.error("❌ Voice error:", e.response?.data || e.message);
+    return null;
+  }
 }
 
 async function generateNextPick() {
@@ -118,23 +138,24 @@ async function generateNextPick() {
   generatingNext = true;
   try {
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-    const persona = randomPersona(); // 👤 new persona
+    const persona = randomPersona(); // 👤 generate unique persona for this drop
     const description = await makeDescription(pick.brand, pick.product);
     const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
 
+    // Decorate brand + product with emojis
     const decoratedBrand = decorateTextWithEmojis(pick.brand);
     const decoratedProduct = decorateTextWithEmojis(pick.product);
 
     nextPickCache = {
       brand: decoratedBrand,
       product: decoratedProduct,
-      persona, // 🔒 included in cache
+      persona, // 🔒 included in response
       description,
       hashtags: ["#BeautyTok", "#NowTrending"],
       image: imageUrl,
       refresh: 3000
     };
-    console.log("✅ Next pick ready:", decoratedBrand, "-", decoratedProduct, "| Persona:", persona);
+    console.log("✅ Next pick ready:", nextPickCache.brand, "-", nextPickCache.product, "| Persona:", persona);
   } finally {
     generatingNext = false;
   }
@@ -143,7 +164,10 @@ async function generateNextPick() {
 /* ---------------- API Routes ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    if (!nextPickCache) await generateNextPick();
+    if (!nextPickCache) {
+      console.log("⏳ Generating first drop...");
+      await generateNextPick();
+    }
     const result = nextPickCache || {
       brand: decorateTextWithEmojis("Loading"),
       product: decorateTextWithEmojis("Beauty Product"),
@@ -154,9 +178,10 @@ app.get("/api/trend", async (req, res) => {
       refresh: 5000
     };
     nextPickCache = null;
-    generateNextPick();
+    generateNextPick(); // prepare next one in background
     res.json(result);
   } catch (e) {
+    console.error("❌ Trend API error:", e.response?.data || e.message);
     res.json({
       brand: decorateTextWithEmojis("Error"),
       product: decorateTextWithEmojis("System"),
@@ -169,8 +194,59 @@ app.get("/api/trend", async (req, res) => {
   }
 });
 
+app.get("/api/voice", async (req, res) => {
+  try {
+    const text = req.query.text || "";
+    if (!text) return res.status(400).json({ error: "Missing text" });
+
+    const audioBuffer = await generateVoice(text);
+    if (!audioBuffer) return res.status(500).json({ error: "No audio generated" });
+
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(audioBuffer);
+  } catch (e) {
+    console.error("❌ Voice API error:", e.response?.data || e.message);
+    res.status(500).json({ error: "Voice TTS failed" });
+  }
+});
+
+app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
+
+// 🔎 Debug route to verify API key
+app.get("/test-openai", async (req, res) => {
+  try {
+    const result = await openai.models.list();
+    res.json({ ok: true, modelCount: result.data.length });
+  } catch (e) {
+    console.error("❌ Test OpenAI failed:", e.response?.data || e.message);
+    res.status(500).json({ ok: false, error: e.response?.data || e.message });
+  }
+});
+
+/* ---------------- Chat (Socket.IO) ---------------- */
+io.on("connection", (socket) => {
+  console.log(`🔌 User connected: ${socket.id}`);
+
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    socket.roomId = roomId;
+    console.log(`👥 ${socket.id} joined room: ${roomId}`);
+  });
+
+  socket.on("chatMessage", ({ roomId, user, text }) => {
+    console.log(`💬 [${roomId}] ${user}: ${text}`);
+    io.to(roomId).emit("chatMessage", { user, text });
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`❌ User disconnected: ${socket.id} (room ${socket.roomId || "none"})`);
+  });
+});
+
+/* ---------------- Serve static (app.js etc.) ---------------- */
 app.use(express.static(path.join(__dirname)));
 
+/* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
   console.log(`🚀 323drop backend live on :${PORT}`);
