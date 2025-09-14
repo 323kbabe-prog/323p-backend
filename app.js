@@ -21,10 +21,16 @@ function uiLog(msg) {
   roomId = params.get("room");
 
   if (!roomId) {
+    // generate new room if none in URL
     roomId = "room-" + Math.floor(1000 + Math.random() * 9000);
+
+    // ✅ update URL immediately to include room
+    const newUrl =
+      window.location.origin + window.location.pathname + "?room=" + roomId;
+    window.history.replaceState({}, "", newUrl);
   }
 
-  // Show room number immediately when site loads
+  // Show room number immediately on site load
   document.getElementById("room-label").innerText = "room: " + roomId;
 })();
 
