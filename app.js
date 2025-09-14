@@ -1,13 +1,13 @@
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null;
 let currentTrend = null;
-let lastTrendKey = null;
+let lastTrendKey = null; // to compare old vs new
 let roomId = null;
 let socialMode = false;
 let isHost = false;
 let isGuest = false;
 let warmingUp = true;
-let guestLoop = false; // control guest repeating description
+let guestLoop = false;
 
 window.addEventListener("DOMContentLoaded", () => {
   /* ---------------- Setup Room ---------------- */
@@ -94,15 +94,17 @@ window.addEventListener("DOMContentLoaded", () => {
     const res = await fetch(apiUrl);
     const newTrend = await res.json();
 
-    // Build a unique key for this drop
-    const trendKey = newTrend ? newTrend.brand + "|" + newTrend.product : null;
+    // Create a key to check if this drop is new
+    const trendKey = newTrend
+      ? newTrend.brand + "|" + newTrend.product + "|" + newTrend.description
+      : null;
 
     // Host logic
     if (!isGuestMode) {
-      // If drop is same as last one → show warm-up until a new one is ready
       if (trendKey && trendKey === lastTrendKey) {
+        // Same drop → show warm-up again and check sooner (1s)
         showWarmup();
-        setTimeout(() => loadTrend(isGuestMode), 3000);
+        setTimeout(() => loadTrend(isGuestMode), 1000);
         return;
       }
       hideWarmup();
@@ -111,7 +113,7 @@ window.addEventListener("DOMContentLoaded", () => {
     currentTrend = newTrend;
     lastTrendKey = trendKey;
 
-    // Update screen
+    // Update UI
     document.getElementById("r-title").innerText = currentTrend.brand;
     document.getElementById("r-artist").innerText = currentTrend.product;
     document.getElementById("r-persona").innerText = currentTrend.persona
@@ -130,7 +132,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     if (isGuestMode) {
-      // Guest loops description until next arrives
+      // Guest loops description until host provides next
       guestLoop = true;
       function loopGuest() {
         if (!guestLoop) return;
@@ -138,7 +140,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       loopGuest();
     } else {
-      // Host: read description once, then check for next drop
+      // Host: read description once, then after finish → check next drop
       playVoice(currentTrend.description, () => {
         loadTrend(isGuestMode);
       });
