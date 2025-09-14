@@ -5,6 +5,7 @@ let roomId = null;
 let socialMode = false;
 let isHost = false;
 let isGuest = false;
+let warmingUp = true;
 
 window.addEventListener("DOMContentLoaded", () => {
   /* ---------------- Setup Room ---------------- */
@@ -13,22 +14,17 @@ window.addEventListener("DOMContentLoaded", () => {
     roomId = params.get("room");
 
     if (roomId) {
-      // If a room is already in the URL, this user is a guest
       isGuest = true;
     } else {
-      // No room param → this user is the host
       isHost = true;
       roomId = "room-" + Math.floor(1000 + Math.random() * 9000);
-
-      // Add roomId to URL for sharing
-      const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
+      const newUrl =
+        window.location.origin + window.location.pathname + "?room=" + roomId;
       window.history.replaceState({}, "", newUrl);
     }
 
-    // Show room number immediately
     document.getElementById("room-label").innerText = "room: " + roomId;
 
-    // Show correct button
     if (isHost) {
       document.getElementById("start-btn").style.display = "block";
       document.getElementById("guest-btn").style.display = "none";
@@ -39,46 +35,64 @@ window.addEventListener("DOMContentLoaded", () => {
   })();
 
   /* ---------------- Voice ---------------- */
-  async function playAndWaitVoice(url) {
+  async function playAndWaitVoice(text, callback) {
     return new Promise((resolve) => {
-      if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+      if (audioPlayer) {
+        audioPlayer.pause();
+        audioPlayer = null;
+      }
+      const url =
+        "https://three23p-backend.onrender.com/api/voice?text=" +
+        encodeURIComponent(text);
       document.getElementById("voice-status").textContent = "🔄 Loading voice...";
       audioPlayer = new Audio(url);
-      audioPlayer.onplay = () => { document.getElementById("voice-status").textContent = "🔊 Reading..."; };
-      audioPlayer.onended = () => { document.getElementById("voice-status").textContent = "⏸ Done"; resolve(); };
-      audioPlayer.onerror = () => { document.getElementById("voice-status").textContent = "⚠️ Voice error"; resolve(); };
+      audioPlayer.onplay = () => {
+        document.getElementById("voice-status").textContent = "🔊 Reading...";
+      };
+      audioPlayer.onended = () => {
+        document.getElementById("voice-status").textContent = "⏸ Done";
+        if (callback) callback();
+        resolve();
+      };
+      audioPlayer.onerror = () => {
+        document.getElementById("voice-status").textContent = "⚠️ Voice error";
+        if (callback) callback();
+        resolve();
+      };
       audioPlayer.play();
     });
   }
 
-  /* ---------------- Warm-up (host only) ---------------- */
-  async function warmUp() {
-    document.getElementById("app").style.display = "flex";
-    document.getElementById("r-title").innerText = "—";
-    document.getElementById("r-artist").innerText = "—";
-    document.getElementById("r-persona").innerText = "";
-    document.getElementById("r-desc").innerText = "AI is warming up…";
-    document.getElementById("social-btn").style.display = "none";
-    document.getElementById("r-img").style.display = "none";
-    document.getElementById("r-fallback").style.display = "none";
-    const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent("AI is warming up…");
-    await playAndWaitVoice(url);
-    loadTrend(false); // host triggers generation
+  /* ---------------- Warm-up Loop ---------------- */
+  async function warmUpLoop() {
+    while (warmingUp) {
+      await playAndWaitVoice("✨🔥💖 AI is warming up… ✨🔥💖");
+      // loop again until a trend is ready
+    }
   }
 
-  /* ---------------- Load Trend ---------------- */
+  /* ---------------- Load Trend + Voice ---------------- */
   async function loadTrend(isGuest) {
-    let apiUrl = "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
+    let apiUrl =
+      "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
     if (isGuest) {
       apiUrl += "&guest=true";
     }
+
     const res = await fetch(apiUrl);
     currentTrend = await res.json();
+
+    // If host generating first drop -> stop warm-up loop
+    warmingUp = false;
+
     document.getElementById("r-title").innerText = currentTrend.brand;
     document.getElementById("r-artist").innerText = currentTrend.product;
-    document.getElementById("r-persona").innerText = currentTrend.persona ? `👤 Featuring ${currentTrend.persona}` : "";
+    document.getElementById("r-persona").innerText = currentTrend.persona
+      ? `👤 Featuring ${currentTrend.persona}`
+      : "";
     document.getElementById("r-desc").innerText = currentTrend.description;
     document.getElementById("social-btn").style.display = "block";
+
     if (currentTrend.image) {
       document.getElementById("r-img").src = currentTrend.image;
       document.getElementById("r-img").style.display = "block";
@@ -87,6 +101,12 @@ window.addEventListener("DOMContentLoaded", () => {
       document.getElementById("r-img").style.display = "none";
       document.getElementById("r-fallback").style.display = "block";
     }
+
+    // Voice reads description once
+    await playAndWaitVoice(currentTrend.description, () => {
+      // After voice finishes → immediately fetch next drop
+      loadTrend(isGuest);
+    });
   }
 
   /* ---------------- Start / Guest buttons ---------------- */
@@ -95,10 +115,12 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
 
-    // Show message on screen
-    document.getElementById("voice-status").textContent = "✅ Host started — generating content…";
+    // Start warm-up loop
+    warmingUp = true;
+    warmUpLoop();
 
-    warmUp(); // Host generates if needed
+    // Trigger first trend fetch (host generates if needed)
+    loadTrend(false);
   });
 
   document.getElementById("guest-btn").addEventListener("click", () => {
@@ -106,10 +128,8 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
 
-    // Show message on screen
-    document.getElementById("voice-status").textContent = "✅ Guest joined — loading cached content…";
-
-    loadTrend(true); // Guest only loads cached trend
+    // Guests don’t need warm-up loop
+    loadTrend(true);
   });
 
   /* ---------------- Chat & 🍜 ---------------- */
@@ -123,11 +143,14 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("social-btn").addEventListener("click", () => {
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
-    const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
+    const newUrl =
+      window.location.origin + window.location.pathname + "?room=" + roomId;
     window.history.replaceState({}, "", newUrl);
     const btn = document.getElementById("social-btn");
     btn.disabled = true;
-    btn.textContent = "share the url to your shopping companion and chat";
-    document.getElementById("room-label").innerText = "room: " + roomId + " (social mode active)";
+    btn.textContent =
+      "share the url to your shopping companion and chat";
+    document.getElementById("room-label").innerText =
+      "room: " + roomId + " (social mode active)";
   });
 });
