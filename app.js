@@ -141,10 +141,8 @@ document.getElementById("start-btn").addEventListener("click", () => {
   // join with pre-generated roomId
   socket.emit("joinRoom", roomId);
 
-  if (new URLSearchParams(window.location.search).get("room")) {
-    socialMode = true;
-    document.getElementById("bottom-panel").style.display = "flex";
-  }
+  // ❌ removed auto-social mode activation
+  // chat dock will remain hidden until 🍜 is clicked
 
   warmUp();
 });
