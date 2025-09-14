@@ -5,6 +5,7 @@ let currentTrend = null;
 let roomId = null;
 let socialMode = false;
 
+/* ---------------- Logger ---------------- */
 function uiLog(msg) {
   const logBox = document.getElementById("console-log");
   const line = document.createElement("div");
@@ -14,18 +15,31 @@ function uiLog(msg) {
   console.log(msg);
 }
 
+/* ---------------- Voice ---------------- */
 async function playAndWaitVoice(url) {
   return new Promise((resolve) => {
-    if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+    if (audioPlayer) {
+      audioPlayer.pause();
+      audioPlayer = null;
+    }
     document.getElementById("voice-status").textContent = "🔄 Loading voice...";
     audioPlayer = new Audio(url);
-    audioPlayer.onplay = () => { document.getElementById("voice-status").textContent = "🔊 Reading..."; };
-    audioPlayer.onended = () => { document.getElementById("voice-status").textContent = "⏸ Done"; resolve(); };
-    audioPlayer.onerror = () => { document.getElementById("voice-status").textContent = "⚠️ Voice error"; resolve(); };
+    audioPlayer.onplay = () => {
+      document.getElementById("voice-status").textContent = "🔊 Reading...";
+    };
+    audioPlayer.onended = () => {
+      document.getElementById("voice-status").textContent = "⏸ Done";
+      resolve();
+    };
+    audioPlayer.onerror = () => {
+      document.getElementById("voice-status").textContent = "⚠️ Voice error";
+      resolve();
+    };
     audioPlayer.play();
   });
 }
 
+/* ---------------- Warm-up ---------------- */
 async function warmUp() {
   document.getElementById("app").style.display = "flex";
   document.getElementById("r-title").innerText = "—";
@@ -35,29 +49,48 @@ async function warmUp() {
   document.getElementById("social-btn").style.display = "none";
   document.getElementById("r-img").style.display = "none";
   document.getElementById("r-fallback").style.display = "none";
-  const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent("AI is warming up…");
+
+  const url =
+    "https://three23p-backend.onrender.com/api/voice?text=" +
+    encodeURIComponent("AI is warming up…");
   await playAndWaitVoice(url);
   loadTrend();
 }
 
+/* ---------------- Cycle ---------------- */
 async function cycleTrend() {
   if (!currentTrend) return;
-  const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(currentTrend.description);
+  const url =
+    "https://three23p-backend.onrender.com/api/voice?text=" +
+    encodeURIComponent(currentTrend.description);
   await playAndWaitVoice(url);
-  if (!socialMode) await loadTrend();
-  else cycleTrend();
+  if (!socialMode) {
+    await loadTrend();
+  } else {
+    cycleTrend();
+  }
 }
 
+/* ---------------- Load real drop ---------------- */
 async function loadTrend() {
   uiLog("Fetching trend...");
   const res = await fetch("https://three23p-backend.onrender.com/api/trend");
   currentTrend = await res.json();
-  uiLog("Trend loaded: " + currentTrend.brand + " - " + currentTrend.product);
+  uiLog(
+    "Trend loaded: " + currentTrend.brand + " - " + currentTrend.product
+  );
+
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
-  document.getElementById("r-persona").innerText = currentTrend.persona ? `👤 Featuring ${currentTrend.persona}` : "";
+
+  // 👤 Persona line
+  document.getElementById("r-persona").innerText = currentTrend.persona
+    ? `👤 Featuring ${currentTrend.persona}`
+    : "";
+
   document.getElementById("r-desc").innerText = currentTrend.description;
   document.getElementById("social-btn").style.display = "block";
+
   if (currentTrend.image) {
     document.getElementById("r-img").src = currentTrend.image;
     document.getElementById("r-img").style.display = "block";
@@ -69,29 +102,43 @@ async function loadTrend() {
   cycleTrend();
 }
 
+/* ---------------- Chat ---------------- */
 function addChatLine(user, text) {
   const msgEl = document.createElement("p");
   msgEl.textContent = user + ": " + text;
   document.getElementById("messages").appendChild(msgEl);
 }
-socket.on("chatMessage", (msg) => { uiLog("Chat: " + msg.user + " - " + msg.text); addChatLine(msg.user, msg.text); });
-socket.on("chatHistory", (history) => { uiLog("Loaded history " + history.length); history.forEach((m) => addChatLine(m.user, m.text)); });
+socket.on("chatMessage", (msg) => {
+  uiLog("Chat: " + msg.user + " - " + msg.text);
+  addChatLine(msg.user, msg.text);
+});
+socket.on("chatHistory", (history) => {
+  uiLog("Loaded history " + history.length);
+  history.forEach((m) => addChatLine(m.user, m.text));
+});
 
+/* ---------------- Start button ---------------- */
 document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
+
   let params = new URLSearchParams(window.location.search);
   roomId = params.get("room");
-  if (!roomId) roomId = "default-" + Math.floor(Math.random() * 9999);
+  if (!roomId) {
+    roomId = "default-" + Math.floor(Math.random() * 9999);
+  }
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
+
   if (params.get("room")) {
+    // already in social mode
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
   }
   warmUp();
 });
 
+/* ---------------- Send chat ---------------- */
 document.getElementById("chat-send").addEventListener("click", () => {
   const text = document.getElementById("chat-input").value;
   if (!text.trim()) return;
@@ -100,15 +147,19 @@ document.getElementById("chat-send").addEventListener("click", () => {
   document.getElementById("chat-input").value = "";
 });
 
+/* ---------------- 🍜 Social mode ---------------- */
 document.getElementById("social-btn").addEventListener("click", () => {
   socialMode = true;
-  document.getElementById("bottom-panel").style.display = "flex";
-  const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
+  document.getElementById("bottom-panel").style.display = "flex"; // show chat dock
+  const newUrl =
+    window.location.origin + window.location.pathname + "?room=" + roomId;
   window.history.replaceState({}, "", newUrl);
   uiLog("Switched to social mode, room=" + roomId);
+
   const btn = document.getElementById("social-btn");
   btn.disabled = true;
   btn.style.cursor = "default";
   btn.textContent = "share the url to your shopping companion and chat";
+
   if (currentTrend) cycleTrend();
 });
