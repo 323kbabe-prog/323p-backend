@@ -3,24 +3,37 @@ let audioPlayer = null;
 let currentTrend = null;
 let roomId = null;
 let socialMode = false;
+let isHost = false;
+let isGuest = false;
 
 /* ---------------- Setup Room ---------------- */
 (function initRoom() {
   let params = new URLSearchParams(window.location.search);
   roomId = params.get("room");
-  if (!roomId) {
+
+  if (roomId) {
+    // If a room is already in the URL, this user is a guest
+    isGuest = true;
+  } else {
+    // No room param → this user is the host
+    isHost = true;
     roomId = "room-" + Math.floor(1000 + Math.random() * 9000);
+
+    // Add roomId to URL for sharing
     const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
     window.history.replaceState({}, "", newUrl);
   }
+
+  // Show room number immediately
   document.getElementById("room-label").innerText = "room: " + roomId;
+
   // Show correct button
-  if (params.get("room")) {
-    document.getElementById("start-btn").style.display = "none";
-    document.getElementById("guest-btn").style.display = "block";
-  } else {
+  if (isHost) {
     document.getElementById("start-btn").style.display = "block";
     document.getElementById("guest-btn").style.display = "none";
+  } else if (isGuest) {
+    document.getElementById("start-btn").style.display = "none";
+    document.getElementById("guest-btn").style.display = "block";
   }
 })();
 
@@ -37,7 +50,7 @@ async function playAndWaitVoice(url) {
   });
 }
 
-/* ---------------- Warm-up ---------------- */
+/* ---------------- Warm-up (host only) ---------------- */
 async function warmUp() {
   document.getElementById("app").style.display = "flex";
   document.getElementById("r-title").innerText = "—";
@@ -49,7 +62,7 @@ async function warmUp() {
   document.getElementById("r-fallback").style.display = "none";
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent("AI is warming up…");
   await playAndWaitVoice(url);
-  loadTrend(false); // host call
+  loadTrend(false); // host triggers generation
 }
 
 /* ---------------- Load Trend ---------------- */
@@ -80,7 +93,7 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
   socket.emit("joinRoom", roomId);
-  warmUp(); // Host triggers trend generation if missing
+  warmUp(); // Host generates if needed
 });
 
 document.getElementById("guest-btn").addEventListener("click", () => {
