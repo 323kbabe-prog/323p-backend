@@ -15,6 +15,19 @@ function uiLog(msg) {
   console.log(msg);
 }
 
+/* ---------------- Generate room immediately ---------------- */
+(function initRoom() {
+  let params = new URLSearchParams(window.location.search);
+  roomId = params.get("room");
+
+  if (!roomId) {
+    roomId = "room-" + Math.floor(1000 + Math.random() * 9000);
+  }
+
+  // Show room number immediately when site loads
+  document.getElementById("room-label").innerText = "room: " + roomId;
+})();
+
 /* ---------------- Voice ---------------- */
 async function playAndWaitVoice(url) {
   return new Promise((resolve) => {
@@ -82,12 +95,9 @@ async function loadTrend() {
 
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
-
-  // 👤 Persona line
   document.getElementById("r-persona").innerText = currentTrend.persona
     ? `👤 Featuring ${currentTrend.persona}`
     : "";
-
   document.getElementById("r-desc").innerText = currentTrend.description;
   document.getElementById("social-btn").style.display = "block";
 
@@ -122,18 +132,10 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
 
-  let params = new URLSearchParams(window.location.search);
-  roomId = params.get("room");
-
-  if (!roomId) {
-    // Always generate a room number if missing
-    roomId = "room-" + Math.floor(1000 + Math.random() * 9000);
-  }
-
+  // join with pre-generated roomId
   socket.emit("joinRoom", roomId);
-  document.getElementById("room-label").innerText = "room: " + roomId;
 
-  if (params.get("room")) {
+  if (new URLSearchParams(window.location.search).get("room")) {
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
   }
@@ -164,7 +166,7 @@ document.getElementById("social-btn").addEventListener("click", () => {
   btn.style.cursor = "default";
   btn.textContent = "share the url to your shopping companion and chat";
 
-  // ✅ Update room label to show social mode active
+  // Update room label to reflect active social mode
   document.getElementById("room-label").innerText =
     "room: " + roomId + " (social mode active)";
 
