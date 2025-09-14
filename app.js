@@ -5,6 +5,20 @@ let currentTrend = null;
 let roomId = null;
 let socialMode = false;
 
+/* ---------------- Room setup (auto on load) ---------------- */
+(function initRoom() {
+  let params = new URLSearchParams(window.location.search);
+  roomId = params.get("room");
+
+  // If no room in URL, generate one immediately
+  if (!roomId) {
+    roomId = "default-" + Math.floor(Math.random() * 9999);
+    const newUrl =
+      window.location.origin + window.location.pathname + "?room=" + roomId;
+    window.history.replaceState({}, "", newUrl);
+  }
+})();
+
 /* ---------------- Logger ---------------- */
 function uiLog(msg) {
   const logBox = document.getElementById("console-log");
@@ -120,23 +134,12 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
 
-  // Always check URL for ?room
-  let params = new URLSearchParams(window.location.search);
-  roomId = params.get("room");
-
-  // If no room in URL, create one and update address bar
-  if (!roomId) {
-    roomId = "default-" + Math.floor(Math.random() * 9999);
-    const newUrl =
-      window.location.origin + window.location.pathname + "?room=" + roomId;
-    window.history.replaceState({}, "", newUrl);
-  }
-
-  // Join the room
+  // Always join the room (already created/reused on page load)
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
 
-  // If page already had ?room, enable social mode immediately
+  // If user came via shared link with ?room=..., enable social mode
+  let params = new URLSearchParams(window.location.search);
   if (params.get("room")) {
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
