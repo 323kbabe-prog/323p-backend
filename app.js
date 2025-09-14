@@ -1,4 +1,4 @@
-// app.js — 323drop frontend logic (debug version)
+// app.v2.js — 323drop frontend logic (debug version)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null;
 let currentTrend = null;
