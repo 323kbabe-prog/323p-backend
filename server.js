@@ -1,4 +1,3 @@
-// server.js — 323drop backend (room-specific trends, host/guest aware)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -15,64 +14,20 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- State ---------------- */
-const roomTrends = {}; // { roomId: { trend data } }
+const roomTrends = {}; // { roomId: { current: {...}, next: {...} } }
 let generatingNext = {};
 
 /* ---------------- Products ---------------- */
 const TOP50_COSMETICS = [
-{ brand: "Rhode", product: "Peptide Lip Tint" },
-{ brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
-{ brand: "Anastasia Beverly Hills", product: "Clear Brow Gel" },
-{ brand: "YSL", product: "Make Me Blush Baby Doll" },
-{ brand: "Laura Mercier", product: "Loose Setting Powder" },
-{ brand: "Beautyblender", product: "Blending Sponge" },
-{ brand: "Givenchy", product: "Prisme Libre Blush" },
-{ brand: "Sephora Collection", product: "Pro Brushes" },
-{ brand: "COSRX", product: "Advanced Snail 96 Mucin Essence" },
-{ brand: "Lush", product: "Dream Cream" },
-{ brand: "Nyx", product: "Jumbo Eye Pencil" },
-{ brand: "Nars", product: "Radiant Creamy Concealer" },
-{ brand: "Too Faced", product: "Better Than Sex Mascara" },
-{ brand: "Charlotte Tilbury", product: "Magic Cream" },
-{ brand: "Haus Labs", product: "Triclone Foundation" },
-{ brand: "Dior", product: "Lip Glow Oil" },
-{ brand: "Freck Beauty", product: "Faux Freckle Pen" },
-{ brand: "Sol de Janeiro", product: "Brazilian Crush Mist" },
-{ brand: "Paula’s Choice", product: "2% BHA Liquid Exfoliant" },
-{ brand: "Essence", product: "Lash Princess Mascara" },
-{ brand: "Color Wow", product: "Dream Coat Spray" },
-{ brand: "Laneige", product: "Lip Sleeping Mask" },
-{ brand: "Maybelline", product: "Sky High Mascara" },
-{ brand: "Kitsch", product: "Heatless Curl Set" },
-{ brand: "Biodance", product: "Bio-Collagen Mask" },
-{ brand: "MAC", product: "Squirt Plumping Gloss Stick" },
-{ brand: "Clinique", product: "Black Honey Lipstick" },
-{ brand: "L’Oréal Paris", product: "Infallible Foundation" },
-{ brand: "Isle of Paradise", product: "Self-Tanning Drops" },
-{ brand: "Rare Beauty", product: "Liquid Blush" },
-{ brand: "SHEGLAM", product: "Makeup Essentials" },
-{ brand: "Huda Beauty", product: "Concealer" },
-{ brand: "Cécred", product: "Haircare Treatment" },
-{ brand: "Medicube", product: "PDRN Pink Glass Glow Set" },
-{ brand: "E.L.F.", product: "Halo Glow Powder" },
-{ brand: "Bubble Skincare", product: "Gel Cleanser" },
-{ brand: "Tower 28 Beauty", product: "SOS Spray" },
-{ brand: "Olay", product: "Regenerist Cream" },
-{ brand: "I’m From", product: "Rice Toner" },
-{ brand: "DIBS Beauty", product: "Desert Island Duo" },
-{ brand: "Milk Makeup", product: "Cooling Water Jelly Tint" },
-{ brand: "Glow Recipe", product: "Watermelon Dew Drops" },
-{ brand: "Danessa Myricks Beauty", product: "Yummy Skin Balm Powder" },
-{ brand: "Refy", product: "Brow Sculpt" },
-{ brand: "Kosas", product: "Revealer Concealer" },
-{ brand: "Bioderma", product: "Micellar Water" },
-{ brand: "Embryolisse", product: "Lait-Crème Concentré" },
-{ brand: "CurrentBody", product: "LED Hair Growth Helmet" },
-{ brand: "Dyson Beauty", product: "Airwrap Styler" }
+  { brand: "Rhode", product: "Peptide Lip Tint" },
+  { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
+  { brand: "Rare Beauty", product: "Liquid Blush" },
+  { brand: "Glow Recipe", product: "Watermelon Dew Drops" },
+  { brand: "Dior", product: "Lip Glow Oil" }
 ];
 
 /* ---------------- Emoji Helper ---------------- */
-const EMOJI_POOL = ["✨", "💖", "🔥", "👀", "😍", "💅", "🌈", "🌸", "😎", "🤩", "🫶", "🥹", "🧃", "🌟", "💋"];
+const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
 function randomEmojis(count = 2) {
   return Array.from({ length: count }, () => EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]).join(" ");
 }
@@ -93,7 +48,7 @@ function randomPersona() {
 /* ---------------- Helpers ---------------- */
 async function makeDescription(brand, product) {
   try {
-    const prompt = `Write a 70+ word first-person description of using "${product}" by ${brand}. Make it sensory, authentic, and Gen-Z relatable.`;
+    const prompt = `Write a 70+ word first-person description of using "${product}" by ${brand}. Make it sensory, authentic, and Gen-Z relatable. Add emojis inline.`;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
@@ -103,8 +58,6 @@ async function makeDescription(brand, product) {
       ]
     });
     let desc = completion.choices[0].message.content.trim();
-    desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
-    desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
     return `${desc} ${randomEmojis(3)}`;
   } catch (e) {
     console.error("❌ Description error:", e.message);
@@ -136,26 +89,32 @@ async function generateImageUrl(brand, product, persona) {
   return "https://placehold.co/600x600?text=No+Image";
 }
 
-async function generateNextPick(roomId) {
+async function generateDrop() {
+  const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+  const persona = randomPersona();
+  const description = await makeDescription(pick.brand, pick.product);
+  const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
+  return {
+    brand: decorateTextWithEmojis(pick.brand),
+    product: decorateTextWithEmojis(pick.product),
+    persona,
+    description,
+    hashtags: ["#BeautyTok", "#NowTrending"],
+    image: imageUrl,
+    refresh: 3000
+  };
+}
+
+async function ensureNextDrop(roomId) {
   if (generatingNext[roomId]) return;
   generatingNext[roomId] = true;
   try {
-    const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-    const persona = randomPersona();
-    const description = await makeDescription(pick.brand, pick.product);
-    const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
-    const decoratedBrand = decorateTextWithEmojis(pick.brand);
-    const decoratedProduct = decorateTextWithEmojis(pick.product);
-    roomTrends[roomId] = {
-      brand: decoratedBrand,
-      product: decoratedProduct,
-      persona,
-      description,
-      hashtags: ["#BeautyTok", "#NowTrending"],
-      image: imageUrl,
-      refresh: 3000
-    };
-    console.log(`✅ Trend ready for room ${roomId}: ${pick.brand} - ${pick.product}`);
+    const nextDrop = await generateDrop();
+    if (!roomTrends[roomId]) roomTrends[roomId] = {};
+    roomTrends[roomId].next = nextDrop;
+    console.log(`✅ Pre-generated next drop for room ${roomId}`);
+  } catch (e) {
+    console.error("❌ ensureNextDrop failed:", e.message);
   } finally {
     generatingNext[roomId] = false;
   }
@@ -165,27 +124,20 @@ async function generateNextPick(roomId) {
 app.get("/api/trend", async (req, res) => {
   try {
     const roomId = req.query.room || "default";
-    const guestMode = req.query.guest === "true";
-
-    if (!roomTrends[roomId]) {
-      if (guestMode) {
-        // Guest should never generate — return placeholder instead
-        return res.json({
-          brand: "waiting…",
-          product: "waiting for host",
-          persona: "none yet",
-          description: "please wait — the host has not started this room yet.",
-          hashtags: ["#Waiting"],
-          image: "https://placehold.co/600x600?text=Waiting+for+Host",
-          refresh: 5000
-        });
-      } else {
-        console.log(`⏳ Host generating first drop for room ${roomId}...`);
-        await generateNextPick(roomId);
+    if (!roomTrends[roomId] || !roomTrends[roomId].current) {
+      console.log(`⏳ Generating first drop for room ${roomId}...`);
+      const firstDrop = await generateDrop();
+      roomTrends[roomId] = { current: firstDrop };
+      ensureNextDrop(roomId); // pre-generate next
+    } else {
+      // If a next drop exists → promote it to current
+      if (roomTrends[roomId].next) {
+        roomTrends[roomId].current = roomTrends[roomId].next;
+        roomTrends[roomId].next = null;
+        ensureNextDrop(roomId); // pre-generate again
       }
     }
-
-    res.json(roomTrends[roomId]);
+    res.json(roomTrends[roomId].current);
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
     res.json({
