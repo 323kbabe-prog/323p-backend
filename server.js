@@ -46,9 +46,9 @@ function decorateTextWithEmojis(text) {
 /* ---------------- Persona Generator ---------------- */
 function randomPersona() {
   const genders = ["female"];
-  const ethnicities = ["Korean", "Black", "Latina", "Asian-American", "Mixed"];
+  const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
-  const styles = ["casual", "glam", "streetwear", "futuristic", "retro", "Y2K-inspired", "minimalist"];
+  const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
 
   const g = genders[Math.floor(Math.random() * genders.length)];
   const e = ethnicities[Math.floor(Math.random() * ethnicities.length)];
@@ -252,4 +252,5 @@ httpServer.listen(PORT, async () => {
   console.log(`🚀 323drop backend live on :${PORT}`);
   await generateNextPick();
 });
+
 
