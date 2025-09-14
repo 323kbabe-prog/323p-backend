@@ -6,6 +6,7 @@ let socialMode = false;
 let isHost = false;
 let isGuest = false;
 let warmingUp = true;
+let guestLoop = false; // control guest repeating description
 
 window.addEventListener("DOMContentLoaded", () => {
   /* ---------------- Setup Room ---------------- */
@@ -54,7 +55,25 @@ window.addEventListener("DOMContentLoaded", () => {
     audioPlayer.play();
   }
 
-  /* ---------------- Warm-up Loop ---------------- */
+  /* ---------------- Warm-up (show + voice) ---------------- */
+  function showWarmup() {
+    const center = document.getElementById("warmup-center");
+    if (center) {
+      center.style.display = "flex";
+      center.innerText = "✨🔥💖 AI is warming up… ✨🔥💖";
+    }
+    warmingUp = true;
+    warmUpLoop();
+  }
+
+  function hideWarmup() {
+    const center = document.getElementById("warmup-center");
+    if (center) {
+      center.style.display = "none";
+    }
+    warmingUp = false;
+  }
+
   async function warmUpLoop() {
     while (warmingUp) {
       await new Promise((resolve) => {
@@ -64,26 +83,33 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ---------------- Load Trend + Voice ---------------- */
-  async function loadTrend(isGuest) {
+  async function loadTrend(isGuestMode) {
     let apiUrl =
       "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
-    if (isGuest) {
+    if (isGuestMode) {
       apiUrl += "&guest=true";
     }
 
     const res = await fetch(apiUrl);
     currentTrend = await res.json();
 
-    // Stop warm-up loop once we have a trend
-    warmingUp = false;
+    // If waiting → keep showing warm-up
+    if (!currentTrend || !currentTrend.description || currentTrend.description.includes("waiting")) {
+      showWarmup();
+      setTimeout(() => loadTrend(isGuestMode), 3000);
+      return;
+    }
 
+    hideWarmup();
+
+    // Update screen with drop
     document.getElementById("r-title").innerText = currentTrend.brand;
     document.getElementById("r-artist").innerText = currentTrend.product;
     document.getElementById("r-persona").innerText = currentTrend.persona
       ? `👤 Featuring ${currentTrend.persona}`
       : "";
     document.getElementById("r-desc").innerText = currentTrend.description;
-    document.getElementById("social-btn").style.display = "block";
+    document.getElementById("social-btn").style.display = isHost ? "block" : "none";
 
     if (currentTrend.image) {
       document.getElementById("r-img").src = currentTrend.image;
@@ -94,10 +120,20 @@ window.addEventListener("DOMContentLoaded", () => {
       document.getElementById("r-fallback").style.display = "block";
     }
 
-    // Voice reads description once, then auto-fetch next drop
-    playVoice(currentTrend.description, () => {
-      loadTrend(isGuest); // fetch next immediately after voice ends
-    });
+    if (isGuestMode) {
+      // Guest loops the same description until next drop
+      guestLoop = true;
+      function loopGuest() {
+        if (!guestLoop) return;
+        playVoice(currentTrend.description, loopGuest);
+      }
+      loopGuest();
+    } else {
+      // Host reads description once, then auto-fetch next
+      playVoice(currentTrend.description, () => {
+        loadTrend(isGuestMode);
+      });
+    }
   }
 
   /* ---------------- Start / Guest buttons ---------------- */
@@ -106,11 +142,7 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
 
-    // Start warm-up loop
-    warmingUp = true;
-    warmUpLoop();
-
-    // Trigger first trend fetch
+    showWarmup();
     loadTrend(false);
   });
 
@@ -119,7 +151,7 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
 
-    // Guests don’t need warm-up loop
+    guestLoop = true;
     loadTrend(true);
   });
 
@@ -132,16 +164,9 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("social-btn").addEventListener("click", () => {
-    socialMode = true;
-    document.getElementById("bottom-panel").style.display = "flex";
-    const newUrl =
-      window.location.origin + window.location.pathname + "?room=" + roomId;
-    window.history.replaceState({}, "", newUrl);
+    if (!isHost) return; // only host
     const btn = document.getElementById("social-btn");
     btn.disabled = true;
-    btn.textContent =
-      "share the url to your shopping companion and chat";
-    document.getElementById("room-label").innerText =
-      "room: " + roomId + " (social mode active)";
+    btn.textContent = "✨🔥💖 share the url to your shopping companion and chat. ✨🔥💖";
   });
 });
