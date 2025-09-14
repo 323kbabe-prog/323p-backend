@@ -1,6 +1,7 @@
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null;
 let currentTrend = null;
+let lastTrendKey = null;
 let roomId = null;
 let socialMode = false;
 let isHost = false;
@@ -91,18 +92,26 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     const res = await fetch(apiUrl);
-    currentTrend = await res.json();
+    const newTrend = await res.json();
 
-    // If waiting → keep showing warm-up
-    if (!currentTrend || !currentTrend.description || currentTrend.description.includes("waiting")) {
-      showWarmup();
-      setTimeout(() => loadTrend(isGuestMode), 3000);
-      return;
+    // Build a unique key for this drop
+    const trendKey = newTrend ? newTrend.brand + "|" + newTrend.product : null;
+
+    // Host logic
+    if (!isGuestMode) {
+      // If drop is same as last one → show warm-up until a new one is ready
+      if (trendKey && trendKey === lastTrendKey) {
+        showWarmup();
+        setTimeout(() => loadTrend(isGuestMode), 3000);
+        return;
+      }
+      hideWarmup();
     }
 
-    hideWarmup();
+    currentTrend = newTrend;
+    lastTrendKey = trendKey;
 
-    // Update screen with drop
+    // Update screen
     document.getElementById("r-title").innerText = currentTrend.brand;
     document.getElementById("r-artist").innerText = currentTrend.product;
     document.getElementById("r-persona").innerText = currentTrend.persona
@@ -121,7 +130,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     if (isGuestMode) {
-      // Guest loops the same description until next drop
+      // Guest loops description until next arrives
       guestLoop = true;
       function loopGuest() {
         if (!guestLoop) return;
@@ -129,7 +138,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       loopGuest();
     } else {
-      // Host reads description once, then auto-fetch next
+      // Host: read description once, then check for next drop
       playVoice(currentTrend.description, () => {
         loadTrend(isGuestMode);
       });
@@ -167,6 +176,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!isHost) return; // only host
     const btn = document.getElementById("social-btn");
     btn.disabled = true;
-    btn.textContent = "✨🔥💖 share the url to your shopping companion and chat. ✨🔥💖";
+    btn.textContent =
+      "✨🔥💖 share the url to your shopping companion and chat. ✨🔥💖";
   });
 });
