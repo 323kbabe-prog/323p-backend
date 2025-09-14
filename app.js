@@ -35,45 +35,31 @@ window.addEventListener("DOMContentLoaded", () => {
   })();
 
   /* ---------------- Voice ---------------- */
-  async function playAndWaitVoice(text, onEnd) {
-    return new Promise((resolve) => {
-      if (audioPlayer) {
-        audioPlayer.pause();
-        audioPlayer = null;
-      }
-      const url =
-        "https://three23p-backend.onrender.com/api/voice?text=" +
-        encodeURIComponent(text);
+  function playAndWaitVoice(text, onEnd) {
+    if (audioPlayer) {
+      audioPlayer.pause();
+      audioPlayer = null;
+    }
+    const url =
+      "https://three23p-backend.onrender.com/api/voice?text=" +
+      encodeURIComponent(text);
 
-      document.getElementById("voice-status").textContent =
-        "🎤 Voice: loading…";
-
-      audioPlayer = new Audio(url);
-      audioPlayer.onplay = () => {
-        document.getElementById("voice-status").textContent =
-          "🎤 Voice: reading — " + text;
-      };
-      audioPlayer.onended = () => {
-        document.getElementById("voice-status").textContent =
-          "🎤 Voice finished.";
-        if (onEnd) onEnd();
-        resolve();
-      };
-      audioPlayer.onerror = () => {
-        document.getElementById("voice-status").textContent =
-          "⚠️ Voice error";
-        if (onEnd) onEnd();
-        resolve();
-      };
-      audioPlayer.play();
-    });
+    audioPlayer = new Audio(url);
+    audioPlayer.onended = () => {
+      if (onEnd) onEnd();
+    };
+    audioPlayer.onerror = () => {
+      if (onEnd) onEnd();
+    };
+    audioPlayer.play();
   }
 
   /* ---------------- Warm-up Loop ---------------- */
   async function warmUpLoop() {
     while (warmingUp) {
-      await playAndWaitVoice("✨🔥💖 AI is warming up… ✨🔥💖");
-      // keep looping until first trend arrives
+      await new Promise((resolve) => {
+        playAndWaitVoice("✨🔥💖 AI is warming up… ✨🔥💖", resolve);
+      });
     }
   }
 
@@ -88,7 +74,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const res = await fetch(apiUrl);
     currentTrend = await res.json();
 
-    // Once trend arrives, stop warm-up loop
+    // Stop warm-up once we have a trend
     warmingUp = false;
 
     document.getElementById("r-title").innerText = currentTrend.brand;
@@ -108,12 +94,9 @@ window.addEventListener("DOMContentLoaded", () => {
       document.getElementById("r-fallback").style.display = "block";
     }
 
-    // Voice reads description once, then fetches next drop
-    await playAndWaitVoice(currentTrend.description, () => {
-      document.getElementById("voice-status").textContent =
-        "🎤 Voice finished — fetching next drop…";
-      // fetch next drop immediately after reading
-      loadTrend(isGuest);
+    // Voice reads description once, then auto-fetch next drop
+    playAndWaitVoice(currentTrend.description, () => {
+      loadTrend(isGuest); // fetch next immediately after voice ends
     });
   }
 
@@ -127,7 +110,7 @@ window.addEventListener("DOMContentLoaded", () => {
     warmingUp = true;
     warmUpLoop();
 
-    // Trigger first trend fetch (host generates if needed)
+    // Trigger first trend fetch
     loadTrend(false);
   });
 
