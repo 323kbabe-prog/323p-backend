@@ -93,7 +93,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const res = await fetch(apiUrl);
     const newTrend = await res.json();
 
-    // Stop warm-up once first drop arrives
     hideWarmup();
 
     currentTrend = newTrend;
@@ -125,7 +124,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       loopGuest();
     } else {
-      // Host: read once, then after finish → fetch next (always ready)
+      // Host: read once, then after finish → fetch next
       playVoice(currentTrend.description, () => {
         loadTrend(isGuestMode);
       });
@@ -161,9 +160,20 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("social-btn").addEventListener("click", () => {
     if (!isHost) return; // only host
+
+    // open chat dock
+    document.getElementById("bottom-panel").style.display = "flex";
+
+    // show large overlay message
+    const overlay = document.getElementById("social-center");
+    if (overlay) {
+      overlay.style.display = "flex";
+      overlay.innerText =
+        "✨🔥💖 share the url to your shopping companion and chat. ✨🔥💖";
+    }
+
+    // disable button
     const btn = document.getElementById("social-btn");
     btn.disabled = true;
-    btn.textContent =
-      "✨🔥💖 share the url to your shopping companion and chat. ✨🔥💖";
   });
 });
