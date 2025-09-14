@@ -233,6 +233,10 @@ io.on("connection", (socket) => {
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
   });
 
+  socket.on("socialMode", ({ roomId }) => {
+    console.log(`🍜 ${socket.id} activated social mode in room: ${roomId}`);
+  });
+
   socket.on("chatMessage", ({ roomId, user, text }) => {
     console.log(`💬 [${roomId}] ${user}: ${text}`);
     io.to(roomId).emit("chatMessage", { user, text });
@@ -252,5 +256,3 @@ httpServer.listen(PORT, async () => {
   console.log(`🚀 323drop backend live on :${PORT}`);
   await generateNextPick();
 });
-
-
