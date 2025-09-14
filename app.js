@@ -124,17 +124,20 @@ document.getElementById("start-btn").addEventListener("click", () => {
 
   let params = new URLSearchParams(window.location.search);
   roomId = params.get("room");
+
   if (!roomId) {
-    roomId = "default-" + Math.floor(Math.random() * 9999);
+    // Always generate a room number if missing
+    roomId = "room-" + Math.floor(1000 + Math.random() * 9000);
   }
+
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
 
   if (params.get("room")) {
-    // already in social mode
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
   }
+
   warmUp();
 });
 
@@ -160,6 +163,10 @@ document.getElementById("social-btn").addEventListener("click", () => {
   btn.disabled = true;
   btn.style.cursor = "default";
   btn.textContent = "share the url to your shopping companion and chat";
+
+  // ✅ Update room label to show social mode active
+  document.getElementById("room-label").innerText =
+    "room: " + roomId + " (social mode active)";
 
   if (currentTrend) cycleTrend();
 });
