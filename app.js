@@ -1,7 +1,6 @@
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null;
 let currentTrend = null;
-let lastTrendKey = null; // to compare old vs new
 let roomId = null;
 let socialMode = false;
 let isHost = false;
@@ -94,24 +93,10 @@ window.addEventListener("DOMContentLoaded", () => {
     const res = await fetch(apiUrl);
     const newTrend = await res.json();
 
-    // Create a key to check if this drop is new
-    const trendKey = newTrend
-      ? newTrend.brand + "|" + newTrend.product + "|" + newTrend.description
-      : null;
-
-    // Host logic
-    if (!isGuestMode) {
-      if (trendKey && trendKey === lastTrendKey) {
-        // Same drop → show warm-up again and check sooner (1s)
-        showWarmup();
-        setTimeout(() => loadTrend(isGuestMode), 1000);
-        return;
-      }
-      hideWarmup();
-    }
+    // Stop warm-up once first drop arrives
+    hideWarmup();
 
     currentTrend = newTrend;
-    lastTrendKey = trendKey;
 
     // Update UI
     document.getElementById("r-title").innerText = currentTrend.brand;
@@ -132,7 +117,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     if (isGuestMode) {
-      // Guest loops description until host provides next
+      // Guest loops description until host moves on
       guestLoop = true;
       function loopGuest() {
         if (!guestLoop) return;
@@ -140,7 +125,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       loopGuest();
     } else {
-      // Host: read description once, then after finish → check next drop
+      // Host: read once, then after finish → fetch next (always ready)
       playVoice(currentTrend.description, () => {
         loadTrend(isGuestMode);
       });
