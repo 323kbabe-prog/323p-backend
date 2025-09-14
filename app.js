@@ -120,24 +120,28 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
 
+  // Always check URL for ?room
   let params = new URLSearchParams(window.location.search);
   roomId = params.get("room");
+
+  // If no room in URL, create one and update address bar
   if (!roomId) {
     roomId = "default-" + Math.floor(Math.random() * 9999);
+    const newUrl =
+      window.location.origin + window.location.pathname + "?room=" + roomId;
+    window.history.replaceState({}, "", newUrl);
   }
 
-  // ✅ Update URL with room immediately
-  const newUrl =
-    window.location.origin + window.location.pathname + "?room=" + roomId;
-  window.history.replaceState({}, "", newUrl);
-
+  // Join the room
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
 
+  // If page already had ?room, enable social mode immediately
   if (params.get("room")) {
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
   }
+
   warmUp();
 });
 
