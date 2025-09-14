@@ -1,4 +1,4 @@
-// server.js — 323drop backend (description + image + voice + chat + emojis)
+// server.js — 323drop backend (room-specific trends)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -12,20 +12,11 @@ app.use(cors({ origin: "*" }));
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
-/* ---------------- Crash handlers ---------------- */
-process.on("uncaughtException", (err) => {
-  console.error("❌ Uncaught Exception:", err);
-});
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ Unhandled Rejection:", reason);
-});
-
-/* ---------------- OpenAI ---------------- */
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- State ---------------- */
-let nextPickCache = null;
-let generatingNext = false;
+const roomTrends = {}; // { roomId: { trend data } }
+let generatingNext = {};
 
 /* ---------------- Products ---------------- */
 const TOP50_COSMETICS = [
@@ -95,30 +86,15 @@ async function generateImageUrl(brand, product, persona) {
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
-    console.warn("⚠️ Image response had no URL or base64:", out);
   } catch (e) {
     console.error("❌ Image error:", e.message);
   }
   return "https://placehold.co/600x600?text=No+Image";
 }
 
-async function generateVoice(text) {
-  try {
-    const out = await openai.audio.speech.create({
-      model: "gpt-4o-mini-tts",
-      voice: "alloy",
-      input: text,
-    });
-    return Buffer.from(await out.arrayBuffer());
-  } catch (e) {
-    console.error("❌ Voice error:", e.message);
-    return null;
-  }
-}
-
-async function generateNextPick() {
-  if (generatingNext) return;
-  generatingNext = true;
+async function generateNextPick(roomId) {
+  if (generatingNext[roomId]) return;
+  generatingNext[roomId] = true;
   try {
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
     const persona = randomPersona();
@@ -126,7 +102,7 @@ async function generateNextPick() {
     const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
     const decoratedBrand = decorateTextWithEmojis(pick.brand);
     const decoratedProduct = decorateTextWithEmojis(pick.product);
-    nextPickCache = {
+    roomTrends[roomId] = {
       brand: decoratedBrand,
       product: decoratedProduct,
       persona,
@@ -135,32 +111,21 @@ async function generateNextPick() {
       image: imageUrl,
       refresh: 3000
     };
-    console.log("✅ Next pick ready:", nextPickCache.brand, "-", nextPickCache.product, "| Persona:", persona);
-  } catch (e) {
-    console.error("❌ generateNextPick failed:", e.message);
+    console.log(`✅ Trend ready for room ${roomId}: ${pick.brand} - ${pick.product}`);
   } finally {
-    generatingNext = false;
+    generatingNext[roomId] = false;
   }
 }
 
 /* ---------------- API Routes ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    if (!nextPickCache) {
-      console.log("⏳ Generating first drop...");
-      await generateNextPick();
+    const roomId = req.query.room || "default";
+    if (!roomTrends[roomId]) {
+      console.log(`⏳ Generating first drop for room ${roomId}...`);
+      await generateNextPick(roomId);
     }
-    const result = nextPickCache || {
-      brand: decorateTextWithEmojis("Loading"),
-      product: decorateTextWithEmojis("Beauty Product"),
-      persona: "loading persona…",
-      description: decorateTextWithEmojis("AI is warming up… please wait."),
-      hashtags: ["#Loading"],
-      image: "https://placehold.co/600x600?text=Loading",
-      refresh: 5000
-    };
-    nextPickCache = null;
-    generateNextPick();
+    const result = roomTrends[roomId];
     res.json(result);
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
@@ -180,8 +145,12 @@ app.get("/api/voice", async (req, res) => {
   try {
     const text = req.query.text || "";
     if (!text) return res.status(400).json({ error: "Missing text" });
-    const audioBuffer = await generateVoice(text);
-    if (!audioBuffer) return res.status(500).json({ error: "No audio generated" });
+    const out = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "alloy",
+      input: text,
+    });
+    const audioBuffer = Buffer.from(await out.arrayBuffer());
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
   } catch (e) {
@@ -191,16 +160,6 @@ app.get("/api/voice", async (req, res) => {
 });
 
 app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
-
-app.get("/test-openai", async (req, res) => {
-  try {
-    const result = await openai.models.list();
-    res.json({ ok: true, modelCount: result.data.length });
-  } catch (e) {
-    console.error("❌ Test OpenAI failed:", e.message);
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
 
 /* ---------------- Chat (Socket.IO) ---------------- */
 io.on("connection", (socket) => {
@@ -226,9 +185,4 @@ app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
   console.log(`🚀 323drop backend live on :${PORT}`);
-  try {
-    await generateNextPick();
-  } catch (err) {
-    console.error("⚠️ Startup error:", err.message);
-  }
 });
