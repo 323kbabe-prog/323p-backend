@@ -1,26 +1,15 @@
-// app.v2.js — 323drop frontend logic (debug version)
+// app.js — 323drop frontend logic
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null;
 let currentTrend = null;
 let roomId = null;
 let socialMode = false;
 
-/* ---------------- Room setup (auto on load) ---------------- */
-(function initRoom() {
-  console.log("initRoom: starting room check...");
-  let params = new URLSearchParams(window.location.search);
+/* ---------------- Grab room from URL (set by HTML) ---------------- */
+(function initRoomFromUrl() {
+  const params = new URLSearchParams(window.location.search);
   roomId = params.get("room");
-
-  if (!roomId) {
-    roomId = "default-" + Math.floor(Math.random() * 9999);
-    const newUrl =
-      window.location.origin + window.location.pathname + "?room=" + roomId;
-    console.log("initRoom: no room in URL, creating:", roomId);
-    console.log("initRoom: updating address bar to:", newUrl);
-    window.history.replaceState({}, "", newUrl);
-  } else {
-    console.log("initRoom: found room in URL:", roomId);
-  }
+  console.log("Room initialized from URL:", roomId);
 })();
 
 /* ---------------- Logger ---------------- */
@@ -140,13 +129,13 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
 
+  // Join the room (roomId already created in HTML inline script)
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
 
-  // If user came via shared link with ?room=..., enable social mode
+  // If user came via shared link (?room=...), enable social mode immediately
   let params = new URLSearchParams(window.location.search);
   if (params.get("room")) {
-    console.log("start-btn: social mode detected from URL");
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
   }
@@ -166,7 +155,7 @@ document.getElementById("chat-send").addEventListener("click", () => {
 /* ---------------- 🍜 Social mode ---------------- */
 document.getElementById("social-btn").addEventListener("click", () => {
   socialMode = true;
-  document.getElementById("bottom-panel").style.display = "flex";
+  document.getElementById("bottom-panel").style.display = "flex"; // show chat dock
   uiLog("Switched to social mode, room=" + roomId);
 
   socket.emit("socialMode", { roomId });
