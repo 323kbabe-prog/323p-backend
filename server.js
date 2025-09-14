@@ -45,7 +45,7 @@ function decorateTextWithEmojis(text) {
 
 /* ---------------- Persona Generator ---------------- */
 function randomPersona() {
-  const genders = ["female", "male"];
+  const genders = ["female"];
   const ethnicities = ["Korean", "Black", "Latina", "Asian-American", "Mixed"];
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
   const styles = ["casual", "glam", "streetwear", "futuristic", "retro", "Y2K-inspired", "minimalist"];
@@ -252,3 +252,4 @@ httpServer.listen(PORT, async () => {
   console.log(`🚀 323drop backend live on :${PORT}`);
   await generateNextPick();
 });
+
