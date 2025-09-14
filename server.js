@@ -1,4 +1,4 @@
-// server.js — 323drop backend (room-specific trends)
+// server.js — 323drop backend (room-specific trends, host/guest aware)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -121,12 +121,27 @@ async function generateNextPick(roomId) {
 app.get("/api/trend", async (req, res) => {
   try {
     const roomId = req.query.room || "default";
+    const guestMode = req.query.guest === "true";
+
     if (!roomTrends[roomId]) {
-      console.log(`⏳ Generating first drop for room ${roomId}...`);
-      await generateNextPick(roomId);
+      if (guestMode) {
+        // Guest should never generate — return placeholder instead
+        return res.json({
+          brand: "waiting…",
+          product: "waiting for host",
+          persona: "none yet",
+          description: "please wait — the host has not started this room yet.",
+          hashtags: ["#Waiting"],
+          image: "https://placehold.co/600x600?text=Waiting+for+Host",
+          refresh: 5000
+        });
+      } else {
+        console.log(`⏳ Host generating first drop for room ${roomId}...`);
+        await generateNextPick(roomId);
+      }
     }
-    const result = roomTrends[roomId];
-    res.json(result);
+
+    res.json(roomTrends[roomId]);
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
     res.json({
