@@ -76,9 +76,7 @@ async function loadTrend() {
   uiLog("Fetching trend...");
   const res = await fetch("https://three23p-backend.onrender.com/api/trend");
   currentTrend = await res.json();
-  uiLog(
-    "Trend loaded: " + currentTrend.brand + " - " + currentTrend.product
-  );
+  uiLog("Trend loaded: " + currentTrend.brand + " - " + currentTrend.product);
 
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
@@ -127,11 +125,16 @@ document.getElementById("start-btn").addEventListener("click", () => {
   if (!roomId) {
     roomId = "default-" + Math.floor(Math.random() * 9999);
   }
+
+  // ✅ Update URL with room immediately
+  const newUrl =
+    window.location.origin + window.location.pathname + "?room=" + roomId;
+  window.history.replaceState({}, "", newUrl);
+
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
 
   if (params.get("room")) {
-    // already in social mode
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
   }
@@ -149,12 +152,13 @@ document.getElementById("chat-send").addEventListener("click", () => {
 
 /* ---------------- 🍜 Social mode ---------------- */
 document.getElementById("social-btn").addEventListener("click", () => {
+  // ✅ Do not touch URL or roomId here, just enable chat/social mode
   socialMode = true;
   document.getElementById("bottom-panel").style.display = "flex"; // show chat dock
-  const newUrl =
-    window.location.origin + window.location.pathname + "?room=" + roomId;
-  window.history.replaceState({}, "", newUrl);
   uiLog("Switched to social mode, room=" + roomId);
+
+  // 👇 Emit to backend so it logs activation
+  socket.emit("socialMode", { roomId });
 
   const btn = document.getElementById("social-btn");
   btn.disabled = true;
