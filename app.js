@@ -94,6 +94,10 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("start-screen").style.display = "none";
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
+
+    // Show message on screen
+    document.getElementById("voice-status").textContent = "✅ Host started — generating content…";
+
     warmUp(); // Host generates if needed
   });
 
@@ -101,6 +105,10 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("start-screen").style.display = "none";
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
+
+    // Show message on screen
+    document.getElementById("voice-status").textContent = "✅ Guest joined — loading cached content…";
+
     loadTrend(true); // Guest only loads cached trend
   });
 
