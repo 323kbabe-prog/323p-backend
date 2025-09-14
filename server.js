@@ -1,4 +1,4 @@
-// server.js — 323drop backend (description + image + voice + chat + emojis)
+// server.js — 323drop backend
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -29,7 +29,7 @@ const TOP50_COSMETICS = [
 ];
 
 /* ---------------- Emoji Helper ---------------- */
-const EMOJI_POOL = ["✨", "💖", "🔥", "👀", "😍", "💅", "🌈", "🌸", "😎", "🤩", "🫶", "🥹", "🧃", "🌟", "💋"];
+const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
 
 function randomEmojis(count = 2) {
   let out = [];
@@ -54,7 +54,7 @@ function randomPersona() {
   const e = ethnicities[Math.floor(Math.random() * ethnicities.length)];
   const v = vibes[Math.floor(Math.random() * vibes.length)];
   const s = styles[Math.floor(Math.random() * styles.length)];
-  const age = Math.floor(Math.random() * (23 - 17 + 1)) + 17; // 17–23
+  const age = Math.floor(Math.random() * (23 - 17 + 1)) + 17;
 
   return `a ${age}-year-old ${g} ${e} ${v} with a ${s} style`;
 }
@@ -77,14 +77,9 @@ async function makeDescription(brand, product) {
     });
 
     let desc = completion.choices[0].message.content.trim();
-
-    // Add emojis to brand + product mentions
     desc = desc.replace(new RegExp(`${product}`, "gi"), `${product} ${randomEmojis(2)}`);
     desc = desc.replace(new RegExp(`${brand}`, "gi"), `${brand} ${randomEmojis(2)}`);
-
-    // Add emojis at the end
     desc = `${desc} ${randomEmojis(3)}`;
-
     return desc;
   } catch (e) {
     console.error("❌ Description error:", e.response?.data || e.message);
@@ -111,8 +106,6 @@ async function generateImageUrl(brand, product, persona) {
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
-
-    console.warn("⚠️ Image response had no URL or base64:", out);
   } catch (e) {
     console.error("❌ Image error:", e.response?.data || e.message);
   }
@@ -138,18 +131,17 @@ async function generateNextPick() {
   generatingNext = true;
   try {
     const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-    const persona = randomPersona(); // 👤 generate unique persona for this drop
+    const persona = randomPersona();
     const description = await makeDescription(pick.brand, pick.product);
     const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
 
-    // Decorate brand + product with emojis
     const decoratedBrand = decorateTextWithEmojis(pick.brand);
     const decoratedProduct = decorateTextWithEmojis(pick.product);
 
     nextPickCache = {
       brand: decoratedBrand,
       product: decoratedProduct,
-      persona, // 🔒 included in response
+      persona,
       description,
       hashtags: ["#BeautyTok", "#NowTrending"],
       image: imageUrl,
@@ -168,17 +160,9 @@ app.get("/api/trend", async (req, res) => {
       console.log("⏳ Generating first drop...");
       await generateNextPick();
     }
-    const result = nextPickCache || {
-      brand: decorateTextWithEmojis("Loading"),
-      product: decorateTextWithEmojis("Beauty Product"),
-      persona: "loading persona…",
-      description: decorateTextWithEmojis("AI is warming up… please wait."),
-      hashtags: ["#Loading"],
-      image: "https://placehold.co/600x600?text=Loading",
-      refresh: 5000
-    };
+    const result = nextPickCache;
     nextPickCache = null;
-    generateNextPick(); // prepare next one in background
+    generateNextPick();
     res.json(result);
   } catch (e) {
     console.error("❌ Trend API error:", e.response?.data || e.message);
@@ -210,19 +194,6 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
-app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
-
-// 🔎 Debug route to verify API key
-app.get("/test-openai", async (req, res) => {
-  try {
-    const result = await openai.models.list();
-    res.json({ ok: true, modelCount: result.data.length });
-  } catch (e) {
-    console.error("❌ Test OpenAI failed:", e.response?.data || e.message);
-    res.status(500).json({ ok: false, error: e.response?.data || e.message });
-  }
-});
-
 /* ---------------- Chat (Socket.IO) ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
@@ -230,11 +201,11 @@ io.on("connection", (socket) => {
   socket.on("joinRoom", (roomId) => {
     socket.join(roomId);
     socket.roomId = roomId;
-    console.log(`👥 ${socket.id} joined room: ${roomId}`);
+    console.log(`👥 ${socket.id} joined ${roomId}`);
   });
 
   socket.on("socialMode", ({ roomId }) => {
-    console.log(`🍜 ${socket.id} activated social mode in room: ${roomId}`);
+    console.log(`🍜 ${socket.id} activated social mode in ${roomId}`);
   });
 
   socket.on("chatMessage", ({ roomId, user, text }) => {
@@ -246,9 +217,6 @@ io.on("connection", (socket) => {
     console.log(`❌ User disconnected: ${socket.id} (room ${socket.roomId || "none"})`);
   });
 });
-
-/* ---------------- Serve static (app.js etc.) ---------------- */
-app.use(express.static(path.join(__dirname)));
 
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
