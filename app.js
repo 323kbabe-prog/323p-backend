@@ -5,11 +5,6 @@ let currentTrend = null;
 let roomId = null;
 let socialMode = false;
 
-/* ---------------- Get room from URL ---------------- */
-const params = new URLSearchParams(window.location.search);
-roomId = params.get("room");
-console.log("Loaded roomId from URL:", roomId);
-
 /* ---------------- Logger ---------------- */
 function uiLog(msg) {
   const logBox = document.getElementById("console-log");
@@ -121,17 +116,20 @@ socket.on("chatHistory", (history) => {
 
 /* ---------------- Start button ---------------- */
 document.getElementById("start-btn").addEventListener("click", () => {
+  // Always re-check roomId from URL to avoid null
+  const params = new URLSearchParams(window.location.search);
+  roomId = params.get("room");
+
   console.log("start-btn clicked, joining room:", roomId);
 
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
 
-  // Join the room
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
 
-  // Enable social mode if link had ?room
-  if (params.get("room")) {
+  // If joined via a shared link, enable social mode immediately
+  if (roomId) {
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
   }
@@ -151,7 +149,7 @@ document.getElementById("chat-send").addEventListener("click", () => {
 /* ---------------- 🍜 Social mode ---------------- */
 document.getElementById("social-btn").addEventListener("click", () => {
   socialMode = true;
-  document.getElementById("bottom-panel").style.display = "flex";
+  document.getElementById("bottom-panel").style.display = "flex"; // show chat dock
   uiLog("Switched to social mode, room=" + roomId);
 
   socket.emit("socialMode", { roomId });
