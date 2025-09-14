@@ -5,12 +5,10 @@ let currentTrend = null;
 let roomId = null;
 let socialMode = false;
 
-/* ---------------- Grab room from URL (set by HTML) ---------------- */
-(function initRoomFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  roomId = params.get("room");
-  console.log("Room initialized from URL:", roomId);
-})();
+/* ---------------- Get room from URL ---------------- */
+const params = new URLSearchParams(window.location.search);
+roomId = params.get("room");
+console.log("Loaded roomId from URL:", roomId);
 
 /* ---------------- Logger ---------------- */
 function uiLog(msg) {
@@ -88,7 +86,6 @@ async function loadTrend() {
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
 
-  // 👤 Persona line
   document.getElementById("r-persona").innerText = currentTrend.persona
     ? `👤 Featuring ${currentTrend.persona}`
     : "";
@@ -129,12 +126,11 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
 
-  // Join the room (roomId already created in HTML inline script)
+  // Join the room
   socket.emit("joinRoom", roomId);
   document.getElementById("room-label").innerText = "room: " + roomId;
 
-  // If user came via shared link (?room=...), enable social mode immediately
-  let params = new URLSearchParams(window.location.search);
+  // Enable social mode if link had ?room
   if (params.get("room")) {
     socialMode = true;
     document.getElementById("bottom-panel").style.display = "flex";
@@ -155,7 +151,7 @@ document.getElementById("chat-send").addEventListener("click", () => {
 /* ---------------- 🍜 Social mode ---------------- */
 document.getElementById("social-btn").addEventListener("click", () => {
   socialMode = true;
-  document.getElementById("bottom-panel").style.display = "flex"; // show chat dock
+  document.getElementById("bottom-panel").style.display = "flex";
   uiLog("Switched to social mode, room=" + roomId);
 
   socket.emit("socialMode", { roomId });
