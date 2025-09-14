@@ -49,12 +49,16 @@ async function warmUp() {
   document.getElementById("r-fallback").style.display = "none";
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent("AI is warming up…");
   await playAndWaitVoice(url);
-  loadTrend();
+  loadTrend(false); // host call
 }
 
 /* ---------------- Load Trend ---------------- */
-async function loadTrend() {
-  const res = await fetch("https://three23p-backend.onrender.com/api/trend?room=" + roomId);
+async function loadTrend(isGuest) {
+  let apiUrl = "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
+  if (isGuest) {
+    apiUrl += "&guest=true";
+  }
+  const res = await fetch(apiUrl);
   currentTrend = await res.json();
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
@@ -83,7 +87,7 @@ document.getElementById("guest-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
   socket.emit("joinRoom", roomId);
-  loadTrend(); // Guest only loads cached trend
+  loadTrend(true); // Guest only loads cached trend
 });
 
 /* ---------------- Chat & 🍜 ---------------- */
