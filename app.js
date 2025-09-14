@@ -35,7 +35,7 @@ window.addEventListener("DOMContentLoaded", () => {
   })();
 
   /* ---------------- Voice ---------------- */
-  function playAndWaitVoice(text, onEnd) {
+  function playVoice(text, onEnd) {
     if (audioPlayer) {
       audioPlayer.pause();
       audioPlayer = null;
@@ -58,7 +58,7 @@ window.addEventListener("DOMContentLoaded", () => {
   async function warmUpLoop() {
     while (warmingUp) {
       await new Promise((resolve) => {
-        playAndWaitVoice("✨🔥💖 AI is warming up… ✨🔥💖", resolve);
+        playVoice("✨🔥💖 AI is warming up… ✨🔥💖", resolve);
       });
     }
   }
@@ -74,7 +74,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const res = await fetch(apiUrl);
     currentTrend = await res.json();
 
-    // Stop warm-up once we have a trend
+    // Stop warm-up loop once we have a trend
     warmingUp = false;
 
     document.getElementById("r-title").innerText = currentTrend.brand;
@@ -95,7 +95,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     // Voice reads description once, then auto-fetch next drop
-    playAndWaitVoice(currentTrend.description, () => {
+    playVoice(currentTrend.description, () => {
       loadTrend(isGuest); // fetch next immediately after voice ends
     });
   }
