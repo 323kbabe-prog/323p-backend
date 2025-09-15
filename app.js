@@ -5,9 +5,19 @@ let roomId = null;
 let socialMode = false;
 let isHost = false;
 let isGuest = false;
-let firstDrop = true; // 👈 track first drop
+let firstDrop = true;
 let guestLoop = false;
 let lastDescriptionKey = null;
+
+/* ---------------- Emoji Helper ---------------- */
+const GENZ_EMOJIS = ["✨","🔥","💖","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋","😂","🥺","💕"];
+function randomGenZEmojis(count = 3) {
+  let chosen = [];
+  for (let i = 0; i < count; i++) {
+    chosen.push(GENZ_EMOJIS[Math.floor(Math.random() * GENZ_EMOJIS.length)]);
+  }
+  return chosen.join(" ");
+}
 
 window.addEventListener("DOMContentLoaded", () => {
   /* ---------------- Setup Room ---------------- */
@@ -61,7 +71,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const center = document.getElementById("warmup-center");
     if (center) {
       center.style.display = "flex";
-      center.innerText = "✨🔥💖 AI is warming up… ✨🔥💖";
+      center.innerText = `${randomGenZEmojis(3)} AI is warming up… ${randomGenZEmojis(3)}`;
     }
   }
 
@@ -69,15 +79,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const center = document.getElementById("warmup-center");
     if (center) {
       center.style.display = "none";
-    }
-  }
-
-  /* ---------------- Warm-up Voice Loop (first drop only) ---------------- */
-  async function warmUpVoiceLoop() {
-    while (firstDrop) {
-      await new Promise((resolve) => {
-        playVoice("✨🔥💖 AI is warming up… ✨🔥💖", resolve);
-      });
     }
   }
 
@@ -93,28 +94,24 @@ window.addEventListener("DOMContentLoaded", () => {
     const newTrend = await res.json();
 
     if (!newTrend || !newTrend.description) {
-      // waiting for a drop
+      // waiting for drop
       showWarmupOverlay();
-      if (firstDrop) {
-        // only first drop: voice + overlay
-        warmUpVoiceLoop();
-      }
       setTimeout(() => loadTrend(isGuestMode), 2000);
       return;
     }
 
-    // Got a drop
-    firstDrop = false; // 👈 after first drop, no more warm-up voice
     hideWarmupOverlay();
     currentTrend = newTrend;
 
-    // Update UI
+    // Update UI with random emojis in description text
+    const decoratedDescription = `${randomGenZEmojis(2)} ${currentTrend.description} ${randomGenZEmojis(2)}`;
+
     document.getElementById("r-title").innerText = currentTrend.brand;
     document.getElementById("r-artist").innerText = currentTrend.product;
     document.getElementById("r-persona").innerText = currentTrend.persona
       ? `👤 Featuring ${currentTrend.persona}`
       : "";
-    document.getElementById("r-desc").innerText = currentTrend.description;
+    document.getElementById("r-desc").innerText = decoratedDescription;
     document.getElementById("social-btn").style.display = isHost ? "block" : "none";
 
     if (currentTrend.image) {
@@ -131,7 +128,7 @@ window.addEventListener("DOMContentLoaded", () => {
       guestLoop = true;
       function loopGuest() {
         if (!guestLoop) return;
-        playVoice(currentTrend.description, loopGuest);
+        playVoice(decoratedDescription, loopGuest);
       }
       loopGuest();
     } else {
@@ -139,8 +136,10 @@ window.addEventListener("DOMContentLoaded", () => {
       const descriptionKey = currentTrend.description;
       if (descriptionKey !== lastDescriptionKey) {
         lastDescriptionKey = descriptionKey;
-        playVoice(currentTrend.description, () => {
-          loadTrend(isGuestMode); // fetch next after finish
+        playVoice(decoratedDescription, () => {
+          // After voice ends, show overlay until next drop is ready
+          showWarmupOverlay();
+          loadTrend(isGuestMode);
         });
       } else {
         setTimeout(() => loadTrend(isGuestMode), 2000);
@@ -155,7 +154,6 @@ window.addEventListener("DOMContentLoaded", () => {
     socket.emit("joinRoom", roomId);
 
     showWarmupOverlay();
-    warmUpVoiceLoop(); // start voice loop for first drop
     loadTrend(false);
   });
 
@@ -196,7 +194,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (overlay) {
       overlay.style.display = "flex";
       overlay.innerText =
-        "✨🔥💖 share the url to your shopping companion and chat. ✨🔥💖";
+        `${randomGenZEmojis(3)} share the url to your shopping companion and chat. ${randomGenZEmojis(3)}`;
     }
 
     // disable button
