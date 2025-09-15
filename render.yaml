@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: 323drop-backend
+    name: 323drop-base-mode
     env: node
     plan: free
-    buildCommand: "npm install"
-    startCommand: "node server.js"
+    buildCommand: npm install
+    startCommand: node server.js
     envVars:
       - key: NODE_VERSION
         value: 20
       - key: OPENAI_API_KEY
-        sync: false   # add your key manually in the dashboard
+        sync: false   # Add your OpenAI key manually in Render dashboard
