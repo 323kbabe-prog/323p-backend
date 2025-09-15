@@ -5,7 +5,7 @@ let roomId = null;
 let socialMode = false;
 let isHost = false;
 let isGuest = false;
-let firstDrop = true;
+let firstDrop = true; // 👈 track if it's the very first drop
 let guestLoop = false;
 let lastDescriptionKey = null;
 
@@ -99,12 +99,23 @@ window.addEventListener("DOMContentLoaded", () => {
     const newTrend = await res.json();
 
     if (!newTrend || !newTrend.description) {
-      // waiting for drop
-      showWarmupOverlay(); // overlay visible (no voice after first drop)
-      setTimeout(() => loadTrend(isGuestMode), 2000);
+      // Waiting for drop
+      showWarmupOverlay();
+
+      if (firstDrop) {
+        // Only first drop: also loop warm-up voice
+        playVoice(`${randomGenZEmojis(3)} AI is warming up… ${randomGenZEmojis(3)}`, () => {
+          setTimeout(() => loadTrend(isGuestMode), 2000);
+        });
+      } else {
+        // After description: overlay only (no voice)
+        setTimeout(() => loadTrend(isGuestMode), 2000);
+      }
       return;
     }
 
+    // Got a drop
+    firstDrop = false; // after this, no more warm-up voice between drops
     hideWarmupOverlay();
     currentTrend = newTrend;
 
@@ -140,9 +151,9 @@ window.addEventListener("DOMContentLoaded", () => {
       if (descriptionKey !== lastDescriptionKey) {
         lastDescriptionKey = descriptionKey;
         playVoice(currentTrend.description, () => {
-          // After voice ends: overlay appears while waiting
+          // After description ends: overlay only until next drop
           showWarmupOverlay();
-          loadTrend(isGuestMode);
+          setTimeout(() => loadTrend(isGuestMode), 2000);
         });
       } else {
         setTimeout(() => loadTrend(isGuestMode), 2000);
