@@ -1,7 +1,7 @@
 {
-  "name": "323drop-backend",
+  "name": "323drop-base-mode",
   "version": "1.0.0",
-  "description": "323drop backend (API + chat only, HTML served separately on GoDaddy)",
+  "description": "323drop backend — Base Mode Only (DailyDrop + cycle + voice)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -12,6 +12,7 @@
   "dependencies": {
     "express": "^4.19.2",
     "openai": "^4.0.0",
-    "socket.io": "^4.7.5"
+    "socket.io": "^4.7.5",
+    "cors": "^2.8.5"
   }
 }
