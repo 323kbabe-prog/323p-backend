@@ -5,13 +5,15 @@ let roomId = null;
 let lastDescriptionKey = null;
 let stopCycle = false;
 
-/* ---------------- Pastel Gradients ---------------- */
-const pastelGradients = [
-  "linear-gradient(-45deg, #f9d5ec, #c9e7ff, #e6d7ff)", // pink, blue, lilac
-  "linear-gradient(-45deg, #ffd6e8, #ffe6cc, #fff2cc)", // peach, cream, soft yellow
-  "linear-gradient(-45deg, #d7f9f5, #e0e7ff, #f5d9ff)", // aqua, periwinkle, violet
-  "linear-gradient(-45deg, #fcd5ce, #fae1dd, #fde2e4)", // blush tones
-  "linear-gradient(-45deg, #e0c3fc, #8ec5fc, #d7e1ec)"  // lavender, sky, soft gray
+/* ---------------- Gen-Z Gradients ---------------- */
+const genzGradients = [
+  "linear-gradient(-45deg, #f9d5ec, #c9e7ff, #e6d7ff)", // pastel cute
+  "linear-gradient(-45deg, #ffd6e8, #ffe6cc, #fff2cc)", // peach cream
+  "linear-gradient(-45deg, #ff9a9e, #00f2fe, #a18cd1)", // vaporwave
+  "linear-gradient(-45deg, #ff00cc, #3333ff, #6600ff)", // cyber drip
+  "linear-gradient(-45deg, #d7f9f5, #e0e7ff, #f5d9ff)", // aqua chill
+  "linear-gradient(-45deg, #fcb69f, #ffecd2, #dcb0ed)", // sunset slay
+  "linear-gradient(-45deg, #e0c3fc, #8ec5fc, #d7e1ec)"  // dream glow
 ];
 
 /* ---------------- Room Setup ---------------- */
@@ -77,8 +79,8 @@ async function loadTrend() {
 
   currentTrend = newTrend;
 
-  // ✅ Change background each drop
-  const gradient = pastelGradients[Math.floor(Math.random() * pastelGradients.length)];
+  // ✅ Change background each drop (random Gen-Z gradient)
+  const gradient = genzGradients[Math.floor(Math.random() * genzGradients.length)];
   document.body.style.background = gradient;
   document.body.style.backgroundSize = "400% 400%";
   document.body.style.animation = "gradientShift 12s ease infinite";
