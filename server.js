@@ -178,7 +178,7 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
-// NEW: Trigger pre-generation when voice starts
+// Trigger pre-generation when voice starts
 app.get("/api/start-voice", async (req, res) => {
   const roomId = req.query.room;
   if (!roomId) {
@@ -188,28 +188,16 @@ app.get("/api/start-voice", async (req, res) => {
   res.json({ ok: true, message: "Pre-generation triggered" });
 });
 
-/* ---------------- Chat (Socket.IO) ---------------- */
+/* ---------------- Minimal Socket.IO ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
-
   socket.on("joinRoom", (roomId) => {
     socket.join(roomId);
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
   });
-
-  // Guest joined → force host social mode
-  socket.on("guestJoined", ({ roomId }) => {
-    io.to(roomId).emit("forceSocial");
-  });
-
-  socket.on("chatMessage", ({ roomId, user, text }) => {
-    console.log(`💬 [${roomId}] ${user}: ${text}`);
-    io.to(roomId).emit("chatMessage", { user, text });
-  });
-
   socket.on("disconnect", () => {
-    console.log(`❌ User disconnected: ${socket.id} (room ${socket.roomId || "none"})`);
+    console.log(`❌ User disconnected: ${socket.id}`);
   });
 });
 
@@ -219,5 +207,5 @@ app.use(express.static(path.join(__dirname)));
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-  console.log(`🚀 323drop backend live on :${PORT}`);
+  console.log(`🚀 323drop backend (Base Mode Only) live on :${PORT}`);
 });
