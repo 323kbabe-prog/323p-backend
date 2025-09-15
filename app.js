@@ -1,3 +1,22 @@
+const socket = io("https://three23p-backend.onrender.com");
+let audioPlayer = null;
+let currentTrend = null;
+let roomId = null;
+let lastDescriptionKey = null;
+let stopCycle = false;
+
+/* ---------------- Room Setup ---------------- */
+(function initRoom() {
+  let params = new URLSearchParams(window.location.search);
+  roomId = params.get("room");
+  if (!roomId) {
+    roomId = "room-" + Math.floor(Math.random() * 9000);
+    const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
+    window.history.replaceState({}, "", newUrl);
+  }
+})();
+
+/* ---------------- Voice ---------------- */
 function playVoice(text, onEnd) {
   if (audioPlayer) {
     audioPlayer.pause();
@@ -22,6 +41,20 @@ function playVoice(text, onEnd) {
   audioPlayer.play();
 }
 
+/* ---------------- Warm-up Overlay ---------------- */
+function showWarmupOverlay() {
+  const center = document.getElementById("warmup-center");
+  if (center) {
+    center.style.display = "flex";
+    center.innerText = "✨🔥💖 AI is warming up… 🌈🥹💅";
+  }
+}
+function hideWarmupOverlay() {
+  const center = document.getElementById("warmup-center");
+  if (center) center.style.display = "none";
+}
+
+/* ---------------- Load Trend + Voice ---------------- */
 async function loadTrend() {
   if (stopCycle) return;
   let apiUrl = "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
@@ -41,7 +74,7 @@ async function loadTrend() {
   document.getElementById("r-persona").innerText = currentTrend.persona ? `👤 Featuring ${currentTrend.persona}` : "";
   document.getElementById("r-desc").innerText = currentTrend.description;
 
-  // ✅ Dynamic Gen-Z label
+  // ⚡ Dynamic Gen-Z label
   if (!lastDescriptionKey) {
     document.getElementById("r-label").innerText = "⚡ today’s slay pick";
   } else {
@@ -70,3 +103,17 @@ async function loadTrend() {
     setTimeout(() => loadTrend(), 2000);
   }
 }
+
+/* ---------------- Start Button ---------------- */
+document.getElementById("start-btn").addEventListener("click", () => {
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  socket.emit("joinRoom", roomId);
+
+  showWarmupOverlay();
+
+  // Force 3-second delay before first DailyDrop
+  setTimeout(() => {
+    loadTrend();
+  }, 3000);
+});
