@@ -37,13 +37,23 @@ function playVoice(text, onEnd) {
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
   audioPlayer.onplay = () => {
-    // ✅ Trigger pre-generation when current voice starts
+    // ✅ Update status to Gen-Z tech vibe
+    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
+
+    // Trigger pre-generation when current voice starts
     fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
       .catch(() => {});
     hideWarmupOverlay();
   };
-  audioPlayer.onended = () => { if (onEnd) onEnd(); };
-  audioPlayer.onerror = () => { if (onEnd) onEnd(); };
+  audioPlayer.onended = () => {
+    // ✅ Back to idle/prep status
+    document.getElementById("voice-status").innerText = "⚙️💻 preppin’ the drop…";
+    if (onEnd) onEnd();
+  };
+  audioPlayer.onerror = () => {
+    document.getElementById("voice-status").innerText = "⚙️💻 preppin’ the drop…";
+    if (onEnd) onEnd();
+  };
   audioPlayer.play();
 }
 
