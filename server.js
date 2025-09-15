@@ -1,229 +1,203 @@
-const socket = io("https://three23p-backend.onrender.com");
-let audioPlayer = null;
-let currentTrend = null;
-let roomId = null;
-let socialMode = false;
-let isHost = false;
-let isGuest = false;
-let firstDrop = true;
-let guestLoop = false;
-let lastDescriptionKey = null;
-let stopCycle = false;       // stop auto-refresh when 🍜 clicked
-let loopFrozenVoice = false; // enable looping description in 🍜 mode
+const express = require("express");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
+const OpenAI = require("openai");
+const cors = require("cors");
+
+const app = express();
+app.use(cors({ origin: "*" }));
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: { origin: "*" } });
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+/* ---------------- State ---------------- */
+const roomTrends = {}; // { roomId: { current: {}, next: {} } }
+let generatingNext = {};
+
+/* ---------------- Product pool ---------------- */
+const TOP50_COSMETICS = [
+  { brand: "Rhode", product: "Peptide Lip Tint" },
+  { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
+  { brand: "Rare Beauty", product: "Liquid Blush" },
+  { brand: "Glow Recipe", product: "Watermelon Dew Drops" },
+  { brand: "Dior", product: "Lip Glow Oil" }
+];
 
 /* ---------------- Emoji Helper ---------------- */
-const GENZ_EMOJIS = ["✨","🔥","💖","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
-function randomGenZEmojis(count = 3) {
-  let chosen = [];
-  for (let i = 0; i < count; i++) {
-    chosen.push(GENZ_EMOJIS[Math.floor(Math.random() * GENZ_EMOJIS.length)]);
-  }
-  return chosen.join(" ");
+const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
+function randomEmojis(count = 2) {
+  return Array.from({ length: count }, () => EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]).join(" ");
+}
+function decorateTextWithEmojis(text) {
+  return `${randomEmojis(2)} ${text} ${randomEmojis(2)}`;
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  /* ---------------- Setup Room ---------------- */
-  (function initRoom() {
-    let params = new URLSearchParams(window.location.search);
-    roomId = params.get("room");
+/* ---------------- Persona Generator ---------------- */
+function randomPersona() {
+  const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
+  const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
+  const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
+  return `a ${Math.floor(Math.random() * 7) + 17}-year-old female ${
+    ethnicities[Math.floor(Math.random() * ethnicities.length)]
+  } ${vibes[Math.floor(Math.random() * vibes.length)]} with a ${styles[Math.floor(Math.random() * styles.length)]} style`;
+}
 
-    if (roomId) {
-      isGuest = true;
+/* ---------------- Helpers ---------------- */
+async function makeDescription(brand, product) {
+  try {
+    const prompt = `Write a 70+ word first-person description of using "${product}" by ${brand}. Make it sensory, authentic, and Gen-Z relatable. Add emojis inline.`;
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [
+        { role: "system", content: "You are a beauty lover speaking in first person." },
+        { role: "user", content: prompt }
+      ]
+    });
+    let desc = completion.choices[0].message.content.trim();
+    return `${desc} ${randomEmojis(3)}`;
+  } catch (e) {
+    console.error("❌ Description error:", e.message);
+    return decorateTextWithEmojis(`Using ${product} by ${brand} feels unforgettable and addictive.`);
+  }
+}
+
+async function generateImageUrl(brand, product, persona) {
+  try {
+    const out = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: `
+        Create a photocard-style image.
+        Subject: ${persona}, Gen-Z aesthetic.
+        They are holding and applying ${product} by ${brand}.
+        Pastel gradient background (milk pink, baby blue, lilac).
+        Glitter bokeh, glossy K-beauty skin glow.
+        Sticker shapes only (hearts, stars, sparkles, emoji, text emoticon).
+        Square 1:1 format. No text/logos.
+      `,
+      size: "1024x1024"
+    });
+    const d = out?.data?.[0];
+    if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
+    if (d?.url) return d.url;
+  } catch (e) {
+    console.error("❌ Image error:", e.message);
+  }
+  return "https://placehold.co/600x600?text=No+Image";
+}
+
+async function generateDrop() {
+  const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+  const persona = randomPersona();
+  const description = await makeDescription(pick.brand, pick.product);
+  const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
+  return {
+    brand: decorateTextWithEmojis(pick.brand),
+    product: decorateTextWithEmojis(pick.product),
+    persona,
+    description,
+    hashtags: ["#BeautyTok", "#NowTrending"],
+    image: imageUrl,
+    refresh: 3000
+  };
+}
+
+async function ensureNextDrop(roomId) {
+  if (generatingNext[roomId]) return;
+  generatingNext[roomId] = true;
+  try {
+    const nextDrop = await generateDrop();
+    if (!roomTrends[roomId]) roomTrends[roomId] = {};
+    roomTrends[roomId].next = nextDrop;
+    console.log(`✅ Pre-generated next drop for room ${roomId}`);
+  } catch (e) {
+    console.error("❌ ensureNextDrop failed:", e.message);
+  } finally {
+    generatingNext[roomId] = false;
+  }
+}
+
+/* ---------------- API Routes ---------------- */
+app.get("/api/trend", async (req, res) => {
+  try {
+    const roomId = req.query.room;
+    if (!roomId) {
+      return res.status(400).json({ error: "room parameter required" });
+    }
+
+    if (!roomTrends[roomId] || !roomTrends[roomId].current) {
+      console.log(`⏳ Generating first drop for room ${roomId}...`);
+      const firstDrop = await generateDrop();
+      roomTrends[roomId] = { current: firstDrop };
     } else {
-      isHost = true;
-      roomId = "room-" + Math.floor(Math.random() * 9000);
-      const newUrl =
-        window.location.origin + window.location.pathname + "?room=" + roomId;
-      window.history.replaceState({}, "", newUrl);
-    }
-
-    document.getElementById("room-label").innerText = "room: " + roomId;
-
-    if (isHost) {
-      document.getElementById("start-btn").style.display = "block";
-      document.getElementById("guest-btn").style.display = "none";
-    } else if (isGuest) {
-      document.getElementById("start-btn").style.display = "none";
-      document.getElementById("guest-btn").style.display = "block";
-    }
-  })();
-
-  /* ---------------- Voice ---------------- */
-  function playVoice(text, onEnd) {
-    if (audioPlayer) {
-      audioPlayer.pause();
-      audioPlayer = null;
-    }
-    const url =
-      "https://three23p-backend.onrender.com/api/voice?text=" +
-      encodeURIComponent(text);
-
-    audioPlayer = new Audio(url);
-    audioPlayer.onplay = () => {
-      if (!stopCycle) {
-        fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
-          .catch(() => {});
-        hideWarmupOverlay();
-      }
-    };
-    audioPlayer.onended = () => {
-      if (onEnd) onEnd();
-    };
-    audioPlayer.onerror = () => {
-      if (onEnd) onEnd();
-    };
-    audioPlayer.play();
-  }
-
-  /* ---------------- Warm-up Overlay ---------------- */
-  function showWarmupOverlay() {
-    const center = document.getElementById("warmup-center");
-    if (center) {
-      center.style.display = "flex";
-      center.innerText = `${randomGenZEmojis(3)} AI is warming up… ${randomGenZEmojis(3)}`;
-    }
-  }
-
-  function hideWarmupOverlay() {
-    const center = document.getElementById("warmup-center");
-    if (center) {
-      center.style.display = "none";
-    }
-  }
-
-  /* ---------------- Frozen Loop for Host ---------------- */
-  function loopHostFrozen() {
-    if (loopFrozenVoice && currentTrend && currentTrend.description) {
-      playVoice(currentTrend.description, loopHostFrozen);
-    }
-  }
-
-  /* ---------------- Load Trend + Voice ---------------- */
-  async function loadTrend(isGuestMode) {
-    if (stopCycle) {
-      // If frozen loop enabled, host also loops description
-      if (isHost && loopFrozenVoice && currentTrend && currentTrend.description) {
-        loopHostFrozen();
-      }
-      return;
-    }
-
-    let apiUrl =
-      "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
-    if (isGuestMode) {
-      apiUrl += "&guest=true";
-    }
-
-    const res = await fetch(apiUrl);
-    const newTrend = await res.json();
-
-    if (!newTrend || !newTrend.description) {
-      showWarmupOverlay();
-      setTimeout(() => loadTrend(isGuestMode), 2000);
-      return;
-    }
-
-    currentTrend = newTrend;
-
-    // Update UI
-    document.getElementById("r-title").innerText = currentTrend.brand;
-    document.getElementById("r-artist").innerText = currentTrend.product;
-    document.getElementById("r-persona").innerText = currentTrend.persona
-      ? `👤 Featuring ${currentTrend.persona}`
-      : "";
-    document.getElementById("r-desc").innerText = currentTrend.description;
-    document.getElementById("social-btn").style.display = isHost ? "block" : "none";
-
-    if (currentTrend.image) {
-      document.getElementById("r-img").src = currentTrend.image;
-      document.getElementById("r-img").style.display = "block";
-      document.getElementById("r-fallback").style.display = "none";
-    } else {
-      document.getElementById("r-img").style.display = "none";
-      document.getElementById("r-fallback").style.display = "block";
-    }
-
-    if (isGuestMode) {
-      guestLoop = true;
-      function loopGuest() {
-        if (!guestLoop || stopCycle) return;
-        playVoice(currentTrend.description, loopGuest);
-      }
-      loopGuest();
-    } else {
-      const descriptionKey = currentTrend.description;
-      if (descriptionKey !== lastDescriptionKey) {
-        lastDescriptionKey = descriptionKey;
-        playVoice(currentTrend.description, () => {
-          if (!stopCycle) {
-            showWarmupOverlay();
-            setTimeout(() => loadTrend(isGuestMode), 2000);
-          }
-        });
-      } else {
-        setTimeout(() => loadTrend(isGuestMode), 2000);
+      if (roomTrends[roomId].next) {
+        roomTrends[roomId].current = roomTrends[roomId].next;
+        roomTrends[roomId].next = null;
       }
     }
+    res.json(roomTrends[roomId].current);
+  } catch (e) {
+    console.error("❌ Trend API error:", e.message);
+    res.json({ error: "Trend API failed" });
   }
+});
 
-  /* ---------------- Start / Guest buttons ---------------- */
-  document.getElementById("start-btn").addEventListener("click", () => {
-    document.getElementById("start-screen").style.display = "none";
-    document.getElementById("app").style.display = "flex";
-    socket.emit("joinRoom", roomId);
-
-    showWarmupOverlay();
-    loadTrend(false);
-  });
-
-  document.getElementById("guest-btn").addEventListener("click", () => {
-    document.getElementById("start-screen").style.display = "none";
-    document.getElementById("app").style.display = "flex";
-    socket.emit("joinRoom", roomId);
-
-    guestLoop = true;
-    loadTrend(true);
-  });
-
-  /* ---------------- Chat ---------------- */
-  document.getElementById("chat-send").addEventListener("click", () => {
-    const text = document.getElementById("chat-input").value;
-    if (!text.trim()) return;
-    socket.emit("chatMessage", { roomId: roomId, user: "anon", text });
-    document.getElementById("chat-input").value = "";
-  });
-
-  socket.on("chatMessage", (msg) => {
-    const messagesBox = document.getElementById("messages");
-    const p = document.createElement("p");
-    p.textContent = `${msg.user}: ${msg.text}`;
-    messagesBox.appendChild(p);
-    messagesBox.scrollTop = messagesBox.scrollHeight;
-  });
-
-  /* ---------------- 🍜 Social Button ---------------- */
-  document.getElementById("social-btn").addEventListener("click", () => {
-    if (!isHost) return;
-
-    stopCycle = true;          // stop auto-refresh
-    loopFrozenVoice = true;    // enable frozen description looping
-
-    // open chat dock
-    document.getElementById("bottom-panel").style.display = "flex";
-
-    // replace button with share message (styled bold & big)
-    const btn = document.getElementById("social-btn");
-    const shareMsg = document.createElement("p");
-    shareMsg.textContent = `${randomGenZEmojis(3)} share the url to your shopping companion and chat. ${randomGenZEmojis(3)}`;
-    shareMsg.style.fontWeight = "bold";
-    shareMsg.style.fontSize = "20px";
-    shareMsg.style.textAlign = "center";
-    shareMsg.style.margin = "12px 0";
-    btn.replaceWith(shareMsg);
-
-    // start looping frozen description for host
-    if (currentTrend && currentTrend.description) {
-      loopHostFrozen();
+app.get("/api/voice", async (req, res) => {
+  try {
+    const text = req.query.text || "";
+    if (!text.trim()) {
+      res.setHeader("Content-Type", "audio/mpeg");
+      return res.send(Buffer.alloc(1000)); // ~1s silence
     }
+    const out = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "alloy",
+      input: text,
+    });
+    const audioBuffer = Buffer.from(await out.arrayBuffer());
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(audioBuffer);
+  } catch (e) {
+    console.error("❌ Voice API error:", e.message);
+    res.status(500).json({ error: "Voice TTS failed" });
+  }
+});
+
+// NEW: Trigger pre-generation when voice starts
+app.get("/api/start-voice", async (req, res) => {
+  const roomId = req.query.room;
+  if (!roomId) {
+    return res.status(400).json({ error: "room parameter required" });
+  }
+  ensureNextDrop(roomId);
+  res.json({ ok: true, message: "Pre-generation triggered" });
+});
+
+/* ---------------- Chat (Socket.IO) ---------------- */
+io.on("connection", (socket) => {
+  console.log(`🔌 User connected: ${socket.id}`);
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    socket.roomId = roomId;
+    console.log(`👥 ${socket.id} joined room: ${roomId}`);
   });
+  socket.on("chatMessage", ({ roomId, user, text }) => {
+    console.log(`💬 [${roomId}] ${user}: ${text}`);
+    io.to(roomId).emit("chatMessage", { user, text });
+  });
+  socket.on("disconnect", () => {
+    console.log(`❌ User disconnected: ${socket.id} (room ${socket.roomId || "none"})`);
+  });
+});
+
+/* ---------------- Serve static ---------------- */
+app.use(express.static(path.join(__dirname)));
+
+/* ---------------- Start ---------------- */
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, async () => {
+  console.log(`🚀 323drop backend live on :${PORT}`);
 });
