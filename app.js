@@ -5,9 +5,9 @@ let roomId = null;
 let socialMode = false;
 let isHost = false;
 let isGuest = false;
-let warmingUp = false;
+let firstDrop = true; // 👈 track first drop
 let guestLoop = false;
-let lastDescriptionKey = null; // guard for host
+let lastDescriptionKey = null;
 
 window.addEventListener("DOMContentLoaded", () => {
   /* ---------------- Setup Room ---------------- */
@@ -56,27 +56,25 @@ window.addEventListener("DOMContentLoaded", () => {
     audioPlayer.play();
   }
 
-  /* ---------------- Warm-up (show + voice) ---------------- */
-  function showWarmup() {
+  /* ---------------- Warm-up Overlay ---------------- */
+  function showWarmupOverlay() {
     const center = document.getElementById("warmup-center");
     if (center) {
       center.style.display = "flex";
       center.innerText = "✨🔥💖 AI is warming up… ✨🔥💖";
     }
-    warmingUp = true;
-    warmUpLoop();
   }
 
-  function hideWarmup() {
+  function hideWarmupOverlay() {
     const center = document.getElementById("warmup-center");
     if (center) {
       center.style.display = "none";
     }
-    warmingUp = false;
   }
 
-  async function warmUpLoop() {
-    while (warmingUp) {
+  /* ---------------- Warm-up Voice Loop (first drop only) ---------------- */
+  async function warmUpVoiceLoop() {
+    while (firstDrop) {
       await new Promise((resolve) => {
         playVoice("✨🔥💖 AI is warming up… ✨🔥💖", resolve);
       });
@@ -94,14 +92,20 @@ window.addEventListener("DOMContentLoaded", () => {
     const res = await fetch(apiUrl);
     const newTrend = await res.json();
 
-    // If drop not ready yet → show warm-up until backend promotes next
     if (!newTrend || !newTrend.description) {
-      showWarmup();
+      // waiting for a drop
+      showWarmupOverlay();
+      if (firstDrop) {
+        // only first drop: voice + overlay
+        warmUpVoiceLoop();
+      }
       setTimeout(() => loadTrend(isGuestMode), 2000);
       return;
     }
 
-    hideWarmup();
+    // Got a drop
+    firstDrop = false; // 👈 after first drop, no more warm-up voice
+    hideWarmupOverlay();
     currentTrend = newTrend;
 
     // Update UI
@@ -131,15 +135,14 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       loopGuest();
     } else {
-      // Host: read once per drop
+      // Host reads description once per drop
       const descriptionKey = currentTrend.description;
       if (descriptionKey !== lastDescriptionKey) {
         lastDescriptionKey = descriptionKey;
         playVoice(currentTrend.description, () => {
-          loadTrend(isGuestMode); // after voice ends, fetch next
+          loadTrend(isGuestMode); // fetch next after finish
         });
       } else {
-        // If same description, check again in 2s
         setTimeout(() => loadTrend(isGuestMode), 2000);
       }
     }
@@ -151,7 +154,8 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
 
-    showWarmup();
+    showWarmupOverlay();
+    warmUpVoiceLoop(); // start voice loop for first drop
     loadTrend(false);
   });
 
