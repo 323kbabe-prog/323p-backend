@@ -37,7 +37,7 @@ function playVoice(text, onEnd) {
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
   audioPlayer.onplay = () => {
-    // ✅ Update status to Gen-Z tech vibe
+    // ✅ Gen-Z tech vibe status when playing
     document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
 
     // Trigger pre-generation when current voice starts
@@ -46,7 +46,7 @@ function playVoice(text, onEnd) {
     hideWarmupOverlay();
   };
   audioPlayer.onended = () => {
-    // ✅ Back to idle/prep status
+    // ✅ Gen-Z tech vibe status when idle
     document.getElementById("voice-status").innerText = "⚙️💻 preppin’ the drop…";
     if (onEnd) onEnd();
   };
@@ -91,6 +91,13 @@ async function loadTrend() {
   document.getElementById("r-artist").innerText = currentTrend.product;
   document.getElementById("r-persona").innerText = currentTrend.persona ? `👤 Featuring ${currentTrend.persona}` : "";
   document.getElementById("r-desc").innerText = currentTrend.description;
+
+  // ✅ Dynamic Gen-Z label
+  if (!lastDescriptionKey) {
+    document.getElementById("r-label").innerText = "⚡ today’s slay pick";
+  } else {
+    document.getElementById("r-label").innerText = "⚡ real-time drip";
+  }
 
   if (currentTrend.image) {
     document.getElementById("r-img").src = currentTrend.image;
