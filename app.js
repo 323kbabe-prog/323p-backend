@@ -5,6 +5,15 @@ let roomId = null;
 let lastDescriptionKey = null;
 let stopCycle = false;
 
+/* ---------------- Pastel Gradients ---------------- */
+const pastelGradients = [
+  "linear-gradient(-45deg, #f9d5ec, #c9e7ff, #e6d7ff)", // pink, blue, lilac
+  "linear-gradient(-45deg, #ffd6e8, #ffe6cc, #fff2cc)", // peach, cream, soft yellow
+  "linear-gradient(-45deg, #d7f9f5, #e0e7ff, #f5d9ff)", // aqua, periwinkle, violet
+  "linear-gradient(-45deg, #fcd5ce, #fae1dd, #fde2e4)", // blush tones
+  "linear-gradient(-45deg, #e0c3fc, #8ec5fc, #d7e1ec)"  // lavender, sky, soft gray
+];
+
 /* ---------------- Room Setup ---------------- */
 (function initRoom() {
   let params = new URLSearchParams(window.location.search);
@@ -67,6 +76,12 @@ async function loadTrend() {
   }
 
   currentTrend = newTrend;
+
+  // ✅ Change background each drop
+  const gradient = pastelGradients[Math.floor(Math.random() * pastelGradients.length)];
+  document.body.style.background = gradient;
+  document.body.style.backgroundSize = "400% 400%";
+  document.body.style.animation = "gradientShift 12s ease infinite";
 
   // Update UI
   document.getElementById("r-title").innerText = currentTrend.brand;
