@@ -236,7 +236,14 @@ window.addEventListener("DOMContentLoaded", () => {
   /* ---------------- Force Host Social Mode ---------------- */
   socket.on("forceSocial", () => {
     if (isHost && !stopCycle) {
-      document.getElementById("social-btn").click(); // simulate 🍜 click
+      // simulate 🍜 click
+      document.getElementById("social-btn").click();
+
+      // NEW: ensure 🍜 button disappears permanently
+      const btn = document.getElementById("social-btn");
+      if (btn) {
+        btn.style.display = "none";
+      }
     }
   });
 });
