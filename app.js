@@ -5,7 +5,7 @@ let roomId = null;
 let socialMode = false;
 let isHost = false;
 let isGuest = false;
-let firstDrop = true; // 👈 track if it's the very first drop
+let firstDrop = true;
 let guestLoop = false;
 let lastDescriptionKey = null;
 
@@ -61,6 +61,8 @@ window.addEventListener("DOMContentLoaded", () => {
       // Trigger pre-generation when voice starts
       fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
         .catch(() => {});
+      // 👇 Hide overlay when new voice begins
+      hideWarmupOverlay();
     };
     audioPlayer.onended = () => {
       if (onEnd) onEnd();
@@ -99,24 +101,12 @@ window.addEventListener("DOMContentLoaded", () => {
     const newTrend = await res.json();
 
     if (!newTrend || !newTrend.description) {
-      // Waiting for drop
+      // Waiting for drop → overlay visible, silent
       showWarmupOverlay();
-
-      if (firstDrop) {
-        // Only first drop: also loop warm-up voice
-        playVoice(`${randomGenZEmojis(3)} AI is warming up… ${randomGenZEmojis(3)}`, () => {
-          setTimeout(() => loadTrend(isGuestMode), 2000);
-        });
-      } else {
-        // After description: overlay only (no voice)
-        setTimeout(() => loadTrend(isGuestMode), 2000);
-      }
+      setTimeout(() => loadTrend(isGuestMode), 2000);
       return;
     }
 
-    // Got a drop
-    firstDrop = false; // after this, no more warm-up voice between drops
-    hideWarmupOverlay();
     currentTrend = newTrend;
 
     // Update UI
@@ -151,7 +141,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (descriptionKey !== lastDescriptionKey) {
         lastDescriptionKey = descriptionKey;
         playVoice(currentTrend.description, () => {
-          // After description ends: overlay only until next drop
+          // After description ends → overlay shows until next voice starts
           showWarmupOverlay();
           setTimeout(() => loadTrend(isGuestMode), 2000);
         });
