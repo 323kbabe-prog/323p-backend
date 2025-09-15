@@ -34,7 +34,7 @@ function decorateTextWithEmojis(text) {
 function randomPersona() {
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
-  return `a young ${vibes[Math.floor(Math.random() * vibes.length)]} with a ${styles[Math.floor(Math.random() * styles.length)]} style`;
+  return `a young female ${vibes[Math.floor(Math.random() * vibes.length)]} with a ${styles[Math.floor(Math.random() * styles.length)]} style`;
 }
 
 /* ---------------- Background Pool ---------------- */
