@@ -8,6 +8,7 @@ let isGuest = false;
 let firstDrop = true;
 let guestLoop = false;
 let lastDescriptionKey = null;
+let stopCycle = false; // 👈 new flag to stop auto-refresh
 
 /* ---------------- Emoji Helper ---------------- */
 const GENZ_EMOJIS = ["✨","🔥","💖","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
@@ -58,17 +59,18 @@ window.addEventListener("DOMContentLoaded", () => {
 
     audioPlayer = new Audio(url);
     audioPlayer.onplay = () => {
-      // Trigger pre-generation when voice starts
-      fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
-        .catch(() => {});
-      // 👇 Hide overlay when new voice begins
-      hideWarmupOverlay();
+      if (!stopCycle) {
+        // Trigger pre-generation when voice starts
+        fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
+          .catch(() => {});
+        hideWarmupOverlay();
+      }
     };
     audioPlayer.onended = () => {
-      if (onEnd) onEnd();
+      if (onEnd && !stopCycle) onEnd();
     };
     audioPlayer.onerror = () => {
-      if (onEnd) onEnd();
+      if (onEnd && !stopCycle) onEnd();
     };
     audioPlayer.play();
   }
@@ -91,6 +93,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
   /* ---------------- Load Trend + Voice ---------------- */
   async function loadTrend(isGuestMode) {
+    if (stopCycle) return; // 👈 stop auto-refresh when flag set
+
     let apiUrl =
       "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
     if (isGuestMode) {
@@ -101,7 +105,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const newTrend = await res.json();
 
     if (!newTrend || !newTrend.description) {
-      // Waiting for drop → overlay visible, silent
       showWarmupOverlay();
       setTimeout(() => loadTrend(isGuestMode), 2000);
       return;
@@ -131,19 +134,20 @@ window.addEventListener("DOMContentLoaded", () => {
       // Guest loops description until host moves on
       guestLoop = true;
       function loopGuest() {
-        if (!guestLoop) return;
+        if (!guestLoop || stopCycle) return;
         playVoice(currentTrend.description, loopGuest);
       }
       loopGuest();
     } else {
-      // Host: read description once
+      // Host reads description once
       const descriptionKey = currentTrend.description;
       if (descriptionKey !== lastDescriptionKey) {
         lastDescriptionKey = descriptionKey;
         playVoice(currentTrend.description, () => {
-          // After description ends → overlay shows until next voice starts
-          showWarmupOverlay();
-          setTimeout(() => loadTrend(isGuestMode), 2000);
+          if (!stopCycle) {
+            showWarmupOverlay();
+            setTimeout(() => loadTrend(isGuestMode), 2000);
+          }
         });
       } else {
         setTimeout(() => loadTrend(isGuestMode), 2000);
@@ -188,21 +192,22 @@ window.addEventListener("DOMContentLoaded", () => {
 
   /* ---------------- 🍜 Social Button ---------------- */
   document.getElementById("social-btn").addEventListener("click", () => {
-    if (!isHost) return; // only host
+    if (!isHost) return;
+
+    // stop the auto-refresh cycle
+    stopCycle = true;
 
     // open chat dock
     document.getElementById("bottom-panel").style.display = "flex";
 
-    // show large overlay message
-    const overlay = document.getElementById("social-center");
-    if (overlay) {
-      overlay.style.display = "flex";
-      overlay.innerText =
-        `${randomGenZEmojis(3)} share the url to your shopping companion and chat. ${randomGenZEmojis(3)}`;
-    }
-
-    // disable button
+    // replace button with share message
     const btn = document.getElementById("social-btn");
-    btn.disabled = true;
+    const parent = btn.parentNode;
+    btn.remove();
+    const shareMsg = document.createElement("p");
+    shareMsg.textContent = `${randomGenZEmojis(3)} share the url to your shopping companion and chat. ${randomGenZEmojis(3)}`;
+    shareMsg.style.fontWeight = "bold";
+    shareMsg.style.textAlign = "center";
+    parent.appendChild(shareMsg);
   });
 });
