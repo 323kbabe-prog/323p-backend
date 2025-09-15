@@ -14,10 +14,10 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- State ---------------- */
-const roomTrends = {}; // { roomId: { current: {...}, next: {...} } }
+const roomTrends = {}; // { roomId: { current: {}, next: {} } }
 let generatingNext = {};
 
-/* ---------------- Products ---------------- */
+/* ---------------- Product pool ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
   { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
@@ -123,39 +123,35 @@ async function ensureNextDrop(roomId) {
 /* ---------------- API Routes ---------------- */
 app.get("/api/trend", async (req, res) => {
   try {
-    const roomId = req.query.room || "default";
+    const roomId = req.query.room;
+    if (!roomId) {
+      return res.status(400).json({ error: "room parameter required" });
+    }
+
     if (!roomTrends[roomId] || !roomTrends[roomId].current) {
       console.log(`⏳ Generating first drop for room ${roomId}...`);
       const firstDrop = await generateDrop();
       roomTrends[roomId] = { current: firstDrop };
-      ensureNextDrop(roomId); // pre-generate next
     } else {
-      // If a next drop exists → promote it to current
       if (roomTrends[roomId].next) {
         roomTrends[roomId].current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
-        ensureNextDrop(roomId); // pre-generate again
       }
     }
     res.json(roomTrends[roomId].current);
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
-    res.json({
-      brand: decorateTextWithEmojis("Error"),
-      product: decorateTextWithEmojis("System"),
-      persona: "error persona",
-      description: decorateTextWithEmojis("Something went wrong. Retrying soon…"),
-      hashtags: ["#Error"],
-      image: "https://placehold.co/600x600?text=Error",
-      refresh: 5000
-    });
+    res.json({ error: "Trend API failed" });
   }
 });
 
 app.get("/api/voice", async (req, res) => {
   try {
     const text = req.query.text || "";
-    if (!text) return res.status(400).json({ error: "Missing text" });
+    if (!text.trim()) {
+      res.setHeader("Content-Type", "audio/mpeg");
+      return res.send(Buffer.alloc(1000)); // ~1s silence
+    }
     const out = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
       voice: "alloy",
@@ -170,7 +166,15 @@ app.get("/api/voice", async (req, res) => {
   }
 });
 
-app.get("/health", (_req,res) => res.json({ ok: true, time: Date.now() }));
+// NEW: Trigger pre-generation when voice starts
+app.get("/api/start-voice", async (req, res) => {
+  const roomId = req.query.room;
+  if (!roomId) {
+    return res.status(400).json({ error: "room parameter required" });
+  }
+  ensureNextDrop(roomId);
+  res.json({ ok: true, message: "Pre-generation triggered" });
+});
 
 /* ---------------- Chat (Socket.IO) ---------------- */
 io.on("connection", (socket) => {
