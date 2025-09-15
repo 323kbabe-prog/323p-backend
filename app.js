@@ -8,7 +8,8 @@ let isGuest = false;
 let firstDrop = true;
 let guestLoop = false;
 let lastDescriptionKey = null;
-let stopCycle = false; // 👈 stop auto-refresh when 🍜 clicked
+let stopCycle = false;       // stop auto-refresh when 🍜 clicked
+let loopFrozenVoice = false; // enable looping description in 🍜 mode
 
 /* ---------------- Emoji Helper ---------------- */
 const GENZ_EMOJIS = ["✨","🔥","💖","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
@@ -66,10 +67,10 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     };
     audioPlayer.onended = () => {
-      if (onEnd && !stopCycle) onEnd();
+      if (onEnd) onEnd();
     };
     audioPlayer.onerror = () => {
-      if (onEnd && !stopCycle) onEnd();
+      if (onEnd) onEnd();
     };
     audioPlayer.play();
   }
@@ -90,9 +91,22 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  /* ---------------- Frozen Loop for Host ---------------- */
+  function loopHostFrozen() {
+    if (loopFrozenVoice && currentTrend && currentTrend.description) {
+      playVoice(currentTrend.description, loopHostFrozen);
+    }
+  }
+
   /* ---------------- Load Trend + Voice ---------------- */
   async function loadTrend(isGuestMode) {
-    if (stopCycle) return; // 👈 stop auto-refresh when 🍜 clicked
+    if (stopCycle) {
+      // If frozen loop enabled, host also loops description
+      if (isHost && loopFrozenVoice && currentTrend && currentTrend.description) {
+        loopHostFrozen();
+      }
+      return;
+    }
 
     let apiUrl =
       "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
@@ -191,7 +205,8 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("social-btn").addEventListener("click", () => {
     if (!isHost) return;
 
-    stopCycle = true; // stop auto-refresh
+    stopCycle = true;          // stop auto-refresh
+    loopFrozenVoice = true;    // enable frozen description looping
 
     // open chat dock
     document.getElementById("bottom-panel").style.display = "flex";
@@ -205,5 +220,10 @@ window.addEventListener("DOMContentLoaded", () => {
     shareMsg.style.textAlign = "center";
     shareMsg.style.margin = "12px 0";
     btn.replaceWith(shareMsg);
+
+    // start looping frozen description for host
+    if (currentTrend && currentTrend.description) {
+      loopHostFrozen();
+    }
   });
 });
