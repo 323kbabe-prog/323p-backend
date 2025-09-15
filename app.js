@@ -5,9 +5,9 @@ let roomId = null;
 let socialMode = false;
 let isHost = false;
 let isGuest = false;
-let warmingUp = true;
+let warmingUp = false;
 let guestLoop = false;
-let lastDescriptionKey = null; // 👈 guard for host
+let lastDescriptionKey = null; // guard for host
 
 window.addEventListener("DOMContentLoaded", () => {
   /* ---------------- Setup Room ---------------- */
@@ -94,6 +94,13 @@ window.addEventListener("DOMContentLoaded", () => {
     const res = await fetch(apiUrl);
     const newTrend = await res.json();
 
+    // If drop not ready yet → show warm-up until backend promotes next
+    if (!newTrend || !newTrend.description) {
+      showWarmup();
+      setTimeout(() => loadTrend(isGuestMode), 2000);
+      return;
+    }
+
     hideWarmup();
     currentTrend = newTrend;
 
@@ -124,16 +131,16 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       loopGuest();
     } else {
-      // Host: read once per description
+      // Host: read once per drop
       const descriptionKey = currentTrend.description;
       if (descriptionKey !== lastDescriptionKey) {
-        lastDescriptionKey = descriptionKey; // update guard
+        lastDescriptionKey = descriptionKey;
         playVoice(currentTrend.description, () => {
-          loadTrend(isGuestMode); // fetch next after finish
+          loadTrend(isGuestMode); // after voice ends, fetch next
         });
       } else {
-        // If same description, skip voice and just fetch next
-        loadTrend(isGuestMode);
+        // If same description, check again in 2s
+        setTimeout(() => loadTrend(isGuestMode), 2000);
       }
     }
   }
