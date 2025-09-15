@@ -181,8 +181,14 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
 
+    // NEW: tell server a guest joined
+    socket.emit("guestJoined", { roomId });
+
     guestLoop = true;
     loadTrend(true);
+
+    // NEW: guest chat panel always open
+    document.getElementById("bottom-panel").style.display = "flex";
   });
 
   /* ---------------- Chat ---------------- */
@@ -224,6 +230,13 @@ window.addEventListener("DOMContentLoaded", () => {
     // start looping frozen description for host
     if (currentTrend && currentTrend.description) {
       loopHostFrozen();
+    }
+  });
+
+  /* ---------------- Force Host Social Mode ---------------- */
+  socket.on("forceSocial", () => {
+    if (isHost && !stopCycle) {
+      document.getElementById("social-btn").click(); // simulate 🍜 click
     }
   });
 });
