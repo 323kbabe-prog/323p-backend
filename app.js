@@ -1,7 +1,7 @@
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null;
 let currentTrend = null;
-let roomId = "room-" + Math.floor(Math.random() * 9000);
+let roomId = null;
 let lastDescriptionKey = null;
 let stopCycle = false;
 
@@ -14,6 +14,19 @@ function randomGenZEmojis(count = 3) {
   }
   return chosen.join(" ");
 }
+
+/* ---------------- Room Setup ---------------- */
+(function initRoom() {
+  let params = new URLSearchParams(window.location.search);
+  roomId = params.get("room");
+
+  // If no roomId in URL, generate one and write to browser URL
+  if (!roomId) {
+    roomId = "room-" + Math.floor(Math.random() * 9000);
+    const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
+    window.history.replaceState({}, "", newUrl);
+  }
+})();
 
 /* ---------------- Voice ---------------- */
 function playVoice(text, onEnd) {
