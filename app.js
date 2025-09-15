@@ -36,7 +36,12 @@ function playVoice(text, onEnd) {
   }
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
-  audioPlayer.onplay = () => hideWarmupOverlay();
+  audioPlayer.onplay = () => {
+    // ✅ Trigger pre-generation when current voice starts
+    fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
+      .catch(() => {});
+    hideWarmupOverlay();
+  };
   audioPlayer.onended = () => { if (onEnd) onEnd(); };
   audioPlayer.onerror = () => { if (onEnd) onEnd(); };
   audioPlayer.play();
