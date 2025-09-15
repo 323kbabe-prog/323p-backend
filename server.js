@@ -123,7 +123,7 @@ async function generateImageUrl(brand, product, persona) {
         They are holding and applying ${product} by ${brand}.
         Pastel gradient background (milk pink, baby blue, lilac).
         Glitter bokeh, glossy K-beauty skin glow.
-        Sticker shapes only (emoji, text emoticon).
+        Sticker shapes only (lots of emoji, text emoticon).
         Square 1:1 format. No text/logos.
       `,
       size: "1024x1024"
