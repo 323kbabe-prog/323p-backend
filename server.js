@@ -8,8 +8,8 @@ let isGuest = false;
 let firstDrop = true;
 let guestLoop = false;
 let lastDescriptionKey = null;
-let stopCycle = false; // 👈 stop auto-refresh when 🍜 clicked
-let loopFrozenVoice = false; // 👈 loop description forever in 🍜 mode
+let stopCycle = false;       // stop auto-refresh when 🍜 clicked
+let loopFrozenVoice = false; // enable looping description in 🍜 mode
 
 /* ---------------- Emoji Helper ---------------- */
 const GENZ_EMOJIS = ["✨","🔥","💖","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
@@ -67,19 +67,10 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     };
     audioPlayer.onended = () => {
-      if (loopFrozenVoice && currentTrend) {
-        // 👈 keep looping same description in 🍜 mode
-        playVoice(currentTrend.description, () => {});
-      } else {
-        if (onEnd && !stopCycle) onEnd();
-      }
+      if (onEnd) onEnd();
     };
     audioPlayer.onerror = () => {
-      if (loopFrozenVoice && currentTrend) {
-        playVoice(currentTrend.description, () => {});
-      } else {
-        if (onEnd && !stopCycle) onEnd();
-      }
+      if (onEnd) onEnd();
     };
     audioPlayer.play();
   }
@@ -100,12 +91,19 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  /* ---------------- Frozen Loop for Host ---------------- */
+  function loopHostFrozen() {
+    if (loopFrozenVoice && currentTrend && currentTrend.description) {
+      playVoice(currentTrend.description, loopHostFrozen);
+    }
+  }
+
   /* ---------------- Load Trend + Voice ---------------- */
   async function loadTrend(isGuestMode) {
     if (stopCycle) {
-      // 👇 If in 🍜 mode and frozen voice looping is enabled
-      if (loopFrozenVoice && currentTrend && currentTrend.description) {
-        playVoice(currentTrend.description, () => {});
+      // If frozen loop enabled, host also loops description
+      if (isHost && loopFrozenVoice && currentTrend && currentTrend.description) {
+        loopHostFrozen();
       }
       return;
     }
@@ -223,9 +221,9 @@ window.addEventListener("DOMContentLoaded", () => {
     shareMsg.style.margin = "12px 0";
     btn.replaceWith(shareMsg);
 
-    // start looping the frozen description voice for both host and guests
+    // start looping frozen description for host
     if (currentTrend && currentTrend.description) {
-      playVoice(currentTrend.description, () => {});
+      loopHostFrozen();
     }
   });
 });
