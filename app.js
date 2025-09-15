@@ -8,7 +8,7 @@ let isGuest = false;
 let firstDrop = true;
 let guestLoop = false;
 let lastDescriptionKey = null;
-let stopCycle = false; // 👈 new flag to stop auto-refresh
+let stopCycle = false; // 👈 stop auto-refresh when 🍜 clicked
 
 /* ---------------- Emoji Helper ---------------- */
 const GENZ_EMOJIS = ["✨","🔥","💖","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
@@ -30,7 +30,7 @@ window.addEventListener("DOMContentLoaded", () => {
       isGuest = true;
     } else {
       isHost = true;
-      roomId = "room-" + Math.floor(1000 + Math.random() * 9000);
+      roomId = "room-" + Math.floor(Math.random() * 9000);
       const newUrl =
         window.location.origin + window.location.pathname + "?room=" + roomId;
       window.history.replaceState({}, "", newUrl);
@@ -60,7 +60,6 @@ window.addEventListener("DOMContentLoaded", () => {
     audioPlayer = new Audio(url);
     audioPlayer.onplay = () => {
       if (!stopCycle) {
-        // Trigger pre-generation when voice starts
         fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
           .catch(() => {});
         hideWarmupOverlay();
@@ -93,7 +92,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   /* ---------------- Load Trend + Voice ---------------- */
   async function loadTrend(isGuestMode) {
-    if (stopCycle) return; // 👈 stop auto-refresh when flag set
+    if (stopCycle) return; // 👈 stop auto-refresh when 🍜 clicked
 
     let apiUrl =
       "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
@@ -131,7 +130,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     if (isGuestMode) {
-      // Guest loops description until host moves on
       guestLoop = true;
       function loopGuest() {
         if (!guestLoop || stopCycle) return;
@@ -139,7 +137,6 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       loopGuest();
     } else {
-      // Host reads description once
       const descriptionKey = currentTrend.description;
       if (descriptionKey !== lastDescriptionKey) {
         lastDescriptionKey = descriptionKey;
@@ -194,20 +191,19 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("social-btn").addEventListener("click", () => {
     if (!isHost) return;
 
-    // stop the auto-refresh cycle
-    stopCycle = true;
+    stopCycle = true; // stop auto-refresh
 
     // open chat dock
     document.getElementById("bottom-panel").style.display = "flex";
 
-    // replace button with share message
+    // replace button with share message (styled bold & big)
     const btn = document.getElementById("social-btn");
-    const parent = btn.parentNode;
-    btn.remove();
     const shareMsg = document.createElement("p");
     shareMsg.textContent = `${randomGenZEmojis(3)} share the url to your shopping companion and chat. ${randomGenZEmojis(3)}`;
     shareMsg.style.fontWeight = "bold";
+    shareMsg.style.fontSize = "20px";
     shareMsg.style.textAlign = "center";
-    parent.appendChild(shareMsg);
+    shareMsg.style.margin = "12px 0";
+    btn.replaceWith(shareMsg);
   });
 });
