@@ -17,6 +17,10 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const roomTrends = {}; // { roomId: { current: {}, next: {} } }
 let generatingNext = {};
 
+// NEW: cache for daily drop
+let dailyDrop = null;
+let dailyDate = null;
+
 /* ---------------- Product pool ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
@@ -129,9 +133,17 @@ app.get("/api/trend", async (req, res) => {
     }
 
     if (!roomTrends[roomId] || !roomTrends[roomId].current) {
-      console.log(`⏳ Generating first drop for room ${roomId}...`);
-      const firstDrop = await generateDrop();
-      roomTrends[roomId] = { current: firstDrop };
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+      // Check if dailyDrop exists or is outdated
+      if (!dailyDrop || dailyDate !== today) {
+        console.log("🌅 Generating new dailyDrop...");
+        dailyDrop = await generateDrop();
+        dailyDate = today;
+      }
+
+      // Always use dailyDrop as the first drop for a room
+      roomTrends[roomId] = { current: dailyDrop };
     } else {
       if (roomTrends[roomId].next) {
         roomTrends[roomId].current = roomTrends[roomId].next;
@@ -186,7 +198,7 @@ io.on("connection", (socket) => {
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
   });
 
-  // NEW: notify host when guest joins
+  // Guest joined → force host social mode
   socket.on("guestJoined", ({ roomId }) => {
     io.to(roomId).emit("forceSocial");
   });
