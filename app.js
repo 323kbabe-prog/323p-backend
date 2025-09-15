@@ -172,8 +172,13 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
 
+    // Show warmup overlay first
     showWarmupOverlay();
-    loadTrend(false);
+
+    // NEW: force 3-second delay before first drop loads
+    setTimeout(() => {
+      loadTrend(false);
+    }, 3000);
   });
 
   document.getElementById("guest-btn").addEventListener("click", () => {
@@ -181,13 +186,13 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("app").style.display = "flex";
     socket.emit("joinRoom", roomId);
 
-    // NEW: tell server a guest joined
+    // tell server a guest joined
     socket.emit("guestJoined", { roomId });
 
     guestLoop = true;
     loadTrend(true);
 
-    // NEW: guest chat panel always open
+    // guest chat panel always open
     document.getElementById("bottom-panel").style.display = "flex";
   });
 
@@ -239,7 +244,7 @@ window.addEventListener("DOMContentLoaded", () => {
       // simulate 🍜 click
       document.getElementById("social-btn").click();
 
-      // NEW: ensure 🍜 button disappears permanently
+      // ensure 🍜 button disappears permanently
       const btn = document.getElementById("social-btn");
       if (btn) {
         btn.style.display = "none";
