@@ -179,15 +179,23 @@ app.get("/api/start-voice", async (req, res) => {
 /* ---------------- Chat (Socket.IO) ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
+
   socket.on("joinRoom", (roomId) => {
     socket.join(roomId);
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
   });
+
+  // NEW: notify host when guest joins
+  socket.on("guestJoined", ({ roomId }) => {
+    io.to(roomId).emit("forceSocial");
+  });
+
   socket.on("chatMessage", ({ roomId, user, text }) => {
     console.log(`💬 [${roomId}] ${user}: ${text}`);
     io.to(roomId).emit("chatMessage", { user, text });
   });
+
   socket.on("disconnect", () => {
     console.log(`❌ User disconnected: ${socket.id} (room ${socket.roomId || "none"})`);
   });
