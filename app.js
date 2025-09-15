@@ -7,6 +7,7 @@ let isHost = false;
 let isGuest = false;
 let warmingUp = true;
 let guestLoop = false;
+let lastDescriptionKey = null; // 👈 guard for host
 
 window.addEventListener("DOMContentLoaded", () => {
   /* ---------------- Setup Room ---------------- */
@@ -123,10 +124,17 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       loopGuest();
     } else {
-      // Host: read once, then after finish → fetch next
-      playVoice(currentTrend.description, () => {
+      // Host: read once per description
+      const descriptionKey = currentTrend.description;
+      if (descriptionKey !== lastDescriptionKey) {
+        lastDescriptionKey = descriptionKey; // update guard
+        playVoice(currentTrend.description, () => {
+          loadTrend(isGuestMode); // fetch next after finish
+        });
+      } else {
+        // If same description, skip voice and just fetch next
         loadTrend(isGuestMode);
-      });
+      }
     }
   }
 
@@ -157,7 +165,6 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("chat-input").value = "";
   });
 
-  // 👇 NEW: listener to display messages
   socket.on("chatMessage", (msg) => {
     const messagesBox = document.getElementById("messages");
     const p = document.createElement("p");
