@@ -94,7 +94,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const newTrend = await res.json();
 
     hideWarmup();
-
     currentTrend = newTrend;
 
     // Update UI
@@ -150,7 +149,7 @@ window.addEventListener("DOMContentLoaded", () => {
     loadTrend(true);
   });
 
-  /* ---------------- Chat & 🍜 ---------------- */
+  /* ---------------- Chat ---------------- */
   document.getElementById("chat-send").addEventListener("click", () => {
     const text = document.getElementById("chat-input").value;
     if (!text.trim()) return;
@@ -158,6 +157,16 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("chat-input").value = "";
   });
 
+  // 👇 NEW: listener to display messages
+  socket.on("chatMessage", (msg) => {
+    const messagesBox = document.getElementById("messages");
+    const p = document.createElement("p");
+    p.textContent = `${msg.user}: ${msg.text}`;
+    messagesBox.appendChild(p);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  });
+
+  /* ---------------- 🍜 Social Button ---------------- */
   document.getElementById("social-btn").addEventListener("click", () => {
     if (!isHost) return; // only host
 
