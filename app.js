@@ -10,7 +10,7 @@ let guestLoop = false;
 let lastDescriptionKey = null;
 
 /* ---------------- Emoji Helper ---------------- */
-const GENZ_EMOJIS = ["✨","🔥","💖","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋","😂","🥺","💕"];
+const GENZ_EMOJIS = ["✨","🔥","💖","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
 function randomGenZEmojis(count = 3) {
   let chosen = [];
   for (let i = 0; i < count; i++) {
@@ -57,6 +57,11 @@ window.addEventListener("DOMContentLoaded", () => {
       encodeURIComponent(text);
 
     audioPlayer = new Audio(url);
+    audioPlayer.onplay = () => {
+      // Trigger pre-generation when voice starts
+      fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
+        .catch(() => {});
+    };
     audioPlayer.onended = () => {
       if (onEnd) onEnd();
     };
@@ -95,7 +100,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     if (!newTrend || !newTrend.description) {
       // waiting for drop
-      showWarmupOverlay();
+      showWarmupOverlay(); // overlay visible (no voice after first drop)
       setTimeout(() => loadTrend(isGuestMode), 2000);
       return;
     }
@@ -103,15 +108,13 @@ window.addEventListener("DOMContentLoaded", () => {
     hideWarmupOverlay();
     currentTrend = newTrend;
 
-    // Update UI with random emojis in description text
-    const decoratedDescription = `${randomGenZEmojis(2)} ${currentTrend.description} ${randomGenZEmojis(2)}`;
-
+    // Update UI
     document.getElementById("r-title").innerText = currentTrend.brand;
     document.getElementById("r-artist").innerText = currentTrend.product;
     document.getElementById("r-persona").innerText = currentTrend.persona
       ? `👤 Featuring ${currentTrend.persona}`
       : "";
-    document.getElementById("r-desc").innerText = decoratedDescription;
+    document.getElementById("r-desc").innerText = currentTrend.description;
     document.getElementById("social-btn").style.display = isHost ? "block" : "none";
 
     if (currentTrend.image) {
@@ -128,16 +131,16 @@ window.addEventListener("DOMContentLoaded", () => {
       guestLoop = true;
       function loopGuest() {
         if (!guestLoop) return;
-        playVoice(decoratedDescription, loopGuest);
+        playVoice(currentTrend.description, loopGuest);
       }
       loopGuest();
     } else {
-      // Host reads description once per drop
+      // Host: read description once
       const descriptionKey = currentTrend.description;
       if (descriptionKey !== lastDescriptionKey) {
         lastDescriptionKey = descriptionKey;
-        playVoice(decoratedDescription, () => {
-          // After voice ends, show overlay until next drop is ready
+        playVoice(currentTrend.description, () => {
+          // After voice ends: overlay appears while waiting
           showWarmupOverlay();
           loadTrend(isGuestMode);
         });
