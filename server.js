@@ -100,6 +100,7 @@ async function makeDescription(brand, product) {
   }
 }
 
+/* ---------------- Image Generator ---------------- */
 async function generateImageUrl(brand, product, persona) {
   try {
     const bg = genzBackgrounds[Math.floor(Math.random() * genzBackgrounds.length)];
@@ -107,12 +108,17 @@ async function generateImageUrl(brand, product, persona) {
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `
-        Create a photocard-style image.
-        Subject: ${persona}, Gen-Z aesthetic.
+        Create a photocard-style image with a sticker photo booth aesthetic.
+        Foreground subject: ${persona}, Gen-Z aesthetic.
         They are holding and applying ${product} by ${brand}.
-        ${bg}.
-        Sticker shapes only (lots of emoji + text emoticons like ${stickers}).
-        Square 1:1 format. No text/logos.
+        
+        Background must be a bold ${bg}, filling the entire canvas edge-to-edge.
+        The background style should look like a Gen-Z sticker photo booth — playful, colorful, and layered.
+        
+        Overlay many sticker shapes (emoji + text emoticons like ${stickers}) floating around the subject.
+        Stickers should feel chaotic, fun, and cover parts of the background.
+        
+        Square 1:1 format. No plain backgrounds. No text/logos.
       `,
       size: "1024x1024"
     });
@@ -125,6 +131,7 @@ async function generateImageUrl(brand, product, persona) {
   return "https://placehold.co/600x600?text=No+Image";
 }
 
+/* ---------------- Drop Generator ---------------- */
 async function generateDrop() {
   const pick = { brand: "Demo Brand", product: "Demo Product" };
   const persona = randomPersona();
@@ -141,6 +148,7 @@ async function generateDrop() {
   };
 }
 
+/* ---------------- Daily Picks ---------------- */
 async function generateDailyPicks() {
   dailyPicks = [];
   for (let i = 0; i < 3; i++) {
@@ -174,8 +182,6 @@ async function ensureNextDrop(roomId) {
 }
 
 /* ---------------- API Routes ---------------- */
-
-// Cron endpoint
 app.get("/api/generateDailyPicks", async (req, res) => {
   try {
     console.log("🕛 Cron job: generating daily picks...");
@@ -281,6 +287,6 @@ app.use(express.static(path.join(__dirname)));
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-  loadDailyPicks(); // load persisted picks on startup
+  loadDailyPicks();
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
