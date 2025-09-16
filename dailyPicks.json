@@ -1,0 +1,14 @@
+{
+  "dailyDate": "2025-09-17",
+  "dailyPicks": [
+    {
+      "brand": "Fenty Beauty",
+      "product": "Gloss Bomb Lip Gloss",
+      "persona": "a young Korean female influencer with a glam style",
+      "description": "... 70+ word Gen-Z description ...",
+      "hashtags": ["#BeautyTok", "#NowTrending"],
+      "image": "data:image/png;base64,...",
+      "refresh": 3000
+    }
+  ]
+}
