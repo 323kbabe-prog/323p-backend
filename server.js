@@ -284,13 +284,24 @@ app.get("/api/trend", async (req, res) => {
     }
 
     let current;
-    if (roomTrends[roomId].dailyIndex < dailyPicks.length) {
-      current = dailyPicks[roomTrends[roomId].dailyIndex];
+    const dailyIndex = roomTrends[roomId].dailyIndex;
+
+    if (dailyIndex < dailyPicks.length) {
+      // Serve current daily pick
+      current = dailyPicks[dailyIndex];
       roomTrends[roomId].dailyIndex++;
+
+      // 👉 Only when finishing Pick #3, pre-gen the first infinite drop
+      if (roomTrends[roomId].dailyIndex === dailyPicks.length) {
+        ensureNextDrop(roomId);
+        console.log(`🎯 Pre-gen first infinite drop after Daily Picks for room ${roomId}`);
+      }
     } else {
+      // After daily picks, use pre-gen infinite drops
       if (roomTrends[roomId].next) {
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
+        ensureNextDrop(roomId); // queue another infinite
       } else {
         current = await generateDrop();
       }
