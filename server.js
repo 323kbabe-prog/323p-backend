@@ -30,7 +30,7 @@ function decorateTextWithEmojis(text) {
 }
 
 /* ---------------- Persona Generator ---------------- */
-let raceIndex = 0; // keeps track of race sequence
+let raceIndex = 0;
 
 function randomPersona() {
   const races = ["Black", "Korean", "White", ""]; // "" = generic (no race)
@@ -289,7 +289,7 @@ app.get("/api/trend", async (req, res) => {
       if (roomTrends[roomId].next) {
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
-        ensureNextDrop(roomId);
+        // ❌ No ensureNextDrop() here anymore
       } else {
         current = await generateDrop();
       }
@@ -329,12 +329,9 @@ app.get("/api/start-voice", async (req, res) => {
   if (!roomId) {
     return res.status(400).json({ error: "room parameter required" });
   }
-  console.log(`⚡ Pre-gen triggered by voice for room ${roomId}`);
-  if (roomTrends[roomId] && roomTrends[roomId].dailyIndex <= dailyPicks.length) {
-    console.log(`⚡ Pre-gen first infinite drop triggered at voice start (room ${roomId})`);
-  }
+  console.log(`⚡ Pre-gen triggered by Daily Pick voice start for room ${roomId}`);
   ensureNextDrop(roomId);
-  res.json({ ok: true, message: "Pre-generation triggered by voice" });
+  res.json({ ok: true, message: "Pre-generation triggered by voice start" });
 });
 
 /* ---------------- Chat (Socket.IO) ---------------- */
