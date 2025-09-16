@@ -33,7 +33,7 @@ function decorateTextWithEmojis(text) {
 let raceIndex = 0;
 
 function randomPersona() {
-  const races = ["Black", "Korean", "White", ""]; // "" = generic (no race)
+  const races = ["Black", "Korean", "White", ""]; // "" = generic
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
 
@@ -60,7 +60,7 @@ const genzBackgrounds = [
   "dreamy gradient background (lavender, sky blue, soft pink)"
 ];
 
-/* ---------------- AI-Weird Gen-Z Sticker Pool ---------------- */
+/* ---------------- Sticker Pool ---------------- */
 const stickerPool = [
   "🤖","👾","⚡","💻","📟","⌨️","📡","🔮","🧠","💿","🪩","📼",
   "🪐","🌀","🌐","☄️","👁️","🫀","🦷","🐸","🥒","🧃","🥤","🍄",
@@ -285,13 +285,15 @@ app.get("/api/trend", async (req, res) => {
       roomTrends[roomId].dailyIndex++;
       console.log(`🎬 Serving Daily Pick ${roomTrends[roomId].dailyIndex}/${dailyPicks.length} for room ${roomId}`);
     } else {
-      console.log(`🎯 Switching to infinite feed for room ${roomId}`);
       if (roomTrends[roomId].next) {
+        // Use the pre-generated drop from voice start
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
-        // ❌ No ensureNextDrop() here anymore
+        ensureNextDrop(roomId); // continue loop
       } else {
+        // Fallback in case no pre-gen happened
         current = await generateDrop();
+        ensureNextDrop(roomId);
       }
     }
 
