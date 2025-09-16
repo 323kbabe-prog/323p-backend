@@ -4,7 +4,7 @@ const { Server } = require("socket.io");
 const path = require("path");
 const OpenAI = require("openai");
 const cors = require("cors");
-const fs = require("fs"); // 👈 added for persistence
+const fs = require("fs");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -17,8 +17,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 /* ---------------- State ---------------- */
 const roomTrends = {};
 let generatingNext = {};
-
-// Daily picks cache
 let dailyPicks = [];
 let dailyDate = null;
 
@@ -151,7 +149,6 @@ async function generateDailyPicks() {
   }
   dailyDate = new Date().toISOString().slice(0, 10);
 
-  // Save to JSON file
   fs.writeFileSync(PICKS_FILE, JSON.stringify({ dailyDate, dailyPicks }, null, 2));
 
   console.log(`🌅 Daily Picks Generated (${dailyDate}):`);
@@ -160,6 +157,7 @@ async function generateDailyPicks() {
   });
 }
 
+/* ---------------- Pre-gen ---------------- */
 async function ensureNextDrop(roomId) {
   if (generatingNext[roomId]) return;
   generatingNext[roomId] = true;
@@ -198,10 +196,10 @@ app.get("/api/trend", async (req, res) => {
 
     const today = new Date().toISOString().slice(0, 10);
 
-    // Fallback: if cron didn't run and file missing, generate picks now
     if (!dailyPicks.length || dailyDate !== today) {
       console.warn("⚠️ Daily picks not ready, generating now as fallback...");
       await generateDailyPicks();
+      console.log("✅ Fallback generation complete — daily picks are now ready.");
     }
 
     if (!roomTrends[roomId]) {
@@ -283,6 +281,6 @@ app.use(express.static(path.join(__dirname)));
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-  loadDailyPicks(); // 👈 load persisted picks on startup
+  loadDailyPicks(); // load persisted picks on startup
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
