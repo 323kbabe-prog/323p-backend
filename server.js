@@ -218,28 +218,21 @@ async function generateDrop() {
 /* ---------------- Daily Pick (only one per day) ---------------- */
 async function generateDailyPicks() {
   dailyPicks = [];
-  const usedIndexes = new Set();
+  const idx = Math.floor(Math.random() * TOP50_COSMETICS.length);
+  const pick = TOP50_COSMETICS[idx];
+  const persona = randomPersona();
+  const description = await makeDescription(pick.brand, pick.product);
+  const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
 
-  while (dailyPicks.length < 1) {
-    const idx = Math.floor(Math.random() * TOP50_COSMETICS.length);
-    if (usedIndexes.has(idx)) continue;
-    usedIndexes.add(idx);
-
-    const pick = TOP50_COSMETICS[idx];
-    const persona = randomPersona();
-    const description = await makeDescription(pick.brand, pick.product);
-    const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
-
-    dailyPicks.push({
-      brand: decorateTextWithEmojis(pick.brand),
-      product: decorateTextWithEmojis(pick.product),
-      persona,
-      description,
-      hashtags: ["#BeautyTok", "#NowTrending"],
-      image: imageUrl,
-      refresh: 3000
-    });
-  }
+  dailyPicks.push({
+    brand: decorateTextWithEmojis(pick.brand),
+    product: decorateTextWithEmojis(pick.product),
+    persona,
+    description,
+    hashtags: ["#BeautyTok", "#NowTrending"],
+    image: imageUrl,
+    refresh: 3000
+  });
 
   dailyDate = new Date().toISOString().slice(0, 10);
   fs.writeFileSync(PICKS_FILE, JSON.stringify({ dailyDate, dailyPicks }, null, 2));
@@ -292,6 +285,7 @@ app.get("/api/trend", async (req, res) => {
       roomTrends[roomId].dailyIndex++;
       console.log(`🎬 Serving Daily Pick ${roomTrends[roomId].dailyIndex}/${dailyPicks.length} for room ${roomId}`);
     } else {
+      console.log(`🎯 Switching to infinite feed for room ${roomId}`);
       if (roomTrends[roomId].next) {
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
@@ -366,7 +360,6 @@ app.use(express.static(path.join(__dirname)));
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-    loadDailyPicks();
+  loadDailyPicks();
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
-
