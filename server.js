@@ -30,13 +30,17 @@ function decorateTextWithEmojis(text) {
 }
 
 /* ---------------- Persona Generator ---------------- */
+let raceIndex = 0; // keeps track of race sequence
+
 function randomPersona() {
-  // Equal chance: 25% each
   const races = ["Black", "Korean", "White", ""]; // "" = generic (no race)
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
 
-  const race = races[Math.floor(Math.random() * races.length)];
+  // Pick race sequentially (loop back after reaching end)
+  const race = races[raceIndex % races.length];
+  raceIndex++; // advance for next persona
+
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
 
@@ -298,21 +302,17 @@ app.get("/api/trend", async (req, res) => {
     const dailyIndex = roomTrends[roomId].dailyIndex;
 
     if (dailyIndex < dailyPicks.length) {
-      // Serve current daily pick
       current = dailyPicks[dailyIndex];
       roomTrends[roomId].dailyIndex++;
-
-      // 👉 Only when finishing Pick #3, pre-gen the first infinite drop
       if (roomTrends[roomId].dailyIndex === dailyPicks.length) {
         ensureNextDrop(roomId);
         console.log(`🎯 Pre-gen first infinite drop after Daily Picks for room ${roomId}`);
       }
     } else {
-      // After daily picks, use pre-gen infinite drops
       if (roomTrends[roomId].next) {
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
-        ensureNextDrop(roomId); // queue another infinite
+        ensureNextDrop(roomId);
       } else {
         current = await generateDrop();
       }
