@@ -31,7 +31,6 @@ function decorateTextWithEmojis(text) {
 
 /* ---------------- Persona Generator ---------------- */
 let raceIndex = 0;
-
 function randomPersona() {
   const races = ["Black", "Korean", "White", ""]; // "" = generic
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "influencer"];
@@ -202,8 +201,10 @@ async function generateImageUrl(brand, product, persona) {
 async function generateDrop() {
   const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
   const persona = randomPersona();
-  const description = await makeDescription(pick.brand, pick.product);
-  const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
+  const [description, imageUrl] = await Promise.all([
+    makeDescription(pick.brand, pick.product),
+    generateImageUrl(pick.brand, pick.product, persona)
+  ]);
   return {
     brand: decorateTextWithEmojis(pick.brand),
     product: decorateTextWithEmojis(pick.product),
@@ -215,14 +216,16 @@ async function generateDrop() {
   };
 }
 
-/* ---------------- Daily Pick (only one per day) ---------------- */
+/* ---------------- Daily Pick ---------------- */
 async function generateDailyPicks() {
   dailyPicks = [];
   const idx = Math.floor(Math.random() * TOP50_COSMETICS.length);
   const pick = TOP50_COSMETICS[idx];
   const persona = randomPersona();
-  const description = await makeDescription(pick.brand, pick.product);
-  const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
+  const [description, imageUrl] = await Promise.all([
+    makeDescription(pick.brand, pick.product),
+    generateImageUrl(pick.brand, pick.product, persona)
+  ]);
 
   dailyPicks.push({
     brand: decorateTextWithEmojis(pick.brand),
@@ -285,8 +288,8 @@ app.get("/api/trend", async (req, res) => {
       roomTrends[roomId].dailyIndex++;
       console.log(`🎬 Serving Daily Pick ${roomTrends[roomId].dailyIndex}/${dailyPicks.length} for room ${roomId}`);
 
-      // 👉 Start pre-gen immediately when serving the Daily Pick
-      console.log(`⚡ Pre-gen started immediately when serving Daily Pick for room ${roomId}`);
+      // 👉 Kick off pre-gen in background, don't wait
+      console.log(`⚡ Pre-gen started during warm-up for room ${roomId}`);
       ensureNextDrop(roomId);
 
     } else {
