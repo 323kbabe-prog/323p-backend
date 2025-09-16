@@ -31,9 +31,20 @@ function decorateTextWithEmojis(text) {
 
 /* ---------------- Persona Generator ---------------- */
 function randomPersona() {
+  // Equal chance: 25% each
+  const races = ["Black", "Korean", "White", ""]; // "" = generic (no race)
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
-  return `a young female ${vibes[Math.floor(Math.random() * vibes.length)]} with a ${styles[Math.floor(Math.random() * styles.length)]} style`;
+
+  const race = races[Math.floor(Math.random() * races.length)];
+  const vibe = vibes[Math.floor(Math.random() * vibes.length)];
+  const style = styles[Math.floor(Math.random() * styles.length)];
+
+  if (race) {
+    return `a young ${race} female ${vibe} with a ${style} style`;
+  } else {
+    return `a young female ${vibe} with a ${style} style`;
+  }
 }
 
 /* ---------------- Background Pool ---------------- */
