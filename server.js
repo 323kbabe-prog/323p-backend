@@ -4,6 +4,7 @@ const { Server } = require("socket.io");
 const path = require("path");
 const OpenAI = require("openai");
 const cors = require("cors");
+const fs = require("fs"); // 👈 added for persistence
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -14,7 +15,7 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- State ---------------- */
-const roomTrends = {}; // { roomId: { current: {}, next: {}, dailyIndex: number } }
+const roomTrends = {};
 let generatingNext = {};
 
 // Daily picks cache
@@ -49,24 +50,36 @@ const genzBackgrounds = [
 
 /* ---------------- AI-Weird Gen-Z Sticker Pool ---------------- */
 const stickerPool = [
-  // AI / glitch / tech chaos
   "🤖","👾","⚡","💻","📟","⌨️","📡","🔮","🧠","💿","🪩","📼",
-  // surreal / weirdcore vibes
   "🪐","🌀","🌐","☄️","👁️","🫀","🦷","🐸","🥒","🧃","🥤","🍄",
-  // glam / ironic slay
   "💅","💋","👑","🔥","😎","🫦","🥹","😭","😂","😵‍💫","🤯",
-  // kawaii + cursed combo
   "🦋","🐰","🌸","🍓","🍭","🍉","🍒","🍼","☁️","🌙","✨","🌈",
-  // text emoticons — weird & retro
   ":)","<3","☆","^_^","¯\\_(ツ)_/¯","(✿◠‿◠)","(｡♥‿♥｡)","(⌐■_■)",
   "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧","(っ◔◡◔)っ ♥","(ノಠ益ಠ)ノ彡┻━┻","(☞ﾟヮﾟ)☞"
 ];
-
 function randomStickers(countMin = 5, countMax = 12) {
   const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
   return Array.from({ length: count }, () =>
     stickerPool[Math.floor(Math.random() * stickerPool.length)]
   ).join(" ");
+}
+
+/* ---------------- Persistence ---------------- */
+const PICKS_FILE = path.join(__dirname, "dailyPicks.json");
+
+function loadDailyPicks() {
+  try {
+    if (fs.existsSync(PICKS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(PICKS_FILE));
+      if (data.dailyDate === new Date().toISOString().slice(0, 10)) {
+        dailyDate = data.dailyDate;
+        dailyPicks = data.dailyPicks;
+        console.log(`📂 Loaded Daily Picks from file (${dailyDate})`);
+      }
+    }
+  } catch (err) {
+    console.error("❌ Failed to load daily picks file:", err.message);
+  }
 }
 
 /* ---------------- Helpers ---------------- */
@@ -92,7 +105,7 @@ async function makeDescription(brand, product) {
 async function generateImageUrl(brand, product, persona) {
   try {
     const bg = genzBackgrounds[Math.floor(Math.random() * genzBackgrounds.length)];
-    const stickers = randomStickers(); // 👈 NEW random weird AI-GenZ sticker spam
+    const stickers = randomStickers();
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `
@@ -115,7 +128,7 @@ async function generateImageUrl(brand, product, persona) {
 }
 
 async function generateDrop() {
-  const pick = { brand: "Demo Brand", product: "Demo Product" }; // placeholder
+  const pick = { brand: "Demo Brand", product: "Demo Product" };
   const persona = randomPersona();
   const description = await makeDescription(pick.brand, pick.product);
   const imageUrl = await generateImageUrl(pick.brand, pick.product, persona);
@@ -137,6 +150,10 @@ async function generateDailyPicks() {
     dailyPicks.push(drop);
   }
   dailyDate = new Date().toISOString().slice(0, 10);
+
+  // Save to JSON file
+  fs.writeFileSync(PICKS_FILE, JSON.stringify({ dailyDate, dailyPicks }, null, 2));
+
   console.log(`🌅 Daily Picks Generated (${dailyDate}):`);
   dailyPicks.forEach((p, idx) => {
     console.log(`${idx + 1}. ${p.brand} – ${p.product}`);
@@ -181,7 +198,7 @@ app.get("/api/trend", async (req, res) => {
 
     const today = new Date().toISOString().slice(0, 10);
 
-    // Fallback: if cron didn't run, generate picks now
+    // Fallback: if cron didn't run and file missing, generate picks now
     if (!dailyPicks.length || dailyDate !== today) {
       console.warn("⚠️ Daily picks not ready, generating now as fallback...");
       await generateDailyPicks();
@@ -193,11 +210,9 @@ app.get("/api/trend", async (req, res) => {
 
     let current;
     if (roomTrends[roomId].dailyIndex < dailyPicks.length) {
-      // Serve one of the 3 daily picks
       current = dailyPicks[roomTrends[roomId].dailyIndex];
       roomTrends[roomId].dailyIndex++;
     } else {
-      // After the 3rd pick, switch to real-time mode
       if (roomTrends[roomId].next) {
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
@@ -268,5 +283,6 @@ app.use(express.static(path.join(__dirname)));
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
+  loadDailyPicks(); // 👈 load persisted picks on startup
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
