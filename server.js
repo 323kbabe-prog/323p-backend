@@ -284,14 +284,17 @@ app.get("/api/trend", async (req, res) => {
       current = dailyPicks[dailyIndex];
       roomTrends[roomId].dailyIndex++;
       console.log(`🎬 Serving Daily Pick ${roomTrends[roomId].dailyIndex}/${dailyPicks.length} for room ${roomId}`);
+
+      // 👉 Start pre-gen immediately when serving the Daily Pick
+      console.log(`⚡ Pre-gen started immediately when serving Daily Pick for room ${roomId}`);
+      ensureNextDrop(roomId);
+
     } else {
       if (roomTrends[roomId].next) {
-        // Use the pre-generated drop from voice start
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
-        ensureNextDrop(roomId); // continue loop
+        ensureNextDrop(roomId);
       } else {
-        // Fallback in case no pre-gen happened
         current = await generateDrop();
         ensureNextDrop(roomId);
       }
@@ -331,9 +334,8 @@ app.get("/api/start-voice", async (req, res) => {
   if (!roomId) {
     return res.status(400).json({ error: "room parameter required" });
   }
-  console.log(`⚡ Pre-gen triggered by Daily Pick voice start for room ${roomId}`);
-  ensureNextDrop(roomId);
-  res.json({ ok: true, message: "Pre-generation triggered by voice start" });
+  console.log(`🎤 Voice started for Daily Pick in room ${roomId}`);
+  res.json({ ok: true, message: "Voice started" });
 });
 
 /* ---------------- Chat (Socket.IO) ---------------- */
