@@ -23,7 +23,9 @@ let dailyDate = null;
 /* ---------------- Emoji Helper ---------------- */
 const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
 function randomEmojis(count = 2) {
-  return Array.from({ length: count }, () => EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]).join(" ");
+  return Array.from({ length: count }, () =>
+    EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]
+  ).join(" ");
 }
 function decorateTextWithEmojis(text) {
   return `${randomEmojis(2)} ${text} ${randomEmojis(2)}`;
@@ -35,18 +37,12 @@ function randomPersona() {
   const races = ["Black", "Korean", "White", ""]; // "" = generic
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
-
   const race = races[raceIndex % races.length];
   raceIndex++;
-
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
-
-  if (race) {
-    return `a young ${race} female ${vibe} with a ${style} style`;
-  } else {
-    return `a young female ${vibe} with a ${style} style`;
-  }
+  return race ? `a young ${race} female ${vibe} with a ${style} style`
+              : `a young female ${vibe} with a ${style} style`;
 }
 
 /* ---------------- Background Pool ---------------- */
@@ -129,10 +125,12 @@ const TOP50_COSMETICS = [
 ];
 
 /* ---------------- Persistence ---------------- */
-const PICKS_FILE = path.join(__dirname, "dailyPicks.json");
+// use persistent volume on Render
+const PICKS_FILE = path.join("/var/data", "dailyPicks.json");
 
 async function loadDailyPicks() {
   try {
+    console.log(`📂 Using daily pick file: ${PICKS_FILE}`);
     if (fs.existsSync(PICKS_FILE)) {
       const data = JSON.parse(fs.readFileSync(PICKS_FILE));
       if (data.dailyDate === new Date().toISOString().slice(0, 10)) {
@@ -309,7 +307,7 @@ app.get("/api/trend", async (req, res) => {
     roomTrends[roomId].current = current;
     res.json(current);
 
-    // ✅ NEW: always pre-gen immediately after serving a trend
+    // ✅ Always pre-gen after serving
     ensureNextDrop(roomId);
 
   } catch (e) {
