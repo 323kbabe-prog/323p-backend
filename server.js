@@ -131,7 +131,7 @@ const TOP50_COSMETICS = [
 /* ---------------- Persistence ---------------- */
 const PICKS_FILE = path.join(__dirname, "dailyPicks.json");
 
-async function loadDailyPicks() {
+function loadDailyPicks() {
   try {
     if (fs.existsSync(PICKS_FILE)) {
       const data = JSON.parse(fs.readFileSync(PICKS_FILE));
@@ -139,19 +139,11 @@ async function loadDailyPicks() {
         dailyDate = data.dailyDate;
         dailyPicks = data.dailyPicks;
         console.log(`📂 Loaded Daily Pick from file (${dailyDate})`);
-        return;
-      } else {
-        console.log("⚠️ Daily pick file is outdated, regenerating...");
       }
-    } else {
-      console.log("⚠️ No daily pick file found, generating...");
     }
   } catch (err) {
     console.error("❌ Failed to load daily pick file:", err.message);
   }
-
-  // ✅ Fallback: always guarantee at least one pick exists
-  await generateDailyPicks();
 }
 
 /* ---------------- Helpers ---------------- */
@@ -286,7 +278,6 @@ app.get("/api/trend", async (req, res) => {
 
     if (!roomTrends[roomId]) {
       roomTrends[roomId] = { dailyIndex: 0 };
-      ensureNextDrop(roomId);
     }
 
     let current;
@@ -296,14 +287,19 @@ app.get("/api/trend", async (req, res) => {
       current = dailyPicks[dailyIndex];
       roomTrends[roomId].dailyIndex++;
       console.log(`🎬 Serving Daily Pick ${roomTrends[roomId].dailyIndex}/${dailyPicks.length} for room ${roomId}`);
+
+      // Pre-gen first infinite drop in background
+      console.log(`⚡ Pre-gen started during warm-up for room ${roomId}`);
+      ensureNextDrop(roomId);
+
     } else {
       if (roomTrends[roomId].next) {
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
-        ensureNextDrop(roomId);
+        // ❌ no ensureNextDrop() here; will wait for voice start
       } else {
         current = await generateDrop();
-        ensureNextDrop(roomId);
+        // ❌ no ensureNextDrop() here either
       }
     }
 
@@ -342,7 +338,7 @@ app.get("/api/start-voice", async (req, res) => {
     return res.status(400).json({ error: "room parameter required" });
   }
   console.log(`🎤 Voice started for room ${roomId}`);
-  ensureNextDrop(roomId);
+  ensureNextDrop(roomId); // ✅ pre-gen now only at voice start for loop
   res.json({ ok: true, message: "Voice started, pre-gen triggered" });
 });
 
@@ -353,7 +349,6 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
-    ensureNextDrop(roomId);
   });
   socket.on("chatMessage", ({ roomId, user, text }) => {
     console.log(`💬 [${roomId}] ${user}: ${text}`);
@@ -370,7 +365,6 @@ app.use(express.static(path.join(__dirname)));
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-  await loadDailyPicks();   // ✅ loader now always guarantees a valid pick
-  await ensureNextDrop("global");
+  loadDailyPicks();
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
