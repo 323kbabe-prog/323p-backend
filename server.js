@@ -298,7 +298,7 @@ app.get("/api/trend", async (req, res) => {
 
     roomTrends[roomId].current = current;
 
-    // ⚡ NEW: trigger pre-gen right after serving a drop
+    // ✅ Only pre-gen after serving each trend
     ensureNextDrop(roomId);
 
     res.json(current);
@@ -335,8 +335,8 @@ app.get("/api/start-voice", async (req, res) => {
     return res.status(400).json({ error: "room parameter required" });
   }
   console.log(`🎤 Voice started for room ${roomId}`);
-  ensureNextDrop(roomId); // ✅ still runs at voice start
-  res.json({ ok: true, message: "Voice started, pre-gen triggered" });
+  // ❌ Removed ensureNextDrop here
+  res.json({ ok: true, message: "Voice started" });
 });
 
 /* ---------------- Chat (Socket.IO) ---------------- */
