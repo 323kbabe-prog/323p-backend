@@ -23,9 +23,7 @@ let dailyDate = null;
 /* ---------------- Emoji Helper ---------------- */
 const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
 function randomEmojis(count = 2) {
-  return Array.from({ length: count }, () =>
-    EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]
-  ).join(" ");
+  return Array.from({ length: count }, () => EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]).join(" ");
 }
 function decorateTextWithEmojis(text) {
   return `${randomEmojis(2)} ${text} ${randomEmojis(2)}`;
@@ -37,12 +35,18 @@ function randomPersona() {
   const races = ["Black", "Korean", "White", ""]; // "" = generic
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
+
   const race = races[raceIndex % races.length];
   raceIndex++;
+
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
-  return race ? `a young ${race} female ${vibe} with a ${style} style`
-              : `a young female ${vibe} with a ${style} style`;
+
+  if (race) {
+    return `a young ${race} female ${vibe} with a ${style} style`;
+  } else {
+    return `a young female ${vibe} with a ${style} style`;
+  }
 }
 
 /* ---------------- Background Pool ---------------- */
@@ -125,38 +129,20 @@ const TOP50_COSMETICS = [
 ];
 
 /* ---------------- Persistence ---------------- */
-// use persistent volume on Render
-const PICKS_FILE = path.join("/var/data", "dailyPicks.json");
+const PICKS_FILE = path.join(__dirname, "dailyPicks.json");
 
-async function loadDailyPicks() {
+function loadDailyPicks() {
   try {
-    console.log(`📂 Using daily pick file: ${PICKS_FILE}`);
     if (fs.existsSync(PICKS_FILE)) {
       const data = JSON.parse(fs.readFileSync(PICKS_FILE));
       if (data.dailyDate === new Date().toISOString().slice(0, 10)) {
         dailyDate = data.dailyDate;
         dailyPicks = data.dailyPicks;
         console.log(`📂 Loaded Daily Pick from file (${dailyDate})`);
-        return;
-      } else {
-        console.log("⚠️ Daily pick file is outdated, regenerating...");
       }
-    } else {
-      console.log("⚠️ No daily pick file found, generating...");
     }
   } catch (err) {
     console.error("❌ Failed to load daily pick file:", err.message);
-  }
-
-  await generateDailyPicks();
-}
-
-/* ---------------- Guard ---------------- */
-async function ensureDailyPick() {
-  const today = new Date().toISOString().slice(0, 10);
-  if (!dailyPicks.length || dailyDate !== today) {
-    console.log("⚠️ Daily pick not valid, regenerating...");
-    await generateDailyPicks();
   }
 }
 
@@ -282,7 +268,13 @@ app.get("/api/trend", async (req, res) => {
       return res.status(400).json({ error: "room parameter required" });
     }
 
-    await ensureDailyPick();
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (!dailyPicks.length || dailyDate !== today) {
+      console.warn("⚠️ Daily pick not ready, generating now as fallback...");
+      await generateDailyPicks();
+      console.log("✅ Fallback generation complete — daily pick is now ready.");
+    }
 
     if (!roomTrends[roomId]) {
       roomTrends[roomId] = { dailyIndex: 0 };
@@ -295,21 +287,24 @@ app.get("/api/trend", async (req, res) => {
       current = dailyPicks[dailyIndex];
       roomTrends[roomId].dailyIndex++;
       console.log(`🎬 Serving Daily Pick ${roomTrends[roomId].dailyIndex}/${dailyPicks.length} for room ${roomId}`);
+
+      // Pre-gen first infinite drop in background
+      console.log(`⚡ Pre-gen started during warm-up for room ${roomId}`);
+      ensureNextDrop(roomId);
+
     } else {
       if (roomTrends[roomId].next) {
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
+        // ❌ no ensureNextDrop() here; will wait for voice start
       } else {
         current = await generateDrop();
+        // ❌ no ensureNextDrop() here either
       }
     }
 
     roomTrends[roomId].current = current;
     res.json(current);
-
-    // ✅ Always pre-gen after serving
-    ensureNextDrop(roomId);
-
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
     res.json({ error: "Trend API failed" });
@@ -342,9 +337,8 @@ app.get("/api/start-voice", async (req, res) => {
   if (!roomId) {
     return res.status(400).json({ error: "room parameter required" });
   }
-  await ensureDailyPick();
   console.log(`🎤 Voice started for room ${roomId}`);
-  ensureNextDrop(roomId);
+  ensureNextDrop(roomId); // ✅ pre-gen now only at voice start for loop
   res.json({ ok: true, message: "Voice started, pre-gen triggered" });
 });
 
@@ -355,7 +349,6 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     socket.roomId = roomId;
     console.log(`👥 ${socket.id} joined room: ${roomId}`);
-    ensureNextDrop(roomId);
   });
   socket.on("chatMessage", ({ roomId, user, text }) => {
     console.log(`💬 [${roomId}] ${user}: ${text}`);
@@ -372,7 +365,6 @@ app.use(express.static(path.join(__dirname)));
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-  await loadDailyPicks();
-  await ensureNextDrop("global");
+  loadDailyPicks();
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
