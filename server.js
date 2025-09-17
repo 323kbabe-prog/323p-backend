@@ -284,11 +284,10 @@ app.get("/api/trend", async (req, res) => {
       return res.status(400).json({ error: "room parameter required" });
     }
 
-    await ensureDailyPick();  // ✅ always ensure ready
+    await ensureDailyPick();
 
     if (!roomTrends[roomId]) {
       roomTrends[roomId] = { dailyIndex: 0 };
-      ensureNextDrop(roomId);
     }
 
     let current;
@@ -302,15 +301,17 @@ app.get("/api/trend", async (req, res) => {
       if (roomTrends[roomId].next) {
         current = roomTrends[roomId].next;
         roomTrends[roomId].next = null;
-        ensureNextDrop(roomId);
       } else {
         current = await generateDrop();
-        ensureNextDrop(roomId);
       }
     }
 
     roomTrends[roomId].current = current;
     res.json(current);
+
+    // ✅ NEW: always pre-gen immediately after serving a trend
+    ensureNextDrop(roomId);
+
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
     res.json({ error: "Trend API failed" });
@@ -343,7 +344,7 @@ app.get("/api/start-voice", async (req, res) => {
   if (!roomId) {
     return res.status(400).json({ error: "room parameter required" });
   }
-  await ensureDailyPick(); // ✅ guard here too
+  await ensureDailyPick();
   console.log(`🎤 Voice started for room ${roomId}`);
   ensureNextDrop(roomId);
   res.json({ ok: true, message: "Voice started, pre-gen triggered" });
@@ -373,18 +374,7 @@ app.use(express.static(path.join(__dirname)));
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
-  await loadDailyPicks();   // ✅ loader ensures ready at startup
+  await loadDailyPicks();
   await ensureNextDrop("global");
-
-  // ✅ Background auto-check: refresh daily pick if missing/expired
-  setInterval(async () => {
-    try {
-      await ensureDailyPick();
-    } catch (err) {
-      console.error("❌ Background daily pick check failed:", err.message);
-    }
-  }, 10 * 60 * 1000); // every 10 minutes
-
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
-
