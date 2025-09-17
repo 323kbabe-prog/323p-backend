@@ -2,12 +2,12 @@
   "dailyDate": "2025-09-17",
   "dailyPicks": [
     {
-      "brand": "✨ Fenty Beauty 💖",
-      "product": "🔥 Gloss Bomb Lip Gloss 🌈",
+      "brand": "Fenty Beauty",
+      "product": "Gloss Bomb Lip Gloss",
       "persona": "a young Korean female influencer with a glam style",
-      "description": "The moment I swipe Fenty’s Gloss Bomb across my lips, I feel unstoppable. The texture is buttery smooth, gliding like silk with zero stickiness. I catch myself smiling because the shine is unreal — it’s like a spotlight follows me into every room. Even after coffee runs and long chats with friends, it stays glossy without fading, which makes me feel low-key powerful. It’s my little secret weapon for confidence and glow every single day. ✨💋🌟",
+      "description": "... 70+ word Gen-Z description ...",
       "hashtags": ["#BeautyTok", "#NowTrending"],
-      "image": "https://placehold.co/600x600?text=Gloss+Bomb", 
+      "image": "data:image/png;base64,...",
       "refresh": 3000
     }
   ]
