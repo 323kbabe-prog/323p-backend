@@ -135,11 +135,9 @@ function loadDailyPicks() {
   try {
     if (fs.existsSync(PICKS_FILE)) {
       const data = JSON.parse(fs.readFileSync(PICKS_FILE));
-      if (data.dailyDate === new Date().toISOString().slice(0, 10)) {
-        dailyDate = data.dailyDate;
-        dailyPicks = data.dailyPicks;
-        console.log(`📂 Loaded Daily Pick from file (${dailyDate})`);
-      }
+      dailyDate = data.dailyDate;
+      dailyPicks = data.dailyPicks;
+      console.log(`📂 Loaded Daily Pick from file (${dailyDate})`);
     }
   } catch (err) {
     console.error("❌ Failed to load daily pick file:", err.message);
@@ -356,12 +354,26 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- Serve static ---------------- */
-app.use(express.static(path.join(__dirname)));
-
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
   loadDailyPicks();
+
+  // ✅ Safety check: regenerate only if missing, wrong date, or placeholder
+  const today = new Date().toISOString().slice(0, 10);
+  const needsRegenerate =
+    !dailyPicks.length ||
+    dailyDate !== today ||
+    !dailyPicks[0].description ||
+    dailyPicks[0].description.includes("...");
+
+  if (needsRegenerate) {
+    console.log("⚠️ Daily Pick missing or invalid, regenerating...");
+    await generateDailyPicks();
+    console.log("✅ Daily Pick ready for today.");
+  } else {
+    console.log(`✨ Daily Pick already loaded for ${today}.`);
+  }
+
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
