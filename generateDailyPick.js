@@ -4,7 +4,7 @@ const fs = require("fs");
 const OpenAI = require("openai");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const PICKS_FILE = path.join(__dirname, "dailyPicks.json");
+const PICKS_FILE = path.join("/var/data", "dailyPicks.json");
 
 /* ---------------- Emoji Helper ---------------- */
 const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
@@ -177,6 +177,7 @@ async function generateDailyPicks() {
   const dailyDate = new Date().toISOString().slice(0, 10);
   fs.writeFileSync(PICKS_FILE, JSON.stringify({ dailyDate, dailyPicks }, null, 2));
   console.log(`🌅 Daily Pick Generated (${dailyDate}): ${pick.brand} – ${pick.product}`);
+  console.log(`📂 File saved to ${PICKS_FILE}`);
 }
 
 // run once
