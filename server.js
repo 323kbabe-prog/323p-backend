@@ -375,5 +375,16 @@ const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
   await loadDailyPicks();   // ✅ loader ensures ready at startup
   await ensureNextDrop("global");
+
+  // ✅ Background auto-check: refresh daily pick if missing/expired
+  setInterval(async () => {
+    try {
+      await ensureDailyPick();
+    } catch (err) {
+      console.error("❌ Background daily pick check failed:", err.message);
+    }
+  }, 10 * 60 * 1000); // every 10 minutes
+
   console.log(`🚀 323drop backend live on :${PORT}`);
 });
+
