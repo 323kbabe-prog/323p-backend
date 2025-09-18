@@ -57,7 +57,52 @@ function randomStickers(countMin = 5, countMax = 12) {
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
   { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
-  // ... (rest of your 50 cosmetics items)
+  { brand: "Anastasia Beverly Hills", product: "Clear Brow Gel" },
+  { brand: "YSL", product: "Make Me Blush Baby Doll" },
+  { brand: "Laura Mercier", product: "Loose Setting Powder" },
+  { brand: "Beautyblender", product: "Blending Sponge" },
+  { brand: "Givenchy", product: "Prisme Libre Blush" },
+  { brand: "Sephora Collection", product: "Pro Brushes" },
+  { brand: "COSRX", product: "Advanced Snail 96 Mucin Essence" },
+  { brand: "Lush", product: "Dream Cream" },
+  { brand: "Nyx", product: "Jumbo Eye Pencil" },
+  { brand: "Nars", product: "Radiant Creamy Concealer" },
+  { brand: "Too Faced", product: "Better Than Sex Mascara" },
+  { brand: "Charlotte Tilbury", product: "Magic Cream" },
+  { brand: "Haus Labs", product: "Triclone Foundation" },
+  { brand: "Dior", product: "Lip Glow Oil" },
+  { brand: "Freck Beauty", product: "Faux Freckle Pen" },
+  { brand: "Sol de Janeiro", product: "Brazilian Crush Mist" },
+  { brand: "Paula’s Choice", product: "2% BHA Liquid Exfoliant" },
+  { brand: "Essence", product: "Lash Princess Mascara" },
+  { brand: "Color Wow", product: "Dream Coat Spray" },
+  { brand: "Laneige", product: "Lip Sleeping Mask" },
+  { brand: "Maybelline", product: "Sky High Mascara" },
+  { brand: "Kitsch", product: "Heatless Curl Set" },
+  { brand: "Biodance", product: "Bio-Collagen Mask" },
+  { brand: "MAC", product: "Squirt Plumping Gloss Stick" },
+  { brand: "Clinique", product: "Black Honey Lipstick" },
+  { brand: "L’Oréal Paris", product: "Infallible Foundation" },
+  { brand: "Isle of Paradise", product: "Self-Tanning Drops" },
+  { brand: "Rare Beauty", product: "Liquid Blush" },
+  { brand: "SHEGLAM", product: "Makeup Essentials" },
+  { brand: "Huda Beauty", product: "Concealer" },
+  { brand: "Cécred", product: "Haircare Treatment" },
+  { brand: "Medicube", product: "PDRN Pink Glass Glow Set" },
+  { brand: "E.L.F.", product: "Halo Glow Powder" },
+  { brand: "Bubble Skincare", product: "Gel Cleanser" },
+  { brand: "Tower 28 Beauty", product: "SOS Spray" },
+  { brand: "Olay", product: "Regenerist Cream" },
+  { brand: "I’m From", product: "Rice Toner" },
+  { brand: "DIBS Beauty", product: "Desert Island Duo" },
+  { brand: "Milk Makeup", product: "Cooling Water Jelly Tint" },
+  { brand: "Glow Recipe", product: "Watermelon Dew Drops" },
+  { brand: "Danessa Myricks Beauty", product: "Yummy Skin Balm Powder" },
+  { brand: "Refy", product: "Brow Sculpt" },
+  { brand: "Kosas", product: "Revealer Concealer" },
+  { brand: "Bioderma", product: "Micellar Water" },
+  { brand: "Embryolisse", product: "Lait-Crème Concentré" },
+  { brand: "CurrentBody", product: "LED Hair Growth Helmet" },
   { brand: "Dyson Beauty", product: "Airwrap Styler" }
 ];
 
@@ -263,8 +308,12 @@ async function generateImageUrl(topic, pick, persona) {
   } else if (topic === "music") {
     prompt = `Idol/dancer photocard, ${persona}, performing "${pick.track}" by ${pick.artist}. Neon stage, stickers 🎤🎶⭐ ${stickers}. Square 1:1.`;
   } else if (topic === "politics") {
-    prompt = `Protest poster/zine style, ${persona}, speaking on ${pick.issue}. Bold red/black gradient, stickers ✊📢🔥 ${stickers}. Square 1:1.`;
-  } else {
+  prompt = `Cinematic photo of ${persona}, at a real protest about ${pick.issue}.
+  Photo-realistic details, urban street background, natural daylight.
+  Subject holding a protest sign or megaphone, candid action shot.
+  Overlay protest stickers (✊📢🔥 ${stickers}) like digital graffiti.
+  Square 1:1 format.`;
+} else {
     prompt = `Glitchy cyberpunk photocard, ${persona}, embodying ${pick.concept}. Colors purple/aqua, stickers 🤖⚡👾 ${stickers}. Square 1:1.`;
   }
   try {
