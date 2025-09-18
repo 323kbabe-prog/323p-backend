@@ -13,9 +13,9 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- State ---------------- */
-const roomTrends = {}; // holds { current, next, dailyServed }
+const roomTrends = {};
 let dailyData = {};
-const generatingNext = {}; // track preload in progress
+const generatingNext = {};
 
 /* ---------------- Load Daily Picks ---------------- */
 const PICKS_FILE = path.join(__dirname, "dailyPicks.json");
@@ -30,7 +30,7 @@ function loadDailyPicks() {
   }
 }
 
-/* ---------------- Helpers (emoji, persona, stickers) ---------------- */
+/* ---------------- Helpers ---------------- */
 const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
 function randomEmojis(count = 2) {
   return Array.from({ length: count }, () =>
@@ -43,23 +43,15 @@ function decorateTextWithEmojis(text) {
 let raceIndex = 0;
 function randomPersona() {
   const races = ["Black", "Korean", "White", ""];
-  const vibes = ["college student"];
+  const vibes = ["idol","dancer","vlogger","streetwear model","influencer"];
   const styles = ["casual","glam","streetwear","retro","Y2K-inspired","minimalist"];
   const race = races[raceIndex % races.length]; raceIndex++;
-  const vibe = vibes[Math.floor(Math.random()*vibes.length)];
-  const style = styles[Math.floor(Math.random()*styles.length)];
+  const vibe = vibes[Math.floor(Math.random() * vibes.length)];
+  const style = styles[Math.floor(Math.random() * styles.length)];
   return race ? `a young ${race} female ${vibe} with a ${style} style`
               : `a young female ${vibe} with a ${style} style`;
 }
-const genzBackgrounds = [
-  "pastel gradient background (milk pink, baby blue, lilac)",
-  "vaporwave gradient background (neon pink, cyan, purple)",
-  "sunset gradient background (peach, coral, lavender)",
-  "aqua gradient background (mint, aqua, periwinkle)",
-  "cyberpunk gradient background (hot pink, electric purple, deep blue)",
-  "dreamy gradient background (lavender, sky blue, soft pink)"
-];
-const stickerPool = ["🤖","👾","⚡","💻","📟","⌨️","📡","🔮","🧠","💿","🪩","📼","🪐","🌀","🌐","☄️","👁️","🫀","🦷","🐸","🥒","🧃","🥤","🍄","💅","💋","👑","🔥","😎","🫦","🥹","😭","😂","😵‍💫","🤯","🦋","🐰","🌸","🍓","🍭","🍉","🍒","🍼","☁️","🌙","✨","🌈",":)","<3","☆","^_^"];
+const stickerPool = ["🤖","👾","⚡","💻","📟","⌨️","📡","🔮","🧠","💿","🪩","📼","🪐","🌀","🌐","☄️","👁️","🫀","🦷","🐸","🥒","🧃","🥤","🍄","💅","💋","👑","🔥","😎","🫦","🥹","😭","😂","😵‍💫","🤯","🦋","🐰","🌸","🍓","🍭","🍉","🍒","🍼","☁️","🌙","✨","🌈"];
 function randomStickers(countMin = 5, countMax = 12) {
   const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
   return Array.from({ length: count }, () => stickerPool[Math.floor(Math.random() * stickerPool.length)]).join(" ");
@@ -99,24 +91,23 @@ async function makeDescription(topic, pick) {
 
 /* ---------------- Image Generator ---------------- */
 async function generateImageUrl(topic, pick, persona) {
-  const bg = genzBackgrounds[Math.floor(Math.random() * genzBackgrounds.length)];
   const stickers = randomStickers();
   let prompt;
   if (topic === "cosmetics") {
-    prompt = `Photobooth aesthetic, ${persona}, applying ${pick.product} by ${pick.brand}. Pastel background ${bg}, stickers ${stickers}. 1:1.`;
+    prompt = `Photo-realistic close-up of ${persona}, applying ${pick.product} by ${pick.brand}. Natural lighting, glossy textures. Overlay cute stickers ${stickers}. Square 1:1.`;
   } else if (topic === "music") {
-    prompt = `Cinematic photo, ${persona}, performing "${pick.track}" by ${pick.artist}. Neon stage, photo-realistic, stickers 🎤🎶⭐ ${stickers}. 1:1.`;
+    prompt = `Photo-realistic concert photo of ${persona}, performing "${pick.track}" by ${pick.artist}. Neon lights, energetic vibe. Stickers 🎤🎶⭐ ${stickers}. Square 1:1.`;
   } else if (topic === "politics") {
-    prompt = `Photo-realistic protest photo of ${persona}, about ${pick.issue}. Urban street, daylight, holding sign or megaphone. Stickers ✊📢🔥 ${stickers}. 1:1.`;
+    prompt = `Photo-realistic protest photo of ${persona}, about ${pick.issue}. Urban street, daylight, holding a sign or megaphone. Stickers ✊📢🔥 ${stickers}. Square 1:1.`;
   } else {
-  prompt = `Photo-realistic cinematic portrait of ${persona}, embodying ${pick.concept}. 
-Synthetic plastic-like skin texture, glossy reflective surfaces, slightly uncanny. 
-Cyberpunk tones (purple, aqua, glitch blue). 
-Overlay AI-native stickers 🤖⚡👾 ${stickers} like digital graffiti. 
-Square 1:1 format.`;
-}
+    prompt = `Photo-realistic cinematic photo of ${persona}, embodying ${pick.concept}. Synthetic plastic-like skin texture, glossy reflective look, uncanny. Cyberpunk tones purple/aqua. Stickers 🤖⚡👾 ${stickers}. Square 1:1.`;
+  }
   try {
-    const out = await openai.images.generate({ model: "gpt-image-1", prompt, size: "1024x1024" });
+    const out = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt,
+      size: "auto" // ⚡ fastest available
+    });
     const d = out?.data?.[0];
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
@@ -176,11 +167,10 @@ app.get("/api/trend", async (req, res) => {
     const today = new Date().toISOString().slice(0,10);
     let current;
 
-    // Serve Daily Pick first if not served
+    // Serve Daily Pick first if exists and not served yet
     if (dailyData.dailyDate === today && dailyData.dailyPicks?.[topic] && !roomTrends[roomId]?.dailyServed) {
       current = { ...dailyData.dailyPicks[topic], isDaily: true };
       roomTrends[roomId] = { current, dailyServed: true };
-      // Preload next in background
       ensureNextDrop(roomId, topic);
       return res.json(current);
     }
@@ -190,15 +180,13 @@ app.get("/api/trend", async (req, res) => {
       current = roomTrends[roomId].next;
       roomTrends[roomId].next = null;
       roomTrends[roomId].current = current;
-      // Preload again
       ensureNextDrop(roomId, topic);
       return res.json(current);
     }
 
-    // Otherwise generate live
+    // Otherwise generate fresh
     current = await generateDrop(topic);
     roomTrends[roomId] = { current, dailyServed: true };
-    // Preload again
     ensureNextDrop(roomId, topic);
     res.json(current);
   } catch (e) {
@@ -207,7 +195,6 @@ app.get("/api/trend", async (req, res) => {
   }
 });
 
-/* ---------------- Voice ---------------- */
 app.get("/api/voice", async (req, res) => {
   try {
     const text = req.query.text || "";
@@ -215,7 +202,11 @@ app.get("/api/voice", async (req, res) => {
       res.setHeader("Content-Type", "audio/mpeg");
       return res.send(Buffer.alloc(1000));
     }
-    const out = await openai.audio.speech.create({ model: "gpt-4o-mini-tts", voice: "alloy", input: text });
+    const out = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "alloy",
+      input: text
+    });
     const audioBuffer = Buffer.from(await out.arrayBuffer());
     res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
@@ -241,7 +232,7 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- Static + Start ---------------- */
+/* ---------------- Serve static + Start ---------------- */
 app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
