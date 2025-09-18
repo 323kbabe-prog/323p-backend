@@ -108,9 +108,13 @@ async function generateImageUrl(topic, pick, persona) {
     prompt = `Cinematic photo, ${persona}, performing "${pick.track}" by ${pick.artist}. Neon stage, photo-realistic, stickers 🎤🎶⭐ ${stickers}. 1:1.`;
   } else if (topic === "politics") {
     prompt = `Photo-realistic protest photo of ${persona}, about ${pick.issue}. Urban street, daylight, holding sign or megaphone. Stickers ✊📢🔥 ${stickers}. 1:1.`;
-  } else {
-    prompt = `Glitchy cyberpunk photo, ${persona}, embodying ${pick.concept}. Purple/aqua tones, photo-realistic base, stickers 🤖⚡👾 ${stickers}. 1:1.`;
-  }
+  }} else {
+  prompt = `Photo-realistic cinematic portrait of ${persona}, embodying ${pick.concept}. 
+Synthetic plastic-like skin texture, glossy reflective surfaces, slightly uncanny. 
+Cyberpunk tones (purple, aqua, glitch blue). 
+Overlay AI-native stickers 🤖⚡👾 ${stickers} like digital graffiti. 
+Square 1:1 format.`;
+}
   try {
     const out = await openai.images.generate({ model: "gpt-image-1", prompt, size: "1024x1024" });
     const d = out?.data?.[0];
