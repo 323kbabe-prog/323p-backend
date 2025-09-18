@@ -108,7 +108,7 @@ async function generateImageUrl(topic, pick, persona) {
     prompt = `Cinematic photo, ${persona}, performing "${pick.track}" by ${pick.artist}. Neon stage, photo-realistic, stickers 🎤🎶⭐ ${stickers}. 1:1.`;
   } else if (topic === "politics") {
     prompt = `Photo-realistic protest photo of ${persona}, about ${pick.issue}. Urban street, daylight, holding sign or megaphone. Stickers ✊📢🔥 ${stickers}. 1:1.`;
-  }} else {
+  } else {
   prompt = `Photo-realistic cinematic portrait of ${persona}, embodying ${pick.concept}. 
 Synthetic plastic-like skin texture, glossy reflective surfaces, slightly uncanny. 
 Cyberpunk tones (purple, aqua, glitch blue). 
