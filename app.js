@@ -4,7 +4,7 @@ let currentTrend = null;
 let roomId = null;
 let lastDescriptionKey = null;
 let stopCycle = false;
-let currentTopic = "cosmetics"; // default topic
+let currentTopic = "cosmetics";
 
 /* ---------------- Room Setup ---------------- */
 (function initRoom() {
@@ -94,7 +94,6 @@ async function loadTrend() {
     document.getElementById("r-fallback").style.display = "block";
   }
 
-  // Voice playback + preload cycle
   const descriptionKey = currentTrend.description;
   if (descriptionKey !== lastDescriptionKey) {
     lastDescriptionKey = descriptionKey;
