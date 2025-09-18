@@ -4,6 +4,7 @@ let currentTrend = null;
 let roomId = null;
 let lastDescriptionKey = null;
 let stopCycle = false;
+let currentTopic = "cosmetics"; // default topic
 
 /* ---------------- Room Setup ---------------- */
 (function initRoom() {
@@ -26,8 +27,7 @@ function playVoice(text, onEnd) {
   audioPlayer = new Audio(url);
   audioPlayer.onplay = () => {
     document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
-    fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`)
-      .catch(() => {});
+    fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`).catch(() => {});
     hideWarmupOverlay();
   };
   audioPlayer.onended = () => {
@@ -42,11 +42,11 @@ function playVoice(text, onEnd) {
 }
 
 /* ---------------- Warm-up Overlay ---------------- */
-function showWarmupOverlay() {
+function showWarmupOverlay(message) {
   const center = document.getElementById("warmup-center");
   if (center) {
     center.style.display = "flex";
-    center.innerText = "✨🔥💖 AI is warming up… 🌈🥹💅";
+    center.innerText = message || "✨🔥💖 AI is warming up… 🌈🥹💅";
   }
 }
 function hideWarmupOverlay() {
@@ -57,7 +57,7 @@ function hideWarmupOverlay() {
 /* ---------------- Load Trend + Voice ---------------- */
 async function loadTrend() {
   if (stopCycle) return;
-  let apiUrl = "https://three23p-backend.onrender.com/api/trend?room=" + roomId;
+  let apiUrl = "https://three23p-backend.onrender.com/api/trend?room=" + roomId + "&topic=" + currentTopic;
   const res = await fetch(apiUrl);
   const newTrend = await res.json();
   if (!newTrend || !newTrend.description) {
@@ -65,7 +65,6 @@ async function loadTrend() {
     setTimeout(() => loadTrend(), 2000);
     return;
   }
-
   currentTrend = newTrend;
 
   // Update UI
@@ -74,7 +73,7 @@ async function loadTrend() {
   document.getElementById("r-persona").innerText = currentTrend.persona ? `👤 Featuring ${currentTrend.persona}` : "";
   document.getElementById("r-desc").innerText = currentTrend.description;
 
-  // ⚡ Dynamic Gen-Z label
+  // Dynamic Label
   if (!lastDescriptionKey) {
     document.getElementById("r-label").innerText = "⚡ today’s slay pick";
   } else {
@@ -109,11 +108,18 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
   socket.emit("joinRoom", roomId);
-
   showWarmupOverlay();
-
-  // Force 3-second delay before first DailyDrop
   setTimeout(() => {
     loadTrend();
   }, 3000);
+});
+
+/* ---------------- Topic Toggle ---------------- */
+document.querySelectorAll("#topic-picker button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentTopic = btn.dataset.topic;
+    showWarmupOverlay(`✨ switching vibe to 323${currentTopic}…`);
+    stopCycle = false;
+    setTimeout(() => loadTrend(), 2000);
+  });
 });
