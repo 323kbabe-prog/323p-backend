@@ -73,12 +73,18 @@ async function loadTrend() {
   document.getElementById("r-persona").innerText = currentTrend.persona ? `👤 Featuring ${currentTrend.persona}` : "";
   document.getElementById("r-desc").innerText = currentTrend.description;
 
-  // Dynamic Label
-  if (!lastDescriptionKey) {
-    document.getElementById("r-label").innerText = "⚡ today’s slay pick";
+  // Dynamic Label (different per topic)
+  let label;
+  if (currentTopic === "cosmetics") {
+    label = !lastDescriptionKey ? "⚡ today’s slay pick" : "⚡ beauty drip";
+  } else if (currentTopic === "music") {
+    label = !lastDescriptionKey ? "🎶 today’s hype track" : "🎶 looped vibe";
+  } else if (currentTopic === "politics") {
+    label = !lastDescriptionKey ? "🏛 today’s hot take" : "🏛 ongoing rant";
   } else {
-    document.getElementById("r-label").innerText = "⚡ real-time drip";
+    label = !lastDescriptionKey ? "🌐 today’s 323 drop" : "🌐 glitch loop";
   }
+  document.getElementById("r-label").innerText = label;
 
   if (currentTrend.image) {
     document.getElementById("r-img").src = currentTrend.image;
