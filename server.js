@@ -43,7 +43,7 @@ function decorateTextWithEmojis(text) {
 let raceIndex = 0;
 function randomPersona() {
   const races = ["Black", "Korean", "White", ""];
-  const vibes = ["idol","dancer","vlogger","streetwear model","influencer"];
+  const vibes = ["college student"];
   const styles = ["casual","glam","streetwear","retro","Y2K-inspired","minimalist"];
   const race = races[raceIndex % races.length]; raceIndex++;
   const vibe = vibes[Math.floor(Math.random()*vibes.length)];
