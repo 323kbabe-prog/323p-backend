@@ -44,7 +44,7 @@ function randomPersona() {
   }
 }
 
-/* ---------------- Background Pool ---------------- */
+/* ---------------- Backgrounds ---------------- */
 const genzBackgrounds = [
   "pastel gradient background (milk pink, baby blue, lilac)",
   "vaporwave gradient background (neon pink, cyan, purple)",
@@ -70,58 +70,14 @@ function randomStickers(countMin = 5, countMax = 12) {
   ).join(" ");
 }
 
-/* ---------------- Top 50 Cosmetics ---------------- */
-const TOP50_COSMETICS = [
-  { brand: "Rhode", product: "Peptide Lip Tint" },
-  { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
-  { brand: "Anastasia Beverly Hills", product: "Clear Brow Gel" },
-  { brand: "YSL", product: "Make Me Blush Baby Doll" },
-  { brand: "Laura Mercier", product: "Loose Setting Powder" },
-  { brand: "Beautyblender", product: "Blending Sponge" },
-  { brand: "Givenchy", product: "Prisme Libre Blush" },
-  { brand: "Sephora Collection", product: "Pro Brushes" },
-  { brand: "COSRX", product: "Advanced Snail 96 Mucin Essence" },
-  { brand: "Lush", product: "Dream Cream" },
-  { brand: "Nyx", product: "Jumbo Eye Pencil" },
-  { brand: "Nars", product: "Radiant Creamy Concealer" },
-  { brand: "Too Faced", product: "Better Than Sex Mascara" },
-  { brand: "Charlotte Tilbury", product: "Magic Cream" },
-  { brand: "Haus Labs", product: "Triclone Foundation" },
-  { brand: "Dior", product: "Lip Glow Oil" },
-  { brand: "Freck Beauty", product: "Faux Freckle Pen" },
-  { brand: "Sol de Janeiro", product: "Brazilian Crush Mist" },
-  { brand: "Paula’s Choice", product: "2% BHA Liquid Exfoliant" },
-  { brand: "Essence", product: "Lash Princess Mascara" },
-  { brand: "Color Wow", product: "Dream Coat Spray" },
-  { brand: "Laneige", product: "Lip Sleeping Mask" },
-  { brand: "Maybelline", product: "Sky High Mascara" },
-  { brand: "Kitsch", product: "Heatless Curl Set" },
-  { brand: "Biodance", product: "Bio-Collagen Mask" },
-  { brand: "MAC", product: "Squirt Plumping Gloss Stick" },
-  { brand: "Clinique", product: "Black Honey Lipstick" },
-  { brand: "L’Oréal Paris", product: "Infallible Foundation" },
-  { brand: "Isle of Paradise", product: "Self-Tanning Drops" },
-  { brand: "Rare Beauty", product: "Liquid Blush" },
-  { brand: "SHEGLAM", product: "Makeup Essentials" },
-  { brand: "Huda Beauty", product: "Concealer" },
-  { brand: "Cécred", product: "Haircare Treatment" },
-  { brand: "Medicube", product: "PDRN Pink Glass Glow Set" },
-  { brand: "E.L.F.", product: "Halo Glow Powder" },
-  { brand: "Bubble Skincare", product: "Gel Cleanser" },
-  { brand: "Tower 28 Beauty", product: "SOS Spray" },
-  { brand: "Olay", product: "Regenerist Cream" },
-  { brand: "I’m From", product: "Rice Toner" },
-  { brand: "DIBS Beauty", product: "Desert Island Duo" },
-  { brand: "Milk Makeup", product: "Cooling Water Jelly Tint" },
-  { brand: "Glow Recipe", product: "Watermelon Dew Drops" },
-  { brand: "Danessa Myricks Beauty", product: "Yummy Skin Balm Powder" },
-  { brand: "Refy", product: "Brow Sculpt" },
-  { brand: "Kosas", product: "Revealer Concealer" },
-  { brand: "Bioderma", product: "Micellar Water" },
-  { brand: "Embryolisse", product: "Lait-Crème Concentré" },
-  { brand: "CurrentBody", product: "LED Hair Growth Helmet" },
-  { brand: "Dyson Beauty", product: "Airwrap Styler" }
-];
+/* ---------------- Pools ---------------- */
+const TOP50_COSMETICS = [ /* … your existing 50 cosmetics items … */ ];
+
+const TOP_MUSIC = [ /* … 50 items from 323music pool … */ ];
+
+const TOP_POLITICS = [ /* … 50 items from 323politics pool … */ ];
+
+const TOP_AIDROP = [ /* … 50 items from 323aidrop canon … */ ];
 
 /* ---------------- Persistence ---------------- */
 const PICKS_FILE = path.join(__dirname, "dailyPicks.json");
@@ -141,42 +97,60 @@ function loadDailyPicks() {
 }
 
 /* ---------------- Helpers ---------------- */
-async function makeDescription(brand, product) {
+async function makeDescriptionCosmetics(brand, product) {
+  const prompt = `Write a 70+ word first-person description of using "${product}" by ${brand}. Make it sensory, authentic, and Gen-Z relatable. Add emojis inline.`;
+  return await runChat(prompt, "You are a beauty lover speaking in first person.");
+}
+async function makeDescriptionMusic(artist, track) {
+  const prompt = `Write a 70+ word first-person hype reaction to hearing "${track}" by ${artist}. Make it emotional, Gen-Z tone, and use emojis inline.`;
+  return await runChat(prompt, "You are a fan reacting to music.");
+}
+async function makeDescriptionPolitics(issue, keyword) {
+  const prompt = `Write a 70+ word first-person passionate rant about ${issue}, referencing ${keyword}. Gen-Z activist tone with emojis inline.`;
+  return await runChat(prompt, "You are a young activist speaking to peers.");
+}
+async function makeDescriptionAidrop(concept) {
+  const prompt = `Write a 70+ word first-person surreal, glitchy story about ${concept}. Use chaotic Gen-Z slang and emojis inline.`;
+  return await runChat(prompt, "You are an AI-native Gen-Z creator.");
+}
+
+async function runChat(userPrompt, systemPrompt) {
   try {
-    const prompt = `Write a 70+ word first-person description of using "${product}" by ${brand}. Make it sensory, authentic, and Gen-Z relatable. Add emojis inline.`;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
       messages: [
-        { role: "system", content: "You are a beauty lover speaking in first person." },
-        { role: "user", content: prompt }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
       ]
     });
-    let desc = completion.choices[0].message.content.trim();
-    return `${desc} ${randomEmojis(3)}`;
+    return completion.choices[0].message.content.trim() + " " + randomEmojis(3);
   } catch (e) {
     console.error("❌ Description error:", e.message);
-    return decorateTextWithEmojis(`Using ${product} by ${brand} feels unforgettable and addictive.`);
+    return decorateTextWithEmojis(userPrompt);
   }
 }
 
 /* ---------------- Image Generator ---------------- */
-async function generateImageUrl(brand, product, persona) {
+async function generateImageUrl(topic, context, persona) {
+  let bg = genzBackgrounds[Math.floor(Math.random() * genzBackgrounds.length)];
+  let stickers = randomStickers();
+  let prompt;
+
+  if (topic === "cosmetics") {
+    prompt = `Photocard-style sticker booth, ${persona}, applying ${context.product} by ${context.brand}. Background ${bg}. Stickers: ${stickers}. Square 1:1.`;
+  } else if (topic === "music") {
+    prompt = `Idol/dancer photocard, ${persona}, performing "${context.track}" by ${context.artist}. Neon stage gradient. Stickers: 🎤🎶⭐ ${stickers}. Square 1:1.`;
+  } else if (topic === "politics") {
+    prompt = `Protest poster/zine style, ${persona}, speaking on ${context.issue}. Bold red/black gradient. Stickers: ✊📢🔥 ${stickers}. Square 1:1.`;
+  } else if (topic === "aidrop") {
+    prompt = `Glitchy cyberpunk photocard, ${persona}, embodying ${context.concept}. Colors: purple, aqua. Stickers: 🤖⚡👾 ${stickers}. Square 1:1.`;
+  }
+
   try {
-    const bg = genzBackgrounds[Math.floor(Math.random() * genzBackgrounds.length)];
-    const stickers = randomStickers();
     const out = await openai.images.generate({
       model: "gpt-image-1",
-      prompt: `
-        Create a photocard-style image with a sticker photo booth aesthetic.
-        Foreground subject: ${persona}, Gen-Z aesthetic.
-        They are holding and applying ${product} by ${brand}.
-        
-        Background must be a bold ${bg}, filling the entire canvas edge-to-edge.
-        Overlay many sticker shapes (emoji + text emoticons like ${stickers}) floating around the subject.
-        
-        Square 1:1 format. No plain backgrounds. No text/logos.
-      `,
+      prompt,
       size: "1024x1024"
     });
     const d = out?.data?.[0];
@@ -188,64 +162,34 @@ async function generateImageUrl(brand, product, persona) {
   return "https://placehold.co/600x600?text=No+Image";
 }
 
-/* ---------------- Drop Generator ---------------- */
-async function generateDrop() {
-  const pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-  const persona = randomPersona();
-  const [description, imageUrl] = await Promise.all([
-    makeDescription(pick.brand, pick.product),
-    generateImageUrl(pick.brand, pick.product, persona)
-  ]);
-  return {
-    brand: decorateTextWithEmojis(pick.brand),
-    product: decorateTextWithEmojis(pick.product),
-    persona,
-    description,
-    hashtags: ["#BeautyTok", "#NowTrending"],
-    image: imageUrl,
-    refresh: 3000
-  };
-}
+/* ---------------- Drop Generators ---------------- */
+async function generateDrop(topic) {
+  let pick, description, imageUrl, persona = randomPersona();
 
-/* ---------------- Daily Pick ---------------- */
-async function generateDailyPicks() {
-  dailyPicks = [];
-  const idx = Math.floor(Math.random() * TOP50_COSMETICS.length);
-  const pick = TOP50_COSMETICS[idx];
-  const persona = randomPersona();
-  const [description, imageUrl] = await Promise.all([
-    makeDescription(pick.brand, pick.product),
-    generateImageUrl(pick.brand, pick.product, persona)
-  ]);
-  dailyPicks.push({
-    brand: decorateTextWithEmojis(pick.brand),
-    product: decorateTextWithEmojis(pick.product),
-    persona,
-    description,
-    hashtags: ["#BeautyTok", "#NowTrending"],
-    image: imageUrl,
-    refresh: 3000
-  });
-  dailyDate = new Date().toISOString().slice(0, 10);
-  fs.writeFileSync(PICKS_FILE, JSON.stringify({ dailyDate, dailyPicks }, null, 2));
-  console.log(`🌅 Daily Pick Generated (${dailyDate}):`);
-  console.log(`1. ${dailyPicks[0].brand} – ${dailyPicks[0].product}`);
-}
-
-/* ---------------- Pre-gen ---------------- */
-async function ensureNextDrop(roomId) {
-  if (generatingNext[roomId]) return;
-  generatingNext[roomId] = true;
-  try {
-    const nextDrop = await generateDrop();
-    if (!roomTrends[roomId]) roomTrends[roomId] = {};
-    roomTrends[roomId].next = nextDrop;
-    console.log(`✅ Pre-generated next drop for room ${roomId}`);
-  } catch (e) {
-    console.error("❌ ensureNextDrop failed:", e.message);
-  } finally {
-    generatingNext[roomId] = false;
+  if (topic === "music") {
+    pick = TOP_MUSIC[Math.floor(Math.random() * TOP_MUSIC.length)];
+    description = await makeDescriptionMusic(pick.artist, pick.track);
+    imageUrl = await generateImageUrl("music", pick, persona);
+    return { brand: pick.artist, product: pick.track, persona, description, hashtags:["#NowTrending"], image: imageUrl, refresh: 3000 };
   }
+  if (topic === "politics") {
+    pick = TOP_POLITICS[Math.floor(Math.random() * TOP_POLITICS.length)];
+    description = await makeDescriptionPolitics(pick.issue, pick.keyword);
+    imageUrl = await generateImageUrl("politics", pick, persona);
+    return { brand: pick.issue, product: pick.keyword, persona, description, hashtags:["#NowTrending"], image: imageUrl, refresh: 3000 };
+  }
+  if (topic === "aidrop") {
+    pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
+    description = await makeDescriptionAidrop(pick.concept);
+    imageUrl = await generateImageUrl("aidrop", pick, persona);
+    return { brand: "323aidrop", product: pick.concept, persona, description, hashtags:["#NowTrending"], image: imageUrl, refresh: 3000 };
+  }
+
+  // default cosmetics
+  pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+  description = await makeDescriptionCosmetics(pick.brand, pick.product);
+  imageUrl = await generateImageUrl("cosmetics", pick, persona);
+  return { brand: pick.brand, product: pick.product, persona, description, hashtags:["#BeautyTok","#NowTrending"], image: imageUrl, refresh: 3000 };
 }
 
 /* ---------------- API Routes ---------------- */
@@ -253,73 +197,11 @@ app.get("/api/trend", async (req, res) => {
   try {
     const roomId = req.query.room;
     const topic = req.query.topic || "cosmetics";
-    if (!roomId) {
-      return res.status(400).json({ error: "room parameter required" });
-    }
+    if (!roomId) return res.status(400).json({ error: "room parameter required" });
 
-    // Phase 1 placeholders
-    if (topic !== "cosmetics") {
-      let placeholder;
-      if (topic === "music") {
-        placeholder = {
-          brand: "✨ 323music placeholder ✨",
-          product: "coming soon",
-          persona: "a young female dancer with a streetwear style",
-          description: "I can’t wait to vibe with 323music soon… 🎶🔥",
-          image: "https://placehold.co/600x600?text=323music",
-          hashtags: ["#NowTrending"],
-          refresh: 3000
-        };
-      } else if (topic === "politics") {
-        placeholder = {
-          brand: "✨ 323politics placeholder ✨",
-          product: "coming soon",
-          persona: "a young female activist with a casual style",
-          description: "323politics is loading hot takes… ✊📢🔥",
-          image: "https://placehold.co/600x600?text=323politics",
-          hashtags: ["#NowTrending"],
-          refresh: 3000
-        };
-      } else if (topic === "aidrop") {
-        placeholder = {
-          brand: "✨ 323aidrop placeholder ✨",
-          product: "coming soon",
-          persona: "a young female digital native with a retro style",
-          description: "the 323aidrop is glitching into reality… 🤖⚡👾",
-          image: "https://placehold.co/600x600?text=323aidrop",
-          hashtags: ["#NowTrending"],
-          refresh: 3000
-        };
-      }
-      return res.json(placeholder);
-    }
-
-    // Cosmetics logic
-    const today = new Date().toISOString().slice(0, 10);
-    if (!dailyPicks.length || dailyDate !== today) {
-      console.warn("⚠️ Daily pick not ready, generating now as fallback...");
-      await generateDailyPicks();
-    }
-    if (!roomTrends[roomId]) {
-      roomTrends[roomId] = { dailyIndex: 0 };
-    }
-
-    let current;
-    const dailyIndex = roomTrends[roomId].dailyIndex;
-    if (dailyIndex < dailyPicks.length) {
-      current = dailyPicks[dailyIndex];
-      roomTrends[roomId].dailyIndex++;
-      ensureNextDrop(roomId);
-    } else {
-      if (roomTrends[roomId].next) {
-        current = roomTrends[roomId].next;
-        roomTrends[roomId].next = null;
-      } else {
-        current = await generateDrop();
-      }
-    }
-    roomTrends[roomId].current = current;
-    res.json(current);
+    const drop = await generateDrop(topic);
+    roomTrends[roomId] = { current: drop };
+    res.json(drop);
   } catch (e) {
     console.error("❌ Trend API error:", e.message);
     res.json({ error: "Trend API failed" });
@@ -349,15 +231,12 @@ app.get("/api/voice", async (req, res) => {
 
 app.get("/api/start-voice", async (req, res) => {
   const roomId = req.query.room;
-  if (!roomId) {
-    return res.status(400).json({ error: "room parameter required" });
-  }
+  if (!roomId) return res.status(400).json({ error: "room parameter required" });
   console.log(`🎤 Voice started for room ${roomId}`);
-  ensureNextDrop(roomId);
-  res.json({ ok: true, message: "Voice started, pre-gen triggered" });
+  res.json({ ok: true });
 });
 
-/* ---------------- Chat (Socket.IO) ---------------- */
+/* ---------------- Chat ---------------- */
 io.on("connection", (socket) => {
   console.log(`🔌 User connected: ${socket.id}`);
   socket.on("joinRoom", (roomId) => {
@@ -379,8 +258,6 @@ app.use(express.static(path.join(__dirname)));
 
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, async () => {
-  loadDailyPicks();
+httpServer.listen(PORT, () => {
   console.log(`🚀 323aidrop backend live on :${PORT}`);
 });
-
