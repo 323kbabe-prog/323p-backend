@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — op3: logs disappear per your rules
+// app.js — Sticker Booth Style (Gen-Z) — op3 final rules
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -80,7 +80,7 @@ function updateUI(trend){
 /* ---------------- Image Update ---------------- */
 function updateImage(imageUrl,imgLine,imgTimer){
   clearInterval(imgTimer);
-  removeOverlayLine(imgLine,"✅ image ready");
+  removeOverlayLine(imgLine,"✅ image ready"); // rule 4
   if(imageUrl){
     document.getElementById("r-img").src = imageUrl;
     document.getElementById("r-img").style.display="block";
@@ -106,22 +106,24 @@ function playVoice(text,onEnd){
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
 
-  audioPlayer.onplay = ()=>{
+  // As soon as we try to play, clear "generating"
+  audioPlayer.play().then(()=>{
     clearInterval(genTimer);
-    removeOverlayLine(voiceLine,"✅ voice generated"); // rule 5
-    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
-  };
+    removeOverlayLine(voiceLine,"✅ voice started"); // rule 5
+  }).catch(()=>{
+    clearInterval(genTimer);
+    removeOverlayLine(voiceLine,"❌ voice error");
+    if(onEnd) onEnd();
+  });
+
   audioPlayer.onended = ()=>{
     document.getElementById("voice-status").innerText = "⚙️ preparing…";
     if(onEnd) onEnd();
   };
-  audioPlayer.onerror = ()=>{
-    clearInterval(genTimer);
-    removeOverlayLine(voiceLine,"❌ voice error");
-    if(onEnd) onEnd();
-  };
 
-  audioPlayer.play();
+  audioPlayer.onplay = ()=>{
+    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
+  };
 }
 
 /* ---------------- Live Log + Load ---------------- */
@@ -130,11 +132,11 @@ async function runLogAndLoad(topic){
 
   // Request log (disappear after 1s)
   let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
-  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000);
+  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000); // rule 1
 
   // Pool log (disappear after 2s)
   let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
-  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000);
+  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000); // rule 2
 
   // Description log
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
@@ -173,7 +175,7 @@ async function runLogAndLoad(topic){
 
   // Handle image
   imgPromise.then(data=>{
-    updateImage(data.image,imgLine,imgTimer); // rule 4
+    updateImage(data.image,imgLine,imgTimer);
   }).catch(()=>{
     clearInterval(imgTimer);
     removeOverlayLine(imgLine,"❌ image error");
