@@ -1,4 +1,4 @@
-// app.js — clean flow (no black bar on start page)
+// app.js — clean overlay visibility (no black bar on start page)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer=null,currentTrend=null,roomId=null,lastDescriptionKey=null,stopCycle=false;
 let currentTopic="cosmetics";let autoRefresh=false;
@@ -26,9 +26,30 @@ function playVoice(text,onEnd){
 }
 
 /* ---------------- Overlay Helpers ---------------- */
-function showOverlay(msg){const c=document.getElementById("warmup-center");if(c){c.style.display="flex";c.innerText=msg||"";}}
-function appendOverlay(msg){const c=document.getElementById("warmup-center");if(c){c.style.display="flex";c.innerText+="\n"+msg;c.scrollTop=c.scrollHeight;}}
-function hideOverlay(){const c=document.getElementById("warmup-center");if(c)c.style.display="none";}
+function showOverlay(msg){
+  const c=document.getElementById("warmup-center");
+  if(c){
+    c.style.display="flex";
+    c.style.visibility="visible";
+    if(msg) c.innerText=msg;
+  }
+}
+function appendOverlay(msg){
+  const c=document.getElementById("warmup-center");
+  if(c){
+    c.style.display="flex";
+    c.style.visibility="visible";
+    c.innerText+="\n"+msg;
+    c.scrollTop=c.scrollHeight;
+  }
+}
+function hideOverlay(){
+  const c=document.getElementById("warmup-center");
+  if(c){
+    c.style.display="none";
+    c.style.visibility="hidden";
+  }
+}
 
 /* ---------------- UI Update ---------------- */
 function updateUI(trend){
@@ -37,13 +58,18 @@ function updateUI(trend){
   document.getElementById("r-persona").innerText=trend.persona||"";
   document.getElementById("r-desc").innerText=trend.description;
   document.getElementById("r-label").innerText="🔄 live drop";
-  if(trend.image){document.getElementById("r-img").src=trend.image;document.getElementById("r-img").style.display="block";document.getElementById("r-fallback").style.display="none";}
-  else{document.getElementById("r-img").style.display="none";document.getElementById("r-fallback").style.display="block";}
+  if(trend.image){
+    document.getElementById("r-img").src=trend.image;
+    document.getElementById("r-img").style.display="block";
+    document.getElementById("r-fallback").style.display="none";
+  } else {
+    document.getElementById("r-img").style.display="none";
+    document.getElementById("r-fallback").style.display="block";
+  }
 }
 
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
-  // switch overlay into terminal style when logging starts
   const overlay=document.getElementById("warmup-center");
   overlay.style.background="rgba(0,0,0,0.85)";
   overlay.style.boxShadow="0 0 20px rgba(0,255,0,0.5)";
@@ -73,7 +99,10 @@ async function runLogAndLoad(topic){
 
   return trend;
 }
-async function loadTrend(){if(stopCycle)return;currentTrend=await runLogAndLoad(currentTopic);}
+async function loadTrend(){
+  if(stopCycle)return;
+  currentTrend=await runLogAndLoad(currentTopic);
+}
 
 /* ---------------- Emoji map ---------------- */
 function topicEmoji(topic){
@@ -90,16 +119,16 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("app").style.display="flex";
   socket.emit("joinRoom",roomId);
 
-  // show confirm button only (no black bar)
   const overlay=document.getElementById("warmup-center");
   overlay.style.display="flex";
-  overlay.style.background="transparent";
+  overlay.style.visibility="visible";
+  overlay.style.background="transparent"; // ✅ no black bar
   overlay.style.boxShadow="none";
-  overlay.style.color="#000"; // neutral for confirm state
+  overlay.style.color="#000";
   overlay.innerHTML="";
 
   const btn=document.createElement("button");
-  btn.className="start-btn"; 
+  btn.className="start-btn";
   btn.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
   btn.onclick=()=>{
     btn.remove();
@@ -117,7 +146,8 @@ document.querySelectorAll("#topic-picker button").forEach(btn=>{
 
     const overlay=document.getElementById("warmup-center");
     overlay.style.display="flex";
-    overlay.style.background="transparent";
+    overlay.style.visibility="visible";
+    overlay.style.background="transparent"; // ✅ no black bar for confirm
     overlay.style.boxShadow="none";
     overlay.style.color="#000";
     overlay.innerHTML="";
