@@ -1,9 +1,9 @@
-// app.js — Confirm first, then auto-refresh with styled confirm button
+// app.js — clean flow (no black bar on start page)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer=null,currentTrend=null,roomId=null,lastDescriptionKey=null,stopCycle=false;
 let currentTopic="cosmetics";let autoRefresh=false;
 
-/* Room Setup */
+/* ---------------- Room Setup ---------------- */
 (function initRoom(){
   let params=new URLSearchParams(window.location.search);
   roomId=params.get("room");
@@ -14,7 +14,7 @@ let currentTopic="cosmetics";let autoRefresh=false;
   }
 })();
 
-/* Voice */
+/* ---------------- Voice ---------------- */
 function playVoice(text,onEnd){
   if(audioPlayer){audioPlayer.pause();audioPlayer=null;}
   const url="https://three23p-backend.onrender.com/api/voice?text="+encodeURIComponent(text);
@@ -25,12 +25,12 @@ function playVoice(text,onEnd){
   audioPlayer.play();
 }
 
-/* Overlay Helpers */
+/* ---------------- Overlay Helpers ---------------- */
 function showOverlay(msg){const c=document.getElementById("warmup-center");if(c){c.style.display="flex";c.innerText=msg||"";}}
 function appendOverlay(msg){const c=document.getElementById("warmup-center");if(c){c.style.display="flex";c.innerText+="\n"+msg;c.scrollTop=c.scrollHeight;}}
 function hideOverlay(){const c=document.getElementById("warmup-center");if(c)c.style.display="none";}
 
-/* UI Update */
+/* ---------------- UI Update ---------------- */
 function updateUI(trend){
   document.getElementById("r-title").innerText=trend.brand;
   document.getElementById("r-artist").innerText=trend.product;
@@ -41,8 +41,14 @@ function updateUI(trend){
   else{document.getElementById("r-img").style.display="none";document.getElementById("r-fallback").style.display="block";}
 }
 
-/* Live Log + Load */
+/* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
+  // switch overlay into terminal style when logging starts
+  const overlay=document.getElementById("warmup-center");
+  overlay.style.background="rgba(0,0,0,0.85)";
+  overlay.style.boxShadow="0 0 20px rgba(0,255,0,0.5)";
+  overlay.style.color="#0f0";
+
   showOverlay("[00:00] ✅ request sent (323"+topic+")");
   setTimeout(()=>appendOverlay("[00:01] 🧩 pool chosen"),1000);
   setTimeout(()=>appendOverlay("[00:02] 👤 persona locked: a young college student"),2000);
@@ -69,7 +75,7 @@ async function runLogAndLoad(topic){
 }
 async function loadTrend(){if(stopCycle)return;currentTrend=await runLogAndLoad(currentTopic);}
 
-/* Emoji map */
+/* ---------------- Emoji map ---------------- */
 function topicEmoji(topic){
   if(topic==="cosmetics") return "💄";
   if(topic==="music") return "🎶";
@@ -78,31 +84,52 @@ function topicEmoji(topic){
   return "⚡";
 }
 
-/* Start confirm */
+/* ---------------- Start confirm ---------------- */
 document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("start-screen").style.display="none";
   document.getElementById("app").style.display="flex";
   socket.emit("joinRoom",roomId);
-  showOverlay("🔄 confirm first drop");
+
+  // show confirm button only (no black bar)
+  const overlay=document.getElementById("warmup-center");
+  overlay.style.display="flex";
+  overlay.style.background="transparent";
+  overlay.style.boxShadow="none";
+  overlay.style.color="#000"; // neutral for confirm state
+  overlay.innerHTML="";
 
   const btn=document.createElement("button");
-  btn.className="start-btn"; // ✅ same medium width as start button
+  btn.className="start-btn"; 
   btn.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
-  btn.onclick=()=>{btn.remove();autoRefresh=true;loadTrend();};
-  document.getElementById("warmup-center").appendChild(btn);
+  btn.onclick=()=>{
+    btn.remove();
+    autoRefresh=true;
+    loadTrend();
+  };
+  overlay.appendChild(btn);
 });
 
-/* Topic toggle confirm */
+/* ---------------- Topic toggle confirm ---------------- */
 document.querySelectorAll("#topic-picker button").forEach(btn=>{
   btn.addEventListener("click",()=>{
     currentTopic=btn.dataset.topic;
     autoRefresh=false;
-    showOverlay("🔄 confirm new drop for "+currentTopic);
+
+    const overlay=document.getElementById("warmup-center");
+    overlay.style.display="flex";
+    overlay.style.background="transparent";
+    overlay.style.boxShadow="none";
+    overlay.style.color="#000";
+    overlay.innerHTML="";
 
     const b=document.createElement("button");
-    b.className="start-btn"; // ✅ styled like start button
+    b.className="start-btn";
     b.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
-    b.onclick=()=>{b.remove();autoRefresh=true;loadTrend();};
-    document.getElementById("warmup-center").appendChild(b);
+    b.onclick=()=>{
+      b.remove();
+      autoRefresh=true;
+      loadTrend();
+    };
+    overlay.appendChild(b);
   });
 });
