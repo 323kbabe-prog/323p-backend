@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — description drop triggers voice immediately
+// app.js — Sticker Booth Style (Gen-Z) — split endpoints (description + image)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -21,26 +21,15 @@ function playVoice(text,onEnd){
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
 
-  let voiceLine = appendOverlay("🔊 preparing voice…","var(--music-color)",true);
-  let voiceElapsed = 0;
-  const voiceTimer = setInterval(()=>{
-    voiceElapsed++;
-    voiceLine.innerText = "🔊 preparing voice… " + voiceElapsed + "s";
-  },1000);
-
   audioPlayer.onplay = ()=>{
-    clearInterval(voiceTimer);
-    removeOverlayLine(voiceLine,"✅ voice ready");
+    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
+    hideOverlay();
   };
   audioPlayer.onended = ()=>{
-    setTimeout(()=>hideOverlay(),800);
+    document.getElementById("voice-status").innerText = "⚙️ preparing…";
     if(onEnd) onEnd();
   };
-  audioPlayer.onerror = ()=>{
-    clearInterval(voiceTimer);
-    removeOverlayLine(voiceLine,"❌ voice error");
-    if(onEnd) onEnd();
-  };
+  audioPlayer.onerror = ()=>{ if(onEnd) onEnd(); };
   audioPlayer.play();
 }
 
@@ -60,23 +49,15 @@ function hideOverlay(){
     c.style.visibility="hidden";
   }
 }
-function appendOverlay(msg,color="#fff",blinking=false){
+function appendOverlay(msg,color="#fff"){
   const line = document.createElement("div");
   line.className="log-line";
-  if(blinking) line.classList.add("blinking");
   line.style.background=color;
   line.innerText=msg;
   const c = document.getElementById("warmup-center");
   c.appendChild(line);
   c.scrollTop = c.scrollHeight;
   return line;
-}
-function removeOverlayLine(line,finalMsg){
-  if(line){
-    line.classList.remove("blinking");
-    line.innerText = finalMsg;
-    setTimeout(()=>line.remove(),800);
-  }
 }
 
 /* ---------------- UI Update ---------------- */
@@ -87,14 +68,9 @@ function updateUI(trend){
   document.getElementById("r-desc").innerText = trend.description;
   document.getElementById("r-label").innerText = "🔄 live drop";
 
-  if(trend.image){
-    document.getElementById("r-img").src = trend.image;
-    document.getElementById("r-img").style.display="block";
-    document.getElementById("r-fallback").style.display="none";
-  } else {
-    document.getElementById("r-img").style.display="none";
-    document.getElementById("r-fallback").style.display="block";
-  }
+  // Hide image until loaded separately
+  document.getElementById("r-img").style.display="none";
+  document.getElementById("r-fallback").style.display="block";
 
   if(trend.mimicLine){
     let m = document.getElementById("r-mimic");
@@ -118,54 +94,28 @@ function updateUI(trend){
   }
 }
 
+/* ---------------- Image Update ---------------- */
+function updateImage(imageUrl){
+  if(imageUrl){
+    document.getElementById("r-img").src = imageUrl;
+    document.getElementById("r-img").style.display="block";
+    document.getElementById("r-fallback").style.display="none";
+  } else {
+    document.getElementById("r-img").style.display="none";
+    document.getElementById("r-fallback").style.display="block";
+  }
+}
+
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
   showOverlay();
+  appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff");
 
-  // Request sent log
-  let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
-  let reqElapsed = 0;
-  const reqTimer = setInterval(()=>{
-    reqElapsed++;
-    reqLine.innerText = `${topicEmoji(topic)} request sent for 323${topic} ${reqElapsed}s`;
-  },1000);
-  setTimeout(()=>{
-    clearInterval(reqTimer);
-    removeOverlayLine(reqLine,"✅ request sent");
-  },3000);
+  // 1. Fetch description first
+  const descRes = await fetch("https://three23p-backend.onrender.com/api/description?topic="+topic);
+  const trend = await descRes.json();
 
-  // Pool chosen log
-  let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
-  let poolElapsed = 0;
-  const poolTimer = setInterval(()=>{
-    poolElapsed++;
-    poolLine.innerText = `🧩 pool chosen ${poolElapsed}s`;
-  },1000);
-  setTimeout(()=>{
-    clearInterval(poolTimer);
-    removeOverlayLine(poolLine,"✅ pool chosen");
-  },3000);
-
-  // Description + image logs
-  let descLine = appendOverlay("✍️ drafting description…","#fff",true);
-  let imgLine  = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
-  let descElapsed=0, imgElapsed=0;
-
-  const descTimer = setInterval(()=>{
-    descElapsed++;
-    descLine.innerText = "✍️ drafting description… " + descElapsed + "s";
-  },1000);
-  const imgTimer = setInterval(()=>{
-    imgElapsed++;
-    imgLine.innerText = "🖼️ rendering image… " + imgElapsed + "s";
-  },1000);
-
-  const res = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
-  const trend = await res.json();
-
-  // Description ready → drop immediately
-  clearInterval(descTimer);
-  removeOverlayLine(descLine,"✅ description ready");
+  // Update UI with text and start voice right away
   updateUI(trend);
   playVoice(trend.description,()=>{
     if(autoRefresh){
@@ -175,9 +125,13 @@ async function runLogAndLoad(topic){
     }
   });
 
-  // Image keeps running until ready
-  clearInterval(imgTimer);
-  removeOverlayLine(imgLine,"✅ image ready");
+  // 2. Fetch image separately in parallel
+  fetch("https://three23p-backend.onrender.com/api/image?topic="+topic)
+    .then(res=>res.json())
+    .then(data=>{
+      updateImage(data.image);
+    })
+    .catch(()=>{ updateImage(null); });
 
   return trend;
 }
