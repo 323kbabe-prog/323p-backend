@@ -4,7 +4,7 @@ let currentTrend = null;
 let roomId = null;
 let lastDescriptionKey = null;
 let stopCycle = false;
-let currentTopic = "cosmetics";
+let currentTopic = "cosmetics"; // default
 
 /* ---------------- Room Setup ---------------- */
 (function initRoom() {
@@ -54,7 +54,7 @@ function hideWarmupOverlay() {
   if (center) center.style.display = "none";
 }
 
-/* ---------------- Load Trend + Voice ---------------- */
+/* ---------------- Load Trend ---------------- */
 async function loadTrend() {
   if (stopCycle) return;
   let apiUrl = "https://three23p-backend.onrender.com/api/trend?room=" + roomId + "&topic=" + currentTopic;
@@ -94,6 +94,7 @@ async function loadTrend() {
     document.getElementById("r-fallback").style.display = "block";
   }
 
+  // Voice + preload cycle
   const descriptionKey = currentTrend.description;
   if (descriptionKey !== lastDescriptionKey) {
     lastDescriptionKey = descriptionKey;
