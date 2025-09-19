@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — full version with timers for all logs
+// app.js — Sticker Booth Style (Gen-Z) — description drop triggers voice immediately
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -33,7 +33,7 @@ function playVoice(text,onEnd){
     removeOverlayLine(voiceLine,"✅ voice ready");
   };
   audioPlayer.onended = ()=>{
-    setTimeout(()=>hideOverlay(),800); // clears any leftover logs
+    setTimeout(()=>hideOverlay(),800);
     if(onEnd) onEnd();
   };
   audioPlayer.onerror = ()=>{
@@ -75,7 +75,7 @@ function removeOverlayLine(line,finalMsg){
   if(line){
     line.classList.remove("blinking");
     line.innerText = finalMsg;
-    setTimeout(()=>line.remove(),800); // disappear after short delay
+    setTimeout(()=>line.remove(),800);
   }
 }
 
@@ -122,7 +122,7 @@ function updateUI(trend){
 async function runLogAndLoad(topic){
   showOverlay();
 
-  // Request sent log with timer
+  // Request sent log
   let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
   let reqElapsed = 0;
   const reqTimer = setInterval(()=>{
@@ -134,7 +134,7 @@ async function runLogAndLoad(topic){
     removeOverlayLine(reqLine,"✅ request sent");
   },3000);
 
-  // Pool chosen log with timer
+  // Pool chosen log
   let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
   let poolElapsed = 0;
   const poolTimer = setInterval(()=>{
@@ -146,7 +146,7 @@ async function runLogAndLoad(topic){
     removeOverlayLine(poolLine,"✅ pool chosen");
   },3000);
 
-  // Timers for description + image
+  // Description + image logs
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
   let imgLine  = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
   let descElapsed=0, imgElapsed=0;
@@ -163,12 +163,9 @@ async function runLogAndLoad(topic){
   const res = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
   const trend = await res.json();
 
+  // Description ready → drop immediately
   clearInterval(descTimer);
   removeOverlayLine(descLine,"✅ description ready");
-  clearInterval(imgTimer);
-  removeOverlayLine(imgLine,"✅ image ready");
-
-  // Update UI and start voice right away
   updateUI(trend);
   playVoice(trend.description,()=>{
     if(autoRefresh){
@@ -177,6 +174,10 @@ async function runLogAndLoad(topic){
       setTimeout(()=>loadTrend(),2000);
     }
   });
+
+  // Image keeps running until ready
+  clearInterval(imgTimer);
+  removeOverlayLine(imgLine,"✅ image ready");
 
   return trend;
 }
