@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — op2 updated: fast voice + real readiness
+// app.js — Sticker Booth Style (Gen-Z) — op3 (fast readiness)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -35,18 +35,11 @@ function playVoice(text,onEnd){
 /* ---------------- Overlay Helpers ---------------- */
 function showOverlay(){
   const c = document.getElementById("warmup-center");
-  if(c){
-    c.style.display="flex";
-    c.style.visibility="visible";
-    c.innerHTML="";
-  }
+  if(c){ c.style.display="flex"; c.style.visibility="visible"; c.innerHTML=""; }
 }
 function hideOverlay(){
   const c = document.getElementById("warmup-center");
-  if(c){
-    c.style.display="none";
-    c.style.visibility="hidden";
-  }
+  if(c){ c.style.display="none"; c.style.visibility="hidden"; }
 }
 function appendOverlay(msg,color="#fff"){
   const line = document.createElement("div");
@@ -56,7 +49,7 @@ function appendOverlay(msg,color="#fff"){
   const c = document.getElementById("warmup-center");
   c.appendChild(line);
   c.scrollTop = c.scrollHeight;
-  return line; // ✅ return reference
+  return line; // return reference so we can update
 }
 
 /* ---------------- UI Update ---------------- */
@@ -76,7 +69,7 @@ function updateUI(trend){
     document.getElementById("r-fallback").style.display="block";
   }
 
-  // ✅ show mimicLine if exists
+  // ✅ mimicLine support
   if(trend.mimicLine){
     let m = document.getElementById("r-mimic");
     if(!m){
@@ -102,9 +95,9 @@ function updateUI(trend){
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
   showOverlay();
-  let draftingTimer = null; // ✅ track timer for drafting line
+  let draftingTimer = null;
 
-  // start drafting log + counter
+  // drafting log
   let draftLine = appendOverlay("✍️ drafting description…", 
     topic==="cosmetics" ? "var(--cosmetics-color)" :
     topic==="music" ? "var(--music-color)" :
@@ -127,12 +120,12 @@ async function runLogAndLoad(topic){
     const res = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
     const trend = await res.json();
 
-    // stop drafting timer
+    // stop drafting
     if(draftingTimer){ clearInterval(draftingTimer); }
     draftLine.classList.remove("blinking");
     appendOverlay("✅ description ready","#e0ffe0");
 
-    // update UI immediately with description
+    // show description immediately
     updateUI({ ...trend, image: null });
     // start voice immediately
     playVoice(trend.description, ()=>{
@@ -143,13 +136,13 @@ async function runLogAndLoad(topic){
       }
     });
 
-    // log image rendering + update image separately
+    // log image rendering
     appendOverlay("🖼️ image rendering…","#d9f0ff");
     if(trend.image){
       const img = new Image();
       img.onload = ()=>{
         appendOverlay("🖼️ image ready","#d9f0ff");
-        updateUI(trend); // now show image
+        updateUI(trend); // show image when loaded
       };
       img.onerror = ()=>{
         appendOverlay("❌ image failed","#ffd9d9");
