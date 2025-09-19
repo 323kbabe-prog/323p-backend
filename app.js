@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — op2
+// app.js — Sticker Booth Style (Gen-Z) — op2 updated
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -117,7 +117,8 @@ async function runLogAndLoad(topic){
           line.innerText = "✍️ drafting description… " + elapsed + "s";
         } else {
           const mins = Math.floor(elapsed/60);
-          line.innerText = "✍️ drafting description… " + mins + "min";
+          const secs = elapsed % 60;
+          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
         }
       },1000);
     },2000);
@@ -135,7 +136,8 @@ async function runLogAndLoad(topic){
           line.innerText = "✍️ drafting description… " + elapsed + "s";
         } else {
           const mins = Math.floor(elapsed/60);
-          line.innerText = "✍️ drafting description… " + mins + "min";
+          const secs = elapsed % 60;
+          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
         }
       },1000);
     },2000);
@@ -153,7 +155,8 @@ async function runLogAndLoad(topic){
           line.innerText = "✍️ drafting description… " + elapsed + "s";
         } else {
           const mins = Math.floor(elapsed/60);
-          line.innerText = "✍️ drafting description… " + mins + "min";
+          const secs = elapsed % 60;
+          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
         }
       },1000);
     },2000);
@@ -171,7 +174,8 @@ async function runLogAndLoad(topic){
           line.innerText = "✍️ drafting description… " + elapsed + "s";
         } else {
           const mins = Math.floor(elapsed/60);
-          line.innerText = "✍️ drafting description… " + mins + "min";
+          const secs = elapsed % 60;
+          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
         }
       },1000);
     },2000);
