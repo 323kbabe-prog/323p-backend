@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — op2: all logs start together, desc+img parallel, voice log waiting
+// app.js — Sticker Booth Style (Gen-Z) — op3: logs disappear per your rules
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -78,7 +78,9 @@ function updateUI(trend){
 }
 
 /* ---------------- Image Update ---------------- */
-function updateImage(imageUrl){
+function updateImage(imageUrl,imgLine,imgTimer){
+  clearInterval(imgTimer);
+  removeOverlayLine(imgLine,"✅ image ready");
   if(imageUrl){
     document.getElementById("r-img").src = imageUrl;
     document.getElementById("r-img").style.display="block";
@@ -93,7 +95,7 @@ function updateImage(imageUrl){
 function playVoice(text,onEnd){
   if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
 
-  // Add log for voice generation
+  // Add log for voice generating
   let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
   let genElapsed = 0;
   const genTimer = setInterval(()=>{
@@ -105,25 +107,14 @@ function playVoice(text,onEnd){
   audioPlayer = new Audio(url);
 
   audioPlayer.onplay = ()=>{
-    // stop generation timer
     clearInterval(genTimer);
-    removeOverlayLine(voiceLine,"✅ voice generated");
-
-    // start playback log
-    voiceLine = appendOverlay("🎶 voice playing…","#ffe0f0",true);
-    let playElapsed = 0;
-    const playTimer = setInterval(()=>{
-      playElapsed++;
-      voiceLine.innerText = "🎶 voice playing… " + playElapsed + "s";
-    },1000);
-
-    audioPlayer.onended = ()=>{
-      clearInterval(playTimer);
-      removeOverlayLine(voiceLine,"✅ voice finished ("+playElapsed+"s)");
-      if(onEnd) onEnd();
-    };
+    removeOverlayLine(voiceLine,"✅ voice generated"); // rule 5
+    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
   };
-
+  audioPlayer.onended = ()=>{
+    document.getElementById("voice-status").innerText = "⚙️ preparing…";
+    if(onEnd) onEnd();
+  };
   audioPlayer.onerror = ()=>{
     clearInterval(genTimer);
     removeOverlayLine(voiceLine,"❌ voice error");
@@ -137,37 +128,42 @@ function playVoice(text,onEnd){
 async function runLogAndLoad(topic){
   showOverlay();
 
-  // Start all logs immediately
+  // Request log (disappear after 1s)
   let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
+  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000);
+
+  // Pool log (disappear after 2s)
   let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
+  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000);
+
+  // Description log
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
-  let imgLine  = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
-  let voiceLine= appendOverlay("🔊 preparing voice…","#ffe0f0",true);
+  let descElapsed=0;
+  const descTimer=setInterval(()=>{
+    descElapsed++;
+    descLine.innerText="✍️ drafting description… "+descElapsed+"s";
+  },1000);
 
-  // Timers for all
-  let reqElapsed=0, poolElapsed=0, descElapsed=0, imgElapsed=0, voiceElapsed=0;
-  const reqTimer=setInterval(()=>{reqElapsed++; reqLine.innerText=`${topicEmoji(topic)} request sent ${reqElapsed}s`;},1000);
-  const poolTimer=setInterval(()=>{poolElapsed++; poolLine.innerText=`🧩 pool chosen ${poolElapsed}s`;},1000);
-  const descTimer=setInterval(()=>{descElapsed++; descLine.innerText=`✍️ drafting description… ${descElapsed}s`;},1000);
-  const imgTimer=setInterval(()=>{imgElapsed++; imgLine.innerText=`🖼️ rendering image… ${imgElapsed}s`;},1000);
-  // voiceTimer is inside playVoice()
+  // Image log
+  let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
+  let imgElapsed=0;
+  const imgTimer=setInterval(()=>{
+    imgElapsed++;
+    imgLine.innerText="🖼️ rendering image… "+imgElapsed+"s";
+  },1000);
 
-  // Fire description + image fetches in parallel
+  // Fetch description + image in parallel
   const descPromise = fetch("https://three23p-backend.onrender.com/api/description?topic="+topic).then(r=>r.json());
   const imgPromise  = fetch("https://three23p-backend.onrender.com/api/image?topic="+topic).then(r=>r.json());
 
   // Handle description
   const trend = await descPromise;
   clearInterval(descTimer);
-  descLine.innerText="✅ description ready";
+  removeOverlayLine(descLine,"✅ description ready"); // rule 3
   updateUI(trend);
 
-  // Stop req/pool logs once desc is back
-  clearInterval(reqTimer); reqLine.innerText="✅ request sent";
-  clearInterval(poolTimer); poolLine.innerText="✅ pool chosen";
-
-  // Start voice now that we have text (but log already running)
-  playVoice(trend.description,voiceLine,()=>{
+  // Start voice generation log after description is back
+  playVoice(trend.description,()=>{
     if(autoRefresh){
       showOverlay();
       appendOverlay("⏳ fetching next drop…","#ffe0f0");
@@ -177,12 +173,10 @@ async function runLogAndLoad(topic){
 
   // Handle image
   imgPromise.then(data=>{
-    clearInterval(imgTimer);
-    imgLine.innerText="✅ image ready";
-    updateImage(data.image);
+    updateImage(data.image,imgLine,imgTimer); // rule 4
   }).catch(()=>{
     clearInterval(imgTimer);
-    imgLine.innerText="❌ image error";
+    removeOverlayLine(imgLine,"❌ image error");
     updateImage(null);
   });
 
