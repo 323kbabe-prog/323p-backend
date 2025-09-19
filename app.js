@@ -32,9 +32,12 @@ function playVoice(text,onEnd){
     clearInterval(voiceTimer);
     removeOverlayLine(voiceLine,"✅ voice ready");
   };
-  audioPlayer.onended = ()=>{
-    if(onEnd) onEnd();
-  };
+audioPlayer.onended = ()=>{
+  clearInterval(voiceTimer);
+  removeOverlayLine(voiceLine,"✅ voice ready");
+  setTimeout(()=>hideOverlay(),1000); // 👈 clears all remaining logs
+  if(onEnd) onEnd();
+};
   audioPlayer.onerror = ()=>{
     clearInterval(voiceTimer);
     removeOverlayLine(voiceLine,"❌ voice error");
