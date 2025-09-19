@@ -1,4 +1,3 @@
-
 // server.js — backend with mimicLine + safe Music image prompts (his/her pronouns)
 const express = require("express");
 const { createServer } = require("http");
@@ -102,19 +101,19 @@ const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topi
 async function makeDescription(topic,pick){
   let prompt,system;
   if(topic==="cosmetics"){
-    prompt=`Write a 70+ word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
+    prompt=`Write exactly 140 words in a first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
     system="You are a college student talking about beauty.";
   }
   else if(topic==="music"){
-    prompt=`Write a 70+ word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
+    prompt=`Write exactly 140 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
     system="You are a college student reacting to music.";
   }
   else if(topic==="politics"){
-    prompt=`Write a 70+ word rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
+    prompt=`Write exactly 140 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
     system="You are a college student activist.";
   }
   else{
-    prompt=`Write a 70+ word surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
+    prompt=`Write exactly 140 words in a first-person surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
     system="You are a college student living AI culture.";
   }
 
