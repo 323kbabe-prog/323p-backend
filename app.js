@@ -1,65 +1,7 @@
+// app.js — Sticker Booth Style (Gen-Z)
 const socket = io("https://three23p-backend.onrender.com");
-let audioPlayer=null,currentTrend=null,roomId=null,lastDescriptionKey=null,stopCycle=false;
-let currentTopic="cosmetics";
-
-/* ---------------- UI Update ---------------- */
-function updateUI(trend){
-  document.getElementById("r-title").innerText=trend.brand;
-  document.getElementById("r-artist").innerText=trend.product;
-  document.getElementById("r-persona").innerText=trend.persona||"";
-  document.getElementById("r-desc").innerText=trend.description;
-  document.getElementById("r-label").innerText="🔄 live drop";
-
-  // ✅ Mimic line
-  const mimicEl=document.getElementById("r-mimic");
-  if(trend.mimicLine){
-    mimicEl.innerText=trend.mimicLine;
-    mimicEl.style.display="block";
-  } else {
-    mimicEl.style.display="none";
-  }
-
-  if(trend.image){
-    document.getElementById("r-img").src=trend.image;
-    document.getElementById("r-img").style.display="block";
-    document.getElementById("r-fallback").style.display="none";
-  } else {
-    document.getElementById("r-img").style.display="none";
-    document.getElementById("r-fallback").style.display="block";
-  }
-}
-
-/* ---------------- Voice ---------------- */
-function playVoice(text,onEnd){
-  if(audioPlayer){audioPlayer.pause();audioPlayer=null;}
-  const url="https://three23p-backend.onrender.com/api/voice?text="+encodeURIComponent(text);
-  audioPlayer=new Audio(url);
-  audioPlayer.onplay=()=>{document.getElementById("voice-status").innerText="🤖🔊 vibin’ rn…";};
-  audioPlayer.onended=()=>{document.getElementById("voice-status").innerText="⚙️ preparing…";if(onEnd)onEnd();};
-  audioPlayer.onerror=()=>{if(onEnd)onEnd();};
-  audioPlayer.play();
-}
-
-/* ---------------- Load Trend ---------------- */
-async function loadTrend(){
-  if(stopCycle) return;
-  let apiUrl="https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+currentTopic;
-  const res=await fetch(apiUrl);
-  const newTrend=await res.json();
-  if(!newTrend||!newTrend.description){
-    setTimeout(()=>loadTrend(),2000);
-    return;
-  }
-  currentTrend=newTrend;
-  updateUI(currentTrend);
-  const descriptionKey=currentTrend.description;
-  if(descriptionKey!==lastDescriptionKey){
-    lastDescriptionKey=descriptionKey;
-    playVoice(currentTrend.description,()=>{setTimeout(()=>loadTrend(),2000);});
-  } else {
-    setTimeout(()=>loadTrend(),2000);
-  }
-}
+let audioPlayer=null,currentTrend=null,roomId=null,stopCycle=false;
+let currentTopic="cosmetics";let autoRefresh=false;
 
 /* ---------------- Room Setup ---------------- */
 (function initRoom(){
@@ -72,23 +14,147 @@ async function loadTrend(){
   }
 })();
 
-/* ---------------- Confirm Button ---------------- */
-function showConfirmButton(topic){
-  const confirmBtn=document.getElementById("confirm-btn");
-  confirmBtn.style.display="block";
-  confirmBtn.innerText=`drop the ${topic} rn`;
-  confirmBtn.onclick=()=>{
-    confirmBtn.style.display="none";
-    loadTrend();
-  };
+/* ---------------- Voice ---------------- */
+function playVoice(text,onEnd){
+  if(audioPlayer){audioPlayer.pause();audioPlayer=null;}
+  const url="https://three23p-backend.onrender.com/api/voice?text="+encodeURIComponent(text);
+  audioPlayer=new Audio(url);
+  audioPlayer.onplay=()=>{document.getElementById("voice-status").innerText="🤖🔊 vibin’ rn…";hideOverlay();};
+  audioPlayer.onended=()=>{document.getElementById("voice-status").innerText="⚙️ preparing…";if(onEnd)onEnd();};
+  audioPlayer.onerror=()=>{if(onEnd)onEnd();};
+  audioPlayer.play();
 }
 
-/* ---------------- Start Button ---------------- */
+/* ---------------- Overlay Helpers ---------------- */
+function showOverlay(){const c=document.getElementById("warmup-center");if(c){c.style.display="flex";c.style.visibility="visible";c.innerHTML="";}}
+function hideOverlay(){const c=document.getElementById("warmup-center");if(c){c.style.display="none";c.style.visibility="hidden";}}
+
+/* ---------------- Sticker Log Helper ---------------- */
+function appendOverlay(msg,color="#fff"){
+  const line=document.createElement("div");
+  line.className="log-line";
+  line.style.background=color;
+  line.innerText=msg;
+  const c=document.getElementById("warmup-center");
+  c.appendChild(line);
+  c.scrollTop=c.scrollHeight;
+}
+
+/* ---------------- UI Update ---------------- */
+function updateUI(trend){
+  document.getElementById("r-title").innerText=trend.brand;
+  document.getElementById("r-artist").innerText=trend.product;
+  document.getElementById("r-persona").innerText=trend.persona||"";
+  document.getElementById("r-desc").innerText=trend.description;
+  document.getElementById("r-label").innerText="🔄 live drop";
+  if(trend.image){document.getElementById("r-img").src=trend.image;document.getElementById("r-img").style.display="block";document.getElementById("r-fallback").style.display="none";}
+  else{document.getElementById("r-img").style.display="none";document.getElementById("r-fallback").style.display="block";}
+}
+
+/* ---------------- Live Log + Load ---------------- */
+async function runLogAndLoad(topic){
+  showOverlay();
+  if(topic==="cosmetics"){
+    appendOverlay("💄 request sent for 323cosmetics","var(--cosmetics-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--cosmetics-color)"),1000);
+    setTimeout(()=>appendOverlay("👤 persona locked: a young college student","var(--cosmetics-color)"),2000);
+    setTimeout(()=>appendOverlay("✍️ drafting description…","var(--cosmetics-color)"),3000);
+  }
+  if(topic==="music"){
+    appendOverlay("🎶 request sent for 323music","var(--music-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--music-color)"),1000);
+    setTimeout(()=>appendOverlay("👤 persona locked: a young college student","var(--music-color)"),2000);
+    setTimeout(()=>appendOverlay("✍️ drafting description…","var(--music-color)"),3000);
+  }
+  if(topic==="politics"){
+    appendOverlay("🏛️ request sent for 323politics","var(--politics-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--politics-color)"),1000);
+    setTimeout(()=>appendOverlay("👤 persona locked: a young college student","var(--politics-color)"),2000);
+    setTimeout(()=>appendOverlay("✍️ drafting description…","var(--politics-color)"),3000);
+  }
+  if(topic==="aidrop"){
+    appendOverlay("🌐 request sent for 323aidrop","var(--aidrop-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--aidrop-color)"),1000);
+    setTimeout(()=>appendOverlay("👤 persona locked: a young college student","var(--aidrop-color)"),2000);
+    setTimeout(()=>appendOverlay("✍️ drafting description…","var(--aidrop-color)"),3000);
+  }
+
+  const res=await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
+  const trend=await res.json();
+
+  setTimeout(()=>appendOverlay("✅ description ready","#e0ffe0"),4000);
+  setTimeout(()=>appendOverlay("🖼️ image rendering…","#d9f0ff"),5000);
+
+  setTimeout(()=>{
+    hideOverlay();
+    updateUI(trend);
+    playVoice(trend.description,()=>{
+      if(autoRefresh){
+        showOverlay();
+        appendOverlay("⏳ fetching next drop…","#ffe0f0");
+        setTimeout(()=>loadTrend(),2000);
+      }
+    });
+  },6000);
+
+  return trend;
+}
+async function loadTrend(){if(stopCycle)return;currentTrend=await runLogAndLoad(currentTopic);}
+
+/* ---------------- Emoji map ---------------- */
+function topicEmoji(topic){
+  if(topic==="cosmetics") return "💄";
+  if(topic==="music") return "🎶";
+  if(topic==="politics") return "🏛️";
+  if(topic==="aidrop") return "🌐";
+  return "⚡";
+}
+
+/* ---------------- Start confirm ---------------- */
 document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("start-screen").style.display="none";
   document.getElementById("app").style.display="flex";
   socket.emit("joinRoom",roomId);
 
-  // ✅ Show confirm button for first drop
-  showConfirmButton(currentTopic);
+  const overlay=document.getElementById("warmup-center");
+  overlay.style.display="flex";
+  overlay.style.visibility="visible";
+  overlay.style.background="transparent";
+  overlay.style.boxShadow="none";
+  overlay.innerHTML="";
+
+  const btn=document.createElement("button");
+  btn.className="start-btn";
+  btn.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
+  btn.onclick=()=>{
+    btn.remove();
+    autoRefresh=true;
+    loadTrend();
+  };
+  overlay.appendChild(btn);
+});
+
+/* ---------------- Topic toggle confirm ---------------- */
+document.querySelectorAll("#topic-picker button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    currentTopic=btn.dataset.topic;
+    autoRefresh=false;
+
+    const overlay=document.getElementById("warmup-center");
+    overlay.style.display="flex";
+    overlay.style.visibility="visible";
+    overlay.style.background="transparent";
+    overlay.style.boxShadow="none";
+    overlay.innerHTML="";
+
+    const b=document.createElement("button");
+    b.className="start-btn";
+    b.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
+    b.onclick=()=>{
+      b.remove();
+      autoRefresh=true;
+      loadTrend();
+    };
+    overlay.appendChild(b);
+  });
 });
