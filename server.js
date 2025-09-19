@@ -1,4 +1,4 @@
-// server.js — live-only backend with mimicLine emoji prefix + 1:1 image prompts
+// server.js — backend with mimicLine + safe Music image prompts (his/her pronouns)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -24,7 +24,7 @@ function randomStickers(countMin=3,countMax=6){
   return Array.from({length:count},()=>stickerPool[Math.floor(Math.random()*stickerPool.length)]).join(" ");
 }
 
-/* ---------------- Artist → Feature Map (50) ---------------- */
+/* ---------------- Artist → Feature Map ---------------- */
 const artistFeatures = {
   "Doja Cat": "a playful smirk, one hand squishing cheek and the other tugging bangs",
   "Ice Spice": "wide curious eyes, one hand pulling curls forward and the other resting on chin",
@@ -77,6 +77,23 @@ const artistFeatures = {
   "NCT Dream": "a cute grin, both hands pulling bangs forward playfully"
 };
 
+/* ---------------- Gender Map for Pronouns ---------------- */
+const artistGender = {
+  "Doja Cat": "her", "Ice Spice": "her", "NewJeans": "her", "Jungkook": "his",
+  "The Weeknd": "his", "Olivia Rodrigo": "her", "BLACKPINK": "her", "Drake": "his",
+  "SZA": "her", "Travis Scott": "his", "Peso Pluma": "his", "Karol G": "her",
+  "Rema": "his", "Tyla": "her", "Billie Eilish": "her", "Metro Boomin": "his",
+  "Latto": "her", "Lizzo": "her", "Dua Lipa": "her", "Miley Cyrus": "her",
+  "Justin Bieber": "his", "The Kid LAROI": "his", "Taylor Swift": "her", "Harry Styles": "his",
+  "Bad Bunny": "his", "Anitta": "her", "Saweetie": "her", "Lil Nas X": "his",
+  "Post Malone": "his", "Ariana Grande": "her", "Bruno Mars": "his", "Lana Del Rey": "her",
+  "Billie Eilish (Happier Than Ever)": "her", "Post Malone & Swae Lee": "his",
+  "Beyoncé": "her", "ROSALÍA": "her", "Lil Baby": "his", "Shakira": "her",
+  "Ed Sheeran": "his", "Kendrick Lamar": "his", "Megan Thee Stallion": "her", "Nicki Minaj": "her",
+  "Florence + The Machine": "her", "Sam Smith": "his", "Stray Kids": "his", "Seventeen": "his",
+  "IVE": "her", "LE SSERAFIM": "her", "NCT Dream": "his"
+};
+
 /* ---------------- Pools ---------------- */
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
@@ -123,7 +140,8 @@ async function generateImageUrl(topic,pick,persona){
   }
   else if(topic==="music"){
     const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
-    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate ${feature} (inspired by ${pick.artist}). Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+    const pronoun = artistGender[pick.artist] || "their";
+    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate ${pronoun} ${feature}. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
   }
   else if(topic==="politics"){
     prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
@@ -160,7 +178,7 @@ async function generateDrop(topic){
   const description=await makeDescription(topic,pick);
   const imageUrl=await generateImageUrl(topic,pick,persona);
 
-  // ✅ Add mimicLine only for Music, with emoji prefix
+  // ✅ Add mimicLine only for Music
   let mimicLine=null;
   if(topic==="music"){
     const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
@@ -172,7 +190,7 @@ async function generateDrop(topic){
     product:pick.product||pick.track||pick.keyword||pick.concept,
     persona,
     description,
-    mimicLine, // new field for music only
+    mimicLine,
     hashtags:["#NowTrending"],
     image:imageUrl,
     refresh:3000,
