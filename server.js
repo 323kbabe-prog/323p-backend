@@ -1,3 +1,4 @@
+// server.js (Phase 2.6 full backend with daily pick + preload + photo-realistic, college student personas)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -30,28 +31,18 @@ function loadDailyPicks() {
   }
 }
 
-/* ---------------- Helpers ---------------- */
-const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
-function randomEmojis(count = 2) {
-  return Array.from({ length: count }, () =>
-    EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]
-  ).join(" ");
-}
-let raceIndex = 0;
+/* ---------------- Persona Generator ---------------- */
 function randomPersona() {
-  const races = ["Black", "Korean", "White", ""];
-  const vibes = ["idol","dancer","vlogger","streetwear model","influencer"];
-  const styles = ["casual","glam","streetwear","retro","Y2K-inspired","minimalist"];
-  const race = races[raceIndex % races.length]; raceIndex++;
-  const vibe = vibes[Math.floor(Math.random()*vibes.length)];
-  const style = styles[Math.floor(Math.random()*styles.length)];
-  return race ? `a young ${race} female ${vibe} with a ${style} style`
-              : `a young female ${vibe} with a ${style} style`;
+  return `a young college student`;
 }
-const stickerPool = ["🤖","👾","⚡","💻","📟","⌨️","📡","🔮","🧠","💿","🪩","📼","🪐","🌀","🌐","☄️","👁️","🫀","🦷","🐸","🥒","🧃","🥤","🍄","💅","💋","👑","🔥","😎","🫦","🥹","😭","😂","😵‍💫","🤯","🦋","🐰","🌸","🍓","🍭","🍉","🍒","🍼","☁️","🌙","✨","🌈"];
-function randomStickers(countMin = 5, countMax = 12) {
+
+/* ---------------- Stickers ---------------- */
+const stickerPool = ["🤖","👾","⚡","💻","📟","📡","🎶","🎤","✊","📢","🔥","🌈","✨","💖","😍"];
+function randomStickers(countMin = 3, countMax = 6) {
   const count = Math.floor(Math.random() * (countMax - countMin + 1)) + countMin;
-  return Array.from({ length: count }, () => stickerPool[Math.floor(Math.random() * stickerPool.length)]).join(" ");
+  return Array.from({ length: count }, () =>
+    stickerPool[Math.floor(Math.random() * stickerPool.length)]
+  ).join(" ");
 }
 
 /* ---------------- Pools ---------------- */
@@ -61,17 +52,17 @@ const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topi
 async function makeDescription(topic, pick) {
   let prompt, system;
   if (topic === "cosmetics") {
-    prompt = `Write a 70+ word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, Gen-Z relatable, emojis inline.`;
-    system = "You are a beauty lover.";
+    prompt = `Write a 70+ word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, Gen-Z relatable, emojis inline.`;
+    system = "You are a college student talking about beauty.";
   } else if (topic === "music") {
-    prompt = `Write a 70+ word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emojis inline.`;
-    system = "You are a music fan.";
+    prompt = `Write a 70+ word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, Gen-Z tone, emojis inline.`;
+    system = "You are a college student reacting to music.";
   } else if (topic === "politics") {
-    prompt = `Write a 70+ word first-person passionate rant about ${pick.issue}, referencing ${pick.keyword}. Activist Gen-Z tone, emojis inline.`;
-    system = "You are a young activist.";
+    prompt = `Write a 70+ word first-person passionate rant about ${pick.issue}, referencing ${pick.keyword}. Activist college student voice, emojis inline.`;
+    system = "You are a college student activist.";
   } else {
-    prompt = `Write a 70+ word first-person surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
-    system = "You are an AI-native creator.";
+    prompt = `Write a 70+ word first-person surreal story about ${pick.concept}. Chaotic, Gen-Z slang, emojis inline.`;
+    system = "You are a college student living AI culture.";
   }
   try {
     const completion = await openai.chat.completions.create({
@@ -79,34 +70,36 @@ async function makeDescription(topic, pick) {
       temperature: 0.9,
       messages: [{ role:"system", content: system }, { role:"user", content: prompt }]
     });
-    return completion.choices[0].message.content.trim() + " " + randomEmojis(3);
-  } catch (e) {
-    console.error("❌ Description error:", e.message);
-    return `${prompt} ${randomEmojis(3)}`;
+    return completion.choices[0].message.content.trim();
+  } catch {
+    return prompt;
   }
 }
 
 /* ---------------- Image Generator ---------------- */
 async function generateImageUrl(topic, pick, persona) {
   const stickers = randomStickers();
-  let prompt;
+  let prompt = `Photo-realistic mobile snapshot of ${persona}`;
   if (topic === "cosmetics") {
-    prompt = `Photo-realistic close-up of ${persona}, applying ${pick.product} by ${pick.brand}. Natural lighting, glossy textures. Overlay cute Gen-Z stickers ${stickers}. 1:1.`;
+    prompt += ` applying ${pick.product} by ${pick.brand}, casual candid selfie vibe.`;
   } else if (topic === "music") {
-    prompt = `Photo-realistic cinematic photo of ${persona}, performing "${pick.track}" by ${pick.artist}. Neon stage lights, concert vibe. Overlay music stickers 🎤🎶⭐ ${stickers}. 1:1.`;
+    prompt += ` enjoying "${pick.track}" by ${pick.artist}, small live show vibe.`;
   } else if (topic === "politics") {
-    prompt = `Photo-realistic protest photo of ${persona}, about ${pick.issue}. Urban street, daylight, holding a sign or megaphone. Overlay activist stickers ✊📢🔥 ${stickers}. 1:1.`;
+    prompt += ` at a protest about ${pick.issue}, holding a sign about ${pick.keyword}.`;
   } else {
-    prompt = `Photo-realistic cinematic photo of ${persona}, embodying ${pick.concept}. Synthetic plastic-like skin texture, glossy reflective look. Cyberpunk tones (purple, aqua). Overlay AI-native stickers 🤖⚡👾 ${stickers}. 1:1.`;
+    prompt += ` immersed in ${pick.concept}, candid Gen-Z vibe.`;
   }
+  prompt += ` Natural light, realistic textures. Overlay stickers ${stickers}. Square 1:1.`;
+
   try {
-    const out = await openai.images.generate({ model: "gpt-image-1", prompt, size: "auto" });
+    const out = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt,
+      size: "auto"
+    });
     const d = out?.data?.[0];
-    if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
     if (d?.url) return d.url;
-  } catch (e) {
-    console.error("❌ Image error:", e.message);
-  }
+  } catch {}
   return "https://placehold.co/600x600?text=No+Image";
 }
 
@@ -143,88 +136,60 @@ async function ensureNextDrop(roomId, topic) {
     if (!roomTrends[roomId]) roomTrends[roomId] = {};
     roomTrends[roomId].next = nextDrop;
     console.log(`✅ Pre-generated next drop for ${topic} in room ${roomId}`);
-  } catch (e) {
-    console.error("❌ ensureNextDrop failed:", e.message);
   } finally {
     generatingNext[roomId] = false;
   }
 }
 
-/* ---------------- API Routes ---------------- */
+/* ---------------- API ---------------- */
 app.get("/api/trend", async (req, res) => {
-  try {
-    const topic = req.query.topic || "cosmetics";
-    const roomId = req.query.room;
-    if (!roomId) return res.status(400).json({ error: "room parameter required" });
+  const topic = req.query.topic || "cosmetics";
+  const roomId = req.query.room;
+  if (!roomId) return res.status(400).json({ error: "room parameter required" });
 
-    const today = new Date().toISOString().slice(0,10);
-    let current;
+  const today = new Date().toISOString().slice(0,10);
+  let current;
 
-    // 🌅 Serve daily pick first if available
-    if (dailyData.dailyDate === today && dailyData.dailyPicks?.[topic] && !roomTrends[roomId]?.dailyServed) {
-      current = { ...dailyData.dailyPicks[topic], isDaily: true };
-      roomTrends[roomId] = { current, dailyServed: true };
-      ensureNextDrop(roomId, topic); // preload
-      return res.json(current);
-    }
-
-    // Serve preloaded next if available
-    if (roomTrends[roomId]?.next) {
-      current = roomTrends[roomId].next;
-      roomTrends[roomId].next = null;
-      roomTrends[roomId].current = current;
-      ensureNextDrop(roomId, topic);
-      return res.json(current);
-    }
-
-    // Otherwise generate live
-    current = await generateDrop(topic);
+  if (dailyData.dailyDate === today && dailyData.dailyPicks?.[topic] && !roomTrends[roomId]?.dailyServed) {
+    current = { ...dailyData.dailyPicks[topic], isDaily: true };
     roomTrends[roomId] = { current, dailyServed: true };
     ensureNextDrop(roomId, topic);
-    res.json(current);
-  } catch (e) {
-    console.error("❌ Trend API error:", e.message);
-    res.json({ error: "Trend API failed" });
+    return res.json(current);
   }
+
+  if (roomTrends[roomId]?.next) {
+    current = roomTrends[roomId].next;
+    roomTrends[roomId].next = null;
+    roomTrends[roomId].current = current;
+    ensureNextDrop(roomId, topic);
+    return res.json(current);
+  }
+
+  current = await generateDrop(topic);
+  roomTrends[roomId] = { current, dailyServed: true };
+  ensureNextDrop(roomId, topic);
+  res.json(current);
 });
 
+/* ---------------- Voice ---------------- */
 app.get("/api/voice", async (req, res) => {
-  try {
-    const text = req.query.text || "";
-    if (!text.trim()) {
-      res.setHeader("Content-Type", "audio/mpeg");
-      return res.send(Buffer.alloc(1000));
-    }
-    const out = await openai.audio.speech.create({ model: "gpt-4o-mini-tts", voice: "alloy", input: text });
-    const audioBuffer = Buffer.from(await out.arrayBuffer());
+  const text = req.query.text || "";
+  if (!text.trim()) {
     res.setHeader("Content-Type", "audio/mpeg");
-    res.send(audioBuffer);
-  } catch (e) {
-    console.error("❌ Voice API error:", e.message);
-    res.status(500).json({ error: "Voice TTS failed" });
+    return res.send(Buffer.alloc(1000));
   }
+  const out = await openai.audio.speech.create({ model: "gpt-4o-mini-tts", voice: "alloy", input: text });
+  const audioBuffer = Buffer.from(await out.arrayBuffer());
+  res.setHeader("Content-Type", "audio/mpeg");
+  res.send(audioBuffer);
 });
 
 /* ---------------- Chat ---------------- */
 io.on("connection", (socket) => {
-  console.log(`🔌 User connected: ${socket.id}`);
-  socket.on("joinRoom", (roomId) => {
-    socket.join(roomId);
-    socket.roomId = roomId;
-    console.log(`👥 ${socket.id} joined room: ${roomId}`);
-  });
-  socket.on("chatMessage", ({ roomId, user, text }) => {
-    io.to(roomId).emit("chatMessage", { user, text });
-  });
-  socket.on("disconnect", () => {
-    console.log(`❌ User disconnected: ${socket.id}`);
-  });
+  socket.on("joinRoom", (roomId) => { socket.join(roomId); socket.roomId = roomId; });
 });
 
-/* ---------------- Static + Start ---------------- */
+/* ---------------- Start ---------------- */
 app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  loadDailyPicks();
-  console.log(`🚀 323aidrop backend live on :${PORT}`);
-});
+httpServer.listen(PORT, () => { loadDailyPicks(); console.log(`🚀 Backend live on :${PORT}`); });
