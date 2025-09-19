@@ -1,4 +1,5 @@
-// server.js (Phase 2.6 full backend with daily pick + preload + photo-realistic, college student personas)
+// server.js (Phase 2.6 full backend with daily pick + preload + photo-realistic, college student personas + improved logging)
+
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -71,7 +72,8 @@ async function makeDescription(topic, pick) {
       messages: [{ role:"system", content: system }, { role:"user", content: prompt }]
     });
     return completion.choices[0].message.content.trim();
-  } catch {
+  } catch (e) {
+    console.error("❌ Description error:", e.message);
     return prompt;
   }
 }
@@ -97,10 +99,20 @@ async function generateImageUrl(topic, pick, persona) {
       prompt,
       size: "auto"
     });
+
     const d = out?.data?.[0];
     if (d?.url) return d.url;
-  } catch {}
-  return "https://placehold.co/600x600?text=No+Image";
+    if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
+
+    console.error("❌ Image generation returned empty response:", out);
+    return "https://placehold.co/600x600?text=No+Image";
+  } catch (e) {
+    console.error("❌ Image generation failed:", e.message);
+    if (e.response) {
+      console.error("❌ API response:", e.response.status, e.response.data);
+    }
+    return "https://placehold.co/600x600?text=No+Image";
+  }
 }
 
 /* ---------------- Drop Generator ---------------- */
@@ -150,23 +162,29 @@ app.get("/api/trend", async (req, res) => {
   const today = new Date().toISOString().slice(0,10);
   let current;
 
+  // 🌅 Serve daily pick
   if (dailyData.dailyDate === today && dailyData.dailyPicks?.[topic] && !roomTrends[roomId]?.dailyServed) {
     current = { ...dailyData.dailyPicks[topic], isDaily: true };
     roomTrends[roomId] = { current, dailyServed: true };
+    console.log(`🌅 Served daily pick for topic=${topic}, room=${roomId}`);
     ensureNextDrop(roomId, topic);
     return res.json(current);
   }
 
+  // ⚡ Serve preloaded
   if (roomTrends[roomId]?.next) {
     current = roomTrends[roomId].next;
     roomTrends[roomId].next = null;
     roomTrends[roomId].current = current;
+    console.log(`⚡ Served preloaded drop for topic=${topic}, room=${roomId}`);
     ensureNextDrop(roomId, topic);
     return res.json(current);
   }
 
+  // 🔄 Fallback live generation
   current = await generateDrop(topic);
   roomTrends[roomId] = { current, dailyServed: true };
+  console.log(`🔄 Generated live drop for topic=${topic}, room=${roomId}`);
   ensureNextDrop(roomId, topic);
   res.json(current);
 });
@@ -178,10 +196,15 @@ app.get("/api/voice", async (req, res) => {
     res.setHeader("Content-Type", "audio/mpeg");
     return res.send(Buffer.alloc(1000));
   }
-  const out = await openai.audio.speech.create({ model: "gpt-4o-mini-tts", voice: "alloy", input: text });
-  const audioBuffer = Buffer.from(await out.arrayBuffer());
-  res.setHeader("Content-Type", "audio/mpeg");
-  res.send(audioBuffer);
+  try {
+    const out = await openai.audio.speech.create({ model: "gpt-4o-mini-tts", voice: "alloy", input: text });
+    const audioBuffer = Buffer.from(await out.arrayBuffer());
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(audioBuffer);
+  } catch (e) {
+    console.error("❌ Voice API error:", e.message);
+    res.status(500).json({ error: "Voice TTS failed" });
+  }
 });
 
 /* ---------------- Chat ---------------- */
