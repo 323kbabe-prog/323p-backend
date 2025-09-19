@@ -101,7 +101,7 @@ const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topi
 async function makeDescription(topic,pick){
   let prompt,system;
   if(topic==="cosmetics"){
-    prompt=`Write a 70+ word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
+    prompt=`Write a 140+ word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
     system="You are a college student talking about beauty.";
   }
   else if(topic==="music"){
