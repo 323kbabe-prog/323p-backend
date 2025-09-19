@@ -1,5 +1,4 @@
-
-// server.js — live-only backend with artist-specific Music mimic algorithm
+// server.js — live-only backend with mimicLine + 1:1 image prompts
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -25,57 +24,57 @@ function randomStickers(countMin=3,countMax=6){
   return Array.from({length:count},()=>stickerPool[Math.floor(Math.random()*stickerPool.length)]).join(" ");
 }
 
-/* ---------------- Artist → Feature Map ---------------- */
+/* ---------------- Artist → Feature Map (50) ---------------- */
 const artistFeatures = {
-  "Doja Cat": "playful smirk with sharp eyeliner eyes, head tilted slightly",
-  "Ice Spice": "wide eyes and curly hair pulled forward around cheeks",
-  "NewJeans": "big innocent eyes with bangs covering forehead, soft smile",
-  "Jungkook": "gentle smile with fringe slightly covering eyes, boyish charm",
-  "The Weeknd": "serious glare with furrowed brows and slicked back hair",
-  "Olivia Rodrigo": "intense pouty lips with eyeliner stare",
-  "BLACKPINK": "confident bold eyes with hair flipped back",
-  "Drake": "raised brows with a knowing smirk and trimmed beard look",
-  "SZA": "dreamy eyes with head tilted and long wavy hair",
-  "Travis Scott": "intense wide eyes, braided hair pulled by both hands",
-  "Peso Pluma": "serious stare with side-swept hair and sharp jawline",
-  "Karol G": "serious expression with slightly squinted eyes and long hair parted",
-  "Rema": "wide playful eyes with short twisted hair touched by hand",
-  "Tyla": "smiling pout with hand on cheek, hair styled sleek back",
-  "Billie Eilish": "tired dreamy eyes, hair covering one side of face",
-  "Metro Boomin": "straight face with dark cap pulled low, intense gaze",
-  "Latto": "confident smirk with raised brow and lip gloss pout",
-  "Lizzo": "big expressive eyes and wide grin, hair pulled high",
-  "Dua Lipa": "pouty lips with chin up, sleek long hair pushed back",
-  "Miley Cyrus": "wild grin with tongue slightly out, tousled hair",
-  "Justin Bieber": "soft boyish smile, fringe pushed forward",
-  "The Kid LAROI": "confused stare with messy blond hair in face",
-  "Taylor Swift": "wide eyes with red lips, side fringe hair style",
-  "Harry Styles": "gentle grin with tousled hair and dimples",
-  "Bad Bunny": "serious cool look with shaved hairline and shades mimic",
-  "Anitta": "flirty smirk with hand playing in long hair",
-  "Saweetie": "pouty lips and glamorous hair flip",
-  "Lil Nas X": "playful shocked eyes with mischievous grin",
-  "Post Malone": "relaxed eyes with slightly open mouth and hand through hair",
-  "Ariana Grande": "big eyes with pout, hair styled in high ponytail",
-  "Bruno Mars": "smirk with one brow raised, curly hair pushed up",
-  "Lana Del Rey": "melancholy eyes with soft parted lips, hand near cheek",
-  "Billie Eilish (Happier Than Ever)": "serious tired stare with blonde hair brushed to side",
-  "Post Malone & Swae Lee": "relaxed sleepy eyes with casual hair tousle",
-  "Beyoncé": "confident sharp eyes with hair pulled back queenly pose",
-  "ROSALÍA": "intense stare with pout lips and sleek pulled hair",
-  "Lil Baby": "serious tight eyes with short hair touched at sides",
-  "Shakira": "big smile with wide eyes and wavy hair pushed forward",
-  "Ed Sheeran": "soft eyes with small smile, messy ginger hair",
-  "Kendrick Lamar": "serious stare with brows furrowed, short hair cropped",
-  "Megan Thee Stallion": "confident pout with hair framing both sides of face",
-  "Nicki Minaj": "dramatic wide eyes with bold lip pout, hair pulled long",
-  "Florence + The Machine": "ethereal gaze with hand in flowing hair",
-  "Sam Smith": "serious stare with slightly parted lips and clean hair",
-  "Stray Kids": "bright wide eyes with playful open-mouth smile, styled bangs",
-  "Seventeen": "group-idol bright eyes, hair swept with both hands",
-  "IVE": "intense idol stare with hair pulled back, lips parted",
-  "LE SSERAFIM": "sharp bold eyes with trendy bangs and pout",
-  "NCT Dream": "cute playful grin with wide open eyes, bangs styled forward"
+  "Doja Cat": "a playful smirk, one hand squishing cheek and the other tugging bangs",
+  "Ice Spice": "wide curious eyes, one hand pulling curls forward and the other resting on chin",
+  "NewJeans": "big innocent eyes, both hands pulling bangs forward in a playful pose",
+  "Jungkook": "a soft smile, one hand brushing fringe aside and the other hand on neck",
+  "The Weeknd": "a serious glare, one hand adjusting eyebrow and the other pushing hair back",
+  "Olivia Rodrigo": "pouty lips, one hand resting under chin and the other framing cheek",
+  "BLACKPINK": "confident sharp eyes, one hand flipping hair back and the other on jaw",
+  "Drake": "a knowing smirk, one hand pointing at eyebrow and the other resting on chin",
+  "SZA": "dreamy tilted gaze, one hand under chin and the other lifting wavy hair",
+  "Travis Scott": "intense eyes, both hands pulling braids or hair to the sides",
+  "Peso Pluma": "a serious look, one hand straightening collar and the other touching hairline",
+  "Karol G": "focused eyes, both hands parting long hair away from face",
+  "Rema": "playful wide eyes, one hand tugging short twists and the other on cheek",
+  "Tyla": "smiling pout, one hand cupping cheek and the other smoothing sleek hair",
+  "Billie Eilish": "tired dreamy eyes, one hand pulling hoodie up and the other brushing hair aside",
+  "Metro Boomin": "blank intense stare, one hand adjusting cap and the other near mouth",
+  "Latto": "a confident smirk, one hand lifting eyebrow and the other flipping hair",
+  "Lizzo": "a wide grin, one hand framing cheek and the other lifting hair up high",
+  "Dua Lipa": "a serious pout, one hand under chin and the other pushing long hair back",
+  "Miley Cyrus": "a wild grin with tongue out, both hands tousling messy hair",
+  "Justin Bieber": "a soft smile, one hand tugging hoodie and the other ruffling fringe",
+  "The Kid LAROI": "a confused stare, both hands pushing messy blond hair back",
+  "Taylor Swift": "wide eyes with red lips, one hand framing chin and the other holding side bangs",
+  "Harry Styles": "a gentle grin, one hand adjusting collar and the other brushing hair back",
+  "Bad Bunny": "a serious stare, one hand mimicking sunglasses frame and the other on chin",
+  "Anitta": "a flirty smirk, one hand tugging hair strands and the other framing lips",
+  "Saweetie": "pouty lips, both hands framing jawline dramatically",
+  "Lil Nas X": "a mischievous grin, one hand pointing at face and the other pulling hair",
+  "Post Malone": "relaxed eyes, one hand scratching head and the other touching jawline",
+  "Ariana Grande": "a pout with big eyes, both hands holding up an imaginary high ponytail",
+  "Bruno Mars": "a smirk with raised brow, one hand tipping an imaginary hat and the other on chin",
+  "Lana Del Rey": "melancholy eyes, one hand resting on cheek and the other brushing hair aside",
+  "Billie Eilish (Happier Than Ever)": "a serious stare, one hand brushing blonde bangs and the other under chin",
+  "Post Malone & Swae Lee": "relaxed sleepy eyes, one hand rubbing face and the other pushing hair back",
+  "Beyoncé": "a confident queenly stare, one hand on hip and the other pushing hair behind ear",
+  "ROSALÍA": "an intense pout, one hand under chin and the other pulling long hair back",
+  "Lil Baby": "a tight serious gaze, one hand touching chin and the other brushing side fade",
+  "Shakira": "a big smile, one hand flipping hair forward and the other framing cheek",
+  "Ed Sheeran": "a soft grin, one hand rubbing back of neck and the other tousling ginger hair",
+  "Kendrick Lamar": "a serious glare, one hand on chin and the other adjusting collar",
+  "Megan Thee Stallion": "a fierce pout, one hand adjusting jawline and the other flipping hair",
+  "Nicki Minaj": "dramatic wide eyes, one hand framing lips and the other holding long hair straight",
+  "Florence + The Machine": "an ethereal gaze, one hand lifting hair and the other framing cheek",
+  "Sam Smith": "a soft serious stare, one hand over heart and the other near cheek",
+  "Stray Kids": "a playful grin, both hands lifting bangs playfully off forehead",
+  "Seventeen": "idol smile, both hands adjusting styled hair as if mid-performance",
+  "IVE": "an intense stare, one hand pushing hair back and the other pointing at lips",
+  "LE SSERAFIM": "a bold stare, one hand adjusting bangs and the other on chin",
+  "NCT Dream": "a cute grin, both hands pulling bangs forward playfully"
 };
 
 /* ---------------- Pools ---------------- */
@@ -84,12 +83,29 @@ const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topi
 /* ---------------- Description Generator ---------------- */
 async function makeDescription(topic,pick){
   let prompt,system;
-  if(topic==="cosmetics"){prompt=`Write a 70+ word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;system="You are a college student talking about beauty.";}
-  else if(topic==="music"){prompt=`Write a 70+ word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;system="You are a college student reacting to music.";}
-  else if(topic==="politics"){prompt=`Write a 70+ word rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;system="You are a college student activist.";}
-  else{prompt=`Write a 70+ word surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;system="You are a college student living AI culture.";}
+  if(topic==="cosmetics"){
+    prompt=`Write a 70+ word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
+    system="You are a college student talking about beauty.";
+  }
+  else if(topic==="music"){
+    prompt=`Write a 70+ word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
+    system="You are a college student reacting to music.";
+  }
+  else if(topic==="politics"){
+    prompt=`Write a 70+ word rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
+    system="You are a college student activist.";
+  }
+  else{
+    prompt=`Write a 70+ word surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
+    system="You are a college student living AI culture.";
+  }
+
   try{
-    const completion=await openai.chat.completions.create({model:"gpt-4o-mini",temperature:0.9,messages:[{role:"system",content:system},{role:"user",content:prompt}]});
+    const completion=await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.9,
+      messages:[{role:"system",content:system},{role:"user",content:prompt}]
+    });
     return completion.choices[0].message.content.trim();
   }catch(e){
     console.error("❌ Description error:",e.message);
@@ -106,13 +122,13 @@ async function generateImageUrl(topic,pick,persona){
     prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
   }
   else if(topic==="music"){
-    const feature = artistFeatures[pick.artist] || "dramatic stage expression with face and hair adjustments";
-    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate ${feature} (inspired by ${pick.artist}). They are using both hands on their face or hair to adjust their eye size, hair style, or facial features in order to mimic the performer’s look. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+    const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
+    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate ${feature} (inspired by ${pick.artist}). Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
   }
   else if(topic==="politics"){
     prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
   }
-  else { // aidrop
+  else{ // aidrop
     prompt=`Photo-realistic surreal snapshot of ${pick.concept} shown as a cultural object (not a person). Glitchy, holographic neon background with pixel overlays. Floating meme emojis and digital stickers: 🐸 👾 💻 🌐 ✨ ${stickers}.`;
   }
 
@@ -120,7 +136,7 @@ async function generateImageUrl(topic,pick,persona){
     const out=await openai.images.generate({
       model:"gpt-image-1",
       prompt,
-      size:"1024x1024" // ✅ always 1:1 square
+      size:"1024x1024" // ✅ always square
     });
     const d=out?.data?.[0];
     if(d?.url) return d.url;
@@ -144,11 +160,19 @@ async function generateDrop(topic){
   const description=await makeDescription(topic,pick);
   const imageUrl=await generateImageUrl(topic,pick,persona);
 
+  // ✅ Add mimicLine only for Music
+  let mimicLine=null;
+  if(topic==="music"){
+    const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
+    mimicLine=`I tried ${feature} like ${pick.artist} 😅.`;
+  }
+
   return {
     brand:pick.brand||pick.artist||pick.issue||"323aidrop",
     product:pick.product||pick.track||pick.keyword||pick.concept,
     persona,
     description,
+    mimicLine, // new field for music only
     hashtags:["#NowTrending"],
     image:imageUrl,
     refresh:3000,
@@ -171,7 +195,11 @@ app.get("/api/voice",async(req,res)=>{
   const text=req.query.text||"";
   if(!text.trim()){res.setHeader("Content-Type","audio/mpeg");return res.send(Buffer.alloc(1000));}
   try{
-    const out=await openai.audio.speech.create({model:"gpt-4o-mini-tts",voice:"alloy",input:text});
+    const out=await openai.audio.speech.create({
+      model:"gpt-4o-mini-tts",
+      voice:"alloy",
+      input:text,
+    });
     const audioBuffer=Buffer.from(await out.arrayBuffer());
     res.setHeader("Content-Type","audio/mpeg");
     res.send(audioBuffer);
@@ -182,7 +210,12 @@ app.get("/api/voice",async(req,res)=>{
 });
 
 /* ---------------- Chat ---------------- */
-io.on("connection",(socket)=>{socket.on("joinRoom",(roomId)=>{socket.join(roomId);socket.roomId=roomId;});});
+io.on("connection",(socket)=>{
+  socket.on("joinRoom",(roomId)=>{
+    socket.join(roomId);
+    socket.roomId=roomId;
+  });
+});
 
 /* ---------------- Start ---------------- */
 app.use(express.static(path.join(__dirname)));
