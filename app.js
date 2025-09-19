@@ -21,7 +21,7 @@ function playVoice(text,onEnd){
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
 
-  // Voice log with timer
+  // 🔊 Voice log with live timer
   let voiceLine = appendOverlay("🔊 preparing voice…","#ffe0f0",true);
   let voiceElapsed = 0;
   const voiceTimer = setInterval(()=>{
@@ -34,15 +34,18 @@ function playVoice(text,onEnd){
     removeOverlayLine(voiceLine,"✅ voice ready");
     document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
   };
+
   audioPlayer.onended = ()=>{
     document.getElementById("voice-status").innerText = "⚙️ preparing…";
     if(onEnd) onEnd();
   };
+
   audioPlayer.onerror = ()=>{
     clearInterval(voiceTimer);
     removeOverlayLine(voiceLine,"❌ voice error");
     if(onEnd) onEnd();
   };
+
   audioPlayer.play();
 }
 
