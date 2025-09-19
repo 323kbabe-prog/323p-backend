@@ -1,4 +1,4 @@
-// server.js — live-only (no daily pick, no preload) + logs
+// server.js — live-only backend with updated image algorithms for Music + Aidrop
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -46,12 +46,20 @@ async function makeDescription(topic,pick){
 /* ---------------- Image Generator ---------------- */
 async function generateImageUrl(topic,pick,persona){
   const stickers=randomStickers();
-  let prompt=`Photo-realistic mobile snapshot of ${persona}`;
-  if(topic==="cosmetics"){prompt+=` applying ${pick.product} by ${pick.brand}, casual candid selfie vibe.`;}
-  else if(topic==="music"){prompt+=` enjoying "${pick.track}" by ${pick.artist}, small live show vibe.`;}
-  else if(topic==="politics"){prompt+=` at a protest about ${pick.issue}, holding a sign about ${pick.keyword}.`;}
-  else{prompt+=` immersed in ${pick.concept}, candid Gen-Z vibe.`;}
-  prompt+=` Natural light, realistic textures. Overlay stickers ${stickers}. Square 1:1.`;
+  let prompt="";
+
+  if(topic==="cosmetics"){
+    prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Background: pastel photocard style. Stickers floating around: ${stickers}.`;
+  }
+  else if(topic==="music"){
+    prompt=`Photo-realistic snapshot of ${persona} in their dorm room, posing like ${pick.artist} while listening to "${pick.track}". The dorm shows posters, laptop, messy desk, headphones. Lighting is casual neon glow. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+  }
+  else if(topic==="politics"){
+    prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
+  }
+  else { // aidrop
+    prompt=`Photo-realistic surreal snapshot of ${pick.concept} shown as a cultural object. No human character. Glitchy, holographic neon background with pixel overlays. Floating meme emojis and digital stickers: 🐸 👾 💻 🌐 ✨ ${stickers}.`;
+  }
 
   try{
     const out=await openai.images.generate({model:"gpt-image-1",prompt,size:"auto"});
