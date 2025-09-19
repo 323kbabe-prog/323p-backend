@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — op3 true parallel (with DOMContentLoaded)
+// app.js — Sticker Booth Style (Gen-Z) — op2 updated
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -56,21 +56,24 @@ function appendOverlay(msg,color="#fff"){
   const c = document.getElementById("warmup-center");
   c.appendChild(line);
   c.scrollTop = c.scrollHeight;
-  return line;
+  return line; // ✅ return reference
 }
 
 /* ---------------- UI Update ---------------- */
 function updateUI(trend){
-  document.getElementById("r-title").innerText = trend.brand || "—";
-  document.getElementById("r-artist").innerText = trend.product || "—";
+  document.getElementById("r-title").innerText = trend.brand;
+  document.getElementById("r-artist").innerText = trend.product;
   document.getElementById("r-persona").innerText = trend.persona || "";
-  if(trend.description) document.getElementById("r-desc").innerText = trend.description;
+  document.getElementById("r-desc").innerText = trend.description;
   document.getElementById("r-label").innerText = "🔄 live drop";
 
   if(trend.image){
     document.getElementById("r-img").src = trend.image;
     document.getElementById("r-img").style.display="block";
     document.getElementById("r-fallback").style.display="none";
+  } else {
+    document.getElementById("r-img").style.display="none";
+    document.getElementById("r-fallback").style.display="block";
   }
 
   // ✅ show mimicLine if exists
@@ -99,48 +102,108 @@ function updateUI(trend){
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
   showOverlay();
-  appendOverlay((topic==="cosmetics"?"💄":topic==="music"?"🎶":topic==="politics"?"🏛️":"🌐")+" request sent for 323"+topic,"var(--"+topic+"-color)");
-  setTimeout(()=>appendOverlay("🧩 pool chosen","var(--"+topic+"-color)"),1000);
+  let draftingTimer = null; // ✅ track timer for drafting line
 
-  // drafting log
-  const draftLine = appendOverlay("✍️ drafting description…","var(--"+topic+"-color)");
-  draftLine.classList.add("blinking");
-  let elapsed=0;
-  const draftingTimer=setInterval(()=>{
-    elapsed++;
-    if(elapsed<60){draftLine.innerText="✍️ drafting description… "+elapsed+"s";}
-    else{const mins=Math.floor(elapsed/60);const secs=elapsed%60;draftLine.innerText="✍️ drafting description… "+mins+"min "+secs+"s";}
-  },1000);
-
-  // description request
-  fetch("https://three23p-backend.onrender.com/api/description?room="+roomId+"&topic="+topic)
-    .then(r=>r.json())
-    .then(data=>{
-      clearInterval(draftingTimer);
-      draftLine.classList.remove("blinking");
-      appendOverlay("✅ description ready","#e0ffe0");
-      updateUI(data);
-      playVoice(data.description,()=>{
-        if(autoRefresh){
-          showOverlay();
-          appendOverlay("⏳ fetching next drop…","#ffe0f0");
-          setTimeout(()=>loadTrend(),2000);
+  if(topic==="cosmetics"){
+    appendOverlay("💄 request sent for 323cosmetics","var(--cosmetics-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--cosmetics-color)"),1000);
+    setTimeout(()=>{
+      const line = appendOverlay("✍️ drafting description…","var(--cosmetics-color)");
+      line.classList.add("blinking");
+      let elapsed = 0;
+      draftingTimer = setInterval(()=>{
+        elapsed++;
+        if(elapsed < 60){
+          line.innerText = "✍️ drafting description… " + elapsed + "s";
+        } else {
+          const mins = Math.floor(elapsed/60);
+          const secs = elapsed % 60;
+          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
         }
-      });
-    });
+      },1000);
+    },2000);
+  }
+  if(topic==="music"){
+    appendOverlay("🎶 request sent for 323music","var(--music-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--music-color)"),1000);
+    setTimeout(()=>{
+      const line = appendOverlay("✍️ drafting description…","var(--music-color)");
+      line.classList.add("blinking");
+      let elapsed = 0;
+      draftingTimer = setInterval(()=>{
+        elapsed++;
+        if(elapsed < 60){
+          line.innerText = "✍️ drafting description… " + elapsed + "s";
+        } else {
+          const mins = Math.floor(elapsed/60);
+          const secs = elapsed % 60;
+          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
+        }
+      },1000);
+    },2000);
+  }
+  if(topic==="politics"){
+    appendOverlay("🏛️ request sent for 323politics","var(--politics-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--politics-color)"),1000);
+    setTimeout(()=>{
+      const line = appendOverlay("✍️ drafting description…","var(--politics-color)");
+      line.classList.add("blinking");
+      let elapsed = 0;
+      draftingTimer = setInterval(()=>{
+        elapsed++;
+        if(elapsed < 60){
+          line.innerText = "✍️ drafting description… " + elapsed + "s";
+        } else {
+          const mins = Math.floor(elapsed/60);
+          const secs = elapsed % 60;
+          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
+        }
+      },1000);
+    },2000);
+  }
+  if(topic==="aidrop"){
+    appendOverlay("🌐 request sent for 323aidrop","var(--aidrop-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--aidrop-color)"),1000);
+    setTimeout(()=>{
+      const line = appendOverlay("✍️ drafting description…","var(--aidrop-color)");
+      line.classList.add("blinking");
+      let elapsed = 0;
+      draftingTimer = setInterval(()=>{
+        elapsed++;
+        if(elapsed < 60){
+          line.innerText = "✍️ drafting description… " + elapsed + "s";
+        } else {
+          const mins = Math.floor(elapsed/60);
+          const secs = elapsed % 60;
+          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
+        }
+      },1000);
+    },2000);
+  }
 
-  // image request
-  appendOverlay("🖼️ image rendering…","#d9f0ff");
-  fetch("https://three23p-backend.onrender.com/api/image?room="+roomId+"&topic="+topic)
-    .then(r=>r.json())
-    .then(data=>{
-      const img=new Image();
-      img.onload=()=>{appendOverlay("🖼️ image ready","#d9f0ff");updateUI(data);};
-      img.onerror=()=>appendOverlay("❌ image failed","#ffd9d9");
-      img.src=data.image;
+  const res = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
+  const trend = await res.json();
+
+  setTimeout(()=>{
+    if(draftingTimer){ clearInterval(draftingTimer); }
+    appendOverlay("✅ description ready","#e0ffe0");
+  },4000);
+
+  setTimeout(()=>appendOverlay("🖼️ image rendering…","#d9f0ff"),5000);
+  setTimeout(()=>{
+    hideOverlay();
+    updateUI(trend);
+    playVoice(trend.description,()=>{
+      if(autoRefresh){
+        showOverlay();
+        appendOverlay("⏳ fetching next drop…","#ffe0f0");
+        setTimeout(()=>loadTrend(),2000);
+      }
     });
+  },6000);
+
+  return trend;
 }
-
 async function loadTrend(){ 
   if(stopCycle) return; 
   currentTrend = await runLogAndLoad(currentTopic); 
@@ -157,39 +220,36 @@ function topicEmoji(topic){
 
 /* ---------------- Confirm Button ---------------- */
 function showConfirmButton(){
-  const overlay=document.getElementById("warmup-center");
+  const overlay = document.getElementById("warmup-center");
   overlay.style.display="flex";
   overlay.style.visibility="visible";
   overlay.style.background="transparent";
   overlay.style.boxShadow="none";
   overlay.innerHTML="";
-  const btn=document.createElement("button");
+  const btn = document.createElement("button");
   btn.className="start-btn";
   btn.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
   btn.onclick=()=>{
     btn.remove();
-    autoRefresh=true;
+    autoRefresh = true;
     loadTrend();
   };
   overlay.appendChild(btn);
 }
 
-/* ---------------- Attach Listeners after DOM Ready ---------------- */
-window.addEventListener("DOMContentLoaded", ()=>{
-  // Start button
-  document.getElementById("start-btn").addEventListener("click",()=>{
-    document.getElementById("start-screen").style.display="none";
-    document.getElementById("app").style.display="flex";
-    socket.emit("joinRoom",roomId);
-    showConfirmButton();
-  });
+/* ---------------- Start confirm ---------------- */
+document.getElementById("start-btn").addEventListener("click",()=>{
+  document.getElementById("start-screen").style.display="none";
+  document.getElementById("app").style.display="flex";
+  socket.emit("joinRoom",roomId);
+  showConfirmButton();
+});
 
-  // Topic picker
-  document.querySelectorAll("#topic-picker button").forEach(btn=>{
-    btn.addEventListener("click",()=>{
-      currentTopic=btn.dataset.topic;
-      autoRefresh=false;
-      showConfirmButton();
-    });
+/* ---------------- Topic toggle confirm ---------------- */
+document.querySelectorAll("#topic-picker button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    currentTopic = btn.dataset.topic;
+    autoRefresh = false;
+    showConfirmButton();
   });
 });
