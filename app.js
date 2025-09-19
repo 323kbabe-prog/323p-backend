@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — op3 true parallel
+// app.js — Sticker Booth Style (Gen-Z) — op3 true parallel (with DOMContentLoaded)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -174,19 +174,22 @@ function showConfirmButton(){
   overlay.appendChild(btn);
 }
 
-/* ---------------- Start confirm ---------------- */
-document.getElementById("start-btn").addEventListener("click",()=>{
-  document.getElementById("start-screen").style.display="none";
-  document.getElementById("app").style.display="flex";
-  socket.emit("joinRoom",roomId);
-  showConfirmButton();
-});
-
-/* ---------------- Topic toggle confirm ---------------- */
-document.querySelectorAll("#topic-picker button").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    currentTopic=btn.dataset.topic;
-    autoRefresh=false;
+/* ---------------- Attach Listeners after DOM Ready ---------------- */
+window.addEventListener("DOMContentLoaded", ()=>{
+  // Start button
+  document.getElementById("start-btn").addEventListener("click",()=>{
+    document.getElementById("start-screen").style.display="none";
+    document.getElementById("app").style.display="flex";
+    socket.emit("joinRoom",roomId);
     showConfirmButton();
+  });
+
+  // Topic picker
+  document.querySelectorAll("#topic-picker button").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      currentTopic=btn.dataset.topic;
+      autoRefresh=false;
+      showConfirmButton();
+    });
   });
 });
