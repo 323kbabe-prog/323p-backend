@@ -1,10 +1,7 @@
+// app.js (Phase 2.6 frontend — daily pick + preload, photo-realistic, college student personas)
 const socket = io("https://three23p-backend.onrender.com");
-let audioPlayer = null;
-let currentTrend = null;
-let roomId = null;
-let lastDescriptionKey = null;
-let stopCycle = false;
-let currentTopic = "cosmetics"; // default
+let audioPlayer = null, currentTrend = null, roomId = null, lastDescriptionKey = null, stopCycle = false;
+let currentTopic = "cosmetics";
 
 /* ---------------- Room Setup ---------------- */
 (function initRoom() {
@@ -27,15 +24,13 @@ function playVoice(text, onEnd) {
   audioPlayer = new Audio(url);
   audioPlayer.onplay = () => {
     document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
-    fetch(`https://three23p-backend.onrender.com/api/start-voice?room=${roomId}`).catch(() => {});
     hideWarmupOverlay();
   };
   audioPlayer.onended = () => {
-    document.getElementById("voice-status").innerText = "⚙️💻 preppin’ the drop…";
+    document.getElementById("voice-status").innerText = "⚙️ preparing…";
     if (onEnd) onEnd();
   };
   audioPlayer.onerror = () => {
-    document.getElementById("voice-status").innerText = "⚙️💻 preppin’ the drop…";
     if (onEnd) onEnd();
   };
   audioPlayer.play();
@@ -46,7 +41,7 @@ function showWarmupOverlay(message) {
   const center = document.getElementById("warmup-center");
   if (center) {
     center.style.display = "flex";
-    center.innerText = message || "✨🔥💖 AI is warming up… 🌈🥹💅";
+    center.innerText = message || "✨ AI warming up…";
   }
 }
 function hideWarmupOverlay() {
@@ -54,11 +49,10 @@ function hideWarmupOverlay() {
   if (center) center.style.display = "none";
 }
 
-/* ---------------- Load Trend ---------------- */
+/* ---------------- Load Trend + Voice ---------------- */
 async function loadTrend() {
   if (stopCycle) return;
-  let apiUrl = "https://three23p-backend.onrender.com/api/trend?room=" + roomId + "&topic=" + currentTopic;
-  const res = await fetch(apiUrl);
+  const res = await fetch("https://three23p-backend.onrender.com/api/trend?room=" + roomId + "&topic=" + currentTopic);
   const newTrend = await res.json();
   if (!newTrend || !newTrend.description) {
     showWarmupOverlay();
@@ -70,20 +64,9 @@ async function loadTrend() {
   // Update UI
   document.getElementById("r-title").innerText = currentTrend.brand;
   document.getElementById("r-artist").innerText = currentTrend.product;
-  document.getElementById("r-persona").innerText = currentTrend.persona ? `👤 Featuring ${currentTrend.persona}` : "";
+  document.getElementById("r-persona").innerText = currentTrend.persona || "";
   document.getElementById("r-desc").innerText = currentTrend.description;
-
-  // Dynamic Label
-  let label;
-  if (currentTrend.isDaily) {
-    label = "🌅 pick of the day";
-  } else {
-    if (currentTopic === "cosmetics") label = "⚡ beauty drip";
-    else if (currentTopic === "music") label = "🎶 looped vibe";
-    else if (currentTopic === "politics") label = "🏛 ongoing rant";
-    else label = "🌐 glitch loop";
-  }
-  document.getElementById("r-label").innerText = label;
+  document.getElementById("r-label").innerText = currentTrend.isDaily ? "🌅 pick of the day" : "⚡ real-time drip";
 
   if (currentTrend.image) {
     document.getElementById("r-img").src = currentTrend.image;
@@ -94,7 +77,6 @@ async function loadTrend() {
     document.getElementById("r-fallback").style.display = "block";
   }
 
-  // Voice + preload cycle
   const descriptionKey = currentTrend.description;
   if (descriptionKey !== lastDescriptionKey) {
     lastDescriptionKey = descriptionKey;
