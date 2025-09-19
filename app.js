@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — op2 updated
+// app.js — Sticker Booth Style (Gen-Z) — op3 (parallel fast mode)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -35,18 +35,11 @@ function playVoice(text,onEnd){
 /* ---------------- Overlay Helpers ---------------- */
 function showOverlay(){
   const c = document.getElementById("warmup-center");
-  if(c){
-    c.style.display="flex";
-    c.style.visibility="visible";
-    c.innerHTML="";
-  }
+  if(c){ c.style.display="flex"; c.style.visibility="visible"; c.innerHTML=""; }
 }
 function hideOverlay(){
   const c = document.getElementById("warmup-center");
-  if(c){
-    c.style.display="none";
-    c.style.visibility="hidden";
-  }
+  if(c){ c.style.display="none"; c.style.visibility="hidden"; }
 }
 function appendOverlay(msg,color="#fff"){
   const line = document.createElement("div");
@@ -56,7 +49,7 @@ function appendOverlay(msg,color="#fff"){
   const c = document.getElementById("warmup-center");
   c.appendChild(line);
   c.scrollTop = c.scrollHeight;
-  return line; // ✅ return reference
+  return line;
 }
 
 /* ---------------- UI Update ---------------- */
@@ -76,7 +69,7 @@ function updateUI(trend){
     document.getElementById("r-fallback").style.display="block";
   }
 
-  // ✅ show mimicLine if exists
+  // ✅ mimicLine
   if(trend.mimicLine){
     let m = document.getElementById("r-mimic");
     if(!m){
@@ -102,108 +95,70 @@ function updateUI(trend){
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
   showOverlay();
-  let draftingTimer = null; // ✅ track timer for drafting line
+  let draftingTimer = null;
 
-  if(topic==="cosmetics"){
-    appendOverlay("💄 request sent for 323cosmetics","var(--cosmetics-color)");
-    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--cosmetics-color)"),1000);
-    setTimeout(()=>{
-      const line = appendOverlay("✍️ drafting description…","var(--cosmetics-color)");
-      line.classList.add("blinking");
-      let elapsed = 0;
-      draftingTimer = setInterval(()=>{
-        elapsed++;
-        if(elapsed < 60){
-          line.innerText = "✍️ drafting description… " + elapsed + "s";
-        } else {
-          const mins = Math.floor(elapsed/60);
-          const secs = elapsed % 60;
-          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
-        }
-      },1000);
-    },2000);
-  }
-  if(topic==="music"){
-    appendOverlay("🎶 request sent for 323music","var(--music-color)");
-    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--music-color)"),1000);
-    setTimeout(()=>{
-      const line = appendOverlay("✍️ drafting description…","var(--music-color)");
-      line.classList.add("blinking");
-      let elapsed = 0;
-      draftingTimer = setInterval(()=>{
-        elapsed++;
-        if(elapsed < 60){
-          line.innerText = "✍️ drafting description… " + elapsed + "s";
-        } else {
-          const mins = Math.floor(elapsed/60);
-          const secs = elapsed % 60;
-          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
-        }
-      },1000);
-    },2000);
-  }
-  if(topic==="politics"){
-    appendOverlay("🏛️ request sent for 323politics","var(--politics-color)");
-    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--politics-color)"),1000);
-    setTimeout(()=>{
-      const line = appendOverlay("✍️ drafting description…","var(--politics-color)");
-      line.classList.add("blinking");
-      let elapsed = 0;
-      draftingTimer = setInterval(()=>{
-        elapsed++;
-        if(elapsed < 60){
-          line.innerText = "✍️ drafting description… " + elapsed + "s";
-        } else {
-          const mins = Math.floor(elapsed/60);
-          const secs = elapsed % 60;
-          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
-        }
-      },1000);
-    },2000);
-  }
-  if(topic==="aidrop"){
-    appendOverlay("🌐 request sent for 323aidrop","var(--aidrop-color)");
-    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--aidrop-color)"),1000);
-    setTimeout(()=>{
-      const line = appendOverlay("✍️ drafting description…","var(--aidrop-color)");
-      line.classList.add("blinking");
-      let elapsed = 0;
-      draftingTimer = setInterval(()=>{
-        elapsed++;
-        if(elapsed < 60){
-          line.innerText = "✍️ drafting description… " + elapsed + "s";
-        } else {
-          const mins = Math.floor(elapsed/60);
-          const secs = elapsed % 60;
-          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
-        }
-      },1000);
-    },2000);
-  }
+  // Logs: request + pool
+  appendOverlay(
+    (topic==="cosmetics" ? "💄" : topic==="music" ? "🎶" : topic==="politics" ? "🏛️" : "🌐") +
+    " request sent for 323" + topic,
+    "var(--" + topic + "-color)"
+  );
+  setTimeout(()=>appendOverlay("🧩 pool chosen","var(--" + topic + "-color)"),1000);
 
-  const res = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
-  const trend = await res.json();
+  // Drafting log starts immediately
+  const draftLine = appendOverlay("✍️ drafting description…","var(--" + topic + "-color)");
+  draftLine.classList.add("blinking");
+  let elapsed = 0;
+  draftingTimer = setInterval(()=>{
+    elapsed++;
+    if(elapsed < 60){
+      draftLine.innerText = "✍️ drafting description… " + elapsed + "s";
+    } else {
+      const mins = Math.floor(elapsed/60);
+      const secs = elapsed % 60;
+      draftLine.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
+    }
+  },1000);
 
-  setTimeout(()=>{
-    if(draftingTimer){ clearInterval(draftingTimer); }
+  try {
+    const res = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
+    const trend = await res.json();
+
+    // Stop drafting when description is ready
+    if(draftingTimer) clearInterval(draftingTimer);
+    draftLine.classList.remove("blinking");
     appendOverlay("✅ description ready","#e0ffe0");
-  },4000);
 
-  setTimeout(()=>appendOverlay("🖼️ image rendering…","#d9f0ff"),5000);
-  setTimeout(()=>{
-    hideOverlay();
-    updateUI(trend);
-    playVoice(trend.description,()=>{
+    // Show description immediately + play voice
+    updateUI({ ...trend, image: null });
+    playVoice(trend.description, ()=>{
       if(autoRefresh){
         showOverlay();
         appendOverlay("⏳ fetching next drop…","#ffe0f0");
         setTimeout(()=>loadTrend(),2000);
       }
     });
-  },6000);
 
-  return trend;
+    // Handle image in parallel
+    appendOverlay("🖼️ image rendering…","#d9f0ff");
+    if(trend.image){
+      const img = new Image();
+      img.onload = ()=>{
+        appendOverlay("🖼️ image ready","#d9f0ff");
+        updateUI(trend);
+      };
+      img.onerror = ()=>appendOverlay("❌ image failed","#ffd9d9");
+      img.src = trend.image;
+    }
+
+    return trend;
+  } catch(e){
+    console.error("❌ Trend load error:", e);
+    if(draftingTimer) clearInterval(draftingTimer);
+    appendOverlay("❌ failed to load drop","#ffd9d9");
+  }
 }
+
 async function loadTrend(){ 
   if(stopCycle) return; 
   currentTrend = await runLogAndLoad(currentTopic); 
