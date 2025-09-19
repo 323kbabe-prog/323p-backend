@@ -1,4 +1,4 @@
-// app.js — clean overlay visibility (no black bar on start page)
+// app.js — Sticker Booth Style Logs
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer=null,currentTrend=null,roomId=null,lastDescriptionKey=null,stopCycle=false;
 let currentTopic="cosmetics";let autoRefresh=false;
@@ -26,29 +26,18 @@ function playVoice(text,onEnd){
 }
 
 /* ---------------- Overlay Helpers ---------------- */
-function showOverlay(msg){
+function showOverlay(){const c=document.getElementById("warmup-center");if(c){c.style.display="flex";c.style.visibility="visible";c.innerHTML="";}}
+function hideOverlay(){const c=document.getElementById("warmup-center");if(c){c.style.display="none";c.style.visibility="hidden";}}
+
+/* ---------------- Sticker Log Helper ---------------- */
+function appendOverlay(msg,color="#fff"){
+  const line=document.createElement("div");
+  line.className="log-line";
+  line.style.background=color;
+  line.innerText=msg;
   const c=document.getElementById("warmup-center");
-  if(c){
-    c.style.display="flex";
-    c.style.visibility="visible";
-    if(msg) c.innerText=msg;
-  }
-}
-function appendOverlay(msg){
-  const c=document.getElementById("warmup-center");
-  if(c){
-    c.style.display="flex";
-    c.style.visibility="visible";
-    c.innerText+="\n"+msg;
-    c.scrollTop=c.scrollHeight;
-  }
-}
-function hideOverlay(){
-  const c=document.getElementById("warmup-center");
-  if(c){
-    c.style.display="none";
-    c.style.visibility="hidden";
-  }
+  c.appendChild(line);
+  c.scrollTop=c.scrollHeight;
 }
 
 /* ---------------- UI Update ---------------- */
@@ -58,40 +47,32 @@ function updateUI(trend){
   document.getElementById("r-persona").innerText=trend.persona||"";
   document.getElementById("r-desc").innerText=trend.description;
   document.getElementById("r-label").innerText="🔄 live drop";
-  if(trend.image){
-    document.getElementById("r-img").src=trend.image;
-    document.getElementById("r-img").style.display="block";
-    document.getElementById("r-fallback").style.display="none";
-  } else {
-    document.getElementById("r-img").style.display="none";
-    document.getElementById("r-fallback").style.display="block";
-  }
+  if(trend.image){document.getElementById("r-img").src=trend.image;document.getElementById("r-img").style.display="block";document.getElementById("r-fallback").style.display="none";}
+  else{document.getElementById("r-img").style.display="none";document.getElementById("r-fallback").style.display="block";}
 }
 
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
-  const overlay=document.getElementById("warmup-center");
-  overlay.style.background="rgba(0,0,0,0.85)";
-  overlay.style.boxShadow="0 0 20px rgba(0,255,0,0.5)";
-  overlay.style.color="#0f0";
+  showOverlay();
 
-  showOverlay("[00:00] ✅ request sent (323"+topic+")");
-  setTimeout(()=>appendOverlay("[00:01] 🧩 pool chosen"),1000);
-  setTimeout(()=>appendOverlay("[00:02] 👤 persona locked: a young college student"),2000);
-  setTimeout(()=>appendOverlay("[00:03] ✍️ drafting description…"),3000);
+  appendOverlay("💡 request sent for 323"+topic,"#ffe0f0");
+  setTimeout(()=>appendOverlay("🧩 pool chosen","#e0f0ff"),1000);
+  setTimeout(()=>appendOverlay("👤 persona locked: a young college student","#fff9d9"),2000);
+  setTimeout(()=>appendOverlay("✍️ drafting description…","#f0e0ff"),3000);
 
   const res=await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
   const trend=await res.json();
 
-  setTimeout(()=>appendOverlay("[00:04] ✅ description ready"),4000);
-  setTimeout(()=>appendOverlay("[00:05] 🖼️ image rendering…"),5000);
+  setTimeout(()=>appendOverlay("✅ description ready","#e0ffe0"),4000);
+  setTimeout(()=>appendOverlay("🖼️ image rendering…","#d9f0ff"),5000);
 
   setTimeout(()=>{
     hideOverlay();
     updateUI(trend);
     playVoice(trend.description,()=>{
       if(autoRefresh){
-        showOverlay("⏳ fetching next…");
+        showOverlay();
+        appendOverlay("⏳ fetching next drop…","#ffe0f0");
         setTimeout(()=>loadTrend(),2000);
       }
     });
@@ -122,7 +103,7 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   const overlay=document.getElementById("warmup-center");
   overlay.style.display="flex";
   overlay.style.visibility="visible";
-  overlay.style.background="transparent"; // ✅ no black bar
+  overlay.style.background="transparent";
   overlay.style.boxShadow="none";
   overlay.style.color="#000";
   overlay.innerHTML="";
@@ -147,7 +128,7 @@ document.querySelectorAll("#topic-picker button").forEach(btn=>{
     const overlay=document.getElementById("warmup-center");
     overlay.style.display="flex";
     overlay.style.visibility="visible";
-    overlay.style.background="transparent"; // ✅ no black bar for confirm
+    overlay.style.background="transparent";
     overlay.style.boxShadow="none";
     overlay.style.color="#000";
     overlay.innerHTML="";
