@@ -1,4 +1,4 @@
-// server.js — live-only backend with mimicLine + 1:1 image prompts
+// server.js — live-only backend with mimicLine emoji prefix + 1:1 image prompts
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -160,11 +160,11 @@ async function generateDrop(topic){
   const description=await makeDescription(topic,pick);
   const imageUrl=await generateImageUrl(topic,pick,persona);
 
-  // ✅ Add mimicLine only for Music
+  // ✅ Add mimicLine only for Music, with emoji prefix
   let mimicLine=null;
   if(topic==="music"){
     const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
-    mimicLine=`I tried ${feature} like ${pick.artist} 😅.`;
+    mimicLine=`🎶✨ I tried ${feature} like ${pick.artist} 😅.`;
   }
 
   return {
