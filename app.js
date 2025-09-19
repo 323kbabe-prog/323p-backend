@@ -90,38 +90,43 @@ function updateImage(imageUrl){
 }
 
 /* ---------------- Voice ---------------- */
-function playVoice(text,voiceLine,onEnd){
+function playVoice(text,onEnd){
   if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
+
+  // Add log for voice generation
+  let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
+  let genElapsed = 0;
+  const genTimer = setInterval(()=>{
+    genElapsed++;
+    voiceLine.innerText = "🎤 generating voice… " + genElapsed + "s";
+  },1000);
+
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
 
-  let voiceElapsed = 0;
-  let playing = false;
-
-  const voiceTimer = setInterval(()=>{
-    voiceElapsed++;
-    if(!playing){
-      voiceLine.innerText = "🔊 preparing voice… " + voiceElapsed + "s";
-    } else {
-      voiceLine.innerText = "🎶 voice playing… " + voiceElapsed + "s";
-    }
-  },1000);
-
   audioPlayer.onplay = ()=>{
-    playing = true;
-    voiceElapsed = 0; // reset when playback begins
-    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
+    // stop generation timer
+    clearInterval(genTimer);
+    removeOverlayLine(voiceLine,"✅ voice generated");
+
+    // start playback log
+    voiceLine = appendOverlay("🎶 voice playing…","#ffe0f0",true);
+    let playElapsed = 0;
+    const playTimer = setInterval(()=>{
+      playElapsed++;
+      voiceLine.innerText = "🎶 voice playing… " + playElapsed + "s";
+    },1000);
+
+    audioPlayer.onended = ()=>{
+      clearInterval(playTimer);
+      removeOverlayLine(voiceLine,"✅ voice finished ("+playElapsed+"s)");
+      if(onEnd) onEnd();
+    };
   };
-  audioPlayer.onended = ()=>{
-    clearInterval(voiceTimer);
-    voiceLine.innerText = "✅ voice finished ("+voiceElapsed+"s)";
-    hideOverlay();
-    if(onEnd) onEnd();
-  };
+
   audioPlayer.onerror = ()=>{
-    clearInterval(voiceTimer);
-    voiceLine.innerText = "❌ voice error";
-    hideOverlay();
+    clearInterval(genTimer);
+    removeOverlayLine(voiceLine,"❌ voice error");
     if(onEnd) onEnd();
   };
 
