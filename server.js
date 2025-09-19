@@ -1,4 +1,4 @@
-// server.js — live-only backend with updated Music mimic algorithm
+// server.js — live-only backend with artist-specific Music mimic algorithm
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -23,6 +23,59 @@ function randomStickers(countMin=3,countMax=6){
   const count=Math.floor(Math.random()*(countMax-countMin+1))+countMin;
   return Array.from({length:count},()=>stickerPool[Math.floor(Math.random()*stickerPool.length)]).join(" ");
 }
+
+/* ---------------- Artist → Feature Map ---------------- */
+const artistFeatures = {
+  "Doja Cat": "playful smirk with sharp eyeliner eyes, head tilted slightly",
+  "Ice Spice": "wide eyes and curly hair pulled forward around cheeks",
+  "NewJeans": "big innocent eyes with bangs covering forehead, soft smile",
+  "Jungkook": "gentle smile with fringe slightly covering eyes, boyish charm",
+  "The Weeknd": "serious glare with furrowed brows and slicked back hair",
+  "Olivia Rodrigo": "intense pouty lips with eyeliner stare",
+  "BLACKPINK": "confident bold eyes with hair flipped back",
+  "Drake": "raised brows with a knowing smirk and trimmed beard look",
+  "SZA": "dreamy eyes with head tilted and long wavy hair",
+  "Travis Scott": "intense wide eyes, braided hair pulled by both hands",
+  "Peso Pluma": "serious stare with side-swept hair and sharp jawline",
+  "Karol G": "serious expression with slightly squinted eyes and long hair parted",
+  "Rema": "wide playful eyes with short twisted hair touched by hand",
+  "Tyla": "smiling pout with hand on cheek, hair styled sleek back",
+  "Billie Eilish": "tired dreamy eyes, hair covering one side of face",
+  "Metro Boomin": "straight face with dark cap pulled low, intense gaze",
+  "Latto": "confident smirk with raised brow and lip gloss pout",
+  "Lizzo": "big expressive eyes and wide grin, hair pulled high",
+  "Dua Lipa": "pouty lips with chin up, sleek long hair pushed back",
+  "Miley Cyrus": "wild grin with tongue slightly out, tousled hair",
+  "Justin Bieber": "soft boyish smile, fringe pushed forward",
+  "The Kid LAROI": "confused stare with messy blond hair in face",
+  "Taylor Swift": "wide eyes with red lips, side fringe hair style",
+  "Harry Styles": "gentle grin with tousled hair and dimples",
+  "Bad Bunny": "serious cool look with shaved hairline and shades mimic",
+  "Anitta": "flirty smirk with hand playing in long hair",
+  "Saweetie": "pouty lips and glamorous hair flip",
+  "Lil Nas X": "playful shocked eyes with mischievous grin",
+  "Post Malone": "relaxed eyes with slightly open mouth and hand through hair",
+  "Ariana Grande": "big eyes with pout, hair styled in high ponytail",
+  "Bruno Mars": "smirk with one brow raised, curly hair pushed up",
+  "Lana Del Rey": "melancholy eyes with soft parted lips, hand near cheek",
+  "Billie Eilish (Happier Than Ever)": "serious tired stare with blonde hair brushed to side",
+  "Post Malone & Swae Lee": "relaxed sleepy eyes with casual hair tousle",
+  "Beyoncé": "confident sharp eyes with hair pulled back queenly pose",
+  "ROSALÍA": "intense stare with pout lips and sleek pulled hair",
+  "Lil Baby": "serious tight eyes with short hair touched at sides",
+  "Shakira": "big smile with wide eyes and wavy hair pushed forward",
+  "Ed Sheeran": "soft eyes with small smile, messy ginger hair",
+  "Kendrick Lamar": "serious stare with brows furrowed, short hair cropped",
+  "Megan Thee Stallion": "confident pout with hair framing both sides of face",
+  "Nicki Minaj": "dramatic wide eyes with bold lip pout, hair pulled long",
+  "Florence + The Machine": "ethereal gaze with hand in flowing hair",
+  "Sam Smith": "serious stare with slightly parted lips and clean hair",
+  "Stray Kids": "bright wide eyes with playful open-mouth smile, styled bangs",
+  "Seventeen": "group-idol bright eyes, hair swept with both hands",
+  "IVE": "intense idol stare with hair pulled back, lips parted",
+  "LE SSERAFIM": "sharp bold eyes with trendy bangs and pout",
+  "NCT Dream": "cute playful grin with wide open eyes, bangs styled forward"
+};
 
 /* ---------------- Pools ---------------- */
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
@@ -52,7 +105,8 @@ async function generateImageUrl(topic,pick,persona){
     prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
   }
   else if(topic==="music"){
-    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate the performer of the song "${pick.track}". They are using both hands on their face or hair to adjust their eye size, hair style, or facial features in order to mimic the performer’s look. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+    const feature = artistFeatures[pick.artist] || "dramatic stage expression with face and hair adjustments";
+    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate ${feature} (inspired by ${pick.artist}). They are using both hands on their face or hair to adjust their eye size, hair style, or facial features in order to mimic the performer’s look. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
   }
   else if(topic==="politics"){
     prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
