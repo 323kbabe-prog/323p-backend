@@ -1,8 +1,7 @@
-/* ----------------------------------------
-   323aidrop Ecosystem Topic Pools (50 each)
-   ---------------------------------------- */
+// topicPools.js
+// 50-item pools for each topic in the 323aidrop ecosystem.
 
-// Cosmetics — original 50 items
+/* ---------------- Cosmetics ---------------- */
 const TOP50_COSMETICS = [
   { brand: "Rhode", product: "Peptide Lip Tint" },
   { brand: "Fenty Beauty", product: "Gloss Bomb Lip Gloss" },
@@ -55,7 +54,7 @@ const TOP50_COSMETICS = [
   { brand: "Dyson Beauty", product: "Airwrap Styler" }
 ];
 
-// Music — 50 trending artists + tracks
+/* ---------------- Music ---------------- */
 const TOP_MUSIC = [
   { artist: "Doja Cat", track: "Paint The Town Red" },
   { artist: "Ice Spice", track: "Deli" },
@@ -72,7 +71,7 @@ const TOP_MUSIC = [
   { artist: "Rema", track: "Calm Down" },
   { artist: "Tyla", track: "Water" },
   { artist: "Billie Eilish", track: "What Was I Made For?" },
-  { artist: "Metro Boomin", track: "Creepin'" },
+  { artist: "Metro Boomin", track: "Creepin’" },
   { artist: "Latto", track: "Lottery" },
   { artist: "Lizzo", track: "About Damn Time" },
   { artist: "Dua Lipa", track: "Dance The Night" },
@@ -108,7 +107,7 @@ const TOP_MUSIC = [
   { artist: "NCT Dream", track: "Candy" }
 ];
 
-// Politics — 50 issues + keywords
+/* ---------------- Politics ---------------- */
 const TOP_POLITICS = [
   { issue: "Climate Policy", keyword: "Paris Agreement" },
   { issue: "Healthcare", keyword: "Medicare Expansion" },
@@ -159,7 +158,7 @@ const TOP_POLITICS = [
   { issue: "Labor", keyword: "Gig Worker Rights" }
 ];
 
-// Aidrop — 50 canon AI-native concepts
+/* ---------------- Aidrop ---------------- */
 const TOP_AIDROP = [
   { concept: "Infinite TikTok Loop" },
   { concept: "AI Noodles" },
@@ -213,7 +212,6 @@ const TOP_AIDROP = [
   { concept: "AI Ramen Cook-Off" }
 ];
 
-// Export all
 module.exports = {
   TOP50_COSMETICS,
   TOP_MUSIC,
