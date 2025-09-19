@@ -1,9 +1,9 @@
-// app.js — Confirm first, then auto-refresh with live log overlay
+// app.js — Confirm first, then auto-refresh with styled confirm button
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer=null,currentTrend=null,roomId=null,lastDescriptionKey=null,stopCycle=false;
 let currentTopic="cosmetics";let autoRefresh=false;
 
-/* ---------------- Room Setup ---------------- */
+/* Room Setup */
 (function initRoom(){
   let params=new URLSearchParams(window.location.search);
   roomId=params.get("room");
@@ -14,7 +14,7 @@ let currentTopic="cosmetics";let autoRefresh=false;
   }
 })();
 
-/* ---------------- Voice ---------------- */
+/* Voice */
 function playVoice(text,onEnd){
   if(audioPlayer){audioPlayer.pause();audioPlayer=null;}
   const url="https://three23p-backend.onrender.com/api/voice?text="+encodeURIComponent(text);
@@ -25,45 +25,25 @@ function playVoice(text,onEnd){
   audioPlayer.play();
 }
 
-/* ---------------- Overlay Helpers ---------------- */
-function showOverlay(msg){
-  const c=document.getElementById("warmup-center");
-  if(c){c.style.display="flex";c.innerText=msg||"";}
-}
-function appendOverlay(msg){
-  const c=document.getElementById("warmup-center");
-  if(c){
-    c.style.display="flex";
-    c.innerText += "\n"+msg;
-    c.scrollTop = c.scrollHeight;
-  }
-}
-function hideOverlay(){
-  const c=document.getElementById("warmup-center");
-  if(c)c.style.display="none";
-}
+/* Overlay Helpers */
+function showOverlay(msg){const c=document.getElementById("warmup-center");if(c){c.style.display="flex";c.innerText=msg||"";}}
+function appendOverlay(msg){const c=document.getElementById("warmup-center");if(c){c.style.display="flex";c.innerText+="\n"+msg;c.scrollTop=c.scrollHeight;}}
+function hideOverlay(){const c=document.getElementById("warmup-center");if(c)c.style.display="none";}
 
-/* ---------------- UI Update ---------------- */
+/* UI Update */
 function updateUI(trend){
   document.getElementById("r-title").innerText=trend.brand;
   document.getElementById("r-artist").innerText=trend.product;
   document.getElementById("r-persona").innerText=trend.persona||"";
   document.getElementById("r-desc").innerText=trend.description;
   document.getElementById("r-label").innerText="🔄 live drop";
-  if(trend.image){
-    document.getElementById("r-img").src=trend.image;
-    document.getElementById("r-img").style.display="block";
-    document.getElementById("r-fallback").style.display="none";
-  } else {
-    document.getElementById("r-img").style.display="none";
-    document.getElementById("r-fallback").style.display="block";
-  }
+  if(trend.image){document.getElementById("r-img").src=trend.image;document.getElementById("r-img").style.display="block";document.getElementById("r-fallback").style.display="none";}
+  else{document.getElementById("r-img").style.display="none";document.getElementById("r-fallback").style.display="block";}
 }
 
-/* ---------------- Live Log Sequence ---------------- */
+/* Live Log + Load */
 async function runLogAndLoad(topic){
   showOverlay("[00:00] ✅ request sent (323"+topic+")");
-
   setTimeout(()=>appendOverlay("[00:01] 🧩 pool chosen"),1000);
   setTimeout(()=>appendOverlay("[00:02] 👤 persona locked: a young college student"),2000);
   setTimeout(()=>appendOverlay("[00:03] ✍️ drafting description…"),3000);
@@ -87,14 +67,9 @@ async function runLogAndLoad(topic){
 
   return trend;
 }
+async function loadTrend(){if(stopCycle)return;currentTrend=await runLogAndLoad(currentTopic);}
 
-/* ---------------- Load Trend ---------------- */
-async function loadTrend(){
-  if(stopCycle)return;
-  currentTrend=await runLogAndLoad(currentTopic);
-}
-
-/* ---------------- Emoji map for topics ---------------- */
+/* Emoji map */
 function topicEmoji(topic){
   if(topic==="cosmetics") return "💄";
   if(topic==="music") return "🎶";
@@ -103,7 +78,7 @@ function topicEmoji(topic){
   return "⚡";
 }
 
-/* ---------------- Start button ---------------- */
+/* Start confirm */
 document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("start-screen").style.display="none";
   document.getElementById("app").style.display="flex";
@@ -111,17 +86,13 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   showOverlay("🔄 confirm first drop");
 
   const btn=document.createElement("button");
-  btn.className="start-btn"; // ✅ styled like start button
+  btn.className="start-btn"; // ✅ same medium width as start button
   btn.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
-  btn.onclick=()=>{
-    btn.remove();
-    autoRefresh=true;
-    loadTrend();
-  };
+  btn.onclick=()=>{btn.remove();autoRefresh=true;loadTrend();};
   document.getElementById("warmup-center").appendChild(btn);
 });
 
-/* ---------------- Topic toggle ---------------- */
+/* Topic toggle confirm */
 document.querySelectorAll("#topic-picker button").forEach(btn=>{
   btn.addEventListener("click",()=>{
     currentTopic=btn.dataset.topic;
@@ -129,13 +100,9 @@ document.querySelectorAll("#topic-picker button").forEach(btn=>{
     showOverlay("🔄 confirm new drop for "+currentTopic);
 
     const b=document.createElement("button");
-    b.className="start-btn";
+    b.className="start-btn"; // ✅ styled like start button
     b.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
-    b.onclick=()=>{
-      b.remove();
-      autoRefresh=true;
-      loadTrend();
-    };
+    b.onclick=()=>{b.remove();autoRefresh=true;loadTrend();};
     document.getElementById("warmup-center").appendChild(b);
   });
 });
