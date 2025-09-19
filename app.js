@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — updated with parallel timers
+// app.js — Sticker Booth Style (Gen-Z) — full version with timers for all logs
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -32,12 +32,10 @@ function playVoice(text,onEnd){
     clearInterval(voiceTimer);
     removeOverlayLine(voiceLine,"✅ voice ready");
   };
-audioPlayer.onended = ()=>{
-  clearInterval(voiceTimer);
-  removeOverlayLine(voiceLine,"✅ voice ready");
-  setTimeout(()=>hideOverlay(),1000); // 👈 clears all remaining logs
-  if(onEnd) onEnd();
-};
+  audioPlayer.onended = ()=>{
+    setTimeout(()=>hideOverlay(),800); // clears any leftover logs
+    if(onEnd) onEnd();
+  };
   audioPlayer.onerror = ()=>{
     clearInterval(voiceTimer);
     removeOverlayLine(voiceLine,"❌ voice error");
@@ -124,8 +122,29 @@ function updateUI(trend){
 async function runLogAndLoad(topic){
   showOverlay();
 
-  appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff");
-  setTimeout(()=>appendOverlay("🧩 pool chosen","#fff"),500);
+  // Request sent log with timer
+  let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
+  let reqElapsed = 0;
+  const reqTimer = setInterval(()=>{
+    reqElapsed++;
+    reqLine.innerText = `${topicEmoji(topic)} request sent for 323${topic} ${reqElapsed}s`;
+  },1000);
+  setTimeout(()=>{
+    clearInterval(reqTimer);
+    removeOverlayLine(reqLine,"✅ request sent");
+  },3000);
+
+  // Pool chosen log with timer
+  let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
+  let poolElapsed = 0;
+  const poolTimer = setInterval(()=>{
+    poolElapsed++;
+    poolLine.innerText = `🧩 pool chosen ${poolElapsed}s`;
+  },1000);
+  setTimeout(()=>{
+    clearInterval(poolTimer);
+    removeOverlayLine(poolLine,"✅ pool chosen");
+  },3000);
 
   // Timers for description + image
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
@@ -156,8 +175,6 @@ async function runLogAndLoad(topic){
       showOverlay();
       appendOverlay("⏳ fetching next drop…","#ffe0f0");
       setTimeout(()=>loadTrend(),2000);
-    } else {
-      hideOverlay();
     }
   });
 
