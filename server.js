@@ -1,4 +1,5 @@
-// server.js — backend with mimicLine + safe Music image prompts (parallelized)
+
+// server.js — backend with mimicLine + safe Music image prompts (his/her pronouns)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -101,19 +102,19 @@ const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topi
 async function makeDescription(topic,pick){
   let prompt,system;
   if(topic==="cosmetics"){
-    prompt=`Write a ~140 word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
+    prompt=`Write a 70+ word first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
     system="You are a college student talking about beauty.";
   }
   else if(topic==="music"){
-    prompt=`Write a ~140 word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
+    prompt=`Write a 70+ word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
     system="You are a college student reacting to music.";
   }
   else if(topic==="politics"){
-    prompt=`Write a ~140 word rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
+    prompt=`Write a 70+ word rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
     system="You are a college student activist.";
   }
   else{
-    prompt=`Write a ~140 word surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
+    prompt=`Write a 70+ word surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
     system="You are a college student living AI culture.";
   }
 
@@ -154,7 +155,7 @@ async function generateImageUrl(topic,pick,persona){
     const out=await openai.images.generate({
       model:"gpt-image-1",
       prompt,
-      size:"1024x1024"
+      size:"1024x1024" // ✅ always square
     });
     const d=out?.data?.[0];
     if(d?.url) return d.url;
@@ -166,9 +167,8 @@ async function generateImageUrl(topic,pick,persona){
   return "https://placehold.co/600x600?text=No+Image";
 }
 
-/* ---------------- API: description ---------------- */
-app.get("/api/description",async(req,res)=>{
-  const topic=req.query.topic||"cosmetics";
+/* ---------------- Drop Generator ---------------- */
+async function generateDrop(topic){
   let pick;
   if(topic==="cosmetics") pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
   else if(topic==="music") pick=TOP_MUSIC[Math.floor(Math.random()*TOP_MUSIC.length)];
@@ -177,34 +177,36 @@ app.get("/api/description",async(req,res)=>{
 
   const persona=randomPersona();
   const description=await makeDescription(topic,pick);
+  const imageUrl=await generateImageUrl(topic,pick,persona);
 
+  // ✅ Add mimicLine only for Music
   let mimicLine=null;
   if(topic==="music"){
     const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
     mimicLine=`🎶✨ I tried ${feature} like ${pick.artist} 😅.`;
   }
 
-  res.json({
+  return {
     brand:pick.brand||pick.artist||pick.issue||"323aidrop",
     product:pick.product||pick.track||pick.keyword||pick.concept,
     persona,
     description,
-    mimicLine
-  });
-});
+    mimicLine,
+    hashtags:["#NowTrending"],
+    image:imageUrl,
+    refresh:3000,
+    isDaily:false
+  };
+}
 
-/* ---------------- API: image ---------------- */
-app.get("/api/image",async(req,res)=>{
+/* ---------------- API ---------------- */
+app.get("/api/trend",async(req,res)=>{
   const topic=req.query.topic||"cosmetics";
-  let pick;
-  if(topic==="cosmetics") pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
-  else if(topic==="music") pick=TOP_MUSIC[Math.floor(Math.random()*TOP_MUSIC.length)];
-  else if(topic==="politics") pick=TOP_POLITICS[Math.floor(Math.random()*TOP_POLITICS.length)];
-  else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
-
-  const persona=randomPersona();
-  const imageUrl=await generateImageUrl(topic,pick,persona);
-  res.json({ image:imageUrl });
+  const roomId=req.query.room;
+  if(!roomId) return res.status(400).json({error:"room parameter required"});
+  console.log(`🔄 Live generation: topic=${topic}, room=${roomId}`);
+  const drop=await generateDrop(topic);
+  res.json(drop);
 });
 
 /* ---------------- Voice ---------------- */
@@ -227,7 +229,12 @@ app.get("/api/voice",async(req,res)=>{
 });
 
 /* ---------------- Chat ---------------- */
-io.on("connection",(socket)=>{ socket.on("joinRoom",(roomId)=>{ socket.join(roomId); socket.roomId=roomId; }); });
+io.on("connection",(socket)=>{
+  socket.on("joinRoom",(roomId)=>{
+    socket.join(roomId);
+    socket.roomId=roomId;
+  });
+});
 
 /* ---------------- Start ---------------- */
 app.use(express.static(path.join(__dirname)));
