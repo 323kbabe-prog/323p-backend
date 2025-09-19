@@ -105,15 +105,15 @@ async function makeDescription(topic,pick){
     system="You are a college student talking about beauty.";
   }
   else if(topic==="music"){
-    prompt=`Write a 70+ word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
+    prompt=`Write a 140+ word first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
     system="You are a college student reacting to music.";
   }
   else if(topic==="politics"){
-    prompt=`Write a 70+ word rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
+    prompt=`Write a 140+ word rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
     system="You are a college student activist.";
   }
   else{
-    prompt=`Write a 70+ word surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
+    prompt=`Write a 140+ word surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
     system="You are a college student living AI culture.";
   }
 
