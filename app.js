@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — split endpoints + timers for all logs
+// app.js — Sticker Booth Style (Gen-Z) — split endpoints + parallel description + image fetch
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -131,7 +131,7 @@ function updateImage(imageUrl){
 async function runLogAndLoad(topic){
   showOverlay();
 
-  // Request sent log
+  // Request log
   let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
   let reqElapsed=0;
   const reqTimer=setInterval(()=>{
@@ -140,7 +140,7 @@ async function runLogAndLoad(topic){
   },1000);
   setTimeout(()=>{clearInterval(reqTimer); removeOverlayLine(reqLine,"✅ request sent");},3000);
 
-  // Pool chosen log
+  // Pool log
   let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
   let poolElapsed=0;
   const poolTimer=setInterval(()=>{
@@ -165,15 +165,17 @@ async function runLogAndLoad(topic){
     imgLine.innerText="🖼️ rendering image… "+imgElapsed+"s";
   },1000);
 
-  // 1. Fetch description
-  const descRes = await fetch("https://three23p-backend.onrender.com/api/description?topic="+topic);
-  const trend = await descRes.json();
+  // Start both fetches in parallel
+  const descPromise = fetch("https://three23p-backend.onrender.com/api/description?topic="+topic).then(r=>r.json());
+  const imgPromise  = fetch("https://three23p-backend.onrender.com/api/image?topic="+topic).then(r=>r.json());
 
+  // Handle description first
+  const trend = await descPromise;
   clearInterval(descTimer);
   removeOverlayLine(descLine,"✅ description ready");
   updateUI(trend);
 
-  // Start voice log here
+  // Start voice
   playVoice(trend.description,()=>{
     if(autoRefresh){
       showOverlay();
@@ -182,19 +184,16 @@ async function runLogAndLoad(topic){
     }
   });
 
-  // 2. Fetch image separately
-  fetch("https://three23p-backend.onrender.com/api/image?topic="+topic)
-    .then(res=>res.json())
-    .then(data=>{
-      clearInterval(imgTimer);
-      removeOverlayLine(imgLine,"✅ image ready");
-      updateImage(data.image);
-    })
-    .catch(()=>{
-      clearInterval(imgTimer);
-      removeOverlayLine(imgLine,"❌ image error");
-      updateImage(null);
-    });
+  // Handle image when ready
+  imgPromise.then(data=>{
+    clearInterval(imgTimer);
+    removeOverlayLine(imgLine,"✅ image ready");
+    updateImage(data.image);
+  }).catch(()=>{
+    clearInterval(imgTimer);
+    removeOverlayLine(imgLine,"❌ image error");
+    updateImage(null);
+  });
 
   return trend;
 }
