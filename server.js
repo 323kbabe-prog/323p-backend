@@ -1,4 +1,4 @@
-// server.js (simplified — live only, no daily pick, no preload)
+// server.js — live-only (no daily pick, no preload) + logs
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
