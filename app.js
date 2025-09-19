@@ -1,4 +1,4 @@
-// app.js — Sticker Booth Style (Gen-Z) — op2 updated
+// app.js — Sticker Booth Style (Gen-Z) — updated with parallel timers
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -20,15 +20,26 @@ function playVoice(text,onEnd){
   if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
+
+  let voiceLine = appendOverlay("🔊 preparing voice…","var(--music-color)",true);
+  let voiceElapsed = 0;
+  const voiceTimer = setInterval(()=>{
+    voiceElapsed++;
+    voiceLine.innerText = "🔊 preparing voice… " + voiceElapsed + "s";
+  },1000);
+
   audioPlayer.onplay = ()=>{
-    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
-    hideOverlay();
+    clearInterval(voiceTimer);
+    removeOverlayLine(voiceLine,"✅ voice ready");
   };
   audioPlayer.onended = ()=>{
-    document.getElementById("voice-status").innerText = "⚙️ preparing…";
     if(onEnd) onEnd();
   };
-  audioPlayer.onerror = ()=>{ if(onEnd) onEnd(); };
+  audioPlayer.onerror = ()=>{
+    clearInterval(voiceTimer);
+    removeOverlayLine(voiceLine,"❌ voice error");
+    if(onEnd) onEnd();
+  };
   audioPlayer.play();
 }
 
@@ -48,15 +59,23 @@ function hideOverlay(){
     c.style.visibility="hidden";
   }
 }
-function appendOverlay(msg,color="#fff"){
+function appendOverlay(msg,color="#fff",blinking=false){
   const line = document.createElement("div");
   line.className="log-line";
+  if(blinking) line.classList.add("blinking");
   line.style.background=color;
   line.innerText=msg;
   const c = document.getElementById("warmup-center");
   c.appendChild(line);
   c.scrollTop = c.scrollHeight;
-  return line; // ✅ return reference
+  return line;
+}
+function removeOverlayLine(line,finalMsg){
+  if(line){
+    line.classList.remove("blinking");
+    line.innerText = finalMsg;
+    setTimeout(()=>line.remove(),800); // disappear after short delay
+  }
 }
 
 /* ---------------- UI Update ---------------- */
@@ -76,7 +95,6 @@ function updateUI(trend){
     document.getElementById("r-fallback").style.display="block";
   }
 
-  // ✅ show mimicLine if exists
   if(trend.mimicLine){
     let m = document.getElementById("r-mimic");
     if(!m){
@@ -102,108 +120,47 @@ function updateUI(trend){
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
   showOverlay();
-  let draftingTimer = null; // ✅ track timer for drafting line
 
-  if(topic==="cosmetics"){
-    appendOverlay("💄 request sent for 323cosmetics","var(--cosmetics-color)");
-    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--cosmetics-color)"),1000);
-    setTimeout(()=>{
-      const line = appendOverlay("✍️ drafting description…","var(--cosmetics-color)");
-      line.classList.add("blinking");
-      let elapsed = 0;
-      draftingTimer = setInterval(()=>{
-        elapsed++;
-        if(elapsed < 60){
-          line.innerText = "✍️ drafting description… " + elapsed + "s";
-        } else {
-          const mins = Math.floor(elapsed/60);
-          const secs = elapsed % 60;
-          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
-        }
-      },1000);
-    },2000);
-  }
-  if(topic==="music"){
-    appendOverlay("🎶 request sent for 323music","var(--music-color)");
-    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--music-color)"),1000);
-    setTimeout(()=>{
-      const line = appendOverlay("✍️ drafting description…","var(--music-color)");
-      line.classList.add("blinking");
-      let elapsed = 0;
-      draftingTimer = setInterval(()=>{
-        elapsed++;
-        if(elapsed < 60){
-          line.innerText = "✍️ drafting description… " + elapsed + "s";
-        } else {
-          const mins = Math.floor(elapsed/60);
-          const secs = elapsed % 60;
-          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
-        }
-      },1000);
-    },2000);
-  }
-  if(topic==="politics"){
-    appendOverlay("🏛️ request sent for 323politics","var(--politics-color)");
-    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--politics-color)"),1000);
-    setTimeout(()=>{
-      const line = appendOverlay("✍️ drafting description…","var(--politics-color)");
-      line.classList.add("blinking");
-      let elapsed = 0;
-      draftingTimer = setInterval(()=>{
-        elapsed++;
-        if(elapsed < 60){
-          line.innerText = "✍️ drafting description… " + elapsed + "s";
-        } else {
-          const mins = Math.floor(elapsed/60);
-          const secs = elapsed % 60;
-          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
-        }
-      },1000);
-    },2000);
-  }
-  if(topic==="aidrop"){
-    appendOverlay("🌐 request sent for 323aidrop","var(--aidrop-color)");
-    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--aidrop-color)"),1000);
-    setTimeout(()=>{
-      const line = appendOverlay("✍️ drafting description…","var(--aidrop-color)");
-      line.classList.add("blinking");
-      let elapsed = 0;
-      draftingTimer = setInterval(()=>{
-        elapsed++;
-        if(elapsed < 60){
-          line.innerText = "✍️ drafting description… " + elapsed + "s";
-        } else {
-          const mins = Math.floor(elapsed/60);
-          const secs = elapsed % 60;
-          line.innerText = "✍️ drafting description… " + mins + "min " + secs + "s";
-        }
-      },1000);
-    },2000);
-  }
+  appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff");
+  setTimeout(()=>appendOverlay("🧩 pool chosen","#fff"),500);
+
+  // Timers for description + image
+  let descLine = appendOverlay("✍️ drafting description…","#fff",true);
+  let imgLine  = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
+  let descElapsed=0, imgElapsed=0;
+
+  const descTimer = setInterval(()=>{
+    descElapsed++;
+    descLine.innerText = "✍️ drafting description… " + descElapsed + "s";
+  },1000);
+  const imgTimer = setInterval(()=>{
+    imgElapsed++;
+    imgLine.innerText = "🖼️ rendering image… " + imgElapsed + "s";
+  },1000);
 
   const res = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
   const trend = await res.json();
 
-  setTimeout(()=>{
-    if(draftingTimer){ clearInterval(draftingTimer); }
-    appendOverlay("✅ description ready","#e0ffe0");
-  },4000);
+  clearInterval(descTimer);
+  removeOverlayLine(descLine,"✅ description ready");
+  clearInterval(imgTimer);
+  removeOverlayLine(imgLine,"✅ image ready");
 
-  setTimeout(()=>appendOverlay("🖼️ image rendering…","#d9f0ff"),5000);
-  setTimeout(()=>{
-    hideOverlay();
-    updateUI(trend);
-    playVoice(trend.description,()=>{
-      if(autoRefresh){
-        showOverlay();
-        appendOverlay("⏳ fetching next drop…","#ffe0f0");
-        setTimeout(()=>loadTrend(),2000);
-      }
-    });
-  },6000);
+  // Update UI and start voice right away
+  updateUI(trend);
+  playVoice(trend.description,()=>{
+    if(autoRefresh){
+      showOverlay();
+      appendOverlay("⏳ fetching next drop…","#ffe0f0");
+      setTimeout(()=>loadTrend(),2000);
+    } else {
+      hideOverlay();
+    }
+  });
 
   return trend;
 }
+
 async function loadTrend(){ 
   if(stopCycle) return; 
   currentTrend = await runLogAndLoad(currentTopic); 
