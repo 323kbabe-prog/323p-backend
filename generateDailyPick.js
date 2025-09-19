@@ -17,7 +17,7 @@ function randomPersona() {
 const EMOJI_POOL = ["✨","💖","🔥","👀","😍","💅","🌈","🌸","😎","🤩","🫶","🥹","🧃","🌟","💋"];
 function randomEmojis(count=2) {
   return Array.from({ length: count }, () =>
-    EMOJI_POOL[Math.floor(Math.random()*EMOJI_POOL.length)]
+    EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)]
   ).join(" ");
 }
 
@@ -45,7 +45,8 @@ async function makeDescription(topic, pick) {
       messages: [{ role: "system", content: system }, { role: "user", content: prompt }]
     });
     return completion.choices[0].message.content.trim() + " " + randomEmojis(3);
-  } catch {
+  } catch (e) {
+    console.error(`❌ GPT error for ${topic}:`, e.message);
     return prompt + " " + randomEmojis(3);
   }
 }
@@ -54,6 +55,8 @@ async function makeDescription(topic, pick) {
 async function generateAllDailyPicks() {
   const today = new Date().toISOString().slice(0,10);
   const dailyPicks = {};
+
+  console.log(`\n🌅 Generating daily picks for ${today}\n`);
 
   // Cosmetics
   const c = TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
@@ -65,6 +68,7 @@ async function generateAllDailyPicks() {
     hashtags: ["#BeautyTok","#NowTrending"],
     isDaily: true
   };
+  console.log(`💄 Cosmetics Pick: ${c.brand} – ${c.product}`);
 
   // Music
   const m = TOP_MUSIC[Math.floor(Math.random()*TOP_MUSIC.length)];
@@ -76,6 +80,7 @@ async function generateAllDailyPicks() {
     hashtags: ["#NowTrending"],
     isDaily: true
   };
+  console.log(`🎶 Music Pick: ${m.artist} – ${m.track}`);
 
   // Politics
   const p = TOP_POLITICS[Math.floor(Math.random()*TOP_POLITICS.length)];
@@ -87,6 +92,7 @@ async function generateAllDailyPicks() {
     hashtags: ["#NowTrending"],
     isDaily: true
   };
+  console.log(`🏛 Politics Pick: ${p.issue} – ${p.keyword}`);
 
   // Aidrop
   const a = TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
@@ -98,12 +104,12 @@ async function generateAllDailyPicks() {
     hashtags: ["#NowTrending"],
     isDaily: true
   };
+  console.log(`🌐 Aidrop Pick: ${a.concept}`);
 
   // Save JSON
   const filePath = path.join(__dirname, "dailyPicks.json");
   fs.writeFileSync(filePath, JSON.stringify({ dailyDate: today, dailyPicks }, null, 2));
-  console.log(`🌅 Generated daily picks for all topics (${today})`);
-  console.log(`📂 Saved to ${filePath}`);
+  console.log(`\n✅ Saved all picks to ${filePath}\n`);
 }
 
 /* ---------------- Run ---------------- */
