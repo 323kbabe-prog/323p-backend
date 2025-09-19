@@ -154,7 +154,7 @@ async function generateImageUrl(topic,pick,persona){
     const out=await openai.images.generate({
       model:"gpt-image-1",
       prompt,
-      size:"1024x1024" // ✅ always square
+      size:"1024x1024"
     });
     const d=out?.data?.[0];
     if(d?.url) return d.url;
@@ -175,8 +175,12 @@ async function generateDrop(topic){
   else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
 
   const persona=randomPersona();
-  const description=await makeDescription(topic,pick);
-  const imageUrl=await generateImageUrl(topic,pick,persona);
+
+  // ⏩ Run description + image at the same time
+  const [description, imageUrl] = await Promise.all([
+    makeDescription(topic,pick),
+    generateImageUrl(topic,pick,persona)
+  ]);
 
   // ✅ Add mimicLine only for Music
   let mimicLine=null;
