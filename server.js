@@ -1,4 +1,4 @@
-// server.js — live-only backend with updated image algorithms for Music + Aidrop
+// server.js — live-only backend with safe image prompts for Music + Aidrop
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -52,13 +52,13 @@ async function generateImageUrl(topic,pick,persona){
     prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Background: pastel photocard style. Stickers floating around: ${stickers}.`;
   }
   else if(topic==="music"){
-    prompt=`Photo-realistic snapshot of ${persona} in their dorm room, posing like ${pick.artist} while listening to "${pick.track}". The dorm shows posters, laptop, messy desk, headphones. Lighting is casual neon glow. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+    prompt=`Photo-realistic snapshot of ${persona} in their dorm room, doing a playful TikTok-style fan impression of the performer of the song "${pick.track}". The dorm has posters, a laptop, messy desk, headphones. Neon light glow. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
   }
   else if(topic==="politics"){
     prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
   }
   else { // aidrop
-    prompt=`Photo-realistic surreal snapshot of ${pick.concept} shown as a cultural object. No human character. Glitchy, holographic neon background with pixel overlays. Floating meme emojis and digital stickers: 🐸 👾 💻 🌐 ✨ ${stickers}.`;
+    prompt=`Photo-realistic surreal snapshot of ${pick.concept} shown as a cultural object (not a person). Glitchy, holographic neon background with pixel overlays. Floating meme emojis and digital stickers: 🐸 👾 💻 🌐 ✨ ${stickers}.`;
   }
 
   try{
@@ -85,7 +85,16 @@ async function generateDrop(topic){
   const description=await makeDescription(topic,pick);
   const imageUrl=await generateImageUrl(topic,pick,persona);
 
-  return {brand:pick.brand||pick.artist||pick.issue||"323aidrop",product:pick.product||pick.track||pick.keyword||pick.concept,persona,description,hashtags:["#NowTrending"],image:imageUrl,refresh:3000,isDaily:false};
+  return {
+    brand:pick.brand||pick.artist||pick.issue||"323aidrop",
+    product:pick.product||pick.track||pick.keyword||pick.concept,
+    persona,
+    description,
+    hashtags:["#NowTrending"],
+    image:imageUrl,
+    refresh:3000,
+    isDaily:false
+  };
 }
 
 /* ---------------- API ---------------- */
