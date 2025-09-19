@@ -1,4 +1,4 @@
-// server.js — live-only backend with safe image prompts for Music + Aidrop
+// server.js — live-only backend with Music expression mimic + 1:1 images
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -49,10 +49,10 @@ async function generateImageUrl(topic,pick,persona){
   let prompt="";
 
   if(topic==="cosmetics"){
-    prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Background: pastel photocard style. Stickers floating around: ${stickers}.`;
+    prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
   }
   else if(topic==="music"){
-    prompt=`Photo-realistic snapshot of ${persona} in their dorm room, doing a playful TikTok-style fan impression of the performer of the song "${pick.track}". The dorm has posters, a laptop, messy desk, headphones. Neon light glow. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, trying to mimic the typical facial expression of the performer of the song "${pick.track}". They are using both hands on their face or hair to exaggerate the mimic. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
   }
   else if(topic==="politics"){
     prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
@@ -62,7 +62,11 @@ async function generateImageUrl(topic,pick,persona){
   }
 
   try{
-    const out=await openai.images.generate({model:"gpt-image-1",prompt,size:"auto"});
+    const out=await openai.images.generate({
+      model:"gpt-image-1",
+      prompt,
+      size:"1024x1024" // ✅ always 1:1 square
+    });
     const d=out?.data?.[0];
     if(d?.url) return d.url;
     if(d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
