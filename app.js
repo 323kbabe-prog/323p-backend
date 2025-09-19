@@ -1,6 +1,6 @@
-// app.js — Sticker Booth Style Logs
+// app.js — Sticker Booth Style (Gen-Z)
 const socket = io("https://three23p-backend.onrender.com");
-let audioPlayer=null,currentTrend=null,roomId=null,lastDescriptionKey=null,stopCycle=false;
+let audioPlayer=null,currentTrend=null,roomId=null,stopCycle=false;
 let currentTopic="cosmetics";let autoRefresh=false;
 
 /* ---------------- Room Setup ---------------- */
@@ -54,11 +54,30 @@ function updateUI(trend){
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
   showOverlay();
-
-  appendOverlay("💡 request sent for 323"+topic,"#ffe0f0");
-  setTimeout(()=>appendOverlay("🧩 pool chosen","#e0f0ff"),1000);
-  setTimeout(()=>appendOverlay("👤 persona locked: a young college student","#fff9d9"),2000);
-  setTimeout(()=>appendOverlay("✍️ drafting description…","#f0e0ff"),3000);
+  if(topic==="cosmetics"){
+    appendOverlay("💄 request sent for 323cosmetics","var(--cosmetics-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--cosmetics-color)"),1000);
+    setTimeout(()=>appendOverlay("👤 persona locked: a young college student","var(--cosmetics-color)"),2000);
+    setTimeout(()=>appendOverlay("✍️ drafting description…","var(--cosmetics-color)"),3000);
+  }
+  if(topic==="music"){
+    appendOverlay("🎶 request sent for 323music","var(--music-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--music-color)"),1000);
+    setTimeout(()=>appendOverlay("👤 persona locked: a young college student","var(--music-color)"),2000);
+    setTimeout(()=>appendOverlay("✍️ drafting description…","var(--music-color)"),3000);
+  }
+  if(topic==="politics"){
+    appendOverlay("🏛️ request sent for 323politics","var(--politics-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--politics-color)"),1000);
+    setTimeout(()=>appendOverlay("👤 persona locked: a young college student","var(--politics-color)"),2000);
+    setTimeout(()=>appendOverlay("✍️ drafting description…","var(--politics-color)"),3000);
+  }
+  if(topic==="aidrop"){
+    appendOverlay("🌐 request sent for 323aidrop","var(--aidrop-color)");
+    setTimeout(()=>appendOverlay("🧩 pool chosen","var(--aidrop-color)"),1000);
+    setTimeout(()=>appendOverlay("👤 persona locked: a young college student","var(--aidrop-color)"),2000);
+    setTimeout(()=>appendOverlay("✍️ drafting description…","var(--aidrop-color)"),3000);
+  }
 
   const res=await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
   const trend=await res.json();
@@ -80,10 +99,7 @@ async function runLogAndLoad(topic){
 
   return trend;
 }
-async function loadTrend(){
-  if(stopCycle)return;
-  currentTrend=await runLogAndLoad(currentTopic);
-}
+async function loadTrend(){if(stopCycle)return;currentTrend=await runLogAndLoad(currentTopic);}
 
 /* ---------------- Emoji map ---------------- */
 function topicEmoji(topic){
@@ -105,7 +121,6 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   overlay.style.visibility="visible";
   overlay.style.background="transparent";
   overlay.style.boxShadow="none";
-  overlay.style.color="#000";
   overlay.innerHTML="";
 
   const btn=document.createElement("button");
@@ -130,7 +145,6 @@ document.querySelectorAll("#topic-picker button").forEach(btn=>{
     overlay.style.visibility="visible";
     overlay.style.background="transparent";
     overlay.style.boxShadow="none";
-    overlay.style.color="#000";
     overlay.innerHTML="";
 
     const b=document.createElement("button");
