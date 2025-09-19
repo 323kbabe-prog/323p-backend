@@ -1,4 +1,4 @@
-// server.js — live-only backend with Music expression mimic + 1:1 images
+// server.js — live-only backend with updated Music mimic algorithm
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -52,7 +52,7 @@ async function generateImageUrl(topic,pick,persona){
     prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
   }
   else if(topic==="music"){
-    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, trying to mimic the typical facial expression of the performer of the song "${pick.track}". They are using both hands on their face or hair to exaggerate the mimic. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate the performer of the song "${pick.track}". They are using both hands on their face or hair to adjust their eye size, hair style, or facial features in order to mimic the performer’s look. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
   }
   else if(topic==="politics"){
     prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
