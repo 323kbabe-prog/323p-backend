@@ -1,5 +1,4 @@
 // app.js — Confirm first, then auto-refresh with live log overlay
-
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer=null,currentTrend=null,roomId=null,lastDescriptionKey=null,stopCycle=false;
 let currentTopic="cosmetics";let autoRefresh=false;
@@ -65,19 +64,16 @@ function updateUI(trend){
 async function runLogAndLoad(topic){
   showOverlay("[00:00] ✅ request sent (323"+topic+")");
 
-  // log line by line with delays
   setTimeout(()=>appendOverlay("[00:01] 🧩 pool chosen"),1000);
   setTimeout(()=>appendOverlay("[00:02] 👤 persona locked: a young college student"),2000);
   setTimeout(()=>appendOverlay("[00:03] ✍️ drafting description…"),3000);
 
-  // fetch drop while logs are playing
   const res=await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
   const trend=await res.json();
 
   setTimeout(()=>appendOverlay("[00:04] ✅ description ready"),4000);
   setTimeout(()=>appendOverlay("[00:05] 🖼️ image rendering…"),5000);
 
-  // reveal UI after ~6s
   setTimeout(()=>{
     hideOverlay();
     updateUI(trend);
@@ -98,7 +94,16 @@ async function loadTrend(){
   currentTrend=await runLogAndLoad(currentTopic);
 }
 
-/* ---------------- Start Button ---------------- */
+/* ---------------- Emoji map for topics ---------------- */
+function topicEmoji(topic){
+  if(topic==="cosmetics") return "💄";
+  if(topic==="music") return "🎶";
+  if(topic==="politics") return "🏛️";
+  if(topic==="aidrop") return "🌐";
+  return "⚡";
+}
+
+/* ---------------- Start button ---------------- */
 document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("start-screen").style.display="none";
   document.getElementById("app").style.display="flex";
@@ -106,7 +111,8 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   showOverlay("🔄 confirm first drop");
 
   const btn=document.createElement("button");
-  btn.innerText="✅ generate first drop";
+  btn.className="start-btn"; // ✅ styled like start button
+  btn.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
   btn.onclick=()=>{
     btn.remove();
     autoRefresh=true;
@@ -115,14 +121,16 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("warmup-center").appendChild(btn);
 });
 
-/* ---------------- Topic Toggle ---------------- */
+/* ---------------- Topic toggle ---------------- */
 document.querySelectorAll("#topic-picker button").forEach(btn=>{
   btn.addEventListener("click",()=>{
     currentTopic=btn.dataset.topic;
     autoRefresh=false;
     showOverlay("🔄 confirm new drop for "+currentTopic);
+
     const b=document.createElement("button");
-    b.innerText="✅ generate";
+    b.className="start-btn";
+    b.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
     b.onclick=()=>{
       b.remove();
       autoRefresh=true;
