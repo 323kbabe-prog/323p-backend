@@ -1,4 +1,4 @@
-// server.js — op15: persona generator + photocard image generator + emoji everywhere
+// server.js — op15: persona generator + photocard image generator + emoji everywhere (with product+persona sets)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -25,40 +25,83 @@ function randomPersona() {
   } style`;
 }
 
-/* ---------------- Emoji Pool ---------------- */
+/* ---------------- Emoji Pools ---------------- */
 const descEmojis = [
   "💄","💅","✨","🌸","👑","💖","🪞","🧴","🫧","😍","🌈","🔥","🎶","🎤","🎧","💃",
   "🕺","🏛️","📢","✊","📣","⚡","👾","🤖","📸","💎","🌟","🥰","🌺","🍓","🍭","💫","🎀"
 ];
 
+// Map product keywords to emoji sets
+const productEmojiMap = {
+  "freckle": ["✒️","🖊️","🎨","🪞","✨","🫧"],
+  "lip": ["💋","👄","💄","✨","💕"],
+  "blush": ["🌸","🌺","💕","✨"],
+  "mascara": ["👁️","👀","🖤","💫"],
+  "eyeliner": ["✒️","🖊️","👁️","✨"],
+  "foundation": ["🧴","🪞","✨","💖"],
+};
+
+// Persona vibe emojis
+const vibeEmojiMap = {
+  "streetwear model": ["👟","🧢","🕶️","🖤","🤍"],
+  "idol": ["🎤","✨","🌟","💎"],
+  "dancer": ["💃","🕺","🎶","🔥"],
+  "vlogger": ["📸","🎥","💻","🎤"],
+  "trainee": ["📓","🎶","💼","🌟"],
+  "influencer": ["👑","💖","📸","🌈"],
+};
+
 /* ---------------- Pools ---------------- */
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
 /* ---------------- Description Generator ---------------- */
-async function makeDescription(topic,pick){
+async function makeDescription(topic,pick,persona){
   let prompt,system;
+
   if(topic==="cosmetics"){
+    // Collect product-specific emojis
+    const lowerProd = (pick.product || "").toLowerCase();
+    let prodEmojis = [];
+    for(const key in productEmojiMap){
+      if(lowerProd.includes(key)){
+        prodEmojis = productEmojiMap[key];
+        break;
+      }
+    }
+
+    // Collect vibe-specific emojis
+    let vibeEmojis = [];
+    for(const vibe in vibeEmojiMap){
+      if(persona.includes(vibe)){
+        vibeEmojis = vibeEmojiMap[vibe];
+        break;
+      }
+    }
+
+    const emojiSet = [...descEmojis, ...prodEmojis, ...vibeEmojis];
+
     prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. 
-    Sensory, photo-realistic. Add emojis inline in every sentence. 
-    Use emojis from this set generously: ${descEmojis.join(" ")}.`;
+I am ${persona}. Sensory, photo-realistic. Add emojis inline in every sentence. 
+Use emojis generously from this set: ${emojiSet.join(" ")}.`;
+
     system="You are a college student talking about beauty.";
   }
   else if(topic==="music"){
     prompt=`Write exactly 300 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. 
-    Emotional, energetic. Add emojis inline in every sentence. 
-    Use emojis from this set generously: ${descEmojis.join(" ")}.`;
+Emotional, energetic. Add emojis inline in every sentence. 
+Use emojis generously from this set: ${descEmojis.join(" ")}.`;
     system="You are a college student reacting to music.";
   }
   else if(topic==="politics"){
     prompt=`Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}. 
-    Activist style. Add emojis inline in every sentence. 
-    Use emojis from this set generously: ${descEmojis.join(" ")}.`;
+Activist style. Add emojis inline in every sentence. 
+Use emojis generously from this set: ${descEmojis.join(" ")}.`;
     system="You are a college student activist.";
   }
   else{
     prompt=`Write exactly 300 words in a first-person surreal story about ${pick.concept}. 
-    Chaotic Gen-Z slang. Add emojis inline in every sentence. 
-    Use emojis from this set generously: ${descEmojis.join(" ")}.`;
+Chaotic Gen-Z slang. Add emojis inline in every sentence. 
+Use emojis generously from this set: ${descEmojis.join(" ")}.`;
     system="You are a college student living AI culture.";
   }
 
@@ -109,7 +152,7 @@ app.get("/api/description", async (req,res) => {
   else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
 
   const persona=randomPersona();
-  const description=await makeDescription(topic,pick);
+  const description=await makeDescription(topic,pick,persona);
 
   let mimicLine=null;
   if(topic==="music"){
