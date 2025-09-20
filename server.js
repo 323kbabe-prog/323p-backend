@@ -1,4 +1,4 @@
-// server.js — op14: cosmetics only, sequential product → description → image AFTER desc drops
+// server.js — op14: cosmetics only, backend split description → image
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -72,7 +72,7 @@ async function generateImageUrl(pick,persona){
 
 /* ---------------- API: Description ---------------- */
 app.get("/api/description",async(req,res)=>{
-  // Pick product once per description
+  // Pick product once
   const pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
   console.log(`💄 product chosen: ${pick.brand} — ${pick.product}`);
 
