@@ -1,4 +1,4 @@
-// app.js — op12: cosmetics only, sequential flow (desc → voice → image)
+// app.js — Sticker Booth Style (Gen-Z) — op3 final rules
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -14,23 +14,6 @@ let autoRefresh = false;
     window.history.replaceState({}, "", newUrl);
   }
 })();
-
-/* ---------------- Voice ---------------- */
-function playVoice(text,onEnd){
-  if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
-  const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
-  audioPlayer = new Audio(url);
-
-  audioPlayer.onplay = ()=>{
-    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
-  };
-  audioPlayer.onended = ()=>{
-    document.getElementById("voice-status").innerText = "⚙️ preparing…";
-    if(onEnd) onEnd();
-  };
-  audioPlayer.onerror = ()=>{ if(onEnd) onEnd(); };
-  audioPlayer.play();
-}
 
 /* ---------------- Overlay Helpers ---------------- */
 function showOverlay(){
@@ -67,12 +50,37 @@ function updateUI(trend){
   document.getElementById("r-persona").innerText = trend.persona || "";
   document.getElementById("r-desc").innerText = trend.description;
   document.getElementById("r-label").innerText = "🔄 live drop";
+
+  // Hide image until loaded separately
   document.getElementById("r-img").style.display="none";
   document.getElementById("r-fallback").style.display="block";
+
+  if(trend.mimicLine){
+    let m = document.getElementById("r-mimic");
+    if(!m){
+      m = document.createElement("p");
+      m.id = "r-mimic";
+      m.style.marginTop = "10px";
+      m.style.fontSize = "18px";
+      m.style.background = "var(--music-color)";
+      m.style.color = "#000";
+      m.style.padding = "8px 12px";
+      m.style.borderRadius = "12px";
+      m.style.display = "inline-block";
+      document.getElementById("drop-card").appendChild(m);
+    }
+    m.innerText = trend.mimicLine;
+    m.style.display = "inline-block";
+  } else {
+    const m = document.getElementById("r-mimic");
+    if(m) m.style.display="none";
+  }
 }
 
 /* ---------------- Image Update ---------------- */
-function updateImage(imageUrl){
+function updateImage(imageUrl,imgLine,imgTimer){
+  clearInterval(imgTimer);
+  removeOverlayLine(imgLine,"✅ image ready"); // rule 4
   if(imageUrl){
     document.getElementById("r-img").src = imageUrl;
     document.getElementById("r-img").style.display="block";
@@ -83,11 +91,54 @@ function updateImage(imageUrl){
   }
 }
 
+/* ---------------- Voice ---------------- */
+function playVoice(text,onEnd){
+  if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
+
+  // Add log for voice generating
+  let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
+  let genElapsed = 0;
+  const genTimer = setInterval(()=>{
+    genElapsed++;
+    voiceLine.innerText = "🎤 generating voice… " + genElapsed + "s";
+  },1000);
+
+  const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
+  audioPlayer = new Audio(url);
+
+  // As soon as we try to play, clear "generating"
+  audioPlayer.play().then(()=>{
+    clearInterval(genTimer);
+    removeOverlayLine(voiceLine,"✅ voice started"); // rule 5
+  }).catch(()=>{
+    clearInterval(genTimer);
+    removeOverlayLine(voiceLine,"❌ voice error");
+    if(onEnd) onEnd();
+  });
+
+  audioPlayer.onended = ()=>{
+    document.getElementById("voice-status").innerText = "⚙️ preparing…";
+    if(onEnd) onEnd();
+  };
+
+  audioPlayer.onplay = ()=>{
+    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
+  };
+}
+
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
   showOverlay();
 
-  // === Description first ===
+  // Request log (disappear after 1s)
+  let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
+  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000); // rule 1
+
+  // Pool log (disappear after 2s)
+  let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
+  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000); // rule 2
+
+  // Description log
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
   let descElapsed=0;
   const descTimer=setInterval(()=>{
@@ -95,33 +146,41 @@ async function runLogAndLoad(topic){
     descLine.innerText="✍️ drafting description… "+descElapsed+"s";
   },1000);
 
-  const descRes = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
-  const trend = await descRes.json();
-
-  clearInterval(descTimer);
-  removeOverlayLine(descLine,"✅ description ready");
-  updateUI(trend);
-
-  // === Voice second ===
-  playVoice(trend.description,()=>{});
-
-  // === Image last ===
-  let imgLine = appendOverlay("🖼️ rendering image (after desc)…","#d9f0ff",true);
+  // Image log
+  let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
   let imgElapsed=0;
   const imgTimer=setInterval(()=>{
     imgElapsed++;
     imgLine.innerText="🖼️ rendering image… "+imgElapsed+"s";
   },1000);
 
-  if(trend.image){
-    clearInterval(imgTimer);
-    removeOverlayLine(imgLine,"✅ image ready");
-    updateImage(trend.image);
-  } else {
+  // Fetch description + image in parallel
+  const descPromise = fetch("https://three23p-backend.onrender.com/api/description?topic="+topic).then(r=>r.json());
+  const imgPromise  = fetch("https://three23p-backend.onrender.com/api/image?topic="+topic).then(r=>r.json());
+
+  // Handle description
+  const trend = await descPromise;
+  clearInterval(descTimer);
+  removeOverlayLine(descLine,"✅ description ready"); // rule 3
+  updateUI(trend);
+
+  // Start voice generation log after description is back
+  playVoice(trend.description,()=>{
+    if(autoRefresh){
+      showOverlay();
+      appendOverlay("⏳ fetching next drop…","#ffe0f0");
+      setTimeout(()=>loadTrend(),2000);
+    }
+  });
+
+  // Handle image
+  imgPromise.then(data=>{
+    updateImage(data.image,imgLine,imgTimer);
+  }).catch(()=>{
     clearInterval(imgTimer);
     removeOverlayLine(imgLine,"❌ image error");
     updateImage(null);
-  }
+  });
 
   return trend;
 }
@@ -134,6 +193,9 @@ async function loadTrend(){
 /* ---------------- Emoji map ---------------- */
 function topicEmoji(topic){
   if(topic==="cosmetics") return "💄";
+  if(topic==="music") return "🎶";
+  if(topic==="politics") return "🏛️";
+  if(topic==="aidrop") return "🌐";
   return "⚡";
 }
 
@@ -165,4 +227,10 @@ document.getElementById("start-btn").addEventListener("click",()=>{
 });
 
 /* ---------------- Topic toggle confirm ---------------- */
-// Only cosmetics now in op12
+document.querySelectorAll("#topic-picker button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    currentTopic = btn.dataset.topic;
+    autoRefresh = false;
+    showConfirmButton();
+  });
+});
