@@ -1,4 +1,4 @@
-// server.js — op12: cosmetics only, synced product + sequential logs
+// server.js — split description & image endpoints
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -18,22 +18,47 @@ function randomPersona() {
 }
 
 /* ---------------- Stickers ---------------- */
-const stickerPool = ["💖","✨","😍","💄","🌈","👾","🌟","💅","📸","🦄","🍓","🥤"];
+const stickerPool = ["🤖","👾","⚡","💻","📟","📡","🎶","🎤","✊","📢","🔥","🌈","✨","💖","😍"];
 function randomStickers(countMin=3,countMax=6){
   const count=Math.floor(Math.random()*(countMax-countMin+1))+countMin;
   return Array.from({length:count},()=>stickerPool[Math.floor(Math.random()*stickerPool.length)]).join(" ");
 }
 
+/* ---------------- Artist → Feature Map ---------------- */
+const artistFeatures = {
+  "Doja Cat": "a playful smirk, one hand squishing cheek and the other tugging bangs",
+  "Bad Bunny": "a serious stare, one hand mimicking sunglasses frame and the other on chin",
+  "Taylor Swift": "wide eyes with red lips, one hand framing chin and the other holding side bangs",
+  // … keep the rest of your mapping here
+};
+
+/* ---------------- Gender Map for Pronouns ---------------- */
+const artistGender = {
+  "Doja Cat": "her", "Bad Bunny": "his", "Taylor Swift": "her",
+  // … keep the rest of your mapping here
+};
+
 /* ---------------- Pools ---------------- */
-const { TOP50_COSMETICS } = require("./topicPools");
+const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
 /* ---------------- Description Generator ---------------- */
 async function makeDescription(topic,pick){
   let prompt,system;
   if(topic==="cosmetics"){
-    prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. 
-    Sensory, photo-realistic, emojis inline.`;
-    system="You are a college student beauty vlogger.";
+    prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
+    system="You are a college student talking about beauty.";
+  }
+  else if(topic==="music"){
+    prompt=`Write exactly 300 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
+    system="You are a college student reacting to music.";
+  }
+  else if(topic==="politics"){
+    prompt=`Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
+    system="You are a college student activist.";
+  }
+  else{
+    prompt=`Write exactly 300 words in a first-person surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
+    system="You are a college student living AI culture.";
   }
 
   try{
@@ -55,9 +80,18 @@ async function generateImageUrl(topic,pick,persona){
   let prompt="";
 
   if(topic==="cosmetics"){
-    prompt=`Photo-realistic selfie of ${persona} applying ${pick.product} by ${pick.brand}, 
-    casual candid vibe in a college setting. Pastel photocard style. 
-    Stickers floating around: ${stickers}.`;
+    prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
+  }
+  else if(topic==="music"){
+    const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
+    const pronoun = artistGender[pick.artist] || "their";
+    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate ${pronoun} ${feature}. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+  }
+  else if(topic==="politics"){
+    prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
+  }
+  else{ // aidrop
+    prompt=`Photo-realistic surreal snapshot of ${pick.concept} shown as a cultural object (not a person). Glitchy, holographic neon background with pixel overlays. Floating meme emojis and digital stickers: 🐸 👾 💻 🌐 ✨ ${stickers}.`;
   }
 
   try{
@@ -75,54 +109,47 @@ async function generateImageUrl(topic,pick,persona){
   return "https://placehold.co/600x600?text=No+Image";
 }
 
-/* ---------------- Drop Generator ---------------- */
-async function generateDrop(topic){
+/* ---------------- API: Description ---------------- */
+app.get("/api/description",async(req,res)=>{
+  const topic=req.query.topic||"cosmetics";
   let pick;
-  if(topic==="cosmetics"){
-    // ✅ Random product picked once
-    pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
-  }
+  if(topic==="cosmetics") pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
+  else if(topic==="music") pick=TOP_MUSIC[Math.floor(Math.random()*TOP_MUSIC.length)];
+  else if(topic==="politics") pick=TOP_POLITICS[Math.floor(Math.random()*TOP_POLITICS.length)];
+  else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
 
   const persona=randomPersona();
-
-  // Sequential generation
-  console.log("✍️ drafting description…");
   const description=await makeDescription(topic,pick);
-  console.log("✅ description ready");
 
-  console.log("🔊 voice task queued (frontend will play TTS)…");
-
-  console.log("🖼️ rendering image…");
-  const imageUrl=await generateImageUrl(topic,pick,persona);
-  if(imageUrl && !imageUrl.includes("placehold")){
-    console.log("✅ image ready");
-  } else {
-    console.log("❌ image error / placeholder returned");
+  let mimicLine=null;
+  if(topic==="music"){
+    const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
+    mimicLine=`🎶✨ I tried ${feature} like ${pick.artist} 😅.`;
   }
 
-  console.log("⚡ drop fully generated\n");
-
-  return {
-    brand:pick.brand,
-    product:pick.product,
+  res.json({
+    brand:pick.brand||pick.artist||pick.issue||"323aidrop",
+    product:pick.product||pick.track||pick.keyword||pick.concept,
     persona,
     description,
-    image:imageUrl,
+    mimicLine,
     hashtags:["#NowTrending"],
-    refresh:3000,
     isDaily:false
-  };
-}
+  });
+});
 
-/* ---------------- API: Drop ---------------- */
-app.get("/api/trend",async(req,res)=>{
-  const topic="cosmetics"; // ✅ Only cosmetics
-  const roomId=req.query.room;
-  if(!roomId) return res.status(400).json({error:"room parameter required"});
+/* ---------------- API: Image ---------------- */
+app.get("/api/image",async(req,res)=>{
+  const topic=req.query.topic||"cosmetics";
+  let pick;
+  if(topic==="cosmetics") pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
+  else if(topic==="music") pick=TOP_MUSIC[Math.floor(Math.random()*TOP_MUSIC.length)];
+  else if(topic==="politics") pick=TOP_POLITICS[Math.floor(Math.random()*TOP_POLITICS.length)];
+  else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
 
-  console.log(`🔄 Live generation started for room=${roomId}, topic=${topic}`);
-  const drop=await generateDrop(topic);
-  res.json(drop);
+  const persona=randomPersona();
+  const imageUrl=await generateImageUrl(topic,pick,persona);
+  res.json({ image:imageUrl });
 });
 
 /* ---------------- Voice ---------------- */
