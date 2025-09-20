@@ -1,4 +1,4 @@
-// app.js — op14: sequential flow (description → voice → image)
+// app.js — op12: cosmetics only, sequential flow (desc → voice → image)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -21,27 +21,14 @@ function playVoice(text,onEnd){
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
 
-  let voiceLine = appendOverlay("🔊 generating voice…","#ffe0f0",true);
-  let elapsed = 0;
-  const timer = setInterval(()=>{
-    elapsed++;
-    voiceLine.innerText = "🔊 voice… " + elapsed + "s";
-  },1000);
-
   audioPlayer.onplay = ()=>{
-    removeOverlayLine(voiceLine,"✅ voice started");
+    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
   };
   audioPlayer.onended = ()=>{
-    clearInterval(timer);
-    removeOverlayLine(voiceLine,"✅ voice finished");
     document.getElementById("voice-status").innerText = "⚙️ preparing…";
     if(onEnd) onEnd();
   };
-  audioPlayer.onerror = ()=>{
-    clearInterval(timer);
-    removeOverlayLine(voiceLine,"❌ voice error");
-    if(onEnd) onEnd();
-  };
+  audioPlayer.onerror = ()=>{ if(onEnd) onEnd(); };
   audioPlayer.play();
 }
 
@@ -102,10 +89,10 @@ async function runLogAndLoad(topic){
 
   // === Description first ===
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
-  let descElapsed = 0;
-  const descTimer = setInterval(()=>{
+  let descElapsed=0;
+  const descTimer=setInterval(()=>{
     descElapsed++;
-    descLine.innerText = "✍️ drafting description… " + descElapsed + "s";
+    descLine.innerText="✍️ drafting description… "+descElapsed+"s";
   },1000);
 
   const descRes = await fetch("https://three23p-backend.onrender.com/api/trend?room="+roomId+"&topic="+topic);
@@ -120,10 +107,10 @@ async function runLogAndLoad(topic){
 
   // === Image last ===
   let imgLine = appendOverlay("🖼️ rendering image (after desc)…","#d9f0ff",true);
-  let imgElapsed = 0;
-  const imgTimer = setInterval(()=>{
+  let imgElapsed=0;
+  const imgTimer=setInterval(()=>{
     imgElapsed++;
-    imgLine.innerText = "🖼️ rendering image… " + imgElapsed + "s";
+    imgLine.innerText="🖼️ rendering image… "+imgElapsed+"s";
   },1000);
 
   if(trend.image){
@@ -178,4 +165,4 @@ document.getElementById("start-btn").addEventListener("click",()=>{
 });
 
 /* ---------------- Topic toggle confirm ---------------- */
-// Only cosmetics now in op14
+// Only cosmetics now in op12
