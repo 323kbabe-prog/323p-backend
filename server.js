@@ -1,4 +1,4 @@
-// server.js — op14: cosmetics only, synced product + influencer style images
+// server.js — op12: cosmetics only, synced product + sequential logs
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -32,9 +32,7 @@ async function makeDescription(topic,pick){
   let prompt,system;
   if(topic==="cosmetics"){
     prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. 
-    Sensory, influencer-style, photo-realistic, emojis inline. 
-    Focus on how the product looks and feels, the glossy make-up result, 
-    and the confidence boost it gives.`;
+    Sensory, photo-realistic, emojis inline.`;
     system="You are a college student beauty vlogger.";
   }
 
@@ -57,14 +55,9 @@ async function generateImageUrl(topic,pick,persona){
   let prompt="";
 
   if(topic==="cosmetics"){
-    // ✅ op14: influencer beauty shot reference style
-    prompt=`High-quality, photo-realistic influencer beauty shot. 
-    Close-up selfie of ${persona} clearly holding and applying ${pick.product} by ${pick.brand}. 
-    Face has glossy skin and full make-up done in vibrant colors. 
-    Lighting: soft fluorescent, pastel photocard vibe (pink/purple background with sparkle effect). 
-    Framing: hand in frame showing the product, expression confident and trendy. 
-    Consistent visual style: Gen-Z / K-beauty Instagram feed. 
-    Floating emoji stickers around the portrait: ${stickers}.`;
+    prompt=`Photo-realistic selfie of ${persona} applying ${pick.product} by ${pick.brand}, 
+    casual candid vibe in a college setting. Pastel photocard style. 
+    Stickers floating around: ${stickers}.`;
   }
 
   try{
@@ -86,14 +79,28 @@ async function generateImageUrl(topic,pick,persona){
 async function generateDrop(topic){
   let pick;
   if(topic==="cosmetics"){
-    // ✅ Pick product once and sync across desc + image
+    // ✅ Random product picked once
     pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
   }
 
   const persona=randomPersona();
 
+  // Sequential generation
+  console.log("✍️ drafting description…");
   const description=await makeDescription(topic,pick);
+  console.log("✅ description ready");
+
+  console.log("🔊 voice task queued (frontend will play TTS)…");
+
+  console.log("🖼️ rendering image…");
   const imageUrl=await generateImageUrl(topic,pick,persona);
+  if(imageUrl && !imageUrl.includes("placehold")){
+    console.log("✅ image ready");
+  } else {
+    console.log("❌ image error / placeholder returned");
+  }
+
+  console.log("⚡ drop fully generated\n");
 
   return {
     brand:pick.brand,
@@ -101,7 +108,7 @@ async function generateDrop(topic){
     persona,
     description,
     image:imageUrl,
-    hashtags:["#NowTrending","#beautytok","#makeupdrop"],
+    hashtags:["#NowTrending"],
     refresh:3000,
     isDaily:false
   };
@@ -109,10 +116,11 @@ async function generateDrop(topic){
 
 /* ---------------- API: Drop ---------------- */
 app.get("/api/trend",async(req,res)=>{
-  const topic="cosmetics"; // ✅ op14 is cosmetics only
+  const topic="cosmetics"; // ✅ Only cosmetics
   const roomId=req.query.room;
   if(!roomId) return res.status(400).json({error:"room parameter required"});
-  console.log(`🔄 Live generation: topic=${topic}, room=${roomId}`);
+
+  console.log(`🔄 Live generation started for room=${roomId}, topic=${topic}`);
   const drop=await generateDrop(topic);
   res.json(drop);
 });
