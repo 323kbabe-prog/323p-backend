@@ -1,4 +1,4 @@
-// server.js — op14: cosmetics only, sequential product → description → image
+// server.js — op14: cosmetics only, sequential product → description → image AFTER desc drops
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -28,13 +28,10 @@ function randomStickers(countMin=3,countMax=6){
 const { TOP50_COSMETICS } = require("./topicPools");
 
 /* ---------------- Description Generator ---------------- */
-async function makeDescription(topic,pick){
-  let prompt,system;
-  if(topic==="cosmetics"){
-    prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. 
-    Sensory, photo-realistic, emojis inline.`;
-    system="You are a college student beauty vlogger.";
-  }
+async function makeDescription(pick){
+  const prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. 
+  Sensory, photo-realistic, emojis inline.`;
+  const system="You are a college student beauty vlogger.";
 
   try{
     const completion=await openai.chat.completions.create({
@@ -50,17 +47,13 @@ async function makeDescription(topic,pick){
 }
 
 /* ---------------- Image Generator ---------------- */
-async function generateImageUrl(topic,pick,persona){
+async function generateImageUrl(pick,persona){
   const stickers=randomStickers();
-  let prompt="";
-
-  if(topic==="cosmetics"){
-    prompt=`Photo-realistic influencer-style photocard. 
-    Close-up selfie of ${persona} clearly holding and applying the product "${pick.product}" by ${pick.brand}. 
-    The ${pick.product} must be visible in the image. 
-    Glossy skin, full make-up, pastel background with fluorescent lighting. 
-    Floating emoji stickers: ${stickers}.`;
-  }
+  const prompt=`Photo-realistic influencer-style photocard. 
+  Close-up selfie of ${persona} clearly holding and applying the product "${pick.product}" by ${pick.brand}. 
+  The ${pick.product} must be visible in the image. 
+  Glossy skin, full make-up, pastel background with fluorescent lighting. 
+  Floating emoji stickers: ${stickers}.`;
 
   try{
     const out=await openai.images.generate({
@@ -77,54 +70,41 @@ async function generateImageUrl(topic,pick,persona){
   return "https://placehold.co/600x600?text=No+Image";
 }
 
-/* ---------------- Drop Generator ---------------- */
-async function generateDrop(topic){
-  let pick;
-  if(topic==="cosmetics"){
-    // ✅ Step 1: product chosen once
-    pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
-    console.log(`💄 product chosen: ${pick.brand} — ${pick.product}`);
-  }
+/* ---------------- API: Description ---------------- */
+app.get("/api/description",async(req,res)=>{
+  // Pick product once per description
+  const pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
+  console.log(`💄 product chosen: ${pick.brand} — ${pick.product}`);
 
   const persona=randomPersona();
 
-  // ✅ Step 2: description
   console.log("✍️ drafting description…");
-  const description=await makeDescription(topic,pick);
+  const description=await makeDescription(pick);
   console.log("✅ description ready");
 
-  // ✅ Step 3: image
-  console.log("🖼️ rendering image…");
-  const imageUrl=await generateImageUrl(topic,pick,persona);
-  if(imageUrl && !imageUrl.includes("placehold")){
-    console.log("✅ image ready");
-  } else {
-    console.log("❌ image error / placeholder returned");
-  }
-
-  console.log("⚡ drop fully generated\n");
-
-  return {
+  res.json({
     brand:pick.brand,
     product:pick.product,
     persona,
-    description,
-    image:imageUrl,
-    hashtags:["#NowTrending"],
-    refresh:3000,
-    isDaily:false
-  };
-}
+    description
+  });
+});
 
-/* ---------------- API: Drop ---------------- */
-app.get("/api/trend",async(req,res)=>{
-  const topic="cosmetics"; // ✅ Only cosmetics in op14
-  const roomId=req.query.room;
-  if(!roomId) return res.status(400).json({error:"room parameter required"});
+/* ---------------- API: Image ---------------- */
+app.get("/api/image",async(req,res)=>{
+  const brand=req.query.brand;
+  const product=req.query.product;
+  const persona=randomPersona();
 
-  console.log(`🔄 Live generation started for room=${roomId}, topic=${topic}`);
-  const drop=await generateDrop(topic);
-  res.json(drop);
+  if(!brand || !product){
+    return res.status(400).json({error:"brand and product required"});
+  }
+
+  console.log(`🖼️ rendering image for: ${brand} — ${product}`);
+  const imageUrl=await generateImageUrl({brand,product},persona);
+  console.log("✅ image ready");
+
+  res.json({ image:imageUrl });
 });
 
 /* ---------------- Voice ---------------- */
