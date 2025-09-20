@@ -80,8 +80,15 @@ async function generateImageUrl(topic,pick,persona){
   let prompt="";
 
   if(topic==="cosmetics"){
-    prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
-  }
+  // ✅ op14: influencer beauty reference style
+  prompt=`High-quality, photo-realistic influencer beauty photocard. 
+  Close-up selfie of ${persona} clearly holding and applying ${pick.product} by ${pick.brand}. 
+  Face has glossy skin and full make-up done in vibrant colors. 
+  Lighting: soft fluorescent, pastel photocard vibe (pink/purple background with sparkle effect). 
+  Framing: hand in frame showing the product, confident trendy expression. 
+  Consistent visual style: Gen-Z / K-beauty Instagram influencer feed. 
+  Floating emoji stickers around the portrait: ${stickers}.`;
+}
   else if(topic==="music"){
     const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
     const pronoun = artistGender[pick.artist] || "their";
