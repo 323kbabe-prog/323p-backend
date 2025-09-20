@@ -80,8 +80,11 @@ async function generateImageUrl(topic,pick,persona){
   let prompt="";
 
   if(topic==="cosmetics"){
-    prompt=`Photo-realistic mobile snapshot of ${persona} applying ${pick.product} by ${pick.brand}, casual candid selfie vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
-  }
+  // ✅ OP13 update: fluorescent lamp + full make-up
+  prompt=`Photo-realistic selfie of ${persona} applying ${pick.product} by ${pick.brand}, 
+  under bright fluorescent lamp lighting, face shown with make-up fully done and styled, 
+  casual candid vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
+}
   else if(topic==="music"){
     const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
     const pronoun = artistGender[pick.artist] || "their";
