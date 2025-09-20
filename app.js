@@ -1,6 +1,6 @@
-// app.js — op14: sequential description → voice → image (logs intact)
+// app.js — Sticker Booth Style (Gen-Z) — op3 final rules (sequential desc → image)
 const socket = io("https://three23p-backend.onrender.com");
-let audioPlayer = null, roomId = null, stopCycle = false;
+let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
 let autoRefresh = false;
 
@@ -14,36 +14,6 @@ let autoRefresh = false;
     window.history.replaceState({}, "", newUrl);
   }
 })();
-
-/* ---------------- Voice ---------------- */
-function playVoice(text,onEnd){
-  if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
-  const url = "/api/voice?text=" + encodeURIComponent(text);
-  audioPlayer = new Audio(url);
-
-  let voiceLine = appendOverlay("🔊 generating voice…","#ffe0f0",true);
-  let elapsed = 0;
-  const timer = setInterval(()=>{
-    elapsed++;
-    voiceLine.innerText = "🔊 voice… " + elapsed + "s";
-  },1000);
-
-  audioPlayer.onplay = ()=>{
-    removeOverlayLine(voiceLine,"✅ voice started");
-  };
-  audioPlayer.onended = ()=>{
-    clearInterval(timer);
-    removeOverlayLine(voiceLine,"✅ voice finished");
-    document.getElementById("voice-status").innerText = "⚙️ preparing…";
-    if(onEnd) onEnd();
-  };
-  audioPlayer.onerror = ()=>{
-    clearInterval(timer);
-    removeOverlayLine(voiceLine,"❌ voice error");
-    if(onEnd) onEnd();
-  };
-  audioPlayer.play();
-}
 
 /* ---------------- Overlay Helpers ---------------- */
 function showOverlay(){
@@ -74,18 +44,43 @@ function removeOverlayLine(line,finalMsg){
 }
 
 /* ---------------- UI Update ---------------- */
-function updateUI(descData){
-  document.getElementById("r-title").innerText = descData.brand;
-  document.getElementById("r-artist").innerText = descData.product;
-  document.getElementById("r-persona").innerText = descData.persona || "";
-  document.getElementById("r-desc").innerText = descData.description;
+function updateUI(trend){
+  document.getElementById("r-title").innerText = trend.brand;
+  document.getElementById("r-artist").innerText = trend.product;
+  document.getElementById("r-persona").innerText = trend.persona || "";
+  document.getElementById("r-desc").innerText = trend.description;
   document.getElementById("r-label").innerText = "🔄 live drop";
+
+  // Hide image until loaded separately
   document.getElementById("r-img").style.display="none";
   document.getElementById("r-fallback").style.display="block";
+
+  if(trend.mimicLine){
+    let m = document.getElementById("r-mimic");
+    if(!m){
+      m = document.createElement("p");
+      m.id = "r-mimic";
+      m.style.marginTop = "10px";
+      m.style.fontSize = "18px";
+      m.style.background = "var(--music-color)";
+      m.style.color = "#000";
+      m.style.padding = "8px 12px";
+      m.style.borderRadius = "12px";
+      m.style.display = "inline-block";
+      document.getElementById("drop-card").appendChild(m);
+    }
+    m.innerText = trend.mimicLine;
+    m.style.display = "inline-block";
+  } else {
+    const m = document.getElementById("r-mimic");
+    if(m) m.style.display="none";
+  }
 }
 
 /* ---------------- Image Update ---------------- */
-function updateImage(imageUrl){
+function updateImage(imageUrl,imgLine,imgTimer){
+  clearInterval(imgTimer);
+  removeOverlayLine(imgLine,"✅ image ready"); // rule 4
   if(imageUrl){
     document.getElementById("r-img").src = imageUrl;
     document.getElementById("r-img").style.display="block";
@@ -96,9 +91,51 @@ function updateImage(imageUrl){
   }
 }
 
+/* ---------------- Voice ---------------- */
+function playVoice(text,onEnd){
+  if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
+
+  // Add log for voice generating
+  let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
+  let genElapsed = 0;
+  const genTimer = setInterval(()=>{
+    genElapsed++;
+    voiceLine.innerText = "🎤 generating voice… " + genElapsed + "s";
+  },1000);
+
+  const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
+  audioPlayer = new Audio(url);
+
+  // As soon as we try to play, clear "generating"
+  audioPlayer.play().then(()=>{
+    clearInterval(genTimer);
+    removeOverlayLine(voiceLine,"✅ voice started"); // rule 5
+  }).catch(()=>{
+    clearInterval(genTimer);
+    removeOverlayLine(voiceLine,"❌ voice error");
+    if(onEnd) onEnd();
+  });
+
+  audioPlayer.onended = ()=>{
+    document.getElementById("voice-status").innerText = "⚙️ preparing…";
+    if(onEnd) onEnd();
+  };
+  audioPlayer.onplay = ()=>{
+    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
+  };
+}
+
 /* ---------------- Live Log + Load ---------------- */
 async function runLogAndLoad(topic){
   showOverlay();
+
+  // Request log (disappear after 1s)
+  let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
+  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000); // rule 1
+
+  // Pool log (disappear after 2s)
+  let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
+  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000); // rule 2
 
   // === Step 1: description ===
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
@@ -108,47 +145,56 @@ async function runLogAndLoad(topic){
     descLine.innerText="✍️ drafting description… "+descElapsed+"s";
   },1000);
 
-  const descRes = await fetch("/api/description");
-  const descData = await descRes.json();
+  const descRes = await fetch("https://three23p-backend.onrender.com/api/description?topic="+topic);
+  const trend = await descRes.json();
 
   clearInterval(descTimer);
-  removeOverlayLine(descLine,"✅ description ready");
-  updateUI(descData);
+  removeOverlayLine(descLine,"✅ description ready"); // rule 3
+  updateUI(trend);
 
-  // === Step 2: voice (after description) ===
-  playVoice(descData.description,()=>{});
+  // Start voice generation log after description is back
+  playVoice(trend.description,()=>{
+    if(autoRefresh){
+      showOverlay();
+      appendOverlay("⏳ fetching next drop…","#ffe0f0");
+      setTimeout(()=>loadTrend(),2000);
+    }
+  });
 
-  // === Step 3: image (AFTER desc) ===
-  let imgLine = appendOverlay("🖼️ rendering image (after desc)…","#d9f0ff",true);
+  // === Step 2: image AFTER description ===
+  let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
   let imgElapsed=0;
   const imgTimer=setInterval(()=>{
     imgElapsed++;
     imgLine.innerText="🖼️ rendering image… "+imgElapsed+"s";
   },1000);
 
-  const imgRes = await fetch(`/api/image?brand=${encodeURIComponent(descData.brand)}&product=${encodeURIComponent(descData.product)}`);
-  const imgData = await imgRes.json();
-
-  clearInterval(imgTimer);
-  if(imgData.image){
-    removeOverlayLine(imgLine,"✅ image ready");
-    updateImage(imgData.image);
-  } else {
+  try {
+    const imgRes = await fetch(
+      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}`
+    );
+    const imgData = await imgRes.json();
+    updateImage(imgData.image,imgLine,imgTimer);
+  } catch(e){
+    clearInterval(imgTimer);
     removeOverlayLine(imgLine,"❌ image error");
     updateImage(null);
   }
 
-  return descData;
+  return trend;
 }
 
 async function loadTrend(){ 
   if(stopCycle) return; 
-  await runLogAndLoad(currentTopic); 
+  currentTrend = await runLogAndLoad(currentTopic); 
 }
 
 /* ---------------- Emoji map ---------------- */
 function topicEmoji(topic){
   if(topic==="cosmetics") return "💄";
+  if(topic==="music") return "🎶";
+  if(topic==="politics") return "🏛️";
+  if(topic==="aidrop") return "🌐";
   return "⚡";
 }
 
@@ -177,4 +223,13 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("app").style.display="flex";
   socket.emit("joinRoom",roomId);
   showConfirmButton();
+});
+
+/* ---------------- Topic toggle confirm ---------------- */
+document.querySelectorAll("#topic-picker button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    currentTopic = btn.dataset.topic;
+    autoRefresh = false;
+    showConfirmButton();
+  });
 });
