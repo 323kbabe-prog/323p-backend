@@ -1,4 +1,4 @@
-// server.js — op15: reintroduced persona generator + photocard image generator
+// server.js — op15: persona generator + photocard image generator + emoji everywhere
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -25,6 +25,12 @@ function randomPersona() {
   } style`;
 }
 
+/* ---------------- Emoji Pool ---------------- */
+const descEmojis = [
+  "💄","💅","✨","🌸","👑","💖","🪞","🧴","🫧","😍","🌈","🔥","🎶","🎤","🎧","💃",
+  "🕺","🏛️","📢","✊","📣","⚡","👾","🤖","📸","💎","🌟","🥰","🌺","🍓","🍭","💫","🎀"
+];
+
 /* ---------------- Pools ---------------- */
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
@@ -32,19 +38,27 @@ const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topi
 async function makeDescription(topic,pick){
   let prompt,system;
   if(topic==="cosmetics"){
-    prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
+    prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. 
+    Sensory, photo-realistic. Add emojis inline in every sentence. 
+    Use emojis from this set generously: ${descEmojis.join(" ")}.`;
     system="You are a college student talking about beauty.";
   }
   else if(topic==="music"){
-    prompt=`Write exactly 300 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. Emotional, emojis inline.`;
+    prompt=`Write exactly 300 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. 
+    Emotional, energetic. Add emojis inline in every sentence. 
+    Use emojis from this set generously: ${descEmojis.join(" ")}.`;
     system="You are a college student reacting to music.";
   }
   else if(topic==="politics"){
-    prompt=`Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}. Activist college student voice, emojis inline.`;
+    prompt=`Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}. 
+    Activist style. Add emojis inline in every sentence. 
+    Use emojis from this set generously: ${descEmojis.join(" ")}.`;
     system="You are a college student activist.";
   }
   else{
-    prompt=`Write exactly 300 words in a first-person surreal story about ${pick.concept}. Chaotic Gen-Z slang, emojis inline.`;
+    prompt=`Write exactly 300 words in a first-person surreal story about ${pick.concept}. 
+    Chaotic Gen-Z slang. Add emojis inline in every sentence. 
+    Use emojis from this set generously: ${descEmojis.join(" ")}.`;
     system="You are a college student living AI culture.";
   }
 
