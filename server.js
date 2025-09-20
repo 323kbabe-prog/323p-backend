@@ -1,4 +1,4 @@
-// server.js — split description & image endpoints
+// server.js — split description & image endpoints (op13+ synced cosmetics)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -42,10 +42,13 @@ const artistGender = {
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
 /* ---------------- Description Generator ---------------- */
-async function makeDescription(topic,pick){
+async function makeDescription(topic,pick,scene){
   let prompt,system;
   if(topic==="cosmetics"){
-    prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. Sensory, photo-realistic, emojis inline.`;
+    prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand} 
+    while in ${scene}. Start by introducing the product, then describe how it looks and feels under bright fluorescent lighting, 
+    how the make-up is fully done and styled, the atmosphere of the school space, and all sensory details. 
+    Add emojis inline.`;
     system="You are a college student talking about beauty.";
   }
   else if(topic==="music"){
@@ -75,26 +78,29 @@ async function makeDescription(topic,pick){
 }
 
 /* ---------------- Image Generator ---------------- */
-async function generateImageUrl(topic,pick,persona){
+async function generateImageUrl(topic,pick,persona,scene){
   const stickers=randomStickers();
   let prompt="";
 
   if(topic==="cosmetics"){
-  // ✅ OP13 update: fluorescent lamp + full make-up
-  prompt=`Photo-realistic selfie of ${persona} applying ${pick.product} by ${pick.brand}, 
-  under bright fluorescent lamp lighting, face shown with make-up fully done and styled, 
-  casual candid vibe. Pastel photocard style. Stickers floating around: ${stickers}.`;
-}
+    prompt=`Photo-realistic selfie clearly showing the product ${pick.product} by ${pick.brand} being applied, 
+    with ${persona} in ${scene}. 
+    Face has make-up fully done and styled, under bright fluorescent lamp lighting. 
+    Pastel photocard style. Stickers floating around: ${stickers}.`;
+  }
   else if(topic==="music"){
     const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
     const pronoun = artistGender[pick.artist] || "their";
-    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate ${pronoun} ${feature}. Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
+    prompt=`Photo-realistic mobile snapshot of ${persona} in their dorm room, playfully trying to imitate ${pronoun} ${feature}. 
+    Dorm has posters, laptop, messy desk. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
   }
   else if(topic==="politics"){
-    prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. Background: city street. Stickers floating around: ${stickers}.`;
+    prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}. 
+    Background: city street. Stickers floating around: ${stickers}.`;
   }
   else{ // aidrop
-    prompt=`Photo-realistic surreal snapshot of ${pick.concept} shown as a cultural object (not a person). Glitchy, holographic neon background with pixel overlays. Floating meme emojis and digital stickers: 🐸 👾 💻 🌐 ✨ ${stickers}.`;
+    prompt=`Photo-realistic surreal snapshot of ${pick.concept} shown as a cultural object (not a person). 
+    Glitchy, holographic neon background with pixel overlays. Floating meme emojis and digital stickers: 🐸 👾 💻 🌐 ✨ ${stickers}.`;
   }
 
   try{
@@ -112,6 +118,42 @@ async function generateImageUrl(topic,pick,persona){
   return "https://placehold.co/600x600?text=No+Image";
 }
 
+/* ---------------- Drop Generator ---------------- */
+async function generateDrop(topic){
+  let pick;
+  if(topic==="cosmetics") pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
+  else if(topic==="music") pick=TOP_MUSIC[Math.floor(Math.random()*TOP_MUSIC.length)];
+  else if(topic==="politics") pick=TOP_POLITICS[Math.floor(Math.random()*TOP_POLITICS.length)];
+  else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
+
+  const persona=randomPersona();
+
+  // ✅ Shared school space for cosmetics
+  const schoolSpaces = [
+    "their dorm room with posters and a messy desk",
+    "the campus library under fluorescent lights, surrounded by bookshelves",
+    "the campus café with neon menu boards and students chatting",
+    "a classroom with desks and a whiteboard in the background",
+    "a lecture hall with a projector and rows of seats",
+    "the gym locker room with mirrors and fluorescent lighting"
+  ];
+  const scene = schoolSpaces[Math.floor(Math.random() * schoolSpaces.length)];
+
+  const description=await makeDescription(topic,pick,scene);
+  const imageUrl=await generateImageUrl(topic,pick,persona,scene);
+
+  return {
+    brand:pick.brand||pick.artist||pick.issue||"323aidrop",
+    product:pick.product||pick.track||pick.keyword||pick.concept,
+    persona,
+    description,
+    hashtags:["#NowTrending"],
+    image:imageUrl,
+    refresh:3000,
+    isDaily:false
+  };
+}
+
 /* ---------------- API: Description ---------------- */
 app.get("/api/description",async(req,res)=>{
   const topic=req.query.topic||"cosmetics";
@@ -122,20 +164,14 @@ app.get("/api/description",async(req,res)=>{
   else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
 
   const persona=randomPersona();
-  const description=await makeDescription(topic,pick);
-
-  let mimicLine=null;
-  if(topic==="music"){
-    const feature = artistFeatures[pick.artist] || "a dramatic playful expression with improvised hand gestures";
-    mimicLine=`🎶✨ I tried ${feature} like ${pick.artist} 😅.`;
-  }
+  const scene="a generic school space"; // fallback for direct desc calls
+  const description=await makeDescription(topic,pick,scene);
 
   res.json({
     brand:pick.brand||pick.artist||pick.issue||"323aidrop",
     product:pick.product||pick.track||pick.keyword||pick.concept,
     persona,
     description,
-    mimicLine,
     hashtags:["#NowTrending"],
     isDaily:false
   });
@@ -151,7 +187,8 @@ app.get("/api/image",async(req,res)=>{
   else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
 
   const persona=randomPersona();
-  const imageUrl=await generateImageUrl(topic,pick,persona);
+  const scene="a generic school space"; // fallback for direct image calls
+  const imageUrl=await generateImageUrl(topic,pick,persona,scene);
   res.json({ image:imageUrl });
 });
 
