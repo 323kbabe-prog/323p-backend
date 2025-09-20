@@ -1,4 +1,4 @@
-// server.js — sequential description → image flow
+// server.js — op15: reintroduced persona generator + photocard image generator
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,16 +13,16 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- Persona ---------------- */
+/* ---------------- Persona Generator ---------------- */
 function randomPersona() {
-  return "a young college student";
-}
-
-/* ---------------- Stickers ---------------- */
-const stickerPool = ["🤖","👾","⚡","💻","📟","📡","🎶","🎤","✊","📢","🔥","🌈","✨","💖","😍"];
-function randomStickers(countMin=3,countMax=6){
-  const count=Math.floor(Math.random()*(countMax-countMin+1))+countMin;
-  return Array.from({length:count},()=>stickerPool[Math.floor(Math.random()*stickerPool.length)]).join(" ");
+  const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
+  const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
+  const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
+  return `a ${Math.floor(Math.random() * 7) + 17}-year-old female ${
+    ethnicities[Math.floor(Math.random() * ethnicities.length)]
+  } ${vibes[Math.floor(Math.random() * vibes.length)]} with a ${
+    styles[Math.floor(Math.random() * styles.length)]
+  } style`;
 }
 
 /* ---------------- Pools ---------------- */
@@ -62,40 +62,24 @@ async function makeDescription(topic,pick){
 }
 
 /* ---------------- Image Generator ---------------- */
-async function generateImageUrl(topic,pick,persona){
-  const stickers=randomStickers();
-  let prompt="";
-
-  if(topic==="cosmetics"){
-    prompt=`High-quality, photo-realistic influencer beauty photocard.
-Close-up selfie of ${persona} clearly holding and applying the product "${pick.product}" by ${pick.brand}.
-The ${pick.product} must be visible in the image.
-Glossy skin, full make-up, pastel background with fluorescent lighting.
-Floating emoji stickers around the portrait: ${stickers}.`;
-  }
-  else if(topic==="music"){
-    prompt=`Photo-realistic mobile snapshot of ${persona} vibing to "${pick.track}" by ${pick.artist},
-messy dorm background, neon accents. Pastel photocard selfie vibe. Stickers floating around: 🎶 💖 ✨ ${stickers}.`;
-  }
-  else if(topic==="politics"){
-    prompt=`Photo-realistic mobile snapshot of ${persona} at a protest about ${pick.issue}, holding a sign about ${pick.keyword}.
-Background: city street. Stickers floating around: ${stickers}.`;
-  }
-  else{ // aidrop
-    prompt=`Photo-realistic surreal snapshot of ${pick.concept} shown as a cultural object (not a person).
-Glitchy, holographic neon background with pixel overlays. Floating meme emojis and digital stickers: 🐸 👾 💻 🌐 ✨ ${stickers}.`;
-  }
-
-  try{
-    const out=await openai.images.generate({
-      model:"gpt-image-1",
-      prompt,
-      size:"1024x1024"
+async function generateImageUrl(brand, product, persona) {
+  try {
+    const out = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: `
+        Create a photocard-style image.
+        Subject: ${persona}, Gen-Z aesthetic.
+        They are holding and applying ${product} by ${brand}.
+        Pastel gradient background (milk pink, baby blue, lilac).
+        Glitter bokeh, glossy K-beauty skin glow.
+        Sticker shapes only (hearts, stars, sparkles, emoji, text emoticon).
+      `,
+      size: "1024x1024"
     });
-    const d=out?.data?.[0];
+    const d = out?.data?.[0];
     if(d?.url) return d.url;
     if(d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
-  }catch(e){
+  } catch(e){
     console.error("❌ Image error:",e.message);
   }
   return "https://placehold.co/600x600?text=No+Image";
@@ -131,14 +115,15 @@ app.get("/api/description", async (req,res) => {
 
 /* ---------------- API: Image ---------------- */
 app.get("/api/image", async (req,res) => {
-  const topic=req.query.topic||"cosmetics";
   const brand=req.query.brand;
   const product=req.query.product;
+  const persona=randomPersona();
+
   if(!brand || !product){
     return res.status(400).json({error:"brand and product required"});
   }
-  const persona=randomPersona();
-  const imageUrl=await generateImageUrl(topic,{brand,product},persona);
+
+  const imageUrl=await generateImageUrl(brand,product,persona);
   res.json({ image:imageUrl });
 });
 
