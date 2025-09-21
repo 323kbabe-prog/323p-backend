@@ -45,9 +45,9 @@ function removeOverlayLine(line,finalMsg){
 
 /* ---------------- UI Update ---------------- */
 function updateUI(trend){
-document.getElementById("r-title").innerText = `💄👑 ${trend.brand} ✨🌸`;
-document.getElementById("r-artist").innerText = `🖊️ ${trend.product} 🌟`;
-document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona} 🧢👟`;
+  document.getElementById("r-title").innerText = `💄👑 ${trend.brand} ✨🌸`;
+  document.getElementById("r-artist").innerText = `🖊️ ${trend.product} 🌟`;
+  document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona} 🧢👟`;
   document.getElementById("r-desc").innerText = trend.description;
   document.getElementById("r-label").innerText = "🔄 live drop";
 
@@ -171,7 +171,7 @@ async function runLogAndLoad(topic){
 
   try {
     const imgRes = await fetch(
-      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}`
+      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`
     );
     const imgData = await imgRes.json();
     updateImage(imgData.image,imgLine,imgTimer);
