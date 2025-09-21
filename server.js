@@ -174,7 +174,7 @@ app.get("/api/description", async (req,res) => {
 app.get("/api/image", async (req,res) => {
   const brand=req.query.brand;
   const product=req.query.product;
-  const persona=randomPersona();
+  const persona=req.query.persona; // ✅ patched: use persona passed in
 
   if(!brand || !product){
     return res.status(400).json({error:"brand and product required"});
