@@ -8,10 +8,17 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors({ origin: "*" }));
+
+// ✅ Serve static files from /public so bg1.png … bg10.png work
+app.use(express.static(path.join(__dirname, "public")));
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// ... your existing routes, sockets, and logic go here ...
+
 
 /* ---------------- Persona Generator ---------------- */
 function randomPersona() {
