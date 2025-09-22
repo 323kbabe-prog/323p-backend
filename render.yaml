@@ -8,10 +8,10 @@ services:
     envVars:
       - key: OPENAI_API_KEY
         sync: false
-    mounts:                       # Shared volume for daily picks
+    mounts:
       - name: daily-picks-volume
         path: /var/data
-    disk:                         # Persistent disk for user credits
+    disk:
       name: user-data
       mountPath: /data
       sizeGB: 1
@@ -20,7 +20,7 @@ services:
     name: daily-pick-generator
     env: node
     plan: free
-    schedule: "0 0 * * *"         # every midnight UTC
+    schedule: "0 0 * * *"
     buildCommand: "npm install"
     startCommand: "node generateDailyPick.js"
     envVars:
