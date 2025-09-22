@@ -41,4 +41,16 @@ volumes:
       name: user-data
       mountPath: /data
       sizeGB: 1
+      services:
+  - type: web
+    name: three23p-backend
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "node server.js"
+    disk:
+      name: user-data
+      mountPath: /data
+      sizeGB: 1
+
 
