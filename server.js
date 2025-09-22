@@ -17,6 +17,34 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const fs = require("fs");
+
+// ---------------- Credit Store ----------------
+const USERS_FILE = path.join(__dirname, "users.json");
+
+function loadUsers() {
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveUsers(data) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+}
+
+let users = loadUsers();
+
+// helper: get or create a user
+function getUser(userId) {
+  if (!users[userId]) {
+    users[userId] = { credits: 5, history: [] }; // 🎁 start with 5 free credits
+    saveUsers(users);
+  }
+  return users[userId];
+}
+
 // ... your existing routes, sockets, and logic go here ...
 
 
@@ -148,6 +176,15 @@ async function generateImageUrl(brand, product, persona) {
   }
   return "https://placehold.co/600x600?text=No+Image";
 }
+
+/* ---------------- API: Credits ---------------- */
+app.get("/api/credits", (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+
+  const user = getUser(userId);
+  res.json({ credits: user.credits, history: user.history });
+});
 
 /* ---------------- API: Description ---------------- */
 app.get("/api/description", async (req,res) => {
