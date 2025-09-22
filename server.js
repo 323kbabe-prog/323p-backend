@@ -18,6 +18,17 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+/* ---------------- Stripe Setup ---------------- */
+const Stripe = require("stripe");
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Packs reference Stripe Product Price IDs (from your Dashboard, Test mode now, Live later)
+const PACKS = {
+  small: { priceId: process.env.STRIPE_PRICE_SMALL, credits: 30 },
+  medium: { priceId: process.env.STRIPE_PRICE_MEDIUM, credits: 60 },
+  large: { priceId: process.env.STRIPE_PRICE_LARGE, credits: 150 },
+};
+
 // ---------------- Credit Store ----------------
 // Store users.json on Render's persistent disk
 const USERS_FILE = path.join("/data", "users.json");
@@ -230,6 +241,50 @@ app.post(
   }
 );
 
+/* ---------------- Stripe Webhook ---------------- */
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error("❌ Webhook signature error:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const { userId, credits } = session.metadata || {};
+
+      if (userId && credits) {
+        const currentUsers = loadUsers();
+        if (!currentUsers[userId]) {
+          currentUsers[userId] = { credits: 0, history: [] };
+        }
+        currentUsers[userId].credits += parseInt(credits, 10);
+        currentUsers[userId].history.push({
+          type: "purchase",
+          credits: parseInt(credits, 10),
+          at: new Date().toISOString(),
+          stripeSession: session.id,
+        });
+        saveUsers(currentUsers);
+        users = currentUsers;
+        console.log(`✅ Added ${credits} credits to ${userId}`);
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
 
 /* ---------------- JSON middleware ---------------- */
 // ✅ Now safe for all your normal APIs
@@ -246,6 +301,35 @@ app.get("/api/credits", (req, res) => {
 
   // ✅ Only return the balance, no history
   res.json({ credits: user.credits });
+});
+
+/* ---------------- API: Buy Credits ---------------- */
+app.post("/api/buy", async (req, res) => {
+  try {
+    const { userId, pack } = req.query;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    const chosen = PACKS[pack] || PACKS.small;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price: chosen.priceId, // ✅ from Stripe Dashboard
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/cancel`,
+      metadata: { userId, credits: chosen.credits },
+    });
+
+    res.json({ id: session.id, url: session.url });
+  } catch (err) {
+    console.error("❌ Stripe checkout error:", err.message);
+    res.status(500).json({ error: "Checkout failed" });
+  }
 });
 
 /* ---------------- API: Description ---------------- */
