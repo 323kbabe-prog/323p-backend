@@ -176,7 +176,7 @@ const Stripe = require("stripe");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 /* ---------------- Stripe Webhook ---------------- */
-// ⚠️ must be BEFORE express.json()
+// ⚠️ Must be BEFORE app.use(express.json())
 app.post(
   "/webhook",
   express.raw({ type: "application/json" }),
@@ -185,7 +185,11 @@ app.post(
     let event;
 
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
     } catch (err) {
       console.error("❌ Webhook signature error:", err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -221,8 +225,9 @@ app.post(
 );
 
 /* ---------------- JSON middleware ---------------- */
-// ✅ now safe to enable for normal APIs
+// ✅ Now safe for all your normal APIs
 app.use(express.json());
+
 
 /* ---------------- API: Credits ---------------- */
 app.get("/api/credits", (req, res) => {
