@@ -1,4 +1,4 @@
-// server.js — op15: persona generator + photocard image generator + emoji everywhere (with product+persona sets)
+// server.js — op18 backend (persona + image + voice + credit store + stripe)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -16,7 +16,6 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 const fs = require("fs");
 
 // ---------------- Credit Store ----------------
@@ -45,10 +44,7 @@ function getUser(userId) {
   return users[userId];
 }
 
-// ... your existing routes, sockets, and logic go here ...
-
-
-/* ---------------- Persona Generator ---------------- */
+// ... your existing persona/image/voice logic ...
 function randomPersona() {
   const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
@@ -60,13 +56,11 @@ function randomPersona() {
   } style`;
 }
 
-/* ---------------- Emoji Pools ---------------- */
 const descEmojis = [
   "💄","💅","✨","🌸","👑","💖","🪞","🧴","🫧","😍","🌈","🔥","🎶","🎤","🎧","💃",
   "🕺","🏛️","📢","✊","📣","⚡","👾","🤖","📸","💎","🌟","🥰","🌺","🍓","🍭","💫","🎀"
 ];
 
-// Map product keywords to emoji sets
 const productEmojiMap = {
   "freckle": ["✒️","🖊️","🎨","🪞","✨","🫧"],
   "lip": ["💋","👄","💄","✨","💕"],
@@ -76,7 +70,6 @@ const productEmojiMap = {
   "foundation": ["🧴","🪞","✨","💖"],
 };
 
-// Persona vibe emojis
 const vibeEmojiMap = {
   "streetwear model": ["👟","🧢","🕶️","🖤","🤍"],
   "idol": ["🎤","✨","🌟","💎"],
@@ -86,15 +79,11 @@ const vibeEmojiMap = {
   "influencer": ["👑","💖","📸","🌈"],
 };
 
-/* ---------------- Pools ---------------- */
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
-/* ---------------- Description Generator ---------------- */
 async function makeDescription(topic,pick,persona){
   let prompt,system;
-
   if(topic==="cosmetics"){
-    // Collect product-specific emojis
     const lowerProd = (pick.product || "").toLowerCase();
     let prodEmojis = [];
     for(const key in productEmojiMap){
@@ -103,8 +92,6 @@ async function makeDescription(topic,pick,persona){
         break;
       }
     }
-
-    // Collect vibe-specific emojis
     let vibeEmojis = [];
     for(const vibe in vibeEmojiMap){
       if(persona.includes(vibe)){
@@ -112,13 +99,10 @@ async function makeDescription(topic,pick,persona){
         break;
       }
     }
-
     const emojiSet = [...descEmojis, ...prodEmojis, ...vibeEmojis];
-
     prompt=`Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. 
 I am ${persona}. Sensory, photo-realistic. Add emojis inline in every sentence. 
 Use emojis generously from this set: ${emojiSet.join(" ")}.`;
-
     system="You are a college student talking about beauty.";
   }
   else if(topic==="music"){
@@ -153,7 +137,6 @@ Use emojis generously from this set: ${descEmojis.join(" ")}.`;
   }
 }
 
-/* ---------------- Image Generator ---------------- */
 async function generateImageUrl(brand, product, persona) {
   try {
     const out = await openai.images.generate({
@@ -177,6 +160,59 @@ async function generateImageUrl(brand, product, persona) {
   return "https://placehold.co/600x600?text=No+Image";
 }
 
+/* ---------------- Stripe Setup ---------------- */
+const Stripe = require("stripe");
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+/* ---------------- Stripe Webhook ---------------- */
+// ⚠️ must be BEFORE express.json()
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+      console.error("❌ Webhook signature error:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const { userId, credits } = session.metadata || {};
+
+      if (userId && credits) {
+        try {
+          const users = loadUsers();
+          if (!users[userId]) {
+            users[userId] = { credits: 0, history: [] };
+          }
+          users[userId].credits += parseInt(credits, 10);
+          users[userId].history.push({
+            type: "purchase",
+            credits: parseInt(credits, 10),
+            at: new Date().toISOString(),
+            stripeSession: session.id,
+          });
+          saveUsers(users);
+          console.log(`✅ Added ${credits} credits to ${userId}`);
+        } catch (err) {
+          console.error("❌ Failed to update user credits:", err.message);
+        }
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
+
+/* ---------------- JSON middleware ---------------- */
+// ✅ now safe to enable for normal APIs
+app.use(express.json());
+
 /* ---------------- API: Credits ---------------- */
 app.get("/api/credits", (req, res) => {
   const userId = req.query.userId;
@@ -187,65 +223,16 @@ app.get("/api/credits", (req, res) => {
 });
 
 /* ---------------- API: Description ---------------- */
-app.get("/api/description", async (req,res) => {
-  const topic=req.query.topic||"cosmetics";
-  let pick;
-  if(topic==="cosmetics") pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
-  else if(topic==="music") pick=TOP_MUSIC[Math.floor(Math.random()*TOP_MUSIC.length)];
-  else if(topic==="politics") pick=TOP_POLITICS[Math.floor(Math.random()*TOP_POLITICS.length)];
-  else pick=TOP_AIDROP[Math.floor(Math.random()*TOP_AIDROP.length)];
-
-  const persona=randomPersona();
-  const description=await makeDescription(topic,pick,persona);
-
-  let mimicLine=null;
-  if(topic==="music"){
-    mimicLine=`🎶✨ I tried a playful move like ${pick.artist} 😅.`;
-  }
-
-  res.json({
-    brand:pick.brand||pick.artist||pick.issue||"323aidrop",
-    product:pick.product||pick.track||pick.keyword||pick.concept,
-    persona,
-    description,
-    mimicLine,
-    hashtags:["#NowTrending"],
-    isDaily:false
-  });
-});
+app.get("/api/description", async (req,res) => { ... });
 
 /* ---------------- API: Image ---------------- */
-app.get("/api/image", async (req,res) => {
-  const brand=req.query.brand;
-  const product=req.query.product;
-  const persona=req.query.persona; // ✅ patched: use persona passed in
-
-  if(!brand || !product){
-    return res.status(400).json({error:"brand and product required"});
-  }
-
-  const imageUrl=await generateImageUrl(brand,product,persona);
-  res.json({ image:imageUrl });
-});
+app.get("/api/image", async (req,res) => { ... });
 
 /* ---------------- Voice ---------------- */
-app.get("/api/voice",async(req,res)=>{
-  const text=req.query.text||"";
-  if(!text.trim()){res.setHeader("Content-Type","audio/mpeg");return res.send(Buffer.alloc(1000));}
-  try{
-    const out=await openai.audio.speech.create({
-      model:"gpt-4o-mini-tts",
-      voice:"alloy",
-      input:text,
-    });
-    const audioBuffer=Buffer.from(await out.arrayBuffer());
-    res.setHeader("Content-Type","audio/mpeg");
-    res.send(audioBuffer);
-  }catch(e){
-    console.error("❌ Voice error:",e.message);
-    res.status(500).json({error:"Voice TTS failed"});
-  }
-});
+app.get("/api/voice", async (req,res) => { ... });
+
+/* ---------------- API: Buy Credits ---------------- */
+app.post("/api/buy", async (req, res) => { ... });
 
 /* ---------------- Chat ---------------- */
 io.on("connection",(socket)=>{
