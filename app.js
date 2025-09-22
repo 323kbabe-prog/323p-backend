@@ -1,4 +1,4 @@
-// app.js — op18 (adds credit balance + userId persistence)
+// app.js — op18 (adds credit balance + userId persistence, fixed start button)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -248,7 +248,10 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("start-screen").style.display="none";
   document.getElementById("app").style.display="flex";
   socket.emit("joinRoom",roomId);
-  updateCreditsUI(); // show balance immediately
+
+  // ✅ delay credit update so DOM is ready
+  setTimeout(updateCreditsUI, 200);
+
   showConfirmButton();
 });
 
