@@ -2,15 +2,19 @@ services:
   - type: web
     name: 323drop-backend
     env: node
-    plan: free    # or standard depending on your usage
+    plan: free
     buildCommand: "npm install"
     startCommand: "node server.js"
     envVars:
       - key: OPENAI_API_KEY
-        sync: false  # set in Render dashboard
-    mounts:
+        sync: false
+    mounts:                       # your daily picks shared volume
       - name: daily-picks-volume
         path: /var/data
+    disk:                         # NEW user-data disk
+      name: user-data
+      mountPath: /data
+      sizeGB: 1
 
   - type: cron
     name: daily-pick-generator
@@ -29,28 +33,3 @@ services:
 volumes:
   - name: daily-picks-volume
     sizeGB: 1
-
-    services:
-  - type: web
-    name: three23p-backend
-    env: node
-    plan: free
-    buildCommand: "npm install"
-    startCommand: "node server.js"
-    disk:
-      name: user-data
-      mountPath: /data
-      sizeGB: 1
-      services:
-  - type: web
-    name: three23p-backend
-    env: node
-    plan: free
-    buildCommand: "npm install"
-    startCommand: "node server.js"
-    disk:
-      name: user-data
-      mountPath: /data
-      sizeGB: 1
-
-
