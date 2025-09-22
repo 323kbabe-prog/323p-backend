@@ -1,7 +1,7 @@
 {
   "name": "323drop-base-mode",
   "version": "1.0.0",
-  "description": "323drop backend — Base Mode Only (DailyDrop + cycle + voice)",
+  "description": "323drop backend — Base Mode Only (DailyDrop + cycle + voice + credits + stripe)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -13,6 +13,7 @@
     "express": "^4.19.2",
     "openai": "^4.0.0",
     "socket.io": "^4.7.5",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "stripe": "^14.0.0"
   }
 }
