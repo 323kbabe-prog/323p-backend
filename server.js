@@ -241,11 +241,11 @@ app.get("/api/credits", (req, res) => {
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "userId required" });
 
-  // ✅ Always reload from disk to get the latest updates
   const freshUsers = loadUsers();
   const user = freshUsers[userId] || { credits: 5, history: [] };
 
-  res.json({ credits: user.credits, history: user.history });
+  // ✅ Only return the balance, no history
+  res.json({ credits: user.credits });
 });
 
 /* ---------------- API: Description ---------------- */
