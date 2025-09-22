@@ -19,7 +19,7 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ---------------- Credit Store ----------------
-const USERS_FILE = path.join(__dirname, "users.json");
+const USERS_FILE = path.join("/data", "users.json");
 
 function loadUsers() {
   try {
