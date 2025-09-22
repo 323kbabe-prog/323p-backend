@@ -1,33 +1,8 @@
-// app.js — op19 (Sticker Booth Style, with credits)
+// app.js — Sticker Booth Style (Gen-Z) — op3 final rules (sequential desc → image)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
 let autoRefresh = false;
-
-/* ---------------- Persistent userId ---------------- */
-function getOrCreateUserId() {
-  let id = localStorage.getItem("userId");
-  if (!id) {
-    id = "user-" + Math.random().toString(36).substring(2, 12);
-    localStorage.setItem("userId", id);
-  }
-  return id;
-}
-const userId = getOrCreateUserId();
-
-/* ---------------- Credits UI ---------------- */
-async function updateCreditsUI() {
-  try {
-    const res = await fetch(
-      `https://three23p-backend.onrender.com/api/credits?userId=${userId}`
-    );
-    const data = await res.json();
-    const count = document.getElementById("credit-count");
-    if (count) count.innerText = `✨ Credits left: ${data.credits} ✨`;
-  } catch (e) {
-    console.error("❌ credit fetch error", e);
-  }
-}
 
 /* ---------------- Room Setup ---------------- */
 (function initRoom(){
@@ -76,6 +51,7 @@ function updateUI(trend){
   document.getElementById("r-desc").innerText = trend.description;
   document.getElementById("r-label").innerText = "🔄 live drop";
 
+  // Hide image until loaded separately
   document.getElementById("r-img").style.display="none";
   document.getElementById("r-fallback").style.display="block";
 
@@ -104,7 +80,7 @@ function updateUI(trend){
 /* ---------------- Image Update ---------------- */
 function updateImage(imageUrl,imgLine,imgTimer){
   clearInterval(imgTimer);
-  removeOverlayLine(imgLine,"✅ image ready");
+  removeOverlayLine(imgLine,"✅ image ready"); // rule 4
   if(imageUrl){
     document.getElementById("r-img").src = imageUrl;
     document.getElementById("r-img").style.display="block";
@@ -119,6 +95,7 @@ function updateImage(imageUrl,imgLine,imgTimer){
 function playVoice(text,onEnd){
   if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
 
+  // Add log for voice generating
   let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
   let genElapsed = 0;
   const genTimer = setInterval(()=>{
@@ -129,9 +106,10 @@ function playVoice(text,onEnd){
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
 
+  // As soon as we try to play, clear "generating"
   audioPlayer.play().then(()=>{
     clearInterval(genTimer);
-    removeOverlayLine(voiceLine,"✅ voice started");
+    removeOverlayLine(voiceLine,"✅ voice started"); // rule 5
   }).catch(()=>{
     clearInterval(genTimer);
     removeOverlayLine(voiceLine,"❌ voice error");
@@ -151,12 +129,15 @@ function playVoice(text,onEnd){
 async function runLogAndLoad(topic){
   showOverlay();
 
+  // Request log (disappear after 1s)
   let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
-  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000);
+  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000); // rule 1
 
+  // Pool log (disappear after 2s)
   let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
-  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000);
+  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000); // rule 2
 
+  // === Step 1: description ===
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
   let descElapsed=0;
   const descTimer=setInterval(()=>{
@@ -164,20 +145,14 @@ async function runLogAndLoad(topic){
     descLine.innerText="✍️ drafting description… "+descElapsed+"s";
   },1000);
 
-  const descRes = await fetch(
-    `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`
-  );
+  const descRes = await fetch("https://three23p-backend.onrender.com/api/description?topic="+topic);
   const trend = await descRes.json();
 
   clearInterval(descTimer);
-  if(trend.error){
-    removeOverlayLine(descLine,"❌ " + trend.error);
-    alert(trend.error);
-    return;
-  }
-  removeOverlayLine(descLine,"✅ description ready");
+  removeOverlayLine(descLine,"✅ description ready"); // rule 3
   updateUI(trend);
 
+  // Start voice generation log after description is back
   playVoice(trend.description,()=>{
     if(autoRefresh){
       showOverlay();
@@ -186,6 +161,7 @@ async function runLogAndLoad(topic){
     }
   });
 
+  // === Step 2: image AFTER description ===
   let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
   let imgElapsed=0;
   const imgTimer=setInterval(()=>{
@@ -195,7 +171,7 @@ async function runLogAndLoad(topic){
 
   try {
     const imgRes = await fetch(
-      `https://three23p-backend.onrender.com/api/image?brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`
+      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`
     );
     const imgData = await imgRes.json();
     updateImage(imgData.image,imgLine,imgTimer);
@@ -205,7 +181,6 @@ async function runLogAndLoad(topic){
     updateImage(null);
   }
 
-  updateCreditsUI(); // 👈 refresh credits after each drop
   return trend;
 }
 
@@ -247,7 +222,6 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("start-screen").style.display="none";
   document.getElementById("app").style.display="flex";
   socket.emit("joinRoom",roomId);
-  setTimeout(updateCreditsUI,200); // safe refresh
   showConfirmButton();
 });
 
@@ -255,6 +229,7 @@ document.getElementById("start-btn").addEventListener("click",()=>{
 document.querySelectorAll("#topic-picker button").forEach(btn=>{
   btn.addEventListener("click",()=>{
     if(btn.dataset.topic === "cosmetics"){
+      // 💄 Cosmetics button is functionless now
       return;
     }
     currentTopic = btn.dataset.topic;
@@ -262,35 +237,3 @@ document.querySelectorAll("#topic-picker button").forEach(btn=>{
     showConfirmButton();
   });
 });
-
-/* ---------------- Buy Credits ---------------- */
-async function buyCredits(pack) {
-  const res = await fetch(
-    `https://three23p-backend.onrender.com/api/buy?userId=${userId}&pack=${pack}`,
-    { method: "POST" }
-  );
-  const data = await res.json();
-  if (data.url) {
-    window.location.href = data.url;
-  } else {
-    alert("Checkout failed: " + (data.error || "unknown error"));
-  }
-}
-document.getElementById("buy-small").addEventListener("click", () => buyCredits("small"));
-document.getElementById("buy-medium").addEventListener("click", () => buyCredits("medium"));
-document.getElementById("buy-large").addEventListener("click", () => buyCredits("large"));
-
-/* ---------------- Success Overlay ---------------- */
-(function checkSuccess() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.has("session_id")) {
-    const overlay = document.getElementById("success-overlay");
-    overlay.style.display = "block";
-    updateCreditsUI();
-    setTimeout(() => {
-      overlay.style.display = "none";
-      params.delete("session_id");
-      window.history.replaceState({}, "", window.location.pathname + "?" + params.toString());
-    }, 4000);
-  }
-})();
