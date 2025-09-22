@@ -8,10 +8,10 @@ services:
     envVars:
       - key: OPENAI_API_KEY
         sync: false
-    mounts:
+    mounts:                       # still sharing your daily-picks volume
       - name: daily-picks-volume
         path: /var/data
-    disk:
+    disk:                         # NEW persistent disk for users.json
       name: user-data
       mountPath: /data
       sizeGB: 1
