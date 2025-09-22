@@ -45,9 +45,9 @@ function removeOverlayLine(line,finalMsg){
 
 /* ---------------- UI Update ---------------- */
 function updateUI(trend){
-  document.getElementById("r-title").innerText = `💄👑 ${trend.brand} ✨🌸`;
-  document.getElementById("r-artist").innerText = `🖊️ ${trend.product} 🌟`;
-  document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona} 🧢👟`;
+  document.getElementById("r-title").innerText = `💄👑 ${trend.brand} `;
+  document.getElementById("r-artist").innerText = `🖊️ ${trend.product} `;
+  document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona} `;
   document.getElementById("r-desc").innerText = trend.description;
   document.getElementById("r-label").innerText = "🔄 live drop";
 
