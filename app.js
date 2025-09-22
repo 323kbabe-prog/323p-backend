@@ -1,4 +1,4 @@
-// app.js — op19 (all functions intact + credit bar + buy credits)
+// app.js — op19 (Sticker Booth Style, with credits)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
@@ -205,7 +205,7 @@ async function runLogAndLoad(topic){
     updateImage(null);
   }
 
-  updateCreditsUI(); // 👈 refresh balance after each drop
+  updateCreditsUI(); // 👈 refresh credits after each drop
   return trend;
 }
 
@@ -247,7 +247,7 @@ document.getElementById("start-btn").addEventListener("click",()=>{
   document.getElementById("start-screen").style.display="none";
   document.getElementById("app").style.display="flex";
   socket.emit("joinRoom",roomId);
-  setTimeout(updateCreditsUI, 200); // safe refresh
+  setTimeout(updateCreditsUI,200); // safe refresh
   showConfirmButton();
 });
 
@@ -271,12 +271,11 @@ async function buyCredits(pack) {
   );
   const data = await res.json();
   if (data.url) {
-    window.location.href = data.url; // redirect to Stripe Checkout
+    window.location.href = data.url;
   } else {
     alert("Checkout failed: " + (data.error || "unknown error"));
   }
 }
-
 document.getElementById("buy-small").addEventListener("click", () => buyCredits("small"));
 document.getElementById("buy-medium").addEventListener("click", () => buyCredits("medium"));
 document.getElementById("buy-large").addEventListener("click", () => buyCredits("large"));
@@ -287,9 +286,7 @@ document.getElementById("buy-large").addEventListener("click", () => buyCredits(
   if (params.has("session_id")) {
     const overlay = document.getElementById("success-overlay");
     overlay.style.display = "block";
-
-    if (typeof updateCreditsUI === "function") updateCreditsUI();
-
+    updateCreditsUI();
     setTimeout(() => {
       overlay.style.display = "none";
       params.delete("session_id");
