@@ -22,8 +22,8 @@ async function updateCreditsUI() {
       `https://three23p-backend.onrender.com/api/credits?userId=${userId}`
     );
     const data = await res.json();
-    const bar = document.getElementById("credit-bar");
-    if (bar) bar.innerText = `✨ Credits left: ${data.credits} ✨`;
+    const count = document.getElementById("credit-count");
+    if (count) count.innerText = `✨ Credits left: ${data.credits} ✨`;
   } catch (e) {
     console.error("❌ credit fetch error", e);
   }
