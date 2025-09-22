@@ -1,4 +1,4 @@
-// server.js — op19 backend (persona + image + voice + credit store + stripe)
+// server.js — op18 backend (persona + image + voice + credit store + stripe)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -18,18 +18,7 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- Stripe Setup ---------------- */
-const Stripe = require("stripe");
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-
-// Packs reference Stripe Product Price IDs (from your Dashboard, Test mode now, Live later)
-const PACKS = {
-  small: { priceId: process.env.STRIPE_PRICE_SMALL, credits: 30 },
-  medium: { priceId: process.env.STRIPE_PRICE_MEDIUM, credits: 60 },
-  large: { priceId: process.env.STRIPE_PRICE_LARGE, credits: 150 },
-};
-
-/* ---------------- Credit Store ---------------- */
+// ---------------- Credit Store ----------------
 // Store users.json on Render's persistent disk
 const USERS_FILE = path.join("/data", "users.json");
 
@@ -46,6 +35,7 @@ function saveUsers(data) {
 }
 
 let users = loadUsers();
+
 
 // helper: get or create a user
 function getUser(userId) {
@@ -183,6 +173,10 @@ async function generateImageUrl(brand, product, persona) {
   return "https://placehold.co/600x600?text=No+Image";
 }
 
+/* ---------------- Stripe Setup ---------------- */
+const Stripe = require("stripe");
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
 /* ---------------- Stripe Webhook ---------------- */
 // ⚠️ Must be BEFORE app.use(express.json())
 app.post(
@@ -208,20 +202,27 @@ app.post(
       const { userId, credits } = session.metadata || {};
 
       if (userId && credits) {
-        const currentUsers = loadUsers();
-        if (!currentUsers[userId]) {
-          currentUsers[userId] = { credits: 0, history: [] };
+        try {
+          const currentUsers = loadUsers(); // ✅ reload latest
+          if (!currentUsers[userId]) {
+            currentUsers[userId] = { credits: 0, history: [] };
+          }
+          currentUsers[userId].credits += parseInt(credits, 10);
+          currentUsers[userId].history.push({
+            type: "purchase",
+            credits: parseInt(credits, 10),
+            at: new Date().toISOString(),
+            stripeSession: session.id,
+          });
+          saveUsers(currentUsers);
+
+          // ✅ refresh global in-memory cache
+          users = currentUsers;
+
+          console.log(`✅ Added ${credits} credits to ${userId}`);
+        } catch (err) {
+          console.error("❌ Failed to update user credits:", err.message);
         }
-        currentUsers[userId].credits += parseInt(credits, 10);
-        currentUsers[userId].history.push({
-          type: "purchase",
-          credits: parseInt(credits, 10),
-          at: new Date().toISOString(),
-          stripeSession: session.id,
-        });
-        saveUsers(currentUsers);
-        users = currentUsers;
-        console.log(`✅ Added ${credits} credits to ${userId}`);
       }
     }
 
@@ -229,8 +230,11 @@ app.post(
   }
 );
 
+
 /* ---------------- JSON middleware ---------------- */
+// ✅ Now safe for all your normal APIs
 app.use(express.json());
+
 
 /* ---------------- API: Credits ---------------- */
 app.get("/api/credits", (req, res) => {
@@ -240,36 +244,8 @@ app.get("/api/credits", (req, res) => {
   const freshUsers = loadUsers();
   const user = freshUsers[userId] || { credits: 5, history: [] };
 
+  // ✅ Only return the balance, no history
   res.json({ credits: user.credits });
-});
-
-/* ---------------- API: Buy Credits ---------------- */
-app.post("/api/buy", async (req, res) => {
-  try {
-    const { userId, pack } = req.query;
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
-
-    const chosen = PACKS[pack] || PACKS.small;
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      line_items: [
-        {
-          price: chosen.priceId,
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/cancel`,
-      metadata: { userId, credits: chosen.credits },
-    });
-
-    res.json({ id: session.id, url: session.url });
-  } catch (err) {
-    console.error("❌ Stripe checkout error:", err.message);
-    res.status(500).json({ error: "Checkout failed" });
-  }
 });
 
 /* ---------------- API: Description ---------------- */
@@ -330,6 +306,45 @@ app.get("/api/voice",async(req,res)=>{
   }catch(e){
     console.error("❌ Voice error:",e.message);
     res.status(500).json({error:"Voice TTS failed"});
+  }
+});
+
+/* ---------------- API: Buy Credits ---------------- */
+app.post("/api/buy", async (req, res) => {
+  try {
+    const { userId, pack } = req.query;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    const packs = {
+      small: { amount: 300, credits: 30 },
+      medium: { amount: 500, credits: 60 },
+      large: { amount: 1000, credits: 150 },
+    };
+
+    const chosen = packs[pack] || packs.small;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { name: `${chosen.credits} AI Credits` },
+            unit_amount: chosen.amount,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/cancel`,
+      metadata: { userId, credits: chosen.credits },
+    });
+
+    res.json({ id: session.id, url: session.url });
+  } catch (err) {
+    console.error("❌ Stripe checkout error:", err.message);
+    res.status(500).json({ error: "Checkout failed" });
   }
 });
 
