@@ -203,18 +203,22 @@ app.post(
 
       if (userId && credits) {
         try {
-          const users = loadUsers();
-          if (!users[userId]) {
-            users[userId] = { credits: 0, history: [] };
+          const currentUsers = loadUsers(); // ✅ reload latest
+          if (!currentUsers[userId]) {
+            currentUsers[userId] = { credits: 0, history: [] };
           }
-          users[userId].credits += parseInt(credits, 10);
-          users[userId].history.push({
+          currentUsers[userId].credits += parseInt(credits, 10);
+          currentUsers[userId].history.push({
             type: "purchase",
             credits: parseInt(credits, 10),
             at: new Date().toISOString(),
             stripeSession: session.id,
           });
-          saveUsers(users);
+          saveUsers(currentUsers);
+
+          // ✅ refresh global in-memory cache
+          users = currentUsers;
+
           console.log(`✅ Added ${credits} credits to ${userId}`);
         } catch (err) {
           console.error("❌ Failed to update user credits:", err.message);
@@ -225,6 +229,7 @@ app.post(
     res.json({ received: true });
   }
 );
+
 
 /* ---------------- JSON middleware ---------------- */
 // ✅ Now safe for all your normal APIs
