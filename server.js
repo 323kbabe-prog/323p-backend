@@ -19,13 +19,14 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ---------------- Credit Store ----------------
+// Store users.json on Render's persistent disk
 const USERS_FILE = path.join("/data", "users.json");
 
 function loadUsers() {
   try {
     return JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
   } catch {
-    return {};
+    return {}; // if file doesn’t exist yet
   }
 }
 
@@ -34,6 +35,7 @@ function saveUsers(data) {
 }
 
 let users = loadUsers();
+
 
 // helper: get or create a user
 function getUser(userId) {
