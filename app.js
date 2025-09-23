@@ -295,15 +295,41 @@ document.getElementById("buy-large").addEventListener("click", () => buyCredits(
     alert("✅ Payment successful! Your credits have been updated.");
 
     // Immediately refresh credits
-    if (typeof updateCredits === "function") {
-      updateCredits();
+    updateCredits();
+
+    // Clean up URL so session_id disappears BUT KEEP room
+    const roomParam = params.get("room");
+    params.delete("session_id");
+
+    let newUrl = window.location.origin + window.location.pathname;
+    if (roomParam) {
+      newUrl += "?room=" + roomParam;
     }
 
-    // Clean up URL so session_id disappears
-    params.delete("session_id");
-    const newUrl = window.location.origin + window.location.pathname + "?" + params.toString();
     window.history.replaceState({}, "", newUrl);
   }
 })();
+
+/* ---------------- Credits Updater ---------------- */
+async function updateCredits() {
+  const userId = localStorage.getItem("userId");
+  if (!userId) return;
+
+  try {
+    const res = await fetch(`https://three23p-backend.onrender.com/api/credits?userId=${userId}`);
+    const data = await res.json();
+    if (data.credits !== undefined) {
+      const creditBar = document.getElementById("credit-balance");
+      if (creditBar) {
+        creditBar.textContent = `✨ Credits left: ${data.credits}`;
+      }
+    }
+  } catch (err) {
+    console.error("❌ Failed to fetch credits:", err);
+  }
+}
+
+// Call on initial page load too
+document.addEventListener("DOMContentLoaded", updateCredits);
 
 
