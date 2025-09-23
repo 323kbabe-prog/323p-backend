@@ -45,7 +45,6 @@ function removeOverlayLine(line,finalMsg){
 
 /* ---------------- UI Update ---------------- */
 function updateUI(trend){
- function updateUI(trend){
   document.getElementById("r-title").innerText =
     `💄👑 ${trend.brand || "…"}`;
   document.getElementById("r-artist").innerText =
@@ -55,7 +54,6 @@ function updateUI(trend){
   document.getElementById("r-desc").innerText =
     trend.description || "…loading description…";
   document.getElementById("r-label").innerText = "🔄 live drop";
-}
 
   // Hide image until loaded separately
   document.getElementById("r-img").style.display="none";
@@ -151,7 +149,16 @@ async function runLogAndLoad(topic){
     descLine.innerText="✍️ drafting description… "+descElapsed+"s";
   },1000);
 
-const descRes = await fetch("https://three23p-backend.onrender.com/api/description?topic="+topic);
+let userId = localStorage.getItem("userId");
+if (!userId) {
+  userId = "user-" + Math.floor(Math.random() * 1e9);
+  localStorage.setItem("userId", userId);
+}
+
+const descRes = await fetch(
+  `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`
+);
+
 const trend = await descRes.json();
 
 clearInterval(descTimer);
