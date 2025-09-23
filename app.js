@@ -45,11 +45,17 @@ function removeOverlayLine(line,finalMsg){
 
 /* ---------------- UI Update ---------------- */
 function updateUI(trend){
-  document.getElementById("r-title").innerText = `💄👑 ${trend.brand} `;
-  document.getElementById("r-artist").innerText = `🖊️ ${trend.product} `;
-  document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona} `;
-  document.getElementById("r-desc").innerText = trend.description;
+ function updateUI(trend){
+  document.getElementById("r-title").innerText =
+    `💄👑 ${trend.brand || "…"}`;
+  document.getElementById("r-artist").innerText =
+    `🖊️ ${trend.product || "…"}`;
+  document.getElementById("r-persona").innerText =
+    `👩‍🎤 ${trend.persona || "…"}`;
+  document.getElementById("r-desc").innerText =
+    trend.description || "…loading description…";
   document.getElementById("r-label").innerText = "🔄 live drop";
+}
 
   // Hide image until loaded separately
   document.getElementById("r-img").style.display="none";
@@ -145,12 +151,18 @@ async function runLogAndLoad(topic){
     descLine.innerText="✍️ drafting description… "+descElapsed+"s";
   },1000);
 
-  const descRes = await fetch("https://three23p-backend.onrender.com/api/description?topic="+topic);
-  const trend = await descRes.json();
+const descRes = await fetch("https://three23p-backend.onrender.com/api/description?topic="+topic);
+const trend = await descRes.json();
 
-  clearInterval(descTimer);
-  removeOverlayLine(descLine,"✅ description ready"); // rule 3
-  updateUI(trend);
+clearInterval(descTimer);
+
+if (!trend || !trend.brand) {
+  removeOverlayLine(descLine,"❌ description failed");
+  return; // stop sequence gracefully
+}
+
+removeOverlayLine(descLine,"✅ description ready");
+updateUI(trend);
 
   // Start voice generation log after description is back
   playVoice(trend.description,()=>{
