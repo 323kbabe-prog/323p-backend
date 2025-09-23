@@ -354,8 +354,9 @@ app.post("/api/buy", async (req, res) => {
       allow_promotion_codes: true,
 
       // 👇 keep the same roomId when Stripe sends user back
-      success_url: `${process.env.CLIENT_URL}/app.html?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/app.html?room=${roomId}`,
+ success_url: `${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
+cancel_url: `${process.env.CLIENT_URL}/?room=${roomId}`,
+
 
       metadata: { userId, credits: chosen.credits },
     });
