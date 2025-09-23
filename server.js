@@ -250,6 +250,21 @@ app.get("/api/credits", (req, res) => {
 
 /* ---------------- API: Description ---------------- */
 app.get("/api/description", async (req,res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+
+  const user = getUser(userId);
+
+  // 👇 Check balance
+  if (user.credits <= 0) {
+    return res.status(403).json({ error: "Out of credits" });
+  }
+
+  // 👇 Deduct one credit
+  user.credits -= 1;
+  saveUsers(users);
+
+  // Continue with existing logic...
   const topic=req.query.topic||"cosmetics";
   let pick;
   if(topic==="cosmetics") pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
