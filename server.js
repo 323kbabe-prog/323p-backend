@@ -342,10 +342,11 @@ app.post("/api/buy", async (req, res) => {
     });
 
     res.json({ id: session.id, url: session.url });
-  } catch (err) {
-    console.error("❌ Stripe checkout error:", err.message);
-    res.status(500).json({ error: "Checkout failed" });
-  }
+  }catch (err) {
+  console.error("❌ Stripe checkout error:", err.message);
+  res.status(500).json({ error: err.message });
+}
+
 });
 
 /* ---------------- Chat ---------------- */
