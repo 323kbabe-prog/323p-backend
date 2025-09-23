@@ -283,3 +283,27 @@ document.getElementById("buy-small").addEventListener("click", () => buyCredits(
 document.getElementById("buy-medium").addEventListener("click", () => buyCredits("medium"));
 document.getElementById("buy-large").addEventListener("click", () => buyCredits("large"));
 
+/* ---------------- Stripe Return Check ---------------- */
+(function checkStripeReturn(){
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+
+  if (sessionId) {
+    console.log("✅ Stripe returned with session:", sessionId);
+
+    // Show popup or toast
+    alert("✅ Payment successful! Your credits have been updated.");
+
+    // Immediately refresh credits
+    if (typeof updateCredits === "function") {
+      updateCredits();
+    }
+
+    // Clean up URL so session_id disappears
+    params.delete("session_id");
+    const newUrl = window.location.origin + window.location.pathname + "?" + params.toString();
+    window.history.replaceState({}, "", newUrl);
+  }
+})();
+
+
