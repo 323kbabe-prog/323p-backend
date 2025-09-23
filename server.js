@@ -354,8 +354,9 @@ app.post("/api/buy", async (req, res) => {
   // ✅ Optional: allow promo codes
   allow_promotion_codes: true,
 
-  success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-  cancel_url: `${process.env.CLIENT_URL}/cancel`,
+success_url: `${process.env.CLIENT_URL}`,   // ✅ redirect to homepage
+cancel_url: `${process.env.CLIENT_URL}`,    // ✅ redirect to homepage
+
   metadata: { userId, credits: chosen.credits },
 });
 
