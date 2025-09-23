@@ -327,7 +327,7 @@ app.get("/api/voice",async(req,res)=>{
 /* ---------------- API: Buy Credits ---------------- */
 app.post("/api/buy", async (req, res) => {
   try {
-    const { userId, pack } = req.query;
+    const { userId, pack, roomId } = req.query;  // 👈 grab roomId
     if (!userId) return res.status(400).json({ error: "Missing userId" });
 
     const packs = {
@@ -338,35 +338,33 @@ app.post("/api/buy", async (req, res) => {
 
     const chosen = packs[pack] || packs.small;
 
-   const session = await stripe.checkout.sessions.create({
-  payment_method_types: ["card"],   // ✅ Keep "card" — enables Apple Pay + Google Pay
-  mode: "payment",
-  line_items: [
-    {
-      price_data: {
-        currency: "usd",
-        product_data: { name: `${chosen.credits} AI Credits` },
-        unit_amount: chosen.amount,
-      },
-      quantity: 1,
-    },
-  ],
-  // ✅ Optional: allow promo codes
-  allow_promotion_codes: true,
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { name: `${chosen.credits} AI Credits` },
+            unit_amount: chosen.amount,
+          },
+          quantity: 1,
+        },
+      ],
+      allow_promotion_codes: true,
 
-success_url: `${process.env.CLIENT_URL}`,   // ✅ redirect to homepage
-cancel_url: `${process.env.CLIENT_URL}`,    // ✅ redirect to homepage
+      // 👇 keep the same roomId when Stripe sends user back
+      success_url: `${process.env.CLIENT_URL}/app.html?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/app.html?room=${roomId}`,
 
-  metadata: { userId, credits: chosen.credits },
-});
-
+      metadata: { userId, credits: chosen.credits },
+    });
 
     res.json({ id: session.id, url: session.url });
-  }catch (err) {
-  console.error("❌ Stripe checkout error:", err.message);
-  res.status(500).json({ error: err.message });
-}
-
+  } catch (err) {
+    console.error("❌ Stripe checkout error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* ---------------- Chat ---------------- */
