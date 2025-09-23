@@ -318,3 +318,19 @@ async function updateCredits() {
 // run once + refresh every 30s ✅
 document.addEventListener("DOMContentLoaded", updateCredits);
 setInterval(updateCredits, 30000);
+/* ---------------- User ID Header ---------------- */
+function showUserIdImmediately() {
+  let userId = localStorage.getItem("userId");
+  if (!userId) {
+    userId = "user-" + Math.floor(Math.random() * 1e9);
+    localStorage.setItem("userId", userId);
+  }
+  const userLabel = document.getElementById("user-id-label");
+  if (userLabel) {
+    userLabel.textContent = `👤 User: ${userId}`;
+  }
+}
+
+// run on page load
+document.addEventListener("DOMContentLoaded", showUserIdImmediately);
+
