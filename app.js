@@ -265,13 +265,14 @@ async function buyCredits(pack) {
     return;
   }
 
+  // 👇 include current roomId
   const res = await fetch(
-    `https://three23p-backend.onrender.com/api/buy?userId=${userId}&pack=${pack}`,
+    `https://three23p-backend.onrender.com/api/buy?userId=${userId}&pack=${pack}&roomId=${roomId}`,
     { method: "POST" }
   );
   const data = await res.json();
   if (data.url) {
-    window.location.href = data.url; // redirect to Stripe Checkout
+    window.location.href = data.url; // Stripe Checkout
   } else {
     alert("Checkout failed: " + (data.error || "unknown error"));
   }
