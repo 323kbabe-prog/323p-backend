@@ -110,7 +110,6 @@ function playVoice(text,onEnd){
   const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
   audioPlayer = new Audio(url);
 
-  // As soon as we try to play, clear "generating"
   audioPlayer.play().then(()=>{
     clearInterval(genTimer);
     removeOverlayLine(voiceLine,"✅ voice started"); // rule 5
@@ -121,11 +120,11 @@ function playVoice(text,onEnd){
   });
 
   audioPlayer.onended = ()=>{
-    document.getElementById("voice-status").innerText = "⚙️ preparing…";
+    document.querySelector("#voice-status .text").textContent = "preparing…"; // ✅ patched
     if(onEnd) onEnd();
   };
   audioPlayer.onplay = ()=>{
-    document.getElementById("voice-status").innerText = "🤖🔊 vibin’ rn…";
+    document.querySelector("#voice-status .text").textContent = "vibin’ rn…"; // ✅ patched
   };
 }
 
@@ -133,15 +132,12 @@ function playVoice(text,onEnd){
 async function runLogAndLoad(topic){
   showOverlay();
 
-  // Request log (disappear after 1s)
   let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
-  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000); // rule 1
+  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000);
 
-  // Pool log (disappear after 2s)
   let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
-  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000); // rule 2
+  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000);
 
-  // === Step 1: description ===
   let descLine = appendOverlay("✍️ drafting description…","#fff",true);
   let descElapsed=0;
   const descTimer=setInterval(()=>{
@@ -149,29 +145,27 @@ async function runLogAndLoad(topic){
     descLine.innerText="✍️ drafting description… "+descElapsed+"s";
   },1000);
 
-let userId = localStorage.getItem("userId");
-if (!userId) {
-  userId = "user-" + Math.floor(Math.random() * 1e9);
-  localStorage.setItem("userId", userId);
-}
+  let userId = localStorage.getItem("userId");
+  if (!userId) {
+    userId = "user-" + Math.floor(Math.random() * 1e9);
+    localStorage.setItem("userId", userId);
+  }
 
-const descRes = await fetch(
-  `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`
-);
+  const descRes = await fetch(
+    `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`
+  );
+  const trend = await descRes.json();
 
-const trend = await descRes.json();
+  clearInterval(descTimer);
 
-clearInterval(descTimer);
+  if (!trend || !trend.brand) {
+    removeOverlayLine(descLine,"❌ description failed");
+    return;
+  }
 
-if (!trend || !trend.brand) {
-  removeOverlayLine(descLine,"❌ description failed");
-  return; // stop sequence gracefully
-}
+  removeOverlayLine(descLine,"✅ description ready");
+  updateUI(trend);
 
-removeOverlayLine(descLine,"✅ description ready");
-updateUI(trend);
-
-  // Start voice generation log after description is back
   playVoice(trend.description,()=>{
     if(autoRefresh){
       showOverlay();
@@ -180,7 +174,6 @@ updateUI(trend);
     }
   });
 
-  // === Step 2: image AFTER description ===
   let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
   let imgElapsed=0;
   const imgTimer=setInterval(()=>{
@@ -248,7 +241,6 @@ document.getElementById("start-btn").addEventListener("click",()=>{
 document.querySelectorAll("#topic-picker button").forEach(btn=>{
   btn.addEventListener("click",()=>{
     if(btn.dataset.topic === "cosmetics"){
-      // 💄 Cosmetics button is functionless now
       return;
     }
     currentTopic = btn.dataset.topic;
@@ -265,7 +257,7 @@ async function buyCredits(pack) {
     return;
   }
 
-  console.log("buyCredits → userId:", userId, "roomId:", roomId); // ✅ debug check
+  console.log("buyCredits → userId:", userId, "roomId:", roomId);
 
   const res = await fetch(
     `https://three23p-backend.onrender.com/api/buy?userId=${userId}&pack=${pack}&roomId=${roomId}`,
@@ -273,7 +265,7 @@ async function buyCredits(pack) {
   );
   const data = await res.json();
   if (data.url) {
-    window.location.href = data.url; // redirect to Stripe Checkout
+    window.location.href = data.url;
   } else {
     alert("Checkout failed: " + (data.error || "unknown error"));
   }
@@ -290,14 +282,9 @@ document.getElementById("buy-large").addEventListener("click", () => buyCredits(
 
   if (sessionId) {
     console.log("✅ Stripe returned with session:", sessionId);
-
-    // Show popup or toast
     alert("✅ Payment successful! Your credits have been updated.");
-
-    // Immediately refresh credits
     updateCredits();
 
-    // Clean up URL so session_id disappears BUT KEEP room
     const roomParam = params.get("room");
     params.delete("session_id");
 
@@ -305,7 +292,6 @@ document.getElementById("buy-large").addEventListener("click", () => buyCredits(
     if (roomParam) {
       newUrl += "?room=" + roomParam;
     }
-
     window.history.replaceState({}, "", newUrl);
   }
 })();
@@ -329,7 +315,6 @@ async function updateCredits() {
   }
 }
 
-// Call on initial page load too
+// run once + refresh every 30s ✅
 document.addEventListener("DOMContentLoaded", updateCredits);
-
-
+setInterval(updateCredits, 30000);
