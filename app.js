@@ -237,3 +237,28 @@ document.querySelectorAll("#topic-picker button").forEach(btn=>{
     showConfirmButton();
   });
 });
+
+/* ---------------- Buy Credits ---------------- */
+async function buyCredits(pack) {
+  const userId = localStorage.getItem("userId");
+  if (!userId) {
+    alert("Missing userId. Please refresh.");
+    return;
+  }
+
+  const res = await fetch(
+    `https://three23p-backend.onrender.com/api/buy?userId=${userId}&pack=${pack}`,
+    { method: "POST" }
+  );
+  const data = await res.json();
+  if (data.url) {
+    window.location.href = data.url; // redirect to Stripe Checkout
+  } else {
+    alert("Checkout failed: " + (data.error || "unknown error"));
+  }
+}
+
+document.getElementById("buy-small").addEventListener("click", () => buyCredits("small"));
+document.getElementById("buy-medium").addEventListener("click", () => buyCredits("medium"));
+document.getElementById("buy-large").addEventListener("click", () => buyCredits("large"));
+
