@@ -323,23 +323,27 @@ app.post("/api/buy", async (req, res) => {
 
     const chosen = packs[pack] || packs.small;
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { name: `${chosen.credits} AI Credits` },
-            unit_amount: chosen.amount,
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/cancel`,
-      metadata: { userId, credits: chosen.credits },
-    });
+   const session = await stripe.checkout.sessions.create({
+  payment_method_types: ["card"],   // ✅ Keep "card" — enables Apple Pay + Google Pay
+  mode: "payment",
+  line_items: [
+    {
+      price_data: {
+        currency: "usd",
+        product_data: { name: `${chosen.credits} AI Credits` },
+        unit_amount: chosen.amount,
+      },
+      quantity: 1,
+    },
+  ],
+  // ✅ Optional: allow promo codes
+  allow_promotion_codes: true,
+
+  success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+  cancel_url: `${process.env.CLIENT_URL}/cancel`,
+  metadata: { userId, credits: chosen.credits },
+});
+
 
     res.json({ id: session.id, url: session.url });
   }catch (err) {
@@ -359,5 +363,8 @@ io.on("connection",(socket)=>{
 
 /* ---------------- Start ---------------- */
 app.use(express.static(path.join(__dirname)));
-const PORT=process.env.PORT||3000;
-httpServer.listen(PORT,()=>console.log(`🚀 Backend live on :${PORT}`));
+
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () =>
+  console.log(`🚀 Backend live on :${PORT}, client URL: ${process.env.CLIENT_URL}`)
+);
