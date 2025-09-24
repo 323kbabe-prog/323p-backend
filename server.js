@@ -1,4 +1,4 @@
-// server.js — op18 backend (persona + image + voice + credit store + stripe)
+// server.js — op19 backend (persona + image + voice + credit store + stripe)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -9,13 +9,7 @@ const fs = require("fs");
 const Stripe = require("stripe");
 
 const app = express();
-
-// ✅ Explicit CORS config for frontend + custom headers
-app.use(cors({
-  origin: ["https://1ai323.ai"], // allow your frontend domain
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "x-passcode", "x-device-id"]
-}));
+app.use(cors({ origin: "*" }));
 
 // ✅ Serve static files from /public so bg1.png … bg10.png work
 app.use(express.static(path.join(__dirname, "public")));
@@ -27,32 +21,33 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ---------------- Credit Store ----------------
+// Store users.json on Render's persistent disk
 const USERS_FILE = path.join("/data", "users.json");
 
 function loadUsers() {
   try {
     return JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
   } catch {
-    return {};
+    return {}; // if file doesn’t exist yet
   }
 }
+
 function saveUsers(data) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
 }
+
 let users = loadUsers();
 
-// ---------------- Passcode Middleware ----------------
-const API_PASSCODE = process.env.API_PASSCODE || "super-secret-pass";
-
-function checkPasscode(req, res, next) {
-  const pass = req.headers["x-passcode"];
-  if (pass !== API_PASSCODE) {
-    return res.status(403).json({ error: "Forbidden: invalid passcode" });
+// helper: get or create a user
+function getUser(userId) {
+  if (!users[userId]) {
+    users[userId] = { credits: 5, history: [] }; // 🎁 start with 5 free credits
+    saveUsers(users);
   }
-  next();
+  return users[userId];
 }
 
-// ---------------- Persona Generator ----------------
+/* ---------------- Persona Generator ---------------- */
 function randomPersona() {
   const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
@@ -64,118 +59,117 @@ function randomPersona() {
   } style`;
 }
 
+/* ---------------- Emoji Pools ---------------- */
+const descEmojis = [
+  "💄","💅","✨","🌸","👑","💖","🪞","🧴","🫧","😍","🌈","🔥","🎶","🎤","🎧","💃",
+  "🕺","🏛️","📢","✊","📣","⚡","👾","🤖","📸","💎","🌟","🥰","🌺","🍓","🍭","💫","🎀"
+];
+
+// Map product keywords to emoji sets
+const productEmojiMap = {
+  "freckle": ["✒️","🖊️","🎨","🪞","✨","🫧"],
+  "lip": ["💋","👄","💄","✨","💕"],
+  "blush": ["🌸","🌺","💕","✨"],
+  "mascara": ["👁️","👀","🖤","💫"],
+  "eyeliner": ["✒️","🖊️","👁️","✨"],
+  "foundation": ["🧴","🪞","✨","💖"],
+};
+
+// Persona vibe emojis
+const vibeEmojiMap = {
+  "streetwear model": ["👟","🧢","🕶️","🖤","🤍"],
+  "idol": ["🎤","✨","🌟","💎"],
+  "dancer": ["💃","🕺","🎶","🔥"],
+  "vlogger": ["📸","🎥","💻","🎤"],
+  "trainee": ["📓","🎶","💼","🌟"],
+  "influencer": ["👑","💖","📸","🌈"],
+};
+
+/* ---------------- Pools ---------------- */
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
-/* ---------------- API: Buy Credits (Stripe Checkout) ---------------- */
-app.post("/api/buy", checkPasscode, async (req, res) => {
-  try {
-    const { userId, pack, roomId } = req.query;
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
+/* ---------------- Description Generator ---------------- */
+async function makeDescription(topic, pick, persona) {
+  let prompt, system;
 
-    const freshUsers = loadUsers();
-    const user = freshUsers[userId];
-    if (!user) return res.status(403).json({ error: "Unknown userId" });
-
-    // ✅ Block if at or above 150 credits
-    if (user.credits >= 150) {
-      return res.status(403).json({ error: "You already have the maximum credits (150)" });
+  if (topic === "cosmetics") {
+    const lowerProd = (pick.product || "").toLowerCase();
+    let prodEmojis = [];
+    for (const key in productEmojiMap) {
+      if (lowerProd.includes(key)) {
+        prodEmojis = productEmojiMap[key];
+        break;
+      }
     }
 
-    const packs = {
-      small: { amount: 300, credits: 30 },
-      medium: { amount: 500, credits: 60 },
-      large: { amount: 1000, credits: 150 },
-    };
-    const chosen = packs[pack] || packs.small;
+    let vibeEmojis = [];
+    for (const vibe in vibeEmojiMap) {
+      if (persona.includes(vibe)) {
+        vibeEmojis = vibeEmojiMap[vibe];
+        break;
+      }
+    }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { name: `${chosen.credits} AI Credits` },
-            unit_amount: chosen.amount, // cents
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/?room=${roomId}`,
-      metadata: { userId, credits: chosen.credits },
+    const emojiSet = [...descEmojis, ...prodEmojis, ...vibeEmojis];
+
+    prompt = `Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}. 
+I am ${persona}. Sensory, photo-realistic. Add emojis inline in every sentence. 
+Use emojis generously from this set: ${emojiSet.join(" ")}.`;
+
+    system = "You are a college student talking about beauty.";
+  } else if (topic === "music") {
+    prompt = `Write exactly 300 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}. 
+Emotional, energetic. Add emojis inline in every sentence. 
+Use emojis generously from this set: ${descEmojis.join(" ")}.`;
+    system = "You are a college student reacting to music.";
+  } else if (topic === "politics") {
+    prompt = `Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}. 
+Activist style. Add emojis inline in every sentence. 
+Use emojis generously from this set: ${descEmojis.join(" ")}.`;
+    system = "You are a college student activist.";
+  } else {
+    prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}. 
+Chaotic Gen-Z slang. Add emojis inline in every sentence. 
+Use emojis generously from this set: ${descEmojis.join(" ")}.`;
+    system = "You are a college student living AI culture.";
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
     });
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error("❌ Stripe checkout error:", err.message);
-    res.status(500).json({ error: err.message });
+    return completion.choices[0].message.content.trim();
+  } catch (e) {
+    console.error("❌ Description error:", e.message);
+    return prompt;
   }
-});
+}
 
-/* ---------------- API: Credits ---------------- */
-app.get("/api/credits", checkPasscode, (req, res) => {
-  const userId = req.query.userId;
-  if (!userId) return res.status(400).json({ error: "userId required" });
-
-  const freshUsers = loadUsers();
-  const user = freshUsers[userId];
-  if (!user) return res.status(403).json({ error: "Unknown userId" });
-
-  res.json({ credits: user.credits });
-});
-
-/* ---------------- API: Description ---------------- */
-app.get("/api/description", checkPasscode, async (req, res) => {
-  const userId = req.query.userId;
-  if (!userId) return res.status(400).json({ error: "userId required" });
-
-  const freshUsers = loadUsers();
-  const user = freshUsers[userId];
-  if (!user) return res.status(403).json({ error: "Unknown userId" });
-
-  if (user.credits <= 0) {
-    return res.status(403).json({ error: "Out of credits" });
+/* ---------------- Image Generator ---------------- */
+async function generateImageUrl(brand, product, persona) {
+  try {
+    const out = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: `
+        Create a photocard-style image.
+        Subject: ${persona}, Gen-Z aesthetic.
+        They are holding and applying ${product} by ${brand}.
+        Pastel gradient background (milk pink, baby blue, lilac).
+        Glitter bokeh, glossy K-beauty skin glow.
+        Sticker shapes only (hearts, emoji, text emoticon).
+      `,
+      size: "1024x1024",
+    });
+    const d = out?.data?.[0];
+    if (d?.url) return d.url;
+    if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
+  } catch (e) {
+    console.error("❌ Image error:", e.message);
   }
-
-  user.credits -= 1;
-  saveUsers(freshUsers);
-
-  const topic = req.query.topic || "cosmetics";
-  let pick;
-  if (topic === "cosmetics") pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-  else if (topic === "music") pick = TOP_MUSIC[Math.floor(Math.random() * TOP_MUSIC.length)];
-  else if (topic === "politics") pick = TOP_POLITICS[Math.floor(Math.random() * TOP_POLITICS.length)];
-  else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
-
-  const persona = randomPersona();
-
-  res.json({
-    brand: pick.brand || pick.artist || pick.issue || "323aidrop",
-    product: pick.product || pick.track || pick.keyword || pick.concept,
-    persona,
-    description: "📝 example description here (replace with OpenAI call)",
-    hashtags: ["#NowTrending"],
-    isDaily: false
-  });
-});
-
-/* ---------------- API: Image ---------------- */
-app.get("/api/image", checkPasscode, async (req, res) => {
-  const brand = req.query.brand;
-  const product = req.query.product;
-  const persona = req.query.persona;
-  if (!brand || !product) {
-    return res.status(400).json({ error: "brand and product required" });
-  }
-  res.json({ image: "https://placehold.co/600x600?text=Image" });
-});
-
-/* ---------------- API: Voice ---------------- */
-app.get("/api/voice", checkPasscode, async (req, res) => {
-  res.setHeader("Content-Type", "audio/mpeg");
-  return res.send(Buffer.alloc(1000)); // placeholder
-});
+  return "https://placehold.co/600x600?text=No+Image";
+}
 
 /* ---------------- Stripe Webhook ---------------- */
 // ⚠️ Must be BEFORE app.use(express.json())
@@ -203,28 +197,23 @@ app.post(
 
       if (userId && credits) {
         try {
-          const currentUsers = loadUsers();
+          const currentUsers = loadUsers(); // ✅ reload latest
           if (!currentUsers[userId]) {
             currentUsers[userId] = { credits: 0, history: [] };
           }
-
-          // ✅ Add credits but cap at 150
-          const newBalance = currentUsers[userId].credits + parseInt(credits, 10);
-          currentUsers[userId].credits = Math.min(newBalance, 150);
-
+          currentUsers[userId].credits += parseInt(credits, 10);
           currentUsers[userId].history.push({
             type: "purchase",
             credits: parseInt(credits, 10),
             at: new Date().toISOString(),
             stripeSession: session.id,
           });
-
           saveUsers(currentUsers);
-          users = currentUsers; // refresh cache
 
-          console.log(
-            `✅ Added ${credits} credits to ${userId}, balance now ${currentUsers[userId].credits}`
-          );
+          // ✅ refresh global in-memory cache
+          users = currentUsers;
+
+          console.log(`✅ Added ${credits} credits to ${userId}`);
         } catch (err) {
           console.error("❌ Failed to update user credits:", err.message);
         }
@@ -234,6 +223,138 @@ app.post(
     res.json({ received: true });
   }
 );
+
+/* ---------------- JSON middleware ---------------- */
+app.use(express.json());
+
+/* ---------------- API: Credits ---------------- */
+app.get("/api/credits", (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+
+  const freshUsers = loadUsers();
+  const user = freshUsers[userId] || { credits: 5, history: [] };
+
+  res.json({ credits: user.credits });
+});
+
+/* ---------------- API: Description ---------------- */
+app.get("/api/description", async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+
+  const user = getUser(userId);
+
+  // 👇 Check balance
+  if (user.credits <= 0) {
+    return res.status(403).json({ error: "Out of credits" });
+  }
+
+  // 👇 Deduct one credit
+  user.credits -= 1;
+  saveUsers(users);
+
+  const topic = req.query.topic || "cosmetics";
+  let pick;
+  if (topic === "cosmetics") pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+  else if (topic === "music") pick = TOP_MUSIC[Math.floor(Math.random() * TOP_MUSIC.length)];
+  else if (topic === "politics") pick = TOP_POLITICS[Math.floor(Math.random() * TOP_POLITICS.length)];
+  else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
+
+  const persona = randomPersona();
+  const description = await makeDescription(topic, pick, persona);
+
+  let mimicLine = null;
+  if (topic === "music") {
+    mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
+  }
+
+  res.json({
+    brand: pick.brand || pick.artist || pick.issue || "323aidrop",
+    product: pick.product || pick.track || pick.keyword || pick.concept,
+    persona,
+    description,
+    mimicLine,
+    hashtags: ["#NowTrending"],
+    isDaily: false,
+  });
+});
+
+/* ---------------- API: Image ---------------- */
+app.get("/api/image", async (req, res) => {
+  const brand = req.query.brand;
+  const product = req.query.product;
+  const persona = req.query.persona;
+
+  if (!brand || !product) {
+    return res.status(400).json({ error: "brand and product required" });
+  }
+
+  const imageUrl = await generateImageUrl(brand, product, persona);
+  res.json({ image: imageUrl });
+});
+
+/* ---------------- Voice ---------------- */
+app.get("/api/voice", async (req, res) => {
+  const text = req.query.text || "";
+  if (!text.trim()) {
+    res.setHeader("Content-Type", "audio/mpeg");
+    return res.send(Buffer.alloc(1000));
+  }
+  try {
+    const out = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "alloy",
+      input: text,
+    });
+    const audioBuffer = Buffer.from(await out.arrayBuffer());
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(audioBuffer);
+  } catch (e) {
+    console.error("❌ Voice error:", e.message);
+    res.status(500).json({ error: "Voice TTS failed" });
+  }
+});
+
+/* ---------------- API: Buy Credits ---------------- */
+app.post("/api/buy", async (req, res) => {
+  try {
+    const { userId, pack, roomId } = req.query;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    const packs = {
+      small: { amount: 300, credits: 30 },
+      medium: { amount: 500, credits: 60 },
+      large: { amount: 1000, credits: 150 },
+    };
+
+    const chosen = packs[pack] || packs.small;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { name: `${chosen.credits} AI Credits` },
+            unit_amount: chosen.amount,
+          },
+          quantity: 1,
+        },
+      ],
+      allow_promotion_codes: true,
+      success_url: `${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/?room=${roomId}`,
+      metadata: { userId, credits: chosen.credits },
+    });
+
+    res.json({ id: session.id, url: session.url });
+  } catch (err) {
+    console.error("❌ Stripe checkout error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /* ---------------- Chat ---------------- */
 io.on("connection", (socket) => {
