@@ -66,26 +66,51 @@ function randomPersona() {
 
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
-/* ---------------- API: Create User ---------------- */
-app.post("/api/create-user", checkPasscode, (req, res) => {
-  const deviceId = req.headers["x-device-id"];
-  if (!deviceId) {
-    return res.status(400).json({ error: "Missing deviceId" });
+/* ---------------- API: Buy Credits (Stripe Checkout) ---------------- */
+app.post("/api/buy", checkPasscode, async (req, res) => {
+  try {
+    const { userId, pack, roomId } = req.query;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    const freshUsers = loadUsers();
+    const user = freshUsers[userId];
+    if (!user) return res.status(403).json({ error: "Unknown userId" });
+
+    // ✅ Block if at or above 150 credits
+    if (user.credits >= 150) {
+      return res.status(403).json({ error: "You already have the maximum credits (150)" });
+    }
+
+    const packs = {
+      small: { amount: 300, credits: 30 },
+      medium: { amount: 500, credits: 60 },
+      large: { amount: 1000, credits: 150 },
+    };
+    const chosen = packs[pack] || packs.small;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { name: `${chosen.credits} AI Credits` },
+            unit_amount: chosen.amount, // cents
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/?room=${roomId}`,
+      metadata: { userId, credits: chosen.credits },
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("❌ Stripe checkout error:", err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  const freshUsers = loadUsers();
-
-  // ✅ Check if this device already claimed free credits
-  const already = Object.values(freshUsers).find(u => u.deviceId === deviceId);
-  if (already) {
-    return res.status(403).json({ error: "Device already claimed free credits" });
-  }
-
-  const id = "user-" + Math.floor(Math.random() * 1e9);
-  freshUsers[id] = { credits: 5, history: [], deviceId };
-  saveUsers(freshUsers);
-
-  res.json({ userId: id, credits: 5 });
 });
 
 /* ---------------- API: Credits ---------------- */
@@ -152,43 +177,63 @@ app.get("/api/voice", checkPasscode, async (req, res) => {
   return res.send(Buffer.alloc(1000)); // placeholder
 });
 
-/* ---------------- API: Buy Credits (Stripe Checkout) ---------------- */
-app.post("/api/buy", checkPasscode, async (req, res) => {
-  try {
-    const { userId, pack, roomId } = req.query;
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
+/* ---------------- Stripe Webhook ---------------- */
+// ⚠️ Must be BEFORE app.use(express.json())
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    let event;
 
-    const packs = {
-      small: { amount: 300, credits: 30 },
-      medium: { amount: 500, credits: 60 },
-      large: { amount: 1000, credits: 150 },
-    };
-    const chosen = packs[pack] || packs.small;
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error("❌ Webhook signature error:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { name: `${chosen.credits} AI Credits` },
-            unit_amount: chosen.amount, // cents
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/?room=${roomId}`,
-      metadata: { userId, credits: chosen.credits },
-    });
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const { userId, credits } = session.metadata || {};
 
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error("❌ Stripe checkout error:", err.message);
-    res.status(500).json({ error: err.message });
+      if (userId && credits) {
+        try {
+          const currentUsers = loadUsers();
+          if (!currentUsers[userId]) {
+            currentUsers[userId] = { credits: 0, history: [] };
+          }
+
+          // ✅ Add credits but cap at 150
+          const newBalance = currentUsers[userId].credits + parseInt(credits, 10);
+          currentUsers[userId].credits = Math.min(newBalance, 150);
+
+          currentUsers[userId].history.push({
+            type: "purchase",
+            credits: parseInt(credits, 10),
+            at: new Date().toISOString(),
+            stripeSession: session.id,
+          });
+
+          saveUsers(currentUsers);
+          users = currentUsers; // refresh cache
+
+          console.log(
+            `✅ Added ${credits} credits to ${userId}, balance now ${currentUsers[userId].credits}`
+          );
+        } catch (err) {
+          console.error("❌ Failed to update user credits:", err.message);
+        }
+      }
+    }
+
+    res.json({ received: true });
   }
-});
+);
 
 /* ---------------- Chat ---------------- */
 io.on("connection", (socket) => {
