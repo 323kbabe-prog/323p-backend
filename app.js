@@ -171,6 +171,16 @@ async function runLogAndLoad(topic){
       showOverlay();
       appendOverlay("⏳ fetching next drop…","#ffe0f0");
       setTimeout(()=>loadTrend(),2000);
+
+      const simulate = new URLSearchParams(window.location.search).get("simulate") || "";
+
+const descRes = await fetch(
+  `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&simulate=${simulate}`
+);
+const imgRes = await fetch(
+  `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}&simulate=${simulate}`
+);
+
     }
   });
 
