@@ -9,7 +9,7 @@ const fs = require("fs");
 
 const app = express();
 
-// ✅ Explicit CORS config
+// ✅ Explicit CORS config for frontend + custom headers
 app.use(cors({
   origin: ["https://1ai323.ai"], // allow your frontend domain
   methods: ["GET", "POST"],
