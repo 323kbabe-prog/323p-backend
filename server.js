@@ -6,6 +6,7 @@ const path = require("path");
 const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
+const Stripe = require("stripe");
 
 const app = express();
 
@@ -23,6 +24,7 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ---------------- Credit Store ----------------
 const USERS_FILE = path.join("/data", "users.json");
@@ -150,9 +152,42 @@ app.get("/api/voice", checkPasscode, async (req, res) => {
   return res.send(Buffer.alloc(1000)); // placeholder
 });
 
-/* ---------------- API: Buy Credits ---------------- */
+/* ---------------- API: Buy Credits (Stripe Checkout) ---------------- */
 app.post("/api/buy", checkPasscode, async (req, res) => {
-  res.json({ url: "https://stripe.com/checkout-session-placeholder" });
+  try {
+    const { userId, pack, roomId } = req.query;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    const packs = {
+      small: { amount: 300, credits: 30 },
+      medium: { amount: 500, credits: 60 },
+      large: { amount: 1000, credits: 150 },
+    };
+    const chosen = packs[pack] || packs.small;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { name: `${chosen.credits} AI Credits` },
+            unit_amount: chosen.amount, // cents
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/?room=${roomId}`,
+      metadata: { userId, credits: chosen.credits },
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("❌ Stripe checkout error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* ---------------- Chat ---------------- */
