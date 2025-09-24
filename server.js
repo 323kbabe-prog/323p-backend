@@ -10,11 +10,6 @@ const fs = require("fs");
 const app = express();
 app.use(cors({ origin: "*" }));
 
-const simulate = req.query.simulate;
-if (simulate === "imagefail") {
-  return res.status(500).json({ error: "Simulated image failure" });
-}
-
 // ✅ Serve static files from /public so bg1.png … bg10.png work
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -24,39 +19,26 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ---------------- Credit Store ----------------
-// Store users.json on Render's persistent disk
 const USERS_FILE = path.join("/data", "users.json");
 
 function loadUsers() {
   try {
     return JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
   } catch {
-    return {}; // if file doesn’t exist yet
+    return {};
   }
 }
-
 function saveUsers(data) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
 }
-
 let users = loadUsers();
 
-
-// helper: get or create a user
 function getUser(userId) {
   if (!users[userId]) {
     users[userId] = { credits: 5, history: [] }; // 🎁 start with 5 free credits
     saveUsers(users);
   }
   return users[userId];
-}
-// --- Simulation toggle ---
-const simulate = req.query.simulate;
-if (simulate === "credits") {
-  return res.status(403).json({ error: "Out of credits (simulated)" });
-}
-if (simulate === "descfail") {
-  return res.status(500).json({ error: "Simulated description failure" });
 }
 
 /* ---------------- Persona Generator ---------------- */
@@ -76,8 +58,6 @@ const descEmojis = [
   "💄","💅","✨","🌸","👑","💖","🪞","🧴","🫧","😍","🌈","🔥","🎶","🎤","🎧","💃",
   "🕺","🏛️","📢","✊","📣","⚡","👾","🤖","📸","💎","🌟","🥰","🌺","🍓","🍭","💫","🎀"
 ];
-
-// Map product keywords to emoji sets
 const productEmojiMap = {
   "freckle": ["✒️","🖊️","🎨","🪞","✨","🫧"],
   "lip": ["💋","👄","💄","✨","💕"],
@@ -86,8 +66,6 @@ const productEmojiMap = {
   "eyeliner": ["✒️","🖊️","👁️","✨"],
   "foundation": ["🧴","🪞","✨","💖"],
 };
-
-// Persona vibe emojis
 const vibeEmojiMap = {
   "streetwear model": ["👟","🧢","🕶️","🖤","🤍"],
   "idol": ["🎤","✨","🌟","💎"],
@@ -96,8 +74,6 @@ const vibeEmojiMap = {
   "trainee": ["📓","🎶","💼","🌟"],
   "influencer": ["👑","💖","📸","🌈"],
 };
-
-/* ---------------- Pools ---------------- */
 const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
 /* ---------------- Description Generator ---------------- */
@@ -160,9 +136,6 @@ Use emojis generously from this set: ${descEmojis.join(" ")}.`;
     console.error("❌ Description error:",e.message);
     return prompt;
   }
-  
-  ✍️ drafting description… ❌ description failed
-
 }
 
 /* ---------------- Image Generator ---------------- */
@@ -187,82 +160,14 @@ async function generateImageUrl(brand, product, persona) {
     console.error("❌ Image error:",e.message);
   }
   return "https://placehold.co/600x600?text=No+Image";
-  throw new Error("Simulated OpenAI image fail");
-
 }
-
-/* ---------------- Stripe Setup ---------------- */
-const Stripe = require("stripe");
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-
-/* ---------------- Stripe Webhook ---------------- */
-// ⚠️ Must be BEFORE app.use(express.json())
-app.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  (req, res) => {
-    const sig = req.headers["stripe-signature"];
-    let event;
-
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.error("❌ Webhook signature error:", err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const { userId, credits } = session.metadata || {};
-
-      if (userId && credits) {
-        try {
-          const currentUsers = loadUsers(); // ✅ reload latest
-          if (!currentUsers[userId]) {
-            currentUsers[userId] = { credits: 0, history: [] };
-          }
-          currentUsers[userId].credits += parseInt(credits, 10);
-          currentUsers[userId].history.push({
-            type: "purchase",
-            credits: parseInt(credits, 10),
-            at: new Date().toISOString(),
-            stripeSession: session.id,
-          });
-          saveUsers(currentUsers);
-
-          // ✅ refresh global in-memory cache
-          users = currentUsers;
-
-          console.log(`✅ Added ${credits} credits to ${userId}`);
-        } catch (err) {
-          console.error("❌ Failed to update user credits:", err.message);
-        }
-      }
-    }
-
-    res.json({ received: true });
-  }
-);
-
-
-/* ---------------- JSON middleware ---------------- */
-// ✅ Now safe for all your normal APIs
-app.use(express.json());
-
 
 /* ---------------- API: Credits ---------------- */
 app.get("/api/credits", (req, res) => {
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "userId required" });
-
   const freshUsers = loadUsers();
   const user = freshUsers[userId] || { credits: 5, history: [] };
-
-  // ✅ Only return the balance, no history
   res.json({ credits: user.credits });
 });
 
@@ -271,21 +176,23 @@ app.get("/api/description", async (req,res) => {
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "userId required" });
 
+  // --- Simulation toggles ---
+  if (req.query.simulate === "credits") {
+    console.warn("⚠️ Simulation active: Out of credits");
+    return res.status(403).json({ error: "Out of credits (simulated)" });
+  }
+  if (req.query.simulate === "descfail") {
+    console.warn("⚠️ Simulation active: Description failure");
+    return res.status(500).json({ error: "Simulated description failure" });
+  }
+
   const user = getUser(userId);
-
-  // 👇 Force simulate out of credits
-return res.status(403).json({ error: "Out of credits" });
-
-  // 👇 Check balance
   if (user.credits <= 0) {
     return res.status(403).json({ error: "Out of credits" });
   }
-
-  // 👇 Deduct one credit
   user.credits -= 1;
   saveUsers(users);
 
-  // Continue with existing logic...
   const topic=req.query.topic||"cosmetics";
   let pick;
   if(topic==="cosmetics") pick=TOP50_COSMETICS[Math.floor(Math.random()*TOP50_COSMETICS.length)];
@@ -314,14 +221,18 @@ return res.status(403).json({ error: "Out of credits" });
 
 /* ---------------- API: Image ---------------- */
 app.get("/api/image", async (req,res) => {
+  const simulate = req.query.simulate;
+  if (simulate === "imagefail") {
+    console.warn("⚠️ Simulation active: Image failure");
+    return res.status(500).json({ error: "Simulated image failure" });
+  }
+
   const brand=req.query.brand;
   const product=req.query.product;
   const persona=req.query.persona;
-
   if(!brand || !product){
     return res.status(400).json({error:"brand and product required"});
   }
-
   const imageUrl=await generateImageUrl(brand,product,persona);
   res.json({ image:imageUrl });
 });
@@ -345,10 +256,66 @@ app.get("/api/voice",async(req,res)=>{
   }
 });
 
+/* ---------------- Stripe Setup ---------------- */
+const Stripe = require("stripe");
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+/* ---------------- Stripe Webhook ---------------- */
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error("❌ Webhook signature error:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const { userId, credits } = session.metadata || {};
+
+      if (userId && credits) {
+        try {
+          const currentUsers = loadUsers();
+          if (!currentUsers[userId]) {
+            currentUsers[userId] = { credits: 0, history: [] };
+          }
+          currentUsers[userId].credits += parseInt(credits, 10);
+          currentUsers[userId].history.push({
+            type: "purchase",
+            credits: parseInt(credits, 10),
+            at: new Date().toISOString(),
+            stripeSession: session.id,
+          });
+          saveUsers(currentUsers);
+          users = currentUsers;
+          console.log(`✅ Added ${credits} credits to ${userId}`);
+        } catch (err) {
+          console.error("❌ Failed to update user credits:", err.message);
+        }
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
+
+/* ---------------- JSON middleware ---------------- */
+app.use(express.json());
+
 /* ---------------- API: Buy Credits ---------------- */
 app.post("/api/buy", async (req, res) => {
   try {
-    const { userId, pack, roomId } = req.query;  // 👈 grab roomId
+    const { userId, pack, roomId } = req.query;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
 
     const packs = {
@@ -373,12 +340,8 @@ app.post("/api/buy", async (req, res) => {
         },
       ],
       allow_promotion_codes: true,
-
-      // 👇 keep the same roomId when Stripe sends user back
- success_url: `${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
-cancel_url: `${process.env.CLIENT_URL}/?room=${roomId}`,
-
-
+      success_url: `${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/?room=${roomId}`,
       metadata: { userId, credits: chosen.credits },
     });
 
