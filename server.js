@@ -56,9 +56,10 @@ function randomPersona() {
 }
 
 /* ---------------- Emoji Pools ---------------- */
-const descEmojis = ["💄","💅","✨","🌸","👑","💖","🪞","🧴","🫧","😍","🌈","🔥","🎶","🎤","🎧","💃",
-  "🕺","🏛️","📢","✊","📣","⚡","👾","🤖","📸","💎","🌟","🥰","🌺","🍓","🍭","💫","🎀"];
-
+const descEmojis = [
+  "💄","💅","✨","🌸","👑","💖","🪞","🧴","🫧","😍","🌈","🔥","🎶","🎤","🎧","💃",
+  "🕺","🏛️","📢","✊","📣","⚡","👾","🤖","📸","💎","🌟","🥰","🌺","🍓","🍭","💫","🎀"
+];
 const productEmojiMap = {
   "freckle": ["✒️","🖊️","🎨","🪞","✨","🫧"],
   "lip": ["💋","👄","💄","✨","💕"],
@@ -161,12 +162,18 @@ app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
         const currentUsers = loadUsers();
         if (!currentUsers[userId]) currentUsers[userId] = { credits: 0, history: [] };
         currentUsers[userId].credits += parseInt(credits, 10);
-        currentUsers[userId].history.push({ type: "purchase", credits: parseInt(credits, 10),
-          at: new Date().toISOString(), stripeSession: session.id });
+        currentUsers[userId].history.push({
+          type: "purchase",
+          credits: parseInt(credits, 10),
+          at: new Date().toISOString(),
+          stripeSession: session.id
+        });
         saveUsers(currentUsers);
         users = currentUsers;
         console.log(`✅ Added ${credits} credits to ${userId}`);
-      } catch (err) { console.error("❌ Failed to update credits:", err.message); }
+      } catch (err) {
+        console.error("❌ Failed to update credits:", err.message);
+      }
     }
   }
   res.json({ received: true });
@@ -174,6 +181,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
 
 /* ---------------- JSON middleware ---------------- */
 app.use(express.json());
+
 /* ---------------- API: Create User ---------------- */
 app.post("/api/create-user", (req, res) => {
   const deviceId = req.headers["x-device-id"];
@@ -182,17 +190,15 @@ app.post("/api/create-user", (req, res) => {
   const userId = "user-" + Math.random().toString(36).substr(2, 9);
 
   const currentUsers = loadUsers();
-  currentUsers[userId] = { credits: 5, history: [], deviceId };
+  if (!currentUsers[userId]) {
+    currentUsers[userId] = { credits: 5, history: [], deviceId };
+  }
   saveUsers(currentUsers);
   users = currentUsers;
 
   console.log(`🎁 Created new user ${userId} with 5 starter credits`);
-  res.json({ userId, credits: 5 });
+  res.json({ userId, credits: currentUsers[userId].credits });
 });
-
-/* ---------------- API: Credits ---------------- */
-app.get("/api/credits", (req, res) => {
-  ...
 
 /* ---------------- API: Credits ---------------- */
 app.get("/api/credits", (req, res) => {
@@ -209,7 +215,8 @@ app.get("/api/description", async (req, res) => {
   if (!userId) return res.status(400).json({ error: "userId required" });
   const user = getUser(userId);
   if (user.credits <= 0) return res.status(403).json({ error: "Out of credits" });
-  user.credits -= 1; saveUsers(users);
+  user.credits -= 1;
+  saveUsers(users);
 
   const topic = req.query.topic || "cosmetics";
   let pick;
@@ -224,9 +231,15 @@ app.get("/api/description", async (req, res) => {
   let mimicLine = null;
   if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
 
-  res.json({ brand: pick.brand || pick.artist || pick.issue || "323aidrop",
+  res.json({
+    brand: pick.brand || pick.artist || pick.issue || "323aidrop",
     product: pick.product || pick.track || pick.keyword || pick.concept,
-    persona, description, mimicLine, hashtags:["#NowTrending"], isDaily:false });
+    persona,
+    description,
+    mimicLine,
+    hashtags:["#NowTrending"],
+    isDaily:false
+  });
 });
 
 /* ---------------- API: Image ---------------- */
@@ -240,12 +253,23 @@ app.get("/api/image", async (req,res)=>{
 /* ---------------- API: Voice ---------------- */
 app.get("/api/voice", async (req, res) => {
   const text = req.query.text || "";
-  if (!text.trim()) { res.setHeader("Content-Type","audio/mpeg"); return res.send(Buffer.alloc(1000)); }
+  if (!text.trim()) {
+    res.setHeader("Content-Type","audio/mpeg");
+    return res.send(Buffer.alloc(1000));
+  }
   try {
-    const out = await openai.audio.speech.create({ model:"gpt-4o-mini-tts", voice:"alloy", input:text });
+    const out = await openai.audio.speech.create({
+      model:"gpt-4o-mini-tts",
+      voice:"alloy",
+      input:text
+    });
     const audioBuffer = Buffer.from(await out.arrayBuffer());
-    res.setHeader("Content-Type","audio/mpeg"); res.send(audioBuffer);
-  } catch (e) { console.error("❌ Voice error:", e.message); res.status(500).json({error:"Voice TTS failed"}); }
+    res.setHeader("Content-Type","audio/mpeg");
+    res.send(audioBuffer);
+  } catch (e) {
+    console.error("❌ Voice error:", e.message);
+    res.status(500).json({error:"Voice TTS failed"});
+  }
 });
 
 /* ---------------- API: Buy Credits ---------------- */
@@ -253,23 +277,41 @@ app.post("/api/buy", async (req,res)=>{
   try {
     const { userId, pack, roomId } = req.query;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    const packs = { small:{amount:300,credits:30}, medium:{amount:500,credits:60}, large:{amount:1000,credits:150} };
+    const packs = {
+      small:{amount:300,credits:30},
+      medium:{amount:500,credits:60},
+      large:{amount:1000,credits:150}
+    };
     const chosen = packs[pack] || packs.small;
     const session = await stripe.checkout.sessions.create({
-      payment_method_types:["card"], mode:"payment",
-      line_items:[{ price_data:{ currency:"usd", product_data:{ name:`${chosen.credits} AI Credits` }, unit_amount:chosen.amount }, quantity:1 }],
+      payment_method_types:["card"],
+      mode:"payment",
+      line_items:[{
+        price_data:{
+          currency:"usd",
+          product_data:{ name:`${chosen.credits} AI Credits` },
+          unit_amount:chosen.amount
+        },
+        quantity:1
+      }],
       allow_promotion_codes:true,
       success_url:`${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:`${process.env.CLIENT_URL}/?room=${roomId}`,
-      metadata:{ userId, credits: chosen.credits },
+      metadata:{ userId, credits: chosen.credits }
     });
     res.json({ id: session.id, url: session.url });
-  } catch(err){ console.error("❌ Stripe checkout error:", err.message); res.status(500).json({error:err.message}); }
+  } catch(err){
+    console.error("❌ Stripe checkout error:", err.message);
+    res.status(500).json({error:err.message});
+  }
 });
 
 /* ---------------- Chat ---------------- */
 io.on("connection", socket=>{
-  socket.on("joinRoom", roomId => { socket.join(roomId); socket.roomId = roomId; });
+  socket.on("joinRoom", roomId => {
+    socket.join(roomId);
+    socket.roomId = roomId;
+  });
 });
 
 /* ---------------- Start ---------------- */
