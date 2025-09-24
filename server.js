@@ -1,333 +1,259 @@
-// app.js — Sticker Booth Style (Gen-Z) — op4 full code (works with op19 backend)
-const socket = io("https://three23p-backend.onrender.com");
-let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
-let currentTopic = "cosmetics"; 
-let autoRefresh = false;
+// server.js — OP19$ backend (persona + image + voice + credit store + stripe)
+const express = require("express");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
+const OpenAI = require("openai");
+const cors = require("cors");
+const fs = require("fs");
+const Stripe = require("stripe");
 
-/* ---------------- Room Setup ---------------- */
-(function initRoom(){
-  let params = new URLSearchParams(window.location.search);
-  roomId = params.get("room");
-  if(!roomId){
-    roomId = "room-" + Math.floor(Math.random()*9000);
-    const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
-    window.history.replaceState({}, "", newUrl);
+const app = express();
+app.use(cors({ origin: "*" }));
+
+// ✅ Serve static files from /public so bg1.png … bg10.png work
+app.use(express.static(path.join(__dirname, "public")));
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: { origin: "*" } });
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+// ---------------- Credit Store ----------------
+const USERS_FILE = path.join("/data", "users.json");
+
+function loadUsers() {
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
+  } catch {
+    return {};
   }
-})();
+}
+function saveUsers(data) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+}
+let users = loadUsers();
 
-/* ---------------- Device ID ---------------- */
-let deviceId = localStorage.getItem("deviceId");
-if (!deviceId) {
-  if (window.crypto && crypto.randomUUID) {
-    deviceId = crypto.randomUUID();
+function getUser(userId) {
+  if (!users[userId]) {
+    users[userId] = { credits: 5, history: [] }; // 🎁 starter credits
+    saveUsers(users);
+  }
+  return users[userId];
+}
+
+/* ---------------- Persona Generator ---------------- */
+function randomPersona() {
+  const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
+  const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
+  const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
+  return `a ${Math.floor(Math.random() * 7) + 17}-year-old female ${
+    ethnicities[Math.floor(Math.random() * ethnicities.length)]
+  } ${vibes[Math.floor(Math.random() * vibes.length)]} with a ${
+    styles[Math.floor(Math.random() * styles.length)]
+  } style`;
+}
+
+/* ---------------- Emoji Pools ---------------- */
+const descEmojis = ["💄","💅","✨","🌸","👑","💖","🪞","🧴","🫧","😍","🌈","🔥","🎶","🎤","🎧","💃",
+  "🕺","🏛️","📢","✊","📣","⚡","👾","🤖","📸","💎","🌟","🥰","🌺","🍓","🍭","💫","🎀"];
+
+const productEmojiMap = {
+  "freckle": ["✒️","🖊️","🎨","🪞","✨","🫧"],
+  "lip": ["💋","👄","💄","✨","💕"],
+  "blush": ["🌸","🌺","💕","✨"],
+  "mascara": ["👁️","👀","🖤","💫"],
+  "eyeliner": ["✒️","🖊️","👁️","✨"],
+  "foundation": ["🧴","🪞","✨","💖"],
+};
+const vibeEmojiMap = {
+  "streetwear model": ["👟","🧢","🕶️","🖤","🤍"],
+  "idol": ["🎤","✨","🌟","💎"],
+  "dancer": ["💃","🕺","🎶","🔥"],
+  "vlogger": ["📸","🎥","💻","🎤"],
+  "trainee": ["📓","🎶","💼","🌟"],
+  "influencer": ["👑","💖","📸","🌈"],
+};
+
+/* ---------------- Pools ---------------- */
+const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
+
+/* ---------------- Description Generator ---------------- */
+async function makeDescription(topic, pick, persona) {
+  let prompt, system;
+
+  if (topic === "cosmetics") {
+    const lowerProd = (pick.product || "").toLowerCase();
+    let prodEmojis = [];
+    for (const key in productEmojiMap) {
+      if (lowerProd.includes(key)) { prodEmojis = productEmojiMap[key]; break; }
+    }
+    let vibeEmojis = [];
+    for (const vibe in vibeEmojiMap) {
+      if (persona.includes(vibe)) { vibeEmojis = vibeEmojiMap[vibe]; break; }
+    }
+    const emojiSet = [...descEmojis, ...prodEmojis, ...vibeEmojis];
+    prompt = `Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}.
+I am ${persona}. Sensory, photo-realistic. Add emojis inline in every sentence.
+Use emojis from: ${emojiSet.join(" ")}`;
+    system = "You are a college student talking about beauty.";
+  } else if (topic === "music") {
+    prompt = `Write exactly 300 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}.
+Emotional, energetic. Add emojis inline in every sentence.`;
+    system = "You are a college student reacting to music.";
+  } else if (topic === "politics") {
+    prompt = `Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}.
+Activist style. Add emojis inline in every sentence.`;
+    system = "You are a college student activist.";
   } else {
-    deviceId = Math.random().toString(36).slice(2);
+    prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}.
+Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
+    system = "You are a college student living AI culture.";
   }
-  localStorage.setItem("deviceId", deviceId);
-}
-console.log("🔑 deviceId is", deviceId);
 
-/* ---------------- Overlay Helpers ---------------- */
-function showOverlay(){
-  const c = document.getElementById("warmup-center");
-  if(c){ c.style.display="flex"; c.style.visibility="visible"; c.innerHTML=""; }
-}
-function hideOverlay(){
-  const c = document.getElementById("warmup-center");
-  if(c){ c.style.display="none"; c.style.visibility="hidden"; }
-}
-function appendOverlay(msg,color="#fff",blinking=false){
-  const line = document.createElement("div");
-  line.className="log-line";
-  if(blinking) line.classList.add("blinking");
-  line.style.background=color;
-  line.innerText=msg;
-  const c = document.getElementById("warmup-center");
-  c.appendChild(line);
-  c.scrollTop = c.scrollHeight;
-  return line;
-}
-function removeOverlayLine(line,finalMsg){
-  if(line){
-    line.classList.remove("blinking");
-    line.innerText = finalMsg;
-    setTimeout(()=>line.remove(),800);
-  }
-}
-
-/* ---------------- Ensure User ---------------- */
-async function ensureUser() {
-  let userId = localStorage.getItem("userId");
-  if (!userId) {
-    console.log("⚡ Calling /api/create-user for new device");
-    const res = await fetch("https://three23p-backend.onrender.com/api/create-user", {
-      method: "POST",
-      headers: { "x-device-id": deviceId }
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
     });
-    console.log("📡 create-user status:", res.status);
-    const data = await res.json();
-    console.log("📡 create-user response:", data);
-    if (data.userId) {
-      userId = data.userId;
-      localStorage.setItem("userId", userId);
-    } else {
-      alert("❌ " + (data.error || "Could not create user"));
-    }
-  }
-  return userId;
-}
-
-/* ---------------- UI Update ---------------- */
-function updateUI(trend){
-  document.getElementById("r-title").innerText = `💄👑 ${trend.brand || "…"}`;
-  document.getElementById("r-artist").innerText = `🖊️ ${trend.product || "…"}`;
-  document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona || "…"}`;
-  document.getElementById("r-desc").innerText = trend.description || "…loading description…";
-  document.getElementById("r-label").innerText = "🔄 live drop";
-
-  document.getElementById("r-img").style.display="none";
-  document.getElementById("r-fallback").style.display="block";
-
-  if(trend.mimicLine){
-    let m = document.getElementById("r-mimic");
-    if(!m){
-      m = document.createElement("p");
-      m.id = "r-mimic";
-      m.style.marginTop = "10px";
-      m.style.fontSize = "18px";
-      m.style.background = "var(--music-color)";
-      m.style.color = "#000";
-      m.style.padding = "8px 12px";
-      m.style.borderRadius = "12px";
-      m.style.display = "inline-block";
-      document.getElementById("drop-card").appendChild(m);
-    }
-    m.innerText = trend.mimicLine;
-    m.style.display = "inline-block";
-  } else {
-    const m = document.getElementById("r-mimic");
-    if(m) m.style.display="none";
+    return completion.choices[0].message.content.trim();
+  } catch (e) {
+    console.error("❌ Description error:", e.message);
+    return prompt;
   }
 }
 
-/* ---------------- Image Update ---------------- */
-function updateImage(imageUrl,imgLine,imgTimer){
-  clearInterval(imgTimer);
-  removeOverlayLine(imgLine,"✅ image ready");
-  if(imageUrl){
-    document.getElementById("r-img").src = imageUrl;
-    document.getElementById("r-img").style.display="block";
-    document.getElementById("r-fallback").style.display="none";
-  } else {
-    document.getElementById("r-img").style.display="none";
-    document.getElementById("r-fallback").style.display="block";
-  }
-}
-
-/* ---------------- Voice ---------------- */
-function playVoice(text,onEnd){
-  if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
-  let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
-  let genElapsed = 0;
-  const genTimer = setInterval(()=>{
-    genElapsed++;
-    voiceLine.innerText = "🎤 generating voice… " + genElapsed + "s";
-  },1000);
-
-  const url = "https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text);
-  audioPlayer = new Audio(url);
-  audioPlayer.play().then(()=>{
-    clearInterval(genTimer);
-    removeOverlayLine(voiceLine,"✅ voice started");
-  }).catch(()=>{
-    clearInterval(genTimer);
-    removeOverlayLine(voiceLine,"❌ voice error");
-    if(onEnd) onEnd();
-  });
-
-  audioPlayer.onended = ()=>{
-    document.querySelector("#voice-status .text").textContent = "preparing…";
-    if(onEnd) onEnd();
-  };
-  audioPlayer.onplay = ()=>{
-    document.querySelector("#voice-status .text").textContent = "vibin’ rn…";
-  };
-}
-
-/* ---------------- Live Log + Load ---------------- */
-async function runLogAndLoad(topic){
-  showOverlay();
-  const userId = await ensureUser();
-  if (!userId) return;
-
-  let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
-  setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000);
-
-  let poolLine = appendOverlay("🧩 pool chosen","#fff",true);
-  setTimeout(()=>removeOverlayLine(poolLine,"✅ pool chosen"),2000);
-
-  let descLine = appendOverlay("✍️ drafting description…","#fff",true);
-  let descElapsed=0;
-  const descTimer=setInterval(()=>{
-    descElapsed++;
-    descLine.innerText="✍️ drafting description… "+descElapsed+"s";
-  },1000);
-
-  const descRes = await fetch(
-    `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`
-  );
-  console.log("📡 description status:", descRes.status);
-  const trend = await descRes.json();
-  console.log("📡 description response:", trend);
-
-  clearInterval(descTimer);
-  if (!trend || !trend.brand) {
-    removeOverlayLine(descLine,"❌ description failed");
-    return;
-  }
-
-  removeOverlayLine(descLine,"✅ description ready");
-  updateUI(trend);
-
-  playVoice(trend.description,()=>{
-    if(autoRefresh){
-      showOverlay();
-      appendOverlay("⏳ fetching next drop…","#ffe0f0");
-      setTimeout(()=>loadTrend(),2000);
-    }
-  });
-
-  let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
-  let imgElapsed=0;
-  const imgTimer=setInterval(()=>{
-    imgElapsed++;
-    imgLine.innerText="🖼️ rendering image… "+imgElapsed+"s";
-  },1000);
-
+/* ---------------- Image Generator ---------------- */
+async function generateImageUrl(brand, product, persona) {
   try {
-    const imgRes = await fetch(
-      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`
-    );
-    const imgData = await imgRes.json();
-    updateImage(imgData.image,imgLine,imgTimer);
-  } catch(e){
-    clearInterval(imgTimer);
-    removeOverlayLine(imgLine,"❌ image error");
-    updateImage(null);
+    const out = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: `Create a photocard-style image of ${persona} holding ${product} by ${brand}.
+Gen-Z aesthetic, pastel gradient background, glitter bokeh, glossy K-beauty skin glow.`,
+      size: "1024x1024",
+    });
+    const d = out?.data?.[0];
+    if (d?.url) return d.url;
+    if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
+  } catch (e) {
+    console.error("❌ Image error:", e.message);
   }
-
-  return trend;
+  return "https://placehold.co/600x600?text=No+Image";
 }
 
-async function loadTrend(){ 
-  if(stopCycle) return; 
-  currentTrend = await runLogAndLoad(currentTopic); 
-}
-
-/* ---------------- Emoji map ---------------- */
-function topicEmoji(topic){
-  if(topic==="cosmetics") return "💄";
-  if(topic==="music") return "🎶";
-  if(topic==="politics") return "🏛️";
-  if(topic==="aidrop") return "🌐";
-  return "⚡";
-}
-
-/* ---------------- Confirm Button ---------------- */
-function showConfirmButton(){
-  const overlay = document.getElementById("warmup-center");
-  overlay.style.display="flex";
-  overlay.style.visibility="visible";
-  overlay.style.background="transparent";
-  overlay.style.boxShadow="none";
-  overlay.innerHTML="";
-  const btn = document.createElement("button");
-  btn.className="start-btn";
-  btn.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
-  btn.onclick=()=>{
-    btn.remove();
-    autoRefresh = true;
-    loadTrend();
-  };
-  overlay.appendChild(btn);
-}
-
-/* ---------------- Start confirm ---------------- */
-document.getElementById("start-btn").addEventListener("click",()=>{
-  document.getElementById("start-screen").style.display="none";
-  document.getElementById("app").style.display="flex";
-  socket.emit("joinRoom",roomId);
-  showConfirmButton();
-});
-
-/* ---------------- Topic toggle confirm ---------------- */
-document.querySelectorAll("#topic-picker button").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    if(btn.dataset.topic === "cosmetics"){
-      return;
-    }
-    currentTopic = btn.dataset.topic;
-    autoRefresh = false;
-    showConfirmButton();
-  });
-});
-
-/* ---------------- Buy Credits ---------------- */
-async function buyCredits(pack) {
-  const userId = await ensureUser();
-  if (!userId) return;
-
-  console.log("buyCredits → userId:", userId, "roomId:", roomId);
-
-  const res = await fetch(
-    `https://three23p-backend.onrender.com/api/buy?userId=${userId}&pack=${pack}&roomId=${roomId}`,
-    { method: "POST" }
-  );
-  const data = await res.json();
-  if (data.url) {
-    window.location.href = data.url;
-  } else {
-    alert("Checkout failed: " + (data.error || "unknown error"));
-  }
-}
-
-document.getElementById("buy-small").addEventListener("click", () => buyCredits("small"));
-document.getElementById("buy-medium").addEventListener("click", () => buyCredits("medium"));
-document.getElementById("buy-large").addEventListener("click", () => buyCredits("large"));
-
-/* ---------------- Stripe Return Check ---------------- */
-(function checkStripeReturn(){
-  const params = new URLSearchParams(window.location.search);
-  const sessionId = params.get("session_id");
-  if (sessionId) {
-    console.log("✅ Stripe returned with session:", sessionId);
-    alert("✅ Payment successful! Your credits have been updated.");
-    updateCredits();
-
-    const roomParam = params.get("room");
-    params.delete("session_id");
-    let newUrl = window.location.origin + window.location.pathname;
-    if (roomParam) newUrl += "?room=" + roomParam;
-    window.history.replaceState({}, "", newUrl);
-  }
-})();
-
-/* ---------------- Credits Updater ---------------- */
-async function updateCredits() {
-  const userId = await ensureUser();
-  if (!userId) return;
+/* ---------------- Webhook ---------------- */
+app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
   try {
-    const res = await fetch(`https://three23p-backend.onrender.com/api/credits?userId=${userId}`);
-    const data = await res.json();
-    if (data.credits !== undefined) {
-      const creditBar = document.getElementById("credit-balance");
-      if (creditBar) {
-        creditBar.textContent = `✨ Credits left: ${data.credits}`;
-      }
-    }
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    console.error("❌ Failed to fetch credits:", err);
+    console.error("❌ Webhook signature error:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-}
-document.addEventListener("DOMContentLoaded", updateCredits);
-setInterval(updateCredits, 30000);
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const { userId, credits } = session.metadata || {};
+    if (userId && credits) {
+      try {
+        const currentUsers = loadUsers();
+        if (!currentUsers[userId]) currentUsers[userId] = { credits: 0, history: [] };
+        currentUsers[userId].credits += parseInt(credits, 10);
+        currentUsers[userId].history.push({ type: "purchase", credits: parseInt(credits, 10),
+          at: new Date().toISOString(), stripeSession: session.id });
+        saveUsers(currentUsers);
+        users = currentUsers;
+        console.log(`✅ Added ${credits} credits to ${userId}`);
+      } catch (err) { console.error("❌ Failed to update credits:", err.message); }
+    }
+  }
+  res.json({ received: true });
+});
+
+/* ---------------- JSON middleware ---------------- */
+app.use(express.json());
+
+/* ---------------- API: Credits ---------------- */
+app.get("/api/credits", (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+  const freshUsers = loadUsers();
+  const user = freshUsers[userId] || { credits: 5, history: [] };
+  res.json({ credits: user.credits });
+});
+
+/* ---------------- API: Description ---------------- */
+app.get("/api/description", async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+  const user = getUser(userId);
+  if (user.credits <= 0) return res.status(403).json({ error: "Out of credits" });
+  user.credits -= 1; saveUsers(users);
+
+  const topic = req.query.topic || "cosmetics";
+  let pick;
+  if (topic === "cosmetics") pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+  else if (topic === "music") pick = TOP_MUSIC[Math.floor(Math.random() * TOP_MUSIC.length)];
+  else if (topic === "politics") pick = TOP_POLITICS[Math.floor(Math.random() * TOP_POLITICS.length)];
+  else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
+
+  const persona = randomPersona();
+  const description = await makeDescription(topic, pick, persona);
+
+  let mimicLine = null;
+  if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
+
+  res.json({ brand: pick.brand || pick.artist || pick.issue || "323aidrop",
+    product: pick.product || pick.track || pick.keyword || pick.concept,
+    persona, description, mimicLine, hashtags:["#NowTrending"], isDaily:false });
+});
+
+/* ---------------- API: Image ---------------- */
+app.get("/api/image", async (req,res)=>{
+  const { brand, product, persona } = req.query;
+  if (!brand || !product) return res.status(400).json({error:"brand and product required"});
+  const imageUrl = await generateImageUrl(brand, product, persona);
+  res.json({ image: imageUrl });
+});
+
+/* ---------------- API: Voice ---------------- */
+app.get("/api/voice", async (req, res) => {
+  const text = req.query.text || "";
+  if (!text.trim()) { res.setHeader("Content-Type","audio/mpeg"); return res.send(Buffer.alloc(1000)); }
+  try {
+    const out = await openai.audio.speech.create({ model:"gpt-4o-mini-tts", voice:"alloy", input:text });
+    const audioBuffer = Buffer.from(await out.arrayBuffer());
+    res.setHeader("Content-Type","audio/mpeg"); res.send(audioBuffer);
+  } catch (e) { console.error("❌ Voice error:", e.message); res.status(500).json({error:"Voice TTS failed"}); }
+});
+
+/* ---------------- API: Buy Credits ---------------- */
+app.post("/api/buy", async (req,res)=>{
+  try {
+    const { userId, pack, roomId } = req.query;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+    const packs = { small:{amount:300,credits:30}, medium:{amount:500,credits:60}, large:{amount:1000,credits:150} };
+    const chosen = packs[pack] || packs.small;
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types:["card"], mode:"payment",
+      line_items:[{ price_data:{ currency:"usd", product_data:{ name:`${chosen.credits} AI Credits` }, unit_amount:chosen.amount }, quantity:1 }],
+      allow_promotion_codes:true,
+      success_url:`${process.env.CLIENT_URL}/?room=${roomId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:`${process.env.CLIENT_URL}/?room=${roomId}`,
+      metadata:{ userId, credits: chosen.credits },
+    });
+    res.json({ id: session.id, url: session.url });
+  } catch(err){ console.error("❌ Stripe checkout error:", err.message); res.status(500).json({error:err.message}); }
+});
+
+/* ---------------- Chat ---------------- */
+io.on("connection", socket=>{
+  socket.on("joinRoom", roomId => { socket.join(roomId); socket.roomId = roomId; });
+});
+
+/* ---------------- Start ---------------- */
+app.use(express.static(path.join(__dirname)));
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, ()=>console.log(`🚀 OP19$ backend live on :${PORT}`));
