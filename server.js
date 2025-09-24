@@ -174,6 +174,25 @@ app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
 
 /* ---------------- JSON middleware ---------------- */
 app.use(express.json());
+/* ---------------- API: Create User ---------------- */
+app.post("/api/create-user", (req, res) => {
+  const deviceId = req.headers["x-device-id"];
+  if (!deviceId) return res.status(400).json({ error: "Missing deviceId" });
+
+  const userId = "user-" + Math.random().toString(36).substr(2, 9);
+
+  const currentUsers = loadUsers();
+  currentUsers[userId] = { credits: 5, history: [], deviceId };
+  saveUsers(currentUsers);
+  users = currentUsers;
+
+  console.log(`🎁 Created new user ${userId} with 5 starter credits`);
+  res.json({ userId, credits: 5 });
+});
+
+/* ---------------- API: Credits ---------------- */
+app.get("/api/credits", (req, res) => {
+  ...
 
 /* ---------------- API: Credits ---------------- */
 app.get("/api/credits", (req, res) => {
