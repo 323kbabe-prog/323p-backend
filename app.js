@@ -132,6 +132,8 @@ function playVoice(text,onEnd){
 async function runLogAndLoad(topic){
   showOverlay();
 
+  const simulate = new URLSearchParams(window.location.search).get("simulate") || "";
+
   let reqLine = appendOverlay(`${topicEmoji(topic)} request sent for 323${topic}`,"#fff",true);
   setTimeout(()=>removeOverlayLine(reqLine,"✅ request sent"),1000);
 
@@ -152,7 +154,7 @@ async function runLogAndLoad(topic){
   }
 
   const descRes = await fetch(
-    `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`
+    `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&simulate=${simulate}`
   );
   const trend = await descRes.json();
 
@@ -171,16 +173,6 @@ async function runLogAndLoad(topic){
       showOverlay();
       appendOverlay("⏳ fetching next drop…","#ffe0f0");
       setTimeout(()=>loadTrend(),2000);
-
-      const simulate = new URLSearchParams(window.location.search).get("simulate") || "";
-
-const descRes = await fetch(
-  `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&simulate=${simulate}`
-);
-const imgRes = await fetch(
-  `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}&simulate=${simulate}`
-);
-
     }
   });
 
@@ -193,7 +185,7 @@ const imgRes = await fetch(
 
   try {
     const imgRes = await fetch(
-      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`
+      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}&simulate=${simulate}`
     );
     const imgData = await imgRes.json();
     updateImage(imgData.image,imgLine,imgTimer);
@@ -328,6 +320,7 @@ async function updateCredits() {
 // run once + refresh every 30s ✅
 document.addEventListener("DOMContentLoaded", updateCredits);
 setInterval(updateCredits, 30000);
+
 /* ---------------- User ID Header ---------------- */
 function showUserIdImmediately() {
   let userId = localStorage.getItem("userId");
@@ -343,4 +336,3 @@ function showUserIdImmediately() {
 
 // run on page load
 document.addEventListener("DOMContentLoaded", showUserIdImmediately);
-
