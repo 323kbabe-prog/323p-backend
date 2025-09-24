@@ -8,7 +8,13 @@ const cors = require("cors");
 const fs = require("fs");
 
 const app = express();
-app.use(cors({ origin: "*" }));
+
+// ✅ Explicit CORS config
+app.use(cors({
+  origin: ["https://1ai323.ai"], // allow your frontend domain
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "x-passcode", "x-device-id"]
+}));
 
 // ✅ Serve static files from /public so bg1.png … bg10.png work
 app.use(express.static(path.join(__dirname, "public")));
