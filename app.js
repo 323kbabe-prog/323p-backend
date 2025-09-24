@@ -333,6 +333,22 @@ function showUserIdImmediately() {
     userLabel.textContent = `👤 User: ${userId}`;
   }
 }
+/* ---------------- Simulation Banner ---------------- */
+document.addEventListener("DOMContentLoaded", () => {
+  const simulate = new URLSearchParams(window.location.search).get("simulate");
+  if (simulate) {
+    const banner = document.getElementById("simulate-banner");
+    if (banner) {
+      let msg = "⚠️ SIMULATION MODE: " + simulate;
+      if (simulate === "credits") msg = "⚠️ SIMULATION MODE: Out of credits";
+      if (simulate === "descfail") msg = "⚠️ SIMULATION MODE: Description failure";
+      if (simulate === "imagefail") msg = "⚠️ SIMULATION MODE: Image failure";
+      banner.textContent = msg;
+      banner.style.display = "block";
+    }
+  }
+});
+
 
 // run on page load
 document.addEventListener("DOMContentLoaded", showUserIdImmediately);
