@@ -1,8 +1,11 @@
-// app.js — OP19$ Sticker Booth Style (Gen-Z, sequential desc → image → voice)
+// app.js — OP19$ Sticker Booth Style (Gen-Z, sequential desc → image → voice, with simulation)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics"; 
 let autoRefresh = false;
+
+// Simulation mode check
+const simulate = new URLSearchParams(window.location.search).get("simulate");
 
 /* ---------------- Room Setup ---------------- */
 (function initRoom(){
@@ -87,27 +90,6 @@ function updateUI(trend){
 
   document.getElementById("r-img").style.display="none";
   document.getElementById("r-fallback").style.display="block";
-
-  if(trend.mimicLine){
-    let m = document.getElementById("r-mimic");
-    if(!m){
-      m = document.createElement("p");
-      m.id = "r-mimic";
-      m.style.marginTop = "10px";
-      m.style.fontSize = "18px";
-      m.style.background = "var(--music-color)";
-      m.style.color = "#000";
-      m.style.padding = "8px 12px";
-      m.style.borderRadius = "12px";
-      m.style.display = "inline-block";
-      document.getElementById("drop-card").appendChild(m);
-    }
-    m.innerText = trend.mimicLine;
-    m.style.display = "inline-block";
-  } else {
-    const m = document.getElementById("r-mimic");
-    if(m) m.style.display="none";
-  }
 }
 
 /* ---------------- Image Update ---------------- */
@@ -173,10 +155,25 @@ async function runLogAndLoad(topic){
     descLine.innerText="✍️ drafting description… "+descElapsed+"s";
   },1000);
 
-  const descRes = await fetch(
-    `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`
-  );
-  const trend = await descRes.json();
+  // --- Simulation: Out of credits ---
+  if (simulate === "credits") {
+    clearInterval(descTimer);
+    removeOverlayLine(descLine,"❌ Out of credits (simulated)");
+    return;
+  }
+
+  // --- Fetch description (or simulate failure) ---
+  let trend = null;
+  if (simulate === "descfail") {
+    clearInterval(descTimer);
+    removeOverlayLine(descLine,"❌ description failed (simulated)");
+    return;
+  } else {
+    const descRes = await fetch(
+      `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`
+    );
+    trend = await descRes.json();
+  }
 
   clearInterval(descTimer);
   if (!trend || !trend.brand) {
@@ -202,16 +199,23 @@ async function runLogAndLoad(topic){
     imgLine.innerText="🖼️ rendering image… "+imgElapsed+"s";
   },1000);
 
-  try {
-    const imgRes = await fetch(
-      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`
-    );
-    const imgData = await imgRes.json();
-    updateImage(imgData.image,imgLine,imgTimer);
-  } catch(e){
+  // --- Simulation: Image failure ---
+  if (simulate === "imagefail") {
     clearInterval(imgTimer);
-    removeOverlayLine(imgLine,"❌ image error");
-    updateImage(null);
+    removeOverlayLine(imgLine,"❌ image error (simulated)");
+    updateImage(null,imgLine,imgTimer);
+  } else {
+    try {
+      const imgRes = await fetch(
+        `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`
+      );
+      const imgData = await imgRes.json();
+      updateImage(imgData.image,imgLine,imgTimer);
+    } catch(e){
+      clearInterval(imgTimer);
+      removeOverlayLine(imgLine,"❌ image error");
+      updateImage(null,imgLine,imgTimer);
+    }
   }
 
   return trend;
