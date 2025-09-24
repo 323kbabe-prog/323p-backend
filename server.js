@@ -255,6 +255,9 @@ app.get("/api/description", async (req,res) => {
 
   const user = getUser(userId);
 
+  // 👇 Force simulate out of credits
+return res.status(403).json({ error: "Out of credits" });
+
   // 👇 Check balance
   if (user.credits <= 0) {
     return res.status(403).json({ error: "Out of credits" });
