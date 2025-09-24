@@ -10,6 +10,11 @@ const fs = require("fs");
 const app = express();
 app.use(cors({ origin: "*" }));
 
+const simulate = req.query.simulate;
+if (simulate === "imagefail") {
+  return res.status(500).json({ error: "Simulated image failure" });
+}
+
 // ✅ Serve static files from /public so bg1.png … bg10.png work
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -44,6 +49,14 @@ function getUser(userId) {
     saveUsers(users);
   }
   return users[userId];
+}
+// --- Simulation toggle ---
+const simulate = req.query.simulate;
+if (simulate === "credits") {
+  return res.status(403).json({ error: "Out of credits (simulated)" });
+}
+if (simulate === "descfail") {
+  return res.status(500).json({ error: "Simulated description failure" });
 }
 
 /* ---------------- Persona Generator ---------------- */
