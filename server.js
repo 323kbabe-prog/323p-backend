@@ -147,6 +147,9 @@ Use emojis generously from this set: ${descEmojis.join(" ")}.`;
     console.error("❌ Description error:",e.message);
     return prompt;
   }
+  
+  ✍️ drafting description… ❌ description failed
+
 }
 
 /* ---------------- Image Generator ---------------- */
@@ -171,6 +174,8 @@ async function generateImageUrl(brand, product, persona) {
     console.error("❌ Image error:",e.message);
   }
   return "https://placehold.co/600x600?text=No+Image";
+  throw new Error("Simulated OpenAI image fail");
+
 }
 
 /* ---------------- Stripe Setup ---------------- */
