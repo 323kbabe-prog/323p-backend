@@ -127,10 +127,6 @@ function updateImage(imageUrl,imgLine,imgTimer){
 
 /* ---------------- Voice ---------------- */
 function playVoice(text,onEnd){
-  if(audioPlayer){ 
-    audioPlayer.pause(); 
-    audioPlayer = null; 
-  }
   let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
   let genElapsed = 0;
   const genTimer = setInterval(()=>{
@@ -144,26 +140,22 @@ function playVoice(text,onEnd){
       "x-device-id": deviceId
     }
   })
-  .then(res => {
-    if (!res.ok) throw new Error("Voice fetch failed");
-    return res.blob();
-  })
+  .then(res => res.blob())
   .then(blob => {
     clearInterval(genTimer);
     removeOverlayLine(voiceLine,"✅ voice started");
 
-    // ✅ Use a persistent <audio> element (works on iOS Safari)
+    // ✅ Reuse persistent <audio> element (works on iOS Safari)
     const url = URL.createObjectURL(blob);
     const audioEl = document.getElementById("voice-player");
-
     audioEl.src = url;
+
     audioEl.play().then(()=>{
       document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
     }).catch(err=>{
-      console.warn("⚠️ Safari autoplay blocked:", err);
+      console.warn("⚠️ iOS autoplay blocked:", err);
     });
 
-    // Track as audioPlayer for consistency
     audioPlayer = audioEl;
 
     audioEl.onended = ()=>{
@@ -201,44 +193,42 @@ async function runLogAndLoad(topic){
     return;
   }
 
-  // // --- Fetch description (or simulate failure) ---
-let trend = null;
-if (simulate === "descfail") {
-  clearInterval(descTimer);
-  removeOverlayLine(descLine,"❌ description failed (simulated)");
-  hideOverlay();
-  return;
-} else {
-  const descRes = await fetch(
-    `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`,
-    {
-      headers: {
-        "x-passcode": "super-secret-pass",
-        "x-device-id": deviceId
-      }
-    }
-  );
-
-  // ✅ NEW: catch real out-of-credits or other errors
-  if (!descRes.ok) {
+  // --- Fetch description (or simulate failure) ---
+  let trend = null;
+  if (simulate === "descfail") {
     clearInterval(descTimer);
-    if (descRes.status === 403) {
-      removeOverlayLine(descLine, "❌ Out of credits");
-      const banner = document.getElementById("simulate-banner");
-      if (banner) {
-        banner.textContent = "⚠️ Out of credits";
-        banner.style.display = "block";
-      }
-    } else {
-      removeOverlayLine(descLine, "❌ description failed");
-    }
+    removeOverlayLine(descLine,"❌ description failed (simulated)");
     hideOverlay();
     return;
+  } else {
+    const descRes = await fetch(
+      `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`,
+      {
+        headers: {
+          "x-passcode": "super-secret-pass",
+          "x-device-id": deviceId
+        }
+      }
+    );
+
+    if (!descRes.ok) {
+      clearInterval(descTimer);
+      if (descRes.status === 403) {
+        removeOverlayLine(descLine, "❌ Out of credits");
+        const banner = document.getElementById("simulate-banner");
+        if (banner) {
+          banner.textContent = "⚠️ Out of credits";
+          banner.style.display = "block";
+        }
+      } else {
+        removeOverlayLine(descLine, "❌ description failed");
+      }
+      hideOverlay();
+      return;
+    }
+
+    trend = await descRes.json();
   }
-
-  trend = await descRes.json();
-}
-
 
   clearInterval(descTimer);
   if (!trend || !trend.brand) {
@@ -251,18 +241,16 @@ if (simulate === "descfail") {
   updateUI(trend);
   updateCredits();
 
-// Voice (parallel)
-playVoice(trend.description, () => {
-  console.log("🎤 Voice ended, auto-refresh check");
-  if (autoRefresh && !stopCycle) {
-    setTimeout(() => {
-      console.log("🔄 Auto-refresh: loading next drop…");
-      loadTrend();
-    }, 2000); // wait 2s before auto-refresh
-  }
-});
-
-
+  // Voice (parallel)
+  playVoice(trend.description, () => {
+    console.log("🎤 Voice ended, auto-refresh check");
+    if (autoRefresh && !stopCycle) {
+      setTimeout(() => {
+        console.log("🔄 Auto-refresh: loading next drop…");
+        loadTrend();
+      }, 2000);
+    }
+  });
 
   // Image
   let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
@@ -352,7 +340,6 @@ document.querySelectorAll("#topic-picker button").forEach(btn=>{
     currentTopic = btn.dataset.topic;
     autoRefresh = false;
     showConfirmButton();
-    
   });
 });
 
