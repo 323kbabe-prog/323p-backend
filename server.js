@@ -44,16 +44,24 @@ function getUser(userId) {
 }
 
 /* ---------------- Persona Generator ---------------- */
+let ethnicityIndex = 0;  // keep track of where we are in the cycle
+
 function randomPersona() {
   const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
-  return `a ${Math.floor(Math.random() * 7) + 17}-year-old female ${
-    ethnicities[Math.floor(Math.random() * ethnicities.length)]
-  } ${vibes[Math.floor(Math.random() * vibes.length)]} with a ${
-    styles[Math.floor(Math.random() * styles.length)]
-  } style`;
+
+  // pick ethnicity in sequence
+  const ethnicity = ethnicities[ethnicityIndex];
+  ethnicityIndex = (ethnicityIndex + 1) % ethnicities.length; // move to next, loop back after 6
+
+  // vibes + styles can still be random
+  const vibe = vibes[Math.floor(Math.random() * vibes.length)];
+  const style = styles[Math.floor(Math.random() * styles.length)];
+
+  return `a ${Math.floor(Math.random() * 7) + 17}-year-old female ${ethnicity} ${vibe} with a ${style} style`;
 }
+
 
 /* ---------------- Emoji Pools ---------------- */
 const descEmojis = [
