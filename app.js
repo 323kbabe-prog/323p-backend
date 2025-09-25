@@ -178,7 +178,7 @@ async function runLogAndLoad(topic){
   if (!userId) return;
 
   // Description log
-  let descLine = appendOverlay("✍️ drafting description…","#fff",true);
+  let descLine = appendOverlay("✍️ drafting description…","#d9f0ff",true);
   let descElapsed=0;
   const descTimer=setInterval(()=>{
     descElapsed++;
