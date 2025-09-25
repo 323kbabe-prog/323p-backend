@@ -187,25 +187,44 @@ async function runLogAndLoad(topic){
     return;
   }
 
-  // --- Fetch description (or simulate failure) ---
-  let trend = null;
-  if (simulate === "descfail") {
+  // // --- Fetch description (or simulate failure) ---
+let trend = null;
+if (simulate === "descfail") {
+  clearInterval(descTimer);
+  removeOverlayLine(descLine,"❌ description failed (simulated)");
+  hideOverlay();
+  return;
+} else {
+  const descRes = await fetch(
+    `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`,
+    {
+      headers: {
+        "x-passcode": "super-secret-pass",
+        "x-device-id": deviceId
+      }
+    }
+  );
+
+  // ✅ NEW: catch real out-of-credits or other errors
+  if (!descRes.ok) {
     clearInterval(descTimer);
-    removeOverlayLine(descLine,"❌ description failed (simulated)");
+    if (descRes.status === 403) {
+      removeOverlayLine(descLine, "❌ Out of credits");
+      const banner = document.getElementById("simulate-banner");
+      if (banner) {
+        banner.textContent = "⚠️ Out of credits";
+        banner.style.display = "block";
+      }
+    } else {
+      removeOverlayLine(descLine, "❌ description failed");
+    }
     hideOverlay();
     return;
-  } else {
-    const descRes = await fetch(
-      `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`,
-      {
-        headers: {
-          "x-passcode": "super-secret-pass",
-          "x-device-id": deviceId
-        }
-      }
-    );
-    trend = await descRes.json();
   }
+
+  trend = await descRes.json();
+}
+
 
   clearInterval(descTimer);
   if (!trend || !trend.brand) {
@@ -309,6 +328,7 @@ document.querySelectorAll("#topic-picker button").forEach(btn=>{
     currentTopic = btn.dataset.topic;
     autoRefresh = false;
     showConfirmButton();
+    
   });
 });
 
