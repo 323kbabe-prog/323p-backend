@@ -237,8 +237,18 @@ if (simulate === "descfail") {
   updateUI(trend);
   updateCredits();
 
-  // Voice (parallel)
-  playVoice(trend.description,()=>{});
+// Voice (parallel)
+playVoice(trend.description, () => {
+  console.log("🎤 Voice ended, auto-refresh check");
+  if (autoRefresh && !stopCycle) {
+    setTimeout(() => {
+      console.log("🔄 Auto-refresh: loading next drop…");
+      loadTrend();
+    }, 2000); // wait 2s before auto-refresh
+  }
+});
+
+
 
   // Image
   let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
