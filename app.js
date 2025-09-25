@@ -127,7 +127,10 @@ function updateImage(imageUrl,imgLine,imgTimer){
 
 /* ---------------- Voice ---------------- */
 function playVoice(text,onEnd){
-  if(audioPlayer){ audioPlayer.pause(); audioPlayer = null; }
+  if(audioPlayer){ 
+    audioPlayer.pause(); 
+    audioPlayer = null; 
+  }
   let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
   let genElapsed = 0;
   const genTimer = setInterval(()=>{
@@ -148,11 +151,22 @@ function playVoice(text,onEnd){
   .then(blob => {
     clearInterval(genTimer);
     removeOverlayLine(voiceLine,"✅ voice started");
+
+    // ✅ Use a persistent <audio> element (works on iOS Safari)
     const url = URL.createObjectURL(blob);
-    audioPlayer = new Audio(url);
-    audioPlayer.play();
-    document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
-    audioPlayer.onended = ()=>{
+    const audioEl = document.getElementById("voice-player");
+
+    audioEl.src = url;
+    audioEl.play().then(()=>{
+      document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
+    }).catch(err=>{
+      console.warn("⚠️ Safari autoplay blocked:", err);
+    });
+
+    // Track as audioPlayer for consistency
+    audioPlayer = audioEl;
+
+    audioEl.onended = ()=>{
       document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
       if(onEnd) onEnd();
     };
