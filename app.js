@@ -127,11 +127,11 @@ function updateImage(imageUrl,imgLine,imgTimer){
 
 /* ---------------- Voice ---------------- */
 function playVoice(text,onEnd){
-  let voiceLine = appendOverlay("🎤 generating voice…","#ffe0f0",true);
+  let voiceLine = appendOverlay("🎤 waiting for the voice…","#ffe0f0",true);
   let genElapsed = 0;
   const genTimer = setInterval(()=>{
     genElapsed++;
-    voiceLine.innerText = "🎤 generating voice… " + genElapsed + "s";
+    voiceLine.innerText = "🎤 waiting for the voice… " + genElapsed + "s";
   },1000);
 
   fetch("https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text), {
@@ -178,11 +178,11 @@ async function runLogAndLoad(topic){
   if (!userId) return;
 
   // Description log
-  let descLine = appendOverlay("✍️ drafting description…","#d9f0ff",true);
+  let descLine = appendOverlay("✍️ waiting for the description…","#d9f0ff",true);
   let descElapsed=0;
   const descTimer=setInterval(()=>{
     descElapsed++;
-    descLine.innerText="✍️ drafting description… "+descElapsed+"s";
+    descLine.innerText="✍️ waiting for the description… "+descElapsed+"s";
   },1000);
 
   // --- Simulation: Out of credits ---
@@ -253,11 +253,11 @@ async function runLogAndLoad(topic){
   });
 
   // Image
-  let imgLine = appendOverlay("🖼️ rendering image…","#d9f0ff",true);
+  let imgLine = appendOverlay("🖼️ waiting for the image…","#d9f0ff",true);
   let imgElapsed=0;
   const imgTimer=setInterval(()=>{
     imgElapsed++;
-    imgLine.innerText="🖼️ rendering image… "+imgElapsed+"s";
+    imgLine.innerText="🖼️ waiting for the image… "+imgElapsed+"s";
   },1000);
 
   if (simulate === "imagefail") {
