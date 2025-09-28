@@ -214,7 +214,7 @@ async function runLogAndLoad(topic){
     if (!descRes.ok) {
       clearInterval(descTimer);
       if (descRes.status === 403) {
-        removeOverlayLine(descLine, "❌ Out of credits");
+        removeOverlayLine(descLine, "💸 you’re dry rn… top-up to keep vibin’ ✨");
         const banner = document.getElementById("simulate-banner");
         if (banner) {
           banner.textContent = "⚠️ Out of credits";
