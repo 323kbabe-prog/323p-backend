@@ -51,17 +51,14 @@ function randomPersona() {
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
 
-  // pick ethnicity in sequence
   const ethnicity = ethnicities[ethnicityIndex];
-  ethnicityIndex = (ethnicityIndex + 1) % ethnicities.length; // move to next, loop back after 6
+  ethnicityIndex = (ethnicityIndex + 1) % ethnicities.length;
 
-  // vibes + styles can still be random
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
 
   return `a ${Math.floor(Math.random() * 7) + 17}-year-old female ${ethnicity} ${vibe} with a ${style} style`;
 }
-
 
 /* ---------------- Emoji Pools ---------------- */
 const descEmojis = [
@@ -219,8 +216,8 @@ app.get("/api/credits", (req, res) => {
   if (!userId) return res.status(400).json({ error: "userId required" });
 
   // ✅ Always reload fresh data
-  users = loadUsers();
-  const user = getUser(userId);
+  let freshUsers = loadUsers();
+  const user = freshUsers[userId] || { credits: 3, history: [] };
 
   res.json({ credits: user.credits });
 });
@@ -231,8 +228,11 @@ app.get("/api/description", async (req, res) => {
   if (!userId) return res.status(400).json({ error: "userId required" });
 
   // ✅ Always reload fresh data
-  users = loadUsers();
-  const user = getUser(userId);
+  let freshUsers = loadUsers();
+  if (!freshUsers[userId]) {
+    freshUsers[userId] = { credits: 3, history: [] };
+  }
+  const user = freshUsers[userId];
 
   if (user.credits <= 0) {
     return res.status(403).json({ error: "Out of credits" });
@@ -251,7 +251,8 @@ app.get("/api/description", async (req, res) => {
 
     // ✅ Deduct only after success
     user.credits -= 1;
-    saveUsers(users);
+    freshUsers[userId] = user;
+    saveUsers(freshUsers);
 
     let mimicLine = null;
     if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
