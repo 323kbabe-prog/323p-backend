@@ -37,7 +37,7 @@ let users = loadUsers();
 
 function getUser(userId) {
   if (!users[userId]) {
-    users[userId] = { credits: 3, history: [] }; // 🎁 starter credits
+    users[userId] = { credits: 2, history: [] }; // 🎁 starter credits
     saveUsers(users);
   }
   return users[userId];
@@ -201,7 +201,7 @@ app.post("/api/create-user", (req, res) => {
 
   const currentUsers = loadUsers();
   if (!currentUsers[userId]) {
-    currentUsers[userId] = { credits: 3, history: [], deviceId }; // 🎁 starter credits
+    currentUsers[userId] = { credits: 2, history: [], deviceId }; // 🎁 starter credits
   }
   saveUsers(currentUsers);
   users = currentUsers;
@@ -217,7 +217,7 @@ app.get("/api/credits", (req, res) => {
 
   // ✅ Always reload fresh data
   let freshUsers = loadUsers();
-  const user = freshUsers[userId] || { credits: 3, history: [] };
+  const user = freshUsers[userId] || { credits: 2, history: [] };
 
   res.json({ credits: user.credits });
 });
@@ -230,7 +230,7 @@ app.get("/api/description", async (req, res) => {
   // ✅ Always reload fresh data
   let freshUsers = loadUsers();
   if (!freshUsers[userId]) {
-    freshUsers[userId] = { credits: 3, history: [] };
+    freshUsers[userId] = { credits: 2, history: [] };
   }
   const user = freshUsers[userId];
 
