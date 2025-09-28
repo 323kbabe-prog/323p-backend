@@ -188,7 +188,7 @@ async function runLogAndLoad(topic){
   // --- Simulation: Out of credits ---
   if (simulate === "credits") {
     clearInterval(descTimer);
-    removeOverlayLine(descLine,"❌ Out of credits (simulated)");
+    removeOverlayLine(descLine,"💸 you’re dry rn… top-up to keep vibin’(simulated)");
     hideOverlay();
     return;
   }
@@ -214,10 +214,10 @@ async function runLogAndLoad(topic){
     if (!descRes.ok) {
       clearInterval(descTimer);
       if (descRes.status === 403) {
-        removeOverlayLine(descLine, "💸 you’re dry rn… top-up to keep vibin’ ✨");
+        removeOverlayLine(descLine, "💸 you’re dry rn… top-up to keep vibin’");
         const banner = document.getElementById("simulate-banner");
         if (banner) {
-          banner.textContent = "⚠️ Out of credits";
+          banner.textContent = "💸 you’re dry rn… top-up to keep vibin’";
           banner.style.display = "block";
         }
       } else {
