@@ -44,24 +44,21 @@ function getUser(userId) {
 }
 
 /* ---------------- Persona Generator ---------------- */
-let ethnicityIndex = 0;  // keep track of where we are in the cycle
+let ethnicityIndex = 0;
 
 function randomPersona() {
   const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
   const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
   const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
 
-  // pick ethnicity in sequence
   const ethnicity = ethnicities[ethnicityIndex];
-  ethnicityIndex = (ethnicityIndex + 1) % ethnicities.length; // move to next, loop back after 6
+  ethnicityIndex = (ethnicityIndex + 1) % ethnicities.length;
 
-  // vibes + styles can still be random
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
 
   return `a ${Math.floor(Math.random() * 7) + 17}-year-old female ${ethnicity} ${vibe} with a ${style} style`;
 }
-
 
 /* ---------------- Emoji Pools ---------------- */
 const descEmojis = [
@@ -84,9 +81,6 @@ const vibeEmojiMap = {
   "trainee": ["📓","🎶","💼","🌟"],
   "influencer": ["👑","💖","📸","🌈"],
 };
-
-/* ---------------- Pools ---------------- */
-const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topicPools");
 
 /* ---------------- Description Generator ---------------- */
 async function makeDescription(topic, pick, persona) {
@@ -157,102 +151,115 @@ async function generateImageUrl(brand, product, persona) {
   return "https://placehold.co/600x600?text=No+Image";
 }
 
-/* ---------------- Webhook ---------------- */
-app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
-  const sig = req.headers["stripe-signature"];
-  let event;
+/* ---------------- Trending Candidates via GPT ---------------- */
+async function fetchTrendingCandidates(topic, limit=20) {
+  let prompt;
+
+  if (topic === "cosmetics") {
+    prompt = `Give me ${limit} trending beauty products right now in the U.S.
+Return JSON array of objects with:
+[{ "brand": "Fenty Beauty", "product": "Gloss Bomb", "category": "lip", "trendStart": 1696118400000, "hypeVelocity": 0.9, "relevanceScore": 18 }]`;
+  } else if (topic === "music") {
+    prompt = `Give me ${limit} trending pop or K-pop songs right now.
+Return JSON array of objects with:
+[{ "artist": "NewJeans", "track": "Super Shy", "category": "kpop", "trendStart": 1696118400000, "hypeVelocity": 0.8, "relevanceScore": 19 }]`;
+  } else if (topic === "politics") {
+    prompt = `Give me ${limit} trending political issues right now.
+Return JSON array of objects with:
+[{ "issue": "climate change", "keyword": "climate", "category": "environment", "trendStart": 1696118400000, "hypeVelocity": 0.7, "relevanceScore": 16 }]`;
+  } else {
+    prompt = `Give me ${limit} trending AI culture concepts right now.
+Return JSON array of objects with:
+[{ "concept": "AI-native fashion", "category": "ai-culture", "trendStart": 1696118400000, "hypeVelocity": 0.6, "relevanceScore": 15 }]`;
+  }
+
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }]
+    });
+
+    return JSON.parse(res.choices[0].message.content);
   } catch (err) {
-    console.error("❌ Webhook signature error:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    console.error("❌ GPT trending fetch error:", err.message);
+    return [];
   }
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-    const { userId, credits } = session.metadata || {};
-    if (userId && credits) {
-      try {
-        const currentUsers = loadUsers();
-        if (!currentUsers[userId]) currentUsers[userId] = { credits: 0, history: [] };
-        currentUsers[userId].credits += parseInt(credits, 10);
-        currentUsers[userId].history.push({
-          type: "purchase",
-          credits: parseInt(credits, 10),
-          at: new Date().toISOString(),
-          stripeSession: session.id
-        });
-        saveUsers(currentUsers);
-        users = currentUsers;
-        console.log(`✅ Added ${credits} credits to ${userId}`);
-      } catch (err) {
-        console.error("❌ Failed to update credits:", err.message);
-      }
-    }
+}
+
+/* ---------------- Drop Selection Algorithm ---------------- */
+function calcScore(item, history) {
+  let score = 0;
+
+  const ageHours = item.trendStart ? ((Date.now() - item.trendStart) / 3600000) : 12;
+  if (ageHours < 24) score += 30;
+  else if (ageHours < 24*7) score += 20;
+  else if (ageHours < 24*30) score += 10;
+
+  const hype = item.hypeVelocity || 0.5;
+  if (hype > 0.8) score += 30;
+  else if (hype > 0.5) score += 20;
+  else if (hype > 0.2) score += 10;
+
+  if (!history.some(h => h.category === item.category)) score += 20;
+  else if (!history.some(h => h.product === item.product)) score += 5;
+
+  score += item.relevanceScore || 10;
+
+  return score;
+}
+
+async function chooseDrop(topic, history) {
+  const candidates = await fetchTrendingCandidates(topic, 20);
+  if (!candidates || candidates.length === 0) {
+    console.warn("⚠️ No trending candidates found, falling back.");
+    return { brand: "Fallback", product: "AI Drop", category: "general" };
   }
-  res.json({ received: true });
-});
 
-/* ---------------- JSON middleware ---------------- */
-app.use(express.json());
+  const scored = candidates.map(c => ({ item: c, score: calcScore(c, history) }));
+  scored.sort((a, b) => b.score - a.score);
 
-/* ---------------- API: Create User ---------------- */
-app.post("/api/create-user", (req, res) => {
-  const deviceId = req.headers["x-device-id"];
-  if (!deviceId) return res.status(400).json({ error: "Missing deviceId" });
+  const winner = scored[0].item;
+  history.push(winner);
+  return winner;
+}
 
-  const userId = "user-" + Math.random().toString(36).substr(2, 9);
-
-  const currentUsers = loadUsers();
-  if (!currentUsers[userId]) {
-    currentUsers[userId] = { credits: 3, history: [], deviceId }; // 🎁 starter credits
-  }
-  saveUsers(currentUsers);
-  users = currentUsers;
-
-  console.log(`🎁 Created new user ${userId} with 3 starter credits`);
-  res.json({ userId, credits: currentUsers[userId].credits });
-});
-
-/* ---------------- API: Credits ---------------- */
-app.get("/api/credits", (req, res) => {
-  const userId = req.query.userId;
-  if (!userId) return res.status(400).json({ error: "userId required" });
-  const freshUsers = loadUsers();
-  const user = freshUsers[userId] || { credits: 3, history: [] }; // 🎁 starter credits
-  res.json({ credits: user.credits });
-});
+let dropHistory = [];
 
 /* ---------------- API: Description ---------------- */
 app.get("/api/description", async (req, res) => {
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "userId required" });
+
   const user = getUser(userId);
   if (user.credits <= 0) return res.status(403).json({ error: "Out of credits" });
-  user.credits -= 1;
-  saveUsers(users);
 
-  const topic = req.query.topic || "cosmetics";
-  let pick;
-  if (topic === "cosmetics") pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-  else if (topic === "music") pick = TOP_MUSIC[Math.floor(Math.random() * TOP_MUSIC.length)];
-  else if (topic === "politics") pick = TOP_POLITICS[Math.floor(Math.random() * TOP_POLITICS.length)];
-  else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
+  try {
+    const topic = req.query.topic || "cosmetics";
+    const pick = await chooseDrop(topic, dropHistory);
+    const persona = randomPersona();
+    const description = await makeDescription(topic, pick, persona);
 
-  const persona = randomPersona();
-  const description = await makeDescription(topic, pick, persona);
+    user.credits -= 1;
+    saveUsers(users);
 
-  let mimicLine = null;
-  if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
+    let mimicLine = null;
+    if (topic === "music" && pick.artist) {
+      mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
+    }
 
-  res.json({
-    brand: pick.brand || pick.artist || pick.issue || "323aidrop",
-    product: pick.product || pick.track || pick.keyword || pick.concept,
-    persona,
-    description,
-    mimicLine,
-    hashtags:["#NowTrending"],
-    isDaily:false
-  });
+    res.json({
+      brand: pick.brand || pick.artist || pick.issue || "323aidrop",
+      product: pick.product || pick.track || pick.keyword || pick.concept,
+      persona,
+      description,
+      mimicLine,
+      hashtags: ["#NowTrending"],
+      isDaily: false
+    });
+  } catch (err) {
+    console.error("❌ Drop generation failed:", err.message);
+    return res.status(500).json({ error: "Drop generation failed" });
+  }
 });
 
 /* ---------------- API: Image ---------------- */
