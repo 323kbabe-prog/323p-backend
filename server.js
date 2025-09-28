@@ -217,8 +217,11 @@ app.post("/api/create-user", (req, res) => {
 app.get("/api/credits", (req, res) => {
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "userId required" });
-  const freshUsers = loadUsers();
-  const user = freshUsers[userId] || { credits: 3, history: [] }; // 🎁 starter credits
+
+  // ✅ Always reload fresh data
+  users = loadUsers();
+  const user = getUser(userId);
+
   res.json({ credits: user.credits });
 });
 
@@ -226,10 +229,14 @@ app.get("/api/credits", (req, res) => {
 app.get("/api/description", async (req, res) => {
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "userId required" });
+
+  // ✅ Always reload fresh data
+  users = loadUsers();
   const user = getUser(userId);
-  if (user.credits <= 0) return res.status(403).json({ error: "Out of credits" });
-  user.credits -= 1;
-  saveUsers(users);
+
+  if (user.credits <= 0) {
+    return res.status(403).json({ error: "Out of credits" });
+  }
 
   const topic = req.query.topic || "cosmetics";
   let pick;
@@ -238,21 +245,30 @@ app.get("/api/description", async (req, res) => {
   else if (topic === "politics") pick = TOP_POLITICS[Math.floor(Math.random() * TOP_POLITICS.length)];
   else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
 
-  const persona = randomPersona();
-  const description = await makeDescription(topic, pick, persona);
+  try {
+    const persona = randomPersona();
+    const description = await makeDescription(topic, pick, persona);
 
-  let mimicLine = null;
-  if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
+    // ✅ Deduct only after success
+    user.credits -= 1;
+    saveUsers(users);
 
-  res.json({
-    brand: pick.brand || pick.artist || pick.issue || "323aidrop",
-    product: pick.product || pick.track || pick.keyword || pick.concept,
-    persona,
-    description,
-    mimicLine,
-    hashtags:["#NowTrending"],
-    isDaily:false
-  });
+    let mimicLine = null;
+    if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
+
+    res.json({
+      brand: pick.brand || pick.artist || pick.issue || "323aidrop",
+      product: pick.product || pick.track || pick.keyword || pick.concept,
+      persona,
+      description,
+      mimicLine,
+      hashtags:["#NowTrending"],
+      isDaily:false
+    });
+  } catch (err) {
+    console.error("❌ Description error:", err.message);
+    res.status(500).json({ error: "Description generation failed" });
+  }
 });
 
 /* ---------------- API: Image ---------------- */
