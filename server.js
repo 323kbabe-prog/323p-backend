@@ -17,7 +17,7 @@ console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("STRIPE_SECRET_KEY:", !!process.env.STRIPE_SECRET_KEY);
 console.log("STRIPE_WEBHOOK_SECRET:", !!process.env.STRIPE_WEBHOOK_SECRET);
 
-// ✅ Make sure /data exists (so saving users.json doesn’t crash)
+// ✅ Make sure /data exists
 if (!fs.existsSync("/data")) {
   fs.mkdirSync("/data");
 }
@@ -33,7 +33,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ---------------- Credit Store ----------------
 const USERS_FILE = path.join("/data", "users.json");
-const MAX_CREDITS = 30; // 🔒 maximum credits allowed
+const MAX_CREDITS = 150; // 🔒 maximum credits allowed
 
 function loadUsers() {
   try {
@@ -167,7 +167,6 @@ async function generateImageUrl(brand, product, persona) {
 }
 
 /* ---------------- Webhook ---------------- */
-// ✅ moved above express.json to avoid raw/body conflict
 app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;
@@ -185,7 +184,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
         const currentUsers = loadUsers();
         if (!currentUsers[userId]) currentUsers[userId] = { credits: 0, history: [] };
 
-        // ✅ enforce maximum credits
+        // ✅ enforce maximum credits (cap at 150)
         currentUsers[userId].credits = Math.min(
           currentUsers[userId].credits + parseInt(credits, 10),
           MAX_CREDITS
@@ -199,7 +198,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
         });
         saveUsers(currentUsers);
         users = currentUsers;
-        console.log(`✅ Added ${credits} credits to ${userId}, now ${currentUsers[userId].credits}`);
+        console.log(`✅ Added ${credits} credits to ${userId}, total now ${currentUsers[userId].credits}`);
       } catch (err) {
         console.error("❌ Failed to update credits:", err.message);
       }
@@ -330,11 +329,15 @@ app.post("/api/buy", async (req,res)=>{
     };
     const chosen = packs[pack] || packs.small;
 
-    // ✅ enforce max credits before Stripe checkout
     users = loadUsers();
     const user = getUser(userId);
+
+    // ✅ prevent buying if it would exceed max credits
     if (user.credits >= MAX_CREDITS) {
-      return res.status(400).json({ error: "Credit limit reached (max 30)" });
+      return res.status(400).json({ error: "Credit limit reached (max 150)" });
+    }
+    if (user.credits + chosen.credits > MAX_CREDITS) {
+      return res.status(400).json({ error: "Buying this pack would exceed max credits (150)" });
     }
 
     const session = await stripe.checkout.sessions.create({
