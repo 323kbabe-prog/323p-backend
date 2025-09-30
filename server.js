@@ -8,9 +8,6 @@ const cors = require("cors");
 const fs = require("fs");
 const Stripe = require("stripe");
 
-const sharp = require("sharp");
-const fetch = require("node-fetch"); // if not already in your deps
-
 const app = express();
 app.use(cors({ origin: "*" }));
 
@@ -149,7 +146,6 @@ Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
 /* ---------------- Image Generator ---------------- */
 async function generateImageUrl(brand, product, persona) {
   try {
-    // 1. Generate AI image
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt:`Create a photocard-style image.
@@ -161,46 +157,55 @@ async function generateImageUrl(brand, product, persona) {
       `,
       size: "1024x1024",
     });
-
     const d = out?.data?.[0];
-    if (!d?.url && !d?.b64_json) {
-      throw new Error("No image returned from OpenAI");
-    }
-
-    // 2. Get the image as buffer
-    let imgBuffer;
-    if (d.url) {
-      const resp = await fetch(d.url);
-      imgBuffer = Buffer.from(await resp.arrayBuffer());
-    } else {
-      imgBuffer = Buffer.from(d.b64_json, "base64");
-    }
-
-    // 3. Add brand text with Sharp
-    const stampedBuffer = await sharp(imgBuffer)
-      .composite([{
-        input: Buffer.from(`
-          <svg width="1024" height="1024">
-            <text x="1000" y="1000" font-size="40" fill="white" stroke="black" stroke-width="2"
-              font-family="sans-serif" text-anchor="end">
-              1ai323.ai 🇺🇸🤖🌴
-            </text>
-          </svg>
-        `),
-        top: 0,
-        left: 0
-      }])
-      .png()
-      .toBuffer();
-
-    // 4. Return as base64 inline (frontend <img> safe)
-    return `data:image/png;base64,${stampedBuffer.toString("base64")}`;
-
+    if (d?.url) return d.url;
+    if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
   } catch (e) {
     console.error("❌ Image error:", e.message);
-    return "https://placehold.co/600x600?text=No+Image";
   }
+  return "https://placehold.co/600x600?text=No+Image";
 }
+
+/* ---------------- Webhook ---------------- */
+app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error("❌ Webhook signature error:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const { userId, credits } = session.metadata || {};
+    if (userId && credits) {
+      try {
+        const currentUsers = loadUsers();
+        if (!currentUsers[userId]) currentUsers[userId] = { credits: 0, history: [] };
+
+        // ✅ enforce maximum credits (cap at 150)
+        currentUsers[userId].credits = Math.min(
+          currentUsers[userId].credits + parseInt(credits, 10),
+          MAX_CREDITS
+        );
+
+        currentUsers[userId].history.push({
+          type: "purchase",
+          credits: parseInt(credits, 10),
+          at: new Date().toISOString(),
+          stripeSession: session.id
+        });
+        saveUsers(currentUsers);
+        users = currentUsers;
+        console.log(`✅ Added ${credits} credits to ${userId}, total now ${currentUsers[userId].credits}`);
+      } catch (err) {
+        console.error("❌ Failed to update credits:", err.message);
+      }
+    }
+  }
+  res.json({ received: true });
+});
 
 /* ---------------- JSON middleware ---------------- */
 app.use(express.json());
