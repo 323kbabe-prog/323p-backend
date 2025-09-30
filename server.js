@@ -154,7 +154,7 @@ async function generateImageUrl(brand, product, persona) {
   Pastel gradient background (milk pink, baby blue, lilac).
   Glitter bokeh, glossy K-beauty skin glow.
   Sticker shapes only (hearts, emoji, text emoticon).
-  Add a stylish neon text label in the bottom-right corner that says: "1ai323.ai 🇺🇸🤖🌴".
+  Add a stylish neon text label in the bottom-right corner that says: "1ai323.ai".
 `,
       size: "1024x1024",
     });
