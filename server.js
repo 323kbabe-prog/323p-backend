@@ -149,12 +149,13 @@ async function generateImageUrl(brand, product, persona) {
     const out = await openai.images.generate({
       model: "gpt-image-1",
       prompt:`Create a photocard-style image.
-        Subject: ${persona}, Gen-Z aesthetic.
-        They are holding and applying ${product} by ${brand}.
-        Pastel gradient background (milk pink, baby blue, lilac).
-        Glitter bokeh, glossy K-beauty skin glow.
-        Sticker shapes only (hearts, emoji, text emoticon).
-      `,
+  Subject: ${persona}, Gen-Z aesthetic.
+  They are holding and applying ${product} by ${brand}.
+  Pastel gradient background (milk pink, baby blue, lilac).
+  Glitter bokeh, glossy K-beauty skin glow.
+  Sticker shapes only (hearts, emoji, text emoticon).
+  Add a stylish neon text label in the bottom-right corner that says: "1ai323.ai 🇺🇸🤖🌴".
+`,
       size: "1024x1024",
     });
     const d = out?.data?.[0];
