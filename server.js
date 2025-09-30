@@ -154,7 +154,8 @@ async function generateImageUrl(brand, product, persona) {
   Pastel gradient background (milk pink, baby blue, lilac).
   Glitter bokeh, glossy K-beauty skin glow.
   Sticker shapes only (hearts, emoji, text emoticon).
-  Add a stylish neon text label in the bottom-right corner that says: "1ai323.ai".
+  Add a playful Gen-Z sticker badge in the corner with bubble letters and neon glow.
+  The sticker should read: "1ai323.ai 🇺🇸🤖🌴".
 `,
       size: "1024x1024",
     });
