@@ -153,8 +153,9 @@ async function generateImageUrl(brand, product, persona) {
         They are holding and applying ${product} by ${brand}.
         Pastel gradient background (milk pink, baby blue, lilac).
         Glitter bokeh, glossy K-beauty skin glow.
-        Sticker shapes only (hearts, emoji, text emoticon, 1ai323.ai 🇺🇸🤖🌴).
-      `,
+        Sticker shapes only (hearts, emoji, text emoticon).
+  Include a small stylish text label in the corner that reads: "1ai323.ai 🇺🇸🤖🌴".
+`,
       size: "1024x1024",
     });
     const d = out?.data?.[0];
