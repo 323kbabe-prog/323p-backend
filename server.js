@@ -154,7 +154,7 @@ async function generateImageUrl(brand, product, persona) {
   Pastel gradient background (milk pink, baby blue, lilac).
   Glitter bokeh, glossy K-beauty skin glow.
   Sticker shapes only (hearts, emoji, text emoticon).
-  Add a playful Gen-Z text emoticon in the corner with bubble letters and neon glow.
+  Add a playful Gen-Z text emoticon in the corner.
   The text emoticon should read: "1ai323.ai 🇺🇸🤖🌴".
 `,
       size: "1024x1024",
