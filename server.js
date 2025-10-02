@@ -154,7 +154,7 @@ async function generateImageUrl(brand, product, persona) {
   Pastel gradient background (milk pink, baby blue, lilac).
   Glitter bokeh, glossy K-beauty skin glow.
   Sticker shapes only (hearts, emoji, text emoticon).
-text "1ai323.ai 🇺🇸🤖🌴"show 50% in the bottom.
+text emoji "1ai323.ai 🇺🇸🤖🌴"a minimal system font overlay, small, sharp, and aligned neatly,show upper half in the bottom.
 
 `,
       size: "1024x1024",
