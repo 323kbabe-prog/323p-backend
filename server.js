@@ -153,10 +153,8 @@ async function generateImageUrl(brand, product, persona) {
   They are holding and applying ${product} by ${brand}.
   Pastel gradient background (milk pink, baby blue, lilac).
   Glitter bokeh, glossy K-beauty skin glow.
-  Sticker shapes only (hearts, emoji, text emoticon).
-Add a clean system text emoji label near the bottom corner, slightly above the edge, so it is always fully visible.  
-The text should read exactly: "1ai323.ai 🇺🇸🤖🌴".  
-It should look like a minimal system font overlay, small, sharp, and aligned neatly.
+  Sticker shapes only (hearts, emoji, text emoticon, 1ai323.ai 🇺🇸🤖🌴).
+
 `,
       size: "1024x1024",
     });
