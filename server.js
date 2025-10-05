@@ -366,6 +366,26 @@ const packs = {
   }
 });
 
+/* ---------------- View Counter ---------------- */
+const VIEWS_FILE = path.join("/data", "views.json");
+
+// Load current count or start at 0
+function loadViews() {
+  try {
+    return JSON.parse(fs.readFileSync(VIEWS_FILE, "utf-8"));
+  } catch {
+    return { total: 0 };
+  }
+}
+
+// Increment view count
+app.get("/api/views", (req, res) => {
+  let views = loadViews();
+  views.total += 1;
+  fs.writeFileSync(VIEWS_FILE, JSON.stringify(views, null, 2));
+  res.json({ total: views.total });
+});
+
 /* ---------------- Chat ---------------- */
 io.on("connection", socket=>{
   socket.on("joinRoom", roomId => {
