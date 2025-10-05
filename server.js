@@ -324,11 +324,12 @@ app.post("/api/buy", async (req,res)=>{
   try {
     const { userId, pack, roomId } = req.query;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    const packs = {
-      small:{amount:300,credits:30},
-      medium:{amount:500,credits:60},
-      large:{amount:1000,credits:150}
-    };
+    // ✅ Updated 2025 pricing / credit tiers
+const packs = {
+  small:{amount:350,credits:30},   // $3.50  → 30 credits
+  medium:{amount:650,credits:60},  // $6.50  → 60 credits
+  large:{amount:1450,credits:135}  // $14.50 → 135 credits
+};
     const chosen = packs[pack] || packs.small;
 
     users = loadUsers();
