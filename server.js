@@ -23,7 +23,6 @@ if (!fs.existsSync("/data")) {
 }
 
 // ✅ Serve static files from /public so bg1.png … bg10.png work
-app.use(express.static(path.join(__dirname, "public")));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
@@ -387,6 +386,9 @@ app.get("/", (req, res, next) => {
   // continue serving your static index.html
   next();
 });
+
+/* ✅ Serve static files AFTER the counter */
+app.use(express.static(path.join(__dirname, "public")));
 
 /* ---------------- Chat ---------------- */
 io.on("connection", socket=>{
