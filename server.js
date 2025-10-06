@@ -23,6 +23,7 @@ if (!fs.existsSync("/data")) {
 }
 
 // ✅ Serve static files from /public so bg1.png … bg10.png work
+app.use(express.static(path.join(__dirname, "public")));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
@@ -323,12 +324,11 @@ app.post("/api/buy", async (req,res)=>{
   try {
     const { userId, pack, roomId } = req.query;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-    // ✅ Updated 2025 pricing / credit tiers
-const packs = {
-  small:{amount:350,credits:30},   // $3.50  → 30 credits
-  medium:{amount:650,credits:60},  // $6.50  → 60 credits
-  large:{amount:1450,credits:135}  // $14.50 → 135 credits
-};
+    const packs = {
+      small:{amount:350,credits:30},   // $3.50  → 30 credits
+      medium:{amount:650,credits:60},  // $6.50  → 60 credits
+      large:{amount:1450,credits:135}  // $14.50 → 135 credits
+    };
     const chosen = packs[pack] || packs.small;
 
     users = loadUsers();
@@ -365,31 +365,6 @@ const packs = {
   }
 });
 
-/* ---------------- Automatic View Counter ---------------- */
-const VIEWS_FILE = path.join("/data", "views.json");
-
-// helper: read current count or start at 0
-function loadViews() {
-  try {
-    return JSON.parse(fs.readFileSync(VIEWS_FILE, "utf-8"));
-  } catch {
-    return { total: 0 };
-  }
-}
-
-// middleware that adds +1 when someone hits the homepage
-app.get("/", (req, res, next) => {
-  let views = loadViews();
-  views.total += 1;
-  fs.writeFileSync(VIEWS_FILE, JSON.stringify(views, null, 2));
-  console.log(`👁️  Total views: ${views.total}`);
-  // continue serving your static index.html
-  next();
-});
-
-/* ✅ Serve static files AFTER the counter */
-app.use(express.static(path.join(__dirname, "public")));
-
 /* ---------------- Chat ---------------- */
 io.on("connection", socket=>{
   socket.on("joinRoom", roomId => {
@@ -399,5 +374,6 @@ io.on("connection", socket=>{
 });
 
 /* ---------------- Start ---------------- */
+app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, ()=>console.log(`🚀 OP19$ backend live on :${PORT}`));
