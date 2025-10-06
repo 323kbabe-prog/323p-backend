@@ -366,10 +366,10 @@ const packs = {
   }
 });
 
-/* ---------------- View Counter ---------------- */
+/* ---------------- Automatic View Counter ---------------- */
 const VIEWS_FILE = path.join("/data", "views.json");
 
-// Load current count or start at 0
+// helper: read current count or start at 0
 function loadViews() {
   try {
     return JSON.parse(fs.readFileSync(VIEWS_FILE, "utf-8"));
@@ -378,12 +378,14 @@ function loadViews() {
   }
 }
 
-// Increment view count
-app.get("/api/views", (req, res) => {
+// middleware that adds +1 when someone hits the homepage
+app.get("/", (req, res, next) => {
   let views = loadViews();
   views.total += 1;
   fs.writeFileSync(VIEWS_FILE, JSON.stringify(views, null, 2));
-  res.json({ total: views.total });
+  console.log(`👁️  Total views: ${views.total}`);
+  // continue serving your static index.html
+  next();
 });
 
 /* ---------------- Chat ---------------- */
