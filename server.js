@@ -399,6 +399,5 @@ io.on("connection", socket=>{
 });
 
 /* ---------------- Start ---------------- */
-app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, ()=>console.log(`🚀 OP19$ backend live on :${PORT}`));
