@@ -7,7 +7,6 @@ const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
 const Stripe = require("stripe");
-
 const app = express();
 app.use(cors({ origin: "*" }));
 
@@ -124,7 +123,7 @@ Emotional, energetic. Add emojis inline in every sentence.`;
     prompt = `Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}.
 Activist style. Add emojis inline in every sentence.`;
     system = "You are a college student activist.";
-  } } else if (topic === "aidrop") {
+  } else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
   prompt = `Write exactly 300 words in a first-person influencer-style description introducing a near-future AI product idea.
 The product name is "${pick.concept}" by ${pick.brand}.
