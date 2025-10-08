@@ -409,4 +409,16 @@ async function updateCredits() {
   }
 }
 document.addEventListener("DOMContentLoaded", updateCredits);
+/* ---------------- Dual Drop Buttons ---------------- */
+document.getElementById("drop-cosmetics-btn").addEventListener("click", async ()=>{
+  currentTopic = "cosmetics";
+  autoRefresh = true;
+  await loadTrend();
+});
+
+document.getElementById("drop-aidrop-btn").addEventListener("click", async ()=>{
+  currentTopic = "aidrop";
+  autoRefresh = true;
+  await loadTrend();
+});
 setInterval(updateCredits, 30000);
