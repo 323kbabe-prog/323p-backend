@@ -1,18 +1,18 @@
-// app.js — OP19$ FCR (drop flow + simulation + headers everywhere)
+// app.js — OP19$ Dual Button Version (cosmetics + aidrop)
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
-let currentTopic = "cosmetics"; 
+let currentTopic = "cosmetics";
 let autoRefresh = false;
 
 // Simulation mode check (?simulate=credits|descfail|imagefail)
 const simulate = new URLSearchParams(window.location.search).get("simulate");
 
 /* ---------------- Room Setup ---------------- */
-(function initRoom(){
-  let params = new URLSearchParams(window.location.search);
+(function initRoom() {
+  const params = new URLSearchParams(window.location.search);
   roomId = params.get("room");
-  if(!roomId){
-    roomId = "room-" + Math.floor(Math.random()*9000);
+  if (!roomId) {
+    roomId = "room-" + Math.floor(Math.random() * 9000);
     const newUrl = window.location.origin + window.location.pathname + "?room=" + roomId;
     window.history.replaceState({}, "", newUrl);
   }
@@ -22,40 +22,38 @@ const simulate = new URLSearchParams(window.location.search).get("simulate");
 /* ---------------- Device ID ---------------- */
 let deviceId = localStorage.getItem("deviceId");
 if (!deviceId) {
-  if (window.crypto && crypto.randomUUID) {
-    deviceId = crypto.randomUUID();
-  } else {
-    deviceId = Math.random().toString(36).slice(2);
-  }
+  deviceId = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
   localStorage.setItem("deviceId", deviceId);
 }
 console.log("🔑 deviceId is", deviceId);
 
 /* ---------------- Overlay Helpers ---------------- */
-function showOverlay(){
+function showOverlay() {
   const c = document.getElementById("warmup-center");
-  if(c){ c.style.display="flex"; c.style.visibility="visible"; c.innerHTML=""; }
+  if (c) { c.style.display = "flex"; c.style.visibility = "visible"; c.innerHTML = ""; }
 }
-function hideOverlay(){
+function hideOverlay() {
   const c = document.getElementById("warmup-center");
-  if(c){ c.style.display="none"; c.style.visibility="hidden"; c.innerHTML=""; }
+  if (c) { c.style.display = "none"; c.style.visibility = "hidden"; c.innerHTML = ""; }
 }
-function appendOverlay(msg,color="#fff",blinking=false){
+function appendOverlay(msg, color = "#fff", blinking = false) {
   const line = document.createElement("div");
-  line.className="log-line";
-  if(blinking) line.classList.add("blinking");
-  line.style.background=color;
-  line.innerText=msg;
+  line.className = "log-line";
+  if (blinking) line.classList.add("blinking");
+  line.style.background = color;
+  line.innerText = msg;
   const c = document.getElementById("warmup-center");
   c.appendChild(line);
   c.scrollTop = c.scrollHeight;
   return line;
 }
-function removeOverlayLine(line,finalMsg){
-  if(line){
+function removeOverlayLine(line, finalMsg) {
+  if (line) {
     line.classList.remove("blinking");
     line.innerText = finalMsg;
-    setTimeout(()=>line.remove(),1200);
+    setTimeout(() => line.remove(), 1200);
   }
 }
 
@@ -63,7 +61,7 @@ function removeOverlayLine(line,finalMsg){
 async function ensureUser() {
   let userId = localStorage.getItem("userId");
   if (!userId) {
-    console.log("⚡ Calling /api/create-user for new device");
+    console.log("⚡ Creating new user for device");
     const res = await fetch("https://three23p-backend.onrender.com/api/create-user", {
       method: "POST",
       headers: { "x-device-id": deviceId }
@@ -72,7 +70,7 @@ async function ensureUser() {
     if (data.userId) {
       userId = data.userId;
       localStorage.setItem("userId", userId);
-      console.log("✅ Created new user:", userId, "credits:", data.credits);
+      console.log("✅ New user:", userId, "credits:", data.credits);
     } else {
       alert("❌ Could not create user: " + (data.error || "unknown error"));
     }
@@ -81,20 +79,20 @@ async function ensureUser() {
 }
 
 /* ---------------- UI Update ---------------- */
-function updateUI(trend){
+function updateUI(trend) {
   document.getElementById("r-title").innerText = `💄👑 ${trend.brand || "…"}`;
   document.getElementById("r-artist").innerText = `🖊️ ${trend.product || "…"}`;
   document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona || "…"}`;
   document.getElementById("r-desc").innerText = trend.description || "…loading description…";
   document.getElementById("r-label").innerText = "🔄 live drop";
 
-  document.getElementById("r-img").style.display="none";
-  document.getElementById("r-fallback").style.display="block";
+  document.getElementById("r-img").style.display = "none";
+  document.getElementById("r-fallback").style.display = "block";
 
-  // show mimic line if music
-  if(trend.mimicLine){
+  // mimic line if music
+  if (trend.mimicLine) {
     let m = document.getElementById("r-mimic");
-    if(!m){
+    if (!m) {
       m = document.createElement("p");
       m.id = "r-mimic";
       m.style.marginTop = "10px";
@@ -112,27 +110,27 @@ function updateUI(trend){
 }
 
 /* ---------------- Image Update ---------------- */
-function updateImage(imageUrl,imgLine,imgTimer){
+function updateImage(imageUrl, imgLine, imgTimer) {
   clearInterval(imgTimer);
-  removeOverlayLine(imgLine,"✅ image ready");
-  if(imageUrl){
+  removeOverlayLine(imgLine, "✅ image ready");
+  if (imageUrl) {
     document.getElementById("r-img").src = imageUrl;
-    document.getElementById("r-img").style.display="block";
-    document.getElementById("r-fallback").style.display="none";
+    document.getElementById("r-img").style.display = "block";
+    document.getElementById("r-fallback").style.display = "none";
   } else {
-    document.getElementById("r-img").style.display="none";
-    document.getElementById("r-fallback").style.display="block";
+    document.getElementById("r-img").style.display = "none";
+    document.getElementById("r-fallback").style.display = "block";
   }
 }
 
 /* ---------------- Voice ---------------- */
-function playVoice(text,onEnd){
-  let voiceLine = appendOverlay("🎤 waiting for the voice…","#ffe0f0",true);
+function playVoice(text, onEnd) {
+  const voiceLine = appendOverlay("🎤 waiting for the voice…", "#ffe0f0", true);
   let genElapsed = 0;
-  const genTimer = setInterval(()=>{
+  const genTimer = setInterval(() => {
     genElapsed++;
     voiceLine.innerText = "🎤 waiting for the voice… " + genElapsed + "s";
-  },1000);
+  }, 1000);
 
   fetch("https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text), {
     headers: {
@@ -140,77 +138,61 @@ function playVoice(text,onEnd){
       "x-device-id": deviceId
     }
   })
-  .then(res => res.blob())
-  .then(blob => {
-    clearInterval(genTimer);
-    removeOverlayLine(voiceLine,"✅ voice started");
+    .then(res => res.blob())
+    .then(blob => {
+      clearInterval(genTimer);
+      removeOverlayLine(voiceLine, "✅ voice started");
 
-    // ✅ Reuse persistent <audio> element (works on iOS Safari)
-    const url = URL.createObjectURL(blob);
-    const audioEl = document.getElementById("voice-player");
-    audioEl.src = url;
+      const url = URL.createObjectURL(blob);
+      const audioEl = document.getElementById("voice-player");
+      audioEl.src = url;
 
-    audioEl.play().then(()=>{
-      document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
-    }).catch(err=>{
-      console.warn("⚠️ iOS autoplay blocked:", err);
+      audioEl.play().then(() => {
+        document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
+      }).catch(err => console.warn("⚠️ iOS autoplay blocked:", err));
+
+      audioPlayer = audioEl;
+      audioEl.onended = () => {
+        document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
+        if (onEnd) onEnd();
+      };
+    })
+    .catch(err => {
+      clearInterval(genTimer);
+      removeOverlayLine(voiceLine, "❌ voice error");
+      console.error("❌ Voice fetch error", err);
+      if (onEnd) onEnd();
     });
-
-    audioPlayer = audioEl;
-
-    audioEl.onended = ()=>{
-      document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
-      if(onEnd) onEnd();
-    };
-  })
-  .catch(err=>{
-    clearInterval(genTimer);
-    removeOverlayLine(voiceLine,"❌ voice error");
-    console.error("❌ Voice fetch error", err);
-    if(onEnd) onEnd();
-  });
 }
 
 /* ---------------- Main Drop Sequence ---------------- */
-async function runLogAndLoad(topic){
+async function runLogAndLoad(topic) {
   showOverlay();
   const userId = await ensureUser();
   if (!userId) return;
 
-  // Description log
-  let descLine = appendOverlay("✍️ waiting for the description…","#d9f0ff",true);
-  let descElapsed=0;
-  const descTimer=setInterval(()=>{
+  const descLine = appendOverlay("✍️ waiting for the description…", "#d9f0ff", true);
+  let descElapsed = 0;
+  const descTimer = setInterval(() => {
     descElapsed++;
-    descLine.innerText="✍️ waiting for the description… "+descElapsed+"s";
-  },1000);
+    descLine.innerText = "✍️ waiting for the description… " + descElapsed + "s";
+  }, 1000);
 
-  // --- Simulation: Out of credits ---
   if (simulate === "credits") {
     clearInterval(descTimer);
-    removeOverlayLine(descLine,"💸 you’re dry rn… top-up to keep vibin’(simulated)");
+    removeOverlayLine(descLine, "💸 you’re dry rn… top-up to keep vibin’ (simulated)");
     hideOverlay();
     return;
   }
 
-  // --- Fetch description (or simulate failure) ---
   let trend = null;
-  if (simulate === "descfail") {
-    clearInterval(descTimer);
-    removeOverlayLine(descLine,"❌ description failed (simulated)");
-    hideOverlay();
-    return;
-  } else {
+  try {
     const descRes = await fetch(
       `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`,
       {
-        headers: {
-          "x-passcode": "super-secret-pass",
-          "x-device-id": deviceId
-        }
+        headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
       }
     );
-
     if (!descRes.ok) {
       clearInterval(descTimer);
       if (descRes.status === 403) {
@@ -220,149 +202,76 @@ async function runLogAndLoad(topic){
           banner.textContent = "💸 you’re dry rn… top-up to keep vibin’";
           banner.style.display = "block";
         }
-      } else {
-        removeOverlayLine(descLine, "❌ description failed");
-      }
+      } else removeOverlayLine(descLine, "❌ description failed");
       hideOverlay();
       return;
     }
-
     trend = await descRes.json();
+  } catch (e) {
+    console.error("❌ Description error:", e);
   }
 
   clearInterval(descTimer);
   if (!trend || !trend.brand) {
-    removeOverlayLine(descLine,"❌ description failed");
+    removeOverlayLine(descLine, "❌ description failed");
     hideOverlay();
     return;
   }
 
-  removeOverlayLine(descLine,"✅ description ready");
+  removeOverlayLine(descLine, "✅ description ready");
   updateUI(trend);
   updateCredits();
 
-  // Voice (parallel)
   playVoice(trend.description, () => {
-    console.log("🎤 Voice ended, auto-refresh check");
     if (autoRefresh && !stopCycle) {
-      setTimeout(() => {
-        console.log("🔄 Auto-refresh: loading next drop…");
-        loadTrend();
-      }, 2000);
+      setTimeout(() => loadTrend(), 2000);
     }
   });
 
-  // Image
-  let imgLine = appendOverlay("🖼️ waiting for the image…","#d9f0ff",true);
-  let imgElapsed=0;
-  const imgTimer=setInterval(()=>{
+  const imgLine = appendOverlay("🖼️ waiting for the image…", "#d9f0ff", true);
+  let imgElapsed = 0;
+  const imgTimer = setInterval(() => {
     imgElapsed++;
-    imgLine.innerText="🖼️ waiting for the image… "+imgElapsed+"s";
-  },1000);
+    imgLine.innerText = "🖼️ waiting for the image… " + imgElapsed + "s";
+  }, 1000);
 
-  if (simulate === "imagefail") {
+  try {
+    const imgRes = await fetch(
+      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`,
+      {
+        headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
+      }
+    );
+    const imgData = await imgRes.json();
+    updateImage(imgData.image, imgLine, imgTimer);
+  } catch (e) {
     clearInterval(imgTimer);
-    removeOverlayLine(imgLine,"❌ image error (simulated)");
-    updateImage(null,imgLine,imgTimer);
-    hideOverlay();
-  } else {
-    try {
-      const imgRes = await fetch(
-        `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`,
-        {
-          headers: {
-            "x-passcode": "super-secret-pass",
-            "x-device-id": deviceId
-          }
-        }
-      );
-      const imgData = await imgRes.json();
-      updateImage(imgData.image,imgLine,imgTimer);
-      hideOverlay();
-    } catch(e){
-      clearInterval(imgTimer);
-      removeOverlayLine(imgLine,"❌ image error");
-      updateImage(null,imgLine,imgTimer);
-      hideOverlay();
-    }
+    removeOverlayLine(imgLine, "❌ image error");
+    updateImage(null, imgLine, imgTimer);
   }
-
+  hideOverlay();
   return trend;
 }
 
-async function loadTrend(){ 
-  if(stopCycle) return; 
-  currentTrend = await runLogAndLoad(currentTopic); 
+async function loadTrend() {
+  if (stopCycle) return;
+  currentTrend = await runLogAndLoad(currentTopic);
 }
-
-/* ---------------- Emoji map ---------------- */
-function topicEmoji(topic){
-  if(topic==="cosmetics") return "💄";
-  if(topic==="music") return "🎶";
-  if(topic==="politics") return "🏛️";
-  if(topic==="aidrop") return "🌐";
-  return "⚡";
-}
-
-/* ---------------- Confirm Button ---------------- */
-function showConfirmButton(){
-  const overlay = document.getElementById("warmup-center");
-  overlay.style.display="flex";
-  overlay.style.visibility="visible";
-  overlay.style.background="transparent";
-  overlay.style.boxShadow="none";
-  overlay.innerHTML="";
-  const btn = document.createElement("button");
-  btn.className="start-btn";
-  btn.innerText=`${topicEmoji(currentTopic)} drop the ${currentTopic} rn`;
-  btn.onclick=()=>{
-    btn.remove();
-    autoRefresh = true;
-    loadTrend();
-  };
-  overlay.appendChild(btn);
-}
-
-/* ---------------- Start confirm ---------------- */
-document.getElementById("start-btn").addEventListener("click",()=>{
-  document.getElementById("start-screen").style.display="none";
-  document.getElementById("app").style.display="flex";
-  socket.emit("joinRoom",roomId);
-  showConfirmButton();
-});
-
-/* ---------------- Topic toggle confirm ---------------- */
-document.querySelectorAll("#topic-picker button").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    currentTopic = btn.dataset.topic;
-    autoRefresh = false;
-    showConfirmButton();
-  });
-});
 
 /* ---------------- Buy Credits ---------------- */
 async function buyCredits(pack) {
   const userId = await ensureUser();
   if (!userId) return;
-
-  console.log("buyCredits → userId:", userId, "roomId:", roomId);
-
   const res = await fetch(
     `https://three23p-backend.onrender.com/api/buy?userId=${userId}&pack=${pack}&roomId=${roomId}`,
     {
       method: "POST",
-      headers: {
-        "x-passcode": "super-secret-pass",
-        "x-device-id": deviceId
-      }
+      headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
     }
   );
   const data = await res.json();
-  if (data.url) {
-    window.location.href = data.url;
-  } else {
-    alert("Checkout failed: " + (data.error || "unknown error"));
-  }
+  if (data.url) window.location.href = data.url;
+  else alert("Checkout failed: " + (data.error || "unknown error"));
 }
 
 document.getElementById("buy-small").addEventListener("click", () => buyCredits("small"));
@@ -370,14 +279,12 @@ document.getElementById("buy-medium").addEventListener("click", () => buyCredits
 document.getElementById("buy-large").addEventListener("click", () => buyCredits("large"));
 
 /* ---------------- Stripe Return Check ---------------- */
-(function checkStripeReturn(){
+(function checkStripeReturn() {
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get("session_id");
   if (sessionId) {
-    console.log("✅ Stripe returned with session:", sessionId);
-    alert("✅ Payment successful! Your credits have been updated.");
+    alert("✅ Payment successful! Credits updated.");
     updateCredits();
-
     const roomParam = params.get("room");
     params.delete("session_id");
     let newUrl = window.location.origin + window.location.pathname;
@@ -392,10 +299,7 @@ async function updateCredits() {
   if (!userId) return;
   try {
     const res = await fetch(`https://three23p-backend.onrender.com/api/credits?userId=${userId}`, {
-      headers: {
-        "x-passcode": "super-secret-pass",
-        "x-device-id": deviceId
-      }
+      headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
     });
     const data = await res.json();
     if (data.credits !== undefined) {
@@ -409,16 +313,27 @@ async function updateCredits() {
   }
 }
 document.addEventListener("DOMContentLoaded", updateCredits);
+setInterval(updateCredits, 30000);
+
 /* ---------------- Dual Drop Buttons ---------------- */
-document.getElementById("drop-cosmetics-btn").addEventListener("click", async ()=>{
+document.getElementById("start-btn").addEventListener("click", () => {
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  socket.emit("joinRoom", roomId);
+
+  // showConfirmButton() removed — using two permanent buttons
+  document.getElementById("warmup-center").style.display = "flex";
+  document.getElementById("warmup-center").style.visibility = "visible";
+});
+
+document.getElementById("drop-cosmetics-btn").addEventListener("click", async () => {
   currentTopic = "cosmetics";
   autoRefresh = true;
   await loadTrend();
 });
 
-document.getElementById("drop-aidrop-btn").addEventListener("click", async ()=>{
+document.getElementById("drop-aidrop-btn").addEventListener("click", async () => {
   currentTopic = "aidrop";
   autoRefresh = true;
   await loadTrend();
 });
-setInterval(updateCredits, 30000);
