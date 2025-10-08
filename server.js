@@ -124,11 +124,25 @@ Emotional, energetic. Add emojis inline in every sentence.`;
     prompt = `Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}.
 Activist style. Add emojis inline in every sentence.`;
     system = "You are a college student activist.";
-  } else {
-    prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}.
+  } } else if (topic === "aidrop") {
+  // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
+  prompt = `Write exactly 300 words in a first-person influencer-style description introducing a near-future AI product idea.
+The product name is "${pick.concept}" by ${pick.brand}.
+I am ${persona}.
+Tone: Gen-Z founder + lifestyle influencer — confident, emotional, sensory, slightly surreal but realistic.
+The product must feel like a real tech drop about to launch within months.
+Include both technical and emotional elements.
+Add emojis inline in every sentence, keep the pacing like a TikTok narration.
+Mention one or two real-sounding use cases and feelings.
+Finish with 3-5 realistic hashtags (no random nonsense).
+Avoid repeating brand or concept more than 3 times.
+Structure should flow like a natural 300-word spoken post — no sections or bullet points.`;
+  system = "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person, emotionally sharp and stylish.";
+} else {
+  prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}.
 Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
-    system = "You are a college student living AI culture.";
-  }
+  system = "You are a college student living AI culture.";
+}
 
   try {
     const completion = await openai.chat.completions.create({
@@ -144,21 +158,42 @@ Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
 }
 
 /* ---------------- Image Generator ---------------- */
-async function generateImageUrl(brand, product, persona) {
+async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
   try {
+    let promptText;
+
+    if (topic === "aidrop") {
+      // 🌐 AI Product Reveal Photocard Style
+      promptText = `
+Create a futuristic AI product reveal photocard.
+Product name: ${product} by ${brand}.
+Concept: shown as a real physical or digital product prototype.
+Visual aesthetic: Gen-Z startup leak + soft sci-fi style.
+Scene: studio shot on pastel gradient (holographic lavender, milk pink, baby blue).
+Lighting: glossy reflective surfaces, subtle lens flares, high contrast.
+Composition: centered product with faint glitch halos or holographic UI hints.
+Include small clean label text near bottom: "1ai323.ai 🌐🤖".
+No humans or faces. Focus on product design only.
+`;
+    } else {
+      // 💄 Default (Cosmetics or others)
+      promptText = `
+Create a photocard-style image.
+Subject: ${persona}, Gen-Z aesthetic.
+They are holding and applying ${product} by ${brand}.
+Pastel gradient background (milk pink, baby blue, lilac).
+Glitter bokeh, glossy K-beauty skin glow.
+Sticker shapes only (hearts, emoji, text emoticon).
+Add text "1ai323.ai 🇺🇸🤖🌴" show 50% near the bottom.
+`;
+    }
+
     const out = await openai.images.generate({
       model: "gpt-image-1",
-      prompt:`Create a photocard-style image.
-  Subject: ${persona}, Gen-Z aesthetic.
-  They are holding and applying ${product} by ${brand}.
-  Pastel gradient background (milk pink, baby blue, lilac).
-  Glitter bokeh, glossy K-beauty skin glow.
-  Sticker shapes only (hearts, emoji, text emoticon).
-  Add text "1ai323.ai 🇺🇸🤖🌴" show 50% near the bottom.
-
-`,
+      prompt: promptText,
       size: "1024x1024",
     });
+
     const d = out?.data?.[0];
     if (d?.url) return d.url;
     if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
@@ -293,7 +328,8 @@ app.get("/api/description", async (req, res) => {
 app.get("/api/image", async (req,res)=>{
   const { brand, product, persona } = req.query;
   if (!brand || !product) return res.status(400).json({error:"brand and product required"});
-  const imageUrl = await generateImageUrl(brand, product, persona);
+  const topic = req.query.topic || "cosmetics";
+const imageUrl = await generateImageUrl(brand, product, persona, topic);
   res.json({ image: imageUrl });
 });
 
