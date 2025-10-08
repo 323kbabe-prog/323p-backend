@@ -334,9 +334,6 @@ document.getElementById("start-btn").addEventListener("click",()=>{
 /* ---------------- Topic toggle confirm ---------------- */
 document.querySelectorAll("#topic-picker button").forEach(btn=>{
   btn.addEventListener("click",()=>{
-    if(btn.dataset.topic === "cosmetics"){
-      return;
-    }
     currentTopic = btn.dataset.topic;
     autoRefresh = false;
     showConfirmButton();
