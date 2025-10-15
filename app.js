@@ -132,7 +132,7 @@ function playVoice(text, onEnd) {
     voiceLine.innerText = "🎤 waiting for the voice… " + genElapsed + "s";
   }, 1000);
 
-  fetch("https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text), {
+  fetch(`https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}&topic=${currentTopic}`, {
     headers: {
       "x-passcode": "super-secret-pass",
       "x-device-id": deviceId
