@@ -161,18 +161,19 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
   try {
     let promptText;
 
-    if (topic === "aidrop") {
-      // 🌐 AI Product Reveal Photocard Style
-      promptText = `
-Create a futuristic AI product reveal photocard.
+      if (topic === "aidrop") {
+  // 🌐 AIDROP — Flowchart Diagram for Description
+  promptText = `
+Create a clean, modern flowchart visualizing the AI concept described.
 Product name: ${product} by ${brand}.
-Concept: shown as a diagram.
-Visual aesthetic: Gen-Z startup leak + soft sci-fi style.
-Scene: studio shot on pastel gradient (holographic lavender, milk pink, baby blue).
-Lighting: glossy reflective surfaces, subtle lens flares, high contrast.
-Composition: centered product with faint glitch halos or holographic UI hints.
-Include small clean label text near bottom: "1ai323.ai 🌐🤖".
-No humans or faces. Focus on product design only.
+Concept: ${description}
+Style: futuristic yet minimal, Gen-Z startup aesthetic with soft-sci-fi influence.
+Show the data or logic flow as connected nodes and arrows — use clear labels, rounded boxes, and pastel colors.
+Background: holographic gradient (lavender, milk pink, baby blue).
+Lighting: soft glow on key elements, light reflections.
+Composition: centered diagram with balanced spacing.
+Include small footer label near bottom: "1ai323.ai 🌐🤖".
+No humans or faces; focus only on the conceptual system flow.
 `;
     } else {
       // 💄 Default (Cosmetics or others)
