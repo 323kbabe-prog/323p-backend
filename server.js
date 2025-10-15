@@ -165,7 +165,7 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
       // 🌐 AI Product Reveal Photocard Style
       promptText = `
 Product name: ${product} by ${brand}.
-Concept: Create a keynote style flowchart. Keep everything fully visible within the frame — no cropped elements or cut edges.
+Concept: Create a flowchart to show the detial from description only text. Keep everything fully visible within the frame — no cropped elements or cut edges.
 Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
 `;
