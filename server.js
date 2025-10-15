@@ -138,9 +138,9 @@ Avoid repeating brand or concept more than 3 times.
 Structure should flow like a natural 300-word spoken post — no sections or bullet points.`;
   system = "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person, emotionally sharp and stylish.";
 } else if (topic === "323kboy") {
-  prompt = `Write exactly 300 words in a first-person TikTok self-intro narration.
+  prompt = `Write exactly 300 words in a first-person self-intro narration.
 The narrator is ${persona}.
-He introduces himself (name, age, school, major, vibe) and speaks like a real Gen-Z TikTok creator in Los Angeles.
+He introduces himself (name, age, school, major, vibe) and speaks like a real creator.
 Tone: confident, fast, emotional, self-aware, funny, and cinematic.
 Use emojis inline in every sentence.
 Keep it human — with filler words ("you know", "like", "honestly").
@@ -182,6 +182,17 @@ Lighting: glossy reflective surfaces, subtle lens flares, high contrast.
 Composition: centered product with faint glitch halos or holographic UI hints.
 Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
+`;
+    } else if (topic === "323kboy") {
+      // 🎤 Male Self-Intro Photocard Style
+      promptText = `
+Create a cinematic photocard of a male Gen-Z college student.
+Subject: ${persona}.
+Scene: outdoor campus or sidewalk setting, warm afternoon light, soft sun flares, light reflections on face.
+Outfit: hoodie, jeans, sneakers, backpack or camera in hand.
+Mood: self-intro vibe, natural expression like a TikTok thumbnail.
+Aesthetic: realistic, trendy, subtle grain, pastel-hazy background.
+Include small text near bottom: "1ai323.ai 🎤🇺🇸🌴".
 `;
     } else {
       // 💄 Default (Cosmetics or others)
@@ -307,7 +318,26 @@ app.get("/api/description", async (req, res) => {
   else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
 
   try {
-    const persona = randomPersona();
+    let persona;
+if (topic === "323kboy") {
+  // 🎓 Male-only persona for 323kboy drops
+  const maleNames = ["Jaymin", "Eli", "Noah", "Ryan", "Caleb", "Tae", "Lucas"];
+  const schools = [
+    "UCLA", "USC", "Cal State LA", "LMU", "Santa Monica College",
+    "Otis College of Art and Design", "Pasadena City College"
+  ];
+  const vibes = ["film major", "design student", "music producer", "marketing kid", "AI startup intern"];
+  const styles = ["streetwear", "retro", "minimalist", "campus casual", "vintage denim"];
+
+  const name = maleNames[Math.floor(Math.random() * maleNames.length)];
+  const school = schools[Math.floor(Math.random() * schools.length)];
+  const vibe = vibes[Math.floor(Math.random() * vibes.length)];
+  const style = styles[Math.floor(Math.random() * styles.length)];
+  persona = `a 21-year-old male student named ${name} from ${school}, a ${vibe} with a ${style} style`;
+} else {
+  persona = randomPersona(); // keep default for cosmetics / aidrop / music
+}
+
     const description = await makeDescription(topic, pick, persona);
 
     user.credits -= 1;
@@ -349,11 +379,18 @@ app.get("/api/voice", async (req, res) => {
     return res.send(Buffer.alloc(1000));
   }
   try {
-    const out = await openai.audio.speech.create({
-      model:"gpt-4o-mini-tts",
-      voice:"alloy",
-      input:text
-    });
+    let voiceName = "alloy"; // default voice
+if (req.query.topic === "323kboy") {
+  // 🎤 use a lighter male tone for 323kboy drops
+  voiceName = "verse"; // choose a brighter, faster male timbre
+}
+
+const out = await openai.audio.speech.create({
+  model: "gpt-4o-mini-tts",
+  voice: voiceName,
+  input: text
+});
+
     const audioBuffer = Buffer.from(await out.arrayBuffer());
     res.setHeader("Content-Type","audio/mpeg");
     res.send(audioBuffer);
