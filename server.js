@@ -166,7 +166,7 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
       promptText = `
 Create a futuristic AI product reveal photocard.
 Product name: ${product} by ${brand}.
-Concept: Create a photocard-style image as a clean system flowchart.
+Concept: Create a emij system flowchart.
 Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
 `;
