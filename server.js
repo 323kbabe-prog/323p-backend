@@ -181,18 +181,17 @@ Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
 `;
     } else if (topic === "323kboy") {
-  // 🎤 Male K-pop Idol Photocard (same style as cosmetics)
+  // 🎤 Male K-pop Idol Photocard (always wearing shiny stage vest)
   promptText = `
 Create a photocard-style image of a male K-pop idol college student.
-Subject: a young male student named ${brand || "Jaymin"} from a university, dressed in K-pop idol style.
-Outfit: layered fashion, earrings or chain, styled hair, soft makeup.
+Subject: a young male student named ${brand || "Jaymin"} from a university, wearing a shiny performance vest on stage.
+Outfit: shimmering stage vest layered over a shirt, jewelry or mic headset, styled hair, confident idol expression.
 Background: pastel gradient (milk pink, baby blue, lilac).
-Lighting: glossy K-pop glow with glitter bokeh and soft reflections.
-Composition: clean centered portrait, subtle sticker shapes (hearts, emoji, sparkle).
+Lighting: glossy K-pop glow with soft lens flares and glitter reflections.
+Composition: centered portrait, clean photocard framing, subtle sticker shapes (hearts, sparkle, emoji).
 Add text "1ai323.ai 🎤🇺🇸🌴" near the bottom in stylish font.
 `;
 }
-
 
  else {
       // 💄 Default (Cosmetics or others)
