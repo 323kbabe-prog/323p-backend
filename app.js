@@ -132,7 +132,7 @@ function playVoice(text, onEnd) {
     voiceLine.innerText = "🎤 waiting for the voice… " + genElapsed + "s";
   }, 1000);
 
-  fetch(`https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}&topic=${currentTopic}`, {
+  fetch("https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text), {
     headers: {
       "x-passcode": "super-secret-pass",
       "x-device-id": deviceId
@@ -337,9 +337,3 @@ document.getElementById("drop-aidrop-btn").addEventListener("click", async () =>
   autoRefresh = true;
   await loadTrend();
 });
-document.getElementById("drop-323kboy-btn").addEventListener("click", async () => {
-  currentTopic = "323kboy";
-  autoRefresh = true;
-  await loadTrend();
-});
-
