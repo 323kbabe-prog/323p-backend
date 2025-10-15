@@ -165,7 +165,7 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
   // 🌐 Realistic AI Product Reveal — Photocard Style
   promptText = `
 Product name: ${product} by ${brand}.
-Concept: Create a hyper-realistic 3D product reveal image that looks like a professional tech or beauty campaign.
+Concept: Create a futuristic hyper-realistic 3D product reveal image that looks like a professional tech or beauty campaign.
 Show the product as if it physically exists — premium materials, reflections, studio lighting.
 Use cinematic lighting and shallow depth of field (blurred background, crisp focus).
 Include elegant surface textures (glass, metal, silicone, or glossy plastic depending on tone).
