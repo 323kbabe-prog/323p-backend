@@ -165,7 +165,7 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
       // 🌐 AI Product Reveal Photocard Style
       promptText = `
 Product name: ${product} by ${brand}.
-Concept: Create a TikTok style dialogue that shows the descriptive points using emojis and arrows with detailed text. Keep everything fully visible within the frame — no cropped elements or cut edges.
+Concept: Create a dialogue that shows the descriptive points using emojis and arrows with detailed text. Keep everything fully visible within the frame — no cropped elements or cut edges.
 Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
 `;
