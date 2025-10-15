@@ -164,9 +164,8 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
     if (topic === "aidrop") {
       // 🌐 AI Product Reveal Photocard Style
       promptText = `
-Create a futuristic AI product reveal photocard.
 Product name: ${product} by ${brand}.
-Concept: Create a chat to show description point use emojis with detial text.Keep everything fully visible within the frame — no cropped elements or cut edges.
+Concept: Create a dialogue that shows the flow of descriptive points using emojis and arrows with detailed text. Keep everything fully visible within the frame — no cropped elements or cut edges.
 Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
 `;
