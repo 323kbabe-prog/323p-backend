@@ -139,13 +139,14 @@ Structure should flow like a natural 300-word spoken post — no sections or bul
   system = "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person, emotionally sharp and stylish.";
 } else if (topic === "323kboy") {
   prompt = `Write exactly 300 words in a first-person self-introduction.
-The narrator is ${persona}.
-He introduces himself (name, age, school, major, vibe) and speaks like a real Gen-Z creator.
-Tone: confident, fast, emotional, self-aware, funny, and cinematic.
+The narrator is a male K-pop idol college student.
+He talks about his school life, his passion for music and performance, and what drives him creatively.
+Include his name, school, and major naturally in the story.
+Tone: confident, cinematic, emotional, slightly playful.
 Use emojis inline in every sentence.
 Keep it natural — with filler words ("you know", "like", "honestly").
-End with 3–5 short hashtags that feel real, not random.`;
-  system = "You are a Gen-Z college guy narrating his own self-introduction from Los Angeles.";
+End with 3–5 short hashtags that sound real and personal.`;
+  system = "You are a young male K-pop idol college student narrating his self-introduction from Los Angeles.";
 }
 
   try {
@@ -180,17 +181,19 @@ Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
 `;
     } else if (topic === "323kboy") {
-  // 🎤 Male Self-Intro Photocard (same style as cosmetics)
+  // 🎤 Male K-pop Idol Photocard (same style as cosmetics)
   promptText = `
-Create a photocard-style image of a male Gen-Z college student.
-Subject: ${persona}, Gen-Z aesthetic.
-They are holding a small mic or smartphone while introducing themselves.
-Pastel gradient background (milk pink, baby blue, lilac).
-Glitter bokeh, glossy soft-light skin glow.
-Sticker shapes only (hearts, emoji, text emoticon).
-Add text "1ai323.ai 🎤🇺🇸🌴" show 50% near the bottom.
+Create a photocard-style image of a male K-pop idol college student.
+Subject: a young male student named ${brand || "Jaymin"} from a university, dressed in K-pop idol style.
+Outfit: layered fashion, earrings or chain, styled hair, soft makeup.
+Background: pastel gradient (milk pink, baby blue, lilac).
+Lighting: glossy K-pop glow with glitter bokeh and soft reflections.
+Composition: clean centered portrait, subtle sticker shapes (hearts, emoji, sparkle).
+Add text "1ai323.ai 🎤🇺🇸🌴" near the bottom in stylish font.
 `;
 }
+
+
  else {
       // 💄 Default (Cosmetics or others)
       promptText = `
@@ -317,20 +320,30 @@ app.get("/api/description", async (req, res) => {
   try {
     let persona;
 if (topic === "323kboy") {
-  // 🎓 Male-only persona for 323kboy drops
-  const maleNames = ["Jaymin", "Eli", "Noah", "Ryan", "Caleb", "Tae", "Lucas"];
+  // 🎤 K-pop male idol persona — random name + school + major (no repeats)
+  const maleNames = ["Jaymin", "Eli", "Noah", "Ryan", "Caleb", "Tae", "Lucas", "Minho", "Jisoo", "Daniel"];
   const schools = [
     "UCLA", "USC", "Cal State LA", "LMU", "Santa Monica College",
-    "Otis College of Art and Design", "Pasadena City College"
+    "Otis College of Art and Design", "Pasadena City College",
+    "Pepperdine University", "Chapman University", "UC Irvine"
   ];
-  const vibes = ["film major", "design student", "music producer", "marketing kid", "AI startup intern"];
-  const styles = ["streetwear", "retro", "minimalist", "campus casual", "vintage denim"];
+  const majors = [
+    "music production", "dance", "performing arts", "fashion design",
+    "visual communication", "sound engineering", "digital media", "stage direction"
+  ];
 
-  const name = maleNames[Math.floor(Math.random() * maleNames.length)];
-  const school = schools[Math.floor(Math.random() * schools.length)];
-  const vibe = vibes[Math.floor(Math.random() * vibes.length)];
-  const style = styles[Math.floor(Math.random() * styles.length)];
-  persona = `a 21-year-old male student named ${name} from ${school}, a ${vibe} with a ${style} style`;
+  if (!global.lastKpopCombo) global.lastKpopCombo = "";
+  let name, school, major, combo;
+  do {
+    name = maleNames[Math.floor(Math.random() * maleNames.length)];
+    school = schools[Math.floor(Math.random() * schools.length)];
+    major = majors[Math.floor(Math.random() * majors.length)];
+    combo = `${name}-${school}-${major}`;
+  } while (combo === global.lastKpopCombo);
+  global.lastKpopCombo = combo;
+
+  persona = `a male K-pop idol student named ${name} from ${school}, majoring in ${major}`;
+  console.log("🎤 323kboy persona:", persona); // optional log
 } else {
   persona = randomPersona(); // keep default for cosmetics / aidrop / music
 }
