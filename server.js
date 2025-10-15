@@ -165,7 +165,7 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
   // 🟪 Pixel-Art Product Card Style (inspired by GitHub Copilot visuals)
   promptText = `
 Product name: ${product} by ${brand}.
-Create a flat, bright pixel-art badge in the style of retro 8-bit or early-game graphics.
+Create a flat, bright pixel-art in the style of retro 8-bit or early-game graphics.
 Center the product name in bold pixel font (like arcade title text) — fully readable.
 Use playful pastel or neon colors (sky blue, purple, pink, yellow, white).
 Include small label text near the bottom: "1ai323.ai 🌐🤖".
