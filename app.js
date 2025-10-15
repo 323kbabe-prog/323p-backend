@@ -337,3 +337,9 @@ document.getElementById("drop-aidrop-btn").addEventListener("click", async () =>
   autoRefresh = true;
   await loadTrend();
 });
+document.getElementById("drop-323kboy-btn").addEventListener("click", async () => {
+  currentTopic = "323kboy";
+  autoRefresh = true;
+  await loadTrend();
+});
+
