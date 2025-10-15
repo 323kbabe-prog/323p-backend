@@ -166,7 +166,7 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
       promptText = `
 Create a futuristic AI product reveal photocard.
 Product name: ${product} by ${brand}.
-Concept: shown as a real physical or digital product prototype.
+Concept: shown as a diagram.
 Visual aesthetic: Gen-Z startup leak + soft sci-fi style.
 Scene: studio shot on pastel gradient (holographic lavender, milk pink, baby blue).
 Lighting: glossy reflective surfaces, subtle lens flares, high contrast.
