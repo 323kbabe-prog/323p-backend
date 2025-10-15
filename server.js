@@ -389,15 +389,9 @@ app.get("/api/voice", async (req, res) => {
     return res.send(Buffer.alloc(1000));
   }
   try {
-    let voiceName = "alloy"; // default voice
-if (req.query.topic === "323kboy") {
-  // 🎤 use a lighter male tone for 323kboy drops
-  voiceName = "verse"; // choose a brighter, faster male timbre
-}
-
-const out = await openai.audio.speech.create({
+    const out = await openai.audio.speech.create({
   model: "gpt-4o-mini-tts",
-  voice: voiceName,
+  voice: "alloy",
   input: text
 });
 
