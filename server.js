@@ -163,26 +163,35 @@ End with 3–5 short hashtags that sound real and personal.`;
 }
 
 /* ---------------- Image Generator ---------------- */
-async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
+async function generateImageUrl(
+  brand,
+  product,
+  persona,
+  topic = "cosmetics",
+  description = ""
+) {
   try {
     let promptText;
 
     if (topic === "aidrop") {
-      // 🌐 AI Product Reveal Photocard Style
+      // 🌐 AIDROP — Serious Diagram Flow (Follows Description)
       promptText = `
-Create a futuristic AI product reveal photocard.
-Product name: ${product} by ${brand}.
-Concept: shown as a real physical or digital product prototype.
-Visual aesthetic: Gen-Z startup leak + soft sci-fi style.
-Scene: studio shot on pastel gradient (holographic lavender, milk pink, baby blue).
-Lighting: glossy reflective surfaces, subtle lens flares, high contrast.
-Composition: centered product with faint glitch halos or holographic UI hints.
-Include small clean label text near bottom: "1ai323.ai 🌐🤖".
-No humans or faces. Focus on product design only.
+Create a professional, realistic 3D-style system diagram visualizing the following AI product idea:
+"${product}" by ${brand}.
+Description context:
+${persona} describes it as: "${description}"
+
+Show a serious data flow representing how this AI system functions — for example:
+user input → AI algorithm core → modules (image, voice, text, Stripe credits) → backend server → real-time feed output.
+
+Aesthetic: cyber-tech blueprint with glowing blue/white lines, sleek 3D depth, clean typography, and cinematic lighting.
+Avoid any cute or cartoonish visuals.
+Mood: serious, high-end, minimal — like an Apple keynote or IBM tech schematic.
+Add small footer text near the bottom: "1ai323.ai 🌐🤖".
 `;
     } else if (topic === "323kboy") {
-  // 🎤 Male K-pop Idol Photocard (always wearing shiny stage vest)
-  promptText = `
+      // 🎤 Male K-pop Idol Photocard (always wearing shiny stage vest)
+      promptText = `
 Create a photocard-style image of a male K-pop idol college student.
 Subject: a young male student.
 Outfit: K-pop stage dress.
@@ -191,9 +200,7 @@ Lighting: glossy K-pop glow with soft lens flares and glitter reflections.
 Composition: centered portrait, clean photocard framing, subtle Sticker shapes only (hearts, emoji, text emoticon)).
 Add text "1ai323.ai 🎤🇺🇸🌴" near the bottom in stylish font.
 `;
-}
-
- else {
+    } else {
       // 💄 Default (Cosmetics or others)
       promptText = `
 Create a photocard-style image.
@@ -220,6 +227,26 @@ Add text "1ai323.ai 🇺🇸🤖🌴" show 50% near the bottom.
   }
   return "https://placehold.co/600x600?text=No+Image";
 }
+
+/* ---------------- API: Image ---------------- */
+app.get("/api/image", async (req, res) => {
+  const { brand, product, persona } = req.query;
+  if (!brand || !product)
+    return res.status(400).json({ error: "brand and product required" });
+
+  const topic = req.query.topic || "cosmetics";
+  const description = req.query.description || ""; // keep this line
+
+  const imageUrl = await generateImageUrl(
+    brand,
+    product,
+    persona,
+    topic,
+    description
+  );
+
+  res.json({ image: imageUrl });
+});
 
 /* ---------------- Webhook ---------------- */
 app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
@@ -386,15 +413,6 @@ if (topic === "323kboy") {
     console.error("❌ Description error:", err.message);
     res.status(500).json({ error: "Description generation failed" });
   }
-});
-
-/* ---------------- API: Image ---------------- */
-app.get("/api/image", async (req,res)=>{
-  const { brand, product, persona } = req.query;
-  if (!brand || !product) return res.status(400).json({error:"brand and product required"});
-  const topic = req.query.topic || "cosmetics";
-const imageUrl = await generateImageUrl(brand, product, persona, topic);
-  res.json({ image: imageUrl });
 });
 
 /* ---------------- API: Voice ---------------- */
