@@ -185,7 +185,7 @@ No humans or faces. Focus on product design only.
   promptText = `
 Create a photocard-style image of a male K-pop idol college student.
 Subject: a young male student named ${brand || "Jaymin"} from a university, wearing a shiny performance vest on stage.
-Outfit: shimmering stage vest.
+Outfit: K-pop stage dress.
 Background: pastel gradient (milk pink, baby blue, lilac).
 Lighting: glossy K-pop glow with soft lens flares and glitter reflections.
 Composition: centered portrait, clean photocard framing, subtle sticker shapes (hearts, sparkle, emoji).
