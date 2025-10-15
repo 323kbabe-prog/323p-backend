@@ -162,14 +162,18 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
     let promptText;
 
     if (topic === "aidrop") {
-      // 🌐 AI Product Reveal Photocard Style
-      promptText = `
+  // 🟪 Pixel-Art Product Card Style (inspired by GitHub Copilot visuals)
+  promptText = `
 Product name: ${product} by ${brand}.
-Concept: Create a flowchart to show the detial from description only text. Keep everything fully visible within the frame — no cropped elements or cut edges.
-Include small clean label text near bottom: "1ai323.ai 🌐🤖".
-No humans or faces. Focus on product design only.
+Create a flat, bright pixel-art badge in the style of retro 8-bit or early-game graphics.
+Center the product name in bold pixel font (like arcade title text) — fully readable.
+Use playful pastel or neon colors (sky blue, purple, pink, yellow, white).
+Include small label text near the bottom: "1ai323.ai 🌐🤖".
+Clean white or gradient background with light radial burst behind the main logo.
+No humans or faces. Focus only on the stylized product name and design elements.
+Keep every element fully visible — no cropped edges.
 `;
-    } else {
+} else {
       // 💄 Default (Cosmetics or others)
       promptText = `
 Create a photocard-style image.
