@@ -184,11 +184,11 @@ No humans or faces. Focus on product design only.
   // 🎤 Male K-pop Idol Photocard (always wearing shiny stage vest)
   promptText = `
 Create a photocard-style image of a male K-pop idol college student.
-Subject: a young male student named ${brand || "Jaymin"} from a university, wearing a shiny performance vest on stage.
+Subject: a young male student.
 Outfit: K-pop stage dress.
 Background: pastel gradient (milk pink, baby blue, lilac).
 Lighting: glossy K-pop glow with soft lens flares and glitter reflections.
-Composition: centered portrait, clean photocard framing, subtle sticker shapes (hearts, sparkle, emoji).
+Composition: centered portrait, clean photocard framing, subtle Sticker shapes only (hearts, emoji, text emoticon)).
 Add text "1ai323.ai 🎤🇺🇸🌴" near the bottom in stylish font.
 `;
 }
