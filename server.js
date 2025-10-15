@@ -137,16 +137,10 @@ Finish with 3-5 realistic hashtags (no random nonsense).
 Avoid repeating brand or concept more than 3 times.
 Structure should flow like a natural 300-word spoken post — no sections or bullet points.`;
   system = "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person, emotionally sharp and stylish.";
-} else if (topic === "323kboy") {
-  prompt = `Write exactly 300 words in a first-person self-introduction.
-The narrator is ${persona}.
-Use exactly the same name, school, and major from that line — do not change them.
-He talks about his daily life, his passion for music and performance, and what drives him creatively.
-Tone: confident, cinematic, emotional, slightly playful.
-Use emojis inline in every sentence.
-Keep it natural — with filler words ("you know", "like", "honestly").
-End with 3–5 short hashtags that sound real and personal.`;
-  system = "You are a young male K-pop idol college student narrating his self-introduction from Los Angeles.";
+} else {
+  prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}.
+Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
+  system = "You are a college student living AI culture.";
 }
 
   try {
@@ -180,20 +174,7 @@ Composition: centered product with faint glitch halos or holographic UI hints.
 Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
 `;
-    } else if (topic === "323kboy") {
-  // 🎤 Male K-pop Idol Photocard (always wearing shiny stage vest)
-  promptText = `
-Create a photocard-style image of a male K-pop idol college student.
-Subject: a young male student.
-Outfit: K-pop stage dress.
-Background: pastel gradient (milk pink, baby blue, lilac).
-Lighting: glossy K-pop glow with soft lens flares and glitter reflections.
-Composition: centered portrait, clean photocard framing, subtle Sticker shapes only (hearts, emoji, text emoticon)).
-Add text "1ai323.ai 🎤🇺🇸🌴" near the bottom in stylish font.
-`;
-}
-
- else {
+    } else {
       // 💄 Default (Cosmetics or others)
       promptText = `
 Create a photocard-style image.
@@ -317,42 +298,7 @@ app.get("/api/description", async (req, res) => {
   else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
 
   try {
-    let persona;
-if (topic === "323kboy") {
-  // 🎤 Fully random K-pop male student setup — Korean full names only
-  const lastNames = ["Kim", "Lee", "Park", "Choi", "Jung", "Kang", "Yoon", "Han", "Shin", "Kwon", "Oh", "Hwang", "Seo", "Nam", "Lim"];
-  const firstSyllables = ["Min", "Ji", "Hyun", "Soo", "Jae", "Ha", "Seung", "Tae", "Woo", "Jun", "Dong", "Young", "Hyo", "Jin", "Kyung"];
-  const secondSyllables = ["ho", "woo", "min", "seok", "jin", "kyu", "hyun", "tae", "won", "joon", "bin", "sung", "chan", "hwan", "bae"];
-
-  const last = lastNames[Math.floor(Math.random() * lastNames.length)];
-  const given = firstSyllables[Math.floor(Math.random() * firstSyllables.length)] +
-                 secondSyllables[Math.floor(Math.random() * secondSyllables.length)];
-  const fullName = `${last} ${given}`;
-
-  const schools = [
-    "UCLA", "USC", "Cal State LA", "LMU", "Santa Monica College",
-    "Otis College of Art and Design", "Pasadena City College",
-    "Pepperdine University", "Chapman University", "UC Irvine",
-    "UC San Diego", "UC Berkeley", "San Jose State University", "Loyola University", "Stanford University"
-  ];
-
-  const majors = [
-    "music production", "dance", "performing arts", "fashion design",
-    "visual communication", "digital media", "sound engineering",
-    "stage direction", "creative technology", "marketing", "animation design"
-  ];
-
-  const school = schools[Math.floor(Math.random() * schools.length)];
-  const major = majors[Math.floor(Math.random() * majors.length)];
-
-  persona = `a male K-pop idol student named ${fullName} from ${school}, majoring in ${major}`;
-  console.log("🎤 323kboy persona:", persona);
-
-  // 🧠 Replace aidrop placeholders with correct school & full name
-  pick.brand = school || "K-pop University"; // top line → school
-  pick.product = fullName || "K-pop Student"; // next line → full Korean name
-}
-
+    const persona = randomPersona();
     const description = await makeDescription(topic, pick, persona);
 
     user.credits -= 1;
@@ -361,17 +307,6 @@ if (topic === "323kboy") {
 
     let mimicLine = null;
     if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
-
-    if (topic === "323kboy") {
-  // 🧠 Replace aidrop placeholders with correct school & full name
-  const nameMatch = persona.match(/named\s+([A-Za-z]+\s+[A-Za-z]+)/i);
-  const schoolMatch = persona.match(/from\s+([^,]+)/i);
-  const name = nameMatch ? nameMatch[1] : "";
-  const school = schoolMatch ? schoolMatch[1] : "";
-
-  pick.brand = school || "K-pop University"; // 💄👑 top line → school
-  pick.product = name || "K-pop Student";    // ✏️ next line → full name
-}
 
     res.json({
       brand: pick.brand || pick.artist || pick.issue || "323aidrop",
@@ -406,11 +341,10 @@ app.get("/api/voice", async (req, res) => {
   }
   try {
     const out = await openai.audio.speech.create({
-  model: "gpt-4o-mini-tts",
-  voice: "alloy",
-  input: text
-});
-
+      model:"gpt-4o-mini-tts",
+      voice:"alloy",
+      input:text
+    });
     const audioBuffer = Buffer.from(await out.arrayBuffer());
     res.setHeader("Content-Type","audio/mpeg");
     res.send(audioBuffer);
