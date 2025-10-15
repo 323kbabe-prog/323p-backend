@@ -162,16 +162,17 @@ async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
     let promptText;
 
     if (topic === "aidrop") {
-  // 🟪 Pixel-Art Product Card Style (inspired by GitHub Copilot visuals)
+  // 🌐 Realistic AI Product Reveal — Photocard Style
   promptText = `
 Product name: ${product} by ${brand}.
-Create a flat, bright pixel-art in the style of retro 8-bit or early-game graphics.
-Center the product name in bold pixel font (like arcade title text) — fully readable.
-Use playful pastel or neon colors (sky blue, purple, pink, yellow, white).
-Include small label text near the bottom: "1ai323.ai 🌐🤖".
-Clean white or gradient background with light radial burst behind the main logo.
-No humans or faces. Focus only on the stylized product name and design elements.
-Keep every element fully visible — no cropped edges.
+Concept: Create a hyper-realistic 3D product reveal image that looks like a professional tech or beauty campaign.
+Show the product as if it physically exists — premium materials, reflections, studio lighting.
+Use cinematic lighting and shallow depth of field (blurred background, crisp focus).
+Include elegant surface textures (glass, metal, silicone, or glossy plastic depending on tone).
+Color theme: futuristic pastel gradients (white, silver, lilac, blue glow).
+Include small clean label text near bottom: "1ai323.ai 🌐🤖".
+No humans or faces. Focus purely on the product object and composition.
+Keep all elements fully visible — no cropped edges or out-of-frame parts.
 `;
 } else {
       // 💄 Default (Cosmetics or others)
