@@ -184,17 +184,18 @@ Include small clean label text near bottom: "1ai323.ai 🌐🤖".
 No humans or faces. Focus on product design only.
 `;
     } else if (topic === "323kboy") {
-      // 🎤 Male Self-Intro Photocard Style
-      promptText = `
-Create a cinematic photocard of a male Gen-Z college student.
-Subject: ${persona}.
-Scene: outdoor campus or sidewalk setting, warm afternoon light, soft sun flares, light reflections on face.
-Outfit: hoodie, jeans, sneakers, backpack or camera in hand.
-Mood: self-intro vibe, natural expression like a TikTok thumbnail.
-Aesthetic: realistic, trendy, subtle grain, pastel-hazy background.
-Include small text near bottom: "1ai323.ai 🎤🇺🇸🌴".
+  // 🎤 Male Self-Intro Photocard (same style as cosmetics)
+  promptText = `
+Create a photocard-style image of a male Gen-Z college student.
+Subject: ${persona}, Gen-Z aesthetic.
+They are holding a small mic or smartphone while introducing themselves.
+Pastel gradient background (milk pink, baby blue, lilac).
+Glitter bokeh, glossy soft-light skin glow.
+Sticker shapes only (hearts, emoji, text emoticon).
+Add text "1ai323.ai 🎤🇺🇸🌴" show 50% near the bottom.
 `;
-    } else {
+}
+ else {
       // 💄 Default (Cosmetics or others)
       promptText = `
 Create a photocard-style image.
