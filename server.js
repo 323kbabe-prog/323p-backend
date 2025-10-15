@@ -319,32 +319,29 @@ app.get("/api/description", async (req, res) => {
   try {
     let persona;
 if (topic === "323kboy") {
-  // 🎤 K-pop male idol persona — random name + school + major (no repeats)
-  const maleNames = ["Jaymin", "Eli", "Noah", "Ryan", "Caleb", "Tae", "Lucas", "Minho", "Jisoo", "Daniel"];
+  // 🎤 Fully random K-pop male student setup
+  const firstNames = ["Jaymin", "Eli", "Noah", "Ryan", "Caleb", "Tae", "Lucas", "Minho", "Jisoo", "Daniel", "Jaden", "Hyun", "Aaron", "Mason", "Leo"];
+  const lastNames = ["Park", "Kim", "Lee", "Choi", "Han", "Seo", "Lim", "Jung", "Kang", "Yoon", "Hwang", "Son", "Shin", "Kwon", "Oh"];
   const schools = [
     "UCLA", "USC", "Cal State LA", "LMU", "Santa Monica College",
     "Otis College of Art and Design", "Pasadena City College",
-    "Pepperdine University", "Chapman University", "UC Irvine"
+    "Pepperdine University", "Chapman University", "UC Irvine",
+    "UC San Diego", "UC Berkeley", "San Jose State University", "Loyola University", "Stanford University"
   ];
   const majors = [
     "music production", "dance", "performing arts", "fashion design",
-    "visual communication", "sound engineering", "digital media", "stage direction"
+    "visual communication", "digital media", "sound engineering",
+    "stage direction", "creative technology", "marketing", "animation design"
   ];
 
-  if (!global.lastKpopCombo) global.lastKpopCombo = "";
-  let name, school, major, combo;
-  do {
-    name = maleNames[Math.floor(Math.random() * maleNames.length)];
-    school = schools[Math.floor(Math.random() * schools.length)];
-    major = majors[Math.floor(Math.random() * majors.length)];
-    combo = `${name}-${school}-${major}`;
-  } while (combo === global.lastKpopCombo);
-  global.lastKpopCombo = combo;
+  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+  const fullName = `${firstName} ${lastName}`;
+  const school = schools[Math.floor(Math.random() * schools.length)];
+  const major = majors[Math.floor(Math.random() * majors.length)];
 
-  persona = `a male K-pop idol student named ${name} from ${school}, majoring in ${major}`;
-  console.log("🎤 323kboy persona:", persona); // optional log
-} else {
-  persona = randomPersona(); // keep default for cosmetics / aidrop / music
+  persona = `a male K-pop idol student named ${fullName} from ${school}, majoring in ${major}`;
+  console.log("🎤 323kboy persona:", persona);
 }
 
     const description = await makeDescription(topic, pick, persona);
