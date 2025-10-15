@@ -137,6 +137,15 @@ Finish with 3-5 realistic hashtags (no random nonsense).
 Avoid repeating brand or concept more than 3 times.
 Structure should flow like a natural 300-word spoken post — no sections or bullet points.`;
   system = "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person, emotionally sharp and stylish.";
+} else if (topic === "323kboy") {
+  prompt = `Write exactly 300 words in a first-person TikTok self-intro narration.
+The narrator is ${persona}.
+He introduces himself (name, age, school, major, vibe) and speaks like a real Gen-Z TikTok creator in Los Angeles.
+Tone: confident, fast, emotional, self-aware, funny, and cinematic.
+Use emojis inline in every sentence.
+Keep it human — with filler words ("you know", "like", "honestly").
+End with 3–5 natural TikTok-style hashtags.`;
+  system = "You are a Gen-Z college guy narrating his own TikTok self-introduction from Los Angeles.";
 } else {
   prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}.
 Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
