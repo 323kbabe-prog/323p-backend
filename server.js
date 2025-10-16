@@ -324,7 +324,8 @@ app.get("/api/description", async (req, res) => {
   }
 }
 
-    const description = await makeDescription(topic, pick, persona);
+    const description = await makeDescription(topic, { ...pick, lang }, persona);
+
 
     user.credits -= 1;
     freshUsers[userId] = user;
