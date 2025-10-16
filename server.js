@@ -100,22 +100,16 @@ const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topi
 async function makeDescription(topic, pick, persona) {
   let prompt, system;
 
-  if (topic === "cosmetics" || topic === "nextmonth") {
-    const lowerProd = (pick.product || "").toLowerCase();
-    let prodEmojis = [];
-    for (const key in productEmojiMap) {
-      if (lowerProd.includes(key)) { prodEmojis = productEmojiMap[key]; break; }
-    }
-    let vibeEmojis = [];
-    for (const vibe in vibeEmojiMap) {
-      if (persona.includes(vibe)) { vibeEmojis = vibeEmojiMap[vibe]; break; }
-    }
-    const emojiSet = [...descEmojis, ...prodEmojis, ...vibeEmojis];
-    prompt = `Write exactly 300 words in a first-person description of using "${pick.product}" by ${pick.brand}.
-I am ${persona}. Sensory, photo-realistic. Add emojis inline in every sentence.
-Use emojis from: ${emojiSet.join(" ")}`;
-    system = "You are a college student talking about beauty.";
-  } else if (topic === "music") {
+if (topic === "cosmetics" || topic === "nextmonth") {
+  const emojiSet = [...descEmojis];
+  prompt = `Predict next-month beauty trend for ${pick.product || pick.brand}.
+I am ${persona}.
+Speak like a Gen-Z beauty analyst + creator — emotional yet logical.
+Blend sensory forecasting (what people will love) and product decoding (why it matters).
+End with one clear “next-month signal” line.
+Add emojis inline in every sentence from: ${emojiSet.join(" ")}`;
+  system = "You are a creative trend forecaster describing next-month beauty logic and signals.";
+} else if (topic === "music") {
     prompt = `Write exactly 300 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}.
 Emotional, energetic. Add emojis inline in every sentence.`;
     system = "You are a college student reacting to music.";
@@ -142,16 +136,6 @@ Structure should flow like a natural 300-word spoken post — no sections or bul
 Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
   system = "You are a college student living AI culture.";
 }
-  else if (topic === "nextmonth") {
-  prompt = `Predict next-month trend for ${pick.concept || pick.product || pick.brand}.
-I am ${persona}.
-Speak like a Gen-Z analyst + creator, combining emotional tone + real logic.
-Blend vibe forecasting (what people will love) and product trend decoding (why it matters).
-End with one clear “next-month signal” line.
-Add emojis inline in every sentence.`;
-  system = "You are a creative trend forecaster describing next-month human logic and signals.";
-}
-
 
   try {
     const completion = await openai.chat.completions.create({
