@@ -1,4 +1,14 @@
 // app.js — OP19$ Dual Button Version (cosmetics + aidrop)
+let userLang = localStorage.getItem("userLang") || "en";
+const langSelect = document.getElementById("language-select");
+if (langSelect) {
+  langSelect.value = userLang;
+  langSelect.addEventListener("change", e => {
+    userLang = e.target.value;
+    localStorage.setItem("userLang", userLang);
+  });
+}
+
 const socket = io("https://three23p-backend.onrender.com");
 let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
 let currentTopic = "cosmetics";
@@ -132,12 +142,10 @@ function playVoice(text, onEnd) {
     voiceLine.innerText = "🎤 waiting for the voice… " + genElapsed + "s";
   }, 1000);
 
-  fetch("https://three23p-backend.onrender.com/api/voice?text=" + encodeURIComponent(text), {
-    headers: {
-      "x-passcode": "super-secret-pass",
-      "x-device-id": deviceId
-    }
-  })
+fetch(`https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}&lang=${userLang}`, {
+  headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
+})
+
     .then(res => res.blob())
     .then(blob => {
       clearInterval(genTimer);
