@@ -196,7 +196,8 @@ async function runLogAndLoad(topic) {
   let trend = null;
   try {
     const descRes = await fetch(
-      `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}`,
+  `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`,
+
       {
         headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
       }
