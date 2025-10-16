@@ -345,18 +345,26 @@ const imageUrl = await generateImageUrl(brand, product, persona, topic);
 });
 
 /* ---------------- API: Voice ---------------- */
+
 app.get("/api/voice", async (req, res) => {
+  const lang = req.query.lang || "en";
+let voice = "alloy";
+if (lang === "kr" || lang === "jp") voice = "verse";
+if (lang === "zh") voice = "sol";
+if (lang === "es") voice = "coral";
+  
   const text = req.query.text || "";
   if (!text.trim()) {
     res.setHeader("Content-Type","audio/mpeg");
     return res.send(Buffer.alloc(1000));
   }
   try {
-    const out = await openai.audio.speech.create({
-      model:"gpt-4o-mini-tts",
-      voice:"alloy",
-      input:text
-    });
+   const out = await openai.audio.speech.create({
+  model: "gpt-4o-mini-tts",
+  voice,
+  input: text
+});
+
     const audioBuffer = Buffer.from(await out.arrayBuffer());
     res.setHeader("Content-Type","audio/mpeg");
     res.send(audioBuffer);
