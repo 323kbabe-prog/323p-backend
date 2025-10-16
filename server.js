@@ -136,6 +136,17 @@ Structure should flow like a natural 300-word spoken post — no sections or bul
 Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
   system = "You are a college student living AI culture.";
 }
+  // 🌐 Auto-translate to selected language
+  const lang = pick.lang || "en"; // fallback
+  if (lang !== "en") {
+    prompt = `Translate and write everything in ${
+      lang === "zh" ? "Chinese" :
+      lang === "kr" ? "Korean" :
+      lang === "jp" ? "Japanese" :
+      lang === "es" ? "Spanish" :
+      lang === "fr" ? "French" : "English"
+    }.\n` + prompt;
+  }
 
   try {
     const completion = await openai.chat.completions.create({
@@ -271,6 +282,8 @@ app.get("/api/credits", (req, res) => {
 
 /* ---------------- API: Description ---------------- */
 app.get("/api/description", async (req, res) => {
+  const lang = req.query.lang || "en";
+
   const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: "userId required" });
 
