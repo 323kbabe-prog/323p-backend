@@ -100,7 +100,7 @@ const { TOP50_COSMETICS, TOP_MUSIC, TOP_POLITICS, TOP_AIDROP } = require("./topi
 async function makeDescription(topic, pick, persona) {
   let prompt, system;
 
-  if (topic === "cosmetics") {
+  if (topic === "cosmetics" || topic === "nextmonth") {
     const lowerProd = (pick.product || "").toLowerCase();
     let prodEmojis = [];
     for (const key in productEmojiMap) {
@@ -142,6 +142,16 @@ Structure should flow like a natural 300-word spoken post — no sections or bul
 Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
   system = "You are a college student living AI culture.";
 }
+  else if (topic === "nextmonth") {
+  prompt = `Predict next-month trend for ${pick.concept || pick.product || pick.brand}.
+I am ${persona}.
+Speak like a Gen-Z analyst + creator, combining emotional tone + real logic.
+Blend vibe forecasting (what people will love) and product trend decoding (why it matters).
+End with one clear “next-month signal” line.
+Add emojis inline in every sentence.`;
+  system = "You are a creative trend forecaster describing next-month human logic and signals.";
+}
+
 
   try {
     const completion = await openai.chat.completions.create({
@@ -299,6 +309,24 @@ app.get("/api/description", async (req, res) => {
 
   try {
     const persona = randomPersona();
+    if (topic === "nextmonth") {
+  const searchPrompt = `Search online signals for next-month trend predictions in ${pick.concept || "beauty and AI"}.
+  Focus on Gen-Z tone, products, and creator culture.
+  Return 3 short trend keywords or hashtags only, separated by commas.`;
+  try {
+    const searchResp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are a live trend-scanning algorithm." },
+        { role: "user", content: searchPrompt }
+      ]
+    });
+    pick.concept = searchResp.choices[0].message.content.trim();
+  } catch (err) {
+    console.error("⚠️ GPT search fetch failed:", err.message);
+  }
+}
+
     const description = await makeDescription(topic, pick, persona);
 
     user.credits -= 1;
