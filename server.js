@@ -359,7 +359,6 @@ const imageUrl = await generateImageUrl(brand, product, persona, topic);
 });
 
 /* ---------------- API: Voice ---------------- */
-
 app.get("/api/voice", async (req, res) => {
   const lang = req.query.lang || "en";
   let voice = "alloy";
@@ -375,15 +374,17 @@ app.get("/api/voice", async (req, res) => {
   }
 
   try {
-    // 🔊 Enable low-latency streaming
+    // 🔊 send headers for real-time MP3 stream
     res.writeHead(200, {
       "Content-Type": "audio/mpeg",
       "Transfer-Encoding": "chunked",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
       "Connection": "keep-alive"
     });
 
-    // Start sending audio frames as soon as they’re produced
+    // 🎙️ request TTS stream from OpenAI
     const response = await openai.audio.speech.stream({
       model: "gpt-4o-mini-tts",
       voice,
@@ -391,14 +392,17 @@ app.get("/api/voice", async (req, res) => {
       format: "mp3"
     });
 
+    // 🚀 send chunks immediately
     for await (const chunk of response) {
       res.write(chunk);
+      if (res.flush) res.flush(); // flush each piece right away
     }
+
     res.end();
-    console.log("✅ Streaming voice finished");
+    console.log("✅ Voice stream completed successfully");
   } catch (e) {
-    console.error("❌ Streaming voice error:", e.message);
-    if (!res.headersSent) res.status(500).json({ error: "Streaming failed" });
+    console.error("❌ Voice stream error:", e);
+    if (!res.headersSent) res.status(500).json({ error: "Voice stream failed" });
   }
 });
 
