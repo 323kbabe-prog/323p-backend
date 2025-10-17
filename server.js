@@ -102,7 +102,7 @@ async function makeDescription(topic, pick, persona) {
 
 if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
-  prompt = `Predict next-month beauty trend and 3 hashtags for ${pick.product || pick.brand}.
+  prompt = `Write 3 paragraph each 40 words predicting next-month beauty trends and 3 hashtags for ${pick.product || pick.brand}.
 I am ${persona}.
 Speak like a Gen-Z beauty analyst + creator — emotional yet logical.
 Blend sensory forecasting (what people will love) and product decoding (why it matters).
@@ -119,7 +119,7 @@ Activist style. Add emojis inline in every sentence.`;
     system = "You are a college student activist.";
   } else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
-  prompt = `Write exactly 150 words and 3 hashtags in a first-person influencer-style description introducing a near-future AI product idea.
+  prompt = `Write 3 paragraph each 40 words and 3 hashtags in a first-person influencer-style description introducing a near-future AI product idea.
 The product name is "${pick.concept}" by ${pick.brand}.
 I am ${persona}.
 Tone: Gen-Z founder + lifestyle influencer — confident, emotional, sensory, slightly surreal but realistic.
