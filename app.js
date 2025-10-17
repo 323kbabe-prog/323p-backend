@@ -1,4 +1,4 @@
-// app.js — OP19$ Dual Button Version (cosmetics + aidrop)
+// app.js — OP19$ Dual Button Version (cosmetics + aidrop, streaming update)
 let userLang = localStorage.getItem("userLang") || "en";
 const langSelect = document.getElementById("language-select");
 if (langSelect) {
@@ -10,7 +10,35 @@ if (langSelect) {
 }
 
 const socket = io("https://three23p-backend.onrender.com");
-let audioPlayer = null, currentTrend = null, roomId = null, stopCycle = false;
+
+/* ---------------- Progressive Description Stream ---------------- */
+let playingAudio = null;
+socket.on("paragraph", async ({ index, paragraph }) => {
+  console.log("🧾 Paragraph", index, paragraph);
+  appendOverlay(`🪞 paragraph ${index}/3`, "#d9f0ff");
+  document.getElementById("r-desc").textContent +=
+    (document.getElementById("r-desc").textContent ? "\n\n" : "") + paragraph;
+
+  if (playingAudio) playingAudio.pause();
+  const voiceUrl = `/api/voice?lang=${userLang}&text=${encodeURIComponent(paragraph)}`;
+  playingAudio = new Audio(voiceUrl);
+  playingAudio.play();
+});
+
+socket.on("done", () => {
+  appendOverlay("✅ All paragraphs generated.", "#d9f0ff");
+  hideOverlay();
+});
+
+socket.on("error", data => {
+  appendOverlay("❌ " + data.message, "#ffcccc");
+  hideOverlay();
+});
+
+let audioPlayer = null,
+  currentTrend = null,
+  roomId = null,
+  stopCycle = false;
 let currentTopic = "cosmetics";
 let autoRefresh = false;
 
@@ -98,25 +126,6 @@ function updateUI(trend) {
 
   document.getElementById("r-img").style.display = "none";
   document.getElementById("r-fallback").style.display = "block";
-
-  // mimic line if music
-  if (trend.mimicLine) {
-    let m = document.getElementById("r-mimic");
-    if (!m) {
-      m = document.createElement("p");
-      m.id = "r-mimic";
-      m.style.marginTop = "10px";
-      m.style.fontSize = "18px";
-      m.style.background = "var(--music-color)";
-      m.style.color = "#000";
-      m.style.padding = "8px 12px";
-      m.style.borderRadius = "12px";
-      m.style.display = "inline-block";
-      document.getElementById("drop-card").appendChild(m);
-    }
-    m.innerText = trend.mimicLine;
-    m.style.display = "inline-block";
-  }
 }
 
 /* ---------------- Image Update ---------------- */
@@ -133,36 +142,30 @@ function updateImage(imageUrl, imgLine, imgTimer) {
   }
 }
 
-/* ---------------- Voice ---------------- */
+/* ---------------- Voice (non-stream mode) ---------------- */
 async function playVoiceAndRevealText(text, onEnd) {
   const voiceLine = appendOverlay("🎤 generating voice segments…", "#ffe0f0", true);
   const audioEl = document.getElementById("voice-player");
   const descEl = document.getElementById("r-desc");
-  descEl.textContent = ""; // clear previous
+  descEl.textContent = "";
 
-  // 🧩 Split into 30-word chunks
   const words = text.split(/\s+/);
   const segments = [];
   for (let i = 0; i < words.length; i += 30) {
     segments.push(words.slice(i, i + 30).join(" "));
   }
 
-  // 🎧 Prefetch system (same as voice)
   let nextUrl = await fetchVoiceSegment(segments[0]);
   removeOverlayLine(voiceLine, `▶️ segment 1/${segments.length}`);
 
   for (let i = 0; i < segments.length; i++) {
     const currentUrl = nextUrl;
-
-    // start prefetch of next
     const nextPromise =
       i + 1 < segments.length ? fetchVoiceSegment(segments[i + 1]) : Promise.resolve(null);
 
-    // 🎙️ text reveal in sync
     descEl.textContent += (descEl.textContent ? " " : "") + segments[i];
-    descEl.scrollTop = descEl.scrollHeight; // smooth scroll follow
+    descEl.scrollTop = descEl.scrollHeight;
 
-    // 🎧 voice playback
     audioEl.src = currentUrl;
     await audioEl.play();
     await new Promise(r => (audioEl.onended = r));
@@ -175,7 +178,6 @@ async function playVoiceAndRevealText(text, onEnd) {
   if (onEnd) onEnd();
 }
 
-// helper (reused)
 async function fetchVoiceSegment(segment) {
   const res = await fetch(
     `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(segment)}&lang=${userLang}`,
@@ -207,13 +209,20 @@ async function runLogAndLoad(topic) {
 
   let trend = null;
   try {
-    const descRes = await fetch(
-  `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`,
+    if (topic === "cosmetics" || topic === "aidrop") {
+      // 🪄 Streaming mode
+      clearInterval(descTimer);
+      removeOverlayLine(descLine, "💬 streaming paragraph by paragraph...");
+      socket.emit("startDescription", { topic, userId, lang: userLang, roomId });
+      return; // rest handled by socket
+    }
 
-      {
-        headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
-      }
+    // 🎵 fallback for other topics
+    const descRes = await fetch(
+      `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`,
+      { headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId } }
     );
+
     if (!descRes.ok) {
       clearInterval(descTimer);
       if (descRes.status === 403) {
@@ -227,6 +236,7 @@ async function runLogAndLoad(topic) {
       hideOverlay();
       return;
     }
+
     trend = await descRes.json();
   } catch (e) {
     console.error("❌ Description error:", e);
@@ -341,8 +351,6 @@ document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
   socket.emit("joinRoom", roomId);
-
-  // showConfirmButton() removed — using two permanent buttons
   document.getElementById("warmup-center").style.display = "flex";
   document.getElementById("warmup-center").style.visibility = "visible";
 });
