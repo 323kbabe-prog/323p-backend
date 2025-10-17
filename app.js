@@ -140,15 +140,15 @@ async function playVoiceAndRevealText(text, onEnd) {
   const descEl = document.getElementById("r-desc");
   descEl.textContent = ""; // clear previous
 
-// 🧩 Split description text into ~30-word or ~30-character chunks depending on language
+// 🧩 Split description text into ~30-word or ~60-character chunks depending on language
 const isCJK = ["zh", "kr", "jp"].includes(userLang);
 
 let segments = [];
 if (isCJK) {
-  // Chinese / Korean / Japanese — split by 40 characters
+  // Chinese / Korean / Japanese — split by 60 characters
   const chars = Array.from(text);
-  for (let i = 0; i < chars.length; i += 40) {
-    segments.push(chars.slice(i, i + 40).join(""));
+  for (let i = 0; i < chars.length; i += 60) {
+    segments.push(chars.slice(i, i + 60).join(""));
   }
 } else {
   // English and other languages — split by 30 words
