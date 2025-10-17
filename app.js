@@ -329,11 +329,35 @@ document.getElementById("start-btn").addEventListener("click", () => {
 document.getElementById("drop-cosmetics-btn").addEventListener("click", async () => {
   currentTopic = "cosmetics";
   autoRefresh = true;
-  await loadTrend();
+
+  // 🟢 unlock the <audio> context immediately for Safari & iOS
+  const audioEl = document.getElementById("voice-player");
+  try {
+    await audioEl.play();   // this silent play keeps audio context active
+    audioEl.pause();
+    audioEl.currentTime = 0;
+  } catch (e) {
+    console.warn("⚠️ Audio unlock skipped:", e);
+  }
+
+  await loadTrend(); // continue as normal
 });
+
 
 document.getElementById("drop-aidrop-btn").addEventListener("click", async () => {
   currentTopic = "aidrop";
   autoRefresh = true;
-  await loadTrend();
+
+  // 🟢 unlock <audio> playback for Safari & iOS
+  const audioEl = document.getElementById("voice-player");
+  try {
+    await audioEl.play();   // start briefly to unlock
+    audioEl.pause();
+    audioEl.currentTime = 0;
+  } catch (e) {
+    console.warn("⚠️ Audio unlock skipped:", e);
+  }
+
+  await loadTrend(); // continue normal sequence
 });
+
