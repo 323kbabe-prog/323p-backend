@@ -316,29 +316,31 @@ document.addEventListener("DOMContentLoaded", updateCredits);
 setInterval(updateCredits, 30000);
 
 /* ---------------- Dual Drop Buttons ---------------- */
-document.getElementById("start-btn").addEventListener("click", () => {
+document.getElementById("start-btn").addEventListener("click", async () => {
+  // 🟢 Unlock audio context for Safari & mobile browsers
+  const audioEl = document.getElementById("voice-player");
+  try {
+    await audioEl.play();
+    audioEl.pause();
+    audioEl.currentTime = 0;
+    console.log("🔊 Audio context unlocked — voice ready");
+  } catch (e) {
+    console.warn("⚠️ Audio unlock skipped:", e);
+  }
+
+  // ✅ Continue showing app
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
   socket.emit("joinRoom", roomId);
 
-  // showConfirmButton() removed — using two permanent buttons
   document.getElementById("warmup-center").style.display = "flex";
   document.getElementById("warmup-center").style.visibility = "visible";
 });
 
+
 document.getElementById("drop-cosmetics-btn").addEventListener("click", async () => {
   currentTopic = "cosmetics";
   autoRefresh = true;
-
-  // 🟢 unlock the <audio> context immediately for Safari & iOS
-  const audioEl = document.getElementById("voice-player");
-  try {
-    await audioEl.play();   // this silent play keeps audio context active
-    audioEl.pause();
-    audioEl.currentTime = 0;
-  } catch (e) {
-    console.warn("⚠️ Audio unlock skipped:", e);
-  }
 
   await loadTrend(); // continue as normal
 });
@@ -347,16 +349,6 @@ document.getElementById("drop-cosmetics-btn").addEventListener("click", async ()
 document.getElementById("drop-aidrop-btn").addEventListener("click", async () => {
   currentTopic = "aidrop";
   autoRefresh = true;
-
-  // 🟢 unlock <audio> playback for Safari & iOS
-  const audioEl = document.getElementById("voice-player");
-  try {
-    await audioEl.play();   // start briefly to unlock
-    audioEl.pause();
-    audioEl.currentTime = 0;
-  } catch (e) {
-    console.warn("⚠️ Audio unlock skipped:", e);
-  }
 
   await loadTrend(); // continue normal sequence
 });
