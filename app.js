@@ -163,7 +163,7 @@ audioEl.onended = () => {
   document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
   if (onEnd) onEnd();
 };
-
+}
 /* ---------------- Main Drop Sequence ---------------- */
 async function runLogAndLoad(topic) {
   showOverlay();
