@@ -94,6 +94,16 @@ function updateUI(trend) {
   document.getElementById("r-artist").innerText = `🖊️ ${trend.product || "…"}`;
   document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona || "…"}`;
   document.getElementById("r-desc").innerText = trend.description || "…loading description…";
+  if (trend.hashtags) {
+  const tagDiv = document.createElement("div");
+  tagDiv.id = "r-tags";
+  tagDiv.textContent = trend.hashtags.join(" ");
+  tagDiv.style.marginTop = "10px";
+  tagDiv.style.fontSize = "14px";
+  tagDiv.style.color = "#444";
+  document.getElementById("drop-card").appendChild(tagDiv);
+}
+
   document.getElementById("r-label").innerText = "🔄 live drop";
 
   document.getElementById("r-img").style.display = "none";
