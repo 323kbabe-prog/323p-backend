@@ -140,12 +140,23 @@ async function playVoiceAndRevealText(text, onEnd) {
   const descEl = document.getElementById("r-desc");
   descEl.textContent = ""; // clear previous
 
-  // 🧩 Split into 30-word chunks
+// 🧩 Split description text into ~30-word or ~30-character chunks depending on language
+const isCJK = ["zh", "kr", "jp"].includes(userLang);
+
+let segments = [];
+if (isCJK) {
+  // Chinese / Korean / Japanese — split by 30 characters
+  const chars = Array.from(text);
+  for (let i = 0; i < chars.length; i += 30) {
+    segments.push(chars.slice(i, i + 30).join(""));
+  }
+} else {
+  // English and other languages — split by 30 words
   const words = text.split(/\s+/);
-  const segments = [];
   for (let i = 0; i < words.length; i += 30) {
     segments.push(words.slice(i, i + 30).join(" "));
   }
+}
 
   // 🎧 Prefetch system (same as voice)
   let nextUrl = await fetchVoiceSegment(segments[0]);
