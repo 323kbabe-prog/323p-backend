@@ -138,12 +138,20 @@ async function playVoice(text, onEnd) {
   const voiceLine = appendOverlay("🎤 generating voice segments…", "#ffe0f0", true);
   const audioEl = document.getElementById("voice-player");
 
-  // 🧩 split description into ~30-word chunks
+  // 🧩 split description into ~30-word or 60-character chunks (for Chinese/Japanese)
+let segments = [];
+if (["zh", "jp"].includes(userLang)) {
+  // split by every 60 Chinese/Japanese characters
+  for (let i = 0; i < text.length; i += 60) {
+    segments.push(text.slice(i, i + 60));
+  }
+} else {
+  // normal 30-word split for spaced languages
   const words = text.split(/\s+/);
-  const segments = [];
   for (let i = 0; i < words.length; i += 30) {
     segments.push(words.slice(i, i + 30).join(" "));
   }
+}
 
   // 🎧 helper to fetch each chunk’s voice
   async function fetchVoiceSegment(segment) {
