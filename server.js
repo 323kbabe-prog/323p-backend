@@ -102,7 +102,7 @@ async function makeDescription(topic, pick, persona) {
 
 if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
-  prompt = `Write 3 paragraph each 40 words predicting next-month beauty trends and 3 hashtags for ${pick.product || pick.brand}.
+  prompt = `Write 3 paragraphs each 40 words predicting next-month beauty trends and 3 hashtags for ${pick.product || pick.brand}.
 I am ${persona}.
 Speak like a Gen-Z beauty analyst + creator — emotional yet logical.
 Blend sensory forecasting (what people will love) and product decoding (why it matters).
@@ -119,7 +119,7 @@ Activist style. Add emojis inline in every sentence.`;
     system = "You are a college student activist.";
   } else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
-  prompt = `Write 3 paragraph each 40 words and 3 hashtags in a first-person influencer-style description introducing a near-future AI product idea.
+  prompt = `Write 3 paragraphs each 40 words and 3 hashtags in a first-person influencer-style description introducing a near-future AI product idea.
 The product name is "${pick.concept}" by ${pick.brand}.
 I am ${persona}.
 Tone: Gen-Z founder + lifestyle influencer — confident, emotional, sensory, slightly surreal but realistic.
@@ -127,14 +127,8 @@ The product must feel like a real tech drop about to launch within months.
 Include both technical and emotional elements.
 Add emojis inline in every sentence, keep the pacing like a TikTok narration.
 Mention one or two real-sounding use cases and feelings.
-Finish with 3-5 realistic hashtags (no random nonsense).
-Avoid repeating brand or concept more than 3 times.
-Structure should flow like a natural 300-word spoken post — no sections or bullet points.`;
+Avoid repeating brand or concept.`;
   system = "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person, emotionally sharp and stylish.";
-} else {
-  prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}.
-Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
-  system = "You are a college student living AI culture.";
 }
   // 🌐 Auto-translate to selected language
   const lang = pick.lang || "en"; // fallback
@@ -440,6 +434,74 @@ io.on("connection", socket=>{
   socket.on("joinRoom", roomId => {
     socket.join(roomId);
     socket.roomId = roomId;
+  });
+});
+
+/* ---------------- Streaming Description via Socket ---------------- */
+io.on("connection", (socket) => {
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    socket.roomId = roomId;
+  });
+
+  socket.on("startDescription", async ({ topic, userId, lang, roomId }) => {
+    console.log(`🎬 startDescription for ${topic} | ${userId}`);
+
+    try {
+      const persona = randomPersona();
+      const allUsers = loadUsers();
+      const user = allUsers[userId] || getUser(userId);
+
+      if (user.credits <= 0) {
+        io.to(roomId).emit("error", { message: "Out of credits" });
+        return;
+      }
+
+      let pick;
+      if (topic === "cosmetics")
+        pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+      else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
+
+      const system =
+        topic === "aidrop"
+          ? "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person."
+          : "You are a creative trend forecaster describing next-month beauty logic and signals.";
+
+      const basePrompt =
+        topic === "aidrop"
+          ? `Write paragraph {i}/3 of about 40 words each, influencer-style, introducing a futuristic AI product "${pick.concept}" by ${pick.brand}. I am ${persona}. Add emojis inline.`
+          : `Write paragraph {i}/3 of about 40 words each predicting next-month beauty trends for ${pick.product || pick.brand}. I am ${persona}. Add emojis inline.`;
+
+      // Deduct 1 credit once the process starts
+      user.credits -= 1;
+      saveUsers(allUsers);
+
+      for (let i = 1; i <= 3; i++) {
+        const prompt = basePrompt.replace("{i}", i);
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          temperature: 0.9,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: prompt },
+          ],
+        });
+
+        const paragraph = completion.choices[0].message.content.trim();
+        io.to(roomId).emit("paragraph", {
+          index: i,
+          paragraph,
+          persona,
+          brand: pick.brand,
+          product: pick.product || pick.concept,
+        });
+      }
+
+      io.to(roomId).emit("done");
+    } catch (err) {
+      console.error("❌ Stream generation error:", err.message);
+      io.to(roomId).emit("error", { message: "Generation failed" });
+    }
   });
 });
 
