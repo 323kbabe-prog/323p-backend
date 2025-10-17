@@ -114,12 +114,12 @@ Add emojis inline in every sentence from: ${emojiSet.join(" ")}`;
 Emotional, energetic. Add emojis inline in every sentence.`;
     system = "You are a college student reacting to music.";
   } else if (topic === "politics") {
-    prompt = `Write exactly 300 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}.
+    prompt = `Write exactly 150 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}.
 Activist style. Add emojis inline in every sentence.`;
     system = "You are a college student activist.";
   } else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
-  prompt = `Write exactly 300 words in a first-person influencer-style description introducing a near-future AI product idea.
+  prompt = `Write exactly 150 words in a first-person influencer-style description introducing a near-future AI product idea.
 The product name is "${pick.concept}" by ${pick.brand}.
 I am ${persona}.
 Tone: Gen-Z founder + lifestyle influencer — confident, emotional, sensory, slightly surreal but realistic.
