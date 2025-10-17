@@ -359,50 +359,34 @@ const imageUrl = await generateImageUrl(brand, product, persona, topic);
 });
 
 /* ---------------- API: Voice ---------------- */
+
 app.get("/api/voice", async (req, res) => {
   const lang = req.query.lang || "en";
-  let voice = "alloy";
-  if (lang === "kr" || lang === "jp") voice = "verse";
-  if (lang === "zh") voice = "verse";
-  if (lang === "es") voice = "coral";
-  if (lang === "fr") voice = "coral";
+let voice = "alloy";
+if (lang === "kr" || lang === "jp") voice = "verse";
+if (lang === "zh") voice = "verse"; // use 'verse' for Mandarin too
+if (lang === "es") voice = "coral";
+if (lang === "fr") voice = "coral";
+
 
   const text = req.query.text || "";
   if (!text.trim()) {
-    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Content-Type","audio/mpeg");
     return res.send(Buffer.alloc(1000));
   }
-
   try {
-    // 🔊 send headers for real-time MP3 stream
-    res.writeHead(200, {
-      "Content-Type": "audio/mpeg",
-      "Transfer-Encoding": "chunked",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache",
-      "Expires": "0",
-      "Connection": "keep-alive"
-    });
+   const out = await openai.audio.speech.create({
+  model: "gpt-4o-mini-tts",
+  voice,
+  input: text
+});
 
-    // 🎙️ request TTS stream from OpenAI
-    const response = await openai.audio.speech.stream({
-      model: "gpt-4o-mini-tts",
-      voice,
-      input: text,
-      format: "mp3"
-    });
-
-    // 🚀 send chunks immediately
-    for await (const chunk of response) {
-      res.write(chunk);
-      if (res.flush) res.flush(); // flush each piece right away
-    }
-
-    res.end();
-    console.log("✅ Voice stream completed successfully");
+    const audioBuffer = Buffer.from(await out.arrayBuffer());
+    res.setHeader("Content-Type","audio/mpeg");
+    res.send(audioBuffer);
   } catch (e) {
-    console.error("❌ Voice stream error:", e);
-    if (!res.headersSent) res.status(500).json({ error: "Voice stream failed" });
+    console.error("❌ Voice error:", e.message);
+    res.status(500).json({error:"Voice TTS failed"});
   }
 });
 
