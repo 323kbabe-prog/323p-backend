@@ -1,4 +1,4 @@
-// app.js — OP19$ Dual Button Version (cosmetics + aidrop, live voice + auto refresh)
+// app.js — OP19$ Dual Button Version (cosmetics + aidrop, seamless voice chain)
 let userLang = localStorage.getItem("userLang") || "en";
 const langSelect = document.getElementById("language-select");
 if (langSelect) {
@@ -11,65 +11,12 @@ if (langSelect) {
 
 const socket = io("https://three23p-backend.onrender.com");
 
-/* ---------------- Progressive Description Stream (cosmetics + aidrop, live voice) ---------------- */
-let voiceQueue = Promise.resolve();
-socket.on("paragraph", async ({ index, paragraph, brand, product }) => {
-  console.log("🧾 Paragraph", index, paragraph);
-
-  // 🧠 Update header on first paragraph
-  if (index === 1) {
-    document.getElementById("r-title").innerText = `💄👑 ${brand || "…"}`;
-    document.getElementById("r-artist").innerText = `🖊️ ${product || "…"}`;
-    document.getElementById("r-desc").textContent = "";
-  }
-
-  // ✍️ Show paragraph live
-  const descEl = document.getElementById("r-desc");
-  descEl.textContent += (descEl.textContent ? "\n\n" : "") + paragraph;
-  descEl.scrollTop = descEl.scrollHeight;
-
-  // 🎧 Queue voice playback
-  const voiceUrl = `https://three23p-backend.onrender.com/api/voice?lang=${userLang}&text=${encodeURIComponent(paragraph)}`;
-  voiceQueue = voiceQueue.then(
-    () =>
-      new Promise(resolve => {
-        const audio = new Audio(voiceUrl);
-        audio.volume = 1.0;
-        audio.onended = resolve;
-        setTimeout(() => {
-          audio.play().catch(err => console.warn("Audio blocked:", err));
-        }, 300);
-      })
-  );
-});
-
-// ✅ Auto-refresh after all voices finish
-socket.on("done", async () => {
-  appendOverlay("✅ All paragraphs generated.", "#d9f0ff");
-  await voiceQueue;
-
-  if (autoRefresh && !stopCycle) {
-    appendOverlay("🔄 loading next drop…", "#d9f0ff", true);
-    console.log("🔁 Auto-refresh next drop...");
-    setTimeout(() => loadTrend(), 2000);
-  }
-
-  hideOverlay();
-});
-
-socket.on("error", data => {
-  appendOverlay("❌ " + data.message, "#ffcccc");
-  hideOverlay();
-});
-
-/* ---------------- Core Variables ---------------- */
 let audioPlayer = null,
   currentTrend = null,
   roomId = null,
   stopCycle = false;
 let currentTopic = "cosmetics";
 let autoRefresh = false;
-
 const simulate = new URLSearchParams(window.location.search).get("simulate");
 
 /* ---------------- Room Setup ---------------- */
@@ -87,10 +34,9 @@ const simulate = new URLSearchParams(window.location.search).get("simulate");
 /* ---------------- Device ID ---------------- */
 let deviceId = localStorage.getItem("deviceId");
 if (!deviceId) {
-  deviceId =
-    (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2);
+  deviceId = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
   localStorage.setItem("deviceId", deviceId);
 }
 console.log("🔑 deviceId is", deviceId);
@@ -151,7 +97,6 @@ function updateUI(trend) {
   document.getElementById("r-persona").innerText = `👩‍🎤 ${trend.persona || "…"}`;
   document.getElementById("r-desc").innerText = trend.description || "…loading description…";
   document.getElementById("r-label").innerText = "🔄 live drop";
-
   document.getElementById("r-img").style.display = "none";
   document.getElementById("r-fallback").style.display = "block";
 }
@@ -170,28 +115,69 @@ function updateImage(imageUrl, imgLine, imgTimer) {
   }
 }
 
-/* ---------------- Non-stream voice (music/politics fallback) ---------------- */
-async function playVoiceAndRevealText(text, onEnd) {
-  const audioEl = document.getElementById("voice-player");
+/* ---------------- Seamless Voice Player (no gaps) ---------------- */
+async function playVoiceSequence(descriptionText) {
+  const words = descriptionText.split(/\s+/);
+  const chunks = [];
+  for (let i = 0; i < words.length; i += 40) {
+    chunks.push(words.slice(i, i + 40).join(" "));
+  }
+
   const descEl = document.getElementById("r-desc");
   descEl.textContent = "";
 
-  const words = text.split(/\s+/);
-  const segments = [];
-  for (let i = 0; i < words.length; i += 30) {
-    segments.push(words.slice(i, i + 30).join(" "));
+  async function fetchVoiceSegment(segment) {
+    const res = await fetch(
+      `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(segment)}&lang=${userLang}`
+    );
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
   }
 
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i];
-    const res = await fetch(`https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(seg)}&lang=${userLang}`);
-    const blob = await res.blob();
-    audioEl.src = URL.createObjectURL(blob);
-    descEl.textContent += (descEl.textContent ? " " : "") + seg;
-    await audioEl.play();
-    await new Promise(r => (audioEl.onended = r));
+  let nextAudioUrl = await fetchVoiceSegment(chunks[0]);
+  descEl.textContent += chunks[0];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const currentUrl = nextAudioUrl;
+    const nextFetch = i + 1 < chunks.length ? fetchVoiceSegment(chunks[i + 1]) : Promise.resolve(null);
+
+    const audio = new Audio(currentUrl);
+    audio.preload = "auto";
+    audio.play().catch(e => console.warn("Playback blocked:", e));
+
+    await new Promise(resolve => {
+      let resolved = false;
+      const check = setInterval(() => {
+        if (!audio.duration || isNaN(audio.duration)) return;
+        if (audio.duration - audio.currentTime <= 0.2 && !resolved) {
+          resolved = true;
+          clearInterval(check);
+          resolve();
+        }
+      }, 50);
+      audio.onended = () => {
+        if (!resolved) {
+          resolved = true;
+          clearInterval(check);
+          resolve();
+        }
+      };
+    });
+
+    nextAudioUrl = await nextFetch;
+    if (i + 1 < chunks.length) {
+      descEl.textContent += " " + chunks[i + 1];
+      descEl.scrollTop = descEl.scrollHeight;
+    }
   }
-  if (onEnd) onEnd();
+
+  appendOverlay("✅ Description complete.", "#d9f0ff");
+  hideOverlay();
+
+  if (autoRefresh && !stopCycle) {
+    console.log("🔁 Auto-refresh next drop...");
+    setTimeout(() => loadTrend(), 2000);
+  }
 }
 
 /* ---------------- Main Drop Sequence ---------------- */
@@ -216,13 +202,6 @@ async function runLogAndLoad(topic) {
 
   let trend = null;
   try {
-    if (topic === "cosmetics" || topic === "aidrop") {
-      clearInterval(descTimer);
-      removeOverlayLine(descLine, "💬 streaming paragraph by paragraph...");
-      socket.emit("startDescription", { topic, userId, lang: userLang, roomId });
-      return; // handled by socket + auto refresh in "done"
-    }
-
     const descRes = await fetch(
       `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`
     );
@@ -248,9 +227,7 @@ async function runLogAndLoad(topic) {
   updateUI(trend);
   updateCredits();
 
-  playVoiceAndRevealText(trend.description, () => {
-    if (autoRefresh && !stopCycle) setTimeout(() => loadTrend(), 2000);
-  });
+  playVoiceSequence(trend.description);
 
   const imgLine = appendOverlay("🖼️ waiting for the image…", "#d9f0ff", true);
   let imgElapsed = 0;
