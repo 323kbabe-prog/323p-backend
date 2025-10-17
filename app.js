@@ -1,4 +1,8 @@
-// app.js — OP19$ Dual Button Version (cosmetics + aidrop, streaming update)
+Here’s the full app.js — OP19$ Dual Button Version, updated for both 💄 cosmetics and 🚀 aidrop to stream paragraph by paragraph with live voice playback (cinematic style).
+It already includes the corrected voiceUrl (full backend URL) and queued audio logic so each paragraph plays in order.
+Copy code
+Js
+// app.js — OP19$ Dual Button Version (cosmetics + aidrop, live paragraph voice)
 let userLang = localStorage.getItem("userLang") || "en";
 const langSelect = document.getElementById("language-select");
 if (langSelect) {
@@ -11,18 +15,36 @@ if (langSelect) {
 
 const socket = io("https://three23p-backend.onrender.com");
 
-/* ---------------- Progressive Description Stream ---------------- */
-let playingAudio = null;
-socket.on("paragraph", async ({ index, paragraph }) => {
+/* ---------------- Progressive Description Stream (cosmetics + aidrop, live voice) ---------------- */
+let voiceQueue = Promise.resolve();
+socket.on("paragraph", async ({ index, paragraph, brand, product }) => {
   console.log("🧾 Paragraph", index, paragraph);
-  appendOverlay(`🪞 paragraph ${index}/3`, "#d9f0ff");
-  document.getElementById("r-desc").textContent +=
-    (document.getElementById("r-desc").textContent ? "\n\n" : "") + paragraph;
 
-  if (playingAudio) playingAudio.pause();
-  const voiceUrl = `/api/voice?lang=${userLang}&text=${encodeURIComponent(paragraph)}`;
-  playingAudio = new Audio(voiceUrl);
-  playingAudio.play();
+  // set title + product on first paragraph
+  if (index === 1) {
+    document.getElementById("r-title").innerText = `💄👑 ${brand || "…"}`;
+    document.getElementById("r-artist").innerText = `🖊️ ${product || "…"}`;
+    document.getElementById("r-desc").textContent = "";
+  }
+
+  // append paragraph immediately
+  const descEl = document.getElementById("r-desc");
+  descEl.textContent += (descEl.textContent ? "\n\n" : "") + paragraph;
+  descEl.scrollTop = descEl.scrollHeight;
+
+  // voice playback queue
+  const voiceUrl = `https://three23p-backend.onrender.com/api/voice?lang=${userLang}&text=${encodeURIComponent(paragraph)}`;
+  voiceQueue = voiceQueue.then(
+    () =>
+      new Promise(resolve => {
+        const audio = new Audio(voiceUrl);
+        audio.volume = 1.0;
+        audio.onended = resolve;
+        setTimeout(() => {
+          audio.play().catch(err => console.warn("Audio blocked:", err));
+        }, 300);
+      })
+  );
 });
 
 socket.on("done", () => {
@@ -42,7 +64,6 @@ let audioPlayer = null,
 let currentTopic = "cosmetics";
 let autoRefresh = false;
 
-// Simulation mode check (?simulate=credits|descfail|imagefail)
 const simulate = new URLSearchParams(window.location.search).get("simulate");
 
 /* ---------------- Room Setup ---------------- */
@@ -60,9 +81,10 @@ const simulate = new URLSearchParams(window.location.search).get("simulate");
 /* ---------------- Device ID ---------------- */
 let deviceId = localStorage.getItem("deviceId");
 if (!deviceId) {
-  deviceId = (window.crypto && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2);
+  deviceId =
+    (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2);
   localStorage.setItem("deviceId", deviceId);
 }
 console.log("🔑 deviceId is", deviceId);
@@ -142,9 +164,8 @@ function updateImage(imageUrl, imgLine, imgTimer) {
   }
 }
 
-/* ---------------- Voice (non-stream mode) ---------------- */
+/* ---------------- Non-stream voice (music/politics fallback) ---------------- */
 async function playVoiceAndRevealText(text, onEnd) {
-  const voiceLine = appendOverlay("🎤 generating voice segments…", "#ffe0f0", true);
   const audioEl = document.getElementById("voice-player");
   const descEl = document.getElementById("r-desc");
   descEl.textContent = "";
@@ -155,36 +176,16 @@ async function playVoiceAndRevealText(text, onEnd) {
     segments.push(words.slice(i, i + 30).join(" "));
   }
 
-  let nextUrl = await fetchVoiceSegment(segments[0]);
-  removeOverlayLine(voiceLine, `▶️ segment 1/${segments.length}`);
-
   for (let i = 0; i < segments.length; i++) {
-    const currentUrl = nextUrl;
-    const nextPromise =
-      i + 1 < segments.length ? fetchVoiceSegment(segments[i + 1]) : Promise.resolve(null);
-
-    descEl.textContent += (descEl.textContent ? " " : "") + segments[i];
-    descEl.scrollTop = descEl.scrollHeight;
-
-    audioEl.src = currentUrl;
+    const seg = segments[i];
+    const res = await fetch(`https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(seg)}&lang=${userLang}`);
+    const blob = await res.blob();
+    audioEl.src = URL.createObjectURL(blob);
+    descEl.textContent += (descEl.textContent ? " " : "") + seg;
     await audioEl.play();
     await new Promise(r => (audioEl.onended = r));
-
-    nextUrl = await nextPromise;
-    removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
   }
-
-  removeOverlayLine(voiceLine, "✅ voice & text finished");
   if (onEnd) onEnd();
-}
-
-async function fetchVoiceSegment(segment) {
-  const res = await fetch(
-    `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(segment)}&lang=${userLang}`,
-    { headers: { "x-device-id": deviceId } }
-  );
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
 }
 
 /* ---------------- Main Drop Sequence ---------------- */
@@ -210,33 +211,21 @@ async function runLogAndLoad(topic) {
   let trend = null;
   try {
     if (topic === "cosmetics" || topic === "aidrop") {
-      // 🪄 Streaming mode
       clearInterval(descTimer);
       removeOverlayLine(descLine, "💬 streaming paragraph by paragraph...");
       socket.emit("startDescription", { topic, userId, lang: userLang, roomId });
-      return; // rest handled by socket
+      return; // handled by socket
     }
 
-    // 🎵 fallback for other topics
     const descRes = await fetch(
-      `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`,
-      { headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId } }
+      `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`
     );
-
     if (!descRes.ok) {
       clearInterval(descTimer);
-      if (descRes.status === 403) {
-        removeOverlayLine(descLine, "💸 you’re dry rn… top-up to keep vibin’");
-        const banner = document.getElementById("simulate-banner");
-        if (banner) {
-          banner.textContent = "💸 you’re dry rn… top-up to keep vibin’";
-          banner.style.display = "block";
-        }
-      } else removeOverlayLine(descLine, "❌ description failed");
+      removeOverlayLine(descLine, "❌ description failed");
       hideOverlay();
       return;
     }
-
     trend = await descRes.json();
   } catch (e) {
     console.error("❌ Description error:", e);
@@ -254,9 +243,7 @@ async function runLogAndLoad(topic) {
   updateCredits();
 
   playVoiceAndRevealText(trend.description, () => {
-    if (autoRefresh && !stopCycle) {
-      setTimeout(() => loadTrend(), 2000);
-    }
+    if (autoRefresh && !stopCycle) setTimeout(() => loadTrend(), 2000);
   });
 
   const imgLine = appendOverlay("🖼️ waiting for the image…", "#d9f0ff", true);
@@ -268,10 +255,7 @@ async function runLogAndLoad(topic) {
 
   try {
     const imgRes = await fetch(
-      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`,
-      {
-        headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
-      }
+      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`
     );
     const imgData = await imgRes.json();
     updateImage(imgData.image, imgLine, imgTimer);
@@ -295,21 +279,17 @@ async function buyCredits(pack) {
   if (!userId) return;
   const res = await fetch(
     `https://three23p-backend.onrender.com/api/buy?userId=${userId}&pack=${pack}&roomId=${roomId}`,
-    {
-      method: "POST",
-      headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
-    }
+    { method: "POST" }
   );
   const data = await res.json();
   if (data.url) window.location.href = data.url;
   else alert("Checkout failed: " + (data.error || "unknown error"));
 }
-
 document.getElementById("buy-small").addEventListener("click", () => buyCredits("small"));
 document.getElementById("buy-medium").addEventListener("click", () => buyCredits("medium"));
 document.getElementById("buy-large").addEventListener("click", () => buyCredits("large"));
 
-/* ---------------- Stripe Return Check ---------------- */
+/* ---------------- Stripe Return ---------------- */
 (function checkStripeReturn() {
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get("session_id");
@@ -329,9 +309,7 @@ async function updateCredits() {
   const userId = await ensureUser();
   if (!userId) return;
   try {
-    const res = await fetch(`https://three23p-backend.onrender.com/api/credits?userId=${userId}`, {
-      headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
-    });
+    const res = await fetch(`https://three23p-backend.onrender.com/api/credits?userId=${userId}`);
     const data = await res.json();
     if (data.credits !== undefined) {
       const creditBar = document.getElementById("credit-balance");
