@@ -1,7 +1,3 @@
-Here’s the full app.js — OP19$ Dual Button Version, updated for both 💄 cosmetics and 🚀 aidrop to stream paragraph by paragraph with live voice playback (cinematic style).
-It already includes the corrected voiceUrl (full backend URL) and queued audio logic so each paragraph plays in order.
-Copy code
-Js
 // app.js — OP19$ Dual Button Version (cosmetics + aidrop, live paragraph voice)
 let userLang = localStorage.getItem("userLang") || "en";
 const langSelect = document.getElementById("language-select");
