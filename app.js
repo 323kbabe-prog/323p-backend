@@ -138,38 +138,51 @@ async function playVoiceAndRevealText(text, onEnd) {
   const voiceLine = appendOverlay("🎤 generating voice segments…", "#ffe0f0", true);
   const audioEl = document.getElementById("voice-player");
   const descEl = document.getElementById("r-desc");
+  descEl.textContent = ""; // clear previous
 
-  // 📝 show full description instantly
-  descEl.textContent = text;
-  descEl.scrollTop = descEl.scrollHeight;
-
-  // 🧩 Split into 30-word chunks (for voice only)
+  // 🧩 Split into 30-word chunks
   const words = text.split(/\s+/);
   const segments = [];
   for (let i = 0; i < words.length; i += 30) {
     segments.push(words.slice(i, i + 30).join(" "));
   }
 
-  // 🎧 Prefetch system (same as before)
+  // 🎧 Prefetch system (same as voice)
   let nextUrl = await fetchVoiceSegment(segments[0]);
   removeOverlayLine(voiceLine, `▶️ segment 1/${segments.length}`);
 
   for (let i = 0; i < segments.length; i++) {
     const currentUrl = nextUrl;
+
     // start prefetch of next
     const nextPromise =
       i + 1 < segments.length ? fetchVoiceSegment(segments[i + 1]) : Promise.resolve(null);
 
-    // 🎧 voice playback only
+    // 🎙️ text reveal in sync
+    descEl.textContent += (descEl.textContent ? " " : "") + segments[i];
+    descEl.scrollTop = descEl.scrollHeight; // smooth scroll follow
+
+    // 🎧 voice playback
     audioEl.src = currentUrl;
     await audioEl.play();
     await new Promise(r => (audioEl.onended = r));
+
     nextUrl = await nextPromise;
     removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
   }
 
   removeOverlayLine(voiceLine, "✅ voice & text finished");
   if (onEnd) onEnd();
+}
+
+// helper (reused)
+async function fetchVoiceSegment(segment) {
+  const res = await fetch(
+    `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(segment)}&lang=${userLang}`,
+    { headers: { "x-device-id": deviceId } }
+  );
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }
 
 /* ---------------- Main Drop Sequence ---------------- */
