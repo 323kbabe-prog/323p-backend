@@ -149,47 +149,12 @@ Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
   }
 
   try {
-   const completion = await openai.chat.completions.create({
-  model: "gpt-4o-mini",
-  temperature: 0.9,
-  messages: [
-    { role: "system", content: system },
-    { role: "user", content: prompt }
-  ],
-});
-
-// original generated description
-const descriptionText = completion.choices[0].message.content.trim();
-
-// 🆕 Generate 3 hashtags at the start
-let hashtags = "";
-try {
-  const hashPrompt = `Generate exactly 3 short, trendy hashtags that match the tone and topic of this text. 
-Each must start with # and contain 1–3 words. 
-Return them in one single line separated by spaces only. 
-Example: #FutureGlow #BeautySignal #GenZDrop
-
-Text:
-"${descriptionText}"`;
-
-  const hashRes = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.7,
-    messages: [
-      { role: "system", content: "You are a social media expert who crafts viral, aesthetic hashtags." },
-      { role: "user", content: hashPrompt }
-    ]
-  });
-
-  hashtags = hashRes.choices[0].message.content.trim();
-} catch (err) {
-  console.error("⚠️ Hashtag generation failed:", err.message);
-  hashtags = "#Trend #Signal #Drop"; // fallback
-}
-
-// ✅ Combine hashtags + description text
-return `${hashtags}\n${descriptionText}`;
-
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
+    });
+    return completion.choices[0].message.content.trim();
   } catch (e) {
     console.error("❌ Description error:", e.message);
     return prompt;
@@ -369,20 +334,21 @@ app.get("/api/description", async (req, res) => {
     let mimicLine = null;
     if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
 
-     res.json({
+    res.json({
       brand: pick.brand || pick.artist || pick.issue || "323aidrop",
       product: pick.product || pick.track || pick.keyword || pick.concept,
       persona,
       description,
       mimicLine,
-      isDaily: false
+      hashtags:["#NowTrending"],
+      isDaily:false
     });
   } catch (err) {
     console.error("❌ Description error:", err.message);
     res.status(500).json({ error: "Description generation failed" });
   }
-}); // ← this closes /api/description properly
-    
+});
+
 /* ---------------- API: Image ---------------- */
 app.get("/api/image", async (req,res)=>{
   const { brand, product, persona } = req.query;
