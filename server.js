@@ -362,31 +362,40 @@ const imageUrl = await generateImageUrl(brand, product, persona, topic);
 
 app.get("/api/voice", async (req, res) => {
   const lang = req.query.lang || "en";
-let voice = "alloy";
-if (lang === "kr" || lang === "jp") voice = "verse";
-if (lang === "zh") voice = "verse"; // use 'verse' for Mandarin too
-if (lang === "es") voice = "coral";
-if (lang === "fr") voice = "coral";
+  let voice = "alloy";
+  if (lang === "kr" || lang === "jp") voice = "verse";
+  if (lang === "zh") voice = "verse";
+  if (lang === "es") voice = "coral";
+  if (lang === "fr") voice = "coral";
 
-  
   const text = req.query.text || "";
   if (!text.trim()) {
-    res.setHeader("Content-Type","audio/mpeg");
+    res.setHeader("Content-Type", "audio/mpeg");
     return res.send(Buffer.alloc(1000));
   }
-  try {
-   const out = await openai.audio.speech.create({
-  model: "gpt-4o-mini-tts",
-  voice,
-  input: text
-});
 
-    const audioBuffer = Buffer.from(await out.arrayBuffer());
-    res.setHeader("Content-Type","audio/mpeg");
-    res.send(audioBuffer);
+  try {
+    // Set streaming headers
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Transfer-Encoding", "chunked");
+
+    const response = await openai.audio.speech.stream({
+      model: "gpt-4o-mini-tts",
+      voice,
+      input: text,
+      format: "mp3"
+    });
+
+    // Pipe audio chunks directly to response
+    for await (const chunk of response) {
+      res.write(chunk);
+    }
+
+    res.end();
+    console.log("✅ Streaming voice completed");
   } catch (e) {
-    console.error("❌ Voice error:", e.message);
-    res.status(500).json({error:"Voice TTS failed"});
+    console.error("❌ Streaming voice error:", e.message);
+    res.status(500).json({ error: "Streaming TTS failed" });
   }
 });
 
