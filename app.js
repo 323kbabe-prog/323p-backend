@@ -142,36 +142,27 @@ function playVoice(text, onEnd) {
     voiceLine.innerText = "🎤 waiting for the voice… " + genElapsed + "s";
   }, 1000);
 
-fetch(`https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}&lang=${userLang}`, {
-  headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
-})
+// 🟢 direct-stream playback (no blob)
+clearInterval(genTimer);
+removeOverlayLine(voiceLine, "✅ voice started");
 
-    .then(res => res.blob())
-    .then(blob => {
-      clearInterval(genTimer);
-      removeOverlayLine(voiceLine, "✅ voice started");
+const audioEl = document.getElementById("voice-player");
 
-      const url = URL.createObjectURL(blob);
-      const audioEl = document.getElementById("voice-player");
-      audioEl.src = url;
+// set the audio source directly to the streaming API endpoint
+audioEl.src = `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}&lang=${userLang}`;
 
-      audioEl.play().then(() => {
-        document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
-      }).catch(err => console.warn("⚠️ iOS autoplay blocked:", err));
+// start playback
+audioEl.play().then(() => {
+  document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
+}).catch(err => console.warn("⚠️ autoplay blocked:", err));
 
-      audioPlayer = audioEl;
-      audioEl.onended = () => {
-        document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
-        if (onEnd) onEnd();
-      };
-    })
-    .catch(err => {
-      clearInterval(genTimer);
-      removeOverlayLine(voiceLine, "❌ voice error");
-      console.error("❌ Voice fetch error", err);
-      if (onEnd) onEnd();
-    });
-}
+audioPlayer = audioEl;
+
+// handle when playback ends
+audioEl.onended = () => {
+  document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
+  if (onEnd) onEnd();
+};
 
 /* ---------------- Main Drop Sequence ---------------- */
 async function runLogAndLoad(topic) {
