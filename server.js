@@ -102,22 +102,21 @@ async function makeDescription(topic, pick, persona) {
 
 if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
-  prompt = `Predict next-month beauty trend for ${pick.product || pick.brand}.
+  prompt = `
+Generate four short paragraphs (each around 30 words) about next-month beauty forecasting.
+
+Paragraph 1 → **Next-month look** — describe upcoming visuals, tones, and materials.
+Paragraph 2 → **Next-month feel** — describe touch, texture, and sensory experience.
+Paragraph 3 → **Next-month emotion** — describe cultural and emotional meaning.
+Paragraph 4 → **Next-month signal** — end with one key insight or prediction.
+
 I am ${persona}.
-Speak like a Gen-Z beauty analyst + creator — emotional yet logical.
-Blend sensory forecasting (what people will love) and product decoding (why it matters).
-End with one clear “next-month signal” line.
-Add emojis inline in every sentence from: ${emojiSet.join(" ")}`;
-  system = "You are a creative trend forecaster describing next-month beauty logic and signals.";
-} else if (topic === "music") {
-    prompt = `Write exactly 300 words in a first-person hype reaction to hearing "${pick.track}" by ${pick.artist}.
-Emotional, energetic. Add emojis inline in every sentence.`;
-    system = "You are a college student reacting to music.";
-  } else if (topic === "politics") {
-    prompt = `Write exactly 150 words in a first-person rant about ${pick.issue}, mentioning ${pick.keyword}.
-Activist style. Add emojis inline in every sentence.`;
-    system = "You are a college student activist.";
-  } else if (topic === "aidrop") {
+Write in Gen-Z creator tone — poetic, sensory, confident, analytical.
+Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
+Each paragraph must be separated by two newlines.
+`;
+  system = "You are a beauty trend forecaster writing four short poetic paragraphs (look, feel, emotion, signal).";
+} else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
   prompt = `Write exactly 150 words in a first-person influencer-style description introducing a near-future AI product idea.
 The product name is "${pick.concept}" by ${pick.brand}.
