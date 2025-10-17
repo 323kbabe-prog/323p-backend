@@ -138,22 +138,20 @@ async function playVoice(text, onEnd) {
   const voiceLine = appendOverlay("🎤 generating voice segments…", "#ffe0f0", true);
   const audioEl = document.getElementById("voice-player");
 
-  // 🧩 split description into ~30-word or 60-character chunks (for Chinese/Japanese)
-let segments = [];
-if (["zh", "jp"].includes(userLang)) {
-  // split by every 60 Chinese/Japanese characters
-  for (let i = 0; i < text.length; i += 60) {
-    segments.push(text.slice(i, i + 60));
+  // 🧩 Split description: 30 words or 60 chars for CJK
+  let segments = [];
+  if (["zh", "jp"].includes(userLang)) {
+    for (let i = 0; i < text.length; i += 60) {
+      segments.push(text.slice(i, i + 60));
+    }
+  } else {
+    const words = text.split(/\s+/);
+    for (let i = 0; i < words.length; i += 30) {
+      segments.push(words.slice(i, i + 30).join(" "));
+    }
   }
-} else {
-  // normal 30-word split for spaced languages
-  const words = text.split(/\s+/);
-  for (let i = 0; i < words.length; i += 30) {
-    segments.push(words.slice(i, i + 30).join(" "));
-  }
-}
 
-  // 🎧 helper to fetch each chunk’s voice
+  // 🎧 Fetch helper
   async function fetchVoiceSegment(segment) {
     const res = await fetch(
       `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(segment)}&lang=${userLang}`,
@@ -163,13 +161,23 @@ if (["zh", "jp"].includes(userLang)) {
     return URL.createObjectURL(blob);
   }
 
-  // 🔄 sequentially play all mini-segments
+  // 🚀 Prefetch system
+  let nextUrl = await fetchVoiceSegment(segments[0]);
+  removeOverlayLine(voiceLine, `▶️ segment 1/${segments.length}`);
+
   for (let i = 0; i < segments.length; i++) {
-    removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
-    const url = await fetchVoiceSegment(segments[i]);
-    audioEl.src = url;
+    const currentUrl = nextUrl;
+    // Start prefetching the next segment early
+    const nextPromise = (i + 1 < segments.length)
+      ? fetchVoiceSegment(segments[i + 1])
+      : Promise.resolve(null);
+
+    audioEl.src = currentUrl;
     await audioEl.play();
     await new Promise(r => (audioEl.onended = r));
+
+    nextUrl = await nextPromise;
+    removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
   }
 
   removeOverlayLine(voiceLine, "✅ voice playback finished");
