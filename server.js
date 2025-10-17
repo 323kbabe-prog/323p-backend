@@ -375,10 +375,15 @@ app.get("/api/voice", async (req, res) => {
   }
 
   try {
-    // Set streaming headers
-    res.setHeader("Content-Type", "audio/mpeg");
-    res.setHeader("Transfer-Encoding", "chunked");
+    // 🔊 Enable low-latency streaming
+    res.writeHead(200, {
+      "Content-Type": "audio/mpeg",
+      "Transfer-Encoding": "chunked",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive"
+    });
 
+    // Start sending audio frames as soon as they’re produced
     const response = await openai.audio.speech.stream({
       model: "gpt-4o-mini-tts",
       voice,
@@ -386,16 +391,14 @@ app.get("/api/voice", async (req, res) => {
       format: "mp3"
     });
 
-    // Pipe audio chunks directly to response
     for await (const chunk of response) {
       res.write(chunk);
     }
-
     res.end();
-    console.log("✅ Streaming voice completed");
+    console.log("✅ Streaming voice finished");
   } catch (e) {
     console.error("❌ Streaming voice error:", e.message);
-    res.status(500).json({ error: "Streaming TTS failed" });
+    if (!res.headersSent) res.status(500).json({ error: "Streaming failed" });
   }
 });
 
