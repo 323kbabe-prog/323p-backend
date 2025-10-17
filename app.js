@@ -140,12 +140,11 @@ async function playVoiceAndRevealText(text, onEnd) {
   const descEl = document.getElementById("r-desc");
   descEl.textContent = ""; // clear previous
 
-  // 🧩 Split into 30-word chunks
-  const words = text.split(/\s+/);
-  const segments = [];
-  for (let i = 0; i < words.length; i += 30) {
-    segments.push(words.slice(i, i + 30).join(" "));
-  }
+  // 🧩 Split into paragraphs instead of 30-word chunks
+const segments = text
+  .split(/\n+/)               // split at line breaks
+  .map(p => p.trim())
+  .filter(p => p.length > 0); // clean out any empty lines
 
   // 🎧 Prefetch system (same as voice)
   let nextUrl = await fetchVoiceSegment(segments[0]);
