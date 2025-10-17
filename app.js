@@ -140,60 +140,59 @@ async function playVoiceAndRevealText(text, onEnd) {
   const descEl = document.getElementById("r-desc");
   descEl.textContent = ""; // clear previous
 
-// 🧩 Split description text into ~30-word or ~60-character chunks depending on language
-const isCJK = ["zh", "kr", "jp"].includes(userLang);
+  // 🧩 Split description text into ~30-word or ~60-character chunks depending on language
+  const isCJK = ["zh", "ko", "ja"].includes(userLang); // ✅ corrected ISO codes
 
-let segments = [];
-if (isCJK) {
-  // Chinese / Korean / Japanese — split by 60 characters
-  const chars = Array.from(text);
-  for (let i = 0; i < chars.length; i += 60) {
-    segments.push(chars.slice(i, i + 60).join(""));
+  let segments = [];
+  if (isCJK) {
+    const chars = Array.from(text);
+    for (let i = 0; i < chars.length; i += 60) {
+      segments.push(chars.slice(i, i + 60).join(""));
+    }
+  } else {
+    const words = text.split(/\s+/);
+    for (let i = 0; i < words.length; i += 30) {
+      segments.push(words.slice(i, i + 30).join(" "));
+    }
   }
-} else {
-  // English and other languages — split by 30 words
-  const words = text.split(/\s+/);
-  for (let i = 0; i < words.length; i += 30) {
-    segments.push(words.slice(i, i + 30).join(" "));
-  }
-}
 
-  // 🎧 Prefetch system (same as voice)
+  // 🎧 Prefetch first segment
   let nextUrl = await fetchVoiceSegment(segments[0]);
   removeOverlayLine(voiceLine, `▶️ segment 1/${segments.length}`);
 
   for (let i = 0; i < segments.length; i++) {
     const currentUrl = nextUrl;
-
-    // start prefetch of next
     const nextPromise =
       i + 1 < segments.length ? fetchVoiceSegment(segments[i + 1]) : Promise.resolve(null);
 
-    // 🎙️ text reveal in sync
-    descEl.textContent += (descEl.textContent ? " " : "") + segments[i];
-    descEl.scrollTop = descEl.scrollHeight; // smooth scroll follow
-
-    // 🎧 voice playback
+    // 🎧 Start voice playback (non-blocking)
     audioEl.src = currentUrl;
-    await audioEl.play();
-    await new Promise(r => (audioEl.onended = r));
+    audioEl.play().catch(e => console.warn("Autoplay blocked", e));
 
+    // 🎙️ Gradually reveal the text while the voice is playing
+    const chunk = segments[i];
+    let charIndex = 0;
+    const revealSpeed = 40; // ms per character — adjust to tune pacing
+
+    const revealInterval = setInterval(() => {
+      if (charIndex < chunk.length) {
+        descEl.textContent += chunk[charIndex++];
+        descEl.scrollTop = descEl.scrollHeight;
+      } else {
+        clearInterval(revealInterval);
+      }
+    }, revealSpeed);
+
+    // Wait for audio to end before continuing to the next segment
+    await new Promise(resolve => (audioEl.onended = resolve));
+
+    // Prepare the next segment’s audio
     nextUrl = await nextPromise;
     removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
   }
 
   removeOverlayLine(voiceLine, "✅ voice & text finished");
   if (onEnd) onEnd();
-}
-
-// helper (reused)
-async function fetchVoiceSegment(segment) {
-  const res = await fetch(
-    `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(segment)}&lang=${userLang}`,
-    { headers: { "x-device-id": deviceId } }
-  );
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
 }
 
 /* ---------------- Main Drop Sequence ---------------- */
