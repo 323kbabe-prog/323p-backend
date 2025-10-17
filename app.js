@@ -134,43 +134,38 @@ function updateImage(imageUrl, imgLine, imgTimer) {
 }
 
 /* ---------------- Voice ---------------- */
-function playVoice(text, onEnd) {
-  const voiceLine = appendOverlay("🎤 waiting for the voice…", "#ffe0f0", true);
-  let genElapsed = 0;
-  const genTimer = setInterval(() => {
-    genElapsed++;
-    voiceLine.innerText = "🎤 waiting for the voice… " + genElapsed + "s";
-  }, 1000);
+async function playVoice(text, onEnd) {
+  const voiceLine = appendOverlay("🎤 generating voice segments…", "#ffe0f0", true);
+  const audioEl = document.getElementById("voice-player");
 
-fetch(`https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}&lang=${userLang}`, {
-  headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
-})
+  // 🧩 split description into ~30-word chunks
+  const words = text.split(/\s+/);
+  const segments = [];
+  for (let i = 0; i < words.length; i += 30) {
+    segments.push(words.slice(i, i + 30).join(" "));
+  }
 
-    .then(res => res.blob())
-    .then(blob => {
-      clearInterval(genTimer);
-      removeOverlayLine(voiceLine, "✅ voice started");
+  // 🎧 helper to fetch each chunk’s voice
+  async function fetchVoiceSegment(segment) {
+    const res = await fetch(
+      `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(segment)}&lang=${userLang}`,
+      { headers: { "x-device-id": deviceId } }
+    );
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  }
 
-      const url = URL.createObjectURL(blob);
-      const audioEl = document.getElementById("voice-player");
-      audioEl.src = url;
+  // 🔄 sequentially play all mini-segments
+  for (let i = 0; i < segments.length; i++) {
+    removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
+    const url = await fetchVoiceSegment(segments[i]);
+    audioEl.src = url;
+    await audioEl.play();
+    await new Promise(r => (audioEl.onended = r));
+  }
 
-      audioEl.play().then(() => {
-        document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
-      }).catch(err => console.warn("⚠️ iOS autoplay blocked:", err));
-
-      audioPlayer = audioEl;
-      audioEl.onended = () => {
-        document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
-        if (onEnd) onEnd();
-      };
-    })
-    .catch(err => {
-      clearInterval(genTimer);
-      removeOverlayLine(voiceLine, "❌ voice error");
-      console.error("❌ Voice fetch error", err);
-      if (onEnd) onEnd();
-    });
+  removeOverlayLine(voiceLine, "✅ voice playback finished");
+  if (onEnd) onEnd();
 }
 
 /* ---------------- Main Drop Sequence ---------------- */
