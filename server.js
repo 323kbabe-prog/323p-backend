@@ -364,7 +364,7 @@ app.get("/api/voice", async (req, res) => {
   const lang = req.query.lang || "en";
 let voice = "alloy";
 if (lang === "kr" || lang === "jp") voice = "verse";
-if (lang === "zh") voice = "sol"; // use 'verse' for Mandarin too
+if (lang === "zh") voice = "Sol"; // capital S fixed here
 if (lang === "es") voice = "coral";
 if (lang === "fr") voice = "coral";
 
