@@ -142,28 +142,37 @@ function playVoice(text, onEnd) {
     voiceLine.innerText = "🎤 waiting for the voice… " + genElapsed + "s";
   }, 1000);
 
-// 🟢 direct-stream playback (no blob)
-clearInterval(genTimer);
-removeOverlayLine(voiceLine, "✅ voice started");
+fetch(`https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}&lang=${userLang}`, {
+  headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
+})
 
-const audioEl = document.getElementById("voice-player");
+    .then(res => res.blob())
+    .then(blob => {
+      clearInterval(genTimer);
+      removeOverlayLine(voiceLine, "✅ voice started");
 
-// set the audio source directly to the streaming API endpoint
-audioEl.src = `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(text)}&lang=${userLang}`;
+      const url = URL.createObjectURL(blob);
+      const audioEl = document.getElementById("voice-player");
+      audioEl.src = url;
 
-// start playback
-audioEl.play().then(() => {
-  document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
-}).catch(err => console.warn("⚠️ autoplay blocked:", err));
+      audioEl.play().then(() => {
+        document.querySelector("#voice-status .text").textContent = "🤖🔊 vibin’ rn…";
+      }).catch(err => console.warn("⚠️ iOS autoplay blocked:", err));
 
-audioPlayer = audioEl;
-
-// handle when playback ends
-audioEl.onended = () => {
-  document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
-  if (onEnd) onEnd();
-};
+      audioPlayer = audioEl;
+      audioEl.onended = () => {
+        document.querySelector("#voice-status .text").textContent = "⚙️ preparing…";
+        if (onEnd) onEnd();
+      };
+    })
+    .catch(err => {
+      clearInterval(genTimer);
+      removeOverlayLine(voiceLine, "❌ voice error");
+      console.error("❌ Voice fetch error", err);
+      if (onEnd) onEnd();
+    });
 }
+
 /* ---------------- Main Drop Sequence ---------------- */
 async function runLogAndLoad(topic) {
   showOverlay();
@@ -316,40 +325,24 @@ document.addEventListener("DOMContentLoaded", updateCredits);
 setInterval(updateCredits, 30000);
 
 /* ---------------- Dual Drop Buttons ---------------- */
-document.getElementById("start-btn").addEventListener("click", async () => {
-  // 🟢 Unlock audio context for Safari & mobile browsers
-  const audioEl = document.getElementById("voice-player");
-  try {
-    await audioEl.play();
-    audioEl.pause();
-    audioEl.currentTime = 0;
-    console.log("🔊 Audio context unlocked — voice ready");
-  } catch (e) {
-    console.warn("⚠️ Audio unlock skipped:", e);
-  }
-
-  // ✅ Continue showing app
+document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("app").style.display = "flex";
   socket.emit("joinRoom", roomId);
 
+  // showConfirmButton() removed — using two permanent buttons
   document.getElementById("warmup-center").style.display = "flex";
   document.getElementById("warmup-center").style.visibility = "visible";
 });
 
-
 document.getElementById("drop-cosmetics-btn").addEventListener("click", async () => {
   currentTopic = "cosmetics";
   autoRefresh = true;
-
-  await loadTrend(); // continue as normal
+  await loadTrend();
 });
-
 
 document.getElementById("drop-aidrop-btn").addEventListener("click", async () => {
   currentTopic = "aidrop";
   autoRefresh = true;
-
-  await loadTrend(); // continue normal sequence
+  await loadTrend();
 });
-
