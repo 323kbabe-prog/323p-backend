@@ -1,4 +1,4 @@
-// app.js — OP19$ Dual Button Version (cosmetics + aidrop, live paragraph voice)
+// app.js — OP19$ Dual Button Version (cosmetics + aidrop, live voice + auto refresh)
 let userLang = localStorage.getItem("userLang") || "en";
 const langSelect = document.getElementById("language-select");
 if (langSelect) {
@@ -16,19 +16,19 @@ let voiceQueue = Promise.resolve();
 socket.on("paragraph", async ({ index, paragraph, brand, product }) => {
   console.log("🧾 Paragraph", index, paragraph);
 
-  // set title + product on first paragraph
+  // 🧠 Update header on first paragraph
   if (index === 1) {
     document.getElementById("r-title").innerText = `💄👑 ${brand || "…"}`;
     document.getElementById("r-artist").innerText = `🖊️ ${product || "…"}`;
     document.getElementById("r-desc").textContent = "";
   }
 
-  // append paragraph immediately
+  // ✍️ Show paragraph live
   const descEl = document.getElementById("r-desc");
   descEl.textContent += (descEl.textContent ? "\n\n" : "") + paragraph;
   descEl.scrollTop = descEl.scrollHeight;
 
-  // voice playback queue
+  // 🎧 Queue voice playback
   const voiceUrl = `https://three23p-backend.onrender.com/api/voice?lang=${userLang}&text=${encodeURIComponent(paragraph)}`;
   voiceQueue = voiceQueue.then(
     () =>
@@ -43,8 +43,17 @@ socket.on("paragraph", async ({ index, paragraph, brand, product }) => {
   );
 });
 
-socket.on("done", () => {
+// ✅ Auto-refresh after all voices finish
+socket.on("done", async () => {
   appendOverlay("✅ All paragraphs generated.", "#d9f0ff");
+  await voiceQueue;
+
+  if (autoRefresh && !stopCycle) {
+    appendOverlay("🔄 loading next drop…", "#d9f0ff", true);
+    console.log("🔁 Auto-refresh next drop...");
+    setTimeout(() => loadTrend(), 2000);
+  }
+
   hideOverlay();
 });
 
@@ -53,6 +62,7 @@ socket.on("error", data => {
   hideOverlay();
 });
 
+/* ---------------- Core Variables ---------------- */
 let audioPlayer = null,
   currentTrend = null,
   roomId = null,
@@ -210,7 +220,7 @@ async function runLogAndLoad(topic) {
       clearInterval(descTimer);
       removeOverlayLine(descLine, "💬 streaming paragraph by paragraph...");
       socket.emit("startDescription", { topic, userId, lang: userLang, roomId });
-      return; // handled by socket
+      return; // handled by socket + auto refresh in "done"
     }
 
     const descRes = await fetch(
