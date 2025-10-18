@@ -146,33 +146,33 @@ else if (topic === "music") {
   const emojiSet = [...descEmojis];
   prompt = `
 Predict next-month’s music wave.
-I am ${persona}, a Gen-Z rapper and sound decoder — I speak in first person like I’m freestyling live, mic in hand.
+I am ${persona}, a Gen-Z rapper and sound decoder — I speak in first person like I’m freestyling live with constant ad-libs on every beat.
 
 Write four short verses (6–8 bars each).  
-Each line = one rap bar — confident, rhythmic, rhyming, and full of ad-libs.
+Each line = one bar.  Each word should be followed by a small ad-lib in parentheses — a hype word or Gen-Z slang, e.g.:
+
+"Feel (yeah) that (uh) beat (fr) bounce (sheesh)"  
 
 FLOW RULES:
-• Start or end lines with Gen-Z-style ad-libs such as (yeah), (uh), (ah), (mmm), (look), (okay), (bet), (fr), (no cap), (on god), (sheesh), (lit), (vibe), (say less).  
-• Use ad-libs naturally, not on every line — sprinkle them for rhythm.  
-• Mix 4-word and 10-word bars for swing.  
-• End most bars with rhyme or near-rhyme.  
-• Use “...” for short breaths, “—” for long pauses, “//” to mark a new bar.  
-• Capitalize punch words (BOUNCE, FLOW, WAVE, FIRE).  
-• Echo tail words sometimes: “vibe... vibe...”, “wave... wave...”.  
-• Keep modern slang and culture references — TikTok, creators, drops, playlists, AI beats.  
-• Separate each verse with two newlines.
+• After almost every word, add an ad-lib: (yeah), (uh), (ah), (mmm), (look), (bet), (fr), (no cap), (on god), (sheesh), (lit), (vibe), (say less), (okay).  
+• Mix different ad-libs so it feels spontaneous — no repeating the same one too often.  
+• Keep natural rhyme at line ends.  
+• Use “...” for short rests, “—” for longer pauses, “//” for bar breaks.  
+• Alternate short and long bars for swing.  
+• Add emojis inline from this set for motion: ${emojiSet.join(" ")}.  
+• Keep the language confident, slangy, and musical — it should sound like a recorded freestyle clip.
 
 VERSE IDEAS:
-1️⃣ Verse 1 — what I *hear* coming next month (tempo, energy, bounce).  
-2️⃣ Verse 2 — how I *create* it (studio lights, loops, late nights).  
-3️⃣ Verse 3 — how people *move* to it (cars, parties, For You page, trends).  
-4️⃣ Verse 4 — my *prophecy* for the sound to come.
+1️⃣ Verse 1 — what I *hear* coming next month: the new rhythm, tempo, crowd energy.  
+2️⃣ Verse 2 — how I *create* it: studio lights, loops, headphones, late nights.  
+3️⃣ Verse 3 — how people *move*: cars, parties, For-You page, city streets.  
+4️⃣ Verse 4 — my *prophecy*: where the next sound will take us.
 
-Add emojis inline from this set: ${emojiSet.join(" ")}.
-Each verse should feel like a short freestyle clip — rhythmic, slang-heavy, and dripping with ad-lib energy.
+Make it rhyme, make it vibe, and make it sound like a full ad-lib performance.
 `;
-  system = "You are a Gen-Z rapper and sound forecaster writing four authentic, ad-lib-filled, rhyming verses about next-month music trends. Use Gen-Z slang ad-libs like (fr), (no cap), (sheesh), (bet), (lit) for energy.";
+  system = "You are a Gen-Z rapper writing four rhyming, ad-lib-filled freestyle verses where nearly every word carries a hype tag in parentheses. Prioritize flow, rhythm, rhyme, and slang energy.";
 }
+
 
   // 🌐 Auto-translate to selected language
   const lang = pick.lang || "en"; // fallback
