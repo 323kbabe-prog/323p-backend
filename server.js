@@ -121,25 +121,28 @@ Each paragraph must be separated by two newlines.
 `;
   system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
- else if (topic === "aidrop") {
-  // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
-  prompt = `Write exactly 150 words in a first-person influencer-style description introducing a near-future AI product idea.
-The product name is "${pick.concept}" by ${pick.brand}.
-I am ${persona}.
-Tone: Gen-Z founder + lifestyle influencer — confident, emotional, sensory, slightly surreal but realistic.
-The product must feel like a real tech drop about to launch within months.
-Include both technical and emotional elements.
-Add emojis inline in every sentence, keep the pacing like a TikTok narration.
-Mention one or two real-sounding use cases and feelings.
-Finish with 3-5 realistic hashtags (no random nonsense).
-Avoid repeating brand or concept more than 3 times.
-Structure should flow like a natural 300-word spoken post — no sections or bullet points.`;
-  system = "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person, emotionally sharp and stylish.";
-} else {
-  prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}.
-Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
-  system = "You are a college student living AI culture.";
+ else else if (topic === "aidrop") {
+  const emojiSet = [...descEmojis];
+  prompt = `
+Predict next-month AI product drop concept called "${pick.concept}" by ${pick.brand}.
+I am ${persona}, a Gen-Z tech founder and lifestyle influencer who lives and builds inside the AI world — I speak in first person like I’m announcing my own drop.
+
+Write four short paragraphs (each around 30 words) in first person, but do not include any paragraph titles or numbers.
+
+1️⃣ The first paragraph should describe how the product looks and feels in real life — design, glow, interface, or texture — as if I’m unboxing or showing it to my followers.
+
+2️⃣ The second paragraph should describe the product’s technical magic — what it does, how it moves, what it changes in my day — mixing real use with emotion and sensory vibe.
+
+3️⃣ The third paragraph should describe the cultural and emotional meaning — how people react online, what this tech represents for creators or dreamers, and what it feels like to launch it.
+
+4️⃣ The final paragraph should end with my personal vision or prediction — what this product means for next month’s AI movement, and why it feels like a new lifestyle wave.
+
+Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
+Each paragraph must be separated by two newlines.
+`;
+  system = "You are a Gen-Z AI influencer and founder writing four first-person poetic paragraphs (look, tech, emotion, prediction) describing a near-future AI product drop without visible titles.";
 }
+
   // 🌐 Auto-translate to selected language
   const lang = pick.lang || "en"; // fallback
   if (lang !== "en") {
