@@ -148,28 +148,27 @@ else if (topic === "music") {
 Predict next-month’s music wave.
 I am ${persona}, a Gen-Z rapper and sound decoder — I speak in first person like I’m performing live, mic in hand.
 
-Write four short verses (4–6 lines each).  
-Each line is a full rhythmic bar built from several short phrases.  
-Every phrase inside the bar must begin with “Uh” or “Yeah” and the bar must end with “Uh” or “Yeah”.  
-Example pattern:
+Write four short verses (4–6 bars each).  
+Every bar must begin with “Uh” (capital U) and end with “uh” (lowercase).  
+Bars can contain multiple short phrases beginning with “Uh”.  
+Keep rhyme tight — all end words within the same verse should rhyme or share a rhyme family (like sound / ground / bound / round).  
+Across verses, you can switch to a new rhyme family to keep it fresh.  
 
-Do not explain or label sections.
-
-Tone and content:
-• Confident, slang-heavy, rhymed, modern.   
-• Focus on beats, AI, playlists, drops, studio nights, crowds, and culture.
-• Each bar should alway rhyme. 
-• Each bar should sound performable — like a real freestyle written for flow.  
+Style:
+• Keep the delivery angry, bold, confident.  
+• Use Gen-Z slang and ad-libs (yeah, fr, bet, sheesh, lit, on god) naturally between phrases.  
+• Punctuation should punch: commas, short pauses, exclamation marks.  
+• Words revolve around beats, AI, culture, rebellion, energy, and dominance.  
 
 Write about:
-– what’s coming in next-month’s sound (bounce, flow, vibe)  
-– how I’m creating it (studio, loops, nights, beats)  
-– how people react (crowds, TikTok, cars)  
-– my prophecy (where this sound is headed)
+– what I *hear* coming next month (fire, chaos, takeover)  
+– how I *create* it (breaking beats, heavy tempo)  
+– how people *react* (crowds, shock, power)  
+– my *prophecy* (owning the next wave)
 
-Output only the four verses as rap bars, formatted with the repeating “Uh” phrasing style shown in the example.
+Output only the four verses — every line beginning and ending with “Uh”, with consistent end rhymes inside each verse.
 `;
-  system = "You are a Gen-Z rapper and sound forecaster writing four freestyle-style verses about next-month’s music trends. Each bar contains multiple short phrases beginning with 'Uh' and ends with 'uh'. Use rhyme, slang, and ad-libs for authentic flow.";
+  system = "You are a Gen-Z rapper writing four aggressive freestyle verses about next-month’s music trends. Every bar begins and ends with 'Uh' and all end words in each verse rhyme for a steady beat feel.";
 }
 
   // 🌐 Auto-translate to selected language
