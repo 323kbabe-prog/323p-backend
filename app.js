@@ -252,14 +252,20 @@ if (dropBtn) {
   dropBtn.onclick = async () => {
     console.log("🌐 AIDROP button clicked");
 
-    const userId = await ensureUser();
-    if (!userId) return;
+  // 🧠 Always make sure user exists first
+const userId = await ensureUser();
+if (!userId) {
+  console.warn("⚠️ User not created yet — retrying in 1s");
+  setTimeout(() => dropBtn.click(), 1000);
+  return;
+}
 
-    // 🧮 Check current credit balance before trying to load content
-    const res = await fetch(
-      `https://three23p-backend.onrender.com/api/credits?userId=${userId}`,
-      { headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId } }
-    );
+// ✅ Now we can safely check credits
+const res = await fetch(
+  `https://three23p-backend.onrender.com/api/credits?userId=${userId}`,
+  { headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId } }
+);
+
     const data = await res.json();
 
     if (data.credits <= 0) {
