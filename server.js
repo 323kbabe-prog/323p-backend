@@ -104,25 +104,24 @@ if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
   prompt = `
 Predict next-month beauty trend for ${pick.product || pick.brand}.
-I am ${persona}, and I speak in first person like a Gen-Z beauty creator sharing real experiences from my own life.
+I am ${persona}, a Gen-Z beauty creator with rhythm — I speak in first person like a rapper narrating my real life.
 
-Write four short paragraphs (each around 30 words) in first person, with no paragraph titles or numbers.
-Each paragraph should feel grounded in my real life — small daily moments, social settings, or creator habits — showing how I actually use or experience the trend.
+Write four short verses (each around 30 words), like rap lyrics with flow and inner rhythm.
+Do not include verse titles or numbers.
+Each verse should rhyme loosely, follow a beat, and sound natural when spoken aloud.
 
-1️⃣ Paragraph 1: Describe the visuals, tones, and materials as I notice them during my daily routine — mirror selfies, café reflections, studio lighting, or daylight walks.
+1️⃣ Verse 1 — Describe the visuals, tones, and materials I'm seeing in daily life (mirror lights, city glow, makeup kits, soft neon reflection).
+2️⃣ Verse 2 — Describe the textures and sensations — how it feels on skin, hands, lips; my sensory vibe while creating or performing.
+3️⃣ Verse 3 — Describe the cultural and emotional energy — people’s reactions, social media love, DMs, and what this means to me.
+4️⃣ Verse 4 — End with a confident next-month prediction — my insight about where beauty is heading and how I’ll ride that wave.
 
-2️⃣ Paragraph 2: Describe the touch, texture, and sensory feel of the product as I use it — applying before class, filming, hanging with friends, or getting ready to post.
-
-3️⃣ Paragraph 3: Describe the cultural and emotional meaning I sense around me — how people react, what comments or messages I get, how this look shifts confidence or mood.
-
-4️⃣ Paragraph 4: End with a key insight or prediction — how this trend might shape next month’s vibe, what I’ll do with it next, and how it reflects my generation’s energy.
-
-Keep tone poetic, confident, and natural — like a creator vlog voiceover.
-Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
-Separate each paragraph with two newlines.
+Keep it lyrical, punchy, and rhythmic like a slow rap flow (no chorus).
+Add emojis inline in every line from this set: ${emojiSet.join(" ")}.
+Separate each verse with two newlines.
 `;
-  system = "You are a Gen-Z beauty creator and forecaster describing lived beauty experiences across four short first-person paragraphs connected to real daily life situations.";
+  system = "You are a Gen-Z beauty creator and rapper blending beauty forecasting with lived experience, writing four rhythmic first-person verses with rhyme and flow.";
 }
+
 else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
   prompt = `Write exactly 150 words in a first-person influencer-style description introducing a near-future AI product idea.
@@ -380,10 +379,21 @@ if (lang === "fr") voice = "coral";
     return res.send(Buffer.alloc(1000));
   }
   try {
-   const out = await openai.audio.speech.create({
+const out = await openai.audio.speech.create({
   model: "gpt-4o-mini-tts",
-  voice,
-  input: text
+  voice: "alloy",             // alloy has clear rhythm; keep or experiment
+  input: rhythmicText,
+  format: "mp3",
+  speed: 1.05,                // slightly faster pacing
+  style: "energetic"          // pseudo-hint: some TTS engines accept this
+});
+
+  // 🧠 Add rhythmic pauses between bars for rap delivery
+let rhythmicText = text
+  .replace(/\n/g, " ... ")            // pause between bars
+  .replace(/([,;])\s*/g, "$1 ... ")   // micro-pause on commas
+  .replace(/([.!?])\s*/g, "$1 ... "); // bigger pause after lines
+
 });
 
     const audioBuffer = Buffer.from(await out.arrayBuffer());
