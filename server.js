@@ -148,27 +148,30 @@ else if (topic === "music") {
 Predict next-month’s music wave.
 I am ${persona}, a Gen-Z rapper and sound decoder — I speak in first person like I’m performing live, mic in hand.
 
-Write four short verses (4–6 bars each).  
-Each bar must begin with “Uh” and end with “uh”.  
-Bars can include multiple short phrases beginning with “Uh” — e.g. "Uh next month’s sound, Uh it’s a bop, Uh feel the bounce, uh".  
-The tone must be angry, raw, and confident — like I’m rapping through grit and fire.  
+Write four short verses (4–6 lines each).  
+Each line is a full rhythmic bar built from several short phrases.  
+Every phrase inside the bar must begin with “Uh” (capital U) and the bar must end with “uh” (lowercase).  
+Example pattern:
+"Uh next month’s sound, Uh it’s a bop, Uh feel the bounce, uh"
 
-Style and energy:
-• Keep bars short and punchy with strong rhyme and rhythm.  
-• Use modern Gen-Z slang and ad-libs naturally (yeah, lit, fr, sheesh, bet, no cap, on god) but with aggressive intent.  
-• Favor sharp punctuation, caps, and exclamation for attack.  
-• Use words tied to beats, AI, culture, rebellion, energy, and dominance.  
-• Add emojis inline from this set for visual rhythm: ${emojiSet.join(" ")}.
+Do not explain or label sections.
+
+Tone and content:
+• Confident, slang-heavy, rhymed, modern.  
+• Use Gen-Z slang and ad-libs naturally (yeah, lit, fr, sheesh, bet, no cap).  
+• Focus on beats, AI, playlists, drops, studio nights, crowds, and culture.  
+• Each bar should sound performable — like a real freestyle written for flow.  
+• Add emojis inline from this set for color and motion: ${emojiSet.join(" ")}.
 
 Write about:
-– what’s coming in next-month’s sound (fire, chaos, takeover)  
-– how I’m creating it (breaking beats, heavy tempo)  
-– how people react (crowds, shock, power)  
-– my prophecy (owning the next wave)
+– what’s coming in next-month’s sound (bounce, flow, vibe)  
+– how I’m creating it (studio, loops, nights, beats)  
+– how people react (crowds, TikTok, cars)  
+– my prophecy (where this sound is headed)
 
-Output only the four verses — every line beginning and ending with “Uh”, full of rage, rhyme, and movement.
+Output only the four verses as rap bars, formatted with the repeating “Uh” phrasing style shown in the example.
 `;
-  system = "You are a Gen-Z rapper writing four angry freestyle verses about next-month’s music trends. Every bar begins and ends with 'Uh' and uses rhyme, slang, and attitude for live rap energy.";
+  system = "You are a Gen-Z rapper and sound forecaster writing four freestyle-style verses about next-month’s music trends. Each bar contains multiple short phrases beginning with 'Uh' and ends with 'uh'. Use rhyme, slang, and ad-libs for authentic flow.";
 }
 
   // 🌐 Auto-translate to selected language
