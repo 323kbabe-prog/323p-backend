@@ -228,20 +228,6 @@ async function updateCredits() {
 document.addEventListener("DOMContentLoaded", updateCredits);
 setInterval(updateCredits, 30000);
 
-// ---------------- Button ----------------
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("drop-aidrop-btn");
-  if (btn) {
-    btn.onclick = async () => {
-      console.log("🌐 AIDROP pressed");
-      currentTopic = "aidrop";
-      autoRefresh = true;
-      stopCycle = false;
-      await loadTrend();
-    };
-  }
-});
-
 // ---------------- BUTTON SETUP ----------------
 document.addEventListener("DOMContentLoaded", () => {
   // 1️⃣ Start Button
@@ -260,15 +246,36 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 2️⃣ Drop AIDROP Button
-  const dropBtn = document.getElementById("drop-aidrop-btn");
-  if (dropBtn) {
-    dropBtn.onclick = async () => {
-      console.log("🌐 AIDROP button clicked");
-      currentTopic = "aidrop";
-      autoRefresh = true;
-      stopCycle = false;
-      await loadTrend();
-    };
-  }
-});
+ // 2️⃣ Drop AIDROP Button — with credit check
+const dropBtn = document.getElementById("drop-aidrop-btn");
+if (dropBtn) {
+  dropBtn.onclick = async () => {
+    console.log("🌐 AIDROP button clicked");
+
+    const userId = await ensureUser();
+    if (!userId) return;
+
+    // 🧮 Check current credit balance before trying to load content
+    const res = await fetch(
+      `https://three23p-backend.onrender.com/api/credits?userId=${userId}`,
+      { headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId } }
+    );
+    const data = await res.json();
+
+    if (data.credits <= 0) {
+      console.warn("❌ No credits left — blocking generation.");
+      const banner = document.getElementById("simulate-banner");
+      if (banner) {
+        banner.textContent = "💸 you’re dry rn… top-up to keep vibin’";
+        banner.style.display = "block";
+      }
+      return; // stop before generation starts
+    }
+
+    // ✅ Credits available — proceed normally
+    currentTopic = "aidrop";
+    autoRefresh = true;
+    stopCycle = false;
+    await loadTrend();
+  };
+}
