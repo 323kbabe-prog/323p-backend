@@ -135,73 +135,39 @@ function updateImage(imageUrl, imgLine, imgTimer) {
 
 /* ---------------- Voice ---------------- */
 async function playVoiceAndRevealText(text, onEnd) {
-  const voiceLine = appendOverlay("🎤 generating voice segments…", "#ffe0f0", true);
+  const voiceLine = appendOverlay("🎤 streaming founder voice...", "#ffe0f0", true);
   const audioEl = document.getElementById("voice-player");
   const descEl = document.getElementById("r-desc");
-  descEl.textContent = ""; // clear previous
+  descEl.textContent = "";
 
-  // 🧩 Split into paragraphs instead of 30-word chunks
-const segments = text
-  .split(/\n+/)               // split at line breaks
-  .map(p => p.trim())
-  .filter(p => p.length > 0); // clean out any empty lines
+  const paragraphs = text.split(/\n+/).map(p => p.trim()).filter(p => p.length > 0);
+  if (paragraphs.length === 0) return removeOverlayLine(voiceLine, "❌ no voice text");
 
-  // 🎧 Prefetch system (same as voice)
-  let nextUrl = await fetchVoiceSegment(segments[0]);
-  removeOverlayLine(voiceLine, `▶️ segment 1/${segments.length}`);
+  let nextUrl = await fetchVoiceSegment(paragraphs[0]);
+  removeOverlayLine(voiceLine, `▶️ part 1/${paragraphs.length}`);
 
-  for (let i = 0; i < segments.length; i++) {
+  for (let i = 0; i < paragraphs.length; i++) {
     const currentUrl = nextUrl;
+    const nextPromise = i + 1 < paragraphs.length ? fetchVoiceSegment(paragraphs[i + 1]) : Promise.resolve(null);
 
-    // start prefetch of next
-    const nextPromise =
-      i + 1 < segments.length ? fetchVoiceSegment(segments[i + 1]) : Promise.resolve(null);
+    // 📝 Show current paragraph
+    descEl.innerHTML += (descEl.innerHTML ? "<br><br>" : "") + paragraphs[i];
+    descEl.scrollTop = descEl.scrollHeight;
 
-  // 🪞 show paragraph only after its voice finishes — keep earlier ones stacked
-descEl.innerHTML += (descEl.innerHTML ? "<br><br>" : "") + segments[i];
-descEl.scrollTop = descEl.scrollHeight;
-
-
-   // 🎧 voice playback
-audioEl.src = currentUrl;
-await audioEl.play();
-await new Promise(r => (audioEl.onended = r));
-
-// 🔊 say "yeah" while next lyric is generating
-if (i + 1 < segments.length) {
-  try {
-    const yeahRes = await fetch(
-      `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent("yeah")}&lang=${userLang}`,
-      { headers: { "x-device-id": deviceId } }
-    );
-    const yeahBlob = await yeahRes.blob();
-    const yeahUrl = URL.createObjectURL(yeahBlob);
-    audioEl.src = yeahUrl;
+    // 🔊 Play current voice
+    audioEl.src = currentUrl;
     await audioEl.play();
     await new Promise(r => (audioEl.onended = r));
-  } catch (e) {
-    console.warn("⚠️ 'yeah' filler failed:", e);
-  }
-}
 
-// ✅ then move on to next lyric segment
-nextUrl = await nextPromise;
-removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
+    // ⚙️ Preload next while current finishes
+    nextUrl = await nextPromise;
 
+    // 🪄 Overlay progress
+    removeOverlayLine(voiceLine, `▶️ part ${i + 1}/${paragraphs.length}`);
   }
 
-  removeOverlayLine(voiceLine, "✅ voice & text finished");
+  removeOverlayLine(voiceLine, "✅ finished — refreshing next founder...");
   if (onEnd) onEnd();
-}
-
-// helper (reused)
-async function fetchVoiceSegment(segment) {
-  const res = await fetch(
-    `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(segment)}&lang=${userLang}`,
-    { headers: { "x-device-id": deviceId } }
-  );
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
 }
 
 /* ---------------- Main Drop Sequence ---------------- */
