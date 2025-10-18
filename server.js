@@ -364,46 +364,47 @@ const imageUrl = await generateImageUrl(brand, product, persona, topic);
 });
 
 /* ---------------- API: Voice ---------------- */
-
 app.get("/api/voice", async (req, res) => {
   const lang = req.query.lang || "en";
-let voice = "alloy";
-if (lang === "kr" || lang === "jp" || lang === "zh") voice = "verse";
-if (lang === "es") voice = "coral";
-if (lang === "fr") voice = "coral";
-
+  let voice = "alloy";
+  if (lang === "kr" || lang === "jp" || lang === "zh") voice = "verse";
+  if (lang === "es" || lang === "fr") voice = "coral";
 
   const text = req.query.text || "";
   if (!text.trim()) {
-    res.setHeader("Content-Type","audio/mpeg");
+    res.setHeader("Content-Type", "audio/mpeg");
     return res.send(Buffer.alloc(1000));
   }
+
   try {
-const out = await openai.audio.speech.create({
-  model: "gpt-4o-mini-tts",
-  voice: "alloy",             // alloy has clear rhythm; keep or experiment
-  input: rhythmicText,
-  format: "mp3",
-  speed: 1.05,                // slightly faster pacing
-  style: "energetic"          // pseudo-hint: some TTS engines accept this
-});
+    // 🧠 Add rhythmic pauses between bars for rap delivery
+    let rhythmicText = text
+      .replace(/\n/g, " ... ")            // pause between bars
+      .replace(/([,;])\s*/g, "$1 ... ")   // micro-pause on commas
+      .replace(/([.!?])\s*/g, "$1 ... "); // bigger pause after lines
 
-  // 🧠 Add rhythmic pauses between bars for rap delivery
-let rhythmicText = text
-  .replace(/\n/g, " ... ")            // pause between bars
-  .replace(/([,;])\s*/g, "$1 ... ")   // micro-pause on commas
-  .replace(/([.!?])\s*/g, "$1 ... "); // bigger pause after lines
+    // 🎤 Add short direction so the model performs like rap
+    rhythmicText = "Rap flow, confident tone, slight breath after each bar. " + rhythmicText;
 
-});
+    // 🧏 Generate the audio
+    const out = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice,
+      input: rhythmicText,
+      format: "mp3",
+      speed: 1.05,         // slightly quicker delivery
+      style: "energetic"   // hint for punchy rhythm
+    });
 
     const audioBuffer = Buffer.from(await out.arrayBuffer());
-    res.setHeader("Content-Type","audio/mpeg");
+    res.setHeader("Content-Type", "audio/mpeg");
     res.send(audioBuffer);
   } catch (e) {
     console.error("❌ Voice error:", e.message);
-    res.status(500).json({error:"Voice TTS failed"});
+    res.status(500).json({ error: "Voice TTS failed" });
   }
 });
+
 
 /* ---------------- API: Buy Credits ---------------- */
 app.post("/api/buy", async (req,res)=>{
