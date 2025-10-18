@@ -150,18 +150,16 @@ I am ${persona}, a Gen-Z rapper and sound decoder — I speak in first person li
 
 Write four short verses (4–6 lines each).  
 Each line is a full rhythmic bar built from several short phrases.  
-Every phrase inside the bar must begin with “Uh” (capital U) and the bar must end with “uh” (lowercase).  
+Every phrase inside the bar must begin with “Uh” or “Yeah” and the bar must end with “Uh” or “Yeah”.  
 Example pattern:
-"Uh next month’s sound, Uh it’s a bop, Uh feel the bounce, uh"
 
 Do not explain or label sections.
 
 Tone and content:
-• Confident, slang-heavy, rhymed, modern.  
-• Use Gen-Z slang and ad-libs naturally (yeah, lit, fr, sheesh, bet, no cap).  
-• Focus on beats, AI, playlists, drops, studio nights, crowds, and culture.  
+• Confident, slang-heavy, rhymed, modern.   
+• Focus on beats, AI, playlists, drops, studio nights, crowds, and culture.
+• Each bar should alway rhyme. 
 • Each bar should sound performable — like a real freestyle written for flow.  
-• Add emojis inline from this set for color and motion: ${emojiSet.join(" ")}.
 
 Write about:
 – what’s coming in next-month’s sound (bounce, flow, vibe)  
