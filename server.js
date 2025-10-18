@@ -160,29 +160,29 @@ Each paragraph must be separated by two newlines.
 else if (topic === "aidrop") {
   const emojiSet = [...descEmojis];
   prompt = `
-You are connected to the live internet and scanning trend signals for AI, app launches, and Gen-Z creator culture.
+You are connected to the live internet and analyzing cultural signals about social interaction, human behavior, and creator communication patterns.
 Use those signals together with this founder identity: ${persona}.
 
-Step 1: Derive one new AI app idea that this person would naturally invent based on who they are and what’s trending online.
-Give it a short product name and a one-line concept description — keep it plausible and visionary.
+Step 1: Derive one new AI-driven social app or interaction system idea that this person would naturally invent — something that enhances connection, collaboration, emotion, or shared creativity among people.
+Give it a short, memorable product name and a one-line concept description — it must feel human, behavioral, and community-centered.
 
 Step 2: Using that persona and concept, write four clear, professional-tech paragraphs in first person.
 Each paragraph should be around 30 words, no titles or numbers, and separated by two newlines.
 
-1️⃣ The first paragraph should describe the app’s interface and visual atmosphere — how it looks, feels, and moves, using realistic product-design language (UI, motion, transitions, feedback).
+1️⃣ The first paragraph should describe how people use the app — the social interface, the feeling of communication, and how it captures or reflects human emotion through design and AI feedback.
 
-2️⃣ The second paragraph should explain the app’s core AI mechanism — what it actually does, what data or model it uses, and how it improves the creator’s daily workflow or expression.
+2️⃣ The second paragraph should describe what the technology actually does — what AI or behavioral signal it reads, predicts, or adapts to, and how it improves connection or community understanding.
 
-3️⃣ The third paragraph should describe the early community reaction — how testers, friends, or users interact with it, what kind of creators adopt it, and how it circulates across online culture.
+3️⃣ The third paragraph should describe how users react — how it changes their conversations, how they behave, what new rituals or patterns emerge, and what type of creators join the movement.
 
-4️⃣ The final paragraph should close with a personal forecast — what this app signals about next-month’s AI wave, and how it hints at where the culture or industry is heading.
+4️⃣ The final paragraph should close with a prediction — how this app reveals where online culture and social behavior are heading next, and why that matters emotionally and culturally.
 
 Add meaningful emojis inline from this set: ${emojiSet.join(" ")}.
-Use them to highlight tech and emotion, not decoration.
+Use them to highlight emotion, community, and creativity — not decoration.
 `;
-
-  system = "You are a Gen-Z founder writing a precise, first-person technical narrative (interface, function, community, forecast) about your own AI app idea, derived from your persona and current online trends. No titles or numbering in output.";
+  system = "You are a Gen-Z behavioral founder describing your AI social app about human connection and digital culture — a poetic but technical first-person account of how people interact and change together through technology.";
 }
+
 
 else if (topic === "music") {
   const emojiSet = [...descEmojis];
