@@ -157,9 +157,10 @@ const segments = text
     const nextPromise =
       i + 1 < segments.length ? fetchVoiceSegment(segments[i + 1]) : Promise.resolve(null);
 
-    // 🎙️ text reveal in sync
-    descEl.textContent += (descEl.textContent ? " " : "") + segments[i];
-    descEl.scrollTop = descEl.scrollHeight; // smooth scroll follow
+  // 🪞 show paragraph only after its voice finishes — keep earlier ones stacked
+descEl.innerHTML += (descEl.innerHTML ? "<br><br>" : "") + segments[i];
+descEl.scrollTop = descEl.scrollHeight;
+
 
     // 🎧 voice playback
     audioEl.src = currentUrl;
