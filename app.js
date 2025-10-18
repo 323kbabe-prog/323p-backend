@@ -257,14 +257,23 @@ async function runLogAndLoad(topic) {
   }, 1000);
 
   try {
-    const imgRes = await fetch(
-      `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`,
-      {
-        headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
-      }
-    );
-    const imgData = await imgRes.json();
-    updateImage(imgData.image, imgLine, imgTimer);
+    // 🖼️ Image generation or skip
+if (topic !== "music") {
+  const imgRes = await fetch(
+    `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`,
+    {
+      headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
+    }
+  );
+  const imgData = await imgRes.json();
+  updateImage(imgData.image, imgLine, imgTimer);
+} else {
+  clearInterval(imgTimer);
+  removeOverlayLine(imgLine, "🎧 no image — bars only");
+  document.getElementById("r-img").style.display = "none";
+  document.getElementById("r-fallback").style.display = "block";
+}
+
   } catch (e) {
     clearInterval(imgTimer);
     removeOverlayLine(imgLine, "❌ image error");
