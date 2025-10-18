@@ -104,22 +104,22 @@ if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
   prompt = `
 Predict next-month beauty trend for ${pick.product || pick.brand}.
-I am ${persona}. Write in first person as if I'm speaking from personal experience, sharing what I see and feel in beauty culture.
+I am ${persona}, speaking from my own experience as a Gen-Z beauty creator who lives and breathes trend signals.
 
-Generate four short paragraphs (each around 30 words):
+Write four short paragraphs (each around 30 words) in first person, but do not include any paragraph titles or numbers.
 
-Paragraph 1 → Describe the upcoming visuals, tones, and materials — how they appear to me and what details catch my eye. Speak like a Gen-Z beauty analyst + creator — emotional yet logical.
+1️⃣ The first paragraph should describe upcoming visuals, tones, and materials I notice emerging in beauty looks — how they appear to me and why they catch my eye.
 
-Paragraph 2 → Describe the touch, texture, and sensory experience from my perspective — how it feels to use or wear, and why that sensation matters to me.
+2️⃣ The second paragraph should describe the touch, texture, and sensory experience — how it feels to use or wear, and how that sensation connects to emotion.
 
-Paragraph 3 → Describe the cultural and emotional meaning — how the vibe connects to mood, people, or daily life. Blend sensory forecasting (what people will love) with product decoding (why it matters).
+3️⃣ The third paragraph should describe the cultural and emotional meaning — how this trend fits into everyday life, mood, and identity, blending what people will love with why it matters.
 
-Paragraph 4 → End with one key insight or prediction about next-month beauty forecasting, stated like a confident creator closing a post.
+4️⃣ The final paragraph should end with one key insight or prediction about next-month beauty forecasting — my personal closing thought as a creator, confident yet reflective.
 
 Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
 Each paragraph must be separated by two newlines.
 `;
-  system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal).";
+  system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
  else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
