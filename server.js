@@ -176,7 +176,6 @@ Each paragraph should be around 30 words, no titles or numbers, and separated by
 
 4️⃣ The final paragraph should close with a prediction — how this app reveals where online culture and social behavior are heading next, and why that matters emotionally and culturally.
 
-Add meaningful emojis inline from this set: ${emojiSet.join(" ")}.
 Use them to highlight emotion, community, and creativity — not decoration.
 `;
   system = "You are a Gen-Z behavioral founder describing your AI social app about human connection and digital culture — a poetic but technical first-person account of how people interact and change together through technology.";
