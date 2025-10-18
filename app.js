@@ -358,3 +358,10 @@ document.getElementById("drop-aidrop-btn").addEventListener("click", async () =>
   autoRefresh = true;
   await loadTrend();
 });
+
+document.getElementById("drop-music-btn").addEventListener("click", async () => {
+  currentTopic = "music";
+  autoRefresh = true;
+  await loadTrend();
+});
+
