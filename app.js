@@ -176,6 +176,7 @@ async function runLogAndLoad(topic) {
   const userId = await ensureUser();
   if (!userId) return;
 
+  // overlay timer
   const descLine = appendOverlay("✍️ waiting for the description…", "#d9f0ff", true);
   let descElapsed = 0;
   const descTimer = setInterval(() => {
@@ -193,14 +194,12 @@ async function runLogAndLoad(topic) {
   let trend = null;
   try {
     const descRes = await fetch(
-  `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`,
-
-      {
-        headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
-      }
+      `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`,
+      { headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId } }
     );
+    clearInterval(descTimer);
+
     if (!descRes.ok) {
-      clearInterval(descTimer);
       if (descRes.status === 403) {
         removeOverlayLine(descLine, "💸 you’re dry rn… top-up to keep vibin’");
         const banner = document.getElementById("simulate-banner");
@@ -212,13 +211,11 @@ async function runLogAndLoad(topic) {
       hideOverlay();
       return;
     }
+
     trend = await descRes.json();
   } catch (e) {
+    clearInterval(descTimer);
     console.error("❌ Description error:", e);
-  }
-
-  clearInterval(descTimer);
-  if (!trend || !trend.brand) {
     removeOverlayLine(descLine, "❌ description failed");
     hideOverlay();
     return;
@@ -228,12 +225,14 @@ async function runLogAndLoad(topic) {
   updateUI(trend);
   updateCredits();
 
+  // start voice flow
   playVoiceAndRevealText(trend.description, () => {
     if (autoRefresh && !stopCycle) {
       setTimeout(() => loadTrend(), 2000);
     }
   });
 
+  // ---------------- Image Handling ----------------
   const imgLine = appendOverlay("🖼️ waiting for the image…", "#d9f0ff", true);
   let imgElapsed = 0;
   const imgTimer = setInterval(() => {
@@ -242,35 +241,39 @@ async function runLogAndLoad(topic) {
   }, 1000);
 
   try {
-    // 🖼️ Image generation or skip
-if (topic !== "music") {
-  const imgRes = await fetch(
-    `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(trend.brand)}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`,
-    {
-      headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId }
+    // 🧠 323AIDROP = voice-only (skip image)
+    if (topic === "aidrop") {
+      clearInterval(imgTimer);
+      removeOverlayLine(imgLine, "🧠 no image — voice-only drop");
+      document.getElementById("r-img").style.display = "none";
+      document.getElementById("r-fallback").style.display = "block";
     }
-  );
-  const imgData = await imgRes.json();
-  updateImage(imgData.image, imgLine, imgTimer);
-} else {
-  clearInterval(imgTimer);
-  removeOverlayLine(imgLine, "🎧 no image — bars only");
-  document.getElementById("r-img").style.display = "none";
-  document.getElementById("r-fallback").style.display = "block";
-}
-
+    // 💄 cosmetics → normal image
+    else if (topic !== "music") {
+      const imgRes = await fetch(
+        `https://three23p-backend.onrender.com/api/image?topic=${topic}&brand=${encodeURIComponent(
+          trend.brand
+        )}&product=${encodeURIComponent(trend.product)}&persona=${encodeURIComponent(trend.persona)}`,
+        { headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId } }
+      );
+      const imgData = await imgRes.json();
+      updateImage(imgData.image, imgLine, imgTimer);
+    }
+    // 🎵 music → bars only
+    else {
+      clearInterval(imgTimer);
+      removeOverlayLine(imgLine, "🎧 no image — bars only");
+      document.getElementById("r-img").style.display = "none";
+      document.getElementById("r-fallback").style.display = "block";
+    }
   } catch (e) {
     clearInterval(imgTimer);
     removeOverlayLine(imgLine, "❌ image error");
     updateImage(null, imgLine, imgTimer);
   }
+
   hideOverlay();
   return trend;
-}
-
-async function loadTrend() {
-  if (stopCycle) return;
-  currentTrend = await runLogAndLoad(currentTopic);
 }
 
 /* ---------------- Buy Credits ---------------- */
