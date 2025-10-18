@@ -285,3 +285,4 @@ const res = await fetch(
     await loadTrend();
   };
 }
+});
