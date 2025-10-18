@@ -122,24 +122,50 @@ Each paragraph must be separated by two newlines.
   system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
  else if (topic === "aidrop") {
-  // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
-  prompt = `Write exactly 150 words in a first-person influencer-style description introducing a near-future AI product idea.
-The product name is "${pick.concept}" by ${pick.brand}.
-I am ${persona}.
-Tone: Gen-Z founder + lifestyle influencer — confident, emotional, sensory, slightly surreal but realistic.
-The product must feel like a real tech drop about to launch within months.
-Include both technical and emotional elements.
-Add emojis inline in every sentence, keep the pacing like a TikTok narration.
-Mention one or two real-sounding use cases and feelings.
-Finish with 3-5 realistic hashtags (no random nonsense).
-Avoid repeating brand or concept more than 3 times.
-Structure should flow like a natural 300-word spoken post — no sections or bullet points.`;
-  system = "You are a Gen-Z tech influencer describing a futuristic AI product drop in first person, emotionally sharp and stylish.";
-} else {
-  prompt = `Write exactly 300 words in a first-person surreal story about ${pick.concept}.
-Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
-  system = "You are a college student living AI culture.";
+  const emojiSet = [...descEmojis];
+  prompt = `
+Predict next-month AI product drop concept called "${pick.concept}" by ${pick.brand}.
+I am ${persona}, a Gen-Z tech founder and lifestyle influencer speaking in first person, like I’m announcing my own near-future AI launch.
+
+Write four short paragraphs (each around 30 words) in first person, but do not include any paragraph titles or numbers.
+
+1️⃣ The first paragraph should describe how the product looks and feels in real life — surfaces, light, motion, the moment I first power it on — cinematic and sensory, as if I’m unboxing it.
+
+2️⃣ The second paragraph should describe what the product actually does — the AI feature, the experience, how it changes my day or workflow — make it feel intimate, emotional, and futuristic.
+
+3️⃣ The third paragraph should describe the cultural reaction — how my friends, audience, or collaborators respond, what this drop means to the creator scene, how it sparks energy online.
+
+4️⃣ The final paragraph should end with my personal prediction — how this product points to next-month’s AI wave, what I believe it will change, and why it feels like the start of a new movement.
+
+Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
+Each paragraph must be separated by two newlines.
+`;
+  system = "You are a Gen-Z AI influencer and founder writing four short, first-person poetic paragraphs (look, function, culture, prediction) about a near-future AI product drop — no visible titles.";
 }
+ else if (topic === "music") {
+  const emojiSet = [...descEmojis];
+  prompt = `
+Predict next-month music trend or sound movement.
+I am ${persona}, a Gen-Z artist and cultural decoder — I speak in first person like a rapper forecasting my own track drop.
+
+Write four short rap-style verses (each around 30 words). 
+Do not include verse titles or numbers.
+
+1️⃣ Verse 1 — Describe what I hear coming next month: beats, tempo, rhythm, how it moves the crowd, how I feel it in my bones. Use playful repetition of words, letters, or spaces to make it sound rhythmic when spoken.
+
+2️⃣ Verse 2 — Describe the vibe of creation: studio life, late-night sessions, sound bleeding through headphones, lights flickering — make the words bounce like bars, stretching syllables for flow.
+
+3️⃣ Verse 3 — Describe the emotion and culture around it: how people react, how it changes mood, how it feels online, in cars, on TikTok loops — build cadence and rhyme naturally.
+
+4️⃣ Verse 4 — End with one confident prediction or declaration — what next-month’s sound means for the culture, how I’ll ride that beat into the future. Keep the tone cinematic, proud, and alive.
+
+Encourage creative word bending, repeated letters, echo words (like “flowww,” “ba-ba-bass”), and natural pauses (add “...”) to enhance rhythm.
+Add emojis inline in every line from this set: ${emojiSet.join(" ")}.
+Separate each verse with two newlines.
+`;
+  system = "You are a Gen-Z rapper and sound forecaster writing four rhythmic first-person verses about next-month music trends — playful, emotional, and phonetically alive, without visible verse numbers.";
+}
+
   // 🌐 Auto-translate to selected language
   const lang = pick.lang || "en"; // fallback
   if (lang !== "en") {
