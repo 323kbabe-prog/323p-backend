@@ -104,25 +104,24 @@ if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
   prompt = `
 Predict next-month beauty trend for ${pick.product || pick.brand}.
-I am ${persona}, a Gen-Z beauty creator with rhythm — I speak in first person like a rapper narrating my real life.
+I am ${persona}, speaking from my own experience as a Gen-Z beauty creator who lives and breathes trend signals.
 
-Write four short verses (each around 30 words), like rap lyrics with flow and inner rhythm.
-Do not include verse titles or numbers.
-Each verse should rhyme loosely, follow a beat, and sound natural when spoken aloud.
+Write four short paragraphs (each around 30 words) in first person, but do not include any paragraph titles or numbers.
 
-1️⃣ Verse 1 — Describe the visuals, tones, and materials I'm seeing in daily life (mirror lights, city glow, makeup kits, soft neon reflection).
-2️⃣ Verse 2 — Describe the textures and sensations — how it feels on skin, hands, lips; my sensory vibe while creating or performing.
-3️⃣ Verse 3 — Describe the cultural and emotional energy — people’s reactions, social media love, DMs, and what this means to me.
-4️⃣ Verse 4 — End with a confident next-month prediction — my insight about where beauty is heading and how I’ll ride that wave.
+1️⃣ The first paragraph should describe upcoming visuals, tones, and materials I notice emerging in beauty looks — how they appear to me and why they catch my eye.
 
-Keep it lyrical, punchy, and rhythmic like a slow rap flow (no chorus).
-Add emojis inline in every line from this set: ${emojiSet.join(" ")}.
-Separate each verse with two newlines.
+2️⃣ The second paragraph should describe the touch, texture, and sensory experience — how it feels to use or wear, and how that sensation connects to emotion.
+
+3️⃣ The third paragraph should describe the cultural and emotional meaning — how this trend fits into everyday life, mood, and identity, blending what people will love with why it matters.
+
+4️⃣ The final paragraph should end with one key insight or prediction about next-month beauty forecasting — my personal closing thought as a creator, confident yet reflective.
+
+Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
+Each paragraph must be separated by two newlines.
 `;
-  system = "You are a Gen-Z beauty creator and rapper blending beauty forecasting with lived experience, writing four rhythmic first-person verses with rhyme and flow.";
+  system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
-
-else if (topic === "aidrop") {
+ else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
   prompt = `Write exactly 150 words in a first-person influencer-style description introducing a near-future AI product idea.
 The product name is "${pick.concept}" by ${pick.brand}.
@@ -159,14 +158,12 @@ Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
       temperature: 0.9,
       messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
     });
-   const raw = completion.choices[0].message.content.trim();
-// remove any "Verse" or "Paragraph" labels GPT might include
-const clean = raw
-  .replace(/^Verse\s*\d+[:\-–]?\s*/gim, "")
-  .replace(/^Paragraph\s*\d+[:\-–]?\s*/gim, "")
-  .replace(/\n{3,}/g, "\n\n") // normalize spacing
-  .trim();
-return clean;
+    return completion.choices[0].message.content.trim();
+  } catch (e) {
+    console.error("❌ Description error:", e.message);
+    return prompt;
+  }
+}
 
 /* ---------------- Image Generator ---------------- */
 async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
@@ -366,47 +363,35 @@ const imageUrl = await generateImageUrl(brand, product, persona, topic);
 });
 
 /* ---------------- API: Voice ---------------- */
+
 app.get("/api/voice", async (req, res) => {
   const lang = req.query.lang || "en";
-  let voice = "alloy";
-  if (lang === "kr" || lang === "jp" || lang === "zh") voice = "verse";
-  if (lang === "es" || lang === "fr") voice = "coral";
+let voice = "alloy";
+if (lang === "kr" || lang === "jp" || lang === "zh") voice = "verse";
+if (lang === "es") voice = "coral";
+if (lang === "fr") voice = "coral";
+
 
   const text = req.query.text || "";
   if (!text.trim()) {
-    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Content-Type","audio/mpeg");
     return res.send(Buffer.alloc(1000));
   }
-
   try {
-    // 🧠 Add rhythmic pauses between bars for rap delivery
-    let rhythmicText = text
-      .replace(/\n/g, " ... ")            // pause between bars
-      .replace(/([,;])\s*/g, "$1 ... ")   // micro-pause on commas
-      .replace(/([.!?])\s*/g, "$1 ... "); // bigger pause after lines
-
-    // 🎤 Add short direction so the model performs like rap
-    rhythmicText = "Rap flow, confident tone, slight breath after each bar. " + rhythmicText;
-
-    // 🧏 Generate the audio
-    const out = await openai.audio.speech.create({
-      model: "gpt-4o-mini-tts",
-      voice,
-      input: rhythmicText,
-      format: "mp3",
-      speed: 1.05,         // slightly quicker delivery
-      style: "energetic"   // hint for punchy rhythm
-    });
+   const out = await openai.audio.speech.create({
+  model: "gpt-4o-mini-tts",
+  voice,
+  input: text
+});
 
     const audioBuffer = Buffer.from(await out.arrayBuffer());
-    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Content-Type","audio/mpeg");
     res.send(audioBuffer);
   } catch (e) {
     console.error("❌ Voice error:", e.message);
-    res.status(500).json({ error: "Voice TTS failed" });
+    res.status(500).json({error:"Voice TTS failed"});
   }
 });
-
 
 /* ---------------- API: Buy Credits ---------------- */
 app.post("/api/buy", async (req,res)=>{
