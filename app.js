@@ -362,3 +362,19 @@ document.getElementById("drop-music-btn").addEventListener("click", async () => 
   await loadTrend();
 });
 
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("drop-aidrop-btn");
+  if (btn) {
+    btn.onclick = async () => {
+      console.log("🌐 AIDROP button clicked");
+      currentTopic = "aidrop";
+      autoRefresh = true;
+      stopCycle = false;
+      await loadTrend();
+    };
+  } else {
+    console.warn("❌ drop-aidrop-btn not found in DOM");
+  }
+});
+
+
