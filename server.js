@@ -416,6 +416,8 @@ app.get("/api/description", async (req, res) => {
       mimicLine,
       hashtags:["#NowTrending"],
       isDaily:false
+      concept: pick.concept || "AI product idea",
+      insight: "auto-generated technical insight about this founder’s app"
     });
   } catch (err) {
     console.error("❌ Description error:", err.message);
