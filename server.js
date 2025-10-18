@@ -103,15 +103,19 @@ async function makeDescription(topic, pick, persona) {
 if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
   prompt = `
-Generate four short paragraphs (each around 30 words) about next-month beauty forecasting.
-
-Paragraph 1 →  describe upcoming visuals, tones, and materials.
-Paragraph 2 →  describe touch, texture, and sensory experience.
-Paragraph 3 →  describe cultural and emotional meaning.
-Paragraph 4 →  end with one key insight or prediction.
-
+Predict next-month beauty trend for ${pick.product || pick.brand}.
 I am ${persona}.
-Write in Gen-Z creator tone — poetic, sensory, confident, analytical.
+
+Generate four short paragraphs (each around 30 words) 
+Paragraph 1 →  describe upcoming visuals, tones, and materials, 
+Speak like a Gen-Z beauty analyst + creator — emotional yet logical.
+Paragraph 2 →  describe touch, texture, and sensory experience, 
+Blend sensory forecasting (what people will love) and product decoding (why it matters).
+Paragraph 3 →  describe cultural and emotional meaning, 
+Blend sensory forecasting (what people will love) and product decoding (why it matters).
+Paragraph 4 →  end with one key insight or prediction,
+about next-month beauty forecasting.
+
 Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
 Each paragraph must be separated by two newlines.
 `;
