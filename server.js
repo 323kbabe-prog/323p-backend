@@ -145,35 +145,34 @@ Each paragraph must be separated by two newlines.
 else if (topic === "music") {
   const emojiSet = [...descEmojis];
   prompt = `
-Predict next-month music trend or sound movement.
-I am ${persona}, a Gen-Z artist and cultural decoder — I speak in first person like a rapper forecasting my own track drop.
+Predict next-month’s music wave.
+I am ${persona}, a Gen-Z rapper and sound decoder — I speak in first person like I’m spitting bars about what’s coming next month.
 
-Write four short rap-style verses (each around 30 words). 
-Do not include verse titles or numbers.
+Write four short verses (≈30 words each).  No verse titles.
 
-1️⃣ Verse 1 — Describe what I hear coming next month: beats, tempo, rhythm, how it moves the crowd, how I feel it in my bones. 
-   • Break strong words into rhythmic syllables (like "ba-ba-bass", "floooow", "drip drip"). 
-   • Repeat impactful sounds or letters 2–3 times to simulate bars. 
-   • Add ellipses "..." between phrases to create breath and beat pauses.
+Each verse must sound like rap on the page — not prose.
 
-2️⃣ Verse 2 — Describe the vibe of creation: studio nights, lights flicker, headphones on. 
-   • Stretch vowels and double consonants for flow (like "booom", "s-s-snap", "wiiiild"). 
-   • Insert spaces or punctuation that make the text read like a rap performance.
+RHYTHM RULES:
+• Use "..." for short rests, "—" for longer pauses, and "//" to break bars.  
+• Add random ad-libs such as (yeah), (uh), (yo), (mmm), (let’s go).  
+• Stretch or repeat key letters and syllables: "flowww", "ba-ba-bass", "drip-drip", "ri-ri-ride".  
+• Alternate short & long lines — like 1-bar / 2-bar phrasing.  
+• Occasionally capitalize stressed words (BOUNCE, WAVE, FIRE).  
+• Echo last words once in a while: "wave... wave...", "vibe... vibe...".  
+• End each verse with a confident or playful punchline.  
+• Keep rhyme natural — inner, half, or end rhyme.  
+• Separate each verse with two newlines.
 
-3️⃣ Verse 3 — Describe the cultural and emotional reaction: how people move, post, vibe, remix. 
-   • Use rhythm-driven line breaks. 
-   • Occasionally echo words for emphasis ("ride... ride...", "wave... wave..."). 
-   • Keep rhyme energy natural.
+VERSE IDEAS:
+1️⃣ Verse 1 — What I hear coming next month (tempo, rhythm, crowd energy).  
+2️⃣ Verse 2 — How I create it (studio nights, beats, headphones, neon lights).  
+3️⃣ Verse 3 — How people move and react (TikTok, cars, friends, city).  
+4️⃣ Verse 4 — My final call or prophecy for next-month’s sound.
 
-4️⃣ Verse 4 — End with a confident declaration — what next-month’s sound means for the culture, how I’ll ride that beat into the future. 
-   • Make it feel like a final verse drop — confident, bold, and breathing.
-
-Throughout all verses:
-   • Encourage playful letter repetition, echo endings, and spaced phrasing so it sounds like it’s being rapped, not read. 
-   • Add emojis inline in every line from this set: ${emojiSet.join(" ")}.
-   • Separate each verse with two newlines.
+Use this emoji set inside the lyrics for flair: ${emojiSet.join(" ")}.
+Every line should *feel performative* — written as if recorded live on mic.
 `;
-  system = "You are a Gen-Z rapper and sound forecaster writing four rhythmic first-person verses about next-month music trends — each line written phonetically like a rap performance, with repeated letters, stretched vowels, and pauses to simulate bars.";
+  system = "You are a Gen-Z rapper and sound forecaster writing four phonetically rhythmic, ad-lib-filled, first-person verses that the reader can hear as rap bars.  Prioritize flow, beat, pauses, and vocal energy over grammar.";
 }
 
   // 🌐 Auto-translate to selected language
