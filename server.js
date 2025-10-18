@@ -152,7 +152,6 @@ Write four short paragraphs (each around 30 words) in first person, but do not i
 
 4️⃣ The final paragraph should end with one key insight or prediction about next-month beauty forecasting — my personal closing thought as a creator, confident yet reflective.
 
-Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
 Each paragraph must be separated by two newlines.
 `;
   system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
