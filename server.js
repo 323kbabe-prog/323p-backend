@@ -408,17 +408,18 @@ app.get("/api/description", async (req, res) => {
     let mimicLine = null;
     if (topic === "music") mimicLine = `🎶✨ I tried a playful move like ${pick.artist} 😅.`;
 
-    res.json({
-      brand: pick.brand || pick.artist || pick.issue || "323aidrop",
-      product: pick.product || pick.track || pick.keyword || pick.concept,
-      persona,
-      description,
-      mimicLine,
-      hashtags:["#NowTrending"],
-      isDaily:false
-      concept: pick.concept || "AI product idea",
-      insight: "auto-generated technical insight about this founder’s app"
-    });
+res.json({
+  brand: pick.brand || pick.artist || pick.issue || "323aidrop",
+  product: pick.product || pick.track || pick.keyword || pick.concept,
+  persona,
+  description,
+  mimicLine,
+  hashtags: ["#NowTrending"],
+  isDaily: false,
+  concept: pick.concept || "AI product idea",
+  insight: "auto-generated technical insight about this founder’s app"
+});
+
   } catch (err) {
     console.error("❌ Description error:", err.message);
     res.status(500).json({ error: "Description generation failed" });
