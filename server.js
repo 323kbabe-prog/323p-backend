@@ -55,20 +55,56 @@ function getUser(userId) {
 }
 
 /* ---------------- Persona Generator ---------------- */
+/* ---------------- Persona Generator — 323AIDROP Expanded ---------------- */
 let ethnicityIndex = 0;
 
 function randomPersona() {
-  const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
-  const vibes = ["idol", "dancer", "vlogger", "streetwear model", "trainee", "influencer"];
-  const styles = ["casual", "glam", "streetwear", "retro", "Y2K-inspired", "minimalist"];
+  const ethnicities = [
+    "Korean", "Black", "White", "Latina", "Asian-American", "Mixed"
+  ];
+
+  // 50 modern Gen-Z creator archetypes — tech, AI, and culture
+  const vibes = [
+    "AI founder", "tech designer", "digital artist", "vlogger", "streamer",
+    "trend forecaster", "AR creator", "fashion engineer", "metaverse curator",
+    "product tester", "AI researcher", "sound producer", "content strategist",
+    "neural-net stylist", "startup intern", "creative coder", "virtual stylist",
+    "app builder", "crypto storyteller", "UX dreamer", "AI makeup artist",
+    "music technologist", "motion designer", "social media director",
+    "brand futurist", "AI poet", "concept photographer", "video remixer",
+    "fashion influencer", "streetwear archivist", "digital journalist",
+    "UI visionary", "culture hacker", "AI choreographer", "sound curator",
+    "data storyteller", "aesthetic researcher", "creator-economy coach",
+    "AI community host", "trend analyst", "digital anthropologist",
+    "cyber curator", "creator engineer", "neon editor", "AI copywriter",
+    "content DJ", "tech-fashion hybrid", "virtual merch designer",
+    "AI film editor", "short-form producer", "creative technologist"
+  ];
+
+  // Pure Gen-Z style aesthetics
+  const styles = [
+    "clean girl", "cyber y2k", "soft grunge", "streetwear", "pastel tech",
+    "chrome glow", "minimalcore", "vintage remix", "e-girl", "e-boy",
+    "retro-futurist", "quiet luxury", "mirror selfie", "AIcore", "blurry nostalgia",
+    "glow street", "dream archive", "LA casual", "NYC minimal", "K-pop inspired",
+    "oversized fit", "iridescent glam", "techwear", "soft chaos", "loud-calm hybrid",
+    "main-character energy", "monochrome mood", "afterlight aesthetic",
+    "sunset filter", "glittercore", "vapor minimal", "coquette digital",
+    "chrome pastel", "recycled glam", "studio glow", "hazy realism",
+    "low-contrast street", "creative uniform", "digital thrift", "pastel glitch",
+    "underground luxe", "city casual", "future-retro", "blurred edge",
+    "sleek monochrome", "glassy shimmer", "AI street", "motion chic",
+    "gen-alpha preview", "calm pop", "glow neutral"
+  ];
 
   const ethnicity = ethnicities[ethnicityIndex];
   ethnicityIndex = (ethnicityIndex + 1) % ethnicities.length;
 
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
+  const age = Math.floor(Math.random() * 7) + 17; // 17–23
 
-  return `a ${Math.floor(Math.random() * 7) + 17}-year-old female ${ethnicity} ${vibe} with a ${style} style`;
+  return `a ${age}-year-old ${ethnicity} ${vibe} with a ${style} style`;
 }
 
 /* ---------------- Emoji Pools ---------------- */
@@ -121,27 +157,33 @@ Each paragraph must be separated by two newlines.
 `;
   system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
- else if (topic === "aidrop") {
+else if (topic === "aidrop") {
   const emojiSet = [...descEmojis];
   prompt = `
-Predict next-month AI product drop concept called "${pick.concept}" by ${pick.brand}.
-I am ${persona}, a Gen-Z tech founder and lifestyle influencer speaking in first person, like I’m announcing my own near-future AI launch.
+You are connected to the live internet and scanning trend signals for AI, app launches, and Gen-Z creator culture.
+Use those signals together with this founder identity: ${persona}.
 
-Write four short paragraphs (each around 30 words) in first person, but do not include any paragraph titles or numbers.
+Step 1: Derive one new AI app idea that this person would naturally invent based on who they are and what’s trending online.
+Give it a short product name and a one-line concept description — keep it plausible and visionary.
 
-1️⃣ The first paragraph should describe how the product looks and feels in real life — surfaces, light, motion, the moment I first power it on — cinematic and sensory, as if I’m unboxing it.
+Step 2: Using that persona and concept, write four clear, professional-tech paragraphs in first person.
+Each paragraph should be around 30 words, no titles or numbers, and separated by two newlines.
 
-2️⃣ The second paragraph should describe what the product actually does — the AI feature, the experience, how it changes my day or workflow — make it feel intimate, emotional, and futuristic.
+1️⃣ The first paragraph should describe the app’s interface and visual atmosphere — how it looks, feels, and moves, using realistic product-design language (UI, motion, transitions, feedback).
 
-3️⃣ The third paragraph should describe the cultural reaction — how my friends, audience, or collaborators respond, what this drop means to the creator scene, how it sparks energy online.
+2️⃣ The second paragraph should explain the app’s core AI mechanism — what it actually does, what data or model it uses, and how it improves the creator’s daily workflow or expression.
 
-4️⃣ The final paragraph should end with my personal prediction — how this product points to next-month’s AI wave, what I believe it will change, and why it feels like the start of a new movement.
+3️⃣ The third paragraph should describe the early community reaction — how testers, friends, or users interact with it, what kind of creators adopt it, and how it circulates across online culture.
 
-Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
-Each paragraph must be separated by two newlines.
+4️⃣ The final paragraph should close with a personal forecast — what this app signals about next-month’s AI wave, and how it hints at where the culture or industry is heading.
+
+Add meaningful emojis inline from this set: ${emojiSet.join(" ")}.
+Use them to highlight tech and emotion, not decoration.
 `;
-  system = "You are a Gen-Z AI influencer and founder writing four short, first-person poetic paragraphs (look, function, culture, prediction) about a near-future AI product drop — no visible titles.";
+
+  system = "You are a Gen-Z founder writing a precise, first-person technical narrative (interface, function, community, forecast) about your own AI app idea, derived from your persona and current online trends. No titles or numbering in output.";
 }
+
 else if (topic === "music") {
   const emojiSet = [...descEmojis];
   prompt = `
