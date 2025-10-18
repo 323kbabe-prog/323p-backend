@@ -84,10 +84,28 @@ async function ensureUser() {
 
 // ---------------- UI ----------------
 function updateUI(t) {
-  document.getElementById("r-persona").innerText = `👩‍🎤 ${t.persona || "…"}`;
-  document.getElementById("r-desc").innerText = t.description || "…";
+  // persona line
+  document.getElementById("r-persona").innerText =
+    `👩‍🎤 ${t.persona || "…"}`;
+
+  // brand / product / concept / insight lines
+  document.getElementById("r-label").innerText =
+    `⚡ ${t.brand || "AI drop brand"}`;
+  document.getElementById("r-title").innerText =
+    `💄 ${t.product || "AI product"}`;
+  document.getElementById("r-artist").innerText =
+    `🎶 ${t.concept || "AI concept"} `;
+  document.getElementById("r-fallback").innerText =
+    `📸 ${t.mimicLine || "Created by next-month founder insight"}`;
+  document.getElementById("voice-status").innerText =
+    `⚙️ ${t.insight || "AI system insight loading..."}`;
+
+  // description text
+  document.getElementById("r-desc").innerText =
+    t.description || "…loading description…";
+
+  // hide image for voice-only
   document.getElementById("r-img").style.display = "none";
-  document.getElementById("r-fallback").style.display = "block";
 }
 
 // ---------------- Voice ----------------
