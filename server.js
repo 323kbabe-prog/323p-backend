@@ -104,24 +104,26 @@ if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
   prompt = `
 Predict next-month beauty trend for ${pick.product || pick.brand}.
-I am ${persona}, speaking from my own experience as a Gen-Z beauty creator who lives and breathes trend signals.
+I am ${persona}, and I speak in first person like a Gen-Z beauty creator sharing real experiences from my own life.
 
-Write four short paragraphs (each around 30 words) in first person, but do not include any paragraph titles or numbers.
+Write four short paragraphs (each around 30 words) in first person, with no paragraph titles or numbers.
+Each paragraph should feel grounded in my real life — small daily moments, social settings, or creator habits — showing how I actually use or experience the trend.
 
-1️⃣ The first paragraph should describe upcoming visuals, tones, and materials I notice emerging in beauty looks — how they appear to me and why they catch my eye.
+1️⃣ Paragraph 1: Describe the visuals, tones, and materials as I notice them during my daily routine — mirror selfies, café reflections, studio lighting, or daylight walks.
 
-2️⃣ The second paragraph should describe the touch, texture, and sensory experience — how it feels to use or wear, and how that sensation connects to emotion.
+2️⃣ Paragraph 2: Describe the touch, texture, and sensory feel of the product as I use it — applying before class, filming, hanging with friends, or getting ready to post.
 
-3️⃣ The third paragraph should describe the cultural and emotional meaning — how this trend fits into everyday life, mood, and identity, blending what people will love with why it matters.
+3️⃣ Paragraph 3: Describe the cultural and emotional meaning I sense around me — how people react, what comments or messages I get, how this look shifts confidence or mood.
 
-4️⃣ The final paragraph should end with one key insight or prediction about next-month beauty forecasting — my personal closing thought as a creator, confident yet reflective.
+4️⃣ Paragraph 4: End with a key insight or prediction — how this trend might shape next month’s vibe, what I’ll do with it next, and how it reflects my generation’s energy.
 
+Keep tone poetic, confident, and natural — like a creator vlog voiceover.
 Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
-Each paragraph must be separated by two newlines.
+Separate each paragraph with two newlines.
 `;
-  system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
+  system = "You are a Gen-Z beauty creator and forecaster describing lived beauty experiences across four short first-person paragraphs connected to real daily life situations.";
 }
- else if (topic === "aidrop") {
+else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
   prompt = `Write exactly 150 words in a first-person influencer-style description introducing a near-future AI product idea.
 The product name is "${pick.concept}" by ${pick.brand}.
