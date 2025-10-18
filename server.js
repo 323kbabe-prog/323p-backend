@@ -146,36 +146,34 @@ else if (topic === "music") {
   const emojiSet = [...descEmojis];
   prompt = `
 Predict next-month’s music wave.
-I am ${persona}, a Gen-Z rapper and sound decoder — I speak in first person like I’m spitting bars about what’s coming next month.
+I am ${persona}, a Gen-Z rapper, writer, and sound decoder — I speak in first person like I’m on the mic, performing my own bars about what’s coming next month.
 
-Write four short verses (≈30 words each). No verse titles.
+Write four short verses, about 6–8 lines each.  
+Each line is a single rap bar — rhythmic, conversational, confident.  
+Do not include verse titles or numbers.
 
-Make it *sound performed*. Tear words apart into rhythmic fragments so the voice literally spells the beat.
-
-FLOW GRAMMAR:
-• Break most words into syllables or letters using hyphens or doubled letters:
-  - "bounce" → "b-b-bounce"
-  - "flow" → "f-f-flowww"
-  - "heart" → "ha-ha-heart"
-• Use "..." for short rests, "—" for long pauses, "//" to mark bar changes.
-• Randomly insert small ad-libs: (yeah), (uh), (yo), (mmm), (let’s go).
-• Stretch vowels and repeat endings: "loooove", "ti-i-ime", "shi-ii-ine".
-• Capitalize a few power words per verse (BOUNCE, FLOW, WAVE, FIRE).
-• Echo the final word sometimes: "ride... ride...", "wave... wave...".
-• Mix 1-word and 3-word lines to create swing.
-• Don’t worry about grammar — every line is about cadence and feeling.
-• Separate verses with two newlines.
+FLOW RULES:
+• Treat punctuation as rhythm: "..." = short rest, "—" = longer pause, "//" = bar break.  
+• Mix short and long bars for swing and pocket feel.  
+• Add ad-libs in parentheses: (yeah), (uh), (look), (let’s go), (mmm).  
+• Use inner rhymes and half rhymes — make the flow bounce, not stiff.  
+• Capitalize or isolate key words for emphasis (BOUNCE, FLOW, WAVE).  
+• Echo tail words sometimes: "wave... wave...", "ride... ride...".  
+• Keep vocabulary modern — talk about beats, culture, apps, AI, nightlife, creators, cities.  
+• Every verse should feel like a moment of real energy or reflection.  
+• Separate each verse with two newlines.
 
 VERSE IDEAS:
-1️⃣ Verse 1 — what I *hear* coming next month: tempo, rhythm, crowd energy.  
-2️⃣ Verse 2 — how I *create* it: studio, neon lights, headphones.  
-3️⃣ Verse 3 — how people *move*: TikTok, cars, friends, dance.  
-4️⃣ Verse 4 — my *prophecy* for the sound to come.
+1️⃣ Verse 1 — The sound I hear coming next month: rhythm, tempo, and crowd feeling.  
+2️⃣ Verse 2 — My creative process: studio nights, beats, headphones, inspiration.  
+3️⃣ Verse 3 — The culture and how people move: streets, TikTok loops, reactions.  
+4️⃣ Verse 4 — My prophecy: what this next sound means for us and where it’s headed.
 
-Include emojis inline for texture and motion from this set: ${emojiSet.join(" ")}.
-Each line must *look and sound* like a bar being rapped aloud — every word alive, torn, repeated, stretched, breathed.
+Use emojis inline for style and pulse from this set: ${emojiSet.join(" ")}.
+Write like a living freestyle — bars that could be performed right now.  
+No spelling games or syllable tears — let rhythm and phrasing create the beat.
 `;
-  system = "You are a Gen-Z rapper and sound forecaster writing four verses where nearly every word is phonetically torn apart into syllables or letters for rhythm. Focus on flow, stutter, breath, and sound over grammar.";
+  system = "You are a Gen-Z rapper and sound forecaster writing four authentic first-person rap verses about next-month’s music trends. Prioritize flow, rhythm, phrasing, and vocal performance over grammar. Each line is a bar.";
 }
 
   // 🌐 Auto-translate to selected language
