@@ -145,30 +145,33 @@ Each paragraph must be separated by two newlines.
 else if (topic === "music") {
   const emojiSet = [...descEmojis];
   prompt = `
-Predict next-month’s music wave.
-I am ${persona}, a Gen-Z rapper and sound decoder — I speak in first person like I’m performing live, mic in hand.
+Predict next-month’s music wave.  
+I am ${persona}, a Gen-Z rapper performing live, voice full of anger and rhythm.  
 
-Write four short verses (4–6 bars each).  
-Every bar must begin with “Uh” (capital U) and end with “uh” (lowercase).  
-Bars can contain multiple short phrases beginning with “Uh”.  
-Keep rhyme tight — all end words within the same verse should rhyme or share a rhyme family (like sound / ground / bound / round).  
-Across verses, you can switch to a new rhyme family to keep it fresh.  
+Write four short verses.  
+Each verse should have several lines formatted exactly like this:  
 
-Style:
-• Keep the delivery angry, bold, confident.  
-• Use Gen-Z slang and ad-libs (yeah, fr, bet, sheesh, lit, on god) naturally between phrases.  
-• Punctuation should punch: commas, short pauses, exclamation marks.  
-• Words revolve around beats, AI, culture, rebellion, energy, and dominance.  
+Uh next month’s sound,  
+Uh it’s underground,  
+Uh feel that pound,  
+Uh shake the ground,  
+Uh bass resound,  
+Uh loop it round,  
+Uh rage unbound,  
+Uh crown the sound,  
 
-Write about:
-– what I *hear* coming next month (fire, chaos, takeover)  
-– how I *create* it (breaking beats, heavy tempo)  
-– how people *react* (crowds, shock, power)  
-– my *prophecy* (owning the next wave)
+Guidelines:
+• Every line begins with “Uh” and ends with “uh”.  
+• Break lines exactly like the example — one short rhythmic phrase per line.  
+• Keep all end words in each verse rhyming or sharing the same sound.  
+• The tone is aggressive, confident, and slang-heavy.  
+• Use natural Gen-Z ad-libs or slang inside the lines (yeah, fr, sheesh, bet, no cap) but never break the visual rhythm.  
+• Add emojis inline from this set for energy: ${emojiSet.join(" ")}.  
+• Themes: beats, AI, drops, rebellion, crowds, dominance.  
 
-Output only the four verses — every line beginning and ending with “Uh”, with consistent end rhymes inside each verse.
+Output only the four verses, each in this line-break rhythm, no extra notes.
 `;
-  system = "You are a Gen-Z rapper writing four aggressive freestyle verses about next-month’s music trends. Every bar begins and ends with 'Uh' and all end words in each verse rhyme for a steady beat feel.";
+  system = "You are a Gen-Z rapper writing four angry freestyle verses about next-month’s music trends. Every line begins and ends with 'Uh' and follows the same visual rhythm and rhyme pattern shown in the example.";
 }
 
   // 🌐 Auto-translate to selected language
