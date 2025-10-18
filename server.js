@@ -151,11 +151,11 @@ I am ${persona}, a Gen-Z rapper performing live, voice full of anger and rhythm.
 Write four short verses.  
 Each verse should have several lines formatted exactly like this:  
 
-Uh next month’s sound, Uh it’s underground mmm mmm. 
-Uh feel that pound, Uh shake the ground mmm mmm.   
+Uh next month’s sound, it’s underground Uh. 
+Uh feel that pound, shake the ground Uh.   
 
 Guidelines:
-• Every line begins with “Uh” and ends with “mmm” “mmm”.  
+• Every line begins with “Uh” and ends with “Uh”.  
 • Break lines exactly like the example — one short rhythmic phrase per line.  
 • Keep all end words in each verse rhyming or sharing the same sound.  
 • The tone is aggressive, confident, and slang-heavy.  
