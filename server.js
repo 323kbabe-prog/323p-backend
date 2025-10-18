@@ -105,10 +105,10 @@ if (topic === "cosmetics" || topic === "nextmonth") {
   prompt = `
 Generate four short paragraphs (each around 30 words) about next-month beauty forecasting.
 
-Paragraph 1 → **Next-month look** — describe upcoming visuals, tones, and materials.
-Paragraph 2 → **Next-month feel** — describe touch, texture, and sensory experience.
-Paragraph 3 → **Next-month emotion** — describe cultural and emotional meaning.
-Paragraph 4 → **Next-month signal** — end with one key insight or prediction.
+Paragraph 1 →  describe upcoming visuals, tones, and materials.
+Paragraph 2 →  describe touch, texture, and sensory experience.
+Paragraph 3 →  describe cultural and emotional meaning.
+Paragraph 4 →  end with one key insight or prediction.
 
 I am ${persona}.
 Write in Gen-Z creator tone — poetic, sensory, confident, analytical.
