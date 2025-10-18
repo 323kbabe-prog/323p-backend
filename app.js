@@ -162,13 +162,32 @@ descEl.innerHTML += (descEl.innerHTML ? "<br><br>" : "") + segments[i];
 descEl.scrollTop = descEl.scrollHeight;
 
 
-    // 🎧 voice playback
-    audioEl.src = currentUrl;
+   // 🎧 voice playback
+audioEl.src = currentUrl;
+await audioEl.play();
+await new Promise(r => (audioEl.onended = r));
+
+// 🔊 say "yeah" while next lyric is generating
+if (i + 1 < segments.length) {
+  try {
+    const yeahRes = await fetch(
+      `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent("yeah")}&lang=${userLang}`,
+      { headers: { "x-device-id": deviceId } }
+    );
+    const yeahBlob = await yeahRes.blob();
+    const yeahUrl = URL.createObjectURL(yeahBlob);
+    audioEl.src = yeahUrl;
     await audioEl.play();
     await new Promise(r => (audioEl.onended = r));
+  } catch (e) {
+    console.warn("⚠️ 'yeah' filler failed:", e);
+  }
+}
 
-    nextUrl = await nextPromise;
-    removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
+// ✅ then move on to next lyric segment
+nextUrl = await nextPromise;
+removeOverlayLine(voiceLine, `▶️ segment ${i + 1}/${segments.length}`);
+
   }
 
   removeOverlayLine(voiceLine, "✅ voice & text finished");
