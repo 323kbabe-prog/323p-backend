@@ -159,12 +159,14 @@ Chaotic Gen-Z slang. Add emojis inline in every sentence.`;
       temperature: 0.9,
       messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
     });
-    return completion.choices[0].message.content.trim();
-  } catch (e) {
-    console.error("❌ Description error:", e.message);
-    return prompt;
-  }
-}
+   const raw = completion.choices[0].message.content.trim();
+// remove any "Verse" or "Paragraph" labels GPT might include
+const clean = raw
+  .replace(/^Verse\s*\d+[:\-–]?\s*/gim, "")
+  .replace(/^Paragraph\s*\d+[:\-–]?\s*/gim, "")
+  .replace(/\n{3,}/g, "\n\n") // normalize spacing
+  .trim();
+return clean;
 
 /* ---------------- Image Generator ---------------- */
 async function generateImageUrl(brand, product, persona, topic = "cosmetics") {
