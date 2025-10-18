@@ -104,23 +104,24 @@ if (topic === "cosmetics" || topic === "nextmonth") {
   const emojiSet = [...descEmojis];
   prompt = `
 Predict next-month beauty trend for ${pick.product || pick.brand}.
-I am ${persona}.
+I am ${persona}. Write in first person as if I'm speaking from personal experience, sharing what I see and feel in beauty culture.
 
-Generate four short paragraphs (each around 30 words) 
-Paragraph 1 →  describe upcoming visuals, tones, and materials, 
-Speak like a Gen-Z beauty analyst + creator — emotional yet logical.
-Paragraph 2 →  describe touch, texture, and sensory experience, 
-Blend sensory forecasting (what people will love) and product decoding (why it matters).
-Paragraph 3 →  describe cultural and emotional meaning, 
-Blend sensory forecasting (what people will love) and product decoding (why it matters).
-Paragraph 4 →  end with one key insight or prediction,
-about next-month beauty forecasting.
+Generate four short paragraphs (each around 30 words):
+
+Paragraph 1 → Describe the upcoming visuals, tones, and materials — how they appear to me and what details catch my eye. Speak like a Gen-Z beauty analyst + creator — emotional yet logical.
+
+Paragraph 2 → Describe the touch, texture, and sensory experience from my perspective — how it feels to use or wear, and why that sensation matters to me.
+
+Paragraph 3 → Describe the cultural and emotional meaning — how the vibe connects to mood, people, or daily life. Blend sensory forecasting (what people will love) with product decoding (why it matters).
+
+Paragraph 4 → End with one key insight or prediction about next-month beauty forecasting, stated like a confident creator closing a post.
 
 Add emojis inline in every sentence from this set: ${emojiSet.join(" ")}.
 Each paragraph must be separated by two newlines.
 `;
-  system = "You are a beauty trend forecaster writing four short poetic paragraphs (look, feel, emotion, signal).";
-} else if (topic === "aidrop") {
+  system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal).";
+}
+ else if (topic === "aidrop") {
   // 🌐 Hybrid AI Product Drop mode (influencer + startup pitch)
   prompt = `Write exactly 150 words in a first-person influencer-style description introducing a near-future AI product idea.
 The product name is "${pick.concept}" by ${pick.brand}.
