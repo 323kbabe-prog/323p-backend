@@ -160,30 +160,29 @@ Each paragraph must be separated by two newlines.
   system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
 else if (topic === "aidrop") {
-  const emojiSet = [...descEmojis];
+  const concept = pick.conceptName || pick.product || "AI social app";
   prompt = `
 You are connected to the live internet and analyzing cultural signals about social interaction, human behavior, and creator communication patterns.
 Use those signals together with this founder identity: ${persona}.
 
-Step 1: Derive one new AI-driven social app or interaction system idea that this person would naturally invent — something that enhances connection, collaboration, emotion, or shared creativity among people.
-Give it a short, memorable product name and a one-line concept description — it must feel human, behavioral, and community-centered.
+The product concept is called **"${concept}"**.  
+All writing must consistently describe and reference this same app name throughout the text. Do NOT invent a new name.
 
-Step 2: Using that persona and concept, write four clear, professional-tech paragraphs in first person.
-Each paragraph should be around 30 words, no titles or numbers, and separated by two newlines.
+Write four poetic yet technical paragraphs in first person.
+Each paragraph should be around 30 words, separated by two newlines.
 
-1️⃣ The first paragraph should describe how people use the app — the social interface, the feeling of communication, and how it captures or reflects human emotion through design and AI feedback.
+1️⃣ The first paragraph should describe how people use ${concept} — the social interface, the emotion of connection, and how it reflects human behavior through AI design feedback.
 
-2️⃣ The second paragraph should describe what the technology actually does — what AI or behavioral signal it reads, predicts, or adapts to, and how it improves connection or community understanding.
+2️⃣ The second paragraph should explain what the technology behind ${concept} actually does — what signal or data it reads, predicts, or adapts to, and how it deepens empathy or understanding.
 
-3️⃣ The third paragraph should describe how users react — how it changes their conversations, how they behave, what new rituals or patterns emerge, and what type of creators join the movement.
+3️⃣ The third paragraph should describe how users react — how ${concept} changes their conversations, behaviors, or rituals, and what types of creators join the experience.
 
-4️⃣ The final paragraph should close with a prediction — how this app reveals where online culture and social behavior are heading next, and why that matters emotionally and culturally.
+4️⃣ The final paragraph should close with a prediction — how ${concept} reveals where online culture and social behavior are heading next, and why that matters emotionally and culturally.
 
-Use them to highlight emotion, community, and creativity — not decoration.
+Keep tone confident, first-person, and visionary.
 `;
-  system = "You are a Gen-Z behavioral founder describing your AI social app about human connection and digital culture — a poetic but technical first-person account of how people interact and change together through technology.";
+  system = "You are a Gen-Z founder describing your AI social app in first person, keeping tone poetic and human-centered while explaining technology and emotion.";
 }
-
 
 else if (topic === "music") {
   const emojiSet = [...descEmojis];
@@ -399,7 +398,12 @@ app.get("/api/description", async (req, res) => {
   }
 }
 
-    const description = await makeDescription(topic, { ...pick, lang }, persona);
+    // 🎯 Pick or reuse one clear concept name
+const conceptName = pick.concept || pick.product || pick.keyword || "AI social app";
+
+// ✅ Pass conceptName into makeDescription so the AI writes about this same concept
+const description = await makeDescription(topic, { ...pick, lang, conceptName }, persona);
+
 
 
     user.credits -= 1;
@@ -411,13 +415,13 @@ app.get("/api/description", async (req, res) => {
 
 res.json({
   brand: pick.brand || pick.artist || pick.issue || "323aidrop",
-  product: pick.product || pick.track || pick.keyword || pick.concept,
+  product: pick.conceptName || pick.product || pick.track || pick.keyword || pick.concept,
+  concept: pick.conceptName || pick.concept || "AI product idea",
   persona,
   description,
   mimicLine,
   hashtags: ["#NowTrending"],
   isDaily: false,
-  concept: pick.concept || "AI product idea",
   insight: "auto-generated technical insight about this founder’s app"
 });
 
