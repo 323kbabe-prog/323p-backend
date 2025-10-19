@@ -218,8 +218,8 @@ async function updateCredits() {
     );
     const d = await r.json();
     if (d.credits !== undefined) {
-      document.getElementById("credit-balance").textContent = `✨ Credits left: ${d.credits}`;
-      document.getElementById("user-id-label").textContent = `👤 User: ${uid} | Room: ${roomId}`;
+      document.getElementById("credit-balance").textContent = `Credits left: ${d.credits}`;
+      document.getElementById("user-id-label").textContent = `User: ${uid} | Room: ${roomId}`;
     }
   } catch (e) {
     console.error("❌ Credits fetch failed:", e);
