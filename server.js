@@ -24,6 +24,9 @@ if (!fs.existsSync("/data")) {
 // ✅ Serve static files from /public so bg1.png … bg10.png work
 app.use(express.static(path.join(__dirname, "public")));
 
+// ✅ Explicitly expose /aidrop folder
+app.use('/aidrop', express.static(path.join(__dirname, 'public/aidrop')));
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
