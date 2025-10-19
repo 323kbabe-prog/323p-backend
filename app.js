@@ -272,7 +272,7 @@ const res = await fetch(
       console.warn("❌ No credits left — blocking generation.");
       const banner = document.getElementById("simulate-banner");
       if (banner) {
-        banner.textContent = "💸 you’re dry rn… top-up to keep vibin’";
+        banner.textContent = "you’re dry rn… top-up to keep vibin’";
         banner.style.display = "block";
       }
       return; // stop before generation starts
