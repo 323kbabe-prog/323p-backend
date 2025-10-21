@@ -42,17 +42,24 @@ function hideOverlay() {
   c.style.visibility = "hidden";
   c.innerHTML = "";
 }
+
 function appendOverlay(msg, color = "#fff", blink = false) {
   const line = document.createElement("div");
   line.className = "log-line";
   if (blink) line.classList.add("blinking");
-  line.style.background = color;
+
+  // ✅ White background + black text
+  line.style.background = "#ffffff";
+  line.style.color = "#000000";
+  line.style.border = "1px solid rgba(0,0,0,0.1)"; // optional thin border for clarity
+
   line.innerText = msg;
   const c = document.getElementById("warmup-center");
   c.appendChild(line);
   c.scrollTop = c.scrollHeight;
   return line;
 }
+
 function removeOverlayLine(line, finalMsg) {
   if (!line) return;
   line.classList.remove("blinking");
@@ -160,7 +167,7 @@ async function runLogAndLoad(topic) {
   const userId = await ensureUser();
   if (!userId) return;
 
-  const descLine = appendOverlay("✍️ waiting for description…", "#d9f0ff", true);
+  const descLine = appendOverlay("waiting for drop…", "#d9f0ff", true);
   const res = await fetch(
     `https://three23p-backend.onrender.com/api/description?topic=${topic}&userId=${userId}&lang=${userLang}`,
     { headers: { "x-passcode": "super-secret-pass", "x-device-id": deviceId } }
