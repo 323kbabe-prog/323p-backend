@@ -52,7 +52,7 @@ function appendOverlay(msg, color = "#fff", blink = false) {
   line.style.background = "#ffffff";
   line.style.color = "#000000";
   line.style.border = "1px solid rgba(0,0,0,0.1)"; // optional thin border for clarity
-
+line.style.borderRadius = "0"; // square corners
   line.innerText = msg;
   const c = document.getElementById("warmup-center");
   c.appendChild(line);
