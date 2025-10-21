@@ -528,4 +528,23 @@ io.on("connection", socket=>{
 /* ---------------- Start ---------------- */
 app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 3000;
+/* ---------------- Page View Counter ---------------- */
+const VIEW_FILE = path.join("/data", "views.json");
+
+function loadViews() {
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf-8")); }
+  catch { return { total: 0 }; }
+}
+function saveViews(v) {
+  fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
+}
+
+// GET /api/views → increments and returns total
+app.get("/api/views", (req, res) => {
+  const v = loadViews();
+  v.total += 1;
+  saveViews(v);
+  res.json({ total: v.total });
+});
+
 httpServer.listen(PORT, ()=>console.log(`🚀 OP19$ backend live on :${PORT}`));
