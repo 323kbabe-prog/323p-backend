@@ -330,18 +330,24 @@ app.post("/api/create-user", (req, res) => {
   const deviceId = req.headers["x-device-id"];
   if (!deviceId) return res.status(400).json({ error: "Missing deviceId" });
 
-  const userId = "user-" + Math.random().toString(36).substr(2, 9);
-
   const currentUsers = loadUsers();
-  if (!currentUsers[userId]) {
-    currentUsers[userId] = { credits: 2, history: [], deviceId }; // 🎁 starter credits
-  }
-  saveUsers(currentUsers);
-  users = currentUsers;
 
-  console.log(`🎁 Created new user ${userId} with 2 starter credits`);
-  res.json({ userId, credits: currentUsers[userId].credits });
+  // 🚫 If this device has already claimed free credits, return without giving more
+  const existingUser = Object.values(currentUsers).find(u => u.deviceId === deviceId);
+  if (existingUser) {
+    console.log(`⚠️ Device ${deviceId} already has a userId`);
+    return res.json({ userId: existingUser.userId, credits: existingUser.credits });
+  }
+
+  // ✅ Otherwise, create new user with 2 starter credits
+  const userId = "user-" + Math.random().toString(36).substr(2, 9);
+  currentUsers[userId] = { userId, deviceId, credits: 2, history: [] };
+  saveUsers(currentUsers);
+
+  console.log(`🎁 Created new user ${userId} for device ${deviceId}`);
+  res.json({ userId, credits: 2 });
 });
+
 
 /* ---------------- API: Credits ---------------- */
 app.get("/api/credits", (req, res) => {
