@@ -22,11 +22,33 @@ let autoRefresh = false;
   window.history.replaceState({}, "", newUrl);
   console.log("🎬 Room initialized:", roomId);
 })();
-let deviceId = localStorage.getItem("deviceId");
-if (!deviceId) {
-  deviceId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-  localStorage.setItem("deviceId", deviceId);
+
+// ---------------- Device ID (persistent via cookie) ----------------
+function getDeviceId() {
+  // 1️⃣ Try to read cookie
+  const name = "deviceId=";
+  const cookies = document.cookie.split(";");
+  for (let c of cookies) {
+    c = c.trim();
+    if (c.indexOf(name) === 0) return c.substring(name.length);
+  }
+
+  // 2️⃣ If cookie not found, fall back to localStorage
+  let existing = localStorage.getItem("deviceId");
+  if (existing) {
+    // write it into cookie for persistence
+    document.cookie = `deviceId=${existing}; path=/; max-age=31536000`; // 1 year
+    return existing;
+  }
+
+  // 3️⃣ Otherwise, create a new one and store it both places
+  const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  document.cookie = `deviceId=${newId}; path=/; max-age=31536000`; // 1 year
+  localStorage.setItem("deviceId", newId);
+  return newId;
 }
+
+const deviceId = getDeviceId();
 console.log("🔑 deviceId:", deviceId);
 
 // ---------------- Overlay Helpers ----------------
