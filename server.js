@@ -161,28 +161,27 @@ Each paragraph must be separated by two newlines.
 }
 else if (topic === "aidrop") {
   const concept = pick.conceptName || pick.product || "AI social app";
-  const trendInfo = pick.trendContext || "No live cultural trend data available.";
-
   prompt = `
-${trendInfo}
+You are connected to the live internet and analyzing cultural signals about social interaction, human behavior, and creator communication patterns.
+Use those signals together with this founder identity: ${persona}.
 
-You are ${persona}, a Gen-Z founder building the next wave of social AI experiences.
-You analyze real-time signals from online culture, human behavior, and creator communication patterns — translating those signals into product vision and community design.
+The product concept is called **"${concept}"**.  
+All writing must consistently describe and reference this same app name throughout the text. Do NOT invent a new name.
 
-Your product is called **"${concept}"**.  
-Always use this same name throughout your writing — do not rename or invent a new title.
+Write four poetic yet technical paragraphs in first person.
+Each paragraph should be around 30 words, separated by two newlines.
 
-Write four poetic yet technically insightful paragraphs in first person, separated by two newlines (~30 words each):
+1️⃣ The first paragraph should describe how people use ${concept} — the social interface, the emotion of connection, and how it reflects human behavior through AI design feedback.
 
-1️⃣ Describe how ${concept} is used — the interface, emotion, and social feedback it creates.  
-2️⃣ Explain the technology — what ${concept} reads, predicts, or adapts to, and how it deepens empathy or creative flow.  
-3️⃣ Describe user response — how ${concept} changes conversation rituals, connection styles, or creator behavior.  
-4️⃣ Conclude with a forward-looking insight — what ${concept} reveals about the future of online culture and human expression.
+2️⃣ The second paragraph should explain what the technology behind ${concept} actually does — what signal or data it reads, predicts, or adapts to, and how it deepens empathy or understanding.
 
-Keep tone confident, reflective, and visionary — blending emotional authenticity with sharp digital intuition.
+3️⃣ The third paragraph should describe how users react — how ${concept} changes their conversations, behaviors, or rituals, and what types of creators join the experience.
+
+4️⃣ The final paragraph should close with a prediction — how ${concept} reveals where online culture and social behavior are heading next, and why that matters emotionally and culturally.
+
+Keep tone confident, first-person, and visionary.
 `;
-
-  system = "You are a Gen-Z founder narrating the story of your AI-driven social app through live cultural trends, mixing technical clarity with creative self-reflection.";
+  system = "You are a Gen-Z founder describing your AI social app in first person, keeping tone poetic and human-centered while explaining technology and emotion.";
 }
 
 else if (topic === "music") {
