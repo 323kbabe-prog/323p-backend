@@ -160,28 +160,26 @@ Each paragraph must be separated by two newlines.
   system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
 else if (topic === "aidrop") {
-  const concept = pick.conceptName || pick.product || "AI social app";
+  const concept = pick.conceptName || pick.product || pick.concept || "AI social app";
+  const trendInfo = pick.trendContext || "No live trend data available.";
+
   prompt = `
-You are connected to the live internet and analyzing cultural signals about social interaction, human behavior, and creator communication patterns.
-Use those signals together with this founder identity: ${persona}.
+${trendInfo}
 
-The product concept is called **"${concept}"**.  
-All writing must consistently describe and reference this same app name throughout the text. Do NOT invent a new name.
+You are ${persona}, a Gen-Z founder reacting to current digital culture.
+Speak in first person — describe how today's real trends inspired your new product **"${concept}"**.
 
-Write four poetic yet technical paragraphs in first person.
-Each paragraph should be around 30 words, separated by two newlines.
+Write four poetic yet technical paragraphs (~30 words each), separated by two newlines:
 
-1️⃣ The first paragraph should describe how people use ${concept} — the social interface, the emotion of connection, and how it reflects human behavior through AI design feedback.
+1️⃣ How these trends inspired ${concept}.  
+2️⃣ What ${concept} does for your generation.  
+3️⃣ The technology or algorithm behind it.  
+4️⃣ What ${concept} reveals about the future of online culture.
 
-2️⃣ The second paragraph should explain what the technology behind ${concept} actually does — what signal or data it reads, predicts, or adapts to, and how it deepens empathy or understanding.
-
-3️⃣ The third paragraph should describe how users react — how ${concept} changes their conversations, behaviors, or rituals, and what types of creators join the experience.
-
-4️⃣ The final paragraph should close with a prediction — how ${concept} reveals where online culture and social behavior are heading next, and why that matters emotionally and culturally.
-
-Keep tone confident, first-person, and visionary.
+Keep it authentic, youthful, and confident — your founder persona’s energy must stay visible in every line.
 `;
-  system = "You are a Gen-Z founder describing your AI social app in first person, keeping tone poetic and human-centered while explaining technology and emotion.";
+
+  system = "You are a Gen-Z startup founder interpreting real cultural trends through your creative lens.";
 }
 
 else if (topic === "music") {
@@ -385,6 +383,21 @@ app.get("/api/description", async (req, res) => {
   else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
 
   try {
+    
+// 🌐 Fetch live Google Trends topics
+let liveTrendsText = "";
+try {
+  const res = await fetch("https://trends.google.com/trending/rss?geo=US");
+  const xml = await res.text();
+  // Grab 5 trend titles (skip feed header)
+  const matches = [...xml.matchAll(/<title>(.*?)<\/title>/g)].slice(2, 7);
+  const topTrends = matches.map(m => m[1]);
+  liveTrendsText = `Today's top real search trends: ${topTrends.join(", ")}.`;
+  console.log("✅ Live trend context:", liveTrendsText);
+} catch (err) {
+  console.warn("⚠️ Could not fetch live trends:", err.message);
+}
+    
     const persona = randomPersona();
     if (topic === "nextmonth") {
   const searchPrompt = `Search online signals for next-month trend predictions in ${pick.concept || "beauty and AI"}.
@@ -408,9 +421,11 @@ app.get("/api/description", async (req, res) => {
 const conceptName = pick.concept || pick.product || pick.keyword || "AI social app";
 
 // ✅ Pass conceptName into makeDescription so the AI writes about this same concept
-const description = await makeDescription(topic, { ...pick, lang, conceptName }, persona);
-
-
+const description = await makeDescription(
+  topic,
+  { ...pick, lang, conceptName, trendContext: liveTrendsText },
+  persona
+);
 
     user.credits -= 1;
     freshUsers[userId] = user;
