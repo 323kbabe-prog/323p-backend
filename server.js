@@ -118,7 +118,7 @@ function randomPersona() {
 
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
-  const age = Math.floor(Math.random() * 7) + 17; // 17–23
+  const age = Math.floor(Math.random() * 6) + 18; // 18–23
 
   return `a ${age}-year-old ${ethnicity} ${vibe} with a ${style} style`;
 }
@@ -191,18 +191,28 @@ else if (topic === "aidrop") {
     console.warn("⚠️ Live trend fetch failed:", err.message);
   }
 
-  // 🗣️ Gen-Z slang openers
-  const genZOpeners = [
-    "Lowkey obsessed with this idea —",
-    "Not gonna lie, this one kinda eats —",
-    "Okay so boom —",
-    "Deadass, this just feels right —",
-    "Fr, it’s giving main character energy —",
-    "Bet, this is the next era —",
-    "This app’s actually kinda insane —",
-    "No cap, this might shift the vibe —"
-  ];
-  const opener = genZOpeners[Math.floor(Math.random() * genZOpeners.length)];
+  // 🗣️ Let GPT itself generate a Gen-Z opener dynamically
+const openerPrompt = `
+Write one short Gen-Z slang opener for a podcast drop.
+It should sound like the first line of a Gen-Z founder speaking live, using real slang (like “lowkey”, “ngl”, “it’s giving”, “deadass”, “no cap”).
+Keep it under 10 words, end with a dash.
+`;
+
+let opener = "";
+try {
+  const openerResp = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 1.0,
+    messages: [
+      { role: "system", content: "You are a Gen-Z creative voice assistant." },
+      { role: "user", content: openerPrompt }
+    ]
+  });
+  opener = openerResp.choices[0].message.content.trim();
+} catch (err) {
+  console.warn("⚠️ Opener generation failed:", err.message);
+  opener = "Lowkey obsessed with this idea —"; // fallback
+}
 
   // 💬 Persona-driven GPT prompt
   prompt = `
