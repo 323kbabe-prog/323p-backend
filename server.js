@@ -10,6 +10,19 @@ const Stripe = require("stripe");
 const app = express();
 app.use(cors({ origin: "*" }));
 
+/* ---------------- AIDROP HISTORY MEMORY ---------------- */
+const AIDROP_FILE = path.join("/data", "aidrop_history.json");
+
+function loadAidropHistory() {
+  try { return JSON.parse(fs.readFileSync(AIDROP_FILE, "utf-8")); }
+  catch { return []; }
+}
+
+function saveAidropHistory(arr) {
+  // keep only the last 50 to keep prompt short
+  fs.writeFileSync(AIDROP_FILE, JSON.stringify(arr.slice(-50), null, 2));
+}
+
 // ✅ Logging environment variables on startup
 console.log("🚀 Starting OP19$ backend...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
@@ -160,28 +173,75 @@ Each paragraph must be separated by two newlines.
   system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
 else if (topic === "aidrop") {
-  const concept = pick.conceptName || pick.product || "AI social app";
+  // 🧠 Load memory of previous concepts
+  const pastConcepts = loadAidropHistory();
+  const avoidText = pastConcepts.length
+    ? `Avoid repeating any of these past app ideas:\n${pastConcepts.map(x => "- " + x).join("\n")}\n\n`
+    : "";
+
+  // 🌍 Fetch live Google Trends
+  let liveTrendsText = "";
+  try {
+    const res = await fetch("https://trends.google.com/trending/rss?geo=US");
+    const xml = await res.text();
+    const matches = [...xml.matchAll(/<title>(.*?)<\/title>/g)].slice(2, 7);
+    const topTrends = matches.map(m => m[1]);
+    liveTrendsText = `Today's top real trends rn: ${topTrends.join(", ")}.`;
+  } catch (err) {
+    console.warn("⚠️ Live trend fetch failed:", err.message);
+  }
+
+  // 🗣️ Gen-Z slang openers
+  const genZOpeners = [
+    "Lowkey obsessed with this idea —",
+    "Not gonna lie, this one kinda eats —",
+    "Okay so boom —",
+    "Deadass, this just feels right —",
+    "Fr, it’s giving main character energy —",
+    "Bet, this is the next era —",
+    "This app’s actually kinda insane —",
+    "No cap, this might shift the vibe —"
+  ];
+  const opener = genZOpeners[Math.floor(Math.random() * genZOpeners.length)];
+
+  // 💬 Persona-driven GPT prompt
   prompt = `
-You are connected to the live internet and analyzing cultural signals about social interaction, human behavior, and creator communication patterns.
-Use those signals together with this founder identity: ${persona}.
+${avoidText}
+${liveTrendsText}
 
-The product concept is called **"${concept}"**.  
-All writing must consistently describe and reference this same app name throughout the text. Do NOT invent a new name.
+You are ${persona}, a Gen-Z founder talking like you’re chatting with your audience on TikTok or a podcast.
+Your language must be 100% Gen-Z slang — use words like “lowkey,” “ngl,” “no cap,” “for real,” “vibe,” “it’s giving,” “deadass,” “idk,” “frfr,” “main character,” “wild,” etc.  
+Do not sound formal or academic. Sound like a human, confident but chaotic-smart.
 
-Write four poetic yet technical paragraphs in first person.
-Each paragraph should be around 30 words, separated by two newlines.
+Start the first line with something like "${opener}" then keep that same energy the whole time.
 
-1️⃣ The first paragraph should describe how people use ${concept} — the social interface, the emotion of connection, and how it reflects human behavior through AI design feedback.
+Write four short paragraphs (~35 words each, separated by two newlines):
+1️⃣ What inspired this new app idea and how it connects to current trends.  
+2️⃣ What the app actually *does* and how people use it.  
+3️⃣ How it changes social energy, creator life, or digital vibe.  
+4️⃣ A bold prediction about the next wave of online culture.
 
-2️⃣ The second paragraph should explain what the technology behind ${concept} actually does — what signal or data it reads, predicts, or adapts to, and how it deepens empathy or understanding.
-
-3️⃣ The third paragraph should describe how users react — how ${concept} changes their conversations, behaviors, or rituals, and what types of creators join the experience.
-
-4️⃣ The final paragraph should close with a prediction — how ${concept} reveals where online culture and social behavior are heading next, and why that matters emotionally and culturally.
-
-Keep tone confident, first-person, and visionary.
+Make it sound like you’re literally vibing and ranting out loud to your followers, mixing humor, emotion, and clarity.
 `;
-  system = "You are a Gen-Z founder describing your AI social app in first person, keeping tone poetic and human-centered while explaining technology and emotion.";
+
+  system = "You are a Gen-Z founder who speaks in slang, memes, and emotional honesty — confident, relatable, and creative.";
+
+  // 🔮 Run GPT
+  const resp = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 1.0,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: prompt }
+    ],
+  });
+
+  const result = resp.choices[0].message.content.trim();
+  const conceptLine = result.split("\n")[0];
+  pastConcepts.push(conceptLine);
+  saveAidropHistory(pastConcepts);
+
+  return result;
 }
 
 else if (topic === "music") {
