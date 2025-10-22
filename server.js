@@ -377,11 +377,49 @@ app.get("/api/description", async (req, res) => {
 
   const topic = req.query.topic || "cosmetics";
   let pick;
-  if (topic === "cosmetics") pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
-  else if (topic === "music") pick = TOP_MUSIC[Math.floor(Math.random() * TOP_MUSIC.length)];
-  else if (topic === "politics") pick = TOP_POLITICS[Math.floor(Math.random() * TOP_POLITICS.length)];
-  else pick = TOP_AIDROP[Math.floor(Math.random() * TOP_AIDROP.length)];
 
+  if (topic === "cosmetics")
+    pick = TOP50_COSMETICS[Math.floor(Math.random() * TOP50_COSMETICS.length)];
+  else if (topic === "music")
+    pick = TOP_MUSIC[Math.floor(Math.random() * TOP_MUSIC.length)];
+  else if (topic === "politics")
+    pick = TOP_POLITICS[Math.floor(Math.random() * TOP_POLITICS.length)];
+  else {
+    // 🧠 dynamic AI-drop concept generator with repeat avoidance
+    const pastConcepts = loadAidropHistory();
+    const avoidText = pastConcepts.length
+      ? `Avoid repeating any of these prior app ideas:\n${pastConcepts
+          .map((x) => "- " + x)
+          .join("\n")}\n\n`
+      : "";
+
+    const ideaPrompt = `
+${avoidText}
+Generate a brand-new AI social app concept name and a one-sentence description of what makes it unique.
+Return only the app name on the first line.
+`;
+
+    const resp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a trend-spotting AI founder who invents new digital platforms.",
+        },
+        { role: "user", content: ideaPrompt },
+      ],
+    });
+
+    const conceptText = resp.choices[0].message.content.trim().split("\n")[0];
+    pick = { concept: conceptText };
+
+    // 🗂️ Remember this idea so GPT won’t reuse it later
+    pastConcepts.push(conceptText);
+    saveAidropHistory(pastConcepts);
+  }
+  
   try {
     
 // 🌐 Fetch live Google Trends topics
@@ -549,6 +587,7 @@ io.on("connection", socket=>{
 /* ---------------- Start ---------------- */
 app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 3000;
+
 /* ---------------- Page View Counter ---------------- */
 const VIEW_FILE = path.join("/data", "views.json");
 
@@ -567,5 +606,18 @@ app.get("/api/views", (req, res) => {
   saveViews(v);
   res.json({ total: v.total });
 });
+
+/* ---------------- AIDROP HISTORY MEMORY ---------------- */
+const AIDROP_FILE = path.join("/data", "aidrop_history.json");
+
+function loadAidropHistory() {
+  try { return JSON.parse(fs.readFileSync(AIDROP_FILE, "utf-8")); }
+  catch { return []; }
+}
+
+function saveAidropHistory(arr) {
+  // keep only the last 50 to keep prompt short
+  fs.writeFileSync(AIDROP_FILE, JSON.stringify(arr.slice(-50), null, 2));
+}
 
 httpServer.listen(PORT, ()=>console.log(`🚀 OP19$ backend live on :${PORT}`));
