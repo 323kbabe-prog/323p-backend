@@ -148,37 +148,48 @@ function updateUI(t) {
 }
 
 // ---------------- Voice ----------------
-async function fetchVoiceSegment(seg) {
-  const r = await fetch(
-    `https://three23p-backend.onrender.com/api/voice?text=${encodeURIComponent(seg)}&lang=${userLang}`,
-    { headers: { "x-device-id": deviceId } }
-  );
-  const b = await r.blob();
-  return URL.createObjectURL(b);
-}
-
 async function playVoiceAndRevealText(text, onEnd) {
-  const voiceLine = appendOverlay("🎤 streaming founder voice…", "#ffe0f0", true);
+  const voiceLine = appendOverlay("🎤 streaming founder voice…", "#ffffff", true);
   const audio = document.getElementById("voice-player");
   const desc = document.getElementById("r-desc");
-  desc.textContent = "";
-  const parts = text.split(/\n+/).map(p => p.trim()).filter(p => p);
-  if (!parts.length) {
-    removeOverlayLine(voiceLine, "❌ no voice text");
+  desc.innerHTML = "";
+
+  // Split into paragraphs by blank lines
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map(p => p.trim())
+    .filter(p => p.length > 0);
+
+  if (!paragraphs.length) {
+    removeOverlayLine(voiceLine, "❌ no voice text found");
     return;
   }
 
-  let next = await fetchVoiceSegment(parts[0]);
-  for (let i = 0; i < parts.length; i++) {
-    const current = next;
-    const nextP = i + 1 < parts.length ? fetchVoiceSegment(parts[i + 1]) : Promise.resolve(null);
-    desc.innerHTML += (desc.innerHTML ? "<br><br>" : "") + parts[i];
-    audio.src = current;
+  // Preload the first voice segment
+  let nextUrl = await fetchVoiceSegment(paragraphs[0]);
+
+  for (let i = 0; i < paragraphs.length; i++) {
+    const currentUrl = nextUrl;
+
+    // Preload next paragraph while current is playing
+    const nextPromise =
+      i + 1 < paragraphs.length ? fetchVoiceSegment(paragraphs[i + 1]) : Promise.resolve(null);
+
+    // Reveal the current paragraph on screen
+    desc.innerHTML += (desc.innerHTML ? "<br><br>" : "") + paragraphs[i];
+
+    // Play current voice
+    audio.src = currentUrl;
     await audio.play();
-    await new Promise(r => (audio.onended = r));
-    next = await nextP;
-    removeOverlayLine(voiceLine, `▶️ part ${i + 1}/${parts.length}`);
+    await new Promise(resolve => (audio.onended = resolve));
+
+    // Prepare next
+    nextUrl = await nextPromise;
+
+    // Update overlay line
+    removeOverlayLine(voiceLine, `▶️ reading ${i + 1}/${paragraphs.length}`);
   }
+
   removeOverlayLine(voiceLine, "✅ finished — refreshing next founder…");
   if (onEnd) onEnd();
 }
