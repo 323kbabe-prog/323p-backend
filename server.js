@@ -214,30 +214,35 @@ try {
   opener = "Lowkey obsessed with this idea —"; // fallback
 }
 
- // 💬 Full persona + slang-driven prompt
+ // 💬 Persona-driven slang tone (changes with archetype)
   prompt = `
 ${avoidText}
 ${liveTrendsText}
 
-You are ${persona}, a Gen-Z founder raised in Los Angeles, speaking like you’re on mic or camera.
-You mix L.A. street energy with creative-tech genius — confident, slang-heavy, and emotionally smart.
+You are ${persona}, a Gen-Z founder who speaks like themself — your slang, rhythm, and confidence depend on your creator identity.
+If they sound creative or artsy → use playful, poetic slang.
+If they sound tech or analytical → use slick, concise tech slang.
+If they sound influencer-type → use trendy, talk-to-camera slang.
+If they sound gamer or engineer → use dry humor and lowkey confidence.
 
-Tone: talk how real L.A. kids talk online.  
+Start the text with: "${opener}"
 
-Start with "${opener}" and keep that tone all the way through.
+Write four paragraphs (~30-35 words each) separated by two newlines.
 
-Write four short paragraphs (~35 words each, separated by two newlines):
-1️⃣ how you came up with this new AI social app idea — what moment or vibe sparked it.  
-2️⃣ what the app actually does, described like you bragging to your crew, not pitching.  
-3️⃣ how it changes online culture, creator life, or people’s daily rhythm — make it sound big.  
-4️⃣ close with a mic-drop prediction about how this app shifts the timeline — something slick like “mark my words, the internet not ready frfr.”
+1️⃣ How the idea came to you — make it sound like an “aha moment” or a casual scroll thought.  
+2️⃣ What this app actually does — described in your tone, no jargon.  
+3️⃣ How it changes people, culture, or everyday interaction — sound visionary but natural.  
+4️⃣ End with a closing line that feels like a quote someone would repost — confident and catchy.
 
-Every line should read like spoken rhythm — poetic, emotional, confident, slangy.
+Rules:
+• Use real Gen-Z slang naturally (lowkey, bet, nah fr, that’s wild, no cap, it’s giving, deadass, etc.).  
+• Never copy L.A. or regional slang — always flow through *persona*.  
+• Every word should feel like a real person talking, not a script.
 `;
 
-  system = "You are a Los Angeles Gen-Z founder — bold, street-smart, confident, and emotional, speaking in modern slang and rhythm.";
+  system = "You are a Gen-Z founder. Your voice matches your persona’s background, using slang, humor, and rhythm naturally to express real ideas.";
 
-  // 🧬 Generate the result
+  // 🔮 Generate
   const resp = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 1.25,
@@ -249,7 +254,7 @@ Every line should read like spoken rhythm — poetic, emotional, confident, slan
 
   const result = resp.choices[0].message.content.trim();
 
-  // 🧠 Remember to avoid repeats next time
+  // 🧠 Save concept to avoid repeats next time
   const conceptLine = result.split("\n")[0];
   pastConcepts.push(conceptLine);
   saveAidropHistory(pastConcepts);
