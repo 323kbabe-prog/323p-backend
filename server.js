@@ -173,7 +173,7 @@ Each paragraph must be separated by two newlines.
   system = "You are a Gen-Z beauty creator and trend forecaster writing four first-person poetic paragraphs (look, feel, emotion, signal) without visible titles.";
 }
 else if (topic === "aidrop") {
-  // 🧠 Avoid repeats
+  // 🧠 Prevent repeats
   const pastConcepts = loadAidropHistory();
   const avoidText = pastConcepts.length
     ? `Avoid repeating any of these past app ideas:\n${pastConcepts.map(x => "- " + x).join("\n")}\n\n`
@@ -186,69 +186,60 @@ else if (topic === "aidrop") {
     const xml = await res.text();
     const matches = [...xml.matchAll(/<title>(.*?)<\/title>/g)].slice(2, 7);
     const topTrends = matches.map(m => m[1]);
-    liveTrendsText = `Today's trending signals rn: ${topTrends.join(", ")}.`;
+    liveTrendsText = `Today's top real trends: ${topTrends.join(", ")}.`;
   } catch (err) {
-    console.warn("⚠️ Live trend fetch failed:", err.message);
+    console.warn("⚠️ Trend fetch failed:", err.message);
   }
 
-  // 🎤 Let GPT generate its own intro based on persona
+  // 🗣 Generate short opener that sounds neutral but personal
   const openerPrompt = `
-  Write one short Gen-Z style opener that matches this founder persona:
-  "${persona}"
-  Tone should feel like they're starting a podcast or video drop — casual, confident, slangy.
-  Max 10 words. End with a dash.
+  Write one short natural sentence starter for a founder introducing their app in first person.
+  Keep it under 10 words, end with a dash.
+  Examples: "I’ve been thinking about this a lot —", "This idea came from something I noticed —"
   `;
   let opener = "";
   try {
     const openerResp = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 1.1,
+      temperature: 0.8,
       messages: [
-        { role: "system", content: "You are a Gen-Z creative voice generator that adapts tone based on persona." },
+        { role: "system", content: "You are a neutral voice generator for founder introductions." },
         { role: "user", content: openerPrompt }
       ]
     });
     opener = openerResp.choices[0].message.content.trim();
-  } catch (err) {
-    console.warn("⚠️ Opener generation failed:", err.message);
-    opener = "lowkey this app too hard —"; // fallback
+  } catch {
+    opener = "I’ve been working on this idea —";
   }
 
-  // 💬 Persona-controlled slang tone
+  // 💬 Persona-based, first-person writing — no slang, no tone layer
   prompt = `
 ${avoidText}
 ${liveTrendsText}
 
-You are ${persona}, a Gen-Z founder speaking completely in your own voice.
-Your slang, rhythm, and energy depend on who you are.
+You are ${persona}, a modern founder describing your new app concept.
+Write naturally in first person — clear, thoughtful, authentic, and straightforward.
+Do not use slang, jokes, or exaggerated tone.
+You are simply talking about your work and what it means to you.
 
-If your vibe is creative, influencer, or artist — sound expressive and emotional.  
-If your vibe is tech, coder, or researcher — sound confident and slick.  
-If your vibe is cultural or fashion — sound bold and trendy.  
-If your vibe is sound/music — use rhythm and flow.  
+Start the description with: "${opener}"
 
-Start the text with: "${opener}"
+Write four paragraphs (~30–35 words each), separated by two newlines:
 
-Write four paragraphs (~35 words each), separated by two newlines:
+1️⃣ Explain how the idea came to you — what inspired it or what problem you noticed.  
+2️⃣ Describe what the app actually does and how it works.  
+3️⃣ Reflect on why it matters to people — what feeling or change it brings.  
+4️⃣ End with a closing thought about what you hope it will mean in the near future.
 
-1️⃣ How the idea came to you — like an “aha” or scroll moment.  
-2️⃣ What this app actually does — sound confident but chill.  
-3️⃣ How it changes people or culture — sound visionary but conversational.  
-4️⃣ End with a short mic-drop reflection — something repostable.
-
-Rules:
-• Let the slang *flow through* the persona, not forced.  
-• Use Gen-Z vocabulary naturally (lowkey, no cap, deadass, fr, bet, wild, that’s crazy, built diff, it’s giving).  
-• Never corporate or generic — must sound like a real founder on mic.  
-• Keep tone confident, slangy, and short-punch rhythm like spoken storytelling.
+Keep it calm, reflective, and human. Avoid corporate or technical writing.
 `;
 
-  system = "You are a Gen-Z founder. Your slang, tone, and rhythm change depending on your persona identity.";
+  system = "You are a thoughtful modern founder describing your app in first person. No slang, no stylization — just clear, real, and personal.";
 
-  // ✨ Generate
+  // 🧠 Generate
   const resp = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 1.25,
+    temperature: 0.85,
     messages: [
       { role: "system", content: system },
       { role: "user", content: prompt }
@@ -257,14 +248,13 @@ Rules:
 
   const result = resp.choices[0].message.content.trim();
 
-  // 🧠 Save to avoid repeats
+  // 🧱 Save concept name for repeat avoidance
   const conceptLine = result.split("\n")[0];
   pastConcepts.push(conceptLine);
   saveAidropHistory(pastConcepts);
 
   return result;
 }
-
 
 else if (topic === "music") {
   const emojiSet = [...descEmojis];
