@@ -194,7 +194,6 @@ else if (topic === "aidrop") {
   // 🗣️ Let GPT itself generate a Gen-Z opener dynamically
 const openerPrompt = `
 Write one short Gen-Z slang opener for a podcast drop.
-It should sound like the first line of a Gen-Z founder speaking live, using real slang (like “lowkey”, “ngl”, “it’s giving”, “deadass”, “no cap”).
 Keep it under 10 words, end with a dash.
 `;
 
