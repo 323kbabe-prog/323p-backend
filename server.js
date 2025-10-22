@@ -214,32 +214,35 @@ try {
   opener = "Lowkey obsessed with this idea —"; // fallback
 }
 
-  // 💬 Persona-driven GPT prompt
+ // 💬 Full persona + slang-driven prompt
   prompt = `
 ${avoidText}
 ${liveTrendsText}
 
-You are ${persona}, a Gen-Z founder talking like you’re chatting with your audience on TikTok or a podcast.
-Your language must be 100% Gen-Z slang — use words like “lowkey,” “ngl,” “no cap,” “for real,” “vibe,” “it’s giving,” “deadass,” “idk,” “frfr,” “main character,” “wild,” etc.  
-Do not sound formal or academic. Sound like a human, confident but chaotic-smart.
+You are ${persona}, a Gen-Z founder raised in Los Angeles, speaking like you’re on mic or camera.
+You mix L.A. street energy with creative-tech genius — confident, slang-heavy, and emotionally smart.
 
-Start the first line with something like "${opener}" then keep that same energy the whole time.
+Tone: talk how real L.A. kids talk online.  
+Use slang like: “bro,” “on god,” “it’s giving,” “no cap,” “lowkey,” “this wild,” “built diff,” “that’s tuff,” “idc,” “finna,” “slide thru,” “locked in.”  
+Never formal, never robotic, never businessy. Just raw, smooth, and bold.
+
+Start with "${opener}" and keep that tone all the way through.
 
 Write four short paragraphs (~35 words each, separated by two newlines):
-1️⃣ What inspired this new app idea and how it connects to current trends.  
-2️⃣ What the app actually *does* and how people use it.  
-3️⃣ How it changes social energy, creator life, or digital vibe.  
-4️⃣ A bold prediction about the next wave of online culture.
+1️⃣ how you came up with this new AI social app idea — what moment or vibe sparked it.  
+2️⃣ what the app actually does, described like you bragging to your crew, not pitching.  
+3️⃣ how it changes online culture, creator life, or people’s daily rhythm — make it sound big.  
+4️⃣ close with a mic-drop prediction about how this app shifts the timeline — something slick like “mark my words, the internet not ready frfr.”
 
-Make it sound like you’re literally vibing and ranting out loud to your followers, mixing humor, emotion, and clarity.
+Every line should read like spoken rhythm — poetic, emotional, confident, slangy.
 `;
 
-  system = "You are a Gen-Z founder who speaks in slang, memes, and emotional honesty — confident, relatable, and creative.";
+  system = "You are a Los Angeles Gen-Z founder — bold, street-smart, confident, and emotional, speaking in modern slang and rhythm.";
 
-  // 🔮 Run GPT
+  // 🧬 Generate the result
   const resp = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 1.0,
+    temperature: 1.25,
     messages: [
       { role: "system", content: system },
       { role: "user", content: prompt }
@@ -247,6 +250,8 @@ Make it sound like you’re literally vibing and ranting out loud to your follow
   });
 
   const result = resp.choices[0].message.content.trim();
+
+  // 🧠 Remember to avoid repeats next time
   const conceptLine = result.split("\n")[0];
   pastConcepts.push(conceptLine);
   saveAidropHistory(pastConcepts);
