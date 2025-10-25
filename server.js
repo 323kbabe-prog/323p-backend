@@ -198,6 +198,29 @@ Return ONLY a valid JSON array.
     ];
   }
 
+// ✅ Step 6 — Final live check: verify each link actually responds with HTTP 200
+async function verifyLiveLinks(arr) {
+  const checked = [];
+  for (const item of arr) {
+    if (!item.link) continue;
+    try {
+      const r = await fetch(item.link, { method: "HEAD", timeout: 4000 });
+      if (r.ok) {
+        checked.push(item);
+      } else {
+        console.log(`⚠️ Skipped broken link (${r.status}): ${item.link}`);
+      }
+    } catch (err) {
+      console.log(`⚠️ Link unreachable: ${item.link}`);
+    }
+  }
+  // If none valid, return original array (fallback safety)
+  return checked.length > 0 ? checked : arr;
+}
+
+// Run final link verification before sending response
+parsed = await verifyLiveLinks(parsed);
+
   res.json(parsed);
 });
 
