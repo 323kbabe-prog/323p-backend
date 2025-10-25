@@ -26,19 +26,23 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+/* ---------------- Persona Pool ---------------- */
 const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
 const vibes = [
-  "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
-  "AR creator","fashion engineer","metaverse curator","product tester","AI researcher",
-  "sound producer","content strategist","neural-net stylist","startup intern","creative coder",
-  "virtual stylist","app builder","crypto storyteller","UX dreamer","AI makeup artist",
-  "music technologist","motion designer","social media director","brand futurist","AI poet",
-  "concept photographer","video remixer","fashion influencer","streetwear archivist",
-  "digital journalist","UI visionary","culture hacker","AI choreographer","sound curator",
-  "data storyteller","aesthetic researcher","creator-economy coach","AI community host",
-  "trend analyst","digital anthropologist","cyber curator","creator engineer","neon editor",
-  "AI copywriter","content DJ","tech-fashion hybrid","virtual merch designer","AI film editor",
-  "short-form producer","creative technologist"
+  "AI founder", "tech designer", "digital artist", "vlogger", "streamer",
+  "trend forecaster", "AR creator", "fashion engineer", "metaverse curator",
+  "product tester", "AI researcher", "sound producer", "content strategist",
+  "neural-net stylist", "startup intern", "creative coder", "virtual stylist",
+  "app builder", "crypto storyteller", "UX dreamer", "AI makeup artist",
+  "music technologist", "motion designer", "social media director",
+  "brand futurist", "AI poet", "concept photographer", "video remixer",
+  "fashion influencer", "streetwear archivist", "digital journalist",
+  "UI visionary", "culture hacker", "AI choreographer", "sound curator",
+  "data storyteller", "aesthetic researcher", "creator-economy coach",
+  "AI community host", "trend analyst", "digital anthropologist",
+  "cyber curator", "creator engineer", "neon editor", "AI copywriter",
+  "content DJ", "tech-fashion hybrid", "virtual merch designer",
+  "AI film editor", "short-form producer", "creative technologist"
 ];
 
 function randomPersona() {
@@ -50,6 +54,7 @@ function randomPersona() {
   return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase() + vibe.slice(1)}`;
 }
 
+/* ---------------- Persona Search API ---------------- */
 app.get("/api/persona-search", async (req, res) => {
   const query = req.query.query || "latest AI trends";
   console.log(`🌐 Live Persona Search for: "${query}"`);
@@ -58,12 +63,28 @@ app.get("/api/persona-search", async (req, res) => {
   let linkPool = [];
   try {
     const serp = await fetch(
-      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`
+      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=10&api_key=${process.env.SERPAPI_KEY}`
     );
     const serpData = await serp.json();
+
+    // ✅ HTTPS-only, relevance-filtered link pool
     const results = serpData.organic_results || [];
-    linkPool = results.map(r => r.link).filter(Boolean);
-    const snippets = results.map(r => r.snippet || r.title) || [];
+    linkPool = results
+      .map(r => ({
+        link: r.link,
+        title: r.title || "",
+        snippet: r.snippet || ""
+      }))
+      .filter(r => r.link && r.link.startsWith("https://"))
+      .sort((a, b) => {
+        const q = query.toLowerCase();
+        const scoreA = (r.title + r.snippet).toLowerCase().includes(q) ? 1 : 0;
+        const scoreB = (b.title + b.snippet).toLowerCase().includes(q) ? 1 : 0;
+        return scoreB - scoreA;
+      })
+      .slice(0, 5);
+
+    const snippets = linkPool.map(r => r.snippet || r.title);
     webContext = snippets.join(" ");
     if (!webContext) throw new Error("SerpAPI empty");
   } catch (err) {
@@ -74,7 +95,7 @@ app.get("/api/persona-search", async (req, res) => {
       );
       const newsData = await news.json();
       const articles = newsData.articles?.map(a => a.title + " " + a.description) || [];
-      linkPool = newsData.articles?.map(a => a.url).filter(Boolean) || [];
+      linkPool = newsData.articles?.map(a => a.url).filter(u => u && u.startsWith("https://")) || [];
       webContext = articles.join(" ");
     } catch (err2) {
       console.warn("⚠️ NewsAPI fallback failed:", err2.message);
@@ -85,14 +106,14 @@ app.get("/api/persona-search", async (req, res) => {
   const prompt = `
 You are an AI-Native persona generator connected to live web data.
 
-Use this real-world context about "${query}":
+Use this real context about "${query}":
 ${webContext}
 
 Generate 10 unique JSON entries. Each entry must include:
 - "persona": e.g. "${randomPersona()}"
-- "thought": a short first-person real-world event (max 25 words)
-- "hashtags": exactly 3 short real hashtags (no # symbols)
-- "link": one real relevant link from context (pick from this list: ${linkPool.slice(0,5).join(", ")})
+- "thought": a short first-person real-world experience (max 25 words)
+- "hashtags": exactly 3 real hashtags (no # symbols)
+- "link": one working, relevant link from this list: ${linkPool.map(x => x.link).join(", ")}
 
 Return ONLY a valid JSON array.
 `;
@@ -105,7 +126,7 @@ Return ONLY a valid JSON array.
       messages: [
         { role: "system", content: "Output only valid JSON arrays, nothing else." },
         { role: "user", content: prompt }
-      ],
+      ]
     });
     raw = completion.choices?.[0]?.message?.content?.trim() || "";
   } catch (err) {
@@ -134,6 +155,7 @@ Return ONLY a valid JSON array.
   res.json(parsed);
 });
 
+/* ---------------- View Counter ---------------- */
 const VIEW_FILE = path.join("/data", "views.json");
 function loadViews() {
   try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf-8")); }
@@ -149,10 +171,12 @@ app.get("/api/views", (req, res) => {
   res.json({ total: v.total });
 });
 
+/* ---------------- Socket ---------------- */
 io.on("connection", socket => {
   socket.on("joinRoom", id => socket.join(id));
 });
 
+/* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
   console.log(`✅ AI-Native Persona Swap Browser backend live on :${PORT}`)
