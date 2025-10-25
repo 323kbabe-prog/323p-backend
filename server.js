@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Swap Browser (Web Live Data Mode)
+// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + SSL Validation)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -7,6 +7,7 @@ const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
 const fetch = require("node-fetch");
+const https = require("https");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -29,29 +30,41 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 /* ---------------- Persona Pool ---------------- */
 const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
 const vibes = [
-  "AI founder", "tech designer", "digital artist", "vlogger", "streamer",
-  "trend forecaster", "AR creator", "fashion engineer", "metaverse curator",
-  "product tester", "AI researcher", "sound producer", "content strategist",
-  "neural-net stylist", "startup intern", "creative coder", "virtual stylist",
-  "app builder", "crypto storyteller", "UX dreamer", "AI makeup artist",
-  "music technologist", "motion designer", "social media director",
-  "brand futurist", "AI poet", "concept photographer", "video remixer",
-  "fashion influencer", "streetwear archivist", "digital journalist",
-  "UI visionary", "culture hacker", "AI choreographer", "sound curator",
-  "data storyteller", "aesthetic researcher", "creator-economy coach",
-  "AI community host", "trend analyst", "digital anthropologist",
-  "cyber curator", "creator engineer", "neon editor", "AI copywriter",
-  "content DJ", "tech-fashion hybrid", "virtual merch designer",
-  "AI film editor", "short-form producer", "creative technologist"
+  "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
+  "AR creator","fashion engineer","metaverse curator","product tester","AI researcher",
+  "sound producer","content strategist","neural-net stylist","startup intern","creative coder",
+  "virtual stylist","app builder","crypto storyteller","UX dreamer","AI makeup artist",
+  "music technologist","motion designer","social media director","brand futurist","AI poet",
+  "concept photographer","video remixer","fashion influencer","streetwear archivist",
+  "digital journalist","UI visionary","culture hacker","AI choreographer","sound curator",
+  "data storyteller","aesthetic researcher","creator-economy coach","AI community host",
+  "trend analyst","digital anthropologist","cyber curator","creator engineer","neon editor",
+  "AI copywriter","content DJ","tech-fashion hybrid","virtual merch designer","AI film editor",
+  "short-form producer","creative technologist"
 ];
 
 function randomPersona() {
   const ethnicity = ethnicities[Math.floor(Math.random() * ethnicities.length)];
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
-  const firstNames = ["Aiko", "Marcus", "Sofia", "Ravi", "Mina", "David", "Lila", "Oliver", "Kenji", "Isabella"];
-  const lastNames = ["Tanaka", "Lee", "Martinez", "Singh", "Park", "Johnson", "Thompson", "Patel", "Kim", "Garcia"];
-  const name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
-  return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase() + vibe.slice(1)}`;
+  const firstNames = ["Aiko","Marcus","Sofia","Ravi","Mina","David","Lila","Oliver","Kenji","Isabella"];
+  const lastNames = ["Tanaka","Lee","Martinez","Singh","Park","Johnson","Thompson","Patel","Kim","Garcia"];
+  const name = `${firstNames[Math.floor(Math.random()*firstNames.length)]} ${lastNames[Math.floor(Math.random()*lastNames.length)]}`;
+  return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
+}
+
+/* ---------------- SSL Validator ---------------- */
+async function validateHttpsLink(url) {
+  return new Promise((resolve) => {
+    try {
+      const req = https.request(url, { method: "HEAD" }, res => {
+        resolve(res.statusCode >= 200 && res.statusCode < 400);
+      });
+      req.on("error", () => resolve(false));
+      req.end();
+    } catch {
+      resolve(false);
+    }
+  });
 }
 
 /* ---------------- Persona Search API ---------------- */
@@ -61,13 +74,14 @@ app.get("/api/persona-search", async (req, res) => {
 
   let webContext = "";
   let linkPool = [];
+
   try {
     const serp = await fetch(
       `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=10&api_key=${process.env.SERPAPI_KEY}`
     );
     const serpData = await serp.json();
 
-    // ✅ HTTPS-only, relevance-filtered link pool
+    // ✅ HTTPS-only + relevance-filtered
     const results = serpData.organic_results || [];
     linkPool = results
       .map(r => ({
@@ -82,7 +96,15 @@ app.get("/api/persona-search", async (req, res) => {
         const scoreB = (b.title + b.snippet).toLowerCase().includes(q) ? 1 : 0;
         return scoreB - scoreA;
       })
-      .slice(0, 5);
+      .slice(0, 10);
+
+    // ✅ SSL validation (remove expired links)
+    const validLinks = [];
+    for (const r of linkPool) {
+      const ok = await validateHttpsLink(r.link);
+      if (ok) validLinks.push(r);
+    }
+    linkPool = validLinks.slice(0, 5);
 
     const snippets = linkPool.map(r => r.snippet || r.title);
     webContext = snippets.join(" ");
@@ -113,7 +135,7 @@ Generate 10 unique JSON entries. Each entry must include:
 - "persona": e.g. "${randomPersona()}"
 - "thought": a short first-person real-world experience (max 25 words)
 - "hashtags": exactly 3 real hashtags (no # symbols)
-- "link": one working, relevant link from this list: ${linkPool.map(x => x.link).join(", ")}
+- "link": one relevant, verified working HTTPS link from this list: ${linkPool.map(x => x.link).join(", ")}
 
 Return ONLY a valid JSON array.
 `;
