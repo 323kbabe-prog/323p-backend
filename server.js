@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Swap Browser — Web Live Data Mode
+// server.js — OP19$ backend + AI-Native Persona Swap Browser integration
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -6,6 +6,7 @@ const path = require("path");
 const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
+const Stripe = require("stripe");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -13,21 +14,21 @@ app.use(express.json());
 
 // ✅ Logging environment
 console.log("🚀 Starting AI-Native Persona Swap Browser backend...");
-console.log("OPENAI_API_KEY present:", !!process.env.OPENAI_API_KEY);
+console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
+console.log("STRIPE_SECRET_KEY:", !!process.env.STRIPE_SECRET_KEY);
 
-// ✅ Ensure /data folder
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-// ✅ Static public routes
+// ✅ Static assets
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/aidrop", express.static(path.join(__dirname, "public/aidrop")));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-/* ---------------- Persona Generator Pool ---------------- */
+/* ---------------- Shared Persona Pool ---------------- */
 const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
 const vibes = [
   "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
@@ -58,70 +59,58 @@ function randomPersona() {
   const ethnicity = ethnicities[Math.floor(Math.random() * ethnicities.length)];
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
-  const age = Math.floor(Math.random() * 6) + 18; // 18–23
+  const age = Math.floor(Math.random() * 6) + 18;
   return `a ${age}-year-old ${ethnicity} ${vibe} with a ${style} style`;
 }
 
-/* ---------------- API: Persona Search ---------------- */
+/* ---------------- AI-Native Persona Search ---------------- */
 app.get("/api/persona-search", async (req, res) => {
-  const query = req.query.query || "latest AI ideas";
-  console.log(`🔍 Persona search query: "${query}"`);
+  const query = req.query.query || "latest AI trends";
+  console.log(`🔍 Persona Search Query: "${query}"`);
 
   try {
-    const messages = [
-      {
-        role: "system",
-        content: `
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [
+        {
+          role: "system",
+          content: `
 You are an AI-Native persona-swap generator.
 Each output must include:
-1️⃣ persona (from your persona pool)
+1️⃣ persona (from the persona pool)
 2️⃣ founder thought — a short first-person event or reflection about "${query}"
 3️⃣ hashtags — 3 relevant ones.
 Tone: real, first-person, human, not corporate.
 Return ONLY a JSON array with 10 unique results.
-        `
-      },
-      {
-        role: "user",
-        content: `
+          `
+        },
+        {
+          role: "user",
+          content: `
 Generate 10 unique persona-based outputs about "${query}".
 Each object must have:
 - "persona": e.g. "${randomPersona()}"
 - "thought": a short first-person sentence (max 25 words)
-- "hashtags": exactly 3 short relevant tags (no symbols inside array).
+- "hashtags": exactly 3 relevant tags (no symbols inside array).
 Return only a JSON array.
-        `
-      }
-    ];
-
-    console.log("🧠 Sending request to OpenAI...");
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.9,
-      messages
+          `
+        }
+      ]
     });
 
     const raw = completion.choices?.[0]?.message?.content?.trim();
-    console.log("🧩 Raw OpenAI response:", raw?.slice(0, 400) || "(empty)");
-
-    if (!raw) throw new Error("Empty response from OpenAI");
-
     const match = raw.match(/\[[\s\S]*\]/);
-    if (!match) throw new Error("Invalid JSON format returned from OpenAI");
-    const data = JSON.parse(match[0]);
+    const data = match ? JSON.parse(match[0]) : [{ error: "No valid JSON" }];
 
-    console.log(`✅ Returning ${data.length} persona results`);
     res.json(data);
   } catch (err) {
-    console.error("❌ Persona-Search error:", err);
-    res.status(500).json({
-      error: err.message || "Error fetching persona data",
-      hint: "Check Render logs for detailed OpenAI output."
-    });
+    console.error("❌ Persona Search Error:", err.message);
+    res.status(500).json({ error: "Persona search failed. Check logs for details." });
   }
 });
 
-/* ---------------- API: View Counter ---------------- */
+/* ---------------- Page View Counter ---------------- */
 const VIEW_FILE = path.join("/data", "views.json");
 function loadViews() {
   try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf-8")); }
@@ -137,6 +126,17 @@ app.get("/api/views", (req, res) => {
   res.json({ total: v.total });
 });
 
+/* ---------------- Test OpenAI Connectivity ---------------- */
+app.get("/test", async (req, res) => {
+  try {
+    const r = await openai.models.list();
+    res.json({ status: "✅ OpenAI Connected", modelCount: r.data.length });
+  } catch (err) {
+    console.error("❌ OpenAI connection test failed:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ---------------- Socket ---------------- */
 io.on("connection", socket => {
   socket.on("joinRoom", id => socket.join(id));
@@ -144,6 +144,4 @@ io.on("connection", socket => {
 
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () =>
-  console.log(`✅ AI-Native Persona Swap backend live on port ${PORT}`)
-);
+httpServer.listen(PORT, () => console.log(`✅ AI-Native Persona Swap backend live on :${PORT}`));
