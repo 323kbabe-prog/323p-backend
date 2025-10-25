@@ -11,22 +11,23 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// ✅ Logging environment variables
+// ✅ Logging environment
 console.log("🚀 Starting AI-Native Persona Swap Browser backend...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 
-// ✅ Ensure /data exists
+// ✅ Make sure /data exists
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 // ✅ Serve static files
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/aidrop", express.static(path.join(__dirname, "public/aidrop")));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- Persona Pools ---------------- */
+/* ---------------- Persona Generator Pool ---------------- */
 const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
 const vibes = [
   "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
@@ -53,19 +54,18 @@ const styles = [
   "AI street","motion chic","gen-alpha preview","calm pop","glow neutral"
 ];
 
-// Random persona builder
 function randomPersona() {
   const ethnicity = ethnicities[Math.floor(Math.random() * ethnicities.length)];
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const style = styles[Math.floor(Math.random() * styles.length)];
-  const age = Math.floor(Math.random() * 6) + 18; // 18–23
+  const age = Math.floor(Math.random() * 6) + 18; // 18-23
   return `a ${age}-year-old ${ethnicity} ${vibe} with a ${style} style`;
 }
 
 /* ---------------- API: Persona Search ---------------- */
 app.get("/api/persona-search", async (req, res) => {
-  const query = req.query.query || "latest AI trend";
-  console.log(`🌐 Persona Search: ${query}`);
+  const query = req.query.query || "latest AI ideas";
+  console.log("🔍 Query:", query);
 
   try {
     const completion = await openai.chat.completions.create({
@@ -75,40 +75,38 @@ app.get("/api/persona-search", async (req, res) => {
         {
           role: "system",
           content: `
-You are an AI persona generation engine for AI-Drop posts.
-Each result must include:
-1️⃣ persona (from your internal persona pool)
-2️⃣ founder thought (first-person statement)
-3️⃣ hashtags (3 total)
-Tone: calm, reflective, first-person, human — not corporate.
-Output in JSON array only, no commentary.
+You are an AI-Native persona-swap generator.
+Each output must include:
+1️⃣ persona (from your persona pool)
+2️⃣ founder thought — a short first-person event or reflection about "${query}"
+3️⃣ hashtags — 3 relevant ones.
+Tone: real, first-person, human, not corporate.
+Return ONLY a JSON array with 10 unique results.
           `
         },
         {
           role: "user",
           content: `
-Generate 10 unique persona-based founder outputs about "${query}".
+Generate 10 unique persona-based outputs about "${query}".
 Each object must have:
-- "persona": random like "${randomPersona()}"
-- "thought": one short first-person statement (max 25 words)
-- "hashtags": exactly 3 relevant hashtags
-Return ONLY a JSON array, no text before or after.
+- "persona": e.g. "${randomPersona()}"
+- "thought": a short first-person sentence (max 25 words)
+- "hashtags": exactly 3 short relevant tags (no symbols inside array).
+Return only a JSON array.
           `
         }
       ]
     });
 
-    let text = completion.choices[0].message.content.trim();
+    const raw = completion.choices[0].message.content.trim();
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error("Invalid JSON format");
+    const data = JSON.parse(match[0]);
 
-    // 🧠 Safe JSON extraction
-    const match = text.match(/\[[\s\S]*\]/);
-    if (!match) throw new Error("No JSON array found in response");
-    const json = JSON.parse(match[0]);
-
-    res.json(json);
+    res.json(data);
   } catch (err) {
-    console.error("❌ Persona Search Error:", err.message);
-    res.status(500).json({ error: "Error generating persona results." });
+    console.error("❌ Persona-Search error:", err.message);
+    res.status(500).json({ error: "Error fetching persona data." });
   }
 });
 
@@ -130,13 +128,9 @@ app.get("/api/views", (req, res) => {
 
 /* ---------------- Socket ---------------- */
 io.on("connection", socket => {
-  console.log("🧠 New socket connection");
-  socket.on("joinRoom", roomId => {
-    socket.join(roomId);
-    socket.roomId = roomId;
-  });
+  socket.on("joinRoom", id => socket.join(id));
 });
 
 /* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => console.log(`✅ Backend live on :${PORT}`));
+httpServer.listen(PORT, () => console.log(`✅ AI-Native Persona Swap backend live on :${PORT}`));
