@@ -52,16 +52,40 @@ function randomPersona() {
   return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
 }
 
-/* ---------------- SSL Validator ---------------- */
+/* ---------------- SSL Validator (with Expiry Check) ---------------- */
 async function validateHttpsLink(url) {
   return new Promise((resolve) => {
     try {
       const req = https.request(url, { method: "HEAD" }, res => {
-        resolve(res.statusCode >= 200 && res.statusCode < 400);
+        // ✅ Check SSL certificate expiration
+        if (res.socket && res.socket.getPeerCertificate) {
+          const cert = res.socket.getPeerCertificate();
+          if (cert.valid_to) {
+            const expiry = new Date(cert.valid_to);
+            if (expiry < new Date()) {
+              console.log(`⚠️ Expired SSL certificate skipped: ${url}`);
+              return resolve(false); // Skip expired certificates
+            }
+          }
+        }
+
+        // ✅ Only accept valid HTTPS responses
+        if (res.statusCode >= 200 && res.statusCode < 400) {
+          resolve(true);
+        } else {
+          console.log(`⚠️ Invalid HTTPS status (${res.statusCode}) for: ${url}`);
+          resolve(false);
+        }
       });
-      req.on("error", () => resolve(false));
+
+      req.on("error", (err) => {
+        console.warn(`⚠️ HTTPS validation error for ${url}:`, err.message);
+        resolve(false);
+      });
+
       req.end();
-    } catch {
+    } catch (err) {
+      console.warn(`⚠️ Unexpected HTTPS validation issue for ${url}:`, err.message);
       resolve(false);
     }
   });
