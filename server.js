@@ -15,10 +15,10 @@ app.use(express.json());
 console.log("🚀 Starting AI-Native Persona Swap Browser backend...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 
-// ✅ Data directory check
+// ✅ Ensure /data exists
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-// ✅ Serve static files (public folder for images etc.)
+// ✅ Serve static files
 app.use(express.static(path.join(__dirname, "public")));
 
 const httpServer = createServer(app);
@@ -29,31 +29,31 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 /* ---------------- Persona Pools ---------------- */
 const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
 const vibes = [
-  "AI founder", "tech designer", "digital artist", "vlogger", "streamer", "trend forecaster",
-  "AR creator", "fashion engineer", "metaverse curator", "product tester", "AI researcher",
-  "sound producer", "content strategist", "neural-net stylist", "startup intern", "creative coder",
-  "virtual stylist", "app builder", "crypto storyteller", "UX dreamer", "AI makeup artist",
-  "music technologist", "motion designer", "social media director", "brand futurist", "AI poet",
-  "concept photographer", "video remixer", "fashion influencer", "streetwear archivist",
-  "digital journalist", "UI visionary", "culture hacker", "AI choreographer", "sound curator",
-  "data storyteller", "aesthetic researcher", "creator-economy coach", "AI community host",
-  "trend analyst", "digital anthropologist", "cyber curator", "creator engineer", "neon editor",
-  "AI copywriter", "content DJ", "tech-fashion hybrid", "virtual merch designer", "AI film editor",
-  "short-form producer", "creative technologist"
+  "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
+  "AR creator","fashion engineer","metaverse curator","product tester","AI researcher",
+  "sound producer","content strategist","neural-net stylist","startup intern","creative coder",
+  "virtual stylist","app builder","crypto storyteller","UX dreamer","AI makeup artist",
+  "music technologist","motion designer","social media director","brand futurist","AI poet",
+  "concept photographer","video remixer","fashion influencer","streetwear archivist",
+  "digital journalist","UI visionary","culture hacker","AI choreographer","sound curator",
+  "data storyteller","aesthetic researcher","creator-economy coach","AI community host",
+  "trend analyst","digital anthropologist","cyber curator","creator engineer","neon editor",
+  "AI copywriter","content DJ","tech-fashion hybrid","virtual merch designer","AI film editor",
+  "short-form producer","creative technologist"
 ];
 const styles = [
-  "clean girl", "cyber y2k", "soft grunge", "streetwear", "pastel tech", "chrome glow", "minimalcore",
-  "vintage remix", "e-girl", "e-boy", "retro-futurist", "quiet luxury", "mirror selfie", "AIcore",
-  "blurry nostalgia", "glow street", "dream archive", "LA casual", "NYC minimal", "K-pop inspired",
-  "oversized fit", "iridescent glam", "techwear", "soft chaos", "loud-calm hybrid", "main-character energy",
-  "monochrome mood", "afterlight aesthetic", "sunset filter", "glittercore", "vapor minimal",
-  "coquette digital", "chrome pastel", "recycled glam", "studio glow", "hazy realism",
-  "low-contrast street", "creative uniform", "digital thrift", "pastel glitch", "underground luxe",
-  "city casual", "future-retro", "blurred edge", "sleek monochrome", "glassy shimmer", "AI street",
-  "motion chic", "gen-alpha preview", "calm pop", "glow neutral"
+  "clean girl","cyber y2k","soft grunge","streetwear","pastel tech","chrome glow","minimalcore",
+  "vintage remix","e-girl","e-boy","retro-futurist","quiet luxury","mirror selfie","AIcore",
+  "blurry nostalgia","glow street","dream archive","LA casual","NYC minimal","K-pop inspired",
+  "oversized fit","iridescent glam","techwear","soft chaos","loud-calm hybrid",
+  "main-character energy","monochrome mood","afterlight aesthetic","sunset filter","glittercore",
+  "vapor minimal","coquette digital","chrome pastel","recycled glam","studio glow","hazy realism",
+  "low-contrast street","creative uniform","digital thrift","pastel glitch","underground luxe",
+  "city casual","future-retro","blurred edge","sleek monochrome","glassy shimmer",
+  "AI street","motion chic","gen-alpha preview","calm pop","glow neutral"
 ];
 
-// Utility to create random persona
+// Random persona builder
 function randomPersona() {
   const ethnicity = ethnicities[Math.floor(Math.random() * ethnicities.length)];
   const vibe = vibes[Math.floor(Math.random() * vibes.length)];
@@ -68,41 +68,43 @@ app.get("/api/persona-search", async (req, res) => {
   console.log(`🌐 Persona Search: ${query}`);
 
   try {
-    // 🔹 Ask OpenAI to generate results using your persona logic
-    const response = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
       messages: [
         {
           role: "system",
           content: `
-You are an AI persona generation engine for AI-Drop posts. 
+You are an AI persona generation engine for AI-Drop posts.
 Each result must include:
-1️⃣ persona (random from predefined pool)
-2️⃣ founder thought (first-person reflection)
+1️⃣ persona (from your internal persona pool)
+2️⃣ founder thought (first-person statement)
 3️⃣ hashtags (3 total)
 Tone: calm, reflective, first-person, human — not corporate.
-Always base insights on real-time cultural or tech trends related to "${query}".
-Output in JSON array format.
+Output in JSON array only, no commentary.
           `
         },
         {
           role: "user",
           content: `
-Generate 10 unique persona-based founder outputs based on "${query}".
-For each:
-- "persona": a randomly constructed persona like "${randomPersona()}".
-- "thought": one short first-person statement (max 25 words) describing their idea or app inspired by "${query}".
-- "hashtags": exactly 3 relevant tags.
-Return only a valid JSON array.
+Generate 10 unique persona-based founder outputs about "${query}".
+Each object must have:
+- "persona": random like "${randomPersona()}"
+- "thought": one short first-person statement (max 25 words)
+- "hashtags": exactly 3 relevant hashtags
+Return ONLY a JSON array, no text before or after.
           `
         }
       ]
     });
 
-    // 🧠 Parse model output
-    const text = response.choices[0].message.content.trim();
-    const json = JSON.parse(text);
+    let text = completion.choices[0].message.content.trim();
+
+    // 🧠 Safe JSON extraction
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error("No JSON array found in response");
+    const json = JSON.parse(match[0]);
+
     res.json(json);
   } catch (err) {
     console.error("❌ Persona Search Error:", err.message);
@@ -110,7 +112,7 @@ Return only a valid JSON array.
   }
 });
 
-/* ---------------- API: Page View Counter ---------------- */
+/* ---------------- API: View Counter ---------------- */
 const VIEW_FILE = path.join("/data", "views.json");
 function loadViews() {
   try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf-8")); }
@@ -119,7 +121,6 @@ function loadViews() {
 function saveViews(v) {
   fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
 }
-
 app.get("/api/views", (req, res) => {
   const v = loadViews();
   v.total += 1;
@@ -127,7 +128,7 @@ app.get("/api/views", (req, res) => {
   res.json({ total: v.total });
 });
 
-/* ---------------- SOCKET ---------------- */
+/* ---------------- Socket ---------------- */
 io.on("connection", socket => {
   console.log("🧠 New socket connection");
   socket.on("joinRoom", roomId => {
@@ -136,6 +137,6 @@ io.on("connection", socket => {
   });
 });
 
-/* ---------------- START SERVER ---------------- */
+/* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => console.log(`✅ Backend live on :${PORT}`));
