@@ -136,21 +136,30 @@ Context: ${context}
       const personas = [];
 
       for await (const chunk of completion) {
-        const text = chunk.choices?.[0]?.delta?.content || "";
-        buffer += text;
+  const text = chunk.choices?.[0]?.delta?.content || "";
+  buffer += text;
 
-        // Send persona when <NEXT> appears
-        if (buffer.includes("<NEXT>")) {
-          const parts = buffer.split("<NEXT>");
-          const personaText = parts.shift();
-          buffer = parts.join("<NEXT>");
-          try {
-            const persona = JSON.parse(personaText.trim());
-            socket.emit("personaChunk", persona);
-            personas.push(persona);
-          } catch { /* skip partials */ }
-        }
+  if (buffer.includes("<NEXT>")) {
+    const parts = buffer.split("<NEXT>");
+    const personaText = parts.shift();
+    buffer = parts.join("<NEXT>");
+    try {
+      const persona = JSON.parse(personaText.trim());
+      socket.emit("personaChunk", persona);
+      personas.push(persona);
+
+      // 🧠 Write partial cache update after each persona
+      const cache = loadCache();
+      let entry = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
+      if (!entry) {
+        entry = { query, timestamp: new Date().toISOString(), personas: [] };
+        cache.push(entry);
       }
+      entry.personas = personas;   // keep overwriting with full list so far
+      saveCache(cache);
+    } catch { /* skip partials */ }
+  }
+}
 
       // ✅ Save to cache after full generation
       if (personas.length > 0) {
