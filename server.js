@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Swap Browser (Persona Reacts to Video)
+// server.js — AI-Native Persona Swap Browser (Personas React to Video Content)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -12,20 +12,27 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+// 🔍 Environment check
 console.log("🚀 Starting AI-Native Persona Swap Browser backend...");
-["OPENAI_API_KEY","SERPAPI_KEY","NEWSAPI_KEY","YOUTUBE_API_KEY","RAPIDAPI_KEY","IG_ACCESS_TOKEN"].forEach(k=>{
-  console.log(`${k}:`, !!process.env[k]);
-});
+[
+  "OPENAI_API_KEY",
+  "SERPAPI_KEY",
+  "NEWSAPI_KEY",
+  "YOUTUBE_API_KEY",
+  "RAPIDAPI_KEY",
+  "IG_ACCESS_TOKEN",
+  "IG_BUSINESS_ID"
+].forEach(k => console.log(`${k}:`, !!process.env[k]));
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
-app.use(express.static(path.join(__dirname, "public")));
 
+app.use(express.static(path.join(__dirname, "public")));
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- Persona Pool ---------------- */
-const ethnicities = ["Korean","Black","White","Latina","Asian-American","Mixed"];
+const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
 const vibes = [
   "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
   "AR creator","fashion engineer","metaverse curator","product tester","AI researcher",
@@ -40,8 +47,8 @@ const vibes = [
   "short-form producer","creative technologist"
 ];
 function randomPersona() {
-  const ethnicity = ethnicities[Math.floor(Math.random()*ethnicities.length)];
-  const vibe = vibes[Math.floor(Math.random()*vibes.length)];
+  const ethnicity = ethnicities[Math.floor(Math.random() * ethnicities.length)];
+  const vibe = vibes[Math.floor(Math.random() * vibes.length)];
   const firstNames = ["Aiko","Marcus","Sofia","Ravi","Mina","David","Lila","Oliver","Kenji","Isabella"];
   const lastNames = ["Tanaka","Lee","Martinez","Singh","Park","Johnson","Thompson","Patel","Kim","Garcia"];
   const name = `${firstNames[Math.floor(Math.random()*firstNames.length)]} ${lastNames[Math.floor(Math.random()*lastNames.length)]}`;
@@ -49,132 +56,167 @@ function randomPersona() {
 }
 
 /* ---------------- Persona Search API ---------------- */
-app.get("/api/persona-search", async (req,res)=>{
+app.get("/api/persona-search", async (req, res) => {
   const query = req.query.query || "latest AI trends";
   console.log(`🌐 Persona Search for: "${query}"`);
 
   let webContext = "";
 
-  /* --- Step 1: SerpAPI or NewsAPI context --- */
+  /* --- STEP 1: SERP + NEWS CONTEXT --- */
   try {
     const serp = await fetch(
       `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=8&api_key=${process.env.SERPAPI_KEY}`
     );
-    const data = await serp.json();
-    const results = data.organic_results || [];
-    webContext = results.map(r=>`${r.title}: ${r.snippet}`).join(" ");
-  } catch (e) {
-    console.warn("⚠️ SerpAPI failed:", e.message);
+    const serpData = await serp.json();
+    const results = serpData.organic_results || [];
+    webContext = results.map(r => `${r.title}: ${r.snippet}`).join(" ");
+  } catch (err) {
+    console.warn("⚠️ SerpAPI failed:", err.message);
     try {
       const news = await fetch(
         `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=5&apiKey=${process.env.NEWSAPI_KEY}`
       );
-      const d = await news.json();
-      webContext = d.articles?.map(a=>`${a.title}: ${a.description}`).join(" ") || "";
-    } catch(e2){ webContext = "No live context available."; }
+      const newsData = await news.json();
+      webContext = newsData.articles?.map(a => `${a.title}: ${a.description}`).join(" ") || "";
+    } catch (err2) {
+      console.warn("⚠️ NewsAPI fallback failed:", err2.message);
+      webContext = "No live web context available.";
+    }
   }
 
-  /* --- Step 2: Short-form fetch with titles --- */
+  /* --- STEP 2: FETCH SHORT-FORM VIDEOS (YouTube, TikTok, IG) --- */
   let shortLinks = [];
   try {
-    // YouTube Shorts
+    // 🎥 YouTube Shorts
     if (process.env.YOUTUBE_API_KEY) {
       const yt = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query+" shorts")}&maxResults=5&key=${process.env.YOUTUBE_API_KEY}`
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query + " shorts")}&maxResults=5&key=${process.env.YOUTUBE_API_KEY}`
       );
       const ytData = await yt.json();
-      ytData.items?.forEach(v=>{
-        shortLinks.push({ title:v.snippet.title, link:`https://www.youtube.com/shorts/${v.id.videoId}` });
-      });
+      ytData.items?.forEach(v =>
+        shortLinks.push({
+          platform: "YouTube",
+          title: v.snippet.title,
+          link: `https://www.youtube.com/shorts/${v.id.videoId}`
+        })
+      );
     }
-    // TikTok (RapidAPI)
+
+    // 🎵 TikTok (RapidAPI)
     if (process.env.RAPIDAPI_KEY) {
       const tiktok = await fetch(
         `https://tiktok-scraper-api.p.rapidapi.com/video/search?keywords=${encodeURIComponent(query)}`,
-        { headers:{ "X-RapidAPI-Key":process.env.RAPIDAPI_KEY }}
+        { headers: { "X-RapidAPI-Key": process.env.RAPIDAPI_KEY } }
       );
       const ttData = await tiktok.json();
-      ttData.data?.slice(0,5).forEach(v=> shortLinks.push({ title:v.title, link:v.url }));
+      ttData.data?.slice(0, 5).forEach(v =>
+        shortLinks.push({
+          platform: "TikTok",
+          title: v.title || v.desc || "TikTok video",
+          link: v.url
+        })
+      );
     }
-    // Instagram Reels (optional)
+
+    // 📱 Instagram Reels (Graph API)
     if (process.env.IG_ACCESS_TOKEN && process.env.IG_BUSINESS_ID) {
       const ig = await fetch(
         `https://graph.facebook.com/v18.0/${process.env.IG_BUSINESS_ID}/media?fields=caption,permalink,media_type&access_token=${process.env.IG_ACCESS_TOKEN}`
       );
       const igData = await ig.json();
-      igData.data?.filter(x=>x.media_type==="REEL" && x.caption?.toLowerCase().includes(query.toLowerCase()))
-        .slice(0,5)
-        .forEach(v=> shortLinks.push({ title:v.caption.slice(0,90), link:v.permalink }));
+      igData.data
+        ?.filter(x => x.media_type === "REEL" && x.caption?.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 5)
+        .forEach(v =>
+          shortLinks.push({
+            platform: "Instagram",
+            title: v.caption.slice(0, 80),
+            link: v.permalink
+          })
+        );
     }
-  } catch(e){ console.warn("⚠️ short-form fetch failed:", e.message); }
-
-  if (shortLinks.length===0) {
-    shortLinks=[{title:"generic video",link:"https://www.youtube.com/shorts"}];
+  } catch (err) {
+    console.warn("⚠️ Short-form fetch failed:", err.message);
   }
 
-  /* --- Step 3: GPT prompt --- */
+  if (shortLinks.length === 0) {
+    shortLinks = [{ platform: "YouTube", title: "Generic short", link: "https://www.youtube.com/shorts" }];
+  }
+
+  /* --- STEP 3: GPT PROMPT — PERSONA TALKS ABOUT EACH VIDEO --- */
   const prompt = `
-You are an AI-Native persona generator.
+You are an AI-Native persona generator that reacts to short-form videos about "${query}".
 
-Topic: "${query}"
+Below are trending short-form clips (with platform + title + link).  
+For each video, imagine a young creative persona who just watched it and is posting a first-person reaction.  
+Each persona must clearly talk about that video's content — not generic topics.
 
-Context from web search:
-${webContext}
+${shortLinks.map((v, i) => `(${i + 1}) [${v.platform}] ${v.title} — ${v.link}`).join("\n")}
 
-Below are recent short-form videos (titles + links):
-${shortLinks.map((v,i)=>`(${i+1}) ${v.title} — ${v.link}`).join("\n")}
-
-For each video, imagine a different AI-native persona reacting to it.
-Write what that persona would say about that specific video, in first-person tone.
-
-Output a JSON array of up to 10 entries with:
-- "persona": e.g. "${randomPersona()}"
-- "thought": what the persona says about that video's topic (max 25 words)
-- "hashtags": 3 relevant trending tags (no #)
+Return one JSON object per video with:
+- "persona": creative name + short identity (e.g. "${randomPersona()}")
+- "thought": first-person comment that fits that video's title (max 25 words)
+- "hashtags": 3 relevant trending hashtags (no # symbols)
 - "link": that video's link
 
-Output only JSON.
+Output only a valid JSON array.
 `;
 
-  let raw="",parsed=[];
-  try{
-    const c=await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.9,
-      messages:[
-        {role:"system",content:"Output only valid JSON arrays, nothing else."},
-        {role:"user",content:prompt}
+  /* --- STEP 4: GPT CALL --- */
+  let raw = "", parsed = [];
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [
+        { role: "system", content: "Output only valid JSON arrays, nothing else." },
+        { role: "user", content: prompt }
       ]
     });
-    raw=c.choices?.[0]?.message?.content?.trim()||"";
-    const match=raw.match(/\[[\s\S]*\]/);
-    if(match) parsed=JSON.parse(match[0]);
-  }catch(e){
-    console.error("❌ GPT error:",e.message);
+    raw = completion.choices?.[0]?.message?.content?.trim() || "";
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (match) parsed = JSON.parse(match[0]);
+  } catch (err) {
+    console.error("❌ GPT generation failed:", err.message);
   }
-  if(!Array.isArray(parsed)||parsed.length===0){
-    parsed=[{
-      persona:"Aiko Tanaka, AI nightlife designer",
-      thought:"The new rooftop bar in NYC looks unreal—AI lights, smooth beats, and neon cocktails built for Instagram.",
-      hashtags:["NYCNightlife","AIDesign","CocktailTrend"],
-      link:shortLinks[0].link
-    }];
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    parsed = [
+      {
+        persona: "Mina Park, Korean AI trend forecaster",
+        thought: "That new NYC bar reel is wild — neon lights, AI bartender, future feels so close!",
+        hashtags: ["NYCNightlife", "AIDesign", "FutureVibes"],
+        link: shortLinks[0].link
+      }
+    ];
   }
+
   res.json(parsed);
 });
 
 /* ---------------- View Counter ---------------- */
 const VIEW_FILE = "/data/views.json";
-function loadViews(){try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"))}catch{return{total:0}}}
-function saveViews(v){fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2))}
-app.get("/api/views",(req,res)=>{
-  const v=loadViews(); v.total+=1; saveViews(v);
-  res.json({total:v.total});
+function loadViews() {
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf-8")); }
+  catch { return { total: 0 }; }
+}
+function saveViews(v) {
+  fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
+}
+app.get("/api/views", (req, res) => {
+  const v = loadViews();
+  v.total += 1;
+  saveViews(v);
+  res.json({ total: v.total });
 });
 
 /* ---------------- Socket ---------------- */
-io.on("connection",s=> s.on("joinRoom",id=> s.join(id)));
+io.on("connection", socket => {
+  socket.on("joinRoom", id => socket.join(id));
+});
 
 /* ---------------- Start ---------------- */
-const PORT=process.env.PORT||3000;
-httpServer.listen(PORT,()=> console.log(`✅ Backend running on :${PORT}`));
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () =>
+  console.log(`✅ Backend running and listening on port ${PORT}`)
+);
