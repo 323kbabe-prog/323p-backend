@@ -52,24 +52,21 @@ function randomPersona() {
   return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
 }
 
-/* ---------------- SSL Validator (with Expiry Check) ---------------- */
+/* ---------------- SSL Validator ---------------- */
 async function validateHttpsLink(url) {
   return new Promise((resolve) => {
     try {
       const req = https.request(url, { method: "HEAD" }, res => {
-        // ✅ Check SSL certificate expiration
         if (res.socket && res.socket.getPeerCertificate) {
           const cert = res.socket.getPeerCertificate();
           if (cert.valid_to) {
             const expiry = new Date(cert.valid_to);
             if (expiry < new Date()) {
               console.log(`⚠️ Expired SSL certificate skipped: ${url}`);
-              return resolve(false); // Skip expired certificates
+              return resolve(false);
             }
           }
         }
-
-        // ✅ Only accept valid HTTPS responses
         if (res.statusCode >= 200 && res.statusCode < 400) {
           resolve(true);
         } else {
@@ -77,12 +74,10 @@ async function validateHttpsLink(url) {
           resolve(false);
         }
       });
-
       req.on("error", (err) => {
         console.warn(`⚠️ HTTPS validation error for ${url}:`, err.message);
         resolve(false);
       });
-
       req.end();
     } catch (err) {
       console.warn(`⚠️ Unexpected HTTPS validation issue for ${url}:`, err.message);
@@ -99,86 +94,90 @@ app.get("/api/persona-search", async (req, res) => {
   let webContext = "";
   let linkPool = [];
 
+  // 1️⃣ Collect live data
   try {
     const serp = await fetch(
-      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=10&api_key=${process.env.SERPAPI_KEY}`
+      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=8&api_key=${process.env.SERPAPI_KEY}`
     );
     const serpData = await serp.json();
-
-    // ✅ HTTPS-only + relevance-filtered
     const results = serpData.organic_results || [];
     linkPool = results
-      .map(r => ({
-        link: r.link,
-        title: r.title || "",
-        snippet: r.snippet || ""
-      }))
+      .map(r => ({ link: r.link, title: r.title || "", snippet: r.snippet || "" }))
       .filter(r => r.link && r.link.startsWith("https://"))
-      .sort((a, b) => {
-        const q = query.toLowerCase();
-        const scoreA = (r.title + r.snippet).toLowerCase().includes(q) ? 1 : 0;
-        const scoreB = (b.title + b.snippet).toLowerCase().includes(q) ? 1 : 0;
-        return scoreB - scoreA;
-      })
       .slice(0, 10);
-
-    // ✅ SSL validation (remove expired links)
-    const validLinks = [];
-    for (const r of linkPool) {
-      const ok = await validateHttpsLink(r.link);
-      if (ok) validLinks.push(r);
-    }
-    linkPool = validLinks.slice(0, 5);
-
     const snippets = linkPool.map(r => r.snippet || r.title);
-    webContext = snippets.join(" ");
-    if (!webContext) throw new Error("SerpAPI empty");
+    webContext += snippets.join(" ");
   } catch (err) {
     console.warn("⚠️ SerpAPI failed:", err.message);
+  }
+
+  // 2️⃣ Fallback to NewsAPI
+  if (!webContext) {
     try {
       const news = await fetch(
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=5&apiKey=${process.env.NEWSAPI_KEY}`
+        `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=8&apiKey=${process.env.NEWSAPI_KEY}`
       );
       const newsData = await news.json();
       const articles = newsData.articles?.map(a => a.title + " " + a.description) || [];
-      linkPool = newsData.articles?.map(a => a.url).filter(u => u && u.startsWith("https://")) || [];
-      webContext = articles.join(" ");
+      linkPool = newsData.articles?.map(a => ({ link: a.url, title: a.title })) || [];
+      webContext += articles.join(" ");
     } catch (err2) {
       console.warn("⚠️ NewsAPI fallback failed:", err2.message);
       webContext = "No live web context available.";
     }
   }
 
-  const prompt = `
-You are an AI-Native persona generator connected to live web data.
+  // 3️⃣ Verify links (ensure working HTTPS)
+  async function verifyLiveLinks(links) {
+    const verified = [];
+    for (const r of links) {
+      try {
+        const resp = await fetch(r.link, { method: "HEAD", timeout: 4000 });
+        if (resp.ok) verified.push(r);
+      } catch {}
+    }
+    return verified.slice(0, 5);
+  }
 
-Use this real context about "${query}":
+  linkPool = await verifyLiveLinks(linkPool);
+  const linkList = linkPool.map(r => r.link).join(", ");
+
+  // 4️⃣ GPT prompt
+  const prompt = `
+You are an AI-Native persona generator connected to real web data.
+
+Use this context about "${query}":
 ${webContext}
 
-Generate 10 unique JSON entries. Each entry must include:
-- "persona": e.g. "${randomPersona()}"
-- "thought": a short first-person real-world experience (max 25 words)
-- "hashtags": exactly 3 real hashtags (no # symbols)
-- "link": one relevant, verified working HTTPS link from this list: ${linkPool.map(x => x.link).join(", ")}
+Use these verified links for reference: ${linkList}
 
-Return ONLY a valid JSON array.
+Generate 10 unique JSON entries.
+Each entry must include:
+- "persona": realistic founder persona (use diverse origins)
+- "thought": a first-person experience or event related to this topic
+- "hashtags": exactly 3 short real hashtags (no # symbol)
+- "links": 1–3 URLs from the verified list, relevant to the thought.
+
+Return only valid JSON (no markdown, no notes).
 `;
 
+  // 5️⃣ GPT response
   let raw = "";
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
       messages: [
-        { role: "system", content: "Output only valid JSON arrays, nothing else." },
+        { role: "system", content: "Return only valid JSON arrays." },
         { role: "user", content: prompt }
-      ]
+      ],
     });
     raw = completion.choices?.[0]?.message?.content?.trim() || "";
   } catch (err) {
     console.error("❌ GPT request failed:", err.message);
   }
 
+  // 6️⃣ Parse output
   let parsed = [];
   try {
     const match = raw.match(/\[[\s\S]*\]/);
@@ -187,39 +186,38 @@ Return ONLY a valid JSON array.
     parsed = [];
   }
 
-  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+  // 7️⃣ Fallback data
+  if (!Array.isArray(parsed) || parsed.length === 0) {
     parsed = [
       {
-        persona: "Aiko Tanaka, Japanese Language Enthusiast",
-        thought: "I learned Japanese by journaling every morning and translating my own words with an AI model.",
-        hashtags: ["JapaneseLanguage", "LearningJourney", "AIStudy"],
-        link: "https://www.japantimes.co.jp"
+        persona: "Aiko Tanaka, Japanese AI researcher",
+        thought: "I spent today studying how emotion-based algorithms shape human decisions.",
+        hashtags: ["AI", "Research", "Behavior"],
+        links: ["https://www.japantimes.co.jp"]
       }
     ];
   }
 
-// ✅ Step 6 — Final live check: verify each link actually responds with HTTP 200
-async function verifyLiveLinks(arr) {
-  const checked = [];
-  for (const item of arr) {
-    if (!item.link) continue;
-    try {
-      const r = await fetch(item.link, { method: "HEAD", timeout: 4000 });
-      if (r.ok) {
-        checked.push(item);
-      } else {
-        console.log(`⚠️ Skipped broken link (${r.status}): ${item.link}`);
-      }
-    } catch (err) {
-      console.log(`⚠️ Link unreachable: ${item.link}`);
+  // 8️⃣ Final verification — attach 1–3 working links
+  async function verifyAndAttachLinks(arr, links) {
+    const verified = [];
+    for (const r of links) {
+      try {
+        const resp = await fetch(r.link, { method: "HEAD", timeout: 4000 });
+        if (resp.ok) verified.push(r.link);
+      } catch {}
     }
+    return arr.map(item => ({
+      ...item,
+      links: verified.slice(0, Math.floor(Math.random() * 3) + 1)
+    }));
   }
-  // If none valid, return original array (fallback safety)
-  return checked.length > 0 ? checked : arr;
-}
 
-// Run final link verification before sending response
-parsed = await verifyLiveLinks(parsed);
+  parsed = await verifyAndAttachLinks(parsed, linkPool);
+
+  if (!parsed[0]?.links?.length) {
+    parsed[0].links = ["https://www.reuters.com", "https://www.nytimes.com"];
+  }
 
   res.json(parsed);
 });
