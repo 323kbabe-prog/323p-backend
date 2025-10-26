@@ -150,55 +150,28 @@ app.post("/api/save-drop", (req, res) => {
   }
 });
 
-// serve a saved drop as HTML at ?drop=<id>
+
+/* ---------------- Unified Viewer Route ---------------- */
+// if a ?drop=<id> query is present, serve the same index.html shell
 app.get("/", (req, res) => {
   const dropId = req.query.drop;
-  if (!dropId)
-    return res.send("<h3 style='font-family:Inter,sans-serif;text-align:center;margin-top:40px;'>No drop specified.</h3>");
+  const indexPath = path.join(__dirname, "public", "index.html");
 
-  const filePath = path.join("/data", `drop-${dropId}.json`);
-  if (!fs.existsSync(filePath))
-    return res.send("<h3 style='font-family:Inter,sans-serif;text-align:center;margin-top:40px;'>Drop not found.</h3>");
-
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    const html = `
-      <html>
-        <head>
-          <meta charset="utf-8"/>
-          <title>Persona Drop — ${dropId}</title>
-          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-          <style>
-            body{font-family:'Inter',sans-serif;background:#fafafa;margin:0;padding:40px;color:#000;}
-            h1{text-align:center;margin-bottom:30px;}
-            .card{background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.1);
-                  padding:20px;margin:16px auto;max-width:600px;}
-            .persona{font-weight:700;margin-bottom:8px;}
-            .thought{margin-bottom:10px;}
-            .hashtags{color:#666;font-size:14px;margin-bottom:8px;}
-            a.back{display:block;text-align:center;margin-top:40px;font-size:14px;color:#007aff;text-decoration:none;}
-            a.back:hover{text-decoration:underline;}
-          </style>
-        </head>
-        <body>
-          <h1>Persona Drop</h1>
-          ${data.map(p=>`
-            <div class="card">
-              <div class="persona">${p.persona}</div>
-              <div class="thought">${p.thought}</div>
-              <div class="hashtags">#${p.hashtags.join(" #")}</div>
-            </div>
-          `).join("")}
-          <p style="text-align:center;opacity:0.7">Share their thoughts.</p>
-          <a class="back" href="https://1ai323.ai">← Back to AI-Native Persona Browser</a>
-        </body>
-      </html>`;
-    res.send(html);
-  } catch (err) {
-    console.error("❌ Drop load error:", err.message);
-    res.status(500).send("Error loading drop.");
+  if (dropId) {
+    try {
+      const html = fs.readFileSync(indexPath, "utf8");
+      // inject drop id into <body> tag so the frontend can fetch and render it
+      return res.send(html.replace("<body>", `<body data-drop="${dropId}">`));
+    } catch (err) {
+      console.error("❌ Unified viewer load error:", err.message);
+      return res.status(500).send("index.html missing or unreadable.");
+    }
   }
+
+  // default: serve normal home page
+  res.sendFile(indexPath);
 });
+
 
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
