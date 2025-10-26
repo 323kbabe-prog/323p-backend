@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation + Cache)
+// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation + Cache + Question Handling)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -115,11 +115,12 @@ io.on("connection", socket => {
       const prompt = `
 You are an AI persona generator connected to live web data.
 
-Use this context about "${query}" but do not repeat it literally.
-Generate one persona at a time as valid JSON, for example:
+When the user query is phrased as a question (like "how I learn Japanese"), DO NOT answer the question.
+Instead, interpret it as a *topic* and generate personas who are connected to that theme.
+Each persona must be output strictly as valid JSON in this format:
 {"persona":"${randomPersona()}","thought":"short first-person note","hashtags":["tag1","tag2","tag3"],"link":"https://example.com"}
-After each, append the marker <NEXT>.
-Generate up to 10 personas.
+After each JSON object, append the marker <NEXT>.
+Generate up to 10 personas that match the query.
 Context: ${context}
 `;
 
@@ -139,9 +140,9 @@ Context: ${context}
 
       for await (const chunk of completion) {
         const text = chunk.choices?.[0]?.delta?.content || "";
+        if (!text.includes("{") && !text.includes("<NEXT>")) continue; // skip irrelevant text
         buffer += text;
 
-        // ✅ Emit every persona when <NEXT> marker appears
         while (buffer.includes("<NEXT>")) {
           const [personaText, ...rest] = buffer.split("<NEXT>");
           buffer = rest.join("<NEXT>");
