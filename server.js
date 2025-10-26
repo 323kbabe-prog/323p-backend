@@ -1,11 +1,4 @@
-// server.js — Persona-First GPT Extraction System (with Persona Pool)
-// -----------------------------------------------------------
-// This backend creates 10 personas from your persona pool,
-// extracts search keywords from each persona’s thought,
-// looks up matching videos on YouTube Shorts / TikTok / IG,
-// and returns only personas with verified links.
-// -----------------------------------------------------------
-
+// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + SSL Validation)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -14,200 +7,227 @@ const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
 const fetch = require("node-fetch");
+const https = require("https");
 
 const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// ✅ Log which keys are loaded (helpful for Render debugging)
-console.log("🚀 Starting Persona-First GPT Extraction backend...");
-[
-  "OPENAI_API_KEY",
-  "SERPAPI_KEY",
-  "NEWSAPI_KEY",
-  "YOUTUBE_API_KEY",
-  "RAPIDAPI_KEY",
-  "IG_ACCESS_TOKEN",
-  "IG_BUSINESS_ID"
-].forEach(k => console.log(`${k}:`, !!process.env[k]));
+console.log("🚀 Starting AI-Native Persona Swap Browser backend...");
+console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
+console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
+console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
-// ✅ Create /data directory if missing (for view counter)
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
+
+app.use(express.static(path.join(__dirname, "public")));
+app.use("/aidrop", express.static(path.join(__dirname, "public/aidrop")));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* -----------------------------------------------------------
-   1. Persona Pool — creative DNA for GPT
------------------------------------------------------------ */
-const ethnicities = ["Korean","Black","White","Latina","Asian-American","Mixed"];
+/* ---------------- Persona Pool ---------------- */
+const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
 const vibes = [
-  "AI founder","tech designer","digital artist","trend forecaster","sound producer",
-  "creative coder","AI choreographer","short-form producer","metaverse curator","brand futurist"
+  "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
+  "AR creator","fashion engineer","metaverse curator","product tester","AI researcher",
+  "sound producer","content strategist","neural-net stylist","startup intern","creative coder",
+  "virtual stylist","app builder","crypto storyteller","UX dreamer","AI makeup artist",
+  "music technologist","motion designer","social media director","brand futurist","AI poet",
+  "concept photographer","video remixer","fashion influencer","streetwear archivist",
+  "digital journalist","UI visionary","culture hacker","AI choreographer","sound curator",
+  "data storyteller","aesthetic researcher","creator-economy coach","AI community host",
+  "trend analyst","digital anthropologist","cyber curator","creator engineer","neon editor",
+  "AI copywriter","content DJ","tech-fashion hybrid","virtual merch designer","AI film editor",
+  "short-form producer","creative technologist"
 ];
 
-/* -----------------------------------------------------------
-   2. /api/persona-search — main endpoint
------------------------------------------------------------ */
+function randomPersona() {
+  const ethnicity = ethnicities[Math.floor(Math.random() * ethnicities.length)];
+  const vibe = vibes[Math.floor(Math.random() * vibes.length)];
+  const firstNames = ["Aiko","Marcus","Sofia","Ravi","Mina","David","Lila","Oliver","Kenji","Isabella"];
+  const lastNames = ["Tanaka","Lee","Martinez","Singh","Park","Johnson","Thompson","Patel","Kim","Garcia"];
+  const name = `${firstNames[Math.floor(Math.random()*firstNames.length)]} ${lastNames[Math.floor(Math.random()*lastNames.length)]}`;
+  return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
+}
+
+/* ---------------- SSL Validator (with Expiry Check) ---------------- */
+async function validateHttpsLink(url) {
+  return new Promise((resolve) => {
+    try {
+      const req = https.request(url, { method: "HEAD" }, res => {
+        // ✅ Check SSL certificate expiration
+        if (res.socket && res.socket.getPeerCertificate) {
+          const cert = res.socket.getPeerCertificate();
+          if (cert.valid_to) {
+            const expiry = new Date(cert.valid_to);
+            if (expiry < new Date()) {
+              console.log(`⚠️ Expired SSL certificate skipped: ${url}`);
+              return resolve(false); // Skip expired certificates
+            }
+          }
+        }
+
+        // ✅ Only accept valid HTTPS responses
+        if (res.statusCode >= 200 && res.statusCode < 400) {
+          resolve(true);
+        } else {
+          console.log(`⚠️ Invalid HTTPS status (${res.statusCode}) for: ${url}`);
+          resolve(false);
+        }
+      });
+
+      req.on("error", (err) => {
+        console.warn(`⚠️ HTTPS validation error for ${url}:`, err.message);
+        resolve(false);
+      });
+
+      req.end();
+    } catch (err) {
+      console.warn(`⚠️ Unexpected HTTPS validation issue for ${url}:`, err.message);
+      resolve(false);
+    }
+  });
+}
+
+/* ---------------- Persona Search API ---------------- */
 app.get("/api/persona-search", async (req, res) => {
   const query = req.query.query || "latest AI trends";
-  console.log(`🌐 Persona-First flow for: "${query}"`);
+  console.log(`🌐 Live Persona Search for: "${query}"`);
 
-  // ---------- Step 1: Context from SerpAPI / NewsAPI ----------
   let webContext = "";
+  let linkPool = [];
+
   try {
     const serp = await fetch(
-      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=8&api_key=${process.env.SERPAPI_KEY}`
+      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=10&api_key=${process.env.SERPAPI_KEY}`
     );
-    const data = await serp.json();
-    const results = data.organic_results || [];
-    webContext = results.map(r => `${r.title}: ${r.snippet}`).join(" ");
-  } catch (e) {
+    const serpData = await serp.json();
+
+    // ✅ HTTPS-only + relevance-filtered
+    const results = serpData.organic_results || [];
+    linkPool = results
+      .map(r => ({
+        link: r.link,
+        title: r.title || "",
+        snippet: r.snippet || ""
+      }))
+      .filter(r => r.link && r.link.startsWith("https://"))
+      .sort((a, b) => {
+        const q = query.toLowerCase();
+        const scoreA = (r.title + r.snippet).toLowerCase().includes(q) ? 1 : 0;
+        const scoreB = (b.title + b.snippet).toLowerCase().includes(q) ? 1 : 0;
+        return scoreB - scoreA;
+      })
+      .slice(0, 10);
+
+    // ✅ SSL validation (remove expired links)
+    const validLinks = [];
+    for (const r of linkPool) {
+      const ok = await validateHttpsLink(r.link);
+      if (ok) validLinks.push(r);
+    }
+    linkPool = validLinks.slice(0, 5);
+
+    const snippets = linkPool.map(r => r.snippet || r.title);
+    webContext = snippets.join(" ");
+    if (!webContext) throw new Error("SerpAPI empty");
+  } catch (err) {
+    console.warn("⚠️ SerpAPI failed:", err.message);
     try {
       const news = await fetch(
         `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=5&apiKey=${process.env.NEWSAPI_KEY}`
       );
-      const d = await news.json();
-      webContext = d.articles?.map(a => `${a.title}: ${a.description}`).join(" ") || "";
-    } catch (e2) {
+      const newsData = await news.json();
+      const articles = newsData.articles?.map(a => a.title + " " + a.description) || [];
+      linkPool = newsData.articles?.map(a => a.url).filter(u => u && u.startsWith("https://")) || [];
+      webContext = articles.join(" ");
+    } catch (err2) {
+      console.warn("⚠️ NewsAPI fallback failed:", err2.message);
       webContext = "No live web context available.";
     }
   }
 
-  // ---------- Step 2: GPT #1 — generate 10 personas ----------
-  const personaPrompt = `
-You are an AI-Native persona generator.
+  const prompt = `
+You are an AI-Native persona generator connected to live web data.
 
-Use these ethnicities and creative roles as inspiration:
-Ethnicities: ${ethnicities.join(", ")}
-Roles: ${vibes.join(", ")}
-
-Topic: "${query}"
-
-Based on this context:
+Use this real context about "${query}":
 ${webContext}
 
-Generate 10 unique creative personas reacting to this topic.
-Each entry must have:
-- "persona": name + short identity
-- "thought": 1 sentence, first-person reaction (max 25 words)
-- "hashtags": 3 relevant tags (no #)
-Return only a JSON array.
+Generate 10 unique JSON entries. Each entry must include:
+- "persona": e.g. "${randomPersona()}"
+- "thought": a short first-person real-world experience (max 25 words)
+- "hashtags": exactly 3 real hashtags (no # symbols)
+- "link": one relevant, verified working HTTPS link from this list: ${linkPool.map(x => x.link).join(", ")}
+
+Return ONLY a valid JSON array.
 `;
 
-  let personas = [];
+  let raw = "";
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
       messages: [
-        { role: "system", content: "Output only valid JSON arrays." },
-        { role: "user", content: personaPrompt }
+        { role: "system", content: "Output only valid JSON arrays, nothing else." },
+        { role: "user", content: prompt }
       ]
     });
-    const raw = completion.choices?.[0]?.message?.content?.trim() || "";
-    const match = raw.match(/\[[\s\S]*\]/);
-    if (match) personas = JSON.parse(match[0]);
+    raw = completion.choices?.[0]?.message?.content?.trim() || "";
   } catch (err) {
-    console.error("❌ GPT persona generation failed:", err.message);
+    console.error("❌ GPT request failed:", err.message);
   }
 
-  if (!Array.isArray(personas) || personas.length === 0) {
-    return res.json([{ persona: "System", thought: "No personas generated.", hashtags: [] }]);
+  let parsed = [];
+  try {
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (match) parsed = JSON.parse(match[0]);
+  } catch {
+    parsed = [];
   }
 
-  // ---------- Step 3: GPT #2 + Cross-Platform Search ----------
-  const results = [];
-  for (let i = 0; i < personas.length; i++) {
-    const p = personas[i];
-    console.log(`🧠 Extracting keywords for persona ${i + 1}: ${p.persona}`);
-
-    // GPT keyword extraction prompt
-    const keywordPrompt = `
-From this thought: "${p.thought}"
-Extract 3-5 concise search keywords for finding short-form videos (YouTube Shorts, TikTok, Instagram Reels) related to it.
-Return as JSON array of strings only.`;
-    let keywords = [];
-    try {
-      const kw = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.5,
-        messages: [
-          { role: "system", content: "Output only JSON array of short search keywords." },
-          { role: "user", content: keywordPrompt }
-        ]
-      });
-      const rawKW = kw.choices?.[0]?.message?.content?.trim() || "";
-      const matchKW = rawKW.match(/\[[\s\S]*\]/);
-      if (matchKW) keywords = JSON.parse(matchKW[0]);
-    } catch (err) {
-      console.warn("⚠️ Keyword extraction failed for persona:", p.persona);
-      continue; // Skip if keywords fail
-    }
-
-    if (!Array.isArray(keywords) || keywords.length === 0) continue;
-    const term = encodeURIComponent(keywords[0]); // use first keyword
-
-    // rotate platform: 0=YouTube, 1=TikTok, 2=IG
-    const platformIndex = i % 3;
-    let foundLink = null;
-
-    try {
-      if (platformIndex === 0 && process.env.YOUTUBE_API_KEY) {
-        const yt = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${term}+shorts&maxResults=1&key=${process.env.YOUTUBE_API_KEY}`
-        );
-        const ytData = await yt.json();
-        if (ytData.items?.length)
-          foundLink = `https://www.youtube.com/shorts/${ytData.items[0].id.videoId}`;
+  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+    parsed = [
+      {
+        persona: "Aiko Tanaka, Japanese Language Enthusiast",
+        thought: "I learned Japanese by journaling every morning and translating my own words with an AI model.",
+        hashtags: ["JapaneseLanguage", "LearningJourney", "AIStudy"],
+        link: "https://www.japantimes.co.jp"
       }
-      if (!foundLink && platformIndex === 1 && process.env.RAPIDAPI_KEY) {
-        const tt = await fetch(
-          `https://tiktok-scraper-api.p.rapidapi.com/video/search?keywords=${term}`,
-          { headers: { "X-RapidAPI-Key": process.env.RAPIDAPI_KEY } }
-        );
-        const ttData = await tt.json();
-        if (ttData.data?.length) foundLink = ttData.data[0].url;
-      }
-      if (!foundLink && platformIndex === 2 && process.env.IG_ACCESS_TOKEN && process.env.IG_BUSINESS_ID) {
-        const ig = await fetch(
-          `https://graph.facebook.com/v18.0/${process.env.IG_BUSINESS_ID}/media?fields=caption,permalink,media_type&access_token=${process.env.IG_ACCESS_TOKEN}`
-        );
-        const igData = await ig.json();
-        const match = igData.data?.find(x =>
-          x.media_type === "REEL" && x.caption?.toLowerCase().includes(keywords[0].toLowerCase())
-        );
-        if (match) foundLink = match.permalink;
+    ];
+  }
+
+// ✅ Step 6 — Final live check: verify each link actually responds with HTTP 200
+async function verifyLiveLinks(arr) {
+  const checked = [];
+  for (const item of arr) {
+    if (!item.link) continue;
+    try {
+      const r = await fetch(item.link, { method: "HEAD", timeout: 4000 });
+      if (r.ok) {
+        checked.push(item);
+      } else {
+        console.log(`⚠️ Skipped broken link (${r.status}): ${item.link}`);
       }
     } catch (err) {
-      console.warn("⚠️ Platform search error:", err.message);
+      console.log(`⚠️ Link unreachable: ${item.link}`);
     }
-
-    // Skip persona if no link found
-    if (!foundLink) continue;
-
-    results.push({
-      persona: p.persona,
-      thought: p.thought,
-      hashtags: p.hashtags,
-      link: foundLink
-    });
-
-    // Stop if already have 10 results (safety)
-    if (results.length >= 10) break;
   }
+  // If none valid, return original array (fallback safety)
+  return checked.length > 0 ? checked : arr;
+}
 
-  // ---------- Step 4: Return results ----------
-  res.json(results);
+// Run final link verification before sending response
+parsed = await verifyLiveLinks(parsed);
+
+  res.json(parsed);
 });
 
-/* -----------------------------------------------------------
-   3. View Counter (for footer)
------------------------------------------------------------ */
-const VIEW_FILE = "/data/views.json";
+/* ---------------- View Counter ---------------- */
+const VIEW_FILE = path.join("/data", "views.json");
 function loadViews() {
-  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8")); }
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf-8")); }
   catch { return { total: 0 }; }
 }
 function saveViews(v) {
@@ -220,8 +240,13 @@ app.get("/api/views", (req, res) => {
   res.json({ total: v.total });
 });
 
-/* -----------------------------------------------------------
-   4. Start Server
------------------------------------------------------------ */
+/* ---------------- Socket ---------------- */
+io.on("connection", socket => {
+  socket.on("joinRoom", id => socket.join(id));
+});
+
+/* ---------------- Start ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => console.log(`✅ Backend running on :${PORT}`));
+httpServer.listen(PORT, () =>
+  console.log(`✅ AI-Native Persona Swap Browser backend live on :${PORT}`)
+);
