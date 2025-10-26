@@ -130,7 +130,8 @@ Context: ${context}
 app.post("/api/save-drop", (req, res) => {
   try {
     const id = Math.random().toString(36).substring(2, 15);
-    const filePath = path.join("/data", `drop-${id}.json`);
+    const filePath = path.join("/mnt/data", `drop-${id}.json`);
+
     fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2));
     console.log("💾 Saved drop:", id);
     res.json({ id });
