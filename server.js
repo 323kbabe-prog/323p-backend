@@ -69,12 +69,13 @@ app.get("/api/views", (req, res) => {
 const DROP_DIR = path.join("/data", "drops");
 if (!fs.existsSync(DROP_DIR)) fs.mkdirSync(DROP_DIR, { recursive: true });
 
-// Save a drop permanently
+// Save a completed drop
 app.post("/api/save-drop", (req, res) => {
   try {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     const file = path.join(DROP_DIR, `${id}.json`);
     fs.writeFileSync(file, JSON.stringify(req.body, null, 2));
+    console.log(`💾 Saved drop: ${id}`);
     res.json({ id });
   } catch (err) {
     console.error("❌ Save drop error:", err);
