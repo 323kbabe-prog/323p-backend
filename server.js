@@ -151,12 +151,39 @@ Context: ${context}
           } catch { /* skip partials */ }
         }
       }
+      // 🧩 Try to parse any remaining buffered persona (after last <NEXT>)
+if (buffer.trim()) {
+  try {
+    const leftover = JSON.parse(buffer.trim());
+    socket.emit("personaChunk", leftover);
+    personas.push(leftover);
+  } catch {
+    console.log("⚠️ No valid leftover persona to parse.");
+  }
+}
+      // 🧠 Safety check: keep only complete persona objects and ensure there are 10 max
+const validPersonas = personas.filter(p => p && p.persona && p.thought);
+if (validPersonas.length < 10) {
+  console.log(`⚠️ Only ${validPersonas.length} personas generated, forcing re-parse of buffer.`);
+  try {
+    const possibleExtra = buffer.split("}{").map((x, i, arr) => 
+      (i < arr.length - 1 ? x + "}" : "{" + x)
+    );
+    for (const part of possibleExtra) {
+      const tryObj = JSON.parse(part);
+      if (tryObj && tryObj.persona && !validPersonas.find(v => v.persona === tryObj.persona)) {
+        validPersonas.push(tryObj);
+      }
+    }
+  } catch { /* ignore */ }
+}
 
       // ✅ Save to cache after full generation
       if (personas.length > 0) {
         try {
           const cache = loadCache();
-          cache.push({ query, timestamp: new Date().toISOString(), personas });
+          cache.push({ query, timestamp: new Date().toISOString(), personas: validPersonas });
+
           saveCache(cache);
           console.log(`💾 Cached ${personas.length} personas for "${query}"`);
         } catch (e) {
