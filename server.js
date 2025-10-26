@@ -132,14 +132,15 @@ Use this context about "${query}" but do not repeat it literally.
 Generate one persona at a time as valid JSON, for example:
 {"persona":"${randomPersona()}","thought":"short first-person note","hashtags":["tag1","tag2","tag3"],"link":"https://example.com"}
 After each, append the marker <NEXT>.
-Generate up to 10 personas.
+Generate exactly 10 distinct personas, each as a valid JSON object separated by <NEXT>.
+Do not stop until all 10 are produced.
 Context: ${context}
 `;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         stream: true,
-        temperature: 0.9,
+        temperature: 0.6,
         messages: [
           { role:"system", content:"Output only JSON objects separated by <NEXT>" },
           { role:"user", content:prompt }
@@ -175,6 +176,16 @@ for await (const chunk of completion) {
     } catch { /* skip partials */ }
   }
 }
+      // 🔄 Flush any leftover JSON after stream end
+if (buffer.trim().length > 0) {
+  try {
+    const persona = JSON.parse(buffer.trim());
+    socket.emit("personaChunk", persona);
+    personas.push(persona);
+    console.log("🧩 Flushed final persona from buffer");
+  } catch { /* ignore partial fragments */ }
+}
+
 
 // ✅ Ensure cache includes all 10 after stream complete
 if (personas.length > 0) {
