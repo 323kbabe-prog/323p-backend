@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + DeepLinkCheck™ Validation)
+// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + Context-Bound Linking + DeepLinkCheck™)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -52,7 +52,7 @@ function randomPersona() {
   return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
 }
 
-/* ---------------- DeepLinkCheck™ Validation ---------------- */
+/* ---------------- DeepLinkCheck™ ---------------- */
 async function deepLinkCheck(links) {
   const trustedTLDs = [".com", ".org", ".net", ".co", ".gov", ".edu", ".io", ".ai", ".jp"];
   const valid = [];
@@ -65,10 +65,9 @@ async function deepLinkCheck(links) {
     if (!trustedTLDs.some(tld => domain.endsWith(tld))) continue;
 
     try {
-      // Step 1: DNS resolve (to avoid NXDOMAIN)
+      // DNS resolve (avoid NXDOMAIN)
       await dns.lookup(domain);
-
-      // Step 2: HTTP check (fast HEAD request)
+      // HTTP check
       const resp = await fetch(r.link, { method: "HEAD", timeout: 5000 });
       if (resp.ok) valid.push(r);
     } catch (err) {
@@ -76,13 +75,11 @@ async function deepLinkCheck(links) {
     }
   }
 
-  // fallback if too few valid
   if (valid.length < 3) {
-    valid.push({ link: "https://www.reuters.com" });
-    valid.push({ link: "https://www.nytimes.com" });
-    valid.push({ link: "https://www.bbc.com" });
+    valid.push({ link: "https://www.reuters.com", title: "Reuters News" });
+    valid.push({ link: "https://www.nytimes.com", title: "New York Times" });
+    valid.push({ link: "https://www.bbc.com", title: "BBC" });
   }
-
   return valid.slice(0, 5);
 }
 
@@ -94,7 +91,7 @@ app.get("/api/persona-search", async (req, res) => {
   let webContext = "";
   let linkPool = [];
 
-  // 1️⃣ Fetch live context from SerpAPI
+  // 1️⃣ SerpAPI fetch
   try {
     const serp = await fetch(
       `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=8&api_key=${process.env.SERPAPI_KEY}`
@@ -109,7 +106,6 @@ app.get("/api/persona-search", async (req, res) => {
         snippet: r.snippet || ""
       }))
       .filter(r => r.link && r.link.startsWith("https://"))
-      .filter(r => !r.link.includes("example.com"))
       .slice(0, 10);
 
     const snippets = linkPool.map(r => r.snippet || r.title);
@@ -118,7 +114,7 @@ app.get("/api/persona-search", async (req, res) => {
     console.warn("⚠️ SerpAPI failed:", err.message);
   }
 
-  // 2️⃣ Fallback: NewsAPI backup
+  // 2️⃣ Fallback: NewsAPI
   if (!webContext) {
     try {
       const news = await fetch(
@@ -126,9 +122,7 @@ app.get("/api/persona-search", async (req, res) => {
       );
       const newsData = await news.json();
       const articles = newsData.articles?.map(a => a.title + " " + a.description) || [];
-      linkPool = newsData.articles
-        ?.map(a => ({ link: a.url, title: a.title }))
-        .filter(a => a.link && a.link.startsWith("https://") && !a.link.includes("example.com")) || [];
+      linkPool = newsData.articles?.map(a => ({ link: a.url, title: a.title })) || [];
       webContext += articles.join(" ");
     } catch (err2) {
       console.warn("⚠️ NewsAPI fallback failed:", err2.message);
@@ -136,26 +130,29 @@ app.get("/api/persona-search", async (req, res) => {
     }
   }
 
-  // 3️⃣ Run DeepLinkCheck™
+  // 3️⃣ DeepLinkCheck
   linkPool = await deepLinkCheck(linkPool);
-  const linkList = linkPool.map(r => r.link).join(", ");
+  const structuredLinks = linkPool.map((r, i) => `${i+1}. ${r.title} — ${r.link}`).join("\n");
 
-  // 4️⃣ Build GPT prompt
+  // 4️⃣ GPT prompt with context-bound linking
   const prompt = `
 You are an AI-Native persona generator connected to verified live web data.
 
-Use this real context about "${query}":
+Below is real information from the web about "${query}":
+
 ${webContext}
 
-Use these verified links for reference: ${linkList}
+Here are verified link sources:
+${structuredLinks}
 
 Generate 10 unique JSON entries.
 Each entry must include:
-- "persona": realistic founder persona (use diverse origins)
-- "thought": a first-person experience or event related to this topic
+- "persona": a realistic founder persona (use diverse origins)
+- "thought": a first-person experience clearly inspired by one or more of these links
 - "hashtags": exactly 3 short real hashtags (no # symbol)
-- "links": 1–3 URLs from the verified list, relevant to the thought.
+- "links": 1–3 URLs from the verified list that fit that persona’s story.
 
+Make sure each persona’s story matches the theme or topic of the links they include.
 Return only valid JSON (no markdown, no notes).
 `;
 
@@ -168,7 +165,7 @@ Return only valid JSON (no markdown, no notes).
       messages: [
         { role: "system", content: "Return only valid JSON arrays." },
         { role: "user", content: prompt }
-      ],
+      ]
     });
     raw = completion.choices?.[0]?.message?.content?.trim() || "";
   } catch (err) {
@@ -184,14 +181,14 @@ Return only valid JSON (no markdown, no notes).
     parsed = [];
   }
 
-  // 7️⃣ Fallback if nothing parsed
+  // 7️⃣ Fallback
   if (!Array.isArray(parsed) || parsed.length === 0) {
     parsed = [
       {
-        persona: "Aiko Tanaka, Japanese AI researcher",
-        thought: "I spent today studying how emotion-based algorithms shape human decisions.",
-        hashtags: ["AI", "Research", "Behavior"],
-        links: ["https://www.japantimes.co.jp"]
+        persona: "Aiko Tanaka, Japanese Food Blogger",
+        thought: "After visiting NYC’s ramen pop-ups, I realized how cultural fusion changes the meaning of flavor.",
+        hashtags: ["NYCRamen", "FoodCulture", "TravelEats"],
+        links: ["https://www.nytimes.com"]
       }
     ];
   }
