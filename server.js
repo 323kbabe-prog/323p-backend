@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation)
+// server.js — AI-Native Persona Browser (Streaming Edition + Drop Save Mode + SSL Validation)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,11 +13,14 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition)...");
+console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition + Drop Save Mode)...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
+if (!process.env.OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+
+// ensure /data exists
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -67,6 +70,18 @@ app.get("/api/views",(req,res)=>{
   const v=loadViews(); v.total++; saveViews(v); res.json({total:v.total});
 });
 
+/* ---------------- Persona Drop Storage ---------------- */
+const DROP_FILE = path.join("/data","personas.json");
+function loadDrops(){
+  try { return JSON.parse(fs.readFileSync(DROP_FILE,"utf8")); }
+  catch { return []; }
+}
+function saveDrop(personaObj){
+  const drops = loadDrops();
+  drops.push(personaObj);
+  fs.writeFileSync(DROP_FILE, JSON.stringify(drops, null, 2));
+}
+
 /* ---------------- Socket.io Streaming ---------------- */
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
@@ -77,7 +92,12 @@ io.on("connection", socket => {
       /* ---- Fetch Live Context (SerpAPI or fallback) ---- */
       let linkPool = [];
       try {
-        const serp = await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`);
+        const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(()=>controller.abort(), 5000);
+        const serp = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+
         const serpData = await serp.json();
         linkPool = (serpData.organic_results || [])
           .map(r=>r.link)
@@ -112,6 +132,8 @@ Context: ${context}
       });
 
       let buffer = "";
+      const tryParse = txt => { try { return JSON.parse(txt); } catch { return null; } };
+
       for await (const chunk of completion) {
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
@@ -121,10 +143,16 @@ Context: ${context}
           const parts = buffer.split("<NEXT>");
           const personaText = parts.shift();
           buffer = parts.join("<NEXT>");
-          try {
-            const persona = JSON.parse(personaText.trim());
+          const persona = tryParse(personaText.trim());
+          if (persona) {
+            const saved = {
+              ...persona,
+              query,
+              timestamp: new Date().toISOString()
+            };
+            saveDrop(saved);
             socket.emit("personaChunk", persona);
-          } catch { /* skip partials */ }
+          }
         }
       }
 
@@ -138,5 +166,8 @@ Context: ${context}
 
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, ()=>console.log(`✅ AI-Native Persona Browser (Streaming) running on :${PORT}`));
-
+httpServer.listen(PORT, ()=>{
+  const existing = loadDrops();
+  console.log(`✅ AI-Native Persona Browser running on :${PORT}`);
+  console.log(`📊 Currently stored personas: ${existing.length}`);
+});
