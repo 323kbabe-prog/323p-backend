@@ -127,7 +127,7 @@ Context: ${context}
 });
 
 /* ---------------- Save & Serve Drops ---------------- */
-const DATA_DIR = "/mnt/data";
+const DATA_DIR = "/tmp/data";
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
 app.post("/api/save-drop", (req, res) => {
