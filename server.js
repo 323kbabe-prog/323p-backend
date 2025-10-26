@@ -127,11 +127,13 @@ Context: ${context}
 });
 
 /* ---------------- Save & Serve Drops ---------------- */
+const DATA_DIR = "/mnt/data";
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+
 app.post("/api/save-drop", (req, res) => {
   try {
     const id = Math.random().toString(36).substring(2, 15);
-    const filePath = path.join("/mnt/data", `drop-${id}.json`);
-
+    const filePath = path.join(DATA_DIR, `drop-${id}.json`);
     fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2));
     console.log("💾 Saved drop:", id);
     res.json({ id });
@@ -139,6 +141,13 @@ app.post("/api/save-drop", (req, res) => {
     console.error("❌ Save-drop error:", err.message);
     res.status(500).json({ error: "Save failed" });
   }
+});
+
+// Serve saved drops
+app.get("/data/:filename", (req, res) => {
+  const filePath = path.join(DATA_DIR, req.params.filename);
+  if (fs.existsSync(filePath)) return res.sendFile(filePath);
+  res.status(404).json({ error: "Drop not found" });
 });
 
 /* ---------------- Start Server ---------------- */
