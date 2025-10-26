@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + Drop Save Mode + SSL Validation)
+// server.js — AI-Native Persona Browser (Streaming Edition + Cached Results + SSL Validation)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,10 +13,8 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting AI-Native Persona Browser backend (Streaming + Drop Save)...");
+console.log("🚀 Starting AI-Native Persona Browser backend (Streaming + Cache)...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
-console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
-
 if (!process.env.OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
 
 // ensure /data exists
@@ -29,7 +27,7 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- Persona Pool ---------------- */
+/* ---------------- Persona Pools ---------------- */
 const ethnicities = ["Korean","Black","White","Latina","Asian-American","Mixed"];
 const vibes = [
   "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
@@ -60,27 +58,32 @@ async function validateHttpsLink(url) {
   });
 }
 
-/* ---------------- View Counter ---------------- */
+/* ---------------- File Utilities ---------------- */
 const VIEW_FILE = path.join("/data","views.json");
+const CACHE_FILE = path.join("/data","personas.json");
+
 function loadViews(){ try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0};} }
 function saveViews(v){ fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2)); }
+
+function loadCache(){ try{return JSON.parse(fs.readFileSync(CACHE_FILE,"utf8"));}catch{return[];} }
+function saveCache(data){ fs.writeFileSync(CACHE_FILE,JSON.stringify(data,null,2)); }
+
+/* ---------------- API: Views ---------------- */
 app.get("/api/views",(req,res)=>{
   const v=loadViews(); v.total++; saveViews(v); res.json({total:v.total});
 });
 
-/* ---------------- Persona Drop Storage ---------------- */
-const DROP_FILE = path.join("/data","personas.json");
-function loadDrops(){ try { return JSON.parse(fs.readFileSync(DROP_FILE,"utf8")); } catch { return []; } }
-function saveDrop(obj){
-  const drops = loadDrops();
-  drops.push(obj);
-  fs.writeFileSync(DROP_FILE, JSON.stringify(drops, null, 2));
-}
-
-// optional endpoint for history
+/* ---------------- API: Personas (cached) ---------------- */
 app.get("/api/personas",(req,res)=>{
-  const drops = loadDrops();
-  res.json(drops.slice(-50).reverse());
+  res.json(loadCache().slice(-50).reverse());
+});
+
+/* ---------------- API: One Persona Query (for shared link preload) ---------------- */
+app.get("/api/query/:query", (req,res)=>{
+  const cache = loadCache();
+  const found = cache.find(entry => entry.query.toLowerCase() === decodeURIComponent(req.params.query).toLowerCase());
+  if (found) res.json(found.personas);
+  else res.status(404).json({error:"not cached"});
 });
 
 /* ---------------- Socket.io Streaming ---------------- */
@@ -88,15 +91,27 @@ io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
 
   socket.on("personaSearch", async query => {
-    console.log(`🌐 Streaming live personas for: "${query}"`);
+    console.log(`🌐 personaSearch: "${query}"`);
+
+    const cache = loadCache();
+    const cachedEntry = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
+
+    // ✅ If cached, return saved personas immediately
+    if (cachedEntry) {
+      console.log(`⚡ Using cached results for "${query}"`);
+      cachedEntry.personas.forEach(p => socket.emit("personaChunk", p));
+      socket.emit("personaDone");
+      return;
+    }
+
+    // Otherwise: generate new ones from OpenAI
     try {
-      // fetch context from SerpAPI
       let linkPool = [];
       try {
         const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`;
         const controller = new AbortController();
-        const timeout = setTimeout(()=>controller.abort(), 5000);
-        const serp = await fetch(url, { signal: controller.signal });
+        const timeout = setTimeout(()=>controller.abort(),5000);
+        const serp = await fetch(url,{signal:controller.signal});
         clearTimeout(timeout);
         const serpData = await serp.json();
         linkPool = (serpData.organic_results || [])
@@ -109,7 +124,6 @@ io.on("connection", socket => {
 
       const context = linkPool.join(", ") || "No verified links.";
 
-      // GPT streaming
       const prompt = `
 You are an AI persona generator connected to live web data.
 Use this context about "${query}" but do not repeat it literally.
@@ -121,37 +135,49 @@ Context: ${context}
 `;
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        stream: true,
-        temperature: 0.9,
-        messages: [
-          { role:"system", content:"Output only JSON objects separated by <NEXT>" },
-          { role:"user", content:prompt }
+        model:"gpt-4o-mini",
+        stream:true,
+        temperature:0.9,
+        messages:[
+          {role:"system",content:"Output only JSON objects separated by <NEXT>"},
+          {role:"user",content:prompt}
         ]
       });
 
-      let buffer = "";
-      const tryParse = txt => { try { return JSON.parse(txt); } catch { return null; } };
+      let buffer="";
+      const tryParse = txt => {try{return JSON.parse(txt);}catch{return null;}};
+      const newPersonas=[];
 
-      for await (const chunk of completion) {
-        const text = chunk.choices?.[0]?.delta?.content || "";
-        buffer += text;
-        if (buffer.includes("<NEXT>")) {
-          const parts = buffer.split("<NEXT>");
-          const personaText = parts.shift();
-          buffer = parts.join("<NEXT>");
-          const persona = tryParse(personaText.trim());
-          if (persona) {
-            const saved = { ...persona, query, timestamp: new Date().toISOString() };
-            saveDrop(saved);
-            socket.emit("personaChunk", persona);
+      for await (const chunk of completion){
+        const text=chunk.choices?.[0]?.delta?.content||"";
+        buffer+=text;
+        if(buffer.includes("<NEXT>")){
+          const parts=buffer.split("<NEXT>");
+          const personaText=parts.shift();
+          buffer=parts.join("<NEXT>");
+          const persona=tryParse(personaText.trim());
+          if(persona){
+            socket.emit("personaChunk",persona);
+            newPersonas.push(persona);
           }
         }
       }
+
+      // save to cache
+      if(newPersonas.length>0){
+        cache.push({
+          query,
+          timestamp:new Date().toISOString(),
+          personas:newPersonas
+        });
+        saveCache(cache);
+        console.log(`💾 Cached ${newPersonas.length} personas for "${query}"`);
+      }
+
       socket.emit("personaDone");
-    } catch (err) {
-      console.error("❌ Streaming error:", err);
-      socket.emit("personaError", err.message);
+    } catch (err){
+      console.error("❌ Streaming error:",err);
+      socket.emit("personaError",err.message);
     }
   });
 });
@@ -159,7 +185,7 @@ Context: ${context}
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, ()=>{
-  const existing = loadDrops();
+  const existing = loadCache();
   console.log(`✅ AI-Native Persona Browser running on :${PORT}`);
-  console.log(`📊 Stored personas: ${existing.length}`);
+  console.log(`📊 Cached topics: ${existing.length}`);
 });
