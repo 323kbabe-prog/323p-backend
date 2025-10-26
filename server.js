@@ -20,9 +20,6 @@ console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/aidrop", express.static(path.join(__dirname, "public/aidrop")));
-
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -141,22 +138,6 @@ app.post("/api/save-drop", (req, res) => {
     console.error("❌ Save-drop error:", err.message);
     res.status(500).json({ error: "Save failed" });
   }
-});
-
-/* ---------------- Unified Viewer Route ---------------- */
-app.get("/", (req, res) => {
-  const dropId = req.query.drop;
-  const indexPath = path.join(__dirname, "public", "index.html");
-  if (dropId) {
-    try {
-      const html = fs.readFileSync(indexPath, "utf8");
-      return res.send(html.replace("<body>", `<body data-drop="${dropId}">`));
-    } catch (err) {
-      console.error("❌ Unified viewer load error:", err.message);
-      return res.status(500).send("index.html missing or unreadable.");
-    }
-  }
-  res.sendFile(indexPath);
 });
 
 /* ---------------- Start Server ---------------- */
