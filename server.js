@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + Context-Bound Linking + DeepLinkCheck™)
+// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + SSL Validation)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -7,7 +7,7 @@ const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
 const fetch = require("node-fetch");
-const dns = require("dns").promises;
+const https = require("https");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -52,35 +52,43 @@ function randomPersona() {
   return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
 }
 
-/* ---------------- DeepLinkCheck™ ---------------- */
-async function deepLinkCheck(links) {
-  const trustedTLDs = [".com", ".org", ".net", ".co", ".gov", ".edu", ".io", ".ai", ".jp"];
-  const valid = [];
-
-  for (const r of links) {
-    if (!r.link || !r.link.startsWith("https")) continue;
-    if (r.link.includes("example.com")) continue;
-
-    const domain = r.link.split("/")[2];
-    if (!trustedTLDs.some(tld => domain.endsWith(tld))) continue;
-
+/* ---------------- SSL Validator (with Expiry Check) ---------------- */
+async function validateHttpsLink(url) {
+  return new Promise((resolve) => {
     try {
-      // DNS resolve (avoid NXDOMAIN)
-      await dns.lookup(domain);
-      // HTTP check
-      const resp = await fetch(r.link, { method: "HEAD", timeout: 5000 });
-      if (resp.ok) valid.push(r);
-    } catch (err) {
-      console.log(`⚠️ Rejected ${r.link}: ${err.code || err.message}`);
-    }
-  }
+      const req = https.request(url, { method: "HEAD" }, res => {
+        // ✅ Check SSL certificate expiration
+        if (res.socket && res.socket.getPeerCertificate) {
+          const cert = res.socket.getPeerCertificate();
+          if (cert.valid_to) {
+            const expiry = new Date(cert.valid_to);
+            if (expiry < new Date()) {
+              console.log(`⚠️ Expired SSL certificate skipped: ${url}`);
+              return resolve(false); // Skip expired certificates
+            }
+          }
+        }
 
-  if (valid.length < 3) {
-    valid.push({ link: "https://www.reuters.com", title: "Reuters News" });
-    valid.push({ link: "https://www.nytimes.com", title: "New York Times" });
-    valid.push({ link: "https://www.bbc.com", title: "BBC" });
-  }
-  return valid.slice(0, 5);
+        // ✅ Only accept valid HTTPS responses
+        if (res.statusCode >= 200 && res.statusCode < 400) {
+          resolve(true);
+        } else {
+          console.log(`⚠️ Invalid HTTPS status (${res.statusCode}) for: ${url}`);
+          resolve(false);
+        }
+      });
+
+      req.on("error", (err) => {
+        console.warn(`⚠️ HTTPS validation error for ${url}:`, err.message);
+        resolve(false);
+      });
+
+      req.end();
+    } catch (err) {
+      console.warn(`⚠️ Unexpected HTTPS validation issue for ${url}:`, err.message);
+      resolve(false);
+    }
+  });
 }
 
 /* ---------------- Persona Search API ---------------- */
@@ -91,14 +99,14 @@ app.get("/api/persona-search", async (req, res) => {
   let webContext = "";
   let linkPool = [];
 
-  // 1️⃣ SerpAPI fetch
   try {
     const serp = await fetch(
-      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=8&api_key=${process.env.SERPAPI_KEY}`
+      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=10&api_key=${process.env.SERPAPI_KEY}`
     );
     const serpData = await serp.json();
-    const results = serpData.organic_results || [];
 
+    // ✅ HTTPS-only + relevance-filtered
+    const results = serpData.organic_results || [];
     linkPool = results
       .map(r => ({
         link: r.link,
@@ -106,64 +114,63 @@ app.get("/api/persona-search", async (req, res) => {
         snippet: r.snippet || ""
       }))
       .filter(r => r.link && r.link.startsWith("https://"))
+      .sort((a, b) => {
+        const q = query.toLowerCase();
+        const scoreA = (r.title + r.snippet).toLowerCase().includes(q) ? 1 : 0;
+        const scoreB = (b.title + b.snippet).toLowerCase().includes(q) ? 1 : 0;
+        return scoreB - scoreA;
+      })
       .slice(0, 10);
 
+    // ✅ SSL validation (remove expired links)
+    const validLinks = [];
+    for (const r of linkPool) {
+      const ok = await validateHttpsLink(r.link);
+      if (ok) validLinks.push(r);
+    }
+    linkPool = validLinks.slice(0, 5);
+
     const snippets = linkPool.map(r => r.snippet || r.title);
-    webContext += snippets.join(" ");
+    webContext = snippets.join(" ");
+    if (!webContext) throw new Error("SerpAPI empty");
   } catch (err) {
     console.warn("⚠️ SerpAPI failed:", err.message);
-  }
-
-  // 2️⃣ Fallback: NewsAPI
-  if (!webContext) {
     try {
       const news = await fetch(
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=8&apiKey=${process.env.NEWSAPI_KEY}`
+        `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&pageSize=5&apiKey=${process.env.NEWSAPI_KEY}`
       );
       const newsData = await news.json();
       const articles = newsData.articles?.map(a => a.title + " " + a.description) || [];
-      linkPool = newsData.articles?.map(a => ({ link: a.url, title: a.title })) || [];
-      webContext += articles.join(" ");
+      linkPool = newsData.articles?.map(a => a.url).filter(u => u && u.startsWith("https://")) || [];
+      webContext = articles.join(" ");
     } catch (err2) {
       console.warn("⚠️ NewsAPI fallback failed:", err2.message);
       webContext = "No live web context available.";
     }
   }
 
-  // 3️⃣ DeepLinkCheck
-  linkPool = await deepLinkCheck(linkPool);
-  const structuredLinks = linkPool.map((r, i) => `${i+1}. ${r.title} — ${r.link}`).join("\n");
-
-  // 4️⃣ GPT prompt with context-bound linking
   const prompt = `
-You are an AI-Native persona generator connected to verified live web data.
+You are an AI-Native persona generator connected to live web data.
 
-Below is real information from the web about "${query}":
-
+Use this real context about "${query}":
 ${webContext}
 
-Here are verified link sources:
-${structuredLinks}
+Generate 10 unique JSON entries. Each entry must include:
+- "persona": e.g. "${randomPersona()}"
+- "thought": a short first-person real-world experience (max 25 words)
+- "hashtags": exactly 3 real hashtags (no # symbols)
+- "link": one relevant, verified working HTTPS link from this list: ${linkPool.map(x => x.link).join(", ")}
 
-Generate 10 unique JSON entries.
-Each entry must include:
-- "persona": a realistic founder persona (use diverse origins)
-- "thought": a first-person experience clearly inspired by one or more of these links
-- "hashtags": exactly 3 short real hashtags (no # symbol)
-- "links": 1–3 URLs from the verified list that fit that persona’s story.
-
-Make sure each persona’s story matches the theme or topic of the links they include.
-Return only valid JSON (no markdown, no notes).
+Return ONLY a valid JSON array.
 `;
 
-  // 5️⃣ GPT request
   let raw = "";
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
       messages: [
-        { role: "system", content: "Return only valid JSON arrays." },
+        { role: "system", content: "Output only valid JSON arrays, nothing else." },
         { role: "user", content: prompt }
       ]
     });
@@ -172,7 +179,6 @@ Return only valid JSON (no markdown, no notes).
     console.error("❌ GPT request failed:", err.message);
   }
 
-  // 6️⃣ Parse GPT output
   let parsed = [];
   try {
     const match = raw.match(/\[[\s\S]*\]/);
@@ -181,17 +187,39 @@ Return only valid JSON (no markdown, no notes).
     parsed = [];
   }
 
-  // 7️⃣ Fallback
-  if (!Array.isArray(parsed) || parsed.length === 0) {
+  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
     parsed = [
       {
-        persona: "Aiko Tanaka, Japanese Food Blogger",
-        thought: "After visiting NYC’s ramen pop-ups, I realized how cultural fusion changes the meaning of flavor.",
-        hashtags: ["NYCRamen", "FoodCulture", "TravelEats"],
-        links: ["https://www.nytimes.com"]
+        persona: "Aiko Tanaka, Japanese Language Enthusiast",
+        thought: "I learned Japanese by journaling every morning and translating my own words with an AI model.",
+        hashtags: ["JapaneseLanguage", "LearningJourney", "AIStudy"],
+        link: "https://www.japantimes.co.jp"
       }
     ];
   }
+
+// ✅ Step 6 — Final live check: verify each link actually responds with HTTP 200
+async function verifyLiveLinks(arr) {
+  const checked = [];
+  for (const item of arr) {
+    if (!item.link) continue;
+    try {
+      const r = await fetch(item.link, { method: "HEAD", timeout: 4000 });
+      if (r.ok) {
+        checked.push(item);
+      } else {
+        console.log(`⚠️ Skipped broken link (${r.status}): ${item.link}`);
+      }
+    } catch (err) {
+      console.log(`⚠️ Link unreachable: ${item.link}`);
+    }
+  }
+  // If none valid, return original array (fallback safety)
+  return checked.length > 0 ? checked : arr;
+}
+
+// Run final link verification before sending response
+parsed = await verifyLiveLinks(parsed);
 
   res.json(parsed);
 });
