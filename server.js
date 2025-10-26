@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + SSL Validation + Clean Link Filter)
+// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + DeepLinkCheck™ Validation)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -7,7 +7,7 @@ const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
 const fetch = require("node-fetch");
-const https = require("https");
+const dns = require("dns").promises;
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -52,40 +52,38 @@ function randomPersona() {
   return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
 }
 
-/* ---------------- SSL Validator (with Expiry Check) ---------------- */
-async function validateHttpsLink(url) {
-  return new Promise((resolve) => {
+/* ---------------- DeepLinkCheck™ Validation ---------------- */
+async function deepLinkCheck(links) {
+  const trustedTLDs = [".com", ".org", ".net", ".co", ".gov", ".edu", ".io", ".ai", ".jp"];
+  const valid = [];
+
+  for (const r of links) {
+    if (!r.link || !r.link.startsWith("https")) continue;
+    if (r.link.includes("example.com")) continue;
+
+    const domain = r.link.split("/")[2];
+    if (!trustedTLDs.some(tld => domain.endsWith(tld))) continue;
+
     try {
-      const req = https.request(url, { method: "HEAD" }, res => {
-        if (res.socket && res.socket.getPeerCertificate) {
-          const cert = res.socket.getPeerCertificate();
-          if (cert.valid_to) {
-            const expiry = new Date(cert.valid_to);
-            if (expiry < new Date()) {
-              console.log(`⚠️ Expired SSL certificate skipped: ${url}`);
-              return resolve(false);
-            }
-          }
-        }
-        if (res.statusCode >= 200 && res.statusCode < 400) {
-          resolve(true);
-        } else {
-          console.log(`⚠️ Invalid HTTPS status (${res.statusCode}) for: ${url}`);
-          resolve(false);
-        }
-      });
+      // Step 1: DNS resolve (to avoid NXDOMAIN)
+      await dns.lookup(domain);
 
-      req.on("error", (err) => {
-        console.warn(`⚠️ HTTPS validation error for ${url}:`, err.message);
-        resolve(false);
-      });
-
-      req.end();
+      // Step 2: HTTP check (fast HEAD request)
+      const resp = await fetch(r.link, { method: "HEAD", timeout: 5000 });
+      if (resp.ok) valid.push(r);
     } catch (err) {
-      console.warn(`⚠️ Unexpected HTTPS validation issue for ${url}:`, err.message);
-      resolve(false);
+      console.log(`⚠️ Rejected ${r.link}: ${err.code || err.message}`);
     }
-  });
+  }
+
+  // fallback if too few valid
+  if (valid.length < 3) {
+    valid.push({ link: "https://www.reuters.com" });
+    valid.push({ link: "https://www.nytimes.com" });
+    valid.push({ link: "https://www.bbc.com" });
+  }
+
+  return valid.slice(0, 5);
 }
 
 /* ---------------- Persona Search API ---------------- */
@@ -96,7 +94,7 @@ app.get("/api/persona-search", async (req, res) => {
   let webContext = "";
   let linkPool = [];
 
-  // 1️⃣ Collect live context + URLs from SerpAPI
+  // 1️⃣ Fetch live context from SerpAPI
   try {
     const serp = await fetch(
       `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=8&api_key=${process.env.SERPAPI_KEY}`
@@ -111,7 +109,7 @@ app.get("/api/persona-search", async (req, res) => {
         snippet: r.snippet || ""
       }))
       .filter(r => r.link && r.link.startsWith("https://"))
-      .filter(r => !r.link.includes("example.com")) // 🚫 filter out fake placeholder domains
+      .filter(r => !r.link.includes("example.com"))
       .slice(0, 10);
 
     const snippets = linkPool.map(r => r.snippet || r.title);
@@ -120,7 +118,7 @@ app.get("/api/persona-search", async (req, res) => {
     console.warn("⚠️ SerpAPI failed:", err.message);
   }
 
-  // 2️⃣ Fallback: NewsAPI for backup links and text
+  // 2️⃣ Fallback: NewsAPI backup
   if (!webContext) {
     try {
       const news = await fetch(
@@ -138,26 +136,15 @@ app.get("/api/persona-search", async (req, res) => {
     }
   }
 
-  // 3️⃣ Verify links (ensure they’re real & working)
-  async function verifyLiveLinks(links) {
-    const verified = [];
-    for (const r of links) {
-      try {
-        const resp = await fetch(r.link, { method: "HEAD", timeout: 4000 });
-        if (resp.ok) verified.push(r);
-      } catch {}
-    }
-    return verified.slice(0, 5);
-  }
-
-  linkPool = await verifyLiveLinks(linkPool);
+  // 3️⃣ Run DeepLinkCheck™
+  linkPool = await deepLinkCheck(linkPool);
   const linkList = linkPool.map(r => r.link).join(", ");
 
-  // 4️⃣ GPT prompt with real context + verified URLs
+  // 4️⃣ Build GPT prompt
   const prompt = `
-You are an AI-Native persona generator connected to real web data.
+You are an AI-Native persona generator connected to verified live web data.
 
-Use this context about "${query}":
+Use this real context about "${query}":
 ${webContext}
 
 Use these verified links for reference: ${linkList}
@@ -172,7 +159,7 @@ Each entry must include:
 Return only valid JSON (no markdown, no notes).
 `;
 
-  // 5️⃣ GPT completion
+  // 5️⃣ GPT request
   let raw = "";
   try {
     const completion = await openai.chat.completions.create({
@@ -188,7 +175,7 @@ Return only valid JSON (no markdown, no notes).
     console.error("❌ GPT request failed:", err.message);
   }
 
-  // 6️⃣ Parse GPT output safely
+  // 6️⃣ Parse GPT output
   let parsed = [];
   try {
     const match = raw.match(/\[[\s\S]*\]/);
@@ -197,7 +184,7 @@ Return only valid JSON (no markdown, no notes).
     parsed = [];
   }
 
-  // 7️⃣ Fallback example if nothing parsed
+  // 7️⃣ Fallback if nothing parsed
   if (!Array.isArray(parsed) || parsed.length === 0) {
     parsed = [
       {
@@ -208,13 +195,6 @@ Return only valid JSON (no markdown, no notes).
       }
     ];
   }
-
-  // ✅ Ensure all personas have at least one verified link
-  const fallbackLinks = ["https://www.reuters.com", "https://www.nytimes.com", "https://www.bbc.com"];
-  parsed = parsed.map((p, i) => ({
-    ...p,
-    links: p.links && p.links.length ? p.links : [fallbackLinks[i % fallbackLinks.length]]
-  }));
 
   res.json(parsed);
 });
