@@ -74,7 +74,6 @@ io.on("connection", socket => {
   socket.on("personaSearch", async query => {
     console.log(`🌐 Streaming live personas for: "${query}"`);
     try {
-      /* ---- Fetch Live Context (SerpAPI or fallback) ---- */
       let linkPool = [];
       try {
         const serp = await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`);
@@ -88,11 +87,8 @@ io.on("connection", socket => {
       } catch(e){ console.warn("⚠️ SerpAPI issue:",e.message); }
 
       const context = linkPool.join(", ") || "No verified links.";
-
-      /* ---- GPT Streaming Prompt ---- */
       const prompt = `
 You are an AI persona generator connected to live web data.
-
 Use this context about "${query}" but do not repeat it literally.
 Generate one persona at a time as valid JSON, for example:
 {"persona":"${randomPersona()}","thought":"short first-person note","hashtags":["tag1","tag2","tag3"],"link":"https://example.com"}
@@ -115,8 +111,6 @@ Context: ${context}
       for await (const chunk of completion) {
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
-
-        // Send persona when <NEXT> appears
         if (buffer.includes("<NEXT>")) {
           const parts = buffer.split("<NEXT>");
           const personaText = parts.shift();
@@ -124,10 +118,9 @@ Context: ${context}
           try {
             const persona = JSON.parse(personaText.trim());
             socket.emit("personaChunk", persona);
-          } catch { /* skip partials */ }
+          } catch {}
         }
       }
-
       socket.emit("personaDone");
     } catch (err) {
       console.error("❌ Streaming error:", err);
@@ -135,8 +128,8 @@ Context: ${context}
     }
   });
 });
+
 /* ---------------- Save & Serve Drops ---------------- */
-// save a posted drop to /data
 app.post("/api/save-drop", (req, res) => {
   try {
     const id = Math.random().toString(36).substring(2, 15);
@@ -150,30 +143,22 @@ app.post("/api/save-drop", (req, res) => {
   }
 });
 
-
 /* ---------------- Unified Viewer Route ---------------- */
-// if a ?drop=<id> query is present, serve the same index.html shell
 app.get("/", (req, res) => {
   const dropId = req.query.drop;
   const indexPath = path.join(__dirname, "public", "index.html");
-
   if (dropId) {
     try {
       const html = fs.readFileSync(indexPath, "utf8");
-      // inject drop id into <body> tag so the frontend can fetch and render it
       return res.send(html.replace("<body>", `<body data-drop="${dropId}">`));
     } catch (err) {
       console.error("❌ Unified viewer load error:", err.message);
       return res.status(500).send("index.html missing or unreadable.");
     }
   }
-
-  // default: serve normal home page
   res.sendFile(indexPath);
 });
-
 
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, ()=>console.log(`✅ AI-Native Persona Browser (Streaming) running on :${PORT}`));
-
