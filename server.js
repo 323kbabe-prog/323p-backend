@@ -49,8 +49,7 @@ async function validateHttpsLink(url) {
   return new Promise(resolve=>{
     try {
       const req = https.request(url,{method:"HEAD",timeout:3000},res=>{
-        if(res.statusCode>=200 && res.statusCode<400) resolve(true);
-        else resolve(false);
+        resolve(res.statusCode>=200 && res.statusCode<400);
       });
       req.on("error",()=>resolve(false));
       req.on("timeout",()=>{req.destroy();resolve(false);});
@@ -98,7 +97,9 @@ io.on("connection", socket => {
       /* ---- Fetch Live Context (SerpAPI or fallback) ---- */
       let linkPool = [];
       try {
-        const serp = await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`);
+        const serp = await fetch(
+          `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`
+        );
         const serpData = await serp.json();
         linkPool = (serpData.organic_results || [])
           .map(r=>r.link)
@@ -132,6 +133,7 @@ Context: ${context}
         ]
       });
 
+      /* ---- Stream Parsing ---- */
       let buffer = "";
       const personas = [];
 
@@ -139,51 +141,37 @@ Context: ${context}
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
 
-        // Send persona when <NEXT> appears
-        if (buffer.includes("<NEXT>")) {
-          const parts = buffer.split("<NEXT>");
-          const personaText = parts.shift();
-          buffer = parts.join("<NEXT>");
+        // ✅ Emit every persona when <NEXT> marker appears
+        while (buffer.includes("<NEXT>")) {
+          const [personaText, ...rest] = buffer.split("<NEXT>");
+          buffer = rest.join("<NEXT>");
           try {
             const persona = JSON.parse(personaText.trim());
             socket.emit("personaChunk", persona);
             personas.push(persona);
-          } catch { /* skip partials */ }
+          } catch (err) {
+            console.warn("⚠️ Skipped invalid persona chunk:", err.message);
+          }
         }
       }
-      // 🧩 Try to parse any remaining buffered persona (after last <NEXT>)
-if (buffer.trim()) {
-  try {
-    const leftover = JSON.parse(buffer.trim());
-    socket.emit("personaChunk", leftover);
-    personas.push(leftover);
-  } catch {
-    console.log("⚠️ No valid leftover persona to parse.");
-  }
-}
-      // 🧠 Safety check: keep only complete persona objects and ensure there are 10 max
-const validPersonas = personas.filter(p => p && p.persona && p.thought);
-if (validPersonas.length < 10) {
-  console.log(`⚠️ Only ${validPersonas.length} personas generated, forcing re-parse of buffer.`);
-  try {
-    const possibleExtra = buffer.split("}{").map((x, i, arr) => 
-      (i < arr.length - 1 ? x + "}" : "{" + x)
-    );
-    for (const part of possibleExtra) {
-      const tryObj = JSON.parse(part);
-      if (tryObj && tryObj.persona && !validPersonas.find(v => v.persona === tryObj.persona)) {
-        validPersonas.push(tryObj);
-      }
-    }
-  } catch { /* ignore */ }
-}
 
-      // ✅ Save to cache after full generation
+      // 🧩 Try one last leftover persona if JSON is complete
+      try {
+        const trimmed = buffer.trim();
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+          const lastPersona = JSON.parse(trimmed);
+          socket.emit("personaChunk", lastPersona);
+          personas.push(lastPersona);
+        }
+      } catch (e) {
+        console.warn("⚠️ No valid leftover persona:", e.message);
+      }
+
+      // ✅ Cache and log results
       if (personas.length > 0) {
         try {
           const cache = loadCache();
-          cache.push({ query, timestamp: new Date().toISOString(), personas: validPersonas });
-
+          cache.push({ query, timestamp: new Date().toISOString(), personas });
           saveCache(cache);
           console.log(`💾 Cached ${personas.length} personas for "${query}"`);
         } catch (e) {
