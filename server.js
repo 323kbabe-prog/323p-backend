@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation + Cache)
+// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation + Cache + Stable CORS/WebSocket)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -10,13 +10,19 @@ const fetch = require("node-fetch");
 const https = require("https");
 
 const app = express();
-app.use(cors({ origin: "*" }));
+
+// ✅ Set correct CORS for your GoDaddy domain
+app.use(cors({
+  origin: ["https://1ai323.ai"],   // replace with your real domain
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
 app.use(express.json());
 
-console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition + Cache)...");
+console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition + Cache + Stable WebSocket)...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
-console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
@@ -24,7 +30,15 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/aidrop", express.static(path.join(__dirname, "public/aidrop")));
 
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
+const io = new Server(httpServer, {
+  cors: {
+    origin: ["https://1ai323.ai"], // must match frontend
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ["websocket", "polling"]
+});
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- Persona Pool ---------------- */
@@ -136,30 +150,30 @@ Context: ${context}
       const personas = [];
 
       for await (const chunk of completion) {
-  const text = chunk.choices?.[0]?.delta?.content || "";
-  buffer += text;
+        const text = chunk.choices?.[0]?.delta?.content || "";
+        buffer += text;
 
-  if (buffer.includes("<NEXT>")) {
-    const parts = buffer.split("<NEXT>");
-    const personaText = parts.shift();
-    buffer = parts.join("<NEXT>");
-    try {
-      const persona = JSON.parse(personaText.trim());
-      socket.emit("personaChunk", persona);
-      personas.push(persona);
+        if (buffer.includes("<NEXT>")) {
+          const parts = buffer.split("<NEXT>");
+          const personaText = parts.shift();
+          buffer = parts.join("<NEXT>");
+          try {
+            const persona = JSON.parse(personaText.trim());
+            socket.emit("personaChunk", persona);
+            personas.push(persona);
 
-      // 🧠 Write partial cache update after each persona
-      const cache = loadCache();
-      let entry = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
-      if (!entry) {
-        entry = { query, timestamp: new Date().toISOString(), personas: [] };
-        cache.push(entry);
+            // 🧠 Write partial cache update after each persona
+            const cache = loadCache();
+            let entry = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
+            if (!entry) {
+              entry = { query, timestamp: new Date().toISOString(), personas: [] };
+              cache.push(entry);
+            }
+            entry.personas = personas;
+            saveCache(cache);
+          } catch { /* skip partials */ }
+        }
       }
-      entry.personas = personas;   // keep overwriting with full list so far
-      saveCache(cache);
-    } catch { /* skip partials */ }
-  }
-}
 
       // ✅ Save to cache after full generation
       if (personas.length > 0) {
@@ -183,4 +197,6 @@ Context: ${context}
 
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, ()=>console.log(`✅ AI-Native Persona Browser (Streaming + Cache) running on :${PORT}`));
+httpServer.listen(PORT, () => {
+  console.log(`✅ AI-Native Persona Browser (Streaming + Cache + Stable WebSocket) running on :${PORT}`);
+});
