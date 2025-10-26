@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation + Cache + Question Handling)
+// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation + Cache + Query Fix)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -140,7 +140,7 @@ Context: ${context}
 
       for await (const chunk of completion) {
         const text = chunk.choices?.[0]?.delta?.content || "";
-        if (!text.includes("{") && !text.includes("<NEXT>")) continue; // skip irrelevant text
+        if (!text.trim()) continue; // ✅ allow buildup for short queries
         buffer += text;
 
         while (buffer.includes("<NEXT>")) {
@@ -168,16 +168,27 @@ Context: ${context}
         console.warn("⚠️ No valid leftover persona:", e.message);
       }
 
+      // 🛟 Fallback if model returns nothing
+      if (personas.length === 0) {
+        console.warn("⚠️ No personas parsed, forcing fallback generation.");
+        const fallback = {
+          persona: `${randomPersona()}`,
+          thought: `Exploring "${query}" through creative ideas and perspectives.`,
+          hashtags: ["exploration", "trends", "culture"],
+          link: "https://example.com"
+        };
+        socket.emit("personaChunk", fallback);
+        personas.push(fallback);
+      }
+
       // ✅ Cache and log results
-      if (personas.length > 0) {
-        try {
-          const cache = loadCache();
-          cache.push({ query, timestamp: new Date().toISOString(), personas });
-          saveCache(cache);
-          console.log(`💾 Cached ${personas.length} personas for "${query}"`);
-        } catch (e) {
-          console.warn("⚠️ Failed to save cache:", e.message);
-        }
+      try {
+        const cache = loadCache();
+        cache.push({ query, timestamp: new Date().toISOString(), personas });
+        saveCache(cache);
+        console.log(`💾 Cached ${personas.length} personas for "${query}"`);
+      } catch (e) {
+        console.warn("⚠️ Failed to save cache:", e.message);
       }
 
       socket.emit("personaDone");
