@@ -147,33 +147,52 @@ Context: ${context}
       });
 
       let buffer = "";
-      const personas = [];
+const personas = [];
 
-      for await (const chunk of completion) {
-        const text = chunk.choices?.[0]?.delta?.content || "";
-        buffer += text;
+for await (const chunk of completion) {
+  const text = chunk.choices?.[0]?.delta?.content || "";
+  buffer += text;
 
-        if (buffer.includes("<NEXT>")) {
-          const parts = buffer.split("<NEXT>");
-          const personaText = parts.shift();
-          buffer = parts.join("<NEXT>");
-          try {
-            const persona = JSON.parse(personaText.trim());
-            socket.emit("personaChunk", persona);
-            personas.push(persona);
+  if (buffer.includes("<NEXT>")) {
+    const parts = buffer.split("<NEXT>");
+    const personaText = parts.shift();
+    buffer = parts.join("<NEXT>");
+    try {
+      const persona = JSON.parse(personaText.trim());
+      socket.emit("personaChunk", persona);
+      personas.push(persona);
 
-            // 🧠 Write partial cache update after each persona
-            const cache = loadCache();
-            let entry = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
-            if (!entry) {
-              entry = { query, timestamp: new Date().toISOString(), personas: [] };
-              cache.push(entry);
-            }
-            entry.personas = personas;
-            saveCache(cache);
-          } catch { /* skip partials */ }
-        }
+      // 🧠 Update cache live after each persona
+      const cache = loadCache();
+      let entry = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
+      if (!entry) {
+        entry = { query, timestamp: new Date().toISOString(), personas: [] };
+        cache.push(entry);
       }
+      entry.personas = personas; // overwrite each time so it stays complete
+      saveCache(cache);
+      console.log(`💾 Cache updated (${personas.length}) for "${query}"`);
+    } catch { /* skip partials */ }
+  }
+}
+
+// ✅ Ensure cache includes all 10 after stream complete
+if (personas.length > 0) {
+  try {
+    const cache = loadCache();
+    let entry = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
+    if (!entry) {
+      entry = { query, timestamp: new Date().toISOString(), personas };
+      cache.push(entry);
+    } else {
+      entry.personas = personas;
+    }
+    saveCache(cache);
+    console.log(`✅ Final cache complete (${personas.length}) for "${query}"`);
+  } catch (e) {
+    console.warn("⚠️ Failed to finalize cache:", e.message);
+  }
+}
 
       // ✅ Save to cache after full generation
       if (personas.length > 0) {
