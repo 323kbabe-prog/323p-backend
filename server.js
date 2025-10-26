@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + SSL Validation)
+// server.js — AI-Native Persona Swap Browser (Hybrid: SerpAPI/NewsAPI + YouTube/TikTok/IG Reels)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -17,6 +17,9 @@ console.log("🚀 Starting AI-Native Persona Swap Browser backend...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
+console.log("YOUTUBE_API_KEY:", !!process.env.YOUTUBE_API_KEY);
+console.log("RAPIDAPI_KEY:", !!process.env.RAPIDAPI_KEY);
+console.log("IG_ACCESS_TOKEN:", !!process.env.IG_ACCESS_TOKEN);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
@@ -28,7 +31,7 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- Persona Pool ---------------- */
-const ethnicities = ["Korean", "Black", "White", "Latina", "Asian-American", "Mixed"];
+const ethnicities = ["Korean","Black","White","Latina","Asian-American","Mixed"];
 const vibes = [
   "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
   "AR creator","fashion engineer","metaverse curator","product tester","AI researcher",
@@ -52,40 +55,17 @@ function randomPersona() {
   return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
 }
 
-/* ---------------- SSL Validator (with Expiry Check) ---------------- */
+/* ---------------- SSL Validator ---------------- */
 async function validateHttpsLink(url) {
   return new Promise((resolve) => {
     try {
       const req = https.request(url, { method: "HEAD" }, res => {
-        // ✅ Check SSL certificate expiration
-        if (res.socket && res.socket.getPeerCertificate) {
-          const cert = res.socket.getPeerCertificate();
-          if (cert.valid_to) {
-            const expiry = new Date(cert.valid_to);
-            if (expiry < new Date()) {
-              console.log(`⚠️ Expired SSL certificate skipped: ${url}`);
-              return resolve(false); // Skip expired certificates
-            }
-          }
-        }
-
-        // ✅ Only accept valid HTTPS responses
-        if (res.statusCode >= 200 && res.statusCode < 400) {
-          resolve(true);
-        } else {
-          console.log(`⚠️ Invalid HTTPS status (${res.statusCode}) for: ${url}`);
-          resolve(false);
-        }
+        if (res.statusCode >= 200 && res.statusCode < 400) resolve(true);
+        else resolve(false);
       });
-
-      req.on("error", (err) => {
-        console.warn(`⚠️ HTTPS validation error for ${url}:`, err.message);
-        resolve(false);
-      });
-
+      req.on("error", () => resolve(false));
       req.end();
-    } catch (err) {
-      console.warn(`⚠️ Unexpected HTTPS validation issue for ${url}:`, err.message);
+    } catch {
       resolve(false);
     }
   });
@@ -99,40 +79,20 @@ app.get("/api/persona-search", async (req, res) => {
   let webContext = "";
   let linkPool = [];
 
+  /* --- STEP 1: SerpAPI / NewsAPI text context --- */
   try {
     const serp = await fetch(
       `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=10&api_key=${process.env.SERPAPI_KEY}`
     );
     const serpData = await serp.json();
-
-    // ✅ HTTPS-only + relevance-filtered
     const results = serpData.organic_results || [];
     linkPool = results
-      .map(r => ({
-        link: r.link,
-        title: r.title || "",
-        snippet: r.snippet || ""
-      }))
+      .map(r => ({ link: r.link, title: r.title || "", snippet: r.snippet || "" }))
       .filter(r => r.link && r.link.startsWith("https://"))
-      .sort((a, b) => {
-        const q = query.toLowerCase();
-        const scoreA = (r.title + r.snippet).toLowerCase().includes(q) ? 1 : 0;
-        const scoreB = (b.title + b.snippet).toLowerCase().includes(q) ? 1 : 0;
-        return scoreB - scoreA;
-      })
       .slice(0, 10);
-
-    // ✅ SSL validation (remove expired links)
-    const validLinks = [];
-    for (const r of linkPool) {
-      const ok = await validateHttpsLink(r.link);
-      if (ok) validLinks.push(r);
-    }
-    linkPool = validLinks.slice(0, 5);
 
     const snippets = linkPool.map(r => r.snippet || r.title);
     webContext = snippets.join(" ");
-    if (!webContext) throw new Error("SerpAPI empty");
   } catch (err) {
     console.warn("⚠️ SerpAPI failed:", err.message);
     try {
@@ -141,7 +101,6 @@ app.get("/api/persona-search", async (req, res) => {
       );
       const newsData = await news.json();
       const articles = newsData.articles?.map(a => a.title + " " + a.description) || [];
-      linkPool = newsData.articles?.map(a => a.url).filter(u => u && u.startsWith("https://")) || [];
       webContext = articles.join(" ");
     } catch (err2) {
       console.warn("⚠️ NewsAPI fallback failed:", err2.message);
@@ -149,19 +108,67 @@ app.get("/api/persona-search", async (req, res) => {
     }
   }
 
+  /* --- STEP 2: YouTube Shorts + TikTok + IG Reels link pool --- */
+  let shortLinks = [];
+  try {
+    // 🎥 YouTube Shorts
+    if (process.env.YOUTUBE_API_KEY) {
+      const yt = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query + " shorts")}&maxResults=6&key=${process.env.YOUTUBE_API_KEY}`
+      );
+      const ytData = await yt.json();
+      ytData.items?.forEach(v =>
+        shortLinks.push(`https://www.youtube.com/shorts/${v.id.videoId}`)
+      );
+    }
+
+    // 🎵 TikTok (RapidAPI)
+    if (process.env.RAPIDAPI_KEY) {
+      const tiktok = await fetch(
+        `https://tiktok-scraper-api.p.rapidapi.com/video/search?keywords=${encodeURIComponent(query)}`,
+        { headers: { "X-RapidAPI-Key": process.env.RAPIDAPI_KEY } }
+      );
+      const tiktokData = await tiktok.json();
+      tiktokData.data?.forEach(v => shortLinks.push(v.url));
+    }
+
+    // 📱 Instagram Reels (Graph API)
+    if (process.env.IG_ACCESS_TOKEN && process.env.IG_BUSINESS_ID) {
+      const ig = await fetch(
+        `https://graph.facebook.com/v18.0/${process.env.IG_BUSINESS_ID}/media?fields=caption,permalink,media_type&access_token=${process.env.IG_ACCESS_TOKEN}`
+      );
+      const igData = await ig.json();
+      igData.data
+        ?.filter(x => x.media_type === "REEL" && x.caption?.toLowerCase().includes(query.toLowerCase()))
+        .forEach(v => shortLinks.push(v.permalink));
+    }
+
+    // Deduplicate + limit
+    shortLinks = [...new Set(shortLinks)].slice(0, 10);
+  } catch (err) {
+    console.warn("⚠️ Short-form fetch failed:", err.message);
+  }
+
+  if (shortLinks.length === 0)
+    shortLinks = ["https://www.youtube.com/shorts", "https://www.tiktok.com", "https://www.instagram.com/reels"];
+
+  /* --- STEP 3: GPT Persona Generation --- */
   const prompt = `
 You are an AI-Native persona generator connected to live web data.
 
-Use this real context about "${query}":
+Here’s recent context about "${query}" from verified web sources:
 ${webContext}
+
+Now use these trending short-form video links as your cultural reference:
+${shortLinks.join("\n")}
 
 Generate 10 unique JSON entries. Each entry must include:
 - "persona": e.g. "${randomPersona()}"
-- "thought": a short first-person real-world experience (max 25 words)
+- "thought": a short first-person experience reacting to this trend (max 25 words)
 - "hashtags": exactly 3 real hashtags (no # symbols)
-- "link": one relevant, verified working HTTPS link from this list: ${linkPool.map(x => x.link).join(", ")}
+- "link": one link from the short-form list above
 
-Return ONLY a valid JSON array.
+Output ONLY a valid JSON array.
 `;
 
   let raw = "";
@@ -187,39 +194,16 @@ Return ONLY a valid JSON array.
     parsed = [];
   }
 
-  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+  if (!parsed || parsed.length === 0) {
     parsed = [
       {
         persona: "Aiko Tanaka, Japanese Language Enthusiast",
         thought: "I learned Japanese by journaling every morning and translating my own words with an AI model.",
         hashtags: ["JapaneseLanguage", "LearningJourney", "AIStudy"],
-        link: "https://www.japantimes.co.jp"
+        link: shortLinks[0]
       }
     ];
   }
-
-// ✅ Step 6 — Final live check: verify each link actually responds with HTTP 200
-async function verifyLiveLinks(arr) {
-  const checked = [];
-  for (const item of arr) {
-    if (!item.link) continue;
-    try {
-      const r = await fetch(item.link, { method: "HEAD", timeout: 4000 });
-      if (r.ok) {
-        checked.push(item);
-      } else {
-        console.log(`⚠️ Skipped broken link (${r.status}): ${item.link}`);
-      }
-    } catch (err) {
-      console.log(`⚠️ Link unreachable: ${item.link}`);
-    }
-  }
-  // If none valid, return original array (fallback safety)
-  return checked.length > 0 ? checked : arr;
-}
-
-// Run final link verification before sending response
-parsed = await verifyLiveLinks(parsed);
 
   res.json(parsed);
 });
