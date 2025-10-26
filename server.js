@@ -13,10 +13,9 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition + Drop Save Mode)...");
+console.log("🚀 Starting AI-Native Persona Browser backend (Streaming + Drop Save)...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
-console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
 if (!process.env.OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
 
@@ -37,7 +36,6 @@ const vibes = [
   "AR creator","fashion engineer","metaverse curator","AI researcher","sound producer",
   "content strategist","neural-net stylist","startup intern","creative coder"
 ];
-
 function randomPersona() {
   const ethnicity = ethnicities[Math.floor(Math.random()*ethnicities.length)];
   const vibe = vibes[Math.floor(Math.random()*vibes.length)];
@@ -72,15 +70,18 @@ app.get("/api/views",(req,res)=>{
 
 /* ---------------- Persona Drop Storage ---------------- */
 const DROP_FILE = path.join("/data","personas.json");
-function loadDrops(){
-  try { return JSON.parse(fs.readFileSync(DROP_FILE,"utf8")); }
-  catch { return []; }
-}
-function saveDrop(personaObj){
+function loadDrops(){ try { return JSON.parse(fs.readFileSync(DROP_FILE,"utf8")); } catch { return []; } }
+function saveDrop(obj){
   const drops = loadDrops();
-  drops.push(personaObj);
+  drops.push(obj);
   fs.writeFileSync(DROP_FILE, JSON.stringify(drops, null, 2));
 }
+
+// optional endpoint for history
+app.get("/api/personas",(req,res)=>{
+  const drops = loadDrops();
+  res.json(drops.slice(-50).reverse());
+});
 
 /* ---------------- Socket.io Streaming ---------------- */
 io.on("connection", socket => {
@@ -89,7 +90,7 @@ io.on("connection", socket => {
   socket.on("personaSearch", async query => {
     console.log(`🌐 Streaming live personas for: "${query}"`);
     try {
-      /* ---- Fetch Live Context (SerpAPI or fallback) ---- */
+      // fetch context from SerpAPI
       let linkPool = [];
       try {
         const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`;
@@ -97,7 +98,6 @@ io.on("connection", socket => {
         const timeout = setTimeout(()=>controller.abort(), 5000);
         const serp = await fetch(url, { signal: controller.signal });
         clearTimeout(timeout);
-
         const serpData = await serp.json();
         linkPool = (serpData.organic_results || [])
           .map(r=>r.link)
@@ -109,10 +109,9 @@ io.on("connection", socket => {
 
       const context = linkPool.join(", ") || "No verified links.";
 
-      /* ---- GPT Streaming Prompt ---- */
+      // GPT streaming
       const prompt = `
 You are an AI persona generator connected to live web data.
-
 Use this context about "${query}" but do not repeat it literally.
 Generate one persona at a time as valid JSON, for example:
 {"persona":"${randomPersona()}","thought":"short first-person note","hashtags":["tag1","tag2","tag3"],"link":"https://example.com"}
@@ -137,25 +136,18 @@ Context: ${context}
       for await (const chunk of completion) {
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
-
-        // Send persona when <NEXT> appears
         if (buffer.includes("<NEXT>")) {
           const parts = buffer.split("<NEXT>");
           const personaText = parts.shift();
           buffer = parts.join("<NEXT>");
           const persona = tryParse(personaText.trim());
           if (persona) {
-            const saved = {
-              ...persona,
-              query,
-              timestamp: new Date().toISOString()
-            };
+            const saved = { ...persona, query, timestamp: new Date().toISOString() };
             saveDrop(saved);
             socket.emit("personaChunk", persona);
           }
         }
       }
-
       socket.emit("personaDone");
     } catch (err) {
       console.error("❌ Streaming error:", err);
@@ -169,5 +161,5 @@ const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, ()=>{
   const existing = loadDrops();
   console.log(`✅ AI-Native Persona Browser running on :${PORT}`);
-  console.log(`📊 Currently stored personas: ${existing.length}`);
+  console.log(`📊 Stored personas: ${existing.length}`);
 });
