@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + Cached Results + SSL Validation)
+// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation + Cache)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,11 +13,11 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting AI-Native Persona Browser backend (Streaming + Cache)...");
+console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition + Cache)...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
-if (!process.env.OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
+console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
-// ensure /data exists
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -27,13 +27,14 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- Persona Pools ---------------- */
+/* ---------------- Persona Pool ---------------- */
 const ethnicities = ["Korean","Black","White","Latina","Asian-American","Mixed"];
 const vibes = [
   "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
   "AR creator","fashion engineer","metaverse curator","AI researcher","sound producer",
   "content strategist","neural-net stylist","startup intern","creative coder"
 ];
+
 function randomPersona() {
   const ethnicity = ethnicities[Math.floor(Math.random()*ethnicities.length)];
   const vibe = vibes[Math.floor(Math.random()*vibes.length)];
@@ -58,61 +59,46 @@ async function validateHttpsLink(url) {
   });
 }
 
-/* ---------------- File Utilities ---------------- */
+/* ---------------- View Counter ---------------- */
 const VIEW_FILE = path.join("/data","views.json");
-const CACHE_FILE = path.join("/data","personas.json");
-
 function loadViews(){ try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0};} }
 function saveViews(v){ fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2)); }
-
-function loadCache(){ try{return JSON.parse(fs.readFileSync(CACHE_FILE,"utf8"));}catch{return[];} }
-function saveCache(data){ fs.writeFileSync(CACHE_FILE,JSON.stringify(data,null,2)); }
-
-/* ---------------- API: Views ---------------- */
 app.get("/api/views",(req,res)=>{
   const v=loadViews(); v.total++; saveViews(v); res.json({total:v.total});
 });
 
-/* ---------------- API: Personas (cached) ---------------- */
-app.get("/api/personas",(req,res)=>{
-  res.json(loadCache().slice(-50).reverse());
-});
-
-/* ---------------- API: One Persona Query (for shared link preload) ---------------- */
-app.get("/api/query/:query", (req,res)=>{
-  const cache = loadCache();
-  const found = cache.find(entry => entry.query.toLowerCase() === decodeURIComponent(req.params.query).toLowerCase());
-  if (found) res.json(found.personas);
-  else res.status(404).json({error:"not cached"});
-});
+/* ---------------- Persona Cache ---------------- */
+const CACHE_FILE = path.join("/data", "personas.json");
+function loadCache() {
+  try { return JSON.parse(fs.readFileSync(CACHE_FILE, "utf8")); }
+  catch { return []; }
+}
+function saveCache(data) {
+  fs.writeFileSync(CACHE_FILE, JSON.stringify(data, null, 2));
+}
 
 /* ---------------- Socket.io Streaming ---------------- */
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
 
   socket.on("personaSearch", async query => {
-    console.log(`🌐 personaSearch: "${query}"`);
+    console.log(`🌐 Streaming live personas for: "${query}"`);
 
+    // ✅ Check cache first
     const cache = loadCache();
-    const cachedEntry = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
-
-    // ✅ If cached, return saved personas immediately
-    if (cachedEntry) {
-      console.log(`⚡ Using cached results for "${query}"`);
-      cachedEntry.personas.forEach(p => socket.emit("personaChunk", p));
+    const cached = cache.find(e => e.query.toLowerCase() === query.toLowerCase());
+    if (cached) {
+      console.log(`⚡ Serving cached personas for "${query}"`);
+      cached.personas.forEach(p => socket.emit("personaChunk", p));
       socket.emit("personaDone");
       return;
     }
 
-    // Otherwise: generate new ones from OpenAI
     try {
+      /* ---- Fetch Live Context (SerpAPI or fallback) ---- */
       let linkPool = [];
       try {
-        const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`;
-        const controller = new AbortController();
-        const timeout = setTimeout(()=>controller.abort(),5000);
-        const serp = await fetch(url,{signal:controller.signal});
-        clearTimeout(timeout);
+        const serp = await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`);
         const serpData = await serp.json();
         linkPool = (serpData.organic_results || [])
           .map(r=>r.link)
@@ -124,8 +110,10 @@ io.on("connection", socket => {
 
       const context = linkPool.join(", ") || "No verified links.";
 
+      /* ---- GPT Streaming Prompt ---- */
       const prompt = `
 You are an AI persona generator connected to live web data.
+
 Use this context about "${query}" but do not repeat it literally.
 Generate one persona at a time as valid JSON, for example:
 {"persona":"${randomPersona()}","thought":"short first-person note","hashtags":["tag1","tag2","tag3"],"link":"https://example.com"}
@@ -135,57 +123,55 @@ Context: ${context}
 `;
 
       const completion = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        stream:true,
-        temperature:0.9,
-        messages:[
-          {role:"system",content:"Output only JSON objects separated by <NEXT>"},
-          {role:"user",content:prompt}
+        model: "gpt-4o-mini",
+        stream: true,
+        temperature: 0.9,
+        messages: [
+          { role:"system", content:"Output only JSON objects separated by <NEXT>" },
+          { role:"user", content:prompt }
         ]
       });
 
-      let buffer="";
-      const tryParse = txt => {try{return JSON.parse(txt);}catch{return null;}};
-      const newPersonas=[];
+      let buffer = "";
+      const personas = [];
 
-      for await (const chunk of completion){
-        const text=chunk.choices?.[0]?.delta?.content||"";
-        buffer+=text;
-        if(buffer.includes("<NEXT>")){
-          const parts=buffer.split("<NEXT>");
-          const personaText=parts.shift();
-          buffer=parts.join("<NEXT>");
-          const persona=tryParse(personaText.trim());
-          if(persona){
-            socket.emit("personaChunk",persona);
-            newPersonas.push(persona);
-          }
+      for await (const chunk of completion) {
+        const text = chunk.choices?.[0]?.delta?.content || "";
+        buffer += text;
+
+        // Send persona when <NEXT> appears
+        if (buffer.includes("<NEXT>")) {
+          const parts = buffer.split("<NEXT>");
+          const personaText = parts.shift();
+          buffer = parts.join("<NEXT>");
+          try {
+            const persona = JSON.parse(personaText.trim());
+            socket.emit("personaChunk", persona);
+            personas.push(persona);
+          } catch { /* skip partials */ }
         }
       }
 
-      // save to cache
-      if(newPersonas.length>0){
-        cache.push({
-          query,
-          timestamp:new Date().toISOString(),
-          personas:newPersonas
-        });
-        saveCache(cache);
-        console.log(`💾 Cached ${newPersonas.length} personas for "${query}"`);
+      // ✅ Save to cache after full generation
+      if (personas.length > 0) {
+        try {
+          const cache = loadCache();
+          cache.push({ query, timestamp: new Date().toISOString(), personas });
+          saveCache(cache);
+          console.log(`💾 Cached ${personas.length} personas for "${query}"`);
+        } catch (e) {
+          console.warn("⚠️ Failed to save cache:", e.message);
+        }
       }
 
       socket.emit("personaDone");
-    } catch (err){
-      console.error("❌ Streaming error:",err);
-      socket.emit("personaError",err.message);
+    } catch (err) {
+      console.error("❌ Streaming error:", err);
+      socket.emit("personaError", err.message);
     }
   });
 });
 
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, ()=>{
-  const existing = loadCache();
-  console.log(`✅ AI-Native Persona Browser running on :${PORT}`);
-  console.log(`📊 Cached topics: ${existing.length}`);
-});
+httpServer.listen(PORT, ()=>console.log(`✅ AI-Native Persona Browser (Streaming + Cache) running on :${PORT}`));
