@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + SSL Validation)
+// server.js — AI-Native Persona Swap Browser (Web Live Data Mode + SSL Validation + Multi-Link Fix)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -52,40 +52,6 @@ function randomPersona() {
   return `${name}, ${ethnicity} ${vibe.charAt(0).toUpperCase()+vibe.slice(1)}`;
 }
 
-/* ---------------- SSL Validator ---------------- */
-async function validateHttpsLink(url) {
-  return new Promise((resolve) => {
-    try {
-      const req = https.request(url, { method: "HEAD" }, res => {
-        if (res.socket && res.socket.getPeerCertificate) {
-          const cert = res.socket.getPeerCertificate();
-          if (cert.valid_to) {
-            const expiry = new Date(cert.valid_to);
-            if (expiry < new Date()) {
-              console.log(`⚠️ Expired SSL certificate skipped: ${url}`);
-              return resolve(false);
-            }
-          }
-        }
-        if (res.statusCode >= 200 && res.statusCode < 400) {
-          resolve(true);
-        } else {
-          console.log(`⚠️ Invalid HTTPS status (${res.statusCode}) for: ${url}`);
-          resolve(false);
-        }
-      });
-      req.on("error", (err) => {
-        console.warn(`⚠️ HTTPS validation error for ${url}:`, err.message);
-        resolve(false);
-      });
-      req.end();
-    } catch (err) {
-      console.warn(`⚠️ Unexpected HTTPS validation issue for ${url}:`, err.message);
-      resolve(false);
-    }
-  });
-}
-
 /* ---------------- Persona Search API ---------------- */
 app.get("/api/persona-search", async (req, res) => {
   const query = req.query.query || "latest AI trends";
@@ -94,24 +60,30 @@ app.get("/api/persona-search", async (req, res) => {
   let webContext = "";
   let linkPool = [];
 
-  // 1️⃣ Collect live data
+  // 1️⃣ Collect live context from SerpAPI
   try {
     const serp = await fetch(
       `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=8&api_key=${process.env.SERPAPI_KEY}`
     );
     const serpData = await serp.json();
     const results = serpData.organic_results || [];
+
     linkPool = results
-      .map(r => ({ link: r.link, title: r.title || "", snippet: r.snippet || "" }))
+      .map(r => ({
+        link: r.link,
+        title: r.title || "",
+        snippet: r.snippet || ""
+      }))
       .filter(r => r.link && r.link.startsWith("https://"))
       .slice(0, 10);
+
     const snippets = linkPool.map(r => r.snippet || r.title);
     webContext += snippets.join(" ");
   } catch (err) {
     console.warn("⚠️ SerpAPI failed:", err.message);
   }
 
-  // 2️⃣ Fallback to NewsAPI
+  // 2️⃣ Fallback: NewsAPI if SerpAPI fails
   if (!webContext) {
     try {
       const news = await fetch(
@@ -127,7 +99,7 @@ app.get("/api/persona-search", async (req, res) => {
     }
   }
 
-  // 3️⃣ Verify links (ensure working HTTPS)
+  // 3️⃣ Verify links
   async function verifyLiveLinks(links) {
     const verified = [];
     for (const r of links) {
@@ -142,7 +114,7 @@ app.get("/api/persona-search", async (req, res) => {
   linkPool = await verifyLiveLinks(linkPool);
   const linkList = linkPool.map(r => r.link).join(", ");
 
-  // 4️⃣ GPT prompt
+  // 4️⃣ GPT generation
   const prompt = `
 You are an AI-Native persona generator connected to real web data.
 
@@ -154,14 +126,13 @@ Use these verified links for reference: ${linkList}
 Generate 10 unique JSON entries.
 Each entry must include:
 - "persona": realistic founder persona (use diverse origins)
-- "thought": a first-person experience or event related to this topic
+- "thought": a first-person event or experience related to this topic
 - "hashtags": exactly 3 short real hashtags (no # symbol)
 - "links": 1–3 URLs from the verified list, relevant to the thought.
 
 Return only valid JSON (no markdown, no notes).
 `;
 
-  // 5️⃣ GPT response
   let raw = "";
   try {
     const completion = await openai.chat.completions.create({
@@ -177,7 +148,6 @@ Return only valid JSON (no markdown, no notes).
     console.error("❌ GPT request failed:", err.message);
   }
 
-  // 6️⃣ Parse output
   let parsed = [];
   try {
     const match = raw.match(/\[[\s\S]*\]/);
@@ -186,7 +156,6 @@ Return only valid JSON (no markdown, no notes).
     parsed = [];
   }
 
-  // 7️⃣ Fallback data
   if (!Array.isArray(parsed) || parsed.length === 0) {
     parsed = [
       {
@@ -198,26 +167,12 @@ Return only valid JSON (no markdown, no notes).
     ];
   }
 
-  // 8️⃣ Final verification — attach 1–3 working links
-  async function verifyAndAttachLinks(arr, links) {
-    const verified = [];
-    for (const r of links) {
-      try {
-        const resp = await fetch(r.link, { method: "HEAD", timeout: 4000 });
-        if (resp.ok) verified.push(r.link);
-      } catch {}
-    }
-    return arr.map(item => ({
-      ...item,
-      links: verified.slice(0, Math.floor(Math.random() * 3) + 1)
-    }));
-  }
-
-  parsed = await verifyAndAttachLinks(parsed, linkPool);
-
-  if (!parsed[0]?.links?.length) {
-    parsed[0].links = ["https://www.reuters.com", "https://www.nytimes.com"];
-  }
+  // ✅ Ensure all personas have links
+  const fallbackLinks = ["https://www.reuters.com", "https://www.nytimes.com", "https://www.bbc.com"];
+  parsed = parsed.map((p, i) => ({
+    ...p,
+    links: p.links && p.links.length ? p.links : [fallbackLinks[i % fallbackLinks.length]]
+  }));
 
   res.json(parsed);
 });
