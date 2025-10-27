@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
   const thought = req.query.thought || "";
   const hashtags = req.query.hashtags || "";
 
-  // Escape unsafe characters
+  // Clean for HTML safety
   const safe = str =>
     (str || "")
       .replace(/</g, "&lt;")
@@ -39,7 +39,7 @@ app.get("/", (req, res) => {
   const safeThought = safe(thought);
   const safeTags = safe(hashtags);
 
-  // Build Open Graph meta
+  // Build dynamic preview
   const ogTitle =
     safePersona && safePersona.length > 1
       ? `AI-Native Persona Browser — ${safePersona}`
@@ -50,9 +50,8 @@ app.get("/", (req, res) => {
       ? safeThought
       : safeTopic || "Tap here to open the link.";
 
-  const ogImage = "https://yourdomain.com/og-image.jpg"; // update with your image
+  const ogImage = "https://yourdomain.com/og-image.jpg"; // Update this image path
 
-  // Return lightweight HTML for previews
   res.send(`<!doctype html>
   <html lang="en">
   <head>
@@ -68,7 +67,7 @@ app.get("/", (req, res) => {
     <meta name="twitter:image" content="${ogImage}">
     <title>${ogTitle}</title>
     <script>
-      // Redirect to your main app (index.html) preserving all params
+      // redirect to your actual front-end with all parameters
       const qs = window.location.search;
       window.location.href = '/index.html' + qs;
     </script>
