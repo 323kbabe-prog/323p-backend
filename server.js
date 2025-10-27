@@ -150,7 +150,12 @@ You are an AI persona generator connected to live web data.
 
 Use this context about "${query}" but do not repeat it literally.
 Generate one persona at a time as valid JSON, for example:
-{"persona":"${randomPersona()}","thought":"short first-person note","hashtags":["tag1","tag2","tag3"],"link":"https://example.com"}
+{
+  "persona": "${randomPersona()}",
+  "thought": "short first-person statement describing their philosophy or passion, then add one detailed real-world event or project this person experienced that shaped their perspective or work",
+  "hashtags": ["tag1","tag2","tag3"],
+  "link": "https://example.com"
+}
 After each, append the marker <NEXT>.
 Generate up to 10 personas.
 Context: ${context}
