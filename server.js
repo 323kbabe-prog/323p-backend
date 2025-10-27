@@ -191,6 +191,14 @@ Context: ${context}
         }
       }
 
+      // ✅ Ensure last persona (10th drop) is emitted even if <NEXT> not found
+      if (buffer.trim().length > 0) {
+        try {
+          const lastPersona = JSON.parse(buffer.trim());
+          socket.emit("personaChunk", lastPersona);
+        } catch { /* ignore if invalid */ }
+      }
+
       socket.emit("personaDone");
     } catch (err) {
       console.error("❌ Streaming error:", err);
