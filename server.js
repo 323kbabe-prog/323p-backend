@@ -80,22 +80,6 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* ---------------- Persona Pool ---------------- */
-const ethnicities = ["Korean","Black","White","Latina","Asian-American","Mixed"];
-const vibes = [
-  "AI founder","tech designer","digital artist","vlogger","streamer","trend forecaster",
-  "AR creator","fashion engineer","metaverse curator","AI researcher","sound producer",
-  "content strategist","neural-net stylist","startup intern","creative coder"
-];
-function randomPersona() {
-  const ethnicity = ethnicities[Math.floor(Math.random()*ethnicities.length)];
-  const vibe = vibes[Math.floor(Math.random()*vibes.length)];
-  const first = ["Aiko","Marcus","Sofia","Ravi","Mina","David","Lila","Kenji","Isabella"];
-  const last = ["Tanaka","Lee","Martinez","Singh","Park","Johnson","Patel","Kim","Garcia"];
-  const name = `${first[Math.floor(Math.random()*first.length)]} ${last[Math.floor(Math.random()*last.length)]}`;
-  return `${name}, ${ethnicity} ${vibe}`;
-}
-
 /* ---------------- SSL Validator ---------------- */
 async function validateHttpsLink(url) {
   return new Promise(resolve=>{
@@ -141,24 +125,25 @@ io.on("connection", socket => {
       const context = linkPool.join(", ") || "No verified links.";
 
       /* ---- GPT Streaming Prompt ---- */
-      const uniquePersonas = Array.from({ length: 10 }, () => randomPersona());
-
       const prompt = `
 You are an AI persona generator connected to live web data.
 
 Use this context about "${query}" but do not repeat it literally.
 Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
-Each persona must keep its own random identity inspired by the following seeds:
-${uniquePersonas.map((p, i) => `${i + 1}. ${p}`).join("\n")}
 
-Each persona’s "thought" must clearly reflect their unique viewpoint on the topic "${query}"—even if their field is different. 
-They should talk about how the topic connects to their world, profession, or art, 
-and include one short real-world event, project, or collaboration they experienced that shaped this perspective.
+Each persona must:
+- Have a unique name, cultural background, and age between 18 and 49.
+- Represent a different academic or professional field (like a distinct university major).
+  Cover diverse disciplines such as technology, medicine, law, arts, business, philosophy, environment, psychology, sociology, design, and engineering.
+- Speak in the first person about how the topic "${query}" connects to their field or research.
+- Mention one realistic project, study, or collaboration they personally experienced related to the topic.
+- Reflect their age and field in tone and vocabulary.
+- Keep each persona concise and believable.
 
-For each persona, output:
+Output format for each persona:
 {
-  "persona": "the seed identity above",
-  "thought": "first-person reflection connecting their identity to '${query}' and describing one personal event or project tied to it",
+  "persona": "Name (Age), [Field or Major]",
+  "thought": "First-person reflection connecting their identity to '${query}' and describing one personal event or project tied to it.",
   "hashtags": ["tag1","tag2","tag3"],
   "link": "https://example.com"
 }
@@ -191,7 +176,7 @@ Context: ${context}
         }
       }
 
-      // ✅ Ensure last persona (10th drop) is emitted even if <NEXT> not found
+      // ✅ Emit any remaining persona (last drop)
       if (buffer.trim().length > 0) {
         try {
           const lastPersona = JSON.parse(buffer.trim());
