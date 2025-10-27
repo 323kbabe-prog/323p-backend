@@ -20,23 +20,39 @@ console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-/* ---------------- Dynamic topic & persona preview for share links ---------------- */
+/* ---------------- Dynamic topic, persona & thought preview ---------------- */
 app.get("/", (req, res) => {
   const topic = req.query.query || "";
   const persona = req.query.persona || "";
   const thought = req.query.thought || "";
+  const hashtags = req.query.hashtags || "";
 
-  const safeTopic = topic.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const safePersona = persona.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const safeThought = thought.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Escape any unsafe characters for HTML
+  const safe = str =>
+    (str || "")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
 
-  const ogTitle = safePersona
-    ? `AI-Native Persona Browser — ${safePersona}`
-    : `AI-Native Persona Browser — ${safeTopic || "Web Live Data Mode"}`;
-  const ogDesc = safeThought
-    ? safeThought
-    : safeTopic || "Tap here to open the link.";
+  const safeTopic = safe(topic);
+  const safePersona = safe(persona);
+  const safeThought = safe(thought);
+  const safeTags = safe(hashtags);
 
+  // Build Open Graph title and description
+  const ogTitle =
+    safePersona && safePersona.length > 1
+      ? `AI-Native Persona Browser — ${safePersona}`
+      : `AI-Native Persona Browser — ${safeTopic || "Web Live Data Mode"}`;
+
+  const ogDesc =
+    safeThought && safeThought.length > 1
+      ? safeThought
+      : safeTopic || "Tap here to open the link.";
+
+  const ogImage = "https://yourdomain.com/og-image.jpg"; // change to your preview image
+
+  // Serve minimal HTML with meta tags for chat preview
   res.send(`<!doctype html>
   <html lang="en">
   <head>
@@ -44,15 +60,17 @@ app.get("/", (req, res) => {
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <meta property="og:title" content="${ogTitle}">
     <meta property="og:description" content="${ogDesc}">
+    <meta property="og:image" content="${ogImage}">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://yourdomain.com/og-image.jpg">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${ogTitle}">
+    <meta name="twitter:description" content="${ogDesc}">
+    <meta name="twitter:image" content="${ogImage}">
     <title>${ogTitle}</title>
     <script>
-      // redirect to your front-end, preserving all query parameters
-      const params = new URLSearchParams(window.location.search);
-      const qs = params.toString();
-      window.location.href = '/index.html' + (qs ? '?' + qs : '');
+      // redirect to your main app while keeping all params
+      const qs = window.location.search;
+      window.location.href = '/index.html' + qs;
     </script>
   </head>
   <body></body>
