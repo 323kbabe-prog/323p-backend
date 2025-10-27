@@ -145,19 +145,22 @@ io.on("connection", socket => {
       const context = linkPool.join(", ") || "No verified links.";
 
       /* ---- GPT Streaming Prompt ---- */
+      const uniquePersonas = Array.from({ length: 10 }, () => randomPersona());
+
       const prompt = `
 You are an AI persona generator connected to live web data.
 
 Use this context about "${query}" but do not repeat it literally.
-Generate one persona at a time as valid JSON, for example:
+Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
+Each persona must have a unique identity inspired by the following seed ideas:
+${uniquePersonas.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+For each persona, output in this structure:
 {
-  "persona": "${randomPersona()}",
-  "thought": "short first-person statement describing their philosophy or passion, then add one detailed real-world event or project this person experienced that shaped their perspective or work",
+  "persona": "unique creative identity derived from the seed idea above",
+  "thought": "first-person reflection describing their philosophy or passion, plus one detailed real-world event or project that shaped their perspective or work",
   "hashtags": ["tag1","tag2","tag3"],
   "link": "https://example.com"
 }
-After each, append the marker <NEXT>.
-Generate up to 10 personas.
 Context: ${context}
 `;
 
