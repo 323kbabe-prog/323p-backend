@@ -27,7 +27,6 @@ app.get("/", (req, res) => {
   const thought = req.query.thought || "";
   const hashtags = req.query.hashtags || "";
 
-  // Clean for HTML safety
   const safe = str =>
     (str || "")
       .replace(/</g, "&lt;")
@@ -39,7 +38,6 @@ app.get("/", (req, res) => {
   const safeThought = safe(thought);
   const safeTags = safe(hashtags);
 
-  // Build dynamic preview
   const ogTitle =
     safePersona && safePersona.length > 1
       ? `AI-Native Persona Browser — ${safePersona}`
@@ -50,7 +48,7 @@ app.get("/", (req, res) => {
       ? safeThought
       : safeTopic || "Tap here to open the link.";
 
-  const ogImage = "https://yourdomain.com/og-image.jpg"; // Update this image path
+  const ogImage = "https://yourdomain.com/og-image.jpg";
 
   res.send(`<!doctype html>
   <html lang="en">
@@ -67,7 +65,6 @@ app.get("/", (req, res) => {
     <meta name="twitter:image" content="${ogImage}">
     <title>${ogTitle}</title>
     <script>
-      // redirect to your actual front-end with all parameters
       const qs = window.location.search;
       window.location.href = '/index.html' + qs;
     </script>
@@ -129,7 +126,6 @@ io.on("connection", socket => {
   socket.on("personaSearch", async query => {
     console.log(`🌐 Streaming live personas for: "${query}"`);
     try {
-      /* ---- Fetch Live Context ---- */
       let linkPool = [];
       try {
         const serp = await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`);
@@ -152,12 +148,17 @@ You are an AI persona generator connected to live web data.
 
 Use this context about "${query}" but do not repeat it literally.
 Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
-Each persona must have a unique identity inspired by the following seed ideas:
+Each persona must keep its own random identity inspired by the following seeds:
 ${uniquePersonas.map((p, i) => `${i + 1}. ${p}`).join("\n")}
-For each persona, output in this structure:
+
+Each persona’s "thought" must clearly reflect their unique viewpoint on the topic "${query}"—even if their field is different. 
+They should talk about how the topic connects to their world, profession, or art, 
+and include one short real-world event, project, or collaboration they experienced that shaped this perspective.
+
+For each persona, output:
 {
-  "persona": "unique creative identity derived from the seed idea above",
-  "thought": "first-person reflection describing their philosophy or passion, plus one detailed real-world event or project that shaped their perspective or work",
+  "persona": "the seed identity above",
+  "thought": "first-person reflection connecting their identity to '${query}' and describing one personal event or project tied to it",
   "hashtags": ["tag1","tag2","tag3"],
   "link": "https://example.com"
 }
