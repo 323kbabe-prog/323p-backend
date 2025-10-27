@@ -19,6 +19,33 @@ console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
+
+/* ---------------- Dynamic topic preview for share links ---------------- */
+app.get("/", (req, res) => {
+  const topic = req.query.query || "";
+  const safeTopic = topic.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  res.send(`<!doctype html>
+  <html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta property="og:title" content="AI-Native Persona Browser — ${safeTopic || 'Web Live Data Mode'}">
+    <meta property="og:description" content="${safeTopic || 'Tap here to open the link.'}">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://yourdomain.com/og-image.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <title>AI-Native Persona Browser — ${safeTopic || 'Web Live Data Mode'}</title>
+    <script>
+      // redirect to your real front-end, keeping the query intact
+      window.location.href = '/index.html${topic ? '?query=' + encodeURIComponent('${safeTopic}') : ''}';
+    </script>
+  </head>
+  <body></body>
+  </html>`);
+});
+
+/* ---------------- Static Files ---------------- */
 app.use(express.static(path.join(__dirname, "public")));
 
 const httpServer = createServer(app);
@@ -113,7 +140,6 @@ Context: ${context}
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
 
-        // Send persona when <NEXT> appears
         if (buffer.includes("<NEXT>")) {
           const parts = buffer.split("<NEXT>");
           const personaText = parts.shift();
