@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>AI-Native Persona Browser — Live Views</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background:#0e1117;
+      color:#fff;
+      margin:0;
+      font-family:'Inter',sans-serif;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      height:100vh;
+      text-align:center;
+    }
+    h1 {
+      font-size:4vw;
+      font-weight:700;
+      color:#00aaff;
+      margin:0;
+    }
+    #view-count {
+      font-size:25vw;
+      font-weight:700;
+      color:#00aaff;
+      letter-spacing:2px;
+      transition:all 0.3s ease;
+      line-height:1;
+    }
+    p {
+      font-size:2vw;
+      color:#aaa;
+      margin-top:1vw;
+    }
+  </style>
+</head>
+<body>
+  <div id="view-count">0</div>
+  <h1>Total Live Views</h1>
+  <p>AI-Native Persona Browser</p>
+
+  <script>
+    async function loadViews() {
+      try {
+        const res = await fetch("https://three23p-backend.onrender.com/api/views");
+        const data = await res.json();
+        document.getElementById("view-count").textContent = data.total.toLocaleString();
+      } catch (err) {
+        console.error("Error fetching view count:", err);
+        document.getElementById("view-count").textContent = "—";
+      }
+    }
+
+    loadViews();
+    setInterval(loadViews, 3000); // refresh every 3 seconds
+  </script>
+</body>
+</html>
