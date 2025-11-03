@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>AI-Native Persona Browser — Live Views</title>
+  <title>AI-Native Persona Browser — Live Views (Read-Only)</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -40,23 +40,26 @@
   </style>
 </head>
 <body>
-  <div id="view-count">0</div>
-  <h1>Total Live Views</h1>
-  <p>AI-Native Persona Browser</p>
+  <div id="view-count">—</div>
+  <h1>Total Views</h1>
+  <p>AI-Native Persona Browser (Read-Only)</p>
 
   <script>
     async function loadViews() {
       try {
-        const res = await fetch("/api/views");
-        const data = await res.json();
+        // Just read, does NOT increment
+        const response = await fetch("/api/views", { method: "GET" });
+        const data = await response.json();
         document.getElementById("view-count").textContent = data.total.toLocaleString();
       } catch (err) {
         console.error("Error fetching view count:", err);
         document.getElementById("view-count").textContent = "—";
       }
     }
+
+    // Load once and refresh every 3 seconds
     loadViews();
-    setInterval(loadViews, 3000); // refresh every 3 seconds
+    setInterval(loadViews, 3000);
   </script>
 </body>
 </html>
