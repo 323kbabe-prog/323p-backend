@@ -47,17 +47,18 @@
   <script>
     async function loadViews() {
       try {
-        // Just read, does NOT increment
-        const response = await fetch("/api/views", { method: "GET" });
-        const data = await response.json();
-        document.getElementById("view-count").textContent = data.total.toLocaleString();
+        // Read from the new read-only route
+        const res = await fetch("/api/views-readonly", { method: "GET" });
+        const data = await res.json();
+        document.getElementById("view-count").textContent =
+          data.total.toLocaleString();
       } catch (err) {
         console.error("Error fetching view count:", err);
         document.getElementById("view-count").textContent = "—";
       }
     }
 
-    // Load once and refresh every 3 seconds
+    // Load once, then refresh every 3 seconds
     loadViews();
     setInterval(loadViews, 3000);
   </script>
