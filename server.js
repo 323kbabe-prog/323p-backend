@@ -99,6 +99,14 @@ async function validateHttpsLink(url) {
 const VIEW_FILE = path.join("/data","views.json");
 function loadViews(){ try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0};} }
 function saveViews(v){ fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2)); }
+
+// READ-ONLY route: does NOT increment
+app.get("/api/views-readonly", (req, res) => {
+  const v = loadViews();
+  res.json({ total: v.total });
+});
+
+// Incrementing route (leave as-is)
 app.get("/api/views",(req,res)=>{
   const v=loadViews(); v.total++; saveViews(v); res.json({total:v.total});
 });
