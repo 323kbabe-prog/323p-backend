@@ -47,7 +47,7 @@
   <script>
     async function loadViews() {
       try {
-        const res = await fetch("https://three23p-backend.onrender.com/api/views");
+        const res = await fetch("/api/views");
         const data = await res.json();
         document.getElementById("view-count").textContent = data.total.toLocaleString();
       } catch (err) {
@@ -55,7 +55,6 @@
         document.getElementById("view-count").textContent = "—";
       }
     }
-
     loadViews();
     setInterval(loadViews, 3000); // refresh every 3 seconds
   </script>
