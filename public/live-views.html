@@ -40,26 +40,23 @@
   </style>
 </head>
 <body>
-  <div id="view-count">—</div>
-  <h1>Total Views</h1>
-  <p>AI-Native Persona Browser (read-only)</p>
+  <div id="view-count">0</div>
+  <h1>Total Live Views</h1>
+  <p>AI-Native Persona Browser</p>
 
   <script>
-    async function getViews() {
+    async function loadViews() {
       try {
-        // Only reads data — does NOT increment
-        const res = await fetch("/api/views", { method: "GET" });
+        const res = await fetch("/api/views");
         const data = await res.json();
         document.getElementById("view-count").textContent = data.total.toLocaleString();
       } catch (err) {
-        console.error("Error reading views:", err);
+        console.error("Error fetching view count:", err);
         document.getElementById("view-count").textContent = "—";
       }
     }
-
-    // Read immediately and refresh every 3 seconds
-    getViews();
-    setInterval(getViews, 3000);
+    loadViews();
+    setInterval(loadViews, 3000); // refresh every 3 seconds
   </script>
 </body>
 </html>
