@@ -200,6 +200,49 @@ Context: ${context}
   });
 });
 
+/* ---------------- OpenAI Image Generation (DALL·E) ---------------- */
+app.post("/api/generate-image", async (req, res) => {
+  const { persona, age, profession } = req.body;
+
+  // choose background by profession
+  const role = (profession || "").toLowerCase();
+  let background = "clean minimal background";
+  if (role.includes("scientist") || role.includes("research"))
+    background = "modern research lab background";
+  else if (role.includes("engineer") || role.includes("developer") || role.includes("programmer"))
+    background = "tech workspace background with computers";
+  else if (role.includes("designer") || role.includes("artist") || role.includes("illustrator"))
+    background = "creative studio background with soft light";
+  else if (role.includes("manager") || role.includes("marketer") || role.includes("consultant"))
+    background = "modern office background with soft daylight";
+  else if (role.includes("musician") || role.includes("performer") || role.includes("dancer"))
+    background = "music or dance studio background with spot lighting";
+  else if (role.includes("teacher") || role.includes("professor"))
+    background = "academic classroom or library background";
+
+  const prompt = `realistic portrait of ${persona || "unknown person"}, a ${
+    age || "young adult"
+  } ${profession || "creator"},
+  wearing professional attire suited to their role,
+  neutral confident expression, soft cinematic lighting,
+  ${background}, ultra-detailed realistic skin texture, natural tone balance,
+  no text, no logo, no watermark, no writing, no signature`;
+
+  try {
+    const result = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt,
+      size: "1024x1792",            // 9:16 portrait, fastest high quality
+      quality: "standard",          // fastest option
+      style: "natural",
+    });
+    res.json({ url: result.data[0].url });
+  } catch (err) {
+    console.error("❌ DALL·E image generation failed:", err);
+    res.status(500).json({ error: "Image generation failed" });
+  }
+});
+
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, ()=>console.log(`✅ AI-Native Persona Browser (Streaming) running on :${PORT}`));
