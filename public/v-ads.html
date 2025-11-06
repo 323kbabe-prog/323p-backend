@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Google tag (GA4 + Google Ads) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FB5FLT606Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-FB5FLT606Z');
+    gtag('config', 'AW-16674351029');
+  </script>
+
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+  <title>AI-Native Persona Browser — Image Drops Mode</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    body{font-family:'Inter',sans-serif;background:#fafafa;margin:0;color:#000}
+    header{text-align:center;padding:20px}
+    h1{margin:0;font-size:24px;font-weight:700}
+    #search-box{display:block;margin:6px auto 20px;width:90%;max-width:500px;
+      padding:14px 16px;border:1px solid #ddd;border-radius:12px;font-size:16px}
+    .card{background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);
+      padding:20px;margin:16px auto;max-width:600px;opacity:0;transform:translateY(10px);
+      transition:opacity .3s ease,transform .3s ease}
+    .card.visible{opacity:1;transform:translateY(0)}
+    .persona{font-weight:700;margin-bottom:8px}
+    .thought{margin-bottom:10px}
+    .hashtags{color:#666;font-size:14px;margin-bottom:8px}
+    .persona-image{width:100%;border-radius:12px;margin-bottom:12px;object-fit:cover}
+    .platform-links{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .source-link{font-size:13px;background:#f2f2f2;padding:6px 10px;border-radius:8px;
+      color:#007aff;text-decoration:none}
+    .source-link:hover{background:#e6e6e6}
+    .share-link{font-size:13px;color:#555;text-decoration:none;margin-left:6px}
+    .share-link:hover{color:#000;text-decoration:underline}
+    footer{text-align:center;padding:20px;font-size:14px;color:#777}
+    #view-counter{display:block;font-size:13px;opacity:.6;margin-top:6px}
+    #share-page-btn{
+      display:none;
+      position:fixed;
+      bottom:24px;right:24px;width:70px;height:70px;border-radius:50%;
+      background:#007aff;color:#fff;border:none;
+      box-shadow:0 3px 8px rgba(0,0,0,0.25);cursor:pointer;
+      font-family:'Inter',sans-serif;font-weight:600;font-size:12px;
+      text-align:center;line-height:14px;padding:0 4px;z-index:1000;
+      transition:background .3s ease,transform .1s ease;
+    }
+    #share-page-btn:hover{background:#005fd1;transform:scale(1.05)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI-Native Persona Browser</h1>
+    <p style="font-size:14px;color:#777;margin-top:4px;">Image Drops Mode</p>
+  </header>
+
+  <input id="search-box" placeholder="Type a topic and hit Enter…"/>
+  <div id="results"></div>
+  <button id="share-page-btn">Share Page</button>
+
+  <footer>
+    Creator at <strong>1AI323.ai</strong> · 
+    <a href="https://www.linkedin.com/in/gd-j-c-24940a383/" target="_blank" style="color:#007aff;text-decoration:none;">LinkedIn</a> · I use OpenAI
+    <br><span id="view-counter">loading views...</span>
+  </footer>
+
+  <script>
+    const socket = io("https://three23p-backend.onrender.com");
+    const box = document.getElementById("search-box");
+    const results = document.getElementById("results");
+    const sharePageBtn = document.getElementById("share-page-btn");
+    let allPersonas = [];
+
+    function showSkeletons() {
+      results.innerHTML = "";
+      allPersonas = [];
+      for (let i = 1; i <= 10; i++) {
+        results.insertAdjacentHTML("beforeend", `
+          <div class="card skeleton-card" style="opacity:1;transform:none;">
+            <div class="persona" style="font-weight:700;color:#999;">Persona ${i}</div>
+            <div class="thought" style="color:#bbb;">Loading...</div>
+            <div class="hashtags" style="color:#ccc;">#tag1 #tag2 #tag3</div>
+          </div>
+        `);
+      }
+    }
+
+    // Generate image prompt based on persona details
+    function generateImageURL(p) {
+      const name = encodeURIComponent(p.persona || "Unknown");
+      const age = encodeURIComponent(p.age || "25");
+      const profession = encodeURIComponent(p.profession || "creator");
+      const prompt = encodeURIComponent(
+        `realistic portrait of ${name}, a ${age}-year-old ${profession}, ` +
+        `wearing appropriate attire for their role, ` +
+        `neutral confident expression, shot in soft cinematic lighting, ` +
+        `clean professional background (lab, office, or studio depending on role), ` +
+        `high detail skin and texture, no text or logos`
+      );
+      // you can replace this with your image API endpoint if you have one
+      return `https://image.pollinations.ai/prompt/${prompt}`;
+    }
+
+    function renderCard(p){
+      allPersonas.push(p);
+      const q = box.value.trim();
+      const clean = p.thought.replace(new RegExp(q,"gi"),"").trim();
+      const tags = p.hashtags.slice(0,3).map(t =>
+        t.replace(/^#/, "")
+         .replace(/([a-z])([A-Z])/g, "$1 $2")
+         .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+         .trim()
+      );
+      const tagWords = encodeURIComponent(tags.join(" "));
+      const googleUrl = `https://www.google.com/search?q=${tagWords}`;
+      const youtubeUrl = `https://www.youtube.com/results?search_query=${tagWords}+shorts`;
+      const tiktokUrl = `https://www.google.com/search?q=site:tiktok.com+${tagWords}`;
+      const instaUrl  = `https://www.google.com/search?q=site:instagram.com/reel+${tagWords}`;
+      const shareLink = `${location.origin}?query=${encodeURIComponent(q)}&persona=${encodeURIComponent(p.persona)}&thought=${encodeURIComponent(p.thought)}&hashtags=${encodeURIComponent(p.hashtags.join(","))}`;
+
+      const imageURL = generateImageURL(p);
+
+      const html = `
+        <div class="card">
+          <img src="${imageURL}" alt="Portrait of ${p.persona}" class="persona-image">
+          <div class="persona">${p.persona}</div>
+          <div class="thought">${clean}</div>
+          <div class="hashtags">#${p.hashtags.join(" #")}</div>
+          <div class="platform-links">
+            <a class="source-link" target="_blank" href="${googleUrl}">Google</a>
+            <a class="source-link" target="_blank" href="${youtubeUrl}">YouTube Shorts</a>
+            <a class="source-link" target="_blank" href="${tiktokUrl}">TikTok</a>
+            <a class="source-link" target="_blank" href="${instaUrl}">Instagram Reels</a>
+          </div>
+          <div style="margin-top:10px;font-size:14px;color:#777;">
+            <a href="#" class="share-link" data-link="${shareLink}">Share</a>
+          </div>
+        </div>`;
+      const skel = results.querySelector(".skeleton-card");
+      if(skel){
+        skel.outerHTML=html;
+        const newCard=results.querySelector(".card:not(.skeleton-card):not(.visible)");
+        if(newCard)setTimeout(()=>newCard.classList.add("visible"),80);
+      }else{
+        results.insertAdjacentHTML("beforeend",html);
+        const card=results.lastElementChild;
+        setTimeout(()=>card.classList.add("visible"),80);
+      }
+    }
+
+    // --- handle Share click ---
+    document.addEventListener("click", async e => {
+      if (e.target.classList.contains("share-link")) {
+        e.preventDefault();
+        const card = e.target.closest(".card");
+        const persona = card.querySelector(".persona").textContent.trim();
+        const thought = card.querySelector(".thought").textContent.trim();
+        const hashtags = card.querySelector(".hashtags").textContent.trim();
+        const longUrl = e.target.dataset.link;
+        let shortLink = longUrl;
+        try {
+          const res = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}`);
+          const data = await res.json();
+          if (data.shorturl) shortLink = data.shorturl;
+        } catch (err) { console.warn("Shortener failed", err); }
+        const message = `${persona}\n"${thought}"\n${hashtags}\n${shortLink}`;
+        await navigator.clipboard.writeText(message);
+        e.target.textContent = "Link copied";
+        setTimeout(() => (e.target.textContent = "Share"), 2000);
+      }
+    });
+
+    // --- disable auto show of Share Page button ---
+    socket.on("personaDone", ()=>{
+      // sharePageBtn.style.display="block"; // disabled
+      results.insertAdjacentHTML("beforeend",
+        "<p style='text-align:center;color:#999;font-size:12px;margin-top:10px;'>Stream complete.</p>");
+    });
+
+    socket.on("personaChunk", renderCard);
+    socket.on("personaError", e=>{
+      results.insertAdjacentHTML("beforeend", `<p style='color:red;text-align:center'>${e}</p>`);
+    });
+
+    box.addEventListener("keypress", e=>{
+      if(e.key==="Enter"){
+        const q = box.value.trim();
+        showSkeletons();
+        socket.emit("personaSearch", q);
+        sharePageBtn.style.display="none";
+      }
+    });
+
+    (async()=>{
+      const c=document.getElementById("view-counter");
+      try{
+        const r=await fetch("https://three23p-backend.onrender.com/api/views");
+        const d=await r.json();
+        c.textContent=`total views: ${d.total.toLocaleString()}`;
+      }catch{c.textContent="total views unavailable";}
+    })();
+  </script>
+</body>
+</html>
