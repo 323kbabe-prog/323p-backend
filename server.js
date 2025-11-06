@@ -200,7 +200,7 @@ Context: ${context}
   });
 });
 
-/* ---------------- OpenAI Image Generation (Persona-Aligned Prompt) ---------------- */
+/* ---------------- OpenAI Image Generation (Real Human Portrait Mode) ---------------- */
 app.all("/api/generate-image", async (req, res) => {
   const data = req.method === "POST" ? req.body : req.query;
   const { persona, age, profession } = data;
@@ -216,36 +216,38 @@ app.all("/api/generate-image", async (req, res) => {
   const role = (profession || "").toLowerCase();
   let background = "neutral indoor background";
   if (role.includes("scientist") || role.includes("research"))
-    background = "bright research lab background";
+    background = "realistic research lab background";
   else if (role.includes("engineer") || role.includes("developer") || role.includes("programmer"))
-    background = "modern tech workspace background with computers";
+    background = "modern tech workspace background with real equipment";
   else if (role.includes("designer") || role.includes("artist") || role.includes("illustrator"))
     background = "creative studio background with plain wall";
   else if (role.includes("manager") || role.includes("marketer") || role.includes("consultant"))
-    background = "modern office background";
+    background = "modern corporate office background";
   else if (role.includes("musician") || role.includes("performer") || role.includes("dancer"))
-    background = "music studio or simple stage background";
+    background = "music studio or simple indoor stage background";
   else if (role.includes("teacher") || role.includes("professor"))
     background = "classroom or study room background";
 
-  // --- New prompt — realistic, neutral, persona-aligned ---
+  // --- Prompt optimized for real human photo realism ---
   const prompt = `
-realistic portrait of ${persona || "a person"}, 
-a ${age || "25"}-year-old ${profession || "creator"}, 
-wearing appropriate attire for their role, 
-neutral confident expression, 
-shot in regular lighting, ${background}, 
-high detail skin and texture, realistic tone, no text, no logo, no watermark
+ultra-realistic photo portrait of ${persona || "a person"},
+a ${age || "25"}-year-old ${profession || "professional"},
+wearing appropriate attire for their role,
+neutral confident facial expression,
+real human proportions, realistic lighting, ${background},
+natural skin texture, photographic depth of field,
+shot with a DSLR camera, professional color balance,
+no text, no logo, no watermark, no digital illustration, not a painting
   `.trim();
 
   try {
-    console.log(`🎨 Generating persona-aligned portrait for: ${persona || "Unknown"} (${profession || "N/A"})`);
+    console.log(`🎨 Generating REAL HUMAN portrait for: ${persona || "Unknown"} (${profession || "N/A"})`);
 
     const result = await openai.images.generate({
       model: "dall-e-3",
       prompt,
-      size: "1024x1792",   // 9:16 official vertical portrait
-      quality: "standard", // valid: 'standard' or 'hd'
+      size: "1024x1792",   // vertical 9:16 portrait
+      quality: "hd",        // 'hd' gives sharper, more realistic output
     });
 
     const url = result.data?.[0]?.url;
