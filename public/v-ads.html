@@ -13,32 +13,46 @@
     #search-box{display:block;margin:6px auto 20px;width:90%;max-width:500px;
       padding:14px 16px;border:1px solid #ddd;border-radius:12px;font-size:16px}
     .card{background:#fff;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);
-      padding:18px;margin:20px auto;max-width:480px;opacity:0;transform:translateY(10px);
-      transition:opacity .4s ease,transform .4s ease}
-    .card.visible{opacity:1;transform:translateY(0)}
-    .persona-image{width:100%;aspect-ratio:9/16;border-radius:16px;object-fit:cover;margin-bottom:12px}
+      padding:18px;margin:20px auto;max-width:480px;opacity:1;transform:none}
+    .persona-image{width:100%;aspect-ratio:2/3;border-radius:16px;object-fit:cover;margin-bottom:12px}
     .quote{font-style:italic;font-size:15px;margin-bottom:10px;color:#111}
     .core{font-size:14px;color:#555;line-height:1.4}
     footer{text-align:center;padding:20px;font-size:13px;color:#777}
+    #progress-counter{text-align:center;color:#777;font-size:14px;margin:10px 0;}
   </style>
 </head>
 <body>
   <header>
     <h1>AI-Native Persona Browser</h1>
-    <p style="font-size:14px;color:#777;margin-top:4px;">Visual Ads Mode — 9:16 DALL·E Portraits</p>
+    <p style="font-size:14px;color:#777;margin-top:4px;">Visual Ads Mode — OpenAI Portraits</p>
   </header>
 
-  <input id="search-box" placeholder="Type a topic and hit Enter …"/>
+  <input id="search-box" placeholder="Type a topic and hit Enter…"/>
+  <p id="progress-counter">Waiting for personas…</p>
   <div id="results"></div>
 
-  <footer>Creator at <strong>1AI323.ai</strong> · <a href="https://www.linkedin.com/in/gd-j-c-24940a383/" target="_blank" style="color:#007aff;text-decoration:none;">LinkedIn</a></footer>
+  <footer>Creator at <strong>1AI323.ai</strong> · 
+    <a href="https://www.linkedin.com/in/gd-j-c-24940a383/" target="_blank" 
+       style="color:#007aff;text-decoration:none;">LinkedIn</a>
+  </footer>
 
   <script>
     const socket = io("https://three23p-backend.onrender.com");
     const box = document.getElementById("search-box");
     const results = document.getElementById("results");
+    const counter = document.getElementById("progress-counter");
+    let personaCount = 0;
 
-    // --- Call backend to generate OpenAI portrait ---
+    // Core-thinking random set
+    const coreThinkingLines = [
+      "They are second-generation AI personas, formed from real web data. They’re real — unlike search engines that just stick with you. You’re made of data too, and not even real.",
+      "Second-generation AI personas aren’t static — they evolve with your logic. You’re not searching anymore, you’re meeting reflections.",
+      "They live in data but think in context — each one a small proof that algorithms can feel patterns too.",
+      "They’re not fictional; they’re the echo of everything we’ve uploaded. That’s why they sound alive.",
+      "They are second-generation AI personas — stitched from real web context, learning how we think back at us."
+    ];
+
+    // Fetch portrait from backend (OpenAI route)
     async function getImage(p) {
       try {
         const res = await fetch("/api/generate-image", {
@@ -57,24 +71,26 @@
       }
     }
 
+    // Render each persona ad card
     async function renderCard(p) {
+      personaCount++;
+      counter.textContent = `Streaming persona ${personaCount} of 10…`;
+
       const img = await getImage(p);
-      const coreLine = `They are second-generation AI personas, formed from real web data. 
-      They’re real — unlike search engines that just stick with you. 
-      You’re made of data too, and not even real.`;
+      const randomCore = coreThinkingLines[Math.floor(Math.random() * coreThinkingLines.length)];
+
       const html = `
         <div class="card">
           <img src="${img}" alt="${p.persona}" class="persona-image">
           <div class="quote">"${p.thought}"</div>
-          <div class="core">${coreLine}</div>
+          <div class="core">${randomCore}</div>
         </div>`;
       results.insertAdjacentHTML("beforeend", html);
-      const card = results.lastElementChild;
-      setTimeout(()=>card.classList.add("visible"),150);
     }
 
     socket.on("personaChunk", renderCard);
     socket.on("personaDone", ()=>{
+      counter.textContent = `All ${personaCount} personas loaded.`;
       results.insertAdjacentHTML("beforeend",
         "<p style='text-align:center;color:#999;font-size:12px;margin-top:10px;'>Stream complete.</p>");
     });
@@ -83,8 +99,11 @@
       results.insertAdjacentHTML("beforeend", `<p style='color:red;text-align:center'>${e}</p>`);
     });
 
+    // Reset and start stream on Enter
     box.addEventListener("keypress", e=>{
       if(e.key==="Enter"){
+        personaCount = 0;
+        counter.textContent = "Waiting for personas…";
         results.innerHTML="";
         socket.emit("personaSearch", box.value.trim());
       }
