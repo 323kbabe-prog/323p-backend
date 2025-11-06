@@ -2,65 +2,113 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>AI-Native Persona Browser — Live Views (Read-Only)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+  <title>AI-Native Persona Browser — V-ADS Mode</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
-    body {
-      background:#0e1117;
-      color:#fff;
-      margin:0;
-      font-family:'Inter',sans-serif;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      flex-direction:column;
-      height:100vh;
-      text-align:center;
-    }
-    h1 {
-      font-size:4vw;
-      font-weight:700;
-      color:#00aaff;
-      margin:0;
-    }
-    #view-count {
-      font-size:25vw;
-      font-weight:700;
-      color:#00aaff;
-      letter-spacing:2px;
-      transition:all 0.3s ease;
-      line-height:1;
-    }
-    p {
-      font-size:2vw;
-      color:#aaa;
-      margin-top:1vw;
-    }
+    body{font-family:'Inter',sans-serif;background:#fafafa;margin:0;color:#000}
+    header{text-align:center;padding:20px}
+    h1{margin:0;font-size:24px;font-weight:700}
+    #search-box{display:block;margin:6px auto 20px;width:90%;max-width:500px;
+      padding:14px 16px;border:1px solid #ddd;border-radius:12px;font-size:16px}
+    .card{background:#fff;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);
+      padding:18px;margin:20px auto;max-width:480px}
+    .persona-image{width:100%;aspect-ratio:2/3;border-radius:16px;object-fit:cover;margin-bottom:12px}
+    .quote{font-style:italic;font-size:15px;margin-bottom:10px;color:#111}
+    .core{font-size:14px;color:#555;line-height:1.4}
+    footer{text-align:center;padding:20px;font-size:13px;color:#777}
+    #progress-counter{text-align:center;color:#777;font-size:14px;margin:10px 0;}
   </style>
 </head>
 <body>
-  <div id="view-count">—</div>
-  <h1>Total Views</h1>
-  <p>AI-Native Persona Browser (Read-Only)</p>
+  <header>
+    <h1>AI-Native Persona Browser</h1>
+    <p style="font-size:14px;color:#777;margin-top:4px;">Visual Ads Mode — OpenAI Portraits</p>
+  </header>
+
+  <input id="search-box" placeholder="Type a topic and hit Enter…"/>
+  <p id="progress-counter">Waiting for personas…</p>
+  <div id="results"></div>
+
+  <footer>
+    Creator at <strong>1AI323.ai</strong> · 
+    <a href="https://www.linkedin.com/in/gd-j-c-24940a383/" target="_blank"
+       style="color:#007aff;text-decoration:none;">LinkedIn</a>
+  </footer>
 
   <script>
-    async function loadViews() {
+    const socket = io("https://three23p-backend.onrender.com");
+    const box = document.getElementById("search-box");
+    const results = document.getElementById("results");
+    const counter = document.getElementById("progress-counter");
+    let personaCount = 0;
+
+    // --- Core-thinking random set ---
+    const coreThinkingLines = [
+      "They are second-generation AI personas, formed from real web data. They’re real — unlike search engines that just stick with you. You’re made of data too, and not even real.",
+      "Second-generation AI personas aren’t static — they evolve with your logic. You’re not searching anymore, you’re meeting reflections.",
+      "They live in data but think in context — each one a small proof that algorithms can feel patterns too.",
+      "They’re not fictional; they’re the echo of everything we’ve uploaded. That’s why they sound alive.",
+      "They are second-generation AI personas — stitched from real web context, learning how we think back at us."
+    ];
+
+    // --- Fetch portrait from backend (OpenAI route) ---
+    async function getImage(p) {
       try {
-        // Read from the new read-only route
-        const res = await fetch("/api/views-readonly", { method: "GET" });
+        const res = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            persona: p.persona,
+            age: p.age || 25,
+            profession: p.profession || "creator"
+          })
+        });
         const data = await res.json();
-        document.getElementById("view-count").textContent =
-          data.total.toLocaleString();
-      } catch (err) {
-        console.error("Error fetching view count:", err);
-        document.getElementById("view-count").textContent = "—";
+        return data.url || "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png";
+      } catch {
+        return "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png";
       }
     }
 
-    // Load once, then refresh every 3 seconds
-    loadViews();
-    setInterval(loadViews, 3000);
+    // --- Render each persona ad card (quote + core-thinking line) ---
+    async function renderCard(p) {
+      personaCount++;
+      counter.textContent = `Streaming persona ${personaCount} of 10…`;
+
+      const img = await getImage(p);
+      const randomCore = coreThinkingLines[Math.floor(Math.random() * coreThinkingLines.length)];
+
+      const html = `
+        <div class="card">
+          <img src="${img}" alt="${p.persona}" class="persona-image">
+          <div class="quote">"${p.thought}"</div>
+          <div class="core">— ${randomCore}</div>
+        </div>`;
+      results.insertAdjacentHTML("beforeend", html);
+    }
+
+    // --- Socket.io listeners ---
+    socket.on("personaChunk", renderCard);
+    socket.on("personaDone", ()=>{
+      counter.textContent = `All ${personaCount} personas loaded.`;
+      results.insertAdjacentHTML("beforeend",
+        "<p style='text-align:center;color:#999;font-size:12px;margin-top:10px;'>Stream complete.</p>");
+    });
+    socket.on("personaError", e=>{
+      results.insertAdjacentHTML("beforeend", `<p style='color:red;text-align:center'>${e}</p>`);
+    });
+
+    // --- Reset and start stream on Enter ---
+    box.addEventListener("keypress", e=>{
+      if(e.key==="Enter"){
+        personaCount = 0;
+        counter.textContent = "Waiting for personas…";
+        results.innerHTML = "";
+        socket.emit("personaSearch", box.value.trim());
+      }
+    });
   </script>
 </body>
 </html>
