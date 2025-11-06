@@ -200,7 +200,7 @@ Context: ${context}
   });
 });
 
-/* ---------------- OpenAI Image Generation (DALL·E 3 Stable Version) ---------------- */
+/* ---------------- OpenAI Image Generation (Final Stable DALL·E 3 9:16 Version) ---------------- */
 app.all("/api/generate-image", async (req, res) => {
   const data = req.method === "POST" ? req.body : req.query;
   const { persona, age, profession } = data;
@@ -236,12 +236,11 @@ app.all("/api/generate-image", async (req, res) => {
   try {
     console.log(`🎨 Generating portrait for: ${persona || "Unknown"} (${profession || "N/A"})`);
 
-    // ✅ Use only DALL·E 3 with supported quality parameter
     const result = await openai.images.generate({
       model: "dall-e-3",
       prompt,
-      size: "1024x1536",   // valid vertical portrait
-      quality: "standard", // valid: 'standard' or 'hd'
+      size: "1024x1792",   // ✅ official vertical portrait size
+      quality: "standard", // ✅ supported values: 'standard' or 'hd'
     });
 
     const url = result.data?.[0]?.url;
