@@ -200,21 +200,19 @@ Context: ${context}
   });
 });
 
-/* ---------------- OpenAI Image Generation (Final Reliable Version) ---------------- */
+/* ---------------- OpenAI Image Generation (Final Auto-Compatible Version) ---------------- */
 app.all("/api/generate-image", async (req, res) => {
-  // Accept both POST (normal use) and GET (manual browser test)
   const data = req.method === "POST" ? req.body : req.query;
   const { persona, age, profession } = data;
 
-  // --- Safety check for missing key ---
   if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ 
-      ok: false, 
-      error: "Missing OPENAI_API_KEY in Render environment" 
+    return res.status(500).json({
+      ok: false,
+      error: "Missing OPENAI_API_KEY in Render environment."
     });
   }
 
-  // --- Choose background type by profession ---
+  // --- Profession-based background logic ---
   const role = (profession || "").toLowerCase();
   let background = "neutral background";
   if (role.includes("scientist") || role.includes("research"))
@@ -230,37 +228,38 @@ app.all("/api/generate-image", async (req, res) => {
   else if (role.includes("teacher") || role.includes("professor"))
     background = "classroom or library background";
 
-  // --- Concise, DALL·E-optimized prompt ---
+  // --- Optimized DALL·E prompt ---
   const prompt = `portrait photo of ${persona || "a person"}, ${age || "25"} years old, ${profession || "creator"},
   professional attire, neutral confident expression, cinematic soft light, ${background},
   realistic skin texture, natural tone, no text, no logo, no watermark`;
 
-  // --- Internal retry helper ---
-  async function tryGenerate(attempt = 1) {
+  // --- Smart model detection ---
+  const modelList = ["dall-e-3", "gpt-image-1"];
+  async function tryGenerate(modelName, attempt = 1) {
     try {
-      console.log(`🎨 [${attempt}] Generating portrait: ${persona || "Unknown"} (${profession || "N/A"})`);
+      console.log(`🎨 [${attempt}] Generating portrait with ${modelName}: ${persona || "Unknown"} (${profession || "N/A"})`);
       const result = await openai.images.generate({
-        model: "gpt-image-1",
+        model: modelName,
         prompt,
-        size: "1024x1536",   // ✅ valid vertical format
-        quality: "low",      // ✅ fastest valid option
+        size: "1024x1536", // valid portrait ratio
+        quality: "low",    // fastest valid option
       });
       const url = result.data?.[0]?.url;
       if (!url) throw new Error("No image URL returned");
       return url;
     } catch (err) {
-      console.warn(`⚠️ Image gen attempt ${attempt} failed:`, err.message);
-      if (attempt < 2) {
-        await new Promise(r => setTimeout(r, 1500)); // short wait
-        return tryGenerate(attempt + 1); // one retry only
-      } else {
-        return "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png";
+      console.warn(`⚠️ Attempt ${attempt} with ${modelName} failed: ${err.message}`);
+      // If first model fails, try the other one
+      if (attempt === 1 && modelName === "dall-e-3") {
+        return tryGenerate("gpt-image-1", 2);
       }
+      // Final fallback image if all fails
+      return "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png";
     }
   }
 
-  // --- Execute and respond ---
-  const imageUrl = await tryGenerate();
+  // --- Execute image generation ---
+  const imageUrl = await tryGenerate(modelList[0]);
   res.status(200).json({ ok: true, url: imageUrl });
 });
 
