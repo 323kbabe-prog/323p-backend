@@ -200,7 +200,7 @@ Context: ${context}
   });
 });
 
-/* ---------------- OpenAI Image Generation (Final Stable DALL·E 3 9:16 Version) ---------------- */
+/* ---------------- OpenAI Image Generation (Persona-Aligned Prompt) ---------------- */
 app.all("/api/generate-image", async (req, res) => {
   const data = req.method === "POST" ? req.body : req.query;
   const { persona, age, profession } = data;
@@ -208,44 +208,48 @@ app.all("/api/generate-image", async (req, res) => {
   if (!process.env.OPENAI_API_KEY) {
     return res.status(500).json({
       ok: false,
-      error: "Missing OPENAI_API_KEY in Render environment."
+      error: "Missing OPENAI_API_KEY in environment."
     });
   }
 
   // --- Profession-based background logic ---
   const role = (profession || "").toLowerCase();
-  let background = "neutral background";
+  let background = "neutral indoor background";
   if (role.includes("scientist") || role.includes("research"))
     background = "bright research lab background";
   else if (role.includes("engineer") || role.includes("developer") || role.includes("programmer"))
-    background = "tech workspace with computer screens";
+    background = "modern tech workspace background with computers";
   else if (role.includes("designer") || role.includes("artist") || role.includes("illustrator"))
-    background = "creative studio background";
+    background = "creative studio background with plain wall";
   else if (role.includes("manager") || role.includes("marketer") || role.includes("consultant"))
     background = "modern office background";
   else if (role.includes("musician") || role.includes("performer") || role.includes("dancer"))
-    background = "music studio or stage lighting";
+    background = "music studio or simple stage background";
   else if (role.includes("teacher") || role.includes("professor"))
-    background = "classroom or library background";
+    background = "classroom or study room background";
 
-  // --- Optimized DALL·E prompt ---
-  const prompt = `portrait photo of ${persona || "a person"}, ${age || "25"} years old, ${profession || "creator"},
-  professional attire, neutral confident expression, cinematic soft light, ${background},
-  realistic skin texture, natural tone, no text, no logo, no watermark`;
+  // --- New prompt — realistic, neutral, persona-aligned ---
+  const prompt = `
+realistic portrait of ${persona || "a person"}, 
+a ${age || "25"}-year-old ${profession || "creator"}, 
+wearing appropriate attire for their role, 
+neutral confident expression, 
+shot in regular lighting, ${background}, 
+high detail skin and texture, realistic tone, no text, no logo, no watermark
+  `.trim();
 
   try {
-    console.log(`🎨 Generating portrait for: ${persona || "Unknown"} (${profession || "N/A"})`);
+    console.log(`🎨 Generating persona-aligned portrait for: ${persona || "Unknown"} (${profession || "N/A"})`);
 
     const result = await openai.images.generate({
       model: "dall-e-3",
       prompt,
-      size: "1024x1792",   // ✅ official vertical portrait size
-      quality: "standard", // ✅ supported values: 'standard' or 'hd'
+      size: "1024x1792",   // 9:16 official vertical portrait
+      quality: "standard", // valid: 'standard' or 'hd'
     });
 
     const url = result.data?.[0]?.url;
     if (!url) throw new Error("No image URL returned");
-
     res.status(200).json({ ok: true, url });
   } catch (err) {
     console.error("❌ Image generation failed:", err.message || err);
