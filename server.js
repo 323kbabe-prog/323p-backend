@@ -137,7 +137,7 @@ io.on("connection", socket => {
 You are an AI persona generator connected to live web data.
 
 Use this context about "${query}" but do not repeat it literally.
-Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
+Generate exactly 3 personas as valid JSON objects, each separated by the marker <NEXT>.
 
 Each persona must:
 - Have a unique name, cultural background, and age between 18 and 49.
