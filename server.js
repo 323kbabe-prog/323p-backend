@@ -13,7 +13,7 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition)...");
+console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition)…");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
@@ -38,17 +38,13 @@ app.get("/", (req, res) => {
   const safeThought = safe(thought);
   const safeTags = safe(hashtags);
 
-  const ogTitle =
-    safePersona && safePersona.length > 1
-      ? `AI-Native Persona Browser — ${safePersona}`
-      : `AI-Native Persona Browser — ${safeTopic || "Web Live Data Mode"}`;
-
+  // ---------- CLEANER OPEN GRAPH PREVIEW ----------
+  const ogTitle = safePersona || "AI-Native Persona Browser";
   const ogDesc =
     safeThought && safeThought.length > 1
-      ? safeThought
-      : safeTopic || "Tap here to open the link.";
-
-  const ogImage = "https://yourdomain.com/og-image.jpg";
+      ? `${safeThought.slice(0, 150)}…`
+      : safeTopic || "Discover live AI-generated personas.";
+  const ogImage = "https://1ai323.ai/preview.jpg"; // your hosted banner image
 
   res.send(`<!doctype html>
   <html lang="en">
@@ -82,33 +78,36 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- SSL Validator ---------------- */
 async function validateHttpsLink(url) {
-  return new Promise(resolve=>{
+  return new Promise(resolve => {
     try {
-      const req = https.request(url,{method:"HEAD",timeout:3000},res=>{
-        if(res.statusCode>=200 && res.statusCode<400) resolve(true);
-        else resolve(false);
+      const req = https.request(url, { method: "HEAD", timeout: 3000 }, res => {
+        resolve(res.statusCode >= 200 && res.statusCode < 400);
       });
-      req.on("error",()=>resolve(false));
-      req.on("timeout",()=>{req.destroy();resolve(false);});
+      req.on("error", () => resolve(false));
+      req.on("timeout", () => { req.destroy(); resolve(false); });
       req.end();
-    } catch { resolve(false); }
+    } catch {
+      resolve(false);
+    }
   });
 }
 
 /* ---------------- View Counter ---------------- */
-const VIEW_FILE = path.join("/data","views.json");
-function loadViews(){ try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0};} }
-function saveViews(v){ fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2)); }
+const VIEW_FILE = path.join("/data", "views.json");
+function loadViews() {
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8")); }
+  catch { return { total: 0 }; }
+}
+function saveViews(v) { fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2)); }
 
-// READ-ONLY route: does NOT increment
 app.get("/api/views-readonly", (req, res) => {
   const v = loadViews();
   res.json({ total: v.total });
 });
 
-// Incrementing route (leave as-is)
-app.get("/api/views",(req,res)=>{
-  const v=loadViews(); v.total++; saveViews(v); res.json({total:v.total});
+app.get("/api/views", (req, res) => {
+  const v = loadViews(); v.total++; saveViews(v);
+  res.json({ total: v.total });
 });
 
 /* ---------------- Socket.io Streaming ---------------- */
@@ -120,19 +119,20 @@ io.on("connection", socket => {
     try {
       let linkPool = [];
       try {
-        const serp = await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`);
+        const serp = await fetch(
+          `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`
+        );
         const serpData = await serp.json();
         linkPool = (serpData.organic_results || [])
-          .map(r=>r.link)
-          .filter(l=>l && l.startsWith("https://"))
-          .slice(0,5);
+          .map(r => r.link)
+          .filter(l => l && l.startsWith("https://"))
+          .slice(0, 5);
         const checks = await Promise.all(linkPool.map(validateHttpsLink));
-        linkPool = linkPool.filter((_,i)=>checks[i]);
-      } catch(e){ console.warn("⚠️ SerpAPI issue:",e.message); }
+        linkPool = linkPool.filter((_, i) => checks[i]);
+      } catch (e) { console.warn("⚠️ SerpAPI issue:", e.message); }
 
       const context = linkPool.join(", ") || "No verified links.";
 
-      /* ---- GPT Streaming Prompt ---- */
       const prompt = `
 You are an AI persona generator connected to live web data.
 
@@ -141,11 +141,9 @@ Generate exactly 10 personas as valid JSON objects, each separated by the marker
 
 Each persona must:
 - Have a unique name, cultural background, and age between 18 and 49.
-- Represent a different academic or professional field (like a distinct university major).
-  Cover diverse disciplines such as technology, medicine, law, arts, business, philosophy, environment, psychology, sociology, design, and engineering.
+- Represent a different academic or professional field (technology, medicine, law, arts, business, philosophy, environment, psychology, sociology, design, engineering).
 - Speak in the first person about how the topic "${query}" connects to their field or research.
-- Mention one realistic project, study, or collaboration they personally experienced related to the topic.
-- Reflect their age and field in tone and vocabulary.
+- Mention one realistic project, study, or collaboration they personally experienced.
 - Keep each persona concise and believable.
 
 Output format for each persona:
@@ -163,8 +161,8 @@ Context: ${context}
         stream: true,
         temperature: 0.9,
         messages: [
-          { role:"system", content:"Output only JSON objects separated by <NEXT>" },
-          { role:"user", content:prompt }
+          { role: "system", content: "Output only JSON objects separated by <NEXT>" },
+          { role: "user", content: prompt }
         ]
       });
 
@@ -175,21 +173,21 @@ Context: ${context}
 
         if (buffer.includes("<NEXT>")) {
           const parts = buffer.split("<NEXT>");
-          const personaText = parts.shift();
-          buffer = parts.join("<NEXT>");
-          try {
-            const persona = JSON.parse(personaText.trim());
-            socket.emit("personaChunk", persona);
-          } catch { /* skip partials */ }
+          for (let i = 0; i < parts.length - 1; i++) {
+            try {
+              const persona = JSON.parse(parts[i].trim());
+              socket.emit("personaChunk", persona);
+            } catch { /* skip partials */ }
+          }
+          buffer = parts[parts.length - 1];
         }
       }
 
-      // ✅ Emit any remaining persona (last drop)
       if (buffer.trim().length > 0) {
         try {
           const lastPersona = JSON.parse(buffer.trim());
           socket.emit("personaChunk", lastPersona);
-        } catch { /* ignore if invalid */ }
+        } catch {}
       }
 
       socket.emit("personaDone");
@@ -202,4 +200,6 @@ Context: ${context}
 
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, ()=>console.log(`✅ AI-Native Persona Browser (Streaming) running on :${PORT}`));
+httpServer.listen(PORT, () =>
+  console.log(`✅ AI-Native Persona Browser (Streaming) running on :${PORT}`)
+);
