@@ -37,7 +37,8 @@ app.get("/", (req, res) => {
   if (slug) {
     const decoded = decodeURIComponent(slug).replace(/-/g, " ");
     const ogTitle = decoded || "AI-Native Persona Browser";
-    const ogDesc = "Shared from AI-Native Persona Browser — Web Live Data Mode. Tap to explore live personas.";
+   const ogDesc = "The world’s first AI-Native Persona Browser — Live Data Mode. Tap to explore live personas.";
+
     const ogImage = "https://personabrowser.com/preview.jpg"; // your hosted banner image
 
     return res.send(`<!doctype html>
