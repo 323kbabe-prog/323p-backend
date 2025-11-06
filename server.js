@@ -200,7 +200,7 @@ Context: ${context}
   });
 });
 
-/* ---------------- OpenAI Image Generation (Final Auto-Compatible Version) ---------------- */
+/* ---------------- OpenAI Image Generation (DALL·E 3 Stable Version) ---------------- */
 app.all("/api/generate-image", async (req, res) => {
   const data = req.method === "POST" ? req.body : req.query;
   const { persona, age, profession } = data;
@@ -233,34 +233,29 @@ app.all("/api/generate-image", async (req, res) => {
   professional attire, neutral confident expression, cinematic soft light, ${background},
   realistic skin texture, natural tone, no text, no logo, no watermark`;
 
-  // --- Smart model detection ---
-  const modelList = ["dall-e-3", "gpt-image-1"];
-  async function tryGenerate(modelName, attempt = 1) {
-    try {
-      console.log(`🎨 [${attempt}] Generating portrait with ${modelName}: ${persona || "Unknown"} (${profession || "N/A"})`);
-      const result = await openai.images.generate({
-        model: modelName,
-        prompt,
-        size: "1024x1536", // valid portrait ratio
-        quality: "low",    // fastest valid option
-      });
-      const url = result.data?.[0]?.url;
-      if (!url) throw new Error("No image URL returned");
-      return url;
-    } catch (err) {
-      console.warn(`⚠️ Attempt ${attempt} with ${modelName} failed: ${err.message}`);
-      // If first model fails, try the other one
-      if (attempt === 1 && modelName === "dall-e-3") {
-        return tryGenerate("gpt-image-1", 2);
-      }
-      // Final fallback image if all fails
-      return "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png";
-    }
-  }
+  try {
+    console.log(`🎨 Generating portrait for: ${persona || "Unknown"} (${profession || "N/A"})`);
 
-  // --- Execute image generation ---
-  const imageUrl = await tryGenerate(modelList[0]);
-  res.status(200).json({ ok: true, url: imageUrl });
+    // ✅ Use only DALL·E 3 with supported quality parameter
+    const result = await openai.images.generate({
+      model: "dall-e-3",
+      prompt,
+      size: "1024x1536",   // valid vertical portrait
+      quality: "standard", // valid: 'standard' or 'hd'
+    });
+
+    const url = result.data?.[0]?.url;
+    if (!url) throw new Error("No image URL returned");
+
+    res.status(200).json({ ok: true, url });
+  } catch (err) {
+    console.error("❌ Image generation failed:", err.message || err);
+    res.status(200).json({
+      ok: false,
+      url: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
+      error: err.message || "Image generation failed"
+    });
+  }
 });
 
 /* ---------------- Start Server ---------------- */
