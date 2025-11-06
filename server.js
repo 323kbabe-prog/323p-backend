@@ -200,10 +200,21 @@ Context: ${context}
   });
 });
 
-/* ---------------- OpenAI Image Generation (Resilient & Fast) ---------------- */
-app.post("/api/generate-image", async (req, res) => {
-  const { persona, age, profession } = req.body;
+/* ---------------- OpenAI Image Generation (Final Reliable Version) ---------------- */
+app.all("/api/generate-image", async (req, res) => {
+  // Accept both POST (normal use) and GET (manual browser test)
+  const data = req.method === "POST" ? req.body : req.query;
+  const { persona, age, profession } = data;
 
+  // --- Safety check for missing key ---
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({ 
+      ok: false, 
+      error: "Missing OPENAI_API_KEY in Render environment" 
+    });
+  }
+
+  // --- Choose background type by profession ---
   const role = (profession || "").toLowerCase();
   let background = "neutral background";
   if (role.includes("scientist") || role.includes("research"))
@@ -219,27 +230,38 @@ app.post("/api/generate-image", async (req, res) => {
   else if (role.includes("teacher") || role.includes("professor"))
     background = "classroom or library background";
 
+  // --- Concise, DALL·E-optimized prompt ---
   const prompt = `portrait photo of ${persona || "a person"}, ${age || "25"} years old, ${profession || "creator"},
   professional attire, neutral confident expression, cinematic soft light, ${background},
   realistic skin texture, natural tone, no text, no logo, no watermark`;
 
-  try {
-    const result = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt,
-      size: "1024x1536", // valid vertical format
-      quality: "low",    // fastest available
-    });
-    res.json({ url: result.data[0].url });
-  } catch (err) {
-    // --- graceful fallback for transient OpenAI server errors ---
-    console.error("⚠️ Image generation error:", err?.message || err);
-    // return a neutral placeholder so the front end still renders
-    res.json({
-      url: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
-      warning: "OpenAI image generation temporarily unavailable; placeholder used."
-    });
+  // --- Internal retry helper ---
+  async function tryGenerate(attempt = 1) {
+    try {
+      console.log(`🎨 [${attempt}] Generating portrait: ${persona || "Unknown"} (${profession || "N/A"})`);
+      const result = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt,
+        size: "1024x1536",   // ✅ valid vertical format
+        quality: "low",      // ✅ fastest valid option
+      });
+      const url = result.data?.[0]?.url;
+      if (!url) throw new Error("No image URL returned");
+      return url;
+    } catch (err) {
+      console.warn(`⚠️ Image gen attempt ${attempt} failed:`, err.message);
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 1500)); // short wait
+        return tryGenerate(attempt + 1); // one retry only
+      } else {
+        return "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png";
+      }
+    }
   }
+
+  // --- Execute and respond ---
+  const imageUrl = await tryGenerate();
+  res.status(200).json({ ok: true, url: imageUrl });
 });
 
 /* ---------------- Start Server ---------------- */
