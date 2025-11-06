@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + SSL Validation)
+// server.js — AI-Native Persona Browser (Streaming Edition + Clean Share Links)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -16,12 +16,12 @@ app.use(express.json());
 console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition)…");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
-console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-/* ---------------- Dynamic topic, persona & thought preview ---------------- */
+/* ---------------- Dynamic Preview Generator ---------------- */
 app.get("/", (req, res) => {
+  const slug = req.query.p || "";
   const topic = req.query.query || "";
   const persona = req.query.persona || "";
   const thought = req.query.thought || "";
@@ -33,18 +33,45 @@ app.get("/", (req, res) => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
+  // if short link version (?p=...)
+  if (slug) {
+    const decoded = decodeURIComponent(slug).replace(/-/g, " ");
+    const ogTitle = decoded || "AI-Native Persona Browser";
+    const ogDesc = "Shared from AI-Native Persona Browser — Web Live Data Mode. Tap to explore live personas.";
+    const ogImage = "https://personabrowser.com/preview.jpg"; // your hosted banner image
+
+    return res.send(`<!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width,initial-scale=1.0">
+      <meta property="og:title" content="${ogTitle}">
+      <meta property="og:description" content="${ogDesc}">
+      <meta property="og:image" content="${ogImage}">
+      <meta property="og:type" content="website">
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:title" content="${ogTitle}">
+      <meta name="twitter:description" content="${ogDesc}">
+      <meta name="twitter:image" content="${ogImage}">
+      <title>${ogTitle}</title>
+      <script>
+        window.location.href='/index.html?p=${encodeURIComponent(slug)}';
+      </script>
+    </head>
+    <body></body>
+    </html>`);
+  }
+
+  // fallback for full query style
   const safeTopic = safe(topic);
   const safePersona = safe(persona);
   const safeThought = safe(thought);
-  const safeTags = safe(hashtags);
-
-  // ---------- CLEANER OPEN GRAPH PREVIEW ----------
   const ogTitle = safePersona || "AI-Native Persona Browser";
   const ogDesc =
     safeThought && safeThought.length > 1
       ? `${safeThought.slice(0, 150)}…`
       : safeTopic || "Discover live AI-generated personas.";
-  const ogImage = "https://1ai323.ai/preview.jpg"; // your hosted banner image
+  const ogImage = "https://personabrowser.com/preview.jpg";
 
   res.send(`<!doctype html>
   <html lang="en">
@@ -62,7 +89,7 @@ app.get("/", (req, res) => {
     <title>${ogTitle}</title>
     <script>
       const qs = window.location.search;
-      window.location.href = '/index.html' + qs;
+      window.location.href='/index.html' + qs;
     </script>
   </head>
   <body></body>
@@ -86,9 +113,7 @@ async function validateHttpsLink(url) {
       req.on("error", () => resolve(false));
       req.on("timeout", () => { req.destroy(); resolve(false); });
       req.end();
-    } catch {
-      resolve(false);
-    }
+    } catch { resolve(false); }
   });
 }
 
@@ -99,11 +124,6 @@ function loadViews() {
   catch { return { total: 0 }; }
 }
 function saveViews(v) { fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2)); }
-
-app.get("/api/views-readonly", (req, res) => {
-  const v = loadViews();
-  res.json({ total: v.total });
-});
 
 app.get("/api/views", (req, res) => {
   const v = loadViews(); v.total++; saveViews(v);
@@ -177,7 +197,7 @@ Context: ${context}
             try {
               const persona = JSON.parse(parts[i].trim());
               socket.emit("personaChunk", persona);
-            } catch { /* skip partials */ }
+            } catch {}
           }
           buffer = parts[parts.length - 1];
         }
