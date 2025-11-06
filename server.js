@@ -36,10 +36,11 @@ app.get("/", (req, res) => {
   // if short link version (?p=...)
   if (slug) {
     const decoded = decodeURIComponent(slug).replace(/-/g, " ");
-    const ogTitle = decoded || "AI-Native Persona Browser";
-   const ogDesc = "The world’s first AI-Native Persona Browser — Live Data Mode. Tap to explore live personas.";
 
-    const ogImage = "https://personabrowser.com/preview.jpg"; // your hosted banner image
+// ✅ Neutral / no-brand Open Graph tags
+const ogTitle = safe(decoded) || "personabrowser.com";
+const ogDesc  = "Live data personas.";
+const ogImage = "";   // leave blank or remove for zero preview
 
     return res.send(`<!doctype html>
     <html lang="en">
@@ -143,19 +144,20 @@ app.post("/api/shorten", async (req, res) => {
         "Content-Type": "application/json",
         "apikey": process.env.REBRANDLY_API_KEY
       },
-      body: JSON.stringify({
+            body: JSON.stringify({
         destination: longUrl,
-        title: title || "AI-Native Persona Browser",
+        title: title || "personabrowser.com",
         slashtag: slug,
         domain: { fullName: "rebrand.ly" },
         tags: ["personabrowser"],
-        description: description || "The world’s first AI-Native Persona Browser — Live Data Mode.",
-        "meta": {
-          "ogTitle": "AI-Native Persona Browser",
-          "ogDescription": "The world’s first AI-Native Persona Browser — Live Data Mode.",
-          "ogImage": image || "https://personabrowser.com/preview.jpg"
+        description: description || "Live data personas.",
+        meta: {
+          ogTitle: "personabrowser.com",
+          ogDescription: "Live data personas.",
+          ogImage: ""   // leave blank or supply a plain white image if you want a neutral box
         }
       })
+
     });
 
     const data = await result.json();
