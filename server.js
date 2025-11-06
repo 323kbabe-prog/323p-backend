@@ -200,11 +200,11 @@ Context: ${context}
   });
 });
 
-/* ---------------- OpenAI Image Generation (Optimized for Speed & Compatibility) ---------------- */
+/* ---------------- OpenAI Image Generation (Optimized for Speed & Valid Parameters) ---------------- */
 app.post("/api/generate-image", async (req, res) => {
   const { persona, age, profession } = req.body;
 
-  // Determine background dynamically by profession
+  // Auto-select background by profession
   const role = (profession || "").toLowerCase();
   let background = "neutral background";
   if (role.includes("scientist") || role.includes("research"))
@@ -220,20 +220,19 @@ app.post("/api/generate-image", async (req, res) => {
   else if (role.includes("teacher") || role.includes("professor"))
     background = "classroom or library background";
 
-  // Fast, concise prompt for DALL·E 3
+  // Concise and fast-rendering DALL·E prompt
   const prompt = `portrait photo of ${persona || "a person"}, ${age || "25"} years old, ${profession || "creator"},
   professional attire, neutral confident expression, cinematic soft light, ${background},
   realistic skin texture, natural tone, no text, no logo, no watermark`;
 
   try {
     const result = await openai.images.generate({
-      model: "gpt-image-1",     // DALL·E 3 model
+      model: "gpt-image-1",   // DALL·E 3
       prompt,
-      size: "1024x1792",        // 9:16 vertical format
-      quality: "low",           // ✅ fastest valid option ('low' | 'medium' | 'high' | 'auto')
+      size: "1024x1536",      // ✅ valid vertical ratio (fast, high-quality)
+      quality: "low",         // ✅ fastest valid setting
     });
 
-    // Return the image URL to the front end
     res.json({ url: result.data[0].url });
   } catch (err) {
     console.error("❌ DALL·E image generation failed:", err);
