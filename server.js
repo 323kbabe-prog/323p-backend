@@ -131,6 +131,41 @@ app.get("/api/views", (req, res) => {
   res.json({ total: v.total });
 });
 
+/* ---------------- Shortlink Generator with OG Metadata (Rebrandly) ---------------- */
+app.post("/api/shorten", async (req, res) => {
+  const { slug, title, description, image } = req.body;
+  const longUrl = `https://personabrowser.com/?p=${encodeURIComponent(slug)}`;
+
+  try {
+    const result = await fetch("https://api.rebrandly.com/v1/links", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": process.env.REBRANDLY_API_KEY
+      },
+      body: JSON.stringify({
+        destination: longUrl,
+        title: title || "AI-Native Persona Browser",
+        slashtag: slug,
+        domain: { fullName: "rebrand.ly" },
+        tags: ["personabrowser"],
+        description: description || "The world’s first AI-Native Persona Browser — Live Data Mode.",
+        "meta": {
+          "ogTitle": "AI-Native Persona Browser",
+          "ogDescription": "The world’s first AI-Native Persona Browser — Live Data Mode.",
+          "ogImage": image || "https://personabrowser.com/preview.jpg"
+        }
+      })
+    });
+
+    const data = await result.json();
+    res.json({ shortUrl: data.shortUrl || data.shortUrl });
+  } catch (err) {
+    console.error("❌ Rebrandly error:", err);
+    res.status(500).json({ error: "Shortener failed" });
+  }
+});
+
 /* ---------------- Socket.io Streaming ---------------- */
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
