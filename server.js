@@ -137,7 +137,7 @@ io.on("connection", socket => {
 You are an AI persona generator connected to live web data.
 
 Use this context about "${query}" but do not repeat it literally.
-Generate exactly 3 personas as valid JSON objects, each separated by the marker <NEXT>.
+Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
 
 Each persona must:
 - Have a unique name, cultural background, and age between 18 and 49.
@@ -198,69 +198,6 @@ Context: ${context}
       socket.emit("personaError", err.message);
     }
   });
-});
-
-/* ---------------- OpenAI Image Generation (Real Human Portrait Mode) ---------------- */
-app.all("/api/generate-image", async (req, res) => {
-  const data = req.method === "POST" ? req.body : req.query;
-  const { persona, age, profession } = data;
-
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({
-      ok: false,
-      error: "Missing OPENAI_API_KEY in environment."
-    });
-  }
-
-  // --- Profession-based background logic ---
-  const role = (profession || "").toLowerCase();
-  let background = "neutral indoor background";
-  if (role.includes("scientist") || role.includes("research"))
-    background = "realistic research lab background";
-  else if (role.includes("engineer") || role.includes("developer") || role.includes("programmer"))
-    background = "modern tech workspace background with real equipment";
-  else if (role.includes("designer") || role.includes("artist") || role.includes("illustrator"))
-    background = "creative studio background with plain wall";
-  else if (role.includes("manager") || role.includes("marketer") || role.includes("consultant"))
-    background = "modern corporate office background";
-  else if (role.includes("musician") || role.includes("performer") || role.includes("dancer"))
-    background = "music studio or simple indoor stage background";
-  else if (role.includes("teacher") || role.includes("professor"))
-    background = "classroom or study room background";
-
-  // --- Prompt optimized for real human photo realism ---
-  const prompt = `
-ultra-realistic photo portrait of ${persona || "a person"},
-a ${age || "25"}-year-old ${profession || "professional"},
-wearing appropriate attire for their role,
-neutral confident facial expression,
-real human proportions, realistic lighting, ${background},
-natural skin texture, photographic depth of field,
-shot with a DSLR camera, professional color balance,
-no text, no logo, no watermark, no digital illustration, not a painting
-  `.trim();
-
-  try {
-    console.log(`🎨 Generating REAL HUMAN portrait for: ${persona || "Unknown"} (${profession || "N/A"})`);
-
-    const result = await openai.images.generate({
-      model: "dall-e-3",
-      prompt,
-      size: "1024x1792",   // vertical 9:16 portrait
-      quality: "hd",        // 'hd' gives sharper, more realistic output
-    });
-
-    const url = result.data?.[0]?.url;
-    if (!url) throw new Error("No image URL returned");
-    res.status(200).json({ ok: true, url });
-  } catch (err) {
-    console.error("❌ Image generation failed:", err.message || err);
-    res.status(200).json({
-      ok: false,
-      url: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
-      error: err.message || "Image generation failed"
-    });
-  }
 });
 
 /* ---------------- Start Server ---------------- */
