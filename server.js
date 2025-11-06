@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + Universal Neutral Preview)
+// server.js — AI-Native Persona Browser (Streaming Edition + Universal OG Fix)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,10 +13,9 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition)...");
+console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition)…");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
-console.log("NEWSAPI_KEY:", !!process.env.NEWSAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
@@ -37,10 +36,10 @@ app.get("/", (req, res) => {
   const safePersona = safe(persona);
   const safeThought = safe(thought);
 
-  // ✅ Minimal, neutral OG tags (works across iOS, Android, Desktop)
+  // ✅ Minimal, neutral OG tags (the "OH" fix)
   const ogTitle = "personabrowser.com";
-  const ogDesc = "Live data personas — instantly generated.";
-  const ogImage = "https://personabrowser.com/neutral-preview.jpg"; // plain white/grey image
+  const ogDesc  = "Live data personas — instantly generated.";
+  const ogImage = "https://personabrowser.com/neutral-preview.jpg"; // plain white / light-grey image
 
   res.send(`<!doctype html>
   <html lang="en">
@@ -189,5 +188,5 @@ Context: ${context}
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
-  console.log(`✅ AI-Native Persona Browser (Universal Neutral Preview) running on :${PORT}`)
+  console.log(`✅ Universal OG-fixed server running on :${PORT}`)
 );
