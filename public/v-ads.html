@@ -85,7 +85,7 @@
     // --- Render each persona ad card ---
     async function renderCard(p) {
       personaCount++;
-      counter.textContent = `Streaming persona ${personaCount} of 10…`;
+      counter.textContent = `Streaming persona ${personaCount} of 3…`;
 
       const identity = parsePersonaIdentity(p.persona || "Unknown");
       const img = await getImage({
