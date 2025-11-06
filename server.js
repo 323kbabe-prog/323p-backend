@@ -234,7 +234,7 @@ app.post("/api/generate-image", async (req, res) => {
       prompt,
       size: "1024x1792",            // 9:16 portrait, fastest high quality
       quality: "standard",          // fastest option
-      style: "natural",
+
     });
     res.json({ url: result.data[0].url });
   } catch (err) {
