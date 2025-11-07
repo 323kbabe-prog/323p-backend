@@ -68,13 +68,13 @@ app.post("/api/share", (req, res) => {
   }
 });
 
-// Redirect short link to index.html and preload shared data
+// Redirect short link to GoDaddy front-end and preload shared data
 app.get("/s/:id", (req, res) => {
   const all = fs.existsSync(SHARES_FILE)
     ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
     : {};
   const personas = all[req.params.id];
-  if (!personas) return res.redirect("/index.html");
+  if (!personas) return res.redirect("https://personabrowser.com/index.html");
 
   res.send(`<!doctype html>
   <html><head>
@@ -85,7 +85,7 @@ app.get("/s/:id", (req, res) => {
   <meta property="og:image" content="https://personabrowser.com/neutral-preview.jpg">
   <script>
     localStorage.setItem('sharedData', JSON.stringify(${JSON.stringify(personas)}));
-    window.location.href = '/index.html';
+    window.location.href = 'https://personabrowser.com/index.html';
   </script>
   </head><body></body></html>`);
 });
