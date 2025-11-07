@@ -1,4 +1,4 @@
-// server.js — AI-Native Persona Browser (Streaming Edition + Clean Share Links)
+// server.js — personabrowser.com (Streaming Edition + iOS/Android Share Compatible)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,19 +13,18 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting AI-Native Persona Browser backend (Streaming Edition + Clean Share Links)…");
+console.log("🚀 Starting personabrowser.com backend (Streaming Edition)…");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
-console.log("REBRANDLY_API_KEY:", !!process.env.REBRANDLY_API_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 /* ---------------- Dynamic Preview Generator ---------------- */
 app.get("/", (req, res) => {
-  const slug = req.query.p || "";
   const topic = req.query.query || "";
   const persona = req.query.persona || "";
   const thought = req.query.thought || "";
+  const hashtags = req.query.hashtags || "";
 
   const safe = str =>
     (str || "")
@@ -33,54 +32,32 @@ app.get("/", (req, res) => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
-  if (slug) {
-    const decoded = decodeURIComponent(slug).replace(/-/g, " ");
-    const ogTitle = decoded || "AI-Native Persona Browser";
-    const ogDesc = "The world’s first AI-Native Persona Browser — Live Data Mode. Tap to explore live personas.";
-    const ogImage = "https://personabrowser.com/preview.jpg";
-
-    return res.send(`<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta property="og:title" content="${ogTitle}">
-<meta property="og:description" content="${ogDesc}">
-<meta property="og:image" content="${ogImage}">
-<meta property="og:type" content="website">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${ogTitle}">
-<meta name="twitter:description" content="${ogDesc}">
-<meta name="twitter:image" content="${ogImage}">
-<title>${ogTitle}</title>
-<script>window.location.href='/index.html?p=${encodeURIComponent(slug)}';</script>
-</head><body></body></html>`);
-  }
-
-  const safeTopic = safe(topic);
-  const safePersona = safe(persona);
-  const safeThought = safe(thought);
-  const ogTitle = safePersona || "AI-Native Persona Browser";
-  const ogDesc =
-    safeThought && safeThought.length > 1
-      ? `${safeThought.slice(0, 150)}…`
-      : safeTopic || "Discover live AI-generated personas.";
-  const ogImage = "https://personabrowser.com/preview.jpg";
+  // ✅ Minimal OG tags (required for iPad/iPhone share)
+  const ogTitle = "personabrowser.com";
+  const ogDesc  = "Live data personas — instantly generated.";
+  const ogImage = "https://personabrowser.com/neutral-preview.jpg"; // must exist at this path
 
   res.send(`<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta property="og:title" content="${ogTitle}">
-<meta property="og:description" content="${ogDesc}">
-<meta property="og:image" content="${ogImage}">
-<meta property="og:type" content="website">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${ogTitle}">
-<meta name="twitter:description" content="${ogDesc}">
-<meta name="twitter:image" content="${ogImage}">
-<title>${ogTitle}</title>
-<script>window.location.href='/index.html'+window.location.search;</script>
-</head><body></body></html>`);
+  <html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta property="og:title" content="${ogTitle}">
+    <meta property="og:description" content="${ogDesc}">
+    <meta property="og:image" content="${ogImage}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${ogTitle}">
+    <meta name="twitter:description" content="${ogDesc}">
+    <meta name="twitter:image" content="${ogImage}">
+    <title>${ogTitle}</title>
+    <script>
+      const qs = window.location.search;
+      window.location.href = '/index.html' + qs;
+    </script>
+  </head>
+  <body></body>
+  </html>`);
 });
 
 /* ---------------- Static Files ---------------- */
@@ -117,40 +94,6 @@ app.get("/api/views", (req, res) => {
   res.json({ total: v.total });
 });
 
-/* ---------------- Shortlink Generator (Rebrandly) ---------------- */
-app.post("/api/shorten", async (req, res) => {
-  const { slug, title, description, image } = req.body;
-  const longUrl = `https://personabrowser.com/?p=${encodeURIComponent(slug)}`;
-
-  try {
-    const result = await fetch("https://api.rebrandly.com/v1/links", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": process.env.REBRANDLY_API_KEY
-      },
-      body: JSON.stringify({
-        destination: longUrl,
-        title: title || "AI-Native Persona Browser",
-        slashtag: slug,
-        domain: { fullName: "rebrand.ly" },
-        tags: ["personabrowser"],
-        description: description || "The world’s first AI-Native Persona Browser — Live Data Mode.",
-        meta: {
-          ogTitle: "AI-Native Persona Browser",
-          ogDescription: "The world’s first AI-Native Persona Browser — Live Data Mode.",
-          ogImage: image || "https://personabrowser.com/preview.jpg"
-        }
-      })
-    });
-    const data = await result.json();
-    res.json({ shortUrl: data.shortUrl || null });
-  } catch (err) {
-    console.error("❌ Rebrandly error:", err);
-    res.status(500).json({ error: "Shortener failed" });
-  }
-});
-
 /* ---------------- Socket.io Streaming ---------------- */
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
@@ -177,21 +120,24 @@ io.on("connection", socket => {
       const prompt = `
 You are an AI persona generator connected to live web data.
 Use this context about "${query}" but do not repeat it literally.
-Generate exactly 10 personas as valid JSON objects separated by <NEXT>.
+Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
+
 Each persona must:
-- Have a unique name, background, and age 18–49
-- Represent a distinct field
-- Speak in first person about "${query}"
-- Mention one real project or event
-- Be concise and believable
-Format:
+- Have a unique name, cultural background, and age between 18 and 49.
+- Represent a different academic or professional field (technology, medicine, law, arts, business, philosophy, environment, psychology, sociology, design, engineering).
+- Speak in the first person about how the topic "${query}" connects to their field or research.
+- Mention one realistic project, study, or collaboration they personally experienced.
+- Keep each persona concise and believable.
+
+Output format:
 {
-  "persona":"Name (Age), [Field]",
-  "thought":"First-person reflection",
-  "hashtags":["tag1","tag2","tag3"],
-  "link":"https://example.com"
+  "persona": "Name (Age), [Field or Major]",
+  "thought": "First-person reflection connecting their identity to '${query}' and describing one personal event or project tied to it.",
+  "hashtags": ["tag1","tag2","tag3"],
+  "link": "https://example.com"
 }
-Context: ${context}`;
+Context: ${context}
+`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -207,17 +153,26 @@ Context: ${context}`;
       for await (const chunk of completion) {
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
+
         if (buffer.includes("<NEXT>")) {
           const parts = buffer.split("<NEXT>");
           for (let i = 0; i < parts.length - 1; i++) {
-            try { socket.emit("personaChunk", JSON.parse(parts[i].trim())); } catch {}
+            try {
+              const persona = JSON.parse(parts[i].trim());
+              socket.emit("personaChunk", persona);
+            } catch {}
           }
-          buffer = parts.at(-1);
+          buffer = parts[parts.length - 1];
         }
       }
-      if (buffer.trim()) {
-        try { socket.emit("personaChunk", JSON.parse(buffer.trim())); } catch {}
+
+      if (buffer.trim().length > 0) {
+        try {
+          const lastPersona = JSON.parse(buffer.trim());
+          socket.emit("personaChunk", lastPersona);
+        } catch {}
       }
+
       socket.emit("personaDone");
     } catch (err) {
       console.error("❌ Streaming error:", err);
@@ -229,5 +184,5 @@ Context: ${context}`;
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
-  console.log(`✅ AI-Native Persona Browser backend running on :${PORT}`)
+  console.log(`✅ personabrowser.com server running with OG tags on :${PORT}`)
 );
