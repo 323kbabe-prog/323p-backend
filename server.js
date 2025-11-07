@@ -76,6 +76,9 @@ app.get("/s/:id", (req, res) => {
   const personas = all[req.params.id];
   if (!personas) return res.redirect("https://personabrowser.com");
 
+  // Encode personas safely for URL transfer
+  const encoded = encodeURIComponent(JSON.stringify(personas));
+
   res.send(`<!doctype html>
   <html><head>
   <meta charset="utf-8"/>
@@ -84,11 +87,10 @@ app.get("/s/:id", (req, res) => {
   <meta property="og:description" content="Shared AI Personas">
   <meta property="og:image" content="https://personabrowser.com/neutral-preview.jpg">
   <script>
-    // Write data to localStorage and delay redirect to ensure Safari/iOS persistence
-    localStorage.setItem('sharedData', JSON.stringify(${JSON.stringify(personas)}));
-    setTimeout(() => {
-      window.location.href = 'https://personabrowser.com';
-    }, 600); // 600ms delay — safe for iOS
+    // Embed the personas in the redirect itself
+    const data = decodeURIComponent("${encoded}");
+    sessionStorage.setItem('sharedData', data);
+    window.location.href = 'https://personabrowser.com';
   </script>
   </head><body></body></html>`);
 });
