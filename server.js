@@ -68,7 +68,7 @@ app.post("/api/share", (req, res) => {
   }
 });
 
-// Redirect short link to GoDaddy front-end and preload shared data
+// Redirect short link to GoDaddy front-end and preload shared data (100% iOS-safe)
 app.get("/s/:id", (req, res) => {
   const all = fs.existsSync(SHARES_FILE)
     ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
@@ -76,8 +76,8 @@ app.get("/s/:id", (req, res) => {
   const personas = all[req.params.id];
   if (!personas) return res.redirect("https://personabrowser.com");
 
-  // Encode personas safely for URL transfer
-  const encoded = encodeURIComponent(JSON.stringify(personas));
+  // Encode personas as Base64 for direct embedding
+  const encoded = Buffer.from(JSON.stringify(personas)).toString("base64");
 
   res.send(`<!doctype html>
   <html><head>
@@ -87,10 +87,9 @@ app.get("/s/:id", (req, res) => {
   <meta property="og:description" content="Shared AI Personas">
   <meta property="og:image" content="https://personabrowser.com/neutral-preview.jpg">
   <script>
-    // Embed the personas in the redirect itself
-    const data = decodeURIComponent("${encoded}");
-    sessionStorage.setItem('sharedData', data);
-    window.location.href = 'https://personabrowser.com';
+    // Embed personas directly in the URL to bypass iOS storage timing issues
+    const redirectUrl = 'https://personabrowser.com/?data=' + encodeURIComponent("${encoded}");
+    window.location.replace(redirectUrl);
   </script>
   </head><body></body></html>`);
 });
