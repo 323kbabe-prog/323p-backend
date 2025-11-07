@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-  <title>Live Views</title>
+  <title>Live Views — personabrowser.com</title>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
-    body{
-      font-family: 'Inter', sans-serif;
+    body {
+      font-family:'Inter',sans-serif;
       background:#fff;
-      color:#000;
+      color:#007aff;
       margin:0;
       display:flex;
       flex-direction:column;
@@ -20,8 +20,8 @@
     .num{
       font-size:60px;
       font-weight:700;
+      margin:8px 0;
       line-height:1.2;
-      margin:10px 0;
     }
   </style>
 </head>
@@ -47,13 +47,11 @@
     }
 
     updateViews();
-    setInterval(updateViews, 5000);
+    setInterval(updateViews,5000);
 
-    socket.on("viewUpdate", v => {
-      if (v.today !== undefined)
-        todayEl.textContent = v.today.toLocaleString();
-      if (v.yesterday !== undefined)
-        yestEl.textContent = v.yesterday.toLocaleString();
+    socket.on("viewUpdate", v=>{
+      if(v.today!==undefined) todayEl.textContent=v.today.toLocaleString();
+      if(v.yesterday!==undefined) yestEl.textContent=v.yesterday.toLocaleString();
     });
   </script>
 </body>
