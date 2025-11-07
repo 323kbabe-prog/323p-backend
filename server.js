@@ -1,4 +1,4 @@
-// server.js — personabrowser.com (Streaming Edition + Short Link Share + Dynamic OG Preview)
+// server.js — personabrowser.com (Streaming Edition + Short Link Share + Dynamic OG Preview + Live Views)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -137,32 +137,59 @@ async function validateHttpsLink(url) {
   });
 }
 
-/* ---------------- View Counter ---------------- */
+/* ---------------- View Counter (Today + Yesterday) ---------------- */
 const VIEW_FILE = path.join("/data", "views.json");
-function loadViews() {
-  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8")); }
-  catch { return { total: 0 }; }
-}
-function saveViews(v) {
-  try {
-    ensureDataDir();
-    fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
-  } catch (err) {
-    console.warn("⚠️ Could not persist view count:", err.message);
+
+function ensureViewFile() {
+  if (!fs.existsSync(VIEW_FILE)) {
+    const init = { today: 0, yesterday: 0, lastDate: new Date().toISOString().slice(0,10) };
+    fs.writeFileSync(VIEW_FILE, JSON.stringify(init, null, 2));
   }
 }
 
-app.get("/api/views", (req, res) => {
-  const v = loadViews(); 
-  v.total++; 
+function loadViews() {
+  ensureViewFile();
+  return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8"));
+}
+
+function saveViews(v) {
+  fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
+}
+
+function updateDailyViewCount() {
+  const v = loadViews();
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  if (v.lastDate !== todayStr) {
+    v.yesterday = v.today;
+    v.today = 0;
+    v.lastDate = todayStr;
+  }
+
+  v.today++;
   saveViews(v);
-  res.json({ total: v.total });
+  return v;
+}
+
+// increments count manually
+app.get("/api/views", (req, res) => {
+  const v = updateDailyViewCount();
+  res.json({ today: v.today, yesterday: v.yesterday });
 });
 
-// ✅ Add this route for your Live Views page
+// readonly count
 app.get("/api/views-readonly", (req, res) => {
   const v = loadViews();
-  res.json({ total: v.total || 0 });
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  if (v.lastDate !== todayStr) {
+    v.yesterday = v.today;
+    v.today = 0;
+    v.lastDate = todayStr;
+    saveViews(v);
+  }
+
+  res.json({ today: v.today || 0, yesterday: v.yesterday || 0 });
 });
 
 /* ---------------- Socket.io Streaming ---------------- */
@@ -173,27 +200,20 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
 
-  /* ---- Live Views Tracking ---- */
+  // --- Live Views Tracking ---
   try {
-    const v = loadViews();
-    v.total++;
-    saveViews(v);
+    const v = updateDailyViewCount();
+    io.emit("viewUpdate", { today: v.today, yesterday: v.yesterday });
 
-    // Broadcast new total to everyone
-    io.emit("viewUpdate", { total: v.total });
-
-    // Handle disconnects
     socket.on("disconnect", () => {
       const cur = loadViews();
-      if (cur.total > 0) cur.total--;
-      saveViews(cur);
-      io.emit("viewUpdate", { total: cur.total });
+      io.emit("viewUpdate", { today: cur.today, yesterday: cur.yesterday });
     });
   } catch (err) {
     console.warn("⚠️ Live views tracking error:", err.message);
   }
 
-  /* ---- Persona Streaming ---- */
+  // --- Persona Streaming ---
   socket.on("personaSearch", async query => {
     console.log(`🌐 Streaming live personas for: "${query}"`);
     try {
@@ -273,4 +293,3 @@ const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
   console.log(`✅ personabrowser.com backend running (Short-Link + Dynamic OG + Live Views) on :${PORT}`)
 );
-
