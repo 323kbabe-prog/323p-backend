@@ -84,8 +84,11 @@ app.get("/s/:id", (req, res) => {
   <meta property="og:description" content="Shared AI Personas">
   <meta property="og:image" content="https://personabrowser.com/neutral-preview.jpg">
   <script>
+    // Write data to localStorage and delay redirect to ensure Safari/iOS persistence
     localStorage.setItem('sharedData', JSON.stringify(${JSON.stringify(personas)}));
-    window.location.href = 'https://personabrowser.com';
+    setTimeout(() => {
+      window.location.href = 'https://personabrowser.com';
+    }, 600); // 600ms delay — safe for iOS
   </script>
   </head><body></body></html>`);
 });
