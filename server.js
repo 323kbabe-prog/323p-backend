@@ -1,4 +1,4 @@
-// server.js — personabrowser.com (Streaming Edition + Short Link Share + Dynamic OG + Live Views)
+// server.js — personabrowser.com (Streaming Edition + Short Link Share + Dynamic OG Preview)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,7 +13,9 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting personabrowser.com backend (Streaming Edition + Live Views)…");
+console.log("🚀 Starting personabrowser.com backend (Streaming Edition)…");
+console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
+console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
@@ -34,6 +36,11 @@ app.get("/", (req, res) => {
     <meta property="og:title" content="${ogTitle}">
     <meta property="og:description" content="${ogDesc}">
     <meta property="og:image" content="${ogImage}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${ogTitle}">
+    <meta name="twitter:description" content="${ogDesc}">
+    <meta name="twitter:image" content="${ogImage}">
     <title>${ogTitle}</title>
     <script>
       const qs = window.location.search;
@@ -88,6 +95,11 @@ app.get("/s/:id", (req, res) => {
     <meta property="og:title" content="${ogTitle}">
     <meta property="og:description" content="${ogDesc}">
     <meta property="og:image" content="${ogImage}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${ogTitle}">
+    <meta name="twitter:description" content="${ogDesc}">
+    <meta name="twitter:image" content="${ogImage}">
     <title>${ogTitle}</title>
     <script>
       sessionStorage.setItem('sharedId', '${req.params.id}');
@@ -96,6 +108,16 @@ app.get("/s/:id", (req, res) => {
       }, 1200);
     </script>
   </head><body></body></html>`);
+});
+
+/* ---------------- API to load shared personas ---------------- */
+app.get("/api/share/:id", (req, res) => {
+  const all = fs.existsSync(SHARES_FILE)
+    ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
+    : {};
+  const personas = all[req.params.id];
+  if (!personas) return res.status(404).json({ error: "Not found" });
+  res.json(personas);
 });
 
 /* ---------------- Static Files ---------------- */
@@ -115,53 +137,24 @@ async function validateHttpsLink(url) {
   });
 }
 
-/* ---------------- View Counter (Today + Yesterday) ---------------- */
+/* ---------------- View Counter ---------------- */
 const VIEW_FILE = path.join("/data", "views.json");
-
-function ensureViewFile() {
-  if (!fs.existsSync(VIEW_FILE)) {
-    const init = { today: 0, yesterday: 0, lastDate: new Date().toISOString().slice(0,10) };
-    fs.writeFileSync(VIEW_FILE, JSON.stringify(init, null, 2));
-  }
-}
-
 function loadViews() {
-  ensureViewFile();
-  return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8"));
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8")); }
+  catch { return { total: 0 }; }
 }
-
 function saveViews(v) {
-  fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
-}
-
-function updateDailyViewCount() {
-  const v = loadViews();
-  const todayStr = new Date().toISOString().slice(0,10);
-  if (v.lastDate !== todayStr) {
-    v.yesterday = v.today;
-    v.today = 0;
-    v.lastDate = todayStr;
+  try {
+    ensureDataDir();
+    fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
+  } catch (err) {
+    console.warn("⚠️ Could not persist view count:", err.message);
   }
-  v.today++;
-  saveViews(v);
-  return v;
 }
 
 app.get("/api/views", (req, res) => {
-  const v = updateDailyViewCount();
-  res.json({ today: v.today, yesterday: v.yesterday });
-});
-
-app.get("/api/views-readonly", (req, res) => {
-  const v = loadViews();
-  const todayStr = new Date().toISOString().slice(0,10);
-  if (v.lastDate !== todayStr) {
-    v.yesterday = v.today;
-    v.today = 0;
-    v.lastDate = todayStr;
-    saveViews(v);
-  }
-  res.json({ today: v.today || 0, yesterday: v.yesterday || 0 });
+  const v = loadViews(); v.total++; saveViews(v);
+  res.json({ total: v.total });
 });
 
 /* ---------------- Socket.io Streaming ---------------- */
@@ -171,12 +164,83 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
-  const v = loadViews();
-  io.emit("viewUpdate", { today: v.today, yesterday: v.yesterday });
+
+  socket.on("personaSearch", async query => {
+    console.log(`🌐 Streaming live personas for: "${query}"`);
+    try {
+      let linkPool = [];
+      try {
+        const serp = await fetch(
+          `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`
+        );
+        const serpData = await serp.json();
+        linkPool = (serpData.organic_results || [])
+          .map(r => r.link)
+          .filter(l => l && l.startsWith("https://"))
+          .slice(0, 5);
+        const checks = await Promise.all(linkPool.map(validateHttpsLink));
+        linkPool = linkPool.filter((_, i) => checks[i]);
+      } catch (e) {
+        console.warn("⚠️ SerpAPI issue:", e.message);
+      }
+
+      const context = linkPool.join(", ") || "No verified links.";
+      const prompt = `
+You are an AI persona generator connected to live web data.
+Use this context about "${query}" but do not repeat it literally.
+Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
+Each persona must:
+- Have a unique name, cultural background, and age between 18 and 49.
+- Represent a different academic or professional field.
+- Speak in the first person about how the topic "${query}" connects to their field.
+- Mention one realistic project, study, or collaboration they personally experienced.
+Output format:
+{
+  "persona": "Name (Age), [Field]",
+  "thought": "Reflection about '${query}'",
+  "hashtags": ["tag1","tag2","tag3"]
+}
+Context: ${context}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        stream: true,
+        temperature: 0.9,
+        messages: [
+          { role: "system", content: "Output only JSON objects separated by <NEXT>" },
+          { role: "user", content: prompt }
+        ]
+      });
+
+      let buffer = "";
+      for await (const chunk of completion) {
+        const text = chunk.choices?.[0]?.delta?.content || "";
+        buffer += text;
+        if (buffer.includes("<NEXT>")) {
+          const parts = buffer.split("<NEXT>");
+          for (let i = 0; i < parts.length - 1; i++) {
+            try {
+              socket.emit("personaChunk", JSON.parse(parts[i].trim()));
+            } catch {}
+          }
+          buffer = parts[parts.length - 1];
+        }
+      }
+
+      if (buffer.trim().length > 0) {
+        try { socket.emit("personaChunk", JSON.parse(buffer.trim())); } catch {}
+      }
+
+      socket.emit("personaDone");
+    } catch (err) {
+      console.error("❌ Streaming error:", err);
+      socket.emit("personaError", err.message);
+    }
+  });
 });
 
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
-  console.log(`✅ Backend running (Short-Link + Dynamic OG + Live Views) on :${PORT}`)
+  console.log(`✅ personabrowser.com backend running (Short-Link + Dynamic OG) on :${PORT}`)
 );
