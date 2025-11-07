@@ -1,4 +1,4 @@
-// server.js — personabrowser.com (Streaming Edition + Short Link Share + Direct Load Mode)
+// server.js — personabrowser.com (Streaming Edition + iOS/Android Share Compatible)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -21,12 +21,25 @@ if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 /* ---------------- Dynamic Preview Generator ---------------- */
 app.get("/", (req, res) => {
+  const topic = req.query.query || "";
+  const persona = req.query.persona || "";
+  const thought = req.query.thought || "";
+  const hashtags = req.query.hashtags || "";
+
+  const safe = str =>
+    (str || "")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  // ✅ Minimal OG tags (required for iPad/iPhone share)
   const ogTitle = "personabrowser.com";
   const ogDesc  = "Live data personas — instantly generated.";
-  const ogImage = "https://personabrowser.com/neutral-preview.jpg";
+  const ogImage = "https://personabrowser.com/neutral-preview.jpg"; // must exist at this path
 
   res.send(`<!doctype html>
-  <html><head>
+  <html lang="en">
+  <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <meta property="og:title" content="${ogTitle}">
@@ -42,63 +55,17 @@ app.get("/", (req, res) => {
       const qs = window.location.search;
       window.location.href = '/index.html' + qs;
     </script>
-  </head><body></body></html>`);
-});
-
-/* ---------------- Short-Link Share Routes ---------------- */
-const SHARES_FILE = path.join("/data", "shares.json");
-
-// Save shared personas and return short ID
-app.post("/api/share", (req, res) => {
-  try {
-    const data = req.body.personas;
-    const id = Math.random().toString(36).substring(2, 8);
-    const all = fs.existsSync(SHARES_FILE)
-      ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
-      : {};
-    all[id] = data;
-    fs.writeFileSync(SHARES_FILE, JSON.stringify(all, null, 2));
-    res.json({ shortId: id });
-  } catch (err) {
-    console.error("❌ Share save failed:", err);
-    res.status(500).json({ error: "Failed to save share" });
-  }
-});
-
-// Direct Load Mode: share link just passes ID → front-end fetches data
-app.get("/s/:id", (req, res) => {
-  const all = fs.existsSync(SHARES_FILE)
-    ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
-    : {};
-  if (!all[req.params.id]) return res.redirect("https://personabrowser.com");
-
-  res.send(`<!doctype html>
-  <html><head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <meta property="og:title" content="personabrowser.com">
-    <meta property="og:description" content="Shared AI Personas">
-    <meta property="og:image" content="https://personabrowser.com/neutral-preview.jpg">
-    <title>Shared Personas</title>
-    <script>
-      sessionStorage.setItem('sharedId', '${req.params.id}');
-      window.location.href = 'https://personabrowser.com';
-    </script>
-  </head><body></body></html>`);
-});
-
-// API endpoint used by front-end to load shared personas
-app.get("/api/share/:id", (req, res) => {
-  const all = fs.existsSync(SHARES_FILE)
-    ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
-    : {};
-  const personas = all[req.params.id];
-  if (!personas) return res.status(404).json({ error: "Not found" });
-  res.json(personas);
+  </head>
+  <body></body>
+  </html>`);
 });
 
 /* ---------------- Static Files ---------------- */
 app.use(express.static(path.join(__dirname, "public")));
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: { origin: "*" } });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- SSL Validator ---------------- */
 async function validateHttpsLink(url) {
@@ -116,91 +83,106 @@ async function validateHttpsLink(url) {
 
 /* ---------------- View Counter ---------------- */
 const VIEW_FILE = path.join("/data", "views.json");
-function loadViews() { try { return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); } catch { return { total:0 }; } }
-function saveViews(v){ fs.writeFileSync(VIEW_FILE, JSON.stringify(v,null,2)); }
+function loadViews() {
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8")); }
+  catch { return { total: 0 }; }
+}
+function saveViews(v) { fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2)); }
 
-app.get("/api/views",(req,res)=>{
-  const v=loadViews(); v.total++; saveViews(v); res.json({total:v.total});
+app.get("/api/views", (req, res) => {
+  const v = loadViews(); v.total++; saveViews(v);
+  res.json({ total: v.total });
 });
 
 /* ---------------- Socket.io Streaming ---------------- */
-const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
 
   socket.on("personaSearch", async query => {
     console.log(`🌐 Streaming live personas for: "${query}"`);
     try {
-      let linkPool=[];
+      let linkPool = [];
       try {
-        const serp=await fetch(
+        const serp = await fetch(
           `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`
         );
-        const serpData=await serp.json();
-        linkPool=(serpData.organic_results||[])
-          .map(r=>r.link)
-          .filter(l=>l&&l.startsWith("https://"))
-          .slice(0,5);
-        const checks=await Promise.all(linkPool.map(validateHttpsLink));
-        linkPool=linkPool.filter((_,i)=>checks[i]);
-      } catch(e){ console.warn("⚠️ SerpAPI issue:",e.message); }
+        const serpData = await serp.json();
+        linkPool = (serpData.organic_results || [])
+          .map(r => r.link)
+          .filter(l => l && l.startsWith("https://"))
+          .slice(0, 5);
+        const checks = await Promise.all(linkPool.map(validateHttpsLink));
+        linkPool = linkPool.filter((_, i) => checks[i]);
+      } catch (e) { console.warn("⚠️ SerpAPI issue:", e.message); }
 
-      const context=linkPool.join(", ")||"No verified links.";
-      const prompt=`
+      const context = linkPool.join(", ") || "No verified links.";
+
+      const prompt = `
 You are an AI persona generator connected to live web data.
 Use this context about "${query}" but do not repeat it literally.
 Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
+
 Each persona must:
 - Have a unique name, cultural background, and age between 18 and 49.
-- Represent a different academic or professional field.
-- Speak in the first person about how the topic "${query}" connects to their field.
+- Represent a different academic or professional field (technology, medicine, law, arts, business, philosophy, environment, psychology, sociology, design, engineering).
+- Speak in the first person about how the topic "${query}" connects to their field or research.
 - Mention one realistic project, study, or collaboration they personally experienced.
+- Keep each persona concise and believable.
+
 Output format:
 {
-  "persona": "Name (Age), [Field]",
-  "thought": "Reflection about '${query}'",
-  "hashtags": ["tag1","tag2","tag3"]
+  "persona": "Name (Age), [Field or Major]",
+  "thought": "First-person reflection connecting their identity to '${query}' and describing one personal event or project tied to it.",
+  "hashtags": ["tag1","tag2","tag3"],
+  "link": "https://example.com"
 }
-Context: ${context}`;
+Context: ${context}
+`;
 
-      const completion=await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        stream:true,
-        temperature:0.9,
-        messages:[
-          {role:"system",content:"Output only JSON objects separated by <NEXT>"},
-          {role:"user",content:prompt}
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        stream: true,
+        temperature: 0.9,
+        messages: [
+          { role: "system", content: "Output only JSON objects separated by <NEXT>" },
+          { role: "user", content: prompt }
         ]
       });
 
-      let buffer="";
-      for await (const chunk of completion){
-        const text=chunk.choices?.[0]?.delta?.content||"";
-        buffer+=text;
-        if(buffer.includes("<NEXT>")){
-          const parts=buffer.split("<NEXT>");
-          for(let i=0;i<parts.length-1;i++){
-            try{socket.emit("personaChunk",JSON.parse(parts[i].trim()));}catch{}
+      let buffer = "";
+      for await (const chunk of completion) {
+        const text = chunk.choices?.[0]?.delta?.content || "";
+        buffer += text;
+
+        if (buffer.includes("<NEXT>")) {
+          const parts = buffer.split("<NEXT>");
+          for (let i = 0; i < parts.length - 1; i++) {
+            try {
+              const persona = JSON.parse(parts[i].trim());
+              socket.emit("personaChunk", persona);
+            } catch {}
           }
-          buffer=parts[parts.length-1];
+          buffer = parts[parts.length - 1];
         }
       }
 
-      if(buffer.trim().length>0){
-        try{socket.emit("personaChunk",JSON.parse(buffer.trim()));}catch{}
+      if (buffer.trim().length > 0) {
+        try {
+          const lastPersona = JSON.parse(buffer.trim());
+          socket.emit("personaChunk", lastPersona);
+        } catch {}
       }
 
       socket.emit("personaDone");
-    }catch(err){
-      console.error("❌ Streaming error:",err);
-      socket.emit("personaError",err.message);
+    } catch (err) {
+      console.error("❌ Streaming error:", err);
+      socket.emit("personaError", err.message);
     }
   });
 });
 
 /* ---------------- Start Server ---------------- */
-const PORT=process.env.PORT||3000;
-httpServer.listen(PORT,()=>console.log(`✅ personabrowser.com backend running (Direct Load Mode) on :${PORT}`));
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () =>
+  console.log(`✅ personabrowser.com server running with OG tags on :${PORT}`)
+);
