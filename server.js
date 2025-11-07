@@ -1,4 +1,4 @@
-// server.js — personabrowser.com (Streaming Edition + iOS/Android Share Compatible)
+// server.js — personabrowser.com (Streaming Edition + Short Link Share + iOS/Android Compatible)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -19,23 +19,11 @@ console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-/* ---------------- Dynamic Preview Generator ---------------- */
+/* ---------------- Dynamic Preview Generator (OG tags for iOS/Android share) ---------------- */
 app.get("/", (req, res) => {
-  const topic = req.query.query || "";
-  const persona = req.query.persona || "";
-  const thought = req.query.thought || "";
-  const hashtags = req.query.hashtags || "";
-
-  const safe = str =>
-    (str || "")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-
-  // ✅ Minimal OG tags (required for iPad/iPhone share)
   const ogTitle = "personabrowser.com";
-  const ogDesc  = "Live data personas — instantly generated.";
-  const ogImage = "https://personabrowser.com/neutral-preview.jpg"; // must exist at this path
+  const ogDesc = "Live data personas — instantly generated.";
+  const ogImage = "https://personabrowser.com/neutral-preview.jpg";
 
   res.send(`<!doctype html>
   <html lang="en">
@@ -60,12 +48,50 @@ app.get("/", (req, res) => {
   </html>`);
 });
 
+/* ---------------- Short-Link Share Routes ---------------- */
+const SHARES_FILE = path.join("/data", "shares.json");
+
+// Save shared personas and return short ID
+app.post("/api/share", (req, res) => {
+  try {
+    const data = req.body.personas;
+    const id = Math.random().toString(36).substring(2, 8);
+    const all = fs.existsSync(SHARES_FILE)
+      ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
+      : {};
+    all[id] = data;
+    fs.writeFileSync(SHARES_FILE, JSON.stringify(all, null, 2));
+    res.json({ shortId: id });
+  } catch (err) {
+    console.error("❌ Share save failed:", err);
+    res.status(500).json({ error: "Failed to save share" });
+  }
+});
+
+// Redirect short link to index.html and preload shared data
+app.get("/s/:id", (req, res) => {
+  const all = fs.existsSync(SHARES_FILE)
+    ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
+    : {};
+  const personas = all[req.params.id];
+  if (!personas) return res.redirect("/index.html");
+
+  res.send(`<!doctype html>
+  <html><head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta property="og:title" content="personabrowser.com">
+  <meta property="og:description" content="Shared AI Personas">
+  <meta property="og:image" content="https://personabrowser.com/neutral-preview.jpg">
+  <script>
+    localStorage.setItem('sharedData', JSON.stringify(${JSON.stringify(personas)}));
+    window.location.href = '/index.html';
+  </script>
+  </head><body></body></html>`);
+});
+
 /* ---------------- Static Files ---------------- */
 app.use(express.static(path.join(__dirname, "public")));
-
-const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------------- SSL Validator ---------------- */
 async function validateHttpsLink(url) {
@@ -95,6 +121,10 @@ app.get("/api/views", (req, res) => {
 });
 
 /* ---------------- Socket.io Streaming ---------------- */
+const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: { origin: "*" } });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
 
@@ -121,23 +151,18 @@ io.on("connection", socket => {
 You are an AI persona generator connected to live web data.
 Use this context about "${query}" but do not repeat it literally.
 Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
-
 Each persona must:
 - Have a unique name, cultural background, and age between 18 and 49.
-- Represent a different academic or professional field (technology, medicine, law, arts, business, philosophy, environment, psychology, sociology, design, engineering).
-- Speak in the first person about how the topic "${query}" connects to their field or research.
+- Represent a different academic or professional field.
+- Speak in the first person about how the topic "${query}" connects to their field.
 - Mention one realistic project, study, or collaboration they personally experienced.
-- Keep each persona concise and believable.
-
 Output format:
 {
-  "persona": "Name (Age), [Field or Major]",
-  "thought": "First-person reflection connecting their identity to '${query}' and describing one personal event or project tied to it.",
-  "hashtags": ["tag1","tag2","tag3"],
-  "link": "https://example.com"
+  "persona": "Name (Age), [Field]",
+  "thought": "Reflection about '${query}'",
+  "hashtags": ["tag1","tag2","tag3"]
 }
-Context: ${context}
-`;
+Context: ${context}`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -153,7 +178,6 @@ Context: ${context}
       for await (const chunk of completion) {
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
-
         if (buffer.includes("<NEXT>")) {
           const parts = buffer.split("<NEXT>");
           for (let i = 0; i < parts.length - 1; i++) {
@@ -184,5 +208,5 @@ Context: ${context}
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
-  console.log(`✅ personabrowser.com server running with OG tags on :${PORT}`)
+  console.log(`✅ personabrowser.com backend running with short-link share + OG tags on :${PORT}`)
 );
