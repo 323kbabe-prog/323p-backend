@@ -153,8 +153,16 @@ function saveViews(v) {
 }
 
 app.get("/api/views", (req, res) => {
-  const v = loadViews(); v.total++; saveViews(v);
+  const v = loadViews(); 
+  v.total++; 
+  saveViews(v);
   res.json({ total: v.total });
+});
+
+// ✅ Add this route for your Live Views page
+app.get("/api/views-readonly", (req, res) => {
+  const v = loadViews();
+  res.json({ total: v.total || 0 });
 });
 
 /* ---------------- Socket.io Streaming ---------------- */
@@ -165,6 +173,27 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 io.on("connection", socket => {
   console.log("🛰️ Client connected:", socket.id);
 
+  /* ---- Live Views Tracking ---- */
+  try {
+    const v = loadViews();
+    v.total++;
+    saveViews(v);
+
+    // Broadcast new total to everyone
+    io.emit("viewUpdate", { total: v.total });
+
+    // Handle disconnects
+    socket.on("disconnect", () => {
+      const cur = loadViews();
+      if (cur.total > 0) cur.total--;
+      saveViews(cur);
+      io.emit("viewUpdate", { total: cur.total });
+    });
+  } catch (err) {
+    console.warn("⚠️ Live views tracking error:", err.message);
+  }
+
+  /* ---- Persona Streaming ---- */
   socket.on("personaSearch", async query => {
     console.log(`🌐 Streaming live personas for: "${query}"`);
     try {
@@ -242,5 +271,6 @@ Context: ${context}`;
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
-  console.log(`✅ personabrowser.com backend running (Short-Link + Dynamic OG) on :${PORT}`)
+  console.log(`✅ personabrowser.com backend running (Short-Link + Dynamic OG + Live Views) on :${PORT}`)
 );
+
