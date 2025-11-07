@@ -3,69 +3,57 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-  <title>Live Views — AI-Native Persona Browser</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <title>Live Views</title>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     body{
-      font-family:'Inter',sans-serif;
-      background:#fafafa;
-      margin:0;
+      font-family: 'Inter', sans-serif;
+      background:#fff;
       color:#000;
-      text-align:center;
+      margin:0;
       display:flex;
       flex-direction:column;
       justify-content:center;
       align-items:center;
       height:100vh;
     }
-    h1{font-size:26px;font-weight:700;margin-bottom:12px;}
-    p{font-size:16px;color:#555;margin:6px 0;}
-    #count{
-      font-size:56px;
+    .num{
+      font-size:60px;
       font-weight:700;
-      color:#007aff;
-      margin-top:20px;
-    }
-    footer{position:fixed;bottom:20px;font-size:13px;color:#999;}
-    .pulse {
-      animation:pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% {transform:scale(1);opacity:1;}
-      50% {transform:scale(1.05);opacity:0.7;}
-      100% {transform:scale(1);opacity:1;}
+      line-height:1.2;
+      margin:10px 0;
     }
   </style>
 </head>
 <body>
-  <h1>👁 Live Views</h1>
-  <p>AI-Native Persona Browser</p>
-  <div id="count" class="pulse">0</div>
-  <footer>Connected to three23p-backend.onrender.com</footer>
+  <div id="today" class="num">0</div>
+  <div id="yesterday" class="num">0</div>
 
   <script>
-    const counter=document.getElementById("count");
-    const socket=io("https://three23p-backend.onrender.com");
+    const socket = io("https://three23p-backend.onrender.com");
+    const todayEl = document.getElementById("today");
+    const yestEl = document.getElementById("yesterday");
 
     async function updateViews(){
       try{
-        const res=await fetch("https://three23p-backend.onrender.com/api/views-readonly");
-        const data=await res.json();
-        counter.textContent=data.total.toLocaleString();
+        const res = await fetch("https://three23p-backend.onrender.com/api/views-readonly");
+        const data = await res.json();
+        todayEl.textContent = data.today.toLocaleString();
+        yestEl.textContent = data.yesterday.toLocaleString();
       }catch{
-        counter.textContent="offline";
-        counter.style.color="red";
+        todayEl.textContent = "0";
+        yestEl.textContent = "0";
       }
     }
 
-    // Initial load + every 5s refresh
     updateViews();
-    setInterval(updateViews,5000);
+    setInterval(updateViews, 5000);
 
-    // Optional real-time trigger from server (if you add socket.emit on increment)
-    socket.on("viewUpdate",v=>{
-      counter.textContent=v.total.toLocaleString();
+    socket.on("viewUpdate", v => {
+      if (v.today !== undefined)
+        todayEl.textContent = v.today.toLocaleString();
+      if (v.yesterday !== undefined)
+        yestEl.textContent = v.yesterday.toLocaleString();
     });
   </script>
 </body>
