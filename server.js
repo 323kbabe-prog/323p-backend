@@ -1,4 +1,4 @@
-// server.js — personabrowser.com (Streaming Edition + Short Link Share + Dynamic OG Preview)
+// server.js — personabrowser.com (Streaming Edition + Short Link Share + Dynamic OG Preview + Language Detection)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,12 +13,11 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting personabrowser.com backend (Streaming Edition)…");
+console.log("🚀 Starting personabrowser.com backend (Streaming Edition + Language Detection)…");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
-
 function ensureDataDir() {
   if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 }
@@ -44,9 +43,7 @@ app.get("/", (req, res) => {
     <title>${ogTitle}</title>
     <script>
       const qs = window.location.search;
-      setTimeout(() => {
-        window.location.replace('/index.html' + qs);
-      }, 1200);
+      setTimeout(() => { window.location.replace('/index.html' + qs); }, 1200);
     </script>
   </head><body></body></html>`);
 });
@@ -103,9 +100,7 @@ app.get("/s/:id", (req, res) => {
     <title>${ogTitle}</title>
     <script>
       sessionStorage.setItem('sharedId', '${req.params.id}');
-      setTimeout(() => {
-        window.location.href = 'https://personabrowser.com';
-      }, 1200);
+      setTimeout(() => { window.location.href = 'https://personabrowser.com'; }, 1200);
     </script>
   </head><body></body></html>`);
 });
@@ -168,6 +163,24 @@ io.on("connection", socket => {
   socket.on("personaSearch", async query => {
     console.log(`🌐 Streaming live personas for: "${query}"`);
     try {
+      /* --- Language Detection --- */
+      let langCode = "en";
+      try {
+        const langResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "Detect the language of the text and return only its ISO code (e.g., en, es, zh, fr, ko, ja)." },
+            { role: "user", content: query }
+          ],
+          temperature: 0
+        });
+        langCode = langResp.choices?.[0]?.message?.content?.trim().toLowerCase() || "en";
+        console.log("🌍 Detected language:", langCode);
+      } catch (err) {
+        console.warn("⚠️ Language detection failed, defaulting to English.");
+      }
+
+      /* --- SERPAPI Context --- */
       let linkPool = [];
       try {
         const serp = await fetch(
@@ -185,6 +198,8 @@ io.on("connection", socket => {
       }
 
       const context = linkPool.join(", ") || "No verified links.";
+
+      /* --- Persona Generation Prompt --- */
       const prompt = `
 You are an AI persona generator connected to live web data.
 Use this context about "${query}" but do not repeat it literally.
@@ -194,6 +209,7 @@ Each persona must:
 - Represent a different academic or professional field.
 - Speak in the first person about how the topic "${query}" connects to their field.
 - Mention one realistic project, study, or collaboration they personally experienced.
+- Write all output (persona name, thought, hashtags) in ${langCode}.
 Output format:
 {
   "persona": "Name (Age), [Field]",
@@ -219,9 +235,7 @@ Context: ${context}`;
         if (buffer.includes("<NEXT>")) {
           const parts = buffer.split("<NEXT>");
           for (let i = 0; i < parts.length - 1; i++) {
-            try {
-              socket.emit("personaChunk", JSON.parse(parts[i].trim()));
-            } catch {}
+            try { socket.emit("personaChunk", JSON.parse(parts[i].trim())); } catch {}
           }
           buffer = parts[parts.length - 1];
         }
@@ -242,5 +256,5 @@ Context: ${context}`;
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
-  console.log(`✅ personabrowser.com backend running (Short-Link + Dynamic OG) on :${PORT}`)
+  console.log(`✅ personabrowser.com backend running (Language Detection + Short-Link + Dynamic OG) on :${PORT}`)
 );
