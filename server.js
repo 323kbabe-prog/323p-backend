@@ -1,4 +1,4 @@
-// server.js — personabrowser.com (Streaming Edition + Short Link Share + Dynamic OG Preview + Language Detection)
+// server.js — personabrowser.com (Streaming Edition + Short Link Share + Dynamic OG Preview + Language Detection + Demographic Personas)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -13,7 +13,7 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting personabrowser.com backend (Streaming Edition + Language Detection)…");
+console.log("🚀 Starting personabrowser.com backend (Streaming Edition + Language + Demographic Personas)…");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 
@@ -78,7 +78,7 @@ app.get("/s/:id", (req, res) => {
 
   const first = personas[0] || {};
   const ogTitle = first.persona
-    ? `${first.persona} — personabrowser.com`
+    ? `${first.persona.identity || "Shared Persona"} — personabrowser.com`
     : "personabrowser.com";
   const ogDesc = first.thought
     ? first.thought.slice(0, 160)
@@ -205,14 +205,19 @@ You are an AI persona generator connected to live web data.
 Use this context about "${query}" but do not repeat it literally.
 Generate exactly 10 personas as valid JSON objects, each separated by the marker <NEXT>.
 Each persona must:
-- Have a unique name, cultural background, and age between 18 and 49.
+- Describe themselves through gender, race, age, and identity only (no names).
 - Represent a different academic or professional field.
 - Speak in the first person about how the topic "${query}" connects to their field.
 - Mention one realistic project, study, or collaboration they personally experienced.
-- Write all output (persona name, thought, hashtags) in ${langCode}.
+- Write all output (persona demographics, thought, hashtags) in ${langCode}.
 Output format:
 {
-  "persona": "Name (Age), [Field]",
+  "persona": {
+    "gender": "Male or Female or Nonbinary",
+    "race": "Asian, Black, White, Latino, etc.",
+    "age": "between 18 and 49",
+    "identity": "Professional or academic identity related to the topic"
+  },
   "thought": "Reflection about '${query}'",
   "hashtags": ["tag1","tag2","tag3"]
 }
@@ -256,5 +261,5 @@ Context: ${context}`;
 /* ---------------- Start Server ---------------- */
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () =>
-  console.log(`✅ personabrowser.com backend running (Language Detection + Short-Link + Dynamic OG) on :${PORT}`)
+  console.log(`✅ personabrowser.com backend running (Language + Demographic Personas) on :${PORT}`)
 );
