@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v1.2)
-//  With FULL Share System + Auto-Search Restoration
+//  server.js — NPC Browser (Super Agentic Trend Engine v1.3)
+//  FULL NPC Update (Hybrid Professions + 1st Person)
+//  Full Share System + Auto-Search + Trend Engine
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -17,8 +18,8 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 NPC Browser — Agentic Trend Engine + Share System starting...");
-console.log("API Key Loaded:", !!process.env.OPENAI_API_KEY);
+console.log("🚀 NPC Browser — Agentic Trend Engine + NPC Update loading...");
+console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
 // SAFE JSON PARSER
@@ -53,8 +54,7 @@ function extractLocation(text){
   const LOCATIONS = [
     "LA","Los Angeles","NYC","New York","Tokyo",
     "Paris","London","Berlin","Seoul","Busan",
-    "Taipei","Singapore",
-    "San Francisco","SF",
+    "Taipei","Singapore","San Francisco","SF",
     "Chicago","Miami","Toronto"
   ];
   const lower = text.toLowerCase();
@@ -71,7 +71,7 @@ function extractLocation(text){
 // ==========================================================
 const genders=["Female","Male","Nonbinary"];
 const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
-const ages=[20,21,22,23,24,25];
+const ages=[18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49];
 
 const fields = [
   "Psychology","Sociology","Computer Science","Economics",
@@ -91,9 +91,8 @@ function pickUnique(arr, count){
 }
 
 // ==========================================================
-// SHARE NPC SYSTEM (SAVE + LOAD + REDIRECT)
+// SHARE NPC SYSTEM
 // ==========================================================
-
 const SHARES_FILE = "/data/shares.json";
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
@@ -106,21 +105,21 @@ function writeShares(data){
   catch(err){ console.error("❌ Could not save share:",err.message); }
 }
 
-// Save share (WITH query!)
+// Save Share
 app.post("/api/share",(req,res)=>{
   const all = readShares();
   const id = Math.random().toString(36).substring(2,8);
 
   all[id] = {
     personas: req.body.personas || [],
-    query: req.body.query || ""   // <-- IMPORTANT
+    query: req.body.query || ""
   };
 
   writeShares(all);
   res.json({ shortId:id });
 });
 
-// Load shared NPC
+// Load Share
 app.get("/api/share/:id",(req,res)=>{
   const all = readShares();
   const shared = all[req.params.id];
@@ -128,7 +127,7 @@ app.get("/api/share/:id",(req,res)=>{
   res.json(shared.personas || []);
 });
 
-// Redirect page with query restored
+// Redirect with Auto-Search Query
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
   const shared = all[req.params.id];
@@ -145,7 +144,7 @@ app.get("/s/:id",(req,res)=>{
 <html><head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta property="og:title" content="${first.persona?.identity || "NPC Browser"}">
+  <meta property="og:title" content="${first.profession || "NPC Browser"}">
   <meta property="og:description" content="${preview}">
   <meta property="og:image" content="https://npcbrowser.com/og-npc.jpg">
   <meta name="twitter:card" content="summary_large_image">
@@ -161,9 +160,8 @@ app.get("/s/:id",(req,res)=>{
 });
 
 // ==========================================================
-// SOCKET.IO — 10 AGENTIC PERSONAS
+// SOCKET.IO — 10 NPCs WITH UPDATED LOGIC
 // ==========================================================
-
 const httpServer=createServer(app);
 const io=new Server(httpServer,{cors:{origin:"*"}});
 
@@ -183,44 +181,68 @@ io.on("connection", socket=>{
             age:ages[Math.floor(Math.random()*ages.length)],
             identity:selectedFields[i]
           },
+          profession:"",
           thought:"",
           hashtags:[],
           trend:[]
         };
 
-        // GENERATE NPC THOUGHT
+        // ======================================================
+        // NPC THOUGHT + PROFESSION (NEW LOGIC)
+        // ======================================================
         const thoughtPrompt = `
-IDENTITY:
-${persona.persona.gender}, ${persona.persona.race}, ${persona.persona.age}, ${persona.persona.identity}
+You are creating a fully alive NPC persona.
 
-TOPIC: "${query}"
+DEMOGRAPHICS:
+- Gender: ${persona.persona.gender}
+- Race: ${persona.persona.race}
+- Age: ${persona.persona.age}
+
+ACADEMIC DISCIPLINE:
+"${persona.persona.identity}"
 
 TASK:
-1. Write a deep 2–3 sentence AGENTIC interpretation.
-2. Output 3–5 hashtags (NO # symbols).
+1. Create a REAL-WORLD HYBRID PROFESSION for this NPC by blending:
+   - their academic discipline, and
+   - a modern applied field (examples: AI ethics, UX research, public health, legal policy, cognitive systems design, social analytics, cultural insights, environmental consulting, media cognition, clinical decision science, behavioral data, product innovation).
+   DO NOT mention 'major' or 'Stanford'.
 
-Return JSON ONLY:
+2. Write a FIRST-PERSON reflection (2–3 sentences) on the topic "${query}".
+   - moderately expressive
+   - unique voice
+   - shaped by profession + demographics
+   - clear, alive, intelligent
+   - avoid academic jargon
+
+3. Output 3–5 simple hashtags (NO # symbol).
+
+FORMAT JSON ONLY:
 {
- "thought":"...",
- "hashtags":["..."]
+  "profession": "Their hybrid profession",
+  "thought": "First-person reflection",
+  "hashtags": ["..."]
 }
         `;
 
         const thoughtResp=await openai.chat.completions.create({
           model:"gpt-4o-mini",
           messages:[{role:"user",content:thoughtPrompt}],
-          temperature:0.8
+          temperature:0.85
         });
 
-        const parsedThought=safeJSON(thoughtResp.choices?.[0]?.message?.content || "") || {
-          thought:"An NPC perspective emerges.",
-          hashtags:["vibe","identity"]
+        const parsed=safeJSON(thoughtResp.choices?.[0]?.message?.content||"") || {
+          profession:"Cognitive Systems Analyst",
+          thought:"I interpret this topic through patterns I see in my work.",
+          hashtags:["identity","culture"]
         };
 
-        persona.thought = parsedThought.thought;
-        persona.hashtags = parsedThought.hashtags;
+        persona.profession = parsed.profession;
+        persona.thought = parsed.thought;
+        persona.hashtags = parsed.hashtags;
 
-        // GENERATE TREND WORDS (AG4 Hybrid — 4 short words)
+        // ======================================================
+        // TREND ENGINE (unchanged)
+        // ======================================================
         const trendPrompt=`
 Turn the following into EXACTLY 4 short TREND KEYWORDS (1–2 words each).
 Style: vibe + emotion + aesthetic + culture.
@@ -253,7 +275,7 @@ Return JSON:
 
         let trendWords = parsedTrend.trend.map(w=>splitTrendWord(w));
 
-        // LOCATION OVERRIDE
+        // Location override
         if(detectedLocation){
           trendWords[0] = `${detectedLocation} vibe`;
         }
@@ -296,5 +318,5 @@ app.use(express.static(path.join(__dirname,"public")));
 // ==========================================================
 const PORT=process.env.PORT||3000;
 httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser (Agentic Trend Engine v1.2 + Share AutoSearch) running on :${PORT}`);
+  console.log(`🔥 NPC Browser (Agentic NPC Update v1.3) running on :${PORT}`);
 });
