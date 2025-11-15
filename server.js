@@ -1,15 +1,28 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v2.5)
+//  server.js — NPC Browser (Super Agentic Trend Engine v2.7)
 //  Built on v1.6 stable backend
-//  Additions:
-//   • STRICT 5-category profession pools (5 per category)
-//   • Guaranteed A→B→C→D→E rotation for 10 NPCs
-//   • Strong topic-awareness
-//   • Professional subtle micro-emotion
-//   • Personal experience tail sentence
-//   • Optional SERP API (fallback if missing)
-//   • Location-aware trend override
-//   • All backend features preserved
+//
+//  MAJOR FEATURES (v2.7):
+//   • STRICT 5-category Stanford academic major pools (5 per category)
+//   • Guaranteed A→B→C→D→E rotation for 10 NPCs (balanced diversity)
+//   • SERP API web-context integration (live headline signal extraction)
+//   • Enhanced topic-awareness + SERP-influenced reasoning
+//   • Updated 4-step Thought Engine (<420 chars):
+//        1) Distinct academic-worldview opening
+//        2) Deep structural/systemic implication analysis
+//        3) Concrete academic/applied personal moment
+//        4) Service-oriented insight (usage, demand, cost pressure)
+//   • Professional micro-emotion (subtle, no labels)
+//   • Location-aware trend override ("NYC vibe", "LA vibe", etc.)
+//   • Trend Engine v2 (4 short keywords per NPC)
+//   • Safe JSON parsing + output sanitization (no empty cards)
+//   • Share System (short links, auto-load, OG preview)
+//   • Auto-search support via ?query=
+//   • View counter, static hosting, socket streaming
+//
+//  All legacy systems preserved. Stable, production-ready.
+//  This is the official NPC Browser — Agentic Trend Engine v2.7.
+//
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
