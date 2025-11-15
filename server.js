@@ -93,35 +93,35 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 // STRICT PROFESSION POOLS (A4 MIXED LEVELS, 5 PER CATEGORY)
 // ==========================================================
 const PROF = {
-  A: [ // Medical & Health
+  A: [
     "Nurse",
     "EMT",
     "Physician Assistant",
     "Therapist",
     "Public Health Coordinator"
   ],
-  B: [ // Law / Gov / Public Safety
+  B: [
     "Police Officer",
     "Firefighter",
     "Immigration Officer",
-    "Paralegal",
+    "Lawyer",
     "City Safety Coordinator"
   ],
-  C: [ // Engineering / Tech / Science
+  C: [
     "Civil Engineer",
     "Software Developer",
     "Data Scientist",
     "Pilot",
     "Environmental Scientist"
   ],
-  D: [ // Business / Trade / Economics
+  D: [
     "Retail Manager",
     "Business Owner",
     "Financial Analyst",
     "Supply Chain Coordinator",
     "Economist"
   ],
-  E: [ // Creative / Arts / Media
+  E: [
     "Chef",
     "Journalist",
     "Photographer",
