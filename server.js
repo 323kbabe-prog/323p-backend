@@ -1,4 +1,4 @@
-// server.js — NPC Browser (Agentic Reasoning Edition)
+// server.js — NPC Browser (Agentic Reasoning Edition — SAFE VERSION)
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -6,7 +6,6 @@ const path = require("path");
 const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
-const fetch = require("node-fetch");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -14,62 +13,101 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 Agentic NPC Browser backend running...");
-console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
+console.log("🚀 Agentic NPC backend booting...");
+console.log("API key detected:", !!process.env.OPENAI_API_KEY);
 
 /* ------------------------------------------
-   AGENTIC EXTRACTION ENDPOINT (gpt-4o-mini)
-   ------------------------------------------ */
-app.post("/api/agentic", async (req, res) => {
+   SAFE JSON PARSER (never crashes)
+------------------------------------------- */
+function safeJSON(str) {
   try {
-    const thought = req.body.thought || "";
+    // Try exact parse first
+    return JSON.parse(str);
+  } catch {
+    try {
+      // Extract JSON object using regex
+      const match = str.match(/\{[\s\S]*\}/);
+      if (match) return JSON.parse(match[0]);
+    } catch {}
+    return null; // failed completely
+  }
+}
 
-    const prompt = `
-You are an agentic reasoning module.
+/* ------------------------------------------
+   AGENTIC EXTRACTION ENDPOINT (SAFE)
+   Calls gpt-4o-mini → Extract summary & clusters
+   ALWAYS returns something valid.
+------------------------------------------- */
+app.post("/api/agentic", async (req, res) => {
+  const thought = req.body.thought || "";
 
-INPUT NPC THOUGHT:
+  const fallback = {
+    summary: "npc perspective insight",
+    clusters: [
+      "npc reasoning",
+      "agentic search",
+      "interpretive viewpoint"
+    ]
+  };
+
+  if (!thought.trim()) {
+    return res.json(fallback);
+  }
+
+  const prompt = `
+Extract agentic reasoning from the NPC thought.
+
+INPUT:
 "${thought}"
 
-TASKS:
-1. Extract ONE short summary phrase (5–9 words max) describing the perspective.
-2. Extract 3–5 concise keyword clusters (2–4 words each) capturing the core ideas.
-
-FORMAT (JSON ONLY):
+OUTPUT JSON ONLY:
 {
-  "summary": "summary phrase",
-  "clusters": ["...", "...", "..."]
-}`;
+  "summary": "one short phrase (5–9 words)",
+  "clusters": ["2–4 word cluster", "cluster", "cluster"]
+}
+`;
 
+  try {
     const resp = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.2
+      temperature: 0.25
     });
 
-    const text = resp.choices?.[0]?.message?.content || "";
-    const data = JSON.parse(text);
+    const raw = resp.choices?.[0]?.message?.content || "";
+    const parsed = safeJSON(raw);
 
-    res.json({
-      summary: data.summary,
-      clusters: data.clusters
+    if (!parsed || !parsed.summary) {
+      console.log("⚠️ OpenAI returned malformed JSON, using fallback.");
+      return res.json(fallback);
+    }
+
+    // Clean clusters
+    if (!Array.isArray(parsed.clusters)) parsed.clusters = [];
+
+    return res.json({
+      summary: parsed.summary,
+      clusters: parsed.clusters
     });
 
   } catch (err) {
-    console.error("Agentic extraction error:", err);
-    res.json({ summary: "", clusters: [] });
+    console.error("❌ Agentic extraction failed:", err.message);
+    return res.json(fallback);
   }
 });
 
 /* ------------------------------------------
-   STATIC + SOCKET STREAMING (unchanged)
-   ------------------------------------------ */
+   STATIC FILES
+------------------------------------------- */
+app.use(express.static(path.join(__dirname, "public")));
 
+/* ------------------------------------------
+   START SERVER
+------------------------------------------- */
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
-app.use(express.static(path.join(__dirname, "public")));
-
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
-  console.log(`Agentic NPC backend running on :${PORT}`);
+  console.log(`🔥 Agentic NPC backend running on :${PORT}`);
 });
