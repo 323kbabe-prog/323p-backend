@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v1.3)
-//  FULL NPC Update (Hybrid Professions + 1st Person)
-//  Full Share System + Auto-Search + Trend Engine
+//  server.js — NPC Browser (Super Agentic Trend Engine v1.4)
+//  NPC Update: Hybrid Professions + First-Person + No Topic Repetition
+//  Full System Locked: Share, Auto-Search, Trend Engine, Streaming
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -18,8 +18,8 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 NPC Browser — Agentic Trend Engine + NPC Update loading...");
-console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
+console.log("🚀 NPC Browser — Agentic Trend Engine v1.4 starting...");
+console.log("OPENAI_API_KEY loaded:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
 // SAFE JSON PARSER
@@ -83,7 +83,7 @@ const fields = [
 function pickUnique(arr, count){
   const copy=[...arr];
   const selected=[];
-  while(selected.length < count && copy.length > 0){
+  while(selected.length < count && copy.length){
     const idx=Math.floor(Math.random()*copy.length);
     selected.push(copy.splice(idx,1)[0]);
   }
@@ -105,7 +105,7 @@ function writeShares(data){
   catch(err){ console.error("❌ Could not save share:",err.message); }
 }
 
-// Save Share
+// Save NPC Share
 app.post("/api/share",(req,res)=>{
   const all = readShares();
   const id = Math.random().toString(36).substring(2,8);
@@ -119,7 +119,7 @@ app.post("/api/share",(req,res)=>{
   res.json({ shortId:id });
 });
 
-// Load Share
+// Load NPC Share
 app.get("/api/share/:id",(req,res)=>{
   const all = readShares();
   const shared = all[req.params.id];
@@ -127,45 +127,44 @@ app.get("/api/share/:id",(req,res)=>{
   res.json(shared.personas || []);
 });
 
-// Redirect with Auto-Search Query
+// Redirect With Query (Auto-search)
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
   const shared = all[req.params.id];
-
   if(!shared) return res.redirect("https://npcbrowser.com");
 
   const personas = shared.personas || [];
   const originalQuery = shared.query || "";
 
   const first = personas[0] || {};
-  const preview = (first.thought || "").slice(0, 150);
+  const preview = (first.thought || "").slice(0,150);
 
   res.send(`<!doctype html>
 <html><head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta property="og:title" content="${first.profession || "NPC Browser"}">
-  <meta property="og:description" content="${preview}">
-  <meta property="og:image" content="https://npcbrowser.com/og-npc.jpg">
-  <meta name="twitter:card" content="summary_large_image">
-  <title>NPC Browser Share</title>
-  <script>
-    sessionStorage.setItem("sharedId","${req.params.id}");
-    setTimeout(() => {
-      window.location.href =
-        "https://npcbrowser.com?query=${encodeURIComponent(originalQuery)}";
-    }, 900);
-  </script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta property="og:title" content="${first.profession || "NPC Browser"}">
+<meta property="og:description" content="${preview}">
+<meta property="og:image" content="https://npcbrowser.com/og-npc.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<title>NPC Browser Share</title>
+<script>
+sessionStorage.setItem("sharedId","${req.params.id}");
+setTimeout(()=>{
+  window.location.href =
+    "https://npcbrowser.com?query=" + encodeURIComponent("${originalQuery}");
+}, 900);
+</script>
 </head><body></body></html>`);
 });
 
 // ==========================================================
-// SOCKET.IO — 10 NPCs WITH UPDATED LOGIC
+// SOCKET.IO — 10 NPCs (NO TOPIC REPEAT VERSION)
 // ==========================================================
 const httpServer=createServer(app);
 const io=new Server(httpServer,{cors:{origin:"*"}});
 
-io.on("connection", socket=>{
+io.on("connection",socket=>{
   console.log("🛰️ Client connected:",socket.id);
 
   socket.on("personaSearch", async query=>{
@@ -188,10 +187,10 @@ io.on("connection", socket=>{
         };
 
         // ======================================================
-        // NPC THOUGHT + PROFESSION (NEW LOGIC)
+        // NPC THOUGHT ENGINE — NO TOPIC REPEAT FIX
         // ======================================================
         const thoughtPrompt = `
-You are creating a fully alive NPC persona.
+You are generating a fully alive NPC persona.
 
 DEMOGRAPHICS:
 - Gender: ${persona.persona.gender}
@@ -201,26 +200,33 @@ DEMOGRAPHICS:
 ACADEMIC DISCIPLINE:
 "${persona.persona.identity}"
 
-TASK:
-1. Create a REAL-WORLD HYBRID PROFESSION for this NPC by blending:
-   - their academic discipline, and
-   - a modern applied field (examples: AI ethics, UX research, public health, legal policy, cognitive systems design, social analytics, cultural insights, environmental consulting, media cognition, clinical decision science, behavioral data, product innovation).
-   DO NOT mention 'major' or 'Stanford'.
+TASK PART 1 — PROFESSION:
+Create a REAL-WORLD HYBRID PROFESSION for this NPC by blending:
+- their academic discipline
+- a modern applied field (AI ethics, UX research, public health, legal policy, cognitive systems design, environmental consulting, social analytics, product strategy, behavioral science, media cognition, urban systems, etc.)
+IMPORTANT:
+- NEVER mention "major" or "Stanford".
+- The profession must feel like a real job someone could have.
 
-2. Write a FIRST-PERSON reflection (2–3 sentences) on the topic "${query}".
-   - moderately expressive
-   - unique voice
-   - shaped by profession + demographics
-   - clear, alive, intelligent
-   - avoid academic jargon
+TASK PART 2 — FIRST-PERSON REFLECTION (VERY IMPORTANT):
+Write a FIRST-PERSON reflection (2–3 sentences) about the *idea* behind "${query}".
+Rules:
+- DO NOT repeat the topic phrase directly.
+- DO NOT describe the topic ("Seattle coffee is...").
+- Speak in first person only ("I", "my", "to me").
+- Reveal how YOU interpret or analyze the idea through your profession.
+- Use moderately expressive tone (not emotional, not robotic).
+- Make it intelligent, alive, reflective.
+- Show personal reasoning or insight.
 
-3. Output 3–5 simple hashtags (NO # symbol).
+TASK PART 3 — HASHTAGS:
+Output 3–5 simple, trend-friendly hashtags (NO # symbol).
 
-FORMAT JSON ONLY:
+RETURN JSON ONLY:
 {
-  "profession": "Their hybrid profession",
-  "thought": "First-person reflection",
-  "hashtags": ["..."]
+  "profession": "Hybrid profession",
+  "thought": "First-person reflection without repeating the topic",
+  "hashtags": ["word1","word2","word3"]
 }
         `;
 
@@ -232,7 +238,7 @@ FORMAT JSON ONLY:
 
         const parsed=safeJSON(thoughtResp.choices?.[0]?.message?.content||"") || {
           profession:"Cognitive Systems Analyst",
-          thought:"I interpret this topic through patterns I see in my work.",
+          thought:"I interpret this idea through patterns I study in my work.",
           hashtags:["identity","culture"]
         };
 
@@ -257,7 +263,7 @@ ${persona.hashtags.join(", ")}
 User Topic:
 "${query}"
 
-Return JSON:
+RETURN JSON ONLY:
 {
  "trend":["w1","w2","w3","w4"]
 }
@@ -318,5 +324,5 @@ app.use(express.static(path.join(__dirname,"public")));
 // ==========================================================
 const PORT=process.env.PORT||3000;
 httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser (Agentic NPC Update v1.3) running on :${PORT}`);
+  console.log(`🔥 NPC Browser (Agentic NPC v1.4 — No Topic Repeat) running on :${PORT}`);
 });
