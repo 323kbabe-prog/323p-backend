@@ -1,4 +1,4 @@
-// server.js — npcbrowser.com (NPC Simulation Edition + Reference Share System)
+// server.js — npcbrowser.com (NPC Simulation Edition + Reference Share System + Auto Query Forwarding)
 
 const express = require("express");
 const { createServer } = require("http");
@@ -16,7 +16,6 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// Debug info
 console.log("🚀 NPC Browser backend starting…");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
@@ -27,23 +26,21 @@ function ensureDataDir() {
 }
 
 /* ------------------------------------
-   Root OG Preview + Redirect to /index.html
+   Root OG Preview + Redirect
 -------------------------------------- */
 app.get("/", (req, res) => {
   const title = "NPC Browser — AI NPCs That React to the Real World";
-  const desc = "NPC personas generated in real time — shaped by live web data and simulation signals.";
+  const desc = "NPC personas generated in real time — shaped by simulation pulses and live web data.";
   const image = `${ROOT_DOMAIN}/og-npc.jpg`;
 
   res.send(`<!doctype html>
   <html><head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${desc}">
     <meta property="og:image" content="${image}">
     <meta name="twitter:card" content="summary_large_image">
-
     <title>${title}</title>
 
     <script>
@@ -54,7 +51,7 @@ app.get("/", (req, res) => {
 });
 
 /* ------------------------------------
-   Sharing System (Reference Correct)
+   Share System (Reference Working Logic)
 -------------------------------------- */
 const SHARES_FILE = path.join("/data", "shares.json");
 
@@ -79,7 +76,7 @@ app.post("/api/share", (req, res) => {
 });
 
 /* ------------------------------------
-   Short Link /s/:id → OG Preview → Redirect
+   /s/:id → OG Preview + Query Forwarding + Redirect
 -------------------------------------- */
 app.get("/s/:id", (req,res)=>{
   const all = fs.existsSync(SHARES_FILE)
@@ -90,6 +87,7 @@ app.get("/s/:id", (req,res)=>{
   if (!personas) return res.redirect(ROOT_DOMAIN);
 
   const first = personas[0] || {};
+
   const ogTitle = "NPC Browser — Shared NPC Simulation";
   const ogDesc = first.thought
     ? first.thought.slice(0,160)
@@ -106,12 +104,14 @@ app.get("/s/:id", (req,res)=>{
     <meta property="og:description" content="${ogDesc}">
     <meta property="og:image" content="${ogImage}">
     <meta name="twitter:card" content="summary_large_image">
-
     <title>${ogTitle}</title>
 
     <script>
+      const qs = window.location.search;
       sessionStorage.setItem("sharedId","${req.params.id}");
-      setTimeout(()=>{ window.location.href="${ROOT_DOMAIN}"; },1100);
+      setTimeout(()=>{
+        window.location.href = "${ROOT_DOMAIN}" + qs;
+      },1100);
     </script>
   </head><body></body></html>`);
 });
@@ -131,7 +131,7 @@ app.get("/api/share/:id", (req,res)=>{
 });
 
 /* ------------------------------------
-   View Counter (unchanged)
+   View Counter
 -------------------------------------- */
 const VIEW_FILE = path.join("/data","views.json");
 function loadViews(){
@@ -155,18 +155,20 @@ app.get("/api/views",(req,res)=>{
 app.use(express.static(path.join(__dirname,"public")));
 
 /* ------------------------------------
-   HTTPS Link Validator (unchanged)
+   HTTPS Validator
 -------------------------------------- */
 async function validateHttpsLink(url){
   return new Promise(resolve=>{
     try{
-      const req = https.request(url,{method:"HEAD",timeout:3000},res=>{
-        resolve(res.statusCode>=200 && res.statusCode<400);
-      });
+      const req = https.request(
+        url,
+        { method:"HEAD", timeout:3000 },
+        res => resolve(res.statusCode >= 200 && res.statusCode < 400)
+      );
       req.on("error",()=>resolve(false));
-      req.on("timeout",()=>{req.destroy();resolve(false)});
+      req.on("timeout",()=>{ req.destroy(); resolve(false); });
       req.end();
-    }catch{ resolve(false); }
+    } catch { resolve(false); }
   });
 }
 
@@ -181,21 +183,21 @@ io.on("connection", socket=>{
   console.log("🛰️ Client connected:", socket.id);
 
   socket.on("personaSearch", async query=>{
-    console.log("🔍 NPC Search:", query);
+    console.log("🔍 NPC Query:", query);
 
-    /* Detect language */
+    /* Language detect */
     let lang = "en";
-    try {
+    try{
       const lr = await openai.chat.completions.create({
         model:"gpt-4o-mini",
         temperature:0,
         messages:[
-          {role:"system",content:"Return only ISO language code"},
-          {role:"user",content:query}
+          { role:"system", content:"Return only ISO language code" },
+          { role:"user", content:query }
         ]
       });
       lang = lr.choices[0].message.content.trim().toLowerCase();
-    } catch { lang = "en"; }
+    }catch{ lang="en"; }
 
     /* SERPAPI */
     let linkPool=[];
@@ -204,6 +206,7 @@ io.on("connection", socket=>{
         `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`
       );
       const serpData = await serp.json();
+
       linkPool = (serpData.organic_results||[])
         .map(r=>r.link)
         .filter(l=>l && l.startsWith("https://"))
@@ -213,17 +216,17 @@ io.on("connection", socket=>{
       linkPool = linkPool.filter((_,i)=>checks[i]);
 
     }catch(e){
-      console.warn("SERPAPI error:", e.message);
+      console.warn("SERPAPI issue:", e.message);
     }
 
-    const context = linkPool.join(", ") || "No valid data pulses.";
+    const context = linkPool.join(", ") || "No valid signals.";
 
-    /* ---------------- NPC PROMPT (FINAL VERSION) ---------------- */
+    /* NPC Prompt */
     const prompt = `
 You are NPC Browser — a simulation engine generating self-aware NPC personas from live web data.
 
-For the topic "${query}", generate exactly 10 NPC persona JSON objects separated by <NEXT>.
-Each NPC must follow this exact structure:
+For topic "${query}", generate exactly 10 NPC JSON objects separated by <NEXT>.
+Each NPC must follow:
 
 {
   "persona": {
@@ -232,35 +235,33 @@ Each NPC must follow this exact structure:
     "age": "18–49",
     "identity": "NPC role inside the simulation"
   },
-  "thought": "First-person reflection from an NPC who knows they are simulated, describing how '${query}' rewrote their behavior rules. Mention memory rewrites, system signals, data pulses, prior versions, and tie it to real-world signals: ${context}.",
+  "thought": "First-person reflection from a self-aware NPC describing how '${query}' rewrote their behavior rules. Must mention simulation signals, memory rewrites, prior versions, or data pulses. Tie to real-world signals: ${context}. Include one memory injection.",
   "hashtags": ["#tag1","#tag2","#tag3"]
 }
 
 Rules:
-- NPC must be calm, aware, philosophical, slightly eerie.
-- Must reference 'the algorithm', 'the simulation', 'data pulses', or 'memory rewrites'.
-- Must include ONE 'memory injection' (a believable simulated past event).
-- Hashtags must begin with a single # (never ##).
-- Hashtags must be relevant.
-- Respond in ${lang}.
-- Output ONLY valid JSON, separated with <NEXT>.
+- Calm, eerie, philosophical.
+- No human names.
+- Use simulation metaphors.
+- Hashtags must begin with a single #.
+- Language: ${lang}.
+- Output ONLY JSON, separated by <NEXT>.
 `;
 
-    /* Streaming Logic */
     try{
       const completion = await openai.chat.completions.create({
         model:"gpt-4o-mini",
         stream:true,
         temperature:0.95,
         messages:[
-          {role:"system",content:"Output only JSON objects separated by <NEXT>"},
-          {role:"user",content:prompt}
+          { role:"system",content:"Output JSON only, separated by <NEXT>" },
+          { role:"user", content:prompt }
         ]
       });
 
       let buffer="";
 
-      for await (const chunk of completion) {
+      for await (const chunk of completion){
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
 
@@ -280,8 +281,8 @@ Rules:
       socket.emit("personaDone");
 
     }catch(err){
-      console.error("NPC Streaming Error:",err);
-      socket.emit("personaError",err.message);
+      console.error("Streaming error:",err);
+      socket.emit("personaError", err.message);
     }
 
   });
