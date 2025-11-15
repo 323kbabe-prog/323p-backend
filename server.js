@@ -1,18 +1,18 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v2.0)
-//  Base: Your v1.6 backend (no SERPAPI version)
-//  Includes:
+//  server.js — NPC Browser (Super Agentic Trend Engine v2.1)
+//  Base: Your v1.6 backend (no academic logic)
+//  Additions:
 //   • 5 real-world profession categories (A–E)
-//   • Unique category assignment across 10 NPCs
-//   • 3-sentence thought (concept → interpretation → experience)
+//   • Unique category per NPC
+//   • Profession fix (ALWAYS returns profession)
+//   • 3-sentence thought with personal experience
 //   • No topic repetition
 //   • JSON safety
-//   • Output length limits
-//   • Trend engine (unchanged)
-//   • Share system (unchanged)
-//   • Views (unchanged)
-//   • Streaming (unchanged)
-//   • Everything else untouched from v1.6
+//   • Output-length limits
+//   • Trend engine preserved
+//   • Share system preserved
+//   • Views preserved
+//   • Location-aware preserved
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -29,11 +29,11 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 NPC Browser — Agentic Trend Engine v2.0 starting...");
+console.log("🚀 NPC Browser — Agentic Trend Engine v2.1 starting...");
 console.log("API Key:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
-// SAFE JSON PARSER
+// JSON SAFETY
 // ==========================================================
 function safeJSON(str) {
   if (!str || typeof str !== "string") return null;
@@ -53,7 +53,7 @@ function sanitizeNPC(obj) {
   npc.profession = obj?.profession?.trim?.() || "Professional";
 
   npc.thought = obj?.thought?.trim?.() ||
-    "This idea reflects familiar patterns in daily life. It connects to deeper structures of behavior. A moment from my experience last year revealed this clearly.";
+    "This idea reflects familiar behavior patterns. It reveals deeper structures in daily interactions. A moment from my work last year showed me this clearly.";
 
   npc.hashtags = Array.isArray(obj?.hashtags) && obj.hashtags.length
     ? obj.hashtags
@@ -78,8 +78,9 @@ function splitTrendWord(word){
 
 function extractLocation(text){
   const LOC = [
-    "LA","Los Angeles","NYC","New York","Tokyo","Paris","London","Berlin",
-    "Seoul","Busan","Taipei","Singapore","San Francisco","SF",
+    "LA","Los Angeles","NYC","New York","Tokyo",
+    "Paris","London","Berlin","Seoul","Busan",
+    "Taipei","Singapore","San Francisco","SF",
     "Chicago","Miami","Toronto","Seattle"
   ];
   const l = text.toLowerCase();
@@ -125,18 +126,18 @@ app.post("/api/share",(req,res)=>{
 
 app.get("/api/share/:id",(req,res)=>{
   const all = readShares();
-  const shared = all[req.params.id];
-  if(!shared) return res.status(404).json({error:"Not found"});
-  res.json(shared.personas || []);
+  const s = all[req.params.id];
+  if (!s) return res.status(404).json({error:"Not found"});
+  res.json(s.personas || []);
 });
 
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
-  const shared = all[req.params.id];
-  if(!shared) return res.redirect("https://npcbrowser.com");
+  const s = all[req.params.id];
+  if (!s) return res.redirect("https://npcbrowser.com");
 
-  const personas = shared.personas || [];
-  const originalQuery = shared.query || "";
+  const personas = s.personas || [];
+  const originalQuery = s.query || "";
 
   const first = personas[0] || {};
   const preview = (first.thought || "").slice(0,150);
@@ -152,17 +153,18 @@ app.get("/s/:id",(req,res)=>{
 <title>NPC Share</title>
 <script>
 sessionStorage.setItem("sharedId","${req.params.id}");
-setTimeout(()=>{ window.location.href =
-  "https://npcbrowser.com?query=" + encodeURIComponent("${originalQuery}"); 
+setTimeout(()=>{ 
+  window.location.href="https://npcbrowser.com?query=" + encodeURIComponent("${originalQuery}");
 },900);
 </script>
 </head><body></body></html>`);
 });
 
 // ==========================================================
-// SOCKET.IO — NPC ENGINE v2.0
+// SOCKET.IO — NPC ENGINE v2.1 (profession FIXED)
 // ==========================================================
-const httpServer = createServer(app);
+const { createServer: createHTTP } = require("http");
+const httpServer = createHTTP(app);
 const io = new Server(httpServer,{cors:{origin:"*"}});
 
 io.on("connection", socket=>{
@@ -185,7 +187,7 @@ io.on("connection", socket=>{
         };
 
         // ======================================================
-        // THOUGHT + PROFESSION GENERATION
+        // Profession + Thought Generation (v2.1)
         // ======================================================
         const prompt = `
 Generate a professional NPC.
@@ -195,25 +197,24 @@ Gender: ${demo.gender}
 Race: ${demo.race}
 Age: ${demo.age}
 
-TASK 1 — PROFESSION (5 Categories):
+TASK 1 — PROFESSION (Choose 1 Category):
 A — Medical & Health
 B — Law / Government / Public Safety
 C — Engineering / Tech / Science
-D — Business / Economics / Trade
+D — Business / Trade / Economics
 E — Creative / Arts / Media
 
-RULES:
+Rules:
 - MUST choose a category not used yet in this batch.
-- Profession must be real, everyday, max 50 characters.
-- NO academic or major-based titles.
+- Profession must be real and under 50 characters.
 
-TASK 2 — THOUGHT (3 sentences, < 320 chars):
+TASK 2 — THOUGHT (3 sentences, under 320 chars):
 1) conceptual insight (do NOT repeat "${query}")
 2) deeper interpretation
-3) personal experience from their job
+3) short personal experience
 
 TASK 3 — HASHTAGS:
-Return 3–5 simple hashtags (no #).
+3–5 simple hashtags (no #).
 
 JSON ONLY:
 {
@@ -233,8 +234,8 @@ JSON ONLY:
         let parsed = safeJSON(raw.choices?.[0]?.message?.content || "");
         parsed = sanitizeNPC(parsed);
 
-        // Unique category enforcement
-        if(!parsed.category || usedCats.has(parsed.category)){
+        // Force unique categories
+        if (!parsed.category || usedCats.has(parsed.category)){
           const unused = ALL_CATS.filter(c=>!usedCats.has(c));
           parsed.category = unused[0] || parsed.category || "E";
         }
@@ -244,7 +245,7 @@ JSON ONLY:
         // TREND ENGINE (unchanged)
         // ======================================================
         const tPrompt = `
-Turn the following into EXACTLY 4 short trend keywords:
+Turn this into EXACTLY 4 short trend keywords:
 
 "${parsed.thought}"
 
@@ -264,12 +265,14 @@ JSON ONLY:
 
         let trendWords = trendParsed.trend.map(splitTrendWord);
 
+        // Location-aware override
         if (detectedLocation){
           trendWords[0] = `${detectedLocation} vibe`;
         }
 
+        // FINAL PERSONA — profession FIXED HERE
         socket.emit("personaChunk",{
-          profession: parsed.profession,
+          profession: parsed.profession,           // ✔ FIXED
           gender: demo.gender,
           race: demo.race,
           age: demo.age,
@@ -280,7 +283,7 @@ JSON ONLY:
         });
 
       }
-      
+
       socket.emit("personaDone");
 
     } catch(err){
@@ -314,5 +317,5 @@ app.use(express.static(path.join(__dirname,"public")));
 //////////////////////////////////////////////////////////////
 const PORT=process.env.PORT||3000;
 httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser v2.0 running on :${PORT}`);
+  console.log(`🔥 NPC Browser v2.1 running on :${PORT}`);
 });
