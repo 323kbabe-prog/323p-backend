@@ -1,5 +1,5 @@
 // ////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Edition — FINAL)
+//  server.js — NPC Browser (Super Agentic Edition — PATCHED)
 // ////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -34,13 +34,26 @@ function safeJSON(str) {
 }
 
 // ==========================================================
+// TREND WORD SPLITTER (FIX for TikTok/Instagram)
+// ==========================================================
+function splitTrendWord(word){
+  return word
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([A-Za-z])([0-9])/g, "$1 $2")
+    .replace(/([0-9])([A-Za-z])/g, "$1 $2")
+    .replace(/[\-_]/g, " ")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .trim();
+}
+
+// ==========================================================
 // RANDOM DEMOGRAPHICS + RANDOM FIELDS
 // ==========================================================
 const genders = ["Female", "Male", "Nonbinary"];
 const races = ["Asian", "Black", "White", "Latino", "Middle Eastern", "Mixed"];
 const ages = [20, 21, 22, 23, 24, 25];
 
-// Clean academic field names
+// Clean academic identity names
 const fields = [
   "Psychology",
   "Sociology",
@@ -88,7 +101,7 @@ Extract agentic reasoning.
 INPUT:
 "${thought}"
 
-Return JSON exactly as:
+Return JSON only:
 {
   "summary": "5–9 word phrase",
   "clusters": ["cluster1", "cluster2", "cluster3"]
@@ -106,7 +119,6 @@ Return JSON exactly as:
     const parsed = safeJSON(raw);
 
     if (!parsed || !parsed.summary) return res.json(fallback);
-
     if (!Array.isArray(parsed.clusters)) parsed.clusters = [];
 
     return res.json(parsed);
@@ -151,8 +163,8 @@ ${persona.persona.gender}, ${persona.persona.race}, ${persona.persona.age}, ${pe
 TOPIC: "${query}"
 
 TASK:
-1. Write a 2–3 sentence deep academic/agentic interpretation from this field.
-2. Provide 3–5 related hashtags (no # symbol).
+1. Write a 2–3 sentence deep academic/agentic interpretation.
+2. Provide 3–5 hashtags (no # symbol).
 
 Return JSON:
 {
@@ -170,22 +182,22 @@ Return JSON:
         const raw = resp.choices?.[0]?.message?.content || "";
         const parsed = safeJSON(raw) || {
           thought: "An NPC perspective forms.",
-          hashtags: ["npc","insight"]
+          hashtags: ["npc","analysis"]
         };
 
         persona.thought = parsed.thought || "An NPC reflects.";
-        persona.hashtags = parsed.hashtags || ["npc","perspective"];
+        persona.hashtags = parsed.hashtags || ["npc","signal"];
 
         // ======================================================
-        // AGENTIC TREND QUERY (TikTok/Instagram)
+        // AGENTIC TREND QUERY (For TikTok/Instagram)
         // Option 4: thought + hashtags + user topic
         // ======================================================
         const trendPrompt = `
-Create 4–6 SHORT TikTok/Instagram-friendly keywords (no #, no commas).
+Create 4–6 SHORT TikTok/Instagram-friendly keywords (NO #, NO commas).
 Use:
-- this NPC thought: "${persona.thought}"
-- these hashtags: ${persona.hashtags.join(", ")}
-- the user topic: "${query}"
+- NPC thought: "${persona.thought}"
+- Hashtags: ${persona.hashtags.join(", ")}
+- User topic: "${query}"
 
 Return JSON:
 {
@@ -202,7 +214,8 @@ Return JSON:
         const trendRaw = trendResp.choices?.[0]?.message?.content || "";
         const trendParsed = safeJSON(trendRaw) || { trend: ["LA","vibes","culture"] };
 
-        persona.trend = trendParsed.trend || ["LA","vibes","culture"];
+        // PATCH: split fused keywords for TikTok/IG
+        persona.trend = trendParsed.trend.map(w => splitTrendWord(w));
 
         socket.emit("personaChunk", persona);
       }
