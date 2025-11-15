@@ -90,43 +90,43 @@ const ages=[...Array.from({length:32},(_,i)=>i+18)];
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
 // ==========================================================
-// STRICT PROFESSION POOLS (A4 MIXED LEVELS, 5 PER CATEGORY)
+// STRICT MAJOR POOLS (A4 MIXED LEVELS, 5 PER CATEGORY)
 // ==========================================================
 const PROF = {
-  A: [
-    "Nurse",
-    "EMT",
-    "Physician Assistant",
-    "Therapist",
-    "Public Health Coordinator"
+  A: [ // Health, Behavior & Human Systems
+    "Human Biology",
+    "Psychology",
+    "Sociology",
+    "Public Health",
+    "Bioengineering"
   ],
-  B: [
-    "Police Officer",
-    "Firefighter",
-    "Immigration Officer",
-    "Lawyer",
-    "City Safety Coordinator"
+  B: [ // Law, Policy & Society
+    "Political Science",
+    "Public Policy",
+    "International Relations",
+    "Ethics in Society",
+    "Science, Technology & Society"
   ],
-  C: [
-    "Civil Engineer",
-    "Software Developer",
-    "Data Scientist",
-    "Pilot",
-    "Environmental Scientist"
+  C: [ // Engineering & Computational Sciences
+    "Computer Science",
+    "Mechanical Engineering",
+    "Electrical Engineering",
+    "Symbolic Systems",
+    "Aeronautics & Astronautics"
   ],
-  D: [
-    "Retail Manager",
-    "Business Owner",
-    "Financial Analyst",
-    "Supply Chain Coordinator",
-    "Economist"
+  D: [ // Business, Economics & Data
+    "Economics",
+    "Management Science & Engineering",
+    "Data Science",
+    "Mathematical & Computational Science",
+    "Statistics"
   ],
-  E: [
-    "Chef",
-    "Journalist",
-    "Photographer",
-    "Fashion Designer",
-    "Content Creator"
+  E: [ // Arts, Media, Humanities & Design
+    "Art Practice",
+    "Communication",
+    "Film & Media Studies",
+    "Linguistics",
+    "Music"
   ]
 };
 
