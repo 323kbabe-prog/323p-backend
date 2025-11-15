@@ -1,4 +1,4 @@
-// server.js — npcbrowser.com (Simulation NPC Edition + Short Link + Language + SERPAPI)
+// server.js — npcbrowser.com (NPC Simulation Edition + Reference Share System)
 
 const express = require("express");
 const { createServer } = require("http");
@@ -16,7 +16,8 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-console.log("🚀 Starting NPC Browser backend (Simulation NPC Edition)…");
+// Debug info
+console.log("🚀 NPC Browser backend starting…");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 console.log("SERPAPI_KEY:", !!process.env.SERPAPI_KEY);
 
@@ -25,10 +26,12 @@ function ensureDataDir() {
   if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 }
 
-/* ---------------- Root OG Preview ---------------- */
+/* ------------------------------------
+   Root OG Preview + Redirect to /index.html
+-------------------------------------- */
 app.get("/", (req, res) => {
   const title = "NPC Browser — AI NPCs That React to the Real World";
-  const desc = "NPC personas generated in real time — shaped by the simulation and live web data.";
+  const desc = "NPC personas generated in real time — shaped by live web data and simulation signals.";
   const image = `${ROOT_DOMAIN}/og-npc.jpg`;
 
   res.send(`<!doctype html>
@@ -39,61 +42,58 @@ app.get("/", (req, res) => {
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${desc}">
     <meta property="og:image" content="${image}">
-    <meta property="og:type" content="website">
-
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="${title}">
-    <meta name="twitter:description" content="${desc}">
-    <meta name="twitter:image" content="${image}">
 
     <title>${title}</title>
+
     <script>
       const qs = window.location.search;
-      setTimeout(()=>{ window.location.replace("/index.html" + qs); },1100);
+      setTimeout(()=>{ window.location.replace("/index.html"+qs); },1100);
     </script>
-
   </head><body></body></html>`);
 });
 
-/* ---------------- Short-Link Share System ---------------- */
+/* ------------------------------------
+   Sharing System (Reference Correct)
+-------------------------------------- */
 const SHARES_FILE = path.join("/data", "shares.json");
 
 app.post("/api/share", (req, res) => {
   try {
     ensureDataDir();
-    const id = Math.random().toString(36).substring(2, 8);
+    const id = Math.random().toString(36).substring(2,8);
 
-    const all =
-      fs.existsSync(SHARES_FILE)
-        ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
-        : {};
+    const all = fs.existsSync(SHARES_FILE)
+      ? JSON.parse(fs.readFileSync(SHARES_FILE,"utf8"))
+      : {};
 
     all[id] = req.body.personas;
 
-    fs.writeFileSync(SHARES_FILE, JSON.stringify(all, null, 2));
-    res.json({ shortId: id });
+    fs.writeFileSync(SHARES_FILE, JSON.stringify(all,null,2));
+    res.json({ shortId:id });
 
   } catch (err) {
     console.error("❌ Share save failed:", err);
-    res.status(500).json({ error: "Failed to save share" });
+    res.status(500).json({ error:"Share failed" });
   }
 });
 
-/* ---------------- OG Preview for /s/:id ---------------- */
-app.get("/s/:id", (req, res) => {
-  const all =
-    fs.existsSync(SHARES_FILE)
-      ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
-      : {};
+/* ------------------------------------
+   Short Link /s/:id → OG Preview → Redirect
+-------------------------------------- */
+app.get("/s/:id", (req,res)=>{
+  const all = fs.existsSync(SHARES_FILE)
+    ? JSON.parse(fs.readFileSync(SHARES_FILE,"utf8"))
+    : {};
 
   const personas = all[req.params.id];
   if (!personas) return res.redirect(ROOT_DOMAIN);
 
   const first = personas[0] || {};
-  const ogTitle = "NPC Browser — Shared NPC from the Simulation";
+  const ogTitle = "NPC Browser — Shared NPC Simulation";
   const ogDesc = first.thought
-    ? first.thought.slice(0, 160)
-    : "Simulation NPC generated from live data.";
+    ? first.thought.slice(0,160)
+    : "Simulation-generated NPC.";
 
   const ogImage = `${ROOT_DOMAIN}/og-npc.jpg`;
 
@@ -105,207 +105,190 @@ app.get("/s/:id", (req, res) => {
     <meta property="og:title" content="${ogTitle}">
     <meta property="og:description" content="${ogDesc}">
     <meta property="og:image" content="${ogImage}">
-    <meta property="og:type" content="website">
-
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="${ogTitle}">
-    <meta name="twitter:description" content="${ogDesc}">
-    <meta name="twitter:image" content="${ogImage}">
 
     <title>${ogTitle}</title>
+
     <script>
       sessionStorage.setItem("sharedId","${req.params.id}");
       setTimeout(()=>{ window.location.href="${ROOT_DOMAIN}"; },1100);
     </script>
-
   </head><body></body></html>`);
 });
 
-/* ---------------- Load Shared Personas ---------------- */
-app.get("/api/share/:id", (req, res) => {
-  const all =
-    fs.existsSync(SHARES_FILE)
-      ? JSON.parse(fs.readFileSync(SHARES_FILE, "utf8"))
-      : {};
+/* ------------------------------------
+   Load Shared Personas
+-------------------------------------- */
+app.get("/api/share/:id", (req,res)=>{
+  const all = fs.existsSync(SHARES_FILE)
+    ? JSON.parse(fs.readFileSync(SHARES_FILE,"utf8"))
+    : {};
 
   const personas = all[req.params.id];
-  if (!personas) return res.status(404).json({ error: "Not found" });
+  if (!personas) return res.status(404).json({ error:"Not found" });
 
   res.json(personas);
 });
 
-/* ---------------- View Counter ---------------- */
-const VIEW_FILE = path.join("/data", "views.json");
-
-function loadViews() {
-  try {
-    return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8"));
-  } catch {
-    return { total: 0 };
-  }
+/* ------------------------------------
+   View Counter (unchanged)
+-------------------------------------- */
+const VIEW_FILE = path.join("/data","views.json");
+function loadViews(){
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
+  catch { return { total:0 }; }
 }
-
-function saveViews(v) {
+function saveViews(v){
   ensureDataDir();
-  fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
+  fs.writeFileSync(VIEW_FILE, JSON.stringify(v,null,2));
 }
-
-app.get("/api/views", (req, res) => {
-  const v = loadViews();
+app.get("/api/views",(req,res)=>{
+  const v=loadViews();
   v.total++;
   saveViews(v);
-  res.json({ total: v.total });
+  res.json({ total:v.total });
 });
 
-/* ---------------- Static Files ---------------- */
-app.use(express.static(path.join(__dirname, "public")));
+/* ------------------------------------
+   Static Files
+-------------------------------------- */
+app.use(express.static(path.join(__dirname,"public")));
 
-/* ---------------- Validate HTTPS Link ---------------- */
-async function validateHttpsLink(url) {
-  return new Promise(resolve => {
-    try {
-      const req = https.request(
-        url,
-        { method: "HEAD", timeout: 3000 },
-        res => resolve(res.statusCode >= 200 && res.statusCode < 400)
-      );
-      req.on("error", () => resolve(false));
-      req.on("timeout", () => { req.destroy(); resolve(false); });
+/* ------------------------------------
+   HTTPS Link Validator (unchanged)
+-------------------------------------- */
+async function validateHttpsLink(url){
+  return new Promise(resolve=>{
+    try{
+      const req = https.request(url,{method:"HEAD",timeout:3000},res=>{
+        resolve(res.statusCode>=200 && res.statusCode<400);
+      });
+      req.on("error",()=>resolve(false));
+      req.on("timeout",()=>{req.destroy();resolve(false)});
       req.end();
-    } catch {
-      resolve(false);
-    }
+    }catch{ resolve(false); }
   });
 }
 
-/* ---------------- NPC Streaming Engine ---------------- */
+/* ------------------------------------
+   Streaming NPC Engine
+-------------------------------------- */
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const io = new Server(httpServer,{ cors:{ origin:"*" } });
+const openai = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
 
-io.on("connection", socket => {
+io.on("connection", socket=>{
   console.log("🛰️ Client connected:", socket.id);
 
-  socket.on("personaSearch", async query => {
-    console.log(`🔍 NPC Search for: ${query}`);
+  socket.on("personaSearch", async query=>{
+    console.log("🔍 NPC Search:", query);
 
     /* Detect language */
     let lang = "en";
     try {
       const lr = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0,
-        messages: [
-          { role: "system", content: "Return only ISO language code" },
-          { role: "user", content: query }
+        model:"gpt-4o-mini",
+        temperature:0,
+        messages:[
+          {role:"system",content:"Return only ISO language code"},
+          {role:"user",content:query}
         ]
       });
-
       lang = lr.choices[0].message.content.trim().toLowerCase();
+    } catch { lang = "en"; }
 
-    } catch {
-      lang = "en";
-    }
-
-    /* SERPAPI Fetch */
-    let linkPool = [];
-    try {
+    /* SERPAPI */
+    let linkPool=[];
+    try{
       const serp = await fetch(
         `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${process.env.SERPAPI_KEY}`
       );
       const serpData = await serp.json();
-
-      linkPool = (serpData.organic_results || [])
-        .map(r => r.link)
-        .filter(l => l && l.startsWith("https://"))
-        .slice(0, 5);
+      linkPool = (serpData.organic_results||[])
+        .map(r=>r.link)
+        .filter(l=>l && l.startsWith("https://"))
+        .slice(0,5);
 
       const checks = await Promise.all(linkPool.map(validateHttpsLink));
-      linkPool = linkPool.filter((_, i) => checks[i]);
+      linkPool = linkPool.filter((_,i)=>checks[i]);
 
-    } catch (e) {
-      console.warn("⚠️ SERPAPI issue:", e.message);
+    }catch(e){
+      console.warn("SERPAPI error:", e.message);
     }
 
-    const context = linkPool.join(", ") || "No valid sources.";
+    const context = linkPool.join(", ") || "No valid data pulses.";
 
-    /* ---------------- FIXED NPC PROMPT ---------------- */
+    /* ---------------- NPC PROMPT (FINAL VERSION) ---------------- */
     const prompt = `
-You are NPC Browser — a simulation engine generating self-aware NPC personas based on live web data.
+You are NPC Browser — a simulation engine generating self-aware NPC personas from live web data.
 
 For the topic "${query}", generate exactly 10 NPC persona JSON objects separated by <NEXT>.
-Each NPC must follow this structure exactly:
+Each NPC must follow this exact structure:
 
 {
   "persona": {
-    "gender": "Male, Female, or Nonbinary",
-    "race": "Asian, Black, White, Latino, etc.",
+    "gender": "Male/Female/Nonbinary",
+    "race": "Asian/Black/White/Latino/etc.",
     "age": "18–49",
     "identity": "NPC role inside the simulation"
   },
-  "thought": "First-person reflection from an NPC who realizes they exist inside a simulation, and describes how the topic '${query}' rewrote their behavior rules. Include calm eerie awareness, philosophy, memory rewrites, system pulses, and reference real-world signals (${context}).",
-  "hashtags": ["#tag1", "#tag2", "#tag3"]
+  "thought": "First-person reflection from an NPC who knows they are simulated, describing how '${query}' rewrote their behavior rules. Mention memory rewrites, system signals, data pulses, prior versions, and tie it to real-world signals: ${context}.",
+  "hashtags": ["#tag1","#tag2","#tag3"]
 }
 
-NPC rules:
-- They KNOW they are NPCs generated by the algorithm.
-- They speak in first person.
-- They reference “data pulses”, “memory rewrites”, “system signals”, “the simulation”, “my previous version”.
-- Include one believable “memory injection” (a past simulated experience).
-- Hashtags MUST begin with a single # (never ##).
-- Hashtags MUST be real-world tags relevant to the topic.
+Rules:
+- NPC must be calm, aware, philosophical, slightly eerie.
+- Must reference 'the algorithm', 'the simulation', 'data pulses', or 'memory rewrites'.
+- Must include ONE 'memory injection' (a believable simulated past event).
+- Hashtags must begin with a single # (never ##).
+- Hashtags must be relevant.
 - Respond in ${lang}.
-- Output ONLY valid JSON, separated by <NEXT>.
+- Output ONLY valid JSON, separated with <NEXT>.
 `;
 
-    /* Streaming */
-    try {
+    /* Streaming Logic */
+    try{
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        stream: true,
-        temperature: 0.95,
-        messages: [
-          { role: "system", content: "Output only JSON, separated by <NEXT>." },
-          { role: "user", content: prompt }
+        model:"gpt-4o-mini",
+        stream:true,
+        temperature:0.95,
+        messages:[
+          {role:"system",content:"Output only JSON objects separated by <NEXT>"},
+          {role:"user",content:prompt}
         ]
       });
 
-      let buffer = "";
+      let buffer="";
 
       for await (const chunk of completion) {
         const text = chunk.choices?.[0]?.delta?.content || "";
         buffer += text;
 
-        if (buffer.includes("<NEXT>")) {
+        if(buffer.includes("<NEXT>")){
           const parts = buffer.split("<NEXT>");
-
-          for (let i = 0; i < parts.length - 1; i++) {
-            try {
-              socket.emit("personaChunk", JSON.parse(parts[i].trim()));
-            } catch {}
+          for(let i=0;i<parts.length-1;i++){
+            try{ socket.emit("personaChunk", JSON.parse(parts[i].trim())); }catch{}
           }
-
-          buffer = parts[parts.length - 1];
+          buffer = parts[parts.length-1];
         }
       }
 
-      if (buffer.trim()) {
-        try {
-          socket.emit("personaChunk", JSON.parse(buffer.trim()));
-        } catch {}
+      if(buffer.trim()){
+        try{ socket.emit("personaChunk", JSON.parse(buffer.trim())); }catch{}
       }
 
       socket.emit("personaDone");
 
-    } catch (err) {
-      console.error("❌ Streaming error:", err);
-      socket.emit("personaError", err.message);
+    }catch(err){
+      console.error("NPC Streaming Error:",err);
+      socket.emit("personaError",err.message);
     }
+
   });
 });
 
-/* ---------------- Start Server ---------------- */
+/* ------------------------------------
+   Start Server
+-------------------------------------- */
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`✅ NPC Browser backend running on :${PORT}`);
-});
+httpServer.listen(PORT, ()=> console.log(`✅ NPC Browser backend running on :${PORT}`));
