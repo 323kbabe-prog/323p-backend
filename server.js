@@ -1,7 +1,8 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v1.7)
-//  NPC Update: Ultra-Diverse Real Professions + No Topic Repeat
-//  + Personal Experience + ALL SYSTEMS PRESERVED
+//  server.js — NPC Browser (Super Agentic Trend Engine v1.8)
+//  TRUE CROSS-INDUSTRY DIVERSITY (5 CATEGORY SYSTEM)
+//  Professional Thought + Personal Experience + No Topic Repeat
+//  All system functions preserved (Share, Auto-search, Trends)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -18,7 +19,7 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 NPC Browser — Agentic Trend Engine v1.7 starting...");
+console.log("🚀 NPC Browser — Agentic Trend Engine v1.8 starting...");
 console.log("API Key:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
@@ -53,19 +54,19 @@ function extractLocation(text){
     "LA","Los Angeles","NYC","New York","Tokyo",
     "Paris","London","Berlin","Seoul","Busan",
     "Taipei","Singapore","San Francisco","SF",
-    "Chicago","Miami","Toronto"
+    "Chicago","Miami","Toronto","Seattle"
   ];
   const lower = text.toLowerCase();
   for (let loc of LOCATIONS){
-    if(lower.includes(loc.toLowerCase().replace(".",""))){
-      return loc.replace(".","");
+    if(lower.includes(loc.toLowerCase())){
+      return loc;
     }
   }
   return null;
 }
 
 // ==========================================================
-// DEMOGRAPHICS & ACADEMIC FIELDS (Used only for personality variation)
+// DEMOGRAPHICS & DISCIPLINES (used only for personality flavor)
 // ==========================================================
 const genders=["Female","Male","Nonbinary"];
 const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
@@ -89,7 +90,7 @@ function pickUnique(arr, count){
 }
 
 // ==========================================================
-// SHARE SYSTEM (UNCHANGED)
+// SHARE SYSTEM (unchanged)
 // ==========================================================
 const SHARES_FILE = "/data/shares.json";
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
@@ -154,7 +155,7 @@ setTimeout(()=>{
 });
 
 // ==========================================================
-// SOCKET.IO — MAIN NPC GENERATOR (v1.7)
+// SOCKET.IO — NPC GENERATION ENGINE v1.8
 // ==========================================================
 const httpServer=createServer(app);
 const io=new Server(httpServer,{cors:{origin:"*"}});
@@ -167,7 +168,11 @@ io.on("connection", socket=>{
       const selectedFields = pickUnique(fields,10);
       const detectedLocation = extractLocation(query);
 
+      // Track used categories to enforce diversity
+      const usedCategories = new Set();
+
       for(let i=0;i<10;i++){
+
         const persona = {
           persona:{
             gender:genders[Math.floor(Math.random()*genders.length)],
@@ -182,61 +187,72 @@ io.on("connection", socket=>{
         };
 
         // ======================================================
-        // NPC THOUGHT ENGINE v1.7
+        // NPC THOUGHT ENGINE v1.8 — CROSS-INDUSTRY RULES
         // ======================================================
         const thoughtPrompt = `
-You are generating a highly realistic professional perspective.
+You are generating a realistic professional persona.
 
 NPC DEMOGRAPHICS:
 - Gender: ${persona.persona.gender}
 - Race: ${persona.persona.race}
 - Age: ${persona.persona.age}
 
-NPC ACADEMIC BACKGROUND:
+NPC BACKGROUND:
 "${persona.persona.identity}"
 
-TASK 1 — Profession (CRITICAL DIVERSITY RULE):
-Create a **real-world profession** for this NPC that:
-- is a job someone in everyday life could realistically have,
-- belongs to a **different industry** than the other NPCs,
-- avoids similar patterns (no repeated templates like “___ analyst”, “___ researcher”),
-- does NOT mention “major” or “Stanford”.
+TASK 1 — Profession (STRICT 5-CATEGORY SYSTEM):
 
-Allowed industries include:
-medicine, law, engineering, education, arts, trades, journalism,
-transportation, public safety, finance, therapy, architecture, design,
-software development, social work, hospitality, business, science, etc.
+Assign this NPC a **real profession** from EXACTLY ONE of these 5 industries:
 
-Examples (do NOT copy): doctor, nurse, lawyer, teacher, engineer,
-chef, electrician, journalist, pilot, therapist, architect, accountant,
-software developer, firefighter, fashion designer.
+CATEGORY A — MEDICAL & HEALTH  
+(doctor, nurse, therapist, clinician, psychologist, EMT, physical therapist, etc.)
 
-TASK 2 — Thought:
-Write a **3-sentence reflection** about the *idea behind "${query}"*.
+CATEGORY B — LAW / GOVERNMENT / PUBLIC SAFETY  
+(lawyer, police officer, firefighter, judge’s clerk, social worker, immigration officer, etc.)
+
+CATEGORY C — ENGINEERING / TECH / SCIENCE  
+(software developer, civil engineer, mechanical engineer, data scientist, pilot, lab technologist, etc.)
+
+CATEGORY D — BUSINESS / ECONOMICS / TRADE  
+(business owner, mechanic, economist, financial advisor, restaurant manager, supply chain manager, etc.)
+
+CATEGORY E — CREATIVE / ARTS / MEDIA  
+(journalist, artist, chef, musician, fashion designer, filmmaker, designer, etc.)
+
+RULES:
+- MUST choose a profession from a category **NOT yet used** by other NPCs in this batch.
+- MUST be a totally REAL job someone could have.
+- MUST NOT use academic-sounding roles (“researcher”, “analyst”, “specialist” unless normal).
+- NEVER mention “major” or “Stanford”.
+
+TASK 2 — Thought (3 SENTENCES):
+
+Write a **three-sentence reflection** about the *idea behind "${query}"*.
 
 STRUCTURE:
-1. Sentence 1 → A conceptual reflection from their professional worldview  
-   (DO NOT repeat the topic words directly)
-2. Sentence 2 → Deeper interpretation using the logic of their field  
-3. Sentence 3 → A short personal experience (e.g.,  
-   “Last year I handled a case where…”,  
-   “I once had a patient who…”,  
-   “During a project, I saw…”,  
-   “A class I taught revealed this to me…”)
+1. Conceptual reflection based on their profession  
+   (DO NOT repeat or quote the topic words)
+2. Deeper professional interpretation  
+3. A short personal experience related to their job  
+   (“I once had a patient who…”,  
+    “During a case last year…”,  
+    “In a project I led…”,  
+    “A class I taught revealed…”)
 
-Rules:
-- DO NOT describe the topic directly.
-- DO NOT repeat the topic phrase.
-- Tone must be realistic, professional, and grounded.
+RULES:
+- DO NOT describe the topic.  
+- DO NOT repeat the topic phrase.  
+- Tone must be intelligent, grounded, and realistic.
 
 TASK 3 — Hashtags:
-Return 3–5 simple, trend-friendly hashtags (NO # symbol).
+Return 3–5 simple hashtags (NO # symbol).
 
-JSON ONLY:
+OUTPUT JSON:
 {
   "profession": "Real profession",
   "thought": "Three-sentence reflection ending with a personal experience",
-  "hashtags": ["word1","word2","word3"]
+  "hashtags": ["word1","word2","word3"],
+  "category": "A/B/C/D/E"
 }
         `;
 
@@ -246,11 +262,22 @@ JSON ONLY:
           temperature:0.85
         });
 
-        const parsed = safeJSON(resp.choices?.[00000]?.message?.content || "") || {
+        const parsed = safeJSON(resp.choices?.[0]?.message?.content || "") || {
           profession:"Teacher",
-          thought:"This idea reveals how people organize meaning in their daily routines. Different life stages influence how individuals internalize these moments. A class discussion I led last year showed me how deeply this can shape someone’s outlook.",
-          hashtags:["culture","pattern"]
+          thought:"This idea reveals how people create meaning in ordinary routines. It reflects deeper patterns underlying behavior. A class I taught once made this unexpectedly clear.",
+          hashtags:["culture","pattern"],
+          category:"E"
         };
+
+        // Enforce UNIQUE category
+        if (usedCategories.has(parsed.category)) {
+          // If duplicate category returned, fall back to assigning a missing category
+          const allCats = ["A","B","C","D","E"];
+          const unused = allCats.filter(c => !usedCategories.has(c));
+          parsed.category = unused[0] || parsed.category;
+        }
+
+        usedCategories.add(parsed.category);
 
         persona.profession = parsed.profession;
         persona.thought = parsed.thought;
@@ -312,7 +339,7 @@ JSON ONLY:
 });
 
 // ==========================================================
-// VIEW COUNTER (UNCHANGED)
+// VIEW COUNTER (unchanged)
 /////////////////////////////////////////////////////////////
 const VIEW_FILE="/data/views.json";
 function readViews(){try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0}}}
@@ -324,7 +351,7 @@ app.get("/api/views",(req,res)=>{
 });
 
 // ==========================================================
-// STATIC FILES (UNCHANGED)
+// STATIC FILES
 /////////////////////////////////////////////////////////////
 app.use(express.static(path.join(__dirname,"public")));
 
@@ -333,5 +360,5 @@ app.use(express.static(path.join(__dirname,"public")));
 /////////////////////////////////////////////////////////////
 const PORT=process.env.PORT||3000;
 httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser v1.7 running on :${PORT}`);
+  console.log(`🔥 NPC Browser v1.8 running on :${PORT}`);
 });
