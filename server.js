@@ -28,7 +28,7 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-console.log("🚀 NPC Browser — Agentic Trend Engine v2.5 starting...");
+console.log("🚀 NPC Browser — Agentic Trend Engine v2.6 starting...");
 console.log("OpenAI OK:", !!process.env.OPENAI_API_KEY);
 console.log("SERP API Enabled:", !!SERP_KEY);
 
@@ -242,14 +242,16 @@ CHOSEN PROFESSION (MUST USE): "${profession}"
 WEB CONTEXT:
 "${serpContext}"
 
-TASK — Thought (3 sentences, < 320 chars):
+TASK — Thought (3 sentences, < 420 chars):
 Respond to the underlying scenario suggested by: "${query}"
 WITHOUT repeating the exact topic words.
 
 SENTENCE RULES:
-1) Interpret the scenario through this profession  
-2) Explain deeper implications or chain reactions  
-3) End with a subtle micro-emotion (professional tone only) + personal experience  
+1) Connect the situation to the NPC’s professional worldview  
+   (make each opening distinct — no template phrasing)
+2) Describe deeper structural or behavioral implications  
+3) Provide a concrete, brief personal moment from their job  
+   (professional tone, subtle micro-emotion, no emotional labels) 
 
 HASHTAGS:
 Return 3–5 simple tags (no #).
