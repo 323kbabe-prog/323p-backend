@@ -1,4 +1,7 @@
-// server.js — NPC Browser (Agentic Reasoning Edition — SAFE VERSION)
+// ////////////////////////////////////////////////////////////
+//  server.js — NPC Browser (Super Agentic Edition — SAFE)
+// ////////////////////////////////////////////////////////////
+
 const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
@@ -7,63 +10,66 @@ const OpenAI = require("openai");
 const cors = require("cors");
 const fs = require("fs");
 
+// ------------------------------
+// Initialize Express
+// ------------------------------
 const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+// ------------------------------
+// OpenAI client
+// ------------------------------
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 Agentic NPC backend booting...");
-console.log("API key detected:", !!process.env.OPENAI_API_KEY);
+console.log("🚀 Agentic NPC backend starting...");
+console.log("OPENAI_API_KEY loaded:", !!process.env.OPENAI_API_KEY);
 
-/* ------------------------------------------
-   SAFE JSON PARSER (never crashes)
-------------------------------------------- */
+// ==========================================================
+//  SAFE JSON PARSER — never allows server crash
+// ==========================================================
 function safeJSON(str) {
   try {
-    // Try exact parse first
     return JSON.parse(str);
   } catch {
     try {
-      // Extract JSON object using regex
       const match = str.match(/\{[\s\S]*\}/);
       if (match) return JSON.parse(match[0]);
     } catch {}
-    return null; // failed completely
   }
+  return null;
 }
 
-/* ------------------------------------------
-   AGENTIC EXTRACTION ENDPOINT (SAFE)
-   Calls gpt-4o-mini → Extract summary & clusters
-   ALWAYS returns something valid.
-------------------------------------------- */
+// ==========================================================
+//  AGENTIC EXTRACTION ENDPOINT (gpt-4o-mini)
+//  This powers the super agentic search engine.
+// ==========================================================
 app.post("/api/agentic", async (req, res) => {
-  const thought = req.body.thought || "";
+  const thought = (req.body.thought || "").trim();
 
+  // fallback summary + clusters if OpenAI fails
   const fallback = {
     summary: "npc perspective insight",
     clusters: [
       "npc reasoning",
       "agentic search",
-      "interpretive viewpoint"
+      "interpretive signal"
     ]
   };
 
-  if (!thought.trim()) {
-    return res.json(fallback);
-  }
+  if (!thought) return res.json(fallback);
 
   const prompt = `
-Extract agentic reasoning from the NPC thought.
+Extract agentic reasoning from the NPC's thought.
 
-INPUT:
+NPC THOUGHT:
 "${thought}"
 
-OUTPUT JSON ONLY:
+Return JSON ONLY in this EXACT format:
+
 {
   "summary": "one short phrase (5–9 words)",
-  "clusters": ["2–4 word cluster", "cluster", "cluster"]
+  "clusters": ["2–4 word cluster", "cluster", "cluster", "cluster"]
 }
 `;
 
@@ -78,11 +84,10 @@ OUTPUT JSON ONLY:
     const parsed = safeJSON(raw);
 
     if (!parsed || !parsed.summary) {
-      console.log("⚠️ OpenAI returned malformed JSON, using fallback.");
+      console.log("⚠️ OpenAI returned malformed JSON → using fallback.");
       return res.json(fallback);
     }
 
-    // Clean clusters
     if (!Array.isArray(parsed.clusters)) parsed.clusters = [];
 
     return res.json({
@@ -91,23 +96,59 @@ OUTPUT JSON ONLY:
     });
 
   } catch (err) {
-    console.error("❌ Agentic extraction failed:", err.message);
+    console.error("❌ Agentic extraction error:", err.message);
     return res.json(fallback);
   }
 });
 
-/* ------------------------------------------
-   STATIC FILES
-------------------------------------------- */
+// ==========================================================
+//  VIEW COUNTER (SAFE VERSION)
+// ==========================================================
+const VIEW_FILE = "/data/views.json";
+
+function readViews() {
+  try {
+    return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8"));
+  } catch {
+    return { total: 0 };
+  }
+}
+
+function writeViews(v) {
+  try {
+    fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
+  } catch (err) {
+    console.error("⚠️ Could not save view count:", err.message);
+  }
+}
+
+app.get("/api/views", (req, res) => {
+  const data = readViews();
+  data.total++;
+  writeViews(data);
+  res.json({ total: data.total });
+});
+
+// ==========================================================
+//  STATIC FILES
+// ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 
-/* ------------------------------------------
-   START SERVER
-------------------------------------------- */
+// ==========================================================
+//  SOCKET.IO (unchanged from your system)
+// ==========================================================
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`🔥 Agentic NPC backend running on :${PORT}`);
+io.on("connection", socket => {
+  console.log("🛰️ Client connected:", socket.id);
+  socket.on("disconnect", () => console.log("❌ Client disconnected:", socket.id));
 });
+
+// ==========================================================
+//  START SERVER
+// ==========================================================
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () =>
+  console.log(`🔥 Agentic NPC backend running on port ${PORT}`)
+);
