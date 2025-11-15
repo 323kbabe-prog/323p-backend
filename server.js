@@ -260,6 +260,11 @@ SENTENCE RULES:
    — The example MUST align with the WEB CONTEXT’s themes  
    — Include a subtle professional micro-emotion (no emotional labels)
 
+4) Integrate a service-oriented insight  
+   — Mention how public services, systems, platforms, or everyday utilities are used  
+   — Include cost, pricing pressure, or resource demand IF relevant  
+   — Keep it subtle and natural (do NOT force “price” if inappropriate)
+
 HASHTAGS:
 Return 3–5 simple tags (no #).
 
