@@ -1,5 +1,5 @@
 // ////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Edition — FULL)
+//  server.js — NPC Browser (Super Agentic Edition — FINAL)
 // ////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -16,16 +16,15 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 Super Agentic NPC backend booting...");
+console.log("🚀 Super Agentic NPC backend starting...");
 console.log("OPENAI_API_KEY:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
 // SAFE JSON PARSER
 // ==========================================================
 function safeJSON(str) {
-  try {
-    return JSON.parse(str);
-  } catch {
+  try { return JSON.parse(str); }
+  catch {
     try {
       const match = str.match(/\{[\s\S]*\}/);
       if (match) return JSON.parse(match[0]);
@@ -35,31 +34,31 @@ function safeJSON(str) {
 }
 
 // ==========================================================
-// RANDOM DEMOGRAPHICS + FIELDS
+// RANDOM DEMOGRAPHICS + RANDOM FIELDS
 // ==========================================================
 const genders = ["Female", "Male", "Nonbinary"];
 const races = ["Asian", "Black", "White", "Latino", "Middle Eastern", "Mixed"];
 const ages = [20, 21, 22, 23, 24, 25];
 
+// Clean academic field names
 const fields = [
-  "Psychology researcher",
-  "Sociology analyst",
-  "Computer Science thinker",
-  "Economics observer",
-  "Philosophy analyst",
-  "Human Biology researcher",
-  "Symbolic Systems thinker",
-  "Political Science observer",
-  "Mechanical Engineering researcher",
-  "Art & Theory observer",
-  "Anthropology analyst",
-  "Linguistics researcher",
-  "Earth Systems observer",
-  "Media Studies thinker",
-  "Cognitive Science researcher"
+  "Psychology",
+  "Sociology",
+  "Computer Science",
+  "Economics",
+  "Philosophy",
+  "Human Biology",
+  "Symbolic Systems",
+  "Political Science",
+  "Mechanical Engineering",
+  "Art & Theory",
+  "Anthropology",
+  "Linguistics",
+  "Earth Systems",
+  "Media Studies",
+  "Cognitive Science"
 ];
 
-// Pick 10 unique random items
 function pickUnique(arr, count) {
   const copy = [...arr];
   const selected = [];
@@ -71,14 +70,14 @@ function pickUnique(arr, count) {
 }
 
 // ==========================================================
-// AGENTIC EXTRACTION (gpt-4o-mini)
+// AGENTIC EXTRACTION (Google/YT)
 // ==========================================================
 app.post("/api/agentic", async (req, res) => {
   const thought = (req.body.thought || "").trim();
 
   const fallback = {
-    summary: "npc insight perspective",
-    clusters: ["agentic reasoning", "npc signal", "semantic analysis"]
+    summary: "agentic perspective insight",
+    clusters: ["semantic signal", "npc analysis"]
   };
 
   if (!thought) return res.json(fallback);
@@ -86,13 +85,12 @@ app.post("/api/agentic", async (req, res) => {
   const prompt = `
 Extract agentic reasoning.
 
-NPC THOUGHT:
+INPUT:
 "${thought}"
 
-Return JSON only:
-
+Return JSON exactly as:
 {
-  "summary": "one short phrase (5–9 words)",
+  "summary": "5–9 word phrase",
   "clusters": ["cluster1", "cluster2", "cluster3"]
 }
 `;
@@ -101,28 +99,26 @@ Return JSON only:
     const resp = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.2
+      temperature: 0.25
     });
 
     const raw = resp.choices?.[0]?.message?.content || "";
     const parsed = safeJSON(raw);
 
     if (!parsed || !parsed.summary) return res.json(fallback);
+
     if (!Array.isArray(parsed.clusters)) parsed.clusters = [];
 
-    return res.json({
-      summary: parsed.summary,
-      clusters: parsed.clusters
-    });
+    return res.json(parsed);
 
   } catch (err) {
-    console.error("❌ Agentic extraction error:", err);
+    console.error("Agentic extraction error:", err);
     return res.json(fallback);
   }
 });
 
 // ==========================================================
-// SOCKET.IO — PERSONA GENERATOR (10 UNIQUE)
+// SOCKET.IO - PERSONA GENERATOR (10 UNIQUE)
 // ==========================================================
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
@@ -143,42 +139,70 @@ io.on("connection", socket => {
             identity: selectedFields[i]
           },
           thought: "",
-          hashtags: []
+          hashtags: [],
+          trend: []
         };
 
+        // NPC Thought + Hashtags
         const prompt = `
-You are an NPC persona.
-
 IDENTITY:
 ${persona.persona.gender}, ${persona.persona.race}, ${persona.persona.age}, ${persona.persona.identity}
 
-TASK:
-Think about the topic "${query}" from this field's academic worldview.
-Write:
-1. One deep agentic thought (2–3 sentences)
-2. 3–5 hashtags (no # symbol, just words)
+TOPIC: "${query}"
 
-Return JSON ONLY:
+TASK:
+1. Write a 2–3 sentence deep academic/agentic interpretation from this field.
+2. Provide 3–5 related hashtags (no # symbol).
+
+Return JSON:
 {
   "thought": "...",
-  "hashtags": ["...","...", "..."]
+  "hashtags": ["...", "...", "..."]
 }
 `;
 
         const resp = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [{ role: "user", content: prompt }],
-          temperature: 0.6
+          temperature: 0.7
         });
 
         const raw = resp.choices?.[0]?.message?.content || "";
         const parsed = safeJSON(raw) || {
-          thought: "An NPC perspective emerges.",
-          hashtags: ["npc", "perspective", "agentic"]
+          thought: "An NPC perspective forms.",
+          hashtags: ["npc","insight"]
         };
 
         persona.thought = parsed.thought || "An NPC reflects.";
         persona.hashtags = parsed.hashtags || ["npc","perspective"];
+
+        // ======================================================
+        // AGENTIC TREND QUERY (TikTok/Instagram)
+        // Option 4: thought + hashtags + user topic
+        // ======================================================
+        const trendPrompt = `
+Create 4–6 SHORT TikTok/Instagram-friendly keywords (no #, no commas).
+Use:
+- this NPC thought: "${persona.thought}"
+- these hashtags: ${persona.hashtags.join(", ")}
+- the user topic: "${query}"
+
+Return JSON:
+{
+  "trend": ["word1", "word2", "word3"]
+}
+`;
+
+        const trendResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: trendPrompt }],
+          temperature: 0.5
+        });
+
+        const trendRaw = trendResp.choices?.[0]?.message?.content || "";
+        const trendParsed = safeJSON(trendRaw) || { trend: ["LA","vibes","culture"] };
+
+        persona.trend = trendParsed.trend || ["LA","vibes","culture"];
 
         socket.emit("personaChunk", persona);
       }
@@ -187,13 +211,13 @@ Return JSON ONLY:
 
     } catch (err) {
       console.error("❌ personaSearch error:", err);
-      socket.emit("personaError", "Agentic persona system error");
+      socket.emit("personaError", "NPC system error");
     }
   });
 
-  socket.on("disconnect", () => {
-    console.log("❌ Client disconnected:", socket.id);
-  });
+  socket.on("disconnect", () =>
+    console.log("❌ Client disconnected:", socket.id)
+  );
 });
 
 // ==========================================================
@@ -212,10 +236,10 @@ function writeViews(v) {
 }
 
 app.get("/api/views", (req, res) => {
-  const data = readViews();
-  data.total++;
-  writeViews(data);
-  res.json({ total: data.total });
+  const v = readViews();
+  v.total++;
+  writeViews(v);
+  res.json({ total: v.total });
 });
 
 // ==========================================================
