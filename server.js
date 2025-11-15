@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v1.1)
-//  WITH FULL SHARE NPC SYSTEM (save, load, redirect)
-// //////////////////////////////////////////////////////////
+//  server.js — NPC Browser (Super Agentic Trend Engine v1.2)
+//  With FULL Share System + Auto-Search Restoration
+//////////////////////////////////////////////////////////////
 
 const express = require("express");
 const { createServer } = require("http");
@@ -51,9 +51,11 @@ function splitTrendWord(word){
 // ==========================================================
 function extractLocation(text){
   const LOCATIONS = [
-    "LA","Los Angeles","NYC","New York","Tokyo","Osaka","Kyoto",
-    "Paris","London","Berlin","Seoul","Busan","Taipei","Singapore",
-    "San Francisco","SF","Chicago","Miami","Toronto"
+    "LA","Los Angeles","NYC","New York","Tokyo",
+    "Paris","London","Berlin","Seoul","Busan",
+    "Taipei","Singapore",
+    "San Francisco","SF",
+    "Chicago","Miami","Toronto"
   ];
   const lower = text.toLowerCase();
   for (let loc of LOCATIONS){
@@ -65,17 +67,17 @@ function extractLocation(text){
 }
 
 // ==========================================================
-// RANDOM DEMOGRAPHICS + RANDOM IDENTITY
+// DEMOGRAPHICS & IDENTITIES
 // ==========================================================
 const genders=["Female","Male","Nonbinary"];
 const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
 const ages=[20,21,22,23,24,25];
 
 const fields = [
-  "Psychology","Sociology","Computer Science","Economics","Philosophy",
-  "Human Biology","Symbolic Systems","Political Science",
-  "Mechanical Engineering","Art & Theory","Anthropology",
-  "Linguistics","Earth Systems","Media Studies","Cognitive Science"
+  "Psychology","Sociology","Computer Science","Economics",
+  "Philosophy","Human Biology","Symbolic Systems","Political Science",
+  "Mechanical Engineering","Art & Theory","Anthropology","Linguistics",
+  "Earth Systems","Media Studies","Cognitive Science"
 ];
 
 function pickUnique(arr, count){
@@ -91,6 +93,7 @@ function pickUnique(arr, count){
 // ==========================================================
 // SHARE NPC SYSTEM (SAVE + LOAD + REDIRECT)
 // ==========================================================
+
 const SHARES_FILE = "/data/shares.json";
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
@@ -103,44 +106,56 @@ function writeShares(data){
   catch(err){ console.error("❌ Could not save share:",err.message); }
 }
 
-// Save share
+// Save share (WITH query!)
 app.post("/api/share",(req,res)=>{
   const all = readShares();
   const id = Math.random().toString(36).substring(2,8);
-  all[id] = req.body.personas || [];
+
+  all[id] = {
+    personas: req.body.personas || [],
+    query: req.body.query || ""   // <-- IMPORTANT
+  };
+
   writeShares(all);
   res.json({ shortId:id });
 });
 
-// Load shared personas
+// Load shared NPC
 app.get("/api/share/:id",(req,res)=>{
   const all = readShares();
-  const out = all[req.params.id];
-  if(!out) return res.status(404).json({error:"Not found"});
-  res.json(out);
+  const shared = all[req.params.id];
+  if(!shared) return res.status(404).json({error:"Not found"});
+  res.json(shared.personas || []);
 });
 
-// Redirect for /s/:id
+// Redirect page with query restored
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
-  const personas = all[req.params.id];
-  if(!personas) return res.redirect("https://npcbrowser.com");
+  const shared = all[req.params.id];
+
+  if(!shared) return res.redirect("https://npcbrowser.com");
+
+  const personas = shared.personas || [];
+  const originalQuery = shared.query || "";
 
   const first = personas[0] || {};
-  const preview = (first.thought || "").slice(0,150);
+  const preview = (first.thought || "").slice(0, 150);
 
   res.send(`<!doctype html>
 <html><head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta property="og:title" content="${first.persona?.identity || 'NPC Browser'}">
+  <meta property="og:title" content="${first.persona?.identity || "NPC Browser"}">
   <meta property="og:description" content="${preview}">
   <meta property="og:image" content="https://npcbrowser.com/og-npc.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <title>NPC Browser Share</title>
   <script>
     sessionStorage.setItem("sharedId","${req.params.id}");
-    setTimeout(()=>{ window.location.href="https://npcbrowser.com"; }, 1200);
+    setTimeout(() => {
+      window.location.href =
+        "https://npcbrowser.com?query=${encodeURIComponent(originalQuery)}";
+    }, 900);
   </script>
 </head><body></body></html>`);
 });
@@ -148,10 +163,11 @@ app.get("/s/:id",(req,res)=>{
 // ==========================================================
 // SOCKET.IO — 10 AGENTIC PERSONAS
 // ==========================================================
+
 const httpServer=createServer(app);
 const io=new Server(httpServer,{cors:{origin:"*"}});
 
-io.on("connection",socket=>{
+io.on("connection", socket=>{
   console.log("🛰️ Client connected:",socket.id);
 
   socket.on("personaSearch", async query=>{
@@ -172,7 +188,7 @@ io.on("connection",socket=>{
           trend:[]
         };
 
-        // THOUGHT + HASHTAGS
+        // GENERATE NPC THOUGHT
         const thoughtPrompt = `
 IDENTITY:
 ${persona.persona.gender}, ${persona.persona.race}, ${persona.persona.age}, ${persona.persona.identity}
@@ -180,12 +196,13 @@ ${persona.persona.gender}, ${persona.persona.race}, ${persona.persona.age}, ${pe
 TOPIC: "${query}"
 
 TASK:
-1. Write 2–3 deep sentences (full agentic perspective).
-2. Provide 3–5 hashtags (NO # symbols).
-Return JSON:
+1. Write a deep 2–3 sentence AGENTIC interpretation.
+2. Output 3–5 hashtags (NO # symbols).
+
+Return JSON ONLY:
 {
  "thought":"...",
- "hashtags":["...","..."]
+ "hashtags":["..."]
 }
         `;
 
@@ -195,28 +212,28 @@ Return JSON:
           temperature:0.8
         });
 
-        const parsedThought=safeJSON(thoughtResp.choices?.[0]?.message?.content||"") || {
+        const parsedThought=safeJSON(thoughtResp.choices?.[0]?.message?.content || "") || {
           thought:"An NPC perspective emerges.",
-          hashtags:["vibes","identity"]
+          hashtags:["vibe","identity"]
         };
 
         persona.thought = parsedThought.thought;
         persona.hashtags = parsedThought.hashtags;
 
-        // TREND ENGINE (AG4 Hybrid — 4 short words)
+        // GENERATE TREND WORDS (AG4 Hybrid — 4 short words)
         const trendPrompt=`
-Using this NPC thought:
+Turn the following into EXACTLY 4 short TREND KEYWORDS (1–2 words each).
+Style: vibe + emotion + aesthetic + culture.
+NO punctuation. NO academic language.
+
+NPC Thought:
 "${persona.thought}"
 
-And hashtags:
+Hashtags:
 ${persona.hashtags.join(", ")}
 
-And user topic:
+User Topic:
 "${query}"
-
-Produce EXACTLY 4 short TREND KEYWORDS (1–2 words each).
-MUST reflect: vibe + emotion + aesthetic + culture.
-NO punctuation. NO long words. NO academic terms.
 
 Return JSON:
 {
@@ -230,12 +247,13 @@ Return JSON:
           temperature:0.6
         });
 
-        const parsedTrend=safeJSON(trendResp.choices?.[0]?.message?.content||"") ||
-          { trend:["vibe","culture","identity","flow"] };
+        let parsedTrend=safeJSON(trendResp.choices?.[0]?.message?.content||"") || {
+          trend:["vibe","culture","identity","flow"]
+        };
 
-        let trendWords=parsedTrend.trend.map(w=>splitTrendWord(w));
+        let trendWords = parsedTrend.trend.map(w=>splitTrendWord(w));
 
-        // Location override
+        // LOCATION OVERRIDE
         if(detectedLocation){
           trendWords[0] = `${detectedLocation} vibe`;
         }
@@ -273,8 +291,10 @@ app.get("/api/views",(req,res)=>{
 // ==========================================================
 app.use(express.static(path.join(__dirname,"public")));
 
+// ==========================================================
 // START SERVER
+// ==========================================================
 const PORT=process.env.PORT||3000;
 httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser (Agentic Trend Engine + Share System) running on :${PORT}`);
+  console.log(`🔥 NPC Browser (Agentic Trend Engine v1.2 + Share AutoSearch) running on :${PORT}`);
 });
