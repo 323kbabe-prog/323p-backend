@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v1.5)
-//  NPC Update: Real-World Professions + No Topic Repetition
+//  server.js — NPC Browser (Super Agentic Trend Engine v1.6)
+//  NPC Update: Real Professions + No Topic Repeat + Experience
 //  All other systems preserved (Share, Auto-search, Trends)
 //////////////////////////////////////////////////////////////
 
@@ -18,7 +18,7 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 NPC Browser — Agentic Trend Engine v1.5 starting...");
+console.log("🚀 NPC Browser — Agentic Trend Engine v1.6 starting...");
 console.log("API Key:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
@@ -154,7 +154,7 @@ setTimeout(()=>{
 });
 
 // ==========================================================
-// SOCKET.IO — MAIN NPC GENERATOR
+// SOCKET.IO — MAIN NPC GENERATOR (v1.6)
 // ==========================================================
 const httpServer=createServer(app);
 const io=new Server(httpServer,{cors:{origin:"*"}});
@@ -182,8 +182,7 @@ io.on("connection", socket=>{
         };
 
         // ======================================================
-        // NPC THOUGHT ENGINE — REAL-WORLD PROFESSIONS +
-        // NO TOPIC REPETITION + NO FIRST PERSON REQUIREMENT
+        // NPC THOUGHT ENGINE v1.6
         // ======================================================
         const thoughtPrompt = `
 You are generating a highly realistic professional perspective.
@@ -197,31 +196,51 @@ NPC ACADEMIC BACKGROUND:
 "${persona.persona.identity}"
 
 TASK 1 — Profession:
-Create a **real-world, believable profession** for this NPC.
-Rules:
-- profession MUST be different from other NPCs
-- profession MUST be a real job (lawyer, teacher, engineer, therapist, physician, journalist, etc.)
-- combine their academic discipline with a realistic professional domain
-- NEVER mention “major” or “Stanford”
-- EXAMPLES (do not copy): Clinical Psychologist, Civil Engineer, Physician, Corporate Lawyer, Architect, Software Developer
+Create a **real-world, believable profession** based on their academic background.
+Examples (do NOT copy exactly):
+- Clinical Psychologist
+- Civil Engineer
+- Physician
+- Corporate Lawyer
+- Architect
+- Journalist
+- Registered Nurse
+- Software Developer
+- Social Worker
+- Economist
+- Mechanical Engineer
+- Urban Planner
 
-TASK 2 — Thought:
-Write a **reflection (2–3 sentences)** about the *idea behind "${query}"*.
 Rules:
-- Do NOT repeat the topic words directly
-- Do NOT describe the topic (“Seattle coffee is…”)
-- Speak conceptually or interpretively
-- Thought should sound like it comes from their profession
-- Intelligent, grounded, reflective
-- No need for first-person, but natural if used
+- MUST be a real job someone could actually have.
+- MUST be different from the other NPCs.
+- NEVER mention “major” or “Stanford”.
+
+TASK 2 — Thought (VERY IMPORTANT):
+Write a **3-sentence reflection** about the *idea behind "${query}"*.
+
+STRUCTURE:
+1. Sentence 1 → Conceptual reflection from the NPC’s professional worldview  
+   (DO NOT repeat the topic words directly)
+2. Sentence 2 → deeper interpretation using logic from their field  
+   (still no topic repetition)
+3. Sentence 3 → A short personal experience from their profession  
+   (e.g., “In my work last year…”, “A situation I handled once showed me…”,  
+        “During a project, I witnessed…”)
+
+Rules:
+- DO NOT describe the topic.
+- DO NOT repeat the topic phrase.
+- Tone must be intelligent, grounded, smooth.
+- Thought must feel like a realistic professional insight.
 
 TASK 3 — Hashtags:
 Return 3–5 simple hashtags (NO # symbol).
 
-FORMAT (JSON ONLY):
+JSON ONLY:
 {
-  "profession": "Real profession name",
-  "thought": "Reflection without repeating the topic",
+  "profession": "Real profession",
+  "thought": "Three-sentence reflection ending with a personal experience",
   "hashtags": ["word1","word2","word3"]
 }
         `;
@@ -234,7 +253,7 @@ FORMAT (JSON ONLY):
 
         const parsed = safeJSON(resp.choices?.[0]?.message?.content || "") || {
           profession:"Research Analyst",
-          thought:"This idea highlights how people construct meaning in daily routines.",
+          thought:"This idea reflects patterns I often see in social behavior. It highlights how simple signals shape interactions. A past project I worked on revealed this dynamic clearly.",
           hashtags:["culture","identity"]
         };
 
@@ -243,7 +262,7 @@ FORMAT (JSON ONLY):
         persona.hashtags = parsed.hashtags;
 
         // ======================================================
-        // TREND ENGINE — unchanged
+        // TREND ENGINE (unchanged)
         // ======================================================
         const trendPrompt=`
 Turn the following into EXACTLY 4 short TREND KEYWORDS (1–2 words each).
@@ -320,5 +339,5 @@ app.use(express.static(path.join(__dirname,"public")));
 // ==========================================================
 const PORT=process.env.PORT||3000;
 httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser v1.5 running on :${PORT}`);
+  console.log(`🔥 NPC Browser v1.6 running on :${PORT}`);
 });
