@@ -242,30 +242,23 @@ CHOSEN PROFESSION (MUST USE): "${profession}"
 WEB CONTEXT:
 "${serpContext}"
 
-TASK — Thought (3 sentences, < 420 chars):
-Respond to the underlying scenario suggested by: "${query}"
-WITHOUT repeating the exact topic words.
-
 TASK — Thought (3 sentences, < 420 chars, ALL influenced by the web context):
-Use the provided WEB CONTEXT to enrich every part of the analysis.
+Use the provided WEB CONTEXT to enrich every part of the analysis.  
+Do NOT repeat the exact topic words.
 
 SENTENCE RULES:
 1) Connect the situation to the NPC’s academic worldview  
-   — The opening sentence MUST feel distinct each time  
+   — Opening must feel distinct each time  
    — Subtly reference patterns implied by the WEB CONTEXT  
    — No template phrasing
 
 2) Describe deeper structural, behavioral, policy, or systemic implications  
    — Use inferences drawn from the WEB CONTEXT (not direct quotes)  
-   — Show how the situation could evolve or why it matters
+   — Explain why the situation might matter or how it could evolve
 
 3) Provide a brief, concrete personal moment from their academic or applied experience  
-   — The personal example MUST align with the WEB CONTEXT’s themes  
-   — Include a subtle professional micro-emotion  
-   — No emotional labels (“sad”, “angry”), only implied feeling
-
-HASHTAGS:
-Return 3–5 simple tags (no #).
+   — The example MUST align with the WEB CONTEXT’s themes  
+   — Include a subtle professional micro-emotion (no emotional labels)
 
 HASHTAGS:
 Return 3–5 simple tags (no #).
