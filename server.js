@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v1.8)
-//  TRUE CROSS-INDUSTRY DIVERSITY (5 CATEGORY SYSTEM)
-//  Professional Thought + Personal Experience + No Topic Repeat
-//  All system functions preserved (Share, Auto-search, Trends)
+//  server.js — NPC Browser (Agentic Trend Engine v1.9)
+//  PURE PROFESSION ENGINE (5 INDUSTRIES, NO ACADEMIC LAYER)
+//  Real professions + Personal Experience + No Topic Repeat
+//  All other systems preserved
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -19,7 +19,7 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 NPC Browser — Agentic Trend Engine v1.8 starting...");
+console.log("🚀 NPC Browser — Agentic Trend Engine v1.9 starting...");
 console.log("API Key:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
@@ -29,8 +29,8 @@ function safeJSON(str) {
   try { return JSON.parse(str); }
   catch {
     try {
-      const match = str.match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]);
+      const m = str.match(/\{[\s\S]*\}/);
+      if (m) return JSON.parse(m[0]);
     } catch {}
   }
   return null;
@@ -41,8 +41,8 @@ function safeJSON(str) {
 // ==========================================================
 function splitTrendWord(word){
   return word
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/[\-_]/g, " ")
+    .replace(/([a-z])([A-Z])/g,"$1 $2")
+    .replace(/[\-_]/g," ")
     .trim();
 }
 
@@ -50,88 +50,68 @@ function splitTrendWord(word){
 // LOCATION DETECTOR
 // ==========================================================
 function extractLocation(text){
-  const LOCATIONS = [
+  const CITIES = [
     "LA","Los Angeles","NYC","New York","Tokyo",
     "Paris","London","Berlin","Seoul","Busan",
     "Taipei","Singapore","San Francisco","SF",
     "Chicago","Miami","Toronto","Seattle"
   ];
-  const lower = text.toLowerCase();
-  for (let loc of LOCATIONS){
-    if(lower.includes(loc.toLowerCase())){
-      return loc;
-    }
+  const lower=text.toLowerCase();
+  for(let c of CITIES){
+    if(lower.includes(c.toLowerCase())) return c;
   }
   return null;
 }
 
 // ==========================================================
-// DEMOGRAPHICS & DISCIPLINES (used only for personality flavor)
+// DEMOGRAPHICS ONLY (NO ACADEMIC LAYER ANYMORE)
 // ==========================================================
 const genders=["Female","Male","Nonbinary"];
 const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
-const ages=[...Array.from({length:32},(_,i)=>i+18)];  // 18–49
-
-const fields = [
-  "Psychology","Sociology","Computer Science","Economics",
-  "Philosophy","Human Biology","Symbolic Systems","Political Science",
-  "Mechanical Engineering","Art & Theory","Anthropology","Linguistics",
-  "Earth Systems","Media Studies","Cognitive Science"
-];
-
-function pickUnique(arr, count){
-  const copy=[...arr];
-  const out=[];
-  while(out.length<count && copy.length){
-    const idx=Math.floor(Math.random()*copy.length);
-    out.push(copy.splice(idx,1)[0]);
-  }
-  return out;
-}
+const ages=[...Array.from({length:32},(_,i)=>i+18)]; // 18–49
 
 // ==========================================================
-// SHARE SYSTEM (unchanged)
+// SHARE SYSTEM
 // ==========================================================
-const SHARES_FILE = "/data/shares.json";
-if (!fs.existsSync("/data")) fs.mkdirSync("/data");
+const SHARES_FILE="/data/shares.json";
+if(!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 function readShares(){
   try { return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8")); }
   catch { return {}; }
 }
-function writeShares(data){
-  try { fs.writeFileSync(SHARES_FILE, JSON.stringify(data,null,2)); }
-  catch(err){ console.error("❌ Share save error:",err.message); }
+function writeShares(d){
+  try { fs.writeFileSync(SHARES_FILE, JSON.stringify(d,null,2)); }
+  catch(er){ console.error("❌ Share save error:",er.message); }
 }
 
 app.post("/api/share",(req,res)=>{
-  const all = readShares();
-  const id = Math.random().toString(36).substring(2,8);
+  const all=readShares();
+  const id=Math.random().toString(36).substring(2,8);
 
-  all[id] = {
-    personas: req.body.personas || [],
-    query: req.body.query || ""
+  all[id]={
+    personas:req.body.personas||[],
+    query:req.body.query||""
   };
 
   writeShares(all);
-  res.json({ shortId:id });
+  res.json({shortId:id});
 });
 
 app.get("/api/share/:id",(req,res)=>{
-  const all = readShares();
-  const shared = all[req.params.id];
+  const all=readShares();
+  const shared=all[req.params.id];
   if(!shared) return res.status(404).json({error:"Not found"});
-  res.json(shared.personas || []);
+  res.json(shared.personas||[]);
 });
 
 app.get("/s/:id",(req,res)=>{
-  const all = readShares();
-  const shared = all[req.params.id];
+  const all=readShares();
+  const shared=all[req.params.id];
   if(!shared) return res.redirect("https://npcbrowser.com");
 
   const personas=shared.personas||[];
-  const originalQuery=shared.query||"";
-
+  const q=shared.query||"";
   const first=personas[0]||{};
   const preview=(first.thought||"").slice(0,150);
 
@@ -139,7 +119,7 @@ app.get("/s/:id",(req,res)=>{
 <html><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta property="og:title" content="${first.profession || 'NPC Browser'}">
+<meta property="og:title" content="${first.profession||'NPC Browser'}">
 <meta property="og:description" content="${preview}">
 <meta property="og:image" content="https://npcbrowser.com/og-npc.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -147,111 +127,103 @@ app.get("/s/:id",(req,res)=>{
 <script>
 sessionStorage.setItem("sharedId","${req.params.id}");
 setTimeout(()=>{
-  window.location.href =
-    "https://npcbrowser.com?query=" + encodeURIComponent("${originalQuery}");
-}, 900);
+  window.location.href="https://npcbrowser.com?query="+encodeURIComponent("${q}");
+},900);
 </script>
 </head><body></body></html>`);
 });
 
 // ==========================================================
-// SOCKET.IO — NPC GENERATION ENGINE v1.8
+// SOCKET.IO — MAIN NPC ENGINE v1.9
 // ==========================================================
 const httpServer=createServer(app);
 const io=new Server(httpServer,{cors:{origin:"*"}});
 
-io.on("connection", socket=>{
-  console.log("🛰️ Client connected:", socket.id);
+io.on("connection",socket=>{
+  console.log("🛰️ Client:",socket.id);
 
-  socket.on("personaSearch", async query=>{
-    try {
-      const selectedFields = pickUnique(fields,10);
+  socket.on("personaSearch", async (query)=>{
+    try{
       const detectedLocation = extractLocation(query);
 
-      // Track used categories to enforce diversity
-      const usedCategories = new Set();
+      // Track used categories to enforce BIG diversity
+      const usedCats = new Set();
 
+      // 5 industry categories (locked)
+      const ALL_CATEGORIES = ["A","B","C","D","E"];
+
+      // 10 NPCs
       for(let i=0;i<10;i++){
 
-        const persona = {
-          persona:{
-            gender:genders[Math.floor(Math.random()*genders.length)],
-            race:races[Math.floor(Math.random()*races.length)],
-            age:ages[Math.floor(Math.random()*ages.length)],
-            identity:selectedFields[i]
-          },
-          profession:"",
-          thought:"",
-          hashtags:[],
-          trend:[]
+        // demographic identity
+        const persona={
+          gender:genders[Math.floor(Math.random()*genders.length)],
+          race:races[Math.floor(Math.random()*races.length)],
+          age:ages[Math.floor(Math.random()*ages.length)]
         };
 
         // ======================================================
-        // NPC THOUGHT ENGINE v1.8 — CROSS-INDUSTRY RULES
+        // NPC THOUGHT ENGINE v1.9 (NO ACADEMICS)
         // ======================================================
         const thoughtPrompt = `
-You are generating a realistic professional persona.
+You are generating a realistic NPC professional persona.
 
 NPC DEMOGRAPHICS:
-- Gender: ${persona.persona.gender}
-- Race: ${persona.persona.race}
-- Age: ${persona.persona.age}
+- Gender: ${persona.gender}
+- Race: ${persona.race}
+- Age: ${persona.age}
 
-NPC BACKGROUND:
-"${persona.persona.identity}"
+TASK 1 — PROFESSION (5 INDUSTRY SYSTEM):
 
-TASK 1 — Profession (STRICT 5-CATEGORY SYSTEM):
-
-Assign this NPC a **real profession** from EXACTLY ONE of these 5 industries:
+Assign a **real-world profession** to this NPC from EXACTLY ONE of these industries:
 
 CATEGORY A — MEDICAL & HEALTH  
-(doctor, nurse, therapist, clinician, psychologist, EMT, physical therapist, etc.)
+(doctor, nurse, therapist, clinician, EMT, psychologist, etc.)
 
 CATEGORY B — LAW / GOVERNMENT / PUBLIC SAFETY  
-(lawyer, police officer, firefighter, judge’s clerk, social worker, immigration officer, etc.)
+(lawyer, police officer, firefighter, social worker, judge’s clerk, etc.)
 
 CATEGORY C — ENGINEERING / TECH / SCIENCE  
-(software developer, civil engineer, mechanical engineer, data scientist, pilot, lab technologist, etc.)
+(software developer, civil engineer, scientist, pilot, mechanic, lab tech, etc.)
 
 CATEGORY D — BUSINESS / ECONOMICS / TRADE  
-(business owner, mechanic, economist, financial advisor, restaurant manager, supply chain manager, etc.)
+(business owner, economist, restaurant manager, supply chain lead, auto technician, etc.)
 
 CATEGORY E — CREATIVE / ARTS / MEDIA  
-(journalist, artist, chef, musician, fashion designer, filmmaker, designer, etc.)
+(journalist, artist, chef, musician, fashion designer, photographer, etc.)
 
-RULES:
-- MUST choose a profession from a category **NOT yet used** by other NPCs in this batch.
-- MUST be a totally REAL job someone could have.
-- MUST NOT use academic-sounding roles (“researcher”, “analyst”, “specialist” unless normal).
-- NEVER mention “major” or “Stanford”.
+IMPORTANT RULES:
+- MUST choose a category **not already used** by previous NPCs in this batch.
+- MUST be a real job that exists.
+- MUST NOT repeat job patterns (no clustering like “___ analyst”).
+- NEVER mention “major” or “university”.
 
-TASK 2 — Thought (3 SENTENCES):
-
+TASK 2 — THOUGHT (3 SENTENCES):
 Write a **three-sentence reflection** about the *idea behind "${query}"*.
 
 STRUCTURE:
-1. Conceptual reflection based on their profession  
-   (DO NOT repeat or quote the topic words)
-2. Deeper professional interpretation  
-3. A short personal experience related to their job  
-   (“I once had a patient who…”,  
-    “During a case last year…”,  
-    “In a project I led…”,  
-    “A class I taught revealed…”)
+1. Conceptual insight from their profession  
+   (❗ DO NOT repeat or quote the topic words)
+2. Deeper interpretation based on their professional thinking  
+3. Short personal experience tied to the job  
+   (“I once treated a patient who…”,  
+    “A case I handled showed me…”,  
+    “During a project, I noticed…”,  
+    “A customer I worked with taught me…”)
 
 RULES:
-- DO NOT describe the topic.  
-- DO NOT repeat the topic phrase.  
-- Tone must be intelligent, grounded, and realistic.
+- DO NOT describe the topic directly.
+- DO NOT repeat the topic phrase.
+- Tone must feel realistic and grounded.
 
-TASK 3 — Hashtags:
+TASK 3 — HASHTAGS:
 Return 3–5 simple hashtags (NO # symbol).
 
-OUTPUT JSON:
+FORMAT JSON ONLY:
 {
-  "profession": "Real profession",
-  "thought": "Three-sentence reflection ending with a personal experience",
-  "hashtags": ["word1","word2","word3"],
+  "profession": "Real job title",
+  "thought": "3-sentence reflection ending with a personal experience",
+  "hashtags": ["w1","w2","w3"],
   "category": "A/B/C/D/E"
 }
         `;
@@ -259,42 +231,41 @@ OUTPUT JSON:
         const resp = await openai.chat.completions.create({
           model:"gpt-4o-mini",
           messages:[{role:"user",content:thoughtPrompt}],
-          temperature:0.85
+          temperature:0.9
         });
 
-        const parsed = safeJSON(resp.choices?.[0]?.message?.content || "") || {
-          profession:"Teacher",
-          thought:"This idea reveals how people create meaning in ordinary routines. It reflects deeper patterns underlying behavior. A class I taught once made this unexpectedly clear.",
-          hashtags:["culture","pattern"],
-          category:"E"
-        };
+        let parsed = safeJSON(resp.choices?.[0]?.message?.content || "");
 
-        // Enforce UNIQUE category
-        if (usedCategories.has(parsed.category)) {
-          // If duplicate category returned, fall back to assigning a missing category
-          const allCats = ["A","B","C","D","E"];
-          const unused = allCats.filter(c => !usedCategories.has(c));
+        // fallback
+        if(!parsed){
+          parsed={
+            profession:"Teacher",
+            thought:"This idea highlights how people relate to ordinary routines. It shows deeper behavioral patterns. A class discussion last year reminded me how strongly these patterns shape identity.",
+            hashtags:["culture","daily"],
+            category:"E"
+          };
+        }
+
+        // ENFORCE CATEGORY UNIQUENESS
+        if(usedCats.has(parsed.category)){
+          const unused = ALL_CATEGORIES.filter(c=>!usedCats.has(c));
           parsed.category = unused[0] || parsed.category;
         }
 
-        usedCategories.add(parsed.category);
-
-        persona.profession = parsed.profession;
-        persona.thought = parsed.thought;
-        persona.hashtags = parsed.hashtags;
+        usedCats.add(parsed.category);
 
         // ======================================================
         // TREND ENGINE (unchanged)
         // ======================================================
         const trendPrompt=`
-Turn the following into EXACTLY 4 short TREND KEYWORDS (1–2 words each).
+Turn the following into EXACTLY 4 short trend keywords (1–2 words each).
 Style: vibe + emotion + aesthetic + culture.
 
 NPC Thought:
-"${persona.thought}"
+"${parsed.thought}"
 
 Hashtags:
-${persona.hashtags.join(", ")}
+${parsed.hashtags.join(", ")}
 
 User Topic:
 "${query}"
@@ -305,32 +276,41 @@ JSON ONLY:
 }
         `;
 
-        const tResp = await openai.chat.completions.create({
+        const tResp=await openai.chat.completions.create({
           model:"gpt-4o-mini",
           messages:[{role:"user",content:trendPrompt}],
           temperature:0.6
         });
 
-        let trendParsed = safeJSON(tResp.choices?.[0]?.message?.content || "") || {
+        let tParsed = safeJSON(tResp.choices?.[0]?.message?.content || "") || {
           trend:["vibe","culture","identity","flow"]
         };
 
-        let trendWords = trendParsed.trend.map(splitTrendWord);
+        let trendWords = tParsed.trend.map(splitTrendWord);
 
-        // location override
-        if (detectedLocation){
-          trendWords[0] = `${detectedLocation} vibe`;
+        if(detectedLocation){
+          trendWords[0]=`${detectedLocation} vibe`;
         }
 
-        persona.trend = trendWords.slice(0,4);
+        // final persona object
+        const finalNPC={
+          profession:parsed.profession,
+          gender:persona.gender,
+          race:persona.race,
+          age:persona.age,
+          thought:parsed.thought,
+          hashtags:parsed.hashtags,
+          trend:trendWords.slice(0,4),
+          category:parsed.category
+        };
 
-        socket.emit("personaChunk", persona);
+        socket.emit("personaChunk", finalNPC);
       }
 
       socket.emit("personaDone");
 
     } catch(err){
-      console.error("❌ NPC Engine Error:", err);
+      console.error("❌ NPC Engine Error:",err);
       socket.emit("personaError","NPC system error");
     }
   });
@@ -340,7 +320,7 @@ JSON ONLY:
 
 // ==========================================================
 // VIEW COUNTER (unchanged)
-/////////////////////////////////////////////////////////////
+// ==========================================================
 const VIEW_FILE="/data/views.json";
 function readViews(){try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0}}}
 function writeViews(v){try{fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2));}catch{}}
@@ -352,13 +332,13 @@ app.get("/api/views",(req,res)=>{
 
 // ==========================================================
 // STATIC FILES
-/////////////////////////////////////////////////////////////
+// ==========================================================
 app.use(express.static(path.join(__dirname,"public")));
 
 // ==========================================================
 // START SERVER
-/////////////////////////////////////////////////////////////
+// ==========================================================
 const PORT=process.env.PORT||3000;
-httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser v1.8 running on :${PORT}`);
+const server=httpServer.listen(PORT,()=>{
+  console.log(`🔥 NPC Browser v1.9 running on :${PORT}`);
 });
