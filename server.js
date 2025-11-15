@@ -1,18 +1,14 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v2.1)
-//  Base: Your v1.6 backend (no academic logic)
-//  Additions:
+//  server.js — NPC Browser (Super Agentic Trend Engine v2.2)
+//  Base: v1.6 backend (stable), upgraded:
 //   • 5 real-world profession categories (A–E)
 //   • Unique category per NPC
-//   • Profession fix (ALWAYS returns profession)
-//   • 3-sentence thought with personal experience
-//   • No topic repetition
-//   • JSON safety
-//   • Output-length limits
-//   • Trend engine preserved
-//   • Share system preserved
-//   • Views preserved
-//   • Location-aware preserved
+//   • Topic-aware thought engine (STRONG MODE)
+//   • No topic word repetition
+//   • Personal experience sentence
+//   • Location-aware trend override
+//   • JSON safety + output limits
+//   • All backend systems preserved
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -29,31 +25,31 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 NPC Browser — Agentic Trend Engine v2.1 starting...");
-console.log("API Key:", !!process.env.OPENAI_API_KEY);
+console.log("🚀 NPC Browser — Agentic Trend Engine v2.2 starting...");
+console.log("API Key OK:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
-// JSON SAFETY
+// SAFE JSON PARSER
 // ==========================================================
-function safeJSON(str) {
-  if (!str || typeof str !== "string") return null;
+function safeJSON(str){
+  if(!str || typeof str !== "string") return null;
   try { return JSON.parse(str); } catch {}
 
   try {
     const m = str.match(/\{[\s\S]*?\}/);
-    if (m) return JSON.parse(m[0]);
+    if(m) return JSON.parse(m[0]);
   } catch {}
 
   return null;
 }
 
-function sanitizeNPC(obj) {
+function sanitizeNPC(obj){
   const npc = {};
 
   npc.profession = obj?.profession?.trim?.() || "Professional";
 
   npc.thought = obj?.thought?.trim?.() ||
-    "This idea reflects familiar behavior patterns. It reveals deeper structures in daily interactions. A moment from my work last year showed me this clearly.";
+    "This idea reflects familiar shifts in behavior. It exposes underlying pressures that shape decisions. A moment from my work revealed this in a powerful way.";
 
   npc.hashtags = Array.isArray(obj?.hashtags) && obj.hashtags.length
     ? obj.hashtags
@@ -78,14 +74,13 @@ function splitTrendWord(word){
 
 function extractLocation(text){
   const LOC = [
-    "LA","Los Angeles","NYC","New York","Tokyo",
-    "Paris","London","Berlin","Seoul","Busan",
-    "Taipei","Singapore","San Francisco","SF",
+    "LA","Los Angeles","NYC","New York","Tokyo","Paris","London","Berlin",
+    "Seoul","Busan","Taipei","Singapore","San Francisco","SF",
     "Chicago","Miami","Toronto","Seattle"
   ];
   const l = text.toLowerCase();
-  for (let c of LOC){
-    if (l.includes(c.toLowerCase())) return c;
+  for(const c of LOC){
+    if(l.includes(c.toLowerCase())) return c;
   }
   return null;
 }
@@ -99,16 +94,17 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 // ==========================================================
 // SHARE SYSTEM (unchanged)
 // ==========================================================
-const SHARES_FILE = "/data/shares.json";
-if (!fs.existsSync("/data")) fs.mkdirSync("/data");
+const SHARES_FILE="/data/shares.json";
+if(!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 function readShares(){
   try { return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8")); }
   catch { return {}; }
 }
+
 function writeShares(d){
   try { fs.writeFileSync(SHARES_FILE, JSON.stringify(d,null,2)); }
-  catch(err){ console.error("❌ Share save error:",err.message); }
+  catch(err){ console.error("❌ Share save error:", err.message); }
 }
 
 app.post("/api/share",(req,res)=>{
@@ -126,18 +122,18 @@ app.post("/api/share",(req,res)=>{
 
 app.get("/api/share/:id",(req,res)=>{
   const all = readShares();
-  const s = all[req.params.id];
-  if (!s) return res.status(404).json({error:"Not found"});
-  res.json(s.personas || []);
+  const entry = all[req.params.id];
+  if(!entry) return res.status(404).json({error:"Not found"});
+  res.json(entry.personas || []);
 });
 
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
-  const s = all[req.params.id];
-  if (!s) return res.redirect("https://npcbrowser.com");
+  const entry = all[req.params.id];
+  if(!entry) return res.redirect("https://npcbrowser.com");
 
-  const personas = s.personas || [];
-  const originalQuery = s.query || "";
+  const personas = entry.personas || [];
+  const originalQuery = entry.query || "";
 
   const first = personas[0] || {};
   const preview = (first.thought || "").slice(0,150);
@@ -153,7 +149,7 @@ app.get("/s/:id",(req,res)=>{
 <title>NPC Share</title>
 <script>
 sessionStorage.setItem("sharedId","${req.params.id}");
-setTimeout(()=>{ 
+setTimeout(()=>{
   window.location.href="https://npcbrowser.com?query=" + encodeURIComponent("${originalQuery}");
 },900);
 </script>
@@ -161,10 +157,9 @@ setTimeout(()=>{
 });
 
 // ==========================================================
-// SOCKET.IO — NPC ENGINE v2.1 (profession FIXED)
+// NPC ENGINE v2.2 — TOPIC AWARENESS (STRONG MODE)
 // ==========================================================
-const { createServer: createHTTP } = require("http");
-const httpServer = createHTTP(app);
+const httpServer = createServer(app);
 const io = new Server(httpServer,{cors:{origin:"*"}});
 
 io.on("connection", socket=>{
@@ -174,11 +169,10 @@ io.on("connection", socket=>{
     try {
       const detectedLocation = extractLocation(query);
 
-      // 5-category system
       const usedCats = new Set();
-      const ALL_CATS = ["A","B","C","D","E"];
+      const CATS = ["A","B","C","D","E"];
 
-      for (let i=0; i<10; i++){
+      for(let i=0;i<10;i++){
 
         const demo = {
           gender: pick(genders),
@@ -187,7 +181,7 @@ io.on("connection", socket=>{
         };
 
         // ======================================================
-        // Profession + Thought Generation (v2.1)
+        // NPC THOUGHT ENGINE (STRONG TOPIC-AWARENESS)
         // ======================================================
         const prompt = `
 Generate a professional NPC.
@@ -197,24 +191,28 @@ Gender: ${demo.gender}
 Race: ${demo.race}
 Age: ${demo.age}
 
-TASK 1 — PROFESSION (Choose 1 Category):
+TASK 1 — PROFESSION (Choose one Category):
 A — Medical & Health
 B — Law / Government / Public Safety
 C — Engineering / Tech / Science
 D — Business / Trade / Economics
 E — Creative / Arts / Media
 
-Rules:
+RULES:
 - MUST choose a category not used yet in this batch.
 - Profession must be real and under 50 characters.
 
-TASK 2 — THOUGHT (3 sentences, under 320 chars):
-1) conceptual insight (do NOT repeat "${query}")
-2) deeper interpretation
-3) short personal experience
+TASK 2 — TOPIC-AWARE THOUGHT (3 sentences, < 320 chars):
+Respond to the underlying *scenario* suggested by: "${query}"
+BUT DO NOT repeat the exact topic words.
 
-TASK 3 — HASHTAGS:
-3–5 simple hashtags (no #).
+• Sentence 1 → interpret the scenario through the lens of the NPC’s profession  
+• Sentence 2 → explain the deeper implications  
+• Sentence 3 → include a short personal experience related indirectly  
+(Strong awareness: NPC clearly understands the context behind the topic.)
+
+TASK 3 — Hashtags:
+Return 3–5 simple hashtags (no #).
 
 JSON ONLY:
 {
@@ -234,15 +232,14 @@ JSON ONLY:
         let parsed = safeJSON(raw.choices?.[0]?.message?.content || "");
         parsed = sanitizeNPC(parsed);
 
-        // Force unique categories
-        if (!parsed.category || usedCats.has(parsed.category)){
-          const unused = ALL_CATS.filter(c=>!usedCats.has(c));
+        if(!parsed.category || usedCats.has(parsed.category)){
+          const unused = CATS.filter(c=>!usedCats.has(c));
           parsed.category = unused[0] || parsed.category || "E";
         }
         usedCats.add(parsed.category);
 
         // ======================================================
-        // TREND ENGINE (unchanged)
+        // TREND ENGINE
         // ======================================================
         const tPrompt = `
 Turn this into EXACTLY 4 short trend keywords:
@@ -260,19 +257,18 @@ JSON ONLY:
         });
 
         let trendParsed = safeJSON(tRaw.choices?.[0]?.message?.content || "") || {
-          trend:["vibe","culture","identity","flow"]
+          trend:["vibe","culture","flow","signal"]
         };
 
         let trendWords = trendParsed.trend.map(splitTrendWord);
 
-        // Location-aware override
-        if (detectedLocation){
+        if(detectedLocation){
           trendWords[0] = `${detectedLocation} vibe`;
         }
 
-        // FINAL PERSONA — profession FIXED HERE
+        // SEND NPC TO FRONTEND
         socket.emit("personaChunk",{
-          profession: parsed.profession,           // ✔ FIXED
+          profession: parsed.profession,
           gender: demo.gender,
           race: demo.race,
           age: demo.age,
@@ -292,11 +288,11 @@ JSON ONLY:
     }
   });
 
-  socket.on("disconnect",()=>console.log("❌ Client disconnected:",socket.id));
+  socket.on("disconnect",()=>console.log("❌ Client disconnected:", socket.id));
 });
 
 // ==========================================================
-// VIEWS (unchanged)
+// VIEW COUNTER (unchanged)
 //////////////////////////////////////////////////////////////
 const VIEW_FILE="/data/views.json";
 function readViews(){ try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0}} }
@@ -317,5 +313,5 @@ app.use(express.static(path.join(__dirname,"public")));
 //////////////////////////////////////////////////////////////
 const PORT=process.env.PORT||3000;
 httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser v2.1 running on :${PORT}`);
+  console.log(`🔥 NPC Browser v2.2 running on :${PORT}`);
 });
