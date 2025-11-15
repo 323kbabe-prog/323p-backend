@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////
-//  server.js — NPC Browser (Super Agentic Trend Engine v1.6)
-//  NPC Update: Real Professions + No Topic Repeat + Experience
-//  All other systems preserved (Share, Auto-search, Trends)
+//  server.js — NPC Browser (Super Agentic Trend Engine v1.7)
+//  NPC Update: Ultra-Diverse Real Professions + No Topic Repeat
+//  + Personal Experience + ALL SYSTEMS PRESERVED
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -18,7 +18,7 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-console.log("🚀 NPC Browser — Agentic Trend Engine v1.6 starting...");
+console.log("🚀 NPC Browser — Agentic Trend Engine v1.7 starting...");
 console.log("API Key:", !!process.env.OPENAI_API_KEY);
 
 // ==========================================================
@@ -65,7 +65,7 @@ function extractLocation(text){
 }
 
 // ==========================================================
-// DEMOGRAPHICS & ACADEMIC FIELDS
+// DEMOGRAPHICS & ACADEMIC FIELDS (Used only for personality variation)
 // ==========================================================
 const genders=["Female","Male","Nonbinary"];
 const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
@@ -89,7 +89,7 @@ function pickUnique(arr, count){
 }
 
 // ==========================================================
-// SHARE SYSTEM
+// SHARE SYSTEM (UNCHANGED)
 // ==========================================================
 const SHARES_FILE = "/data/shares.json";
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
@@ -154,7 +154,7 @@ setTimeout(()=>{
 });
 
 // ==========================================================
-// SOCKET.IO — MAIN NPC GENERATOR (v1.6)
+// SOCKET.IO — MAIN NPC GENERATOR (v1.7)
 // ==========================================================
 const httpServer=createServer(app);
 const io=new Server(httpServer,{cors:{origin:"*"}});
@@ -182,7 +182,7 @@ io.on("connection", socket=>{
         };
 
         // ======================================================
-        // NPC THOUGHT ENGINE v1.6
+        // NPC THOUGHT ENGINE v1.7
         // ======================================================
         const thoughtPrompt = `
 You are generating a highly realistic professional perspective.
@@ -195,47 +195,42 @@ NPC DEMOGRAPHICS:
 NPC ACADEMIC BACKGROUND:
 "${persona.persona.identity}"
 
-TASK 1 — Profession:
-Create a **real-world, believable profession** based on their academic background.
-Examples (do NOT copy exactly):
-- Clinical Psychologist
-- Civil Engineer
-- Physician
-- Corporate Lawyer
-- Architect
-- Journalist
-- Registered Nurse
-- Software Developer
-- Social Worker
-- Economist
-- Mechanical Engineer
-- Urban Planner
+TASK 1 — Profession (CRITICAL DIVERSITY RULE):
+Create a **real-world profession** for this NPC that:
+- is a job someone in everyday life could realistically have,
+- belongs to a **different industry** than the other NPCs,
+- avoids similar patterns (no repeated templates like “___ analyst”, “___ researcher”),
+- does NOT mention “major” or “Stanford”.
 
-Rules:
-- MUST be a real job someone could actually have.
-- MUST be different from the other NPCs.
-- NEVER mention “major” or “Stanford”.
+Allowed industries include:
+medicine, law, engineering, education, arts, trades, journalism,
+transportation, public safety, finance, therapy, architecture, design,
+software development, social work, hospitality, business, science, etc.
 
-TASK 2 — Thought (VERY IMPORTANT):
+Examples (do NOT copy): doctor, nurse, lawyer, teacher, engineer,
+chef, electrician, journalist, pilot, therapist, architect, accountant,
+software developer, firefighter, fashion designer.
+
+TASK 2 — Thought:
 Write a **3-sentence reflection** about the *idea behind "${query}"*.
 
 STRUCTURE:
-1. Sentence 1 → Conceptual reflection from the NPC’s professional worldview  
+1. Sentence 1 → A conceptual reflection from their professional worldview  
    (DO NOT repeat the topic words directly)
-2. Sentence 2 → deeper interpretation using logic from their field  
-   (still no topic repetition)
-3. Sentence 3 → A short personal experience from their profession  
-   (e.g., “In my work last year…”, “A situation I handled once showed me…”,  
-        “During a project, I witnessed…”)
+2. Sentence 2 → Deeper interpretation using the logic of their field  
+3. Sentence 3 → A short personal experience (e.g.,  
+   “Last year I handled a case where…”,  
+   “I once had a patient who…”,  
+   “During a project, I saw…”,  
+   “A class I taught revealed this to me…”)
 
 Rules:
-- DO NOT describe the topic.
+- DO NOT describe the topic directly.
 - DO NOT repeat the topic phrase.
-- Tone must be intelligent, grounded, smooth.
-- Thought must feel like a realistic professional insight.
+- Tone must be realistic, professional, and grounded.
 
 TASK 3 — Hashtags:
-Return 3–5 simple hashtags (NO # symbol).
+Return 3–5 simple, trend-friendly hashtags (NO # symbol).
 
 JSON ONLY:
 {
@@ -251,10 +246,10 @@ JSON ONLY:
           temperature:0.85
         });
 
-        const parsed = safeJSON(resp.choices?.[0]?.message?.content || "") || {
-          profession:"Research Analyst",
-          thought:"This idea reflects patterns I often see in social behavior. It highlights how simple signals shape interactions. A past project I worked on revealed this dynamic clearly.",
-          hashtags:["culture","identity"]
+        const parsed = safeJSON(resp.choices?.[00000]?.message?.content || "") || {
+          profession:"Teacher",
+          thought:"This idea reveals how people organize meaning in their daily routines. Different life stages influence how individuals internalize these moments. A class discussion I led last year showed me how deeply this can shape someone’s outlook.",
+          hashtags:["culture","pattern"]
         };
 
         persona.profession = parsed.profession;
@@ -267,7 +262,6 @@ JSON ONLY:
         const trendPrompt=`
 Turn the following into EXACTLY 4 short TREND KEYWORDS (1–2 words each).
 Style: vibe + emotion + aesthetic + culture.
-No academic language.
 
 NPC Thought:
 "${persona.thought}"
@@ -318,8 +312,8 @@ JSON ONLY:
 });
 
 // ==========================================================
-// VIEW COUNTER
-// ==========================================================
+// VIEW COUNTER (UNCHANGED)
+/////////////////////////////////////////////////////////////
 const VIEW_FILE="/data/views.json";
 function readViews(){try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0}}}
 function writeViews(v){try{fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2));}catch{}}
@@ -330,14 +324,14 @@ app.get("/api/views",(req,res)=>{
 });
 
 // ==========================================================
-// STATIC FILES
-// ==========================================================
+// STATIC FILES (UNCHANGED)
+/////////////////////////////////////////////////////////////
 app.use(express.static(path.join(__dirname,"public")));
 
 // ==========================================================
 // START SERVER
-// ==========================================================
+/////////////////////////////////////////////////////////////
 const PORT=process.env.PORT||3000;
 httpServer.listen(PORT,()=>{
-  console.log(`🔥 NPC Browser v1.6 running on :${PORT}`);
+  console.log(`🔥 NPC Browser v1.7 running on :${PORT}`);
 });
