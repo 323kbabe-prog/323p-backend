@@ -164,6 +164,46 @@ setTimeout(()=>{
 });
 
 // ==========================================================
+// BLUE OCEAN REWRITE ENGINE vAI-Pro (ONLY ADDITION)
+// ==========================================================
+app.post("/api/rewrite", async (req, res) => {
+  const { query } = req.body;
+
+  const prompt = `
+You are the official rewrite engine for Blue Ocean Browser — an AI-driven business perspective browser.
+
+Rewrite ANY user input into a polished, globally-correct business direction statement.
+
+Rules:
+- ALWAYS rewrite the input.
+- Keep the user’s meaning, never add extra details.
+- Normalize locations to official global names.
+- Use professional strategy language (initiative, concept, venture, project, strategy, brand).
+- Do NOT assume retail categories (no shop/restaurant).
+- Tone: globally neutral, analytical.
+- One sentence only.
+
+User Input: "${query}"
+Rewritten:
+  `;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2
+    });
+
+    const rewritten = completion.choices[0].message.content.trim();
+    res.json({ rewritten });
+
+  } catch (err) {
+    console.error("❌ Rewrite Engine Error:", err);
+    res.json({ rewritten: query });
+  }
+});
+
+// ==========================================================
 // NPC ENGINE v2.8
 // ==========================================================
 const httpServer = createServer(app);
