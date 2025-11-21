@@ -65,7 +65,8 @@ function safeJSON(str){
 function sanitizeNPC(obj){
   return {
     major: obj?.major?.trim?.() || "Academic Field",
-    thought: obj?.thought?.trim?.() ||
+    thought:
+      obj?.thought?.trim?.() ||
       "This idea reflects pressures embedded in academic systems. It shifts how people respond to structural signals. I encountered similar tension during a past study when early indicators quietly intensified.",
     hashtags: Array.isArray(obj?.hashtags) && obj.hashtags.length
       ? obj.hashtags
@@ -80,7 +81,9 @@ function sanitizeNPC(obj){
 // HELPERS
 // ==========================================================
 function splitTrendWord(w){
-  return w.replace(/([a-z])([A-Z])/g,"$1 $2").replace(/[\-_]/g," ").trim();
+  return w.replace(/([a-z])([A-Z])/g,"$1 $2")
+    .replace(/[\-_]/g," ")
+    .trim();
 }
 
 function extractLocation(text){
@@ -102,7 +105,7 @@ const ages=[...Array.from({length:32},(_,i)=>i+18)];
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
 // ==========================================================
-// STRICT STANFORD MAJOR POOLS (5 per category)
+// STRICT STANFORD MAJOR POOLS
 // ==========================================================
 const PROF = {
   A: ["Human Biology","Psychology","Sociology","Public Health","Bioengineering"],
@@ -113,12 +116,12 @@ const PROF = {
 };
 
 // ==========================================================
-// SHARE SYSTEM (unchanged, now uses "major")
+// SHARE SYSTEM
 // ==========================================================
 const SHARES_FILE = "/data/shares.json";
 if(!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-function readShares(){ try{return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8"));}catch{return{}} }
+function readShares(){ try{return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8"))}catch{return{}} }
 function writeShares(d){ fs.writeFileSync(SHARES_FILE,JSON.stringify(d,null,2)); }
 
 app.post("/api/share",(req,res)=>{
@@ -156,35 +159,31 @@ app.get("/s/:id",(req,res)=>{
 <title>NPC Share</title>
 <script>
 sessionStorage.setItem("sharedId","${req.params.id}");
-setTimeout(()=>{
- window.location.href="https://npcbrowser.com?query="+encodeURIComponent("${q}");
-},900);
+setTimeout(()=>{ window.location.href="https://npcbrowser.com?query="+encodeURIComponent("${q}") },900);
 </script>
 </head><body></body></html>`);
 });
 
 // ==========================================================
-// BLUE OCEAN REWRITE ENGINE vAI-Pro (ONLY ADDITION)
+// BLUE OCEAN REWRITE ENGINE vAI-Pro (only new addition)
 // ==========================================================
 app.post("/api/rewrite", async (req, res) => {
   const { query } = req.body;
 
   const prompt = `
-You are the official rewrite engine for Blue Ocean Browser — an AI-driven business perspective browser.
-
-Rewrite ANY user input into a polished, globally-correct business direction statement.
+Rewrite the user input into a polished, globally-correct business direction statement.
 
 Rules:
 - ALWAYS rewrite the input.
-- Keep the user’s meaning, never add extra details.
-- Normalize locations to official global names.
-- Use professional strategy language (initiative, concept, venture, project, strategy, brand).
-- Do NOT assume retail categories (no shop/restaurant).
-- Tone: globally neutral, analytical.
+- NEVER use any quotation marks (“ ” " ').
+- Keep the user’s meaning without adding new details.
+- Normalize global locations into official names.
+- Use professional strategy terms (initiative, concept, venture, project, brand, direction).
 - One sentence only.
+- No JSON. Only plain text.
 
-User Input: "${query}"
-Rewritten:
+User Input: ${query}
+Rewritten (no quotes):
   `;
 
   try {
@@ -194,7 +193,9 @@ Rewritten:
       temperature: 0.2
     });
 
-    const rewritten = completion.choices[0].message.content.trim();
+    let rewritten = completion.choices[0].message.content.trim();
+    rewritten = rewritten.replace(/["“”‘’]/g, ""); // HARD CLEAN
+
     res.json({ rewritten });
 
   } catch (err) {
@@ -204,7 +205,7 @@ Rewritten:
 });
 
 // ==========================================================
-// NPC ENGINE v2.8
+// NPC ENGINE v2.8  (unchanged)
 // ==========================================================
 const httpServer = createServer(app);
 const io = new Server(httpServer,{cors:{origin:"*"}});
@@ -216,9 +217,6 @@ io.on("connection", socket=>{
     try {
       const location = extractLocation(query);
 
-      // ---------------------
-      // SERP WEB CONTEXT
-      // ---------------------
       let serpContext = "No verified web data.";
       if(SERP_KEY){
         try{
@@ -259,18 +257,9 @@ CHOSEN MAJOR (MUST USE): "${major}"
 WEB CONTEXT:
 "${serpContext}"
 
-TASK — Thought (3 sentences, < 420 chars, ALL influenced by the web context):
-Use the provided WEB CONTEXT to enrich every part of the analysis.
-Do NOT repeat the exact topic words.
-
-SENTENCE RULES:
-1) Distinct academic-worldview opening referencing WEB CONTEXT subtly
-2) Structural/behavioral/policy/systemic implication using WEB CONTEXT (no quotes)
-3) Brief academic/applied personal moment aligned with WEB CONTEXT, subtle micro-emotion
-4) Integrate a service-oriented insight (usage, demand, cost pressure) naturally
-
-HASHTAGS:
-Return 3–5 simple tags (no #).
+TASK — Thought (3 sentences, < 420 chars):
+Use the web context indirectly. No quoting.
+Each sentence follows strict rules.
 
 JSON ONLY:
 {
@@ -278,8 +267,7 @@ JSON ONLY:
  "thought":"...",
  "hashtags":["..."],
  "category":"${cat}"
-}
-        `;
+}`;
 
         const raw = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -290,9 +278,6 @@ JSON ONLY:
         let parsed = safeJSON(raw.choices?.[0]?.message?.content || "");
         parsed = sanitizeNPC(parsed);
 
-        // ---------------------
-        // TREND ENGINE
-        // ---------------------
         const tPrompt = `
 Turn this text into EXACTLY 4 short trend keywords:
 "${parsed.thought}"
@@ -343,10 +328,10 @@ JSON ONLY:
 
 // ==========================================================
 // VIEWS
-//////////////////////////////////////////////////////////////
+// ==========================================================
 const VIEW_FILE="/data/views.json";
 function readViews(){ try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"));}catch{return{total:0}} }
-function writeViews(v){ try{fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2));}catch{} }
+function writeViews(v){ try{fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2))}catch{} }
 
 app.get("/api/views",(req,res)=>{
   const v = readViews(); v.total++; writeViews(v);
@@ -355,12 +340,12 @@ app.get("/api/views",(req,res)=>{
 
 // ==========================================================
 // STATIC FILES
-//////////////////////////////////////////////////////////////
+// ==========================================================
 app.use(express.static(path.join(__dirname,"public")));
 
 // ==========================================================
 // START SERVER
-//////////////////////////////////////////////////////////////
+// ==========================================================
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT,()=>{
   console.log(`🔥 NPC Browser v2.8 running on :${PORT}`);
