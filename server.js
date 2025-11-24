@@ -180,14 +180,6 @@ Rewritten:
     });
 
     let rewritten = completion.choices[0].message.content.trim();
-    
-    // CLEAN TYPOS / DOUBLE SPACES / STRANGE ARTIFACTS
-rewritten = rewritten
-  .replace(/["“”‘’]/g, "")         // remove quote characters
-  .replace(/\s+/g, " ")            // collapse multiple spaces
-  .replace(/[^a-zA-Z0-9,.\-! ]/g, "") // remove strange symbols
-  .trim();
-    
     rewritten = rewritten.replace(/["“”‘’]/g,"");
 
     res.json({ rewritten });
