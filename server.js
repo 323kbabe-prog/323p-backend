@@ -182,7 +182,16 @@ Rewritten:
     let rewritten = completion.choices[0].message.content.trim();
     rewritten = rewritten.replace(/["“”‘’]/g,"");
 
-    res.json({ rewritten });
+    // If rewritten is unclear / fallback message → return blank
+if (
+  rewritten.includes("not clear") ||
+  rewritten.includes("clarification") ||
+  rewritten.length < 3
+) {
+  return res.json({ rewritten: "" });
+}
+
+res.json({ rewritten });
 
   } catch (err) {
     console.error("❌ Rewrite Engine Error:", err);
