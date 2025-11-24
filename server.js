@@ -184,9 +184,10 @@ Rewritten:
 
     // If rewritten is unclear / fallback message → return blank
 if (
-  rewritten.includes("not clear") ||
-  rewritten.includes("clarification") ||
-  rewritten.length < 3
+  rewritten.length < 3 ||
+  rewritten.toLowerCase().includes("please provide") ||
+  rewritten.toLowerCase().includes("not clear") ||
+  rewritten.toLowerCase().includes("clarification")
 ) {
   return res.json({ rewritten: "" });
 }
