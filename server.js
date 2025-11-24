@@ -3,7 +3,6 @@
 //  Fully supports: Blue Ocean, NPC, Persona, 24 Billy
 //  Easily expandable for future browsers.
 //  NPC Engine v2.8 remains unchanged.
-//  Blue Ocean Rewrite Engine unchanged.
 //  Share system upgraded to multi-origin.
 //  Production-ready.
 //
@@ -101,14 +100,12 @@ const PROF = {
 // SHARE SYSTEM — Multi-Origin
 //////////////////////////////////////////////////////////////
 
-// The origin map is the KEY to multi-browser sharing.
 const ORIGIN_MAP = {
   blue:   "https://blueoceanbrowser.com",
   npc:    "https://npcbrowser.com",
   persona:"https://personabrowser.com",
   billy:  "https://24billybrowser.com"
 };
-// Just add new origins here later.
 
 const SHARES_FILE = "/data/shares.json";
 if(!fs.existsSync("/data")) fs.mkdirSync("/data");
@@ -116,7 +113,7 @@ if(!fs.existsSync("/data")) fs.mkdirSync("/data");
 function readShares(){ try{return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8"))}catch{return{}} }
 function writeShares(d){ fs.writeFileSync(SHARES_FILE,JSON.stringify(d,null,2)); }
 
-// Save share
+// Save shared personas
 app.post("/api/share",(req,res)=>{
   const all = readShares();
   const id = Math.random().toString(36).substring(2,8);
@@ -124,14 +121,14 @@ app.post("/api/share",(req,res)=>{
   all[id] = {
     personas: req.body.personas || [],
     query: req.body.query || "",
-    origin: req.body.origin || "npc"   // default to NPC
+    origin: req.body.origin || "npc"
   };
 
   writeShares(all);
   res.json({ shortId:id });
 });
 
-// Serve shared link
+// Shared link loader
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
   const s = all[req.params.id];
@@ -139,38 +136,50 @@ app.get("/s/:id",(req,res)=>{
   if(!s) return res.redirect("https://npcbrowser.com");
 
   const q = s.query || "";
-  const origin = s.origin || "npc";
-  const redirectURL = ORIGIN_MAP[origin] || ORIGIN_MAP.npc;
+  const o = s.origin || "npc";
+  const redirectURL = ORIGIN_MAP[o] || ORIGIN_MAP.npc;
 
   res.send(`
     <!doctype html>
-    <html><head>
-    <meta charset="utf-8"/>
+    <html><head><meta charset="utf-8"/>
     <script>
       sessionStorage.setItem("sharedId","${req.params.id}");
-      setTimeout(() => {
-        window.location.href = "${redirectURL}?query=" + encodeURIComponent("${q}");
-      }, 900);
+      setTimeout(()=>{
+        window.location.href="${redirectURL}?query="+encodeURIComponent("${q}");
+      },900);
     </script>
     </head><body></body></html>
   `);
 });
 
 //////////////////////////////////////////////////////////////
-// BLUE OCEAN REWRITE ENGINE
+// BLUE OCEAN REWRITE ENGINE (UPDATED — FIXES TYPOS)
 //////////////////////////////////////////////////////////////
 app.post("/api/rewrite", async (req, res) => {
   const { query } = req.body;
 
   const prompt = `
-Rewrite the user input into a polished business direction.
-Rules:
-- Remove quotes.
-- Do not add new info.
-- One sentence only.
-User Input: ${query}
-Rewritten:
-  `;
+You are a professional rewriting assistant.
+
+FIRST:
+- Fix all typos
+- Fix spelling mistakes
+- Fix broken or incomplete words
+- Fix repeated letters or accidental keyboard errors
+- Fix punctuation and grammar
+- Preserve the meaning
+
+THEN:
+- Rewrite the corrected text into a clear business direction
+- One sentence only
+- No new information
+- Remove all quotation marks
+
+User Input:
+${query}
+
+Corrected + rewritten (no quotes):
+`;
 
   try {
     const completion = await openai.chat.completions.create({
