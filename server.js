@@ -3,7 +3,7 @@
 //  Fully supports: Blue Ocean, NPC, Persona, 24 Billy
 //  Easily expandable for future browsers.
 //  NPC Engine v2.8 remains unchanged.
-//  Blue Ocean Rewrite Engine unchanged.
+//  Blue Ocean Rewrite Engine upgraded with UNCLEAR INPUT FILTER.
 //  Share system upgraded to multi-origin.
 //  Production-ready.
 //
@@ -101,14 +101,12 @@ const PROF = {
 // SHARE SYSTEM — Multi-Origin
 //////////////////////////////////////////////////////////////
 
-// The origin map is the KEY to multi-browser sharing.
 const ORIGIN_MAP = {
   blue:   "https://blueoceanbrowser.com",
   npc:    "https://npcbrowser.com",
   persona:"https://personabrowser.com",
   billy:  "https://24billybrowser.com"
 };
-// Just add new origins here later.
 
 const SHARES_FILE = "/data/shares.json";
 if(!fs.existsSync("/data")) fs.mkdirSync("/data");
@@ -116,7 +114,6 @@ if(!fs.existsSync("/data")) fs.mkdirSync("/data");
 function readShares(){ try{return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8"))}catch{return{}} }
 function writeShares(d){ fs.writeFileSync(SHARES_FILE,JSON.stringify(d,null,2)); }
 
-// Save share
 app.post("/api/share",(req,res)=>{
   const all = readShares();
   const id = Math.random().toString(36).substring(2,8);
@@ -124,14 +121,13 @@ app.post("/api/share",(req,res)=>{
   all[id] = {
     personas: req.body.personas || [],
     query: req.body.query || "",
-    origin: req.body.origin || "npc"   // default to NPC
+    origin: req.body.origin || "npc"
   };
 
   writeShares(all);
   res.json({ shortId:id });
 });
 
-// Serve shared link
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
   const s = all[req.params.id];
@@ -157,7 +153,7 @@ app.get("/s/:id",(req,res)=>{
 });
 
 //////////////////////////////////////////////////////////////
-// BLUE OCEAN REWRITE ENGINE
+// BLUE OCEAN REWRITE ENGINE (UNCLEAR INPUT FILTER ADDED)
 //////////////////////////////////////////////////////////////
 app.post("/api/rewrite", async (req, res) => {
   const { query } = req.body;
@@ -182,21 +178,33 @@ Rewritten:
     let rewritten = completion.choices[0].message.content.trim();
     rewritten = rewritten.replace(/["“”‘’]/g,"");
 
-    // If rewritten is unclear / fallback message → return blank
-if (
-  rewritten.length < 3 ||
-  rewritten.toLowerCase().includes("please provide") ||
-  rewritten.toLowerCase().includes("not clear") ||
-  rewritten.toLowerCase().includes("clarification")
-) {
-  return res.json({ rewritten: "" });
-}
+    // 🔒 BLOCK ALL UNCLEAR/FALLBACK CONTENT
+    const unclear = [
+      "please provide",
+      "not clear",
+      "clarification",
+      "appears to be",
+      "random string",
+      "unclear",
+      "unable to interpret",
+      "does not appear meaningful",
+      "cannot understand"
+    ];
 
-res.json({ rewritten });
+    const low = rewritten.toLowerCase();
+
+    if (
+      rewritten.length < 3 ||
+      unclear.some(k => low.includes(k))
+    ) {
+      return res.json({ rewritten: "" });
+    }
+
+    res.json({ rewritten });
 
   } catch (err) {
     console.error("❌ Rewrite Engine Error:", err);
-    res.json({ rewritten: query });
+    res.json({ rewritten: "" });
   }
 });
 
