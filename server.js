@@ -138,37 +138,52 @@ app.get("/s/:id",(req,res)=>{
 });
 
 //////////////////////////////////////////////////////////////
-// SMART REWRITE ENGINE
+// SMART REWRITE ENGINE — MEDIUM VERSION (2 sentences max)
 //////////////////////////////////////////////////////////////
 
-app.post("/api/rewrite", async (req,res)=>{
+app.post("/api/rewrite", async (req, res) => {
   let { query } = req.body;
   query = (query || "").trim();
-  if (!query) return res.json({ rewritten:"" });
+  if (!query) return res.json({ rewritten: "" });
 
   const prompt = `
-Rewrite this into a meaningful strategic business direction.
-Do NOT quote the user.
-Make it clean, polished, and actionable.
-Input: ${query}
+Rewrite the user's text into a clear strategic business direction.
+Rules:
+- Output EXACTLY 1–2 sentences.
+- Do NOT quote the user.
+- Keep it concise but meaningful.
+- No filler, no over-explaining.
+- Preserve the user's intent, but do not expand beyond it.
+User Input: ${query}
 Rewritten:
-  `;
+`;
 
-  try{
+  try {
     const out = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      messages:[{role:"user",content:prompt}],
-      temperature:0.2
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3
     });
 
     let rewritten = out.choices[0].message.content.trim();
-    rewritten = rewritten.replace(/["“”]/g,"").trim();
 
-    if (rewritten.length < 3) return res.json({ rewritten:"" });
+    // Clean quotes
+    rewritten = rewritten.replace(/["“”‘’]/g, "").trim();
+
+    // If it's empty or meaningless → return blank
+    if (rewritten.length < 3) return res.json({ rewritten: "" });
+
+    // If it produced more than 2 sentences, trim it
+    const sentences = rewritten.split(".").filter(s => s.trim());
+    if (sentences.length > 2) {
+      rewritten = sentences.slice(0, 2).join(". ") + ".";
+    }
 
     res.json({ rewritten });
-  }catch(e){
-    res.json({ rewritten:query });
+
+  } catch (err) {
+    console.error("Rewrite Error:", err);
+    res.json({ rewritten: query });
   }
 });
 
