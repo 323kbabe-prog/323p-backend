@@ -246,7 +246,7 @@ io.on("connection", socket => {
 
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write a **single paragraph, 6–8 sentences**, following:
+Write a **single paragraph, 3–5 sentences**, following:
 
 LAYER 1 — Identity Analysis
 - Analyze the topic through the lens of ${major}
