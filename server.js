@@ -241,12 +241,17 @@ io.on("connection", socket=>{
 
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write a single paragraph (4–6 sentences) analyzing the rewritten direction:
+Write a single paragraph (3 sentences) analyzing the rewritten direction:
 "${rewrittenQuery}" (do NOT quote it).
-Integrate SERP trend data: "${serpContext}".
+
 Use the worldview and methodology of ${major}.
+Naturally integrate insights inspired by: "${serpContext}" — but never mention where they came from.
+Use language that sounds like professional intuition or field-based observation.
+
 Include one small personal anecdote.
 Tone: reflective, analytical, grounded.
+Do NOT mention online trends, search results, SERP, or web activity.
+Provide only the paragraph.
 
 After the paragraph, produce EXACTLY 4 bullet points using this format:
 Key directions to consider:
