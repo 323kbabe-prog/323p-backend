@@ -207,7 +207,7 @@ The user direction is: "${rewrittenQuery}" (DO NOT QUOTE IT).
 
 You also have REAL search trend data: "${serpContext}".
 
-Write a **7-sentence soft reflective analysis** that includes:
+Write a **4=-sentence soft reflective analysis** that includes:
 
 1) Identity-based interpretation (major-specific worldview)
 2) Indirect reference to the rewritten direction (NO quoting)
