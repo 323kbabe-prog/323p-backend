@@ -300,6 +300,14 @@ The directions must:
           hashtags,
           category: cat
         };
+        
+// Append location as hashtag if found
+if (location) {
+  const locTag = location.replace(/\s+/g, "").toLowerCase();
+  if (!persona.hashtags.includes(locTag)) {
+    persona.hashtags.push(locTag);   // e.g. "nyc"
+  }
+}
 
         socket.emit("personaChunk", persona);
       }
