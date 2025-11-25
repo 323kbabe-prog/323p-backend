@@ -203,11 +203,15 @@ io.on("connection", socket=>{
 
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-The user direction is: "${rewrittenQuery}" (DO NOT QUOTE IT).
+Use field-specific terminology, technical language, conceptual frameworks, 
+and analytical patterns commonly used by experts in ${major}. 
+Your reasoning MUST sound like someone who deeply understands ${major}, 
+and should naturally incorporate discipline-specific keywords and mental models.
 
+The user direction is: "${rewrittenQuery}" (DO NOT QUOTE IT).
 You also have REAL search trend data: "${serpContext}".
 
-Write a **4=-sentence soft reflective analysis** that includes:
+Write a **7-sentence soft reflective analysis** that includes:
 
 1) Identity-based interpretation (major-specific worldview)
 2) Indirect reference to the rewritten direction (NO quoting)
