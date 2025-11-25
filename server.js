@@ -4,7 +4,8 @@
 //
 // FEATURES:
 // • Smart rewrite engine (1–2 sentences)
-// • Full SERP-powered 3-sentence thought engine
+// • SERP-powered 3-sentence identity thought
+// • PLUS 4 bullet-point niche strategic directions
 // • AI-generated hashtags (platform-safe, 3–6 tokens)
 // • 4-platform search uses ONLY hashtags
 // • Persona identities (major, gender, race, age)
@@ -40,7 +41,7 @@ function safeJSON(str){
   try{ return JSON.parse(str); }catch{}
   try{
     const m = str.match(/\{[\s\S]*?\}/);
-    if(m) return JSON.parse(m[0]);
+    if (m) return JSON.parse(m[0]);
   }catch{}
   return null;
 }
@@ -124,7 +125,7 @@ app.get("/s/:id",(req,res)=>{
 });
 
 //////////////////////////////////////////////////////////////
-// REWRITE ENGINE (1–2 sentences max)
+// REWRITE ENGINE (1–2 sentences)
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async (req,res)=>{
@@ -165,7 +166,7 @@ Rewritten:
 });
 
 //////////////////////////////////////////////////////////////
-// MAIN ENGINE — SERP + 3-sentence thought + AI hashtags
+// MAIN ENGINE — SERP + THOUGHT + DIRECTIONS + HASHTAGS
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
@@ -215,31 +216,49 @@ io.on("connection", socket=>{
         const demo  = { gender:pick(genders), race:pick(races), age:pick(ages) };
 
         ////////////////////////////////////////////////////////////
-        // FINAL 3-SENTENCE THOUGHT ENGINE
+        // ✨ FINAL THOUGHT PROMPT (Paragraph + 4 bullet points)
         ////////////////////////////////////////////////////////////
 
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write a single paragraph of **3 sentences** analyzing the user's direction
-WITHOUT quoting it:
+Write a single paragraph (3 sentences) analyzing the rewritten direction:
+"${rewrittenQuery}" (do NOT quote it).
 
-Direction: ${rewrittenQuery}
+Use the worldview and methodology of ${major}.
+Naturally integrate insights inspired by: "${serpContext}" — but never mention where they came from.
+Use language that sounds like professional intuition or field-based observation.
 
-Use:
-• Your professional worldview (from ${major})
-• Insights loosely inspired by: "${serpContext}"
-  (but do NOT mention data, SERP, trends, or search)
-• One small personal anecdote
-• Tone: reflective, analytical, grounded
+Include one small personal anecdote.
+Tone: reflective, analytical, grounded.
+Do NOT mention online trends, search results, SERP, or web activity.
+Provide only the paragraph.
 
-Also generate **3–6 short platform-friendly hashtags**:
-• one word or two-word fused tokens
-• no spaces, no punctuation
-• must relate to your thought + identity + subject
-Return JSON only:
+After the paragraph, produce EXACTLY 4 bullet points using this format:
+Key directions to consider:
+- direction 1
+- direction 2
+- direction 3
+- direction 4
+
+The directions must:
+- be niche to the identity field (${major})
+- be relevant to the rewritten direction (no quoting)
+- NOT be generic
+- be actionable and strategic
+
+Finally, generate 3–6 hashtags that relate to:
+• the identity field (${major})
+• the rewritten direction
+• any inferred location
+• your strategic directions
+Rules for hashtags:
+- one word or fused tokens
+- no spaces
+- no punctuation
+Return JSON ONLY:
 {
-"thought":"...",
-"hashtags":["...","..."]
+"thought":"paragraph + bullet list",
+"hashtags":["tag1","tag2","tag3"]
 }
         `;
 
@@ -293,8 +312,8 @@ function writeViews(v){
 }
 
 app.get("/api/views",(req,res)=>{
-  const v = readViews();
-  v.total++;
+  const v = readViews(); 
+  v.total++; 
   writeViews(v);
   res.json({total:v.total});
 });
