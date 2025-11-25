@@ -29,8 +29,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 console.log("🚀 FINAL ENGINE STARTING…");
-console.log("OpenAI OK:", !!process.env.OPENAI_API_KEY);
-console.log("SERP OK:", !!SERP_KEY);
 
 //////////////////////////////////////////////////////////////
 // HELPERS
@@ -41,7 +39,7 @@ function safeJSON(str){
   try{ return JSON.parse(str); }catch{}
   try{
     const m = str.match(/\{[\s\S]*?\}/);
-    if (m) return JSON.parse(m[0]);
+    if(m) return JSON.parse(m[0]);
   }catch{}
   return null;
 }
@@ -55,7 +53,7 @@ const races = ["Asian","Black","White","Latino","Middle Eastern","Mixed"];
 const ages = [...Array.from({length:32},(_,i)=>i+18)];
 
 //////////////////////////////////////////////////////////////
-// MAJORS (IDENTITY POOL)
+// MAJORS
 //////////////////////////////////////////////////////////////
 
 const PROF = {
@@ -125,7 +123,7 @@ app.get("/s/:id",(req,res)=>{
 });
 
 //////////////////////////////////////////////////////////////
-// REWRITE ENGINE (1–2 sentences)
+// REWRITE ENGINE
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async (req,res)=>{
@@ -166,7 +164,7 @@ Rewritten:
 });
 
 //////////////////////////////////////////////////////////////
-// MAIN ENGINE — SERP + THOUGHT + DIRECTIONS + HASHTAGS
+// MAIN ENGINE — SERP + Thought + Bullet-list + Hashtags
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
@@ -177,10 +175,9 @@ io.on("connection", socket=>{
 
   socket.on("personaSearch", async rewrittenQuery=>{
     try{
-      ////////////////////////////////////////////////////////////
+      // --------------------
       // SERP FETCH
-      ////////////////////////////////////////////////////////////
-
+      // --------------------
       const serpQuery = rewrittenQuery
         .split(" ")
         .filter(w=>w.length>2)
@@ -206,8 +203,9 @@ io.on("connection", socket=>{
         }
       }
 
-      ////////////////////////////////////////////////////////////
-
+      // --------------------
+      // PERSONA GENERATION
+      // --------------------
       const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
 
       for(let i=0;i<10;i++){
@@ -215,50 +213,33 @@ io.on("connection", socket=>{
         const major = pick(PROF[cat]);
         const demo  = { gender:pick(genders), race:pick(races), age:pick(ages) };
 
-        ////////////////////////////////////////////////////////////
-        // ✨ FINAL THOUGHT PROMPT (Paragraph + 4 bullet points)
-        ////////////////////////////////////////////////////////////
-
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
 Write a single paragraph (3 sentences) analyzing the rewritten direction:
 "${rewrittenQuery}" (do NOT quote it).
 
-Use the worldview and methodology of ${major}.
-Naturally integrate insights inspired by: "${serpContext}" — but never mention where they came from.
-Use language that sounds like professional intuition or field-based observation.
-
+Use professional intuition from ${major}.
+Integrate insights inspired by: "${serpContext}" — but DO NOT mention any data source.
 Include one small personal anecdote.
-Tone: reflective, analytical, grounded.
-Do NOT mention online trends, search results, SERP, or web activity.
-Provide only the paragraph.
+Tone reflective, analytical, grounded.
 
-After the paragraph, produce EXACTLY 4 bullet points using this format:
+After the paragraph, output exactly:
 Key directions to consider:
 - direction 1
 - direction 2
 - direction 3
 - direction 4
 
-The directions must:
-- be niche to the identity field (${major})
-- be relevant to the rewritten direction (no quoting)
-- NOT be generic
-- be actionable and strategic
+Directions must be:
+- niche to ${major}
+- relevant to the rewritten direction
+- actionable, not generic
 
-Finally, generate 3–6 hashtags that relate to:
-• the identity field (${major})
-• the rewritten direction
-• any inferred location
-• your strategic directions
-Rules for hashtags:
-- one word or fused tokens
-- no spaces
-- no punctuation
+Finally generate **3–6 fused hashtags**, no spaces:
 Return JSON ONLY:
 {
-"thought":"paragraph + bullet list",
-"hashtags":["tag1","tag2","tag3"]
+"thought":"paragraph + bullets",
+"hashtags":["t1","t2","t3"]
 }
         `;
 
@@ -269,23 +250,18 @@ Return JSON ONLY:
         });
 
         const parsed = safeJSON(ai.choices[0].message.content) || {};
-        const finalThought = parsed.thought || "";
-        const finalTags    = parsed.hashtags || [];
-
-        ////////////////////////////////////////////////////////////
-
         const persona = {
           major,
           gender:demo.gender,
           race:demo.race,
           age:demo.age,
-          thought:finalThought,
-          hashtags:finalTags,
+          thought: parsed.thought || "",
+          hashtags: parsed.hashtags || [],
           serpContext,
           category:cat
         };
 
-        socket.emit("personaChunk",persona);
+        socket.emit("personaChunk", persona);
       }
 
       socket.emit("personaDone");
@@ -300,7 +276,7 @@ Return JSON ONLY:
 });
 
 //////////////////////////////////////////////////////////////
-// VIEWS + STATIC
+// VIEWS
 //////////////////////////////////////////////////////////////
 
 const VIEW_FILE="/data/views.json";
@@ -312,11 +288,15 @@ function writeViews(v){
 }
 
 app.get("/api/views",(req,res)=>{
-  const v = readViews(); 
-  v.total++; 
+  const v = readViews();
+  v.total++;
   writeViews(v);
   res.json({total:v.total});
 });
+
+//////////////////////////////////////////////////////////////
+// STATIC
+//////////////////////////////////////////////////////////////
 
 app.use(express.static(path.join(__dirname,"public")));
 
