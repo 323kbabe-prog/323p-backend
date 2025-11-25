@@ -1,13 +1,12 @@
 //////////////////////////////////////////////////////////////
-//  server.js — Multi-Origin Final Engine (SERP FIXED)
+//  server.js — Multi-Origin Final Engine (SERP FIXED + CLEAN)
 //  Supports: Blue Ocean · NPC · Persona · 24 Billy
-//
 //  Features:
-//   • Smart rewrite engine
-//   • Full SERP-powered 3-layer thought engine
-//   • Persona identities (major, gender, race, age)
-//   • Multi-origin share system
-//   • Share links reopen correct browser + auto-search
+//    • Smart rewrite engine (1–2 sentences)
+//    • SERP-powered 3-layer thought engine
+//    • Academic persona identities
+//    • Multi-origin share system
+//    • Auto-load shared queries in correct browser
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -28,13 +27,13 @@ const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 console.log("🚀 FINAL ENGINE STARTING…");
 console.log("OpenAI:", !!process.env.OPENAI_API_KEY);
-console.log("SERP:", !!SERP_KEY);
+console.log("SERP Enabled:", !!SERP_KEY);
 
 //////////////////////////////////////////////////////////////
 // HELPERS
 //////////////////////////////////////////////////////////////
 
-function safeJSON(str){
+function safeJSON(str) {
   if (!str) return null;
   try { return JSON.parse(str); } catch {}
   try {
@@ -44,7 +43,7 @@ function safeJSON(str){
   return null;
 }
 
-function extractLocation(text){
+function extractLocation(text) {
   const LOC = [
     "USA","United States","America","LA","Los Angeles","NYC","New York",
     "Miami","Chicago","Texas","Florida","Seattle","San Francisco",
@@ -57,13 +56,13 @@ function extractLocation(text){
   return null;
 }
 
-const genders = ["Female","Male","Nonbinary"];
-const races = ["Asian","Black","White","Latino","Middle Eastern","Mixed"];
-const ages = [...Array.from({length:32},(_,i)=>i+18)];
-function pick(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+const genders = ["Female", "Male", "Nonbinary"];
+const races = ["Asian", "Black", "White", "Latino", "Middle Eastern", "Mixed"];
+const ages = [...Array.from({ length: 32 }, (_, i) => i + 18)];
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 //////////////////////////////////////////////////////////////
-// MAJORS
+// MAJORS (Academic Identity Pools)
 //////////////////////////////////////////////////////////////
 
 const PROF = {
@@ -88,57 +87,58 @@ const ORIGIN_MAP = {
 const SHARES_FILE = "/data/shares.json";
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-function readShares(){
-  try { return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8")); }
+function readShares() {
+  try { return JSON.parse(fs.readFileSync(SHARES_FILE, "utf8")); }
   catch { return {}; }
 }
-function writeShares(d){
-  fs.writeFileSync(SHARES_FILE,JSON.stringify(d,null,2));
+function writeShares(d) {
+  fs.writeFileSync(SHARES_FILE, JSON.stringify(d, null, 2));
 }
 
-app.post("/api/share",(req,res)=>{
+app.post("/api/share", (req, res) => {
   const all = readShares();
-  const id = Math.random().toString(36).substring(2,8);
-  
+  const id = Math.random().toString(36).substring(2, 8);
+
   all[id] = {
     personas: req.body.personas || [],
     query: req.body.query || "",
     origin: req.body.origin || "blue"
   };
-  
+
   writeShares(all);
-  res.json({ shortId:id });
+  res.json({ shortId: id });
 });
 
-app.get("/api/share/:id",(req,res)=>{
+app.get("/api/share/:id", (req, res) => {
   const all = readShares();
   const s = all[req.params.id];
   if (!s) return res.status(404).json([]);
   res.json(s.personas || []);
 });
 
-app.get("/s/:id",(req,res)=>{
+app.get("/s/:id", (req, res) => {
   const all = readShares();
   const s = all[req.params.id];
+
   if (!s) return res.redirect("https://blueoceanbrowser.com");
 
   const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
   res.send(`
-    <!doctype html>
-    <html><head><meta charset="utf-8"/>
-    <script>
-      sessionStorage.setItem("sharedId","${req.params.id}");
-      setTimeout(()=>{
-        window.location.href = "${redirectURL}?query=" + encodeURIComponent("${s.query||""}");
-      }, 500);
-    </script>
-    </head><body></body></html>
+  <!doctype html>
+  <html><head><meta charset="utf-8"/>
+  <script>
+    sessionStorage.setItem("sharedId", "${req.params.id}");
+    setTimeout(() => {
+      window.location.href = "${redirectURL}?query=" + encodeURIComponent("${s.query||""}");
+    }, 500);
+  </script>
+  </head><body></body></html>
   `);
 });
 
 //////////////////////////////////////////////////////////////
-// SMART REWRITE ENGINE — MEDIUM VERSION (2 sentences max)
+// SMART REWRITE ENGINE (1–2 sentences)
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async (req, res) => {
@@ -147,14 +147,12 @@ app.post("/api/rewrite", async (req, res) => {
   if (!query) return res.json({ rewritten: "" });
 
   const prompt = `
-Rewrite the user's text into a clear strategic business direction.
+Rewrite the user's text into a 1–2 sentence strategic business direction.
 Rules:
-- Output EXACTLY 1–2 sentences.
 - Do NOT quote the user.
-- Keep it concise but meaningful.
-- No filler, no over-explaining.
-- Preserve the user's intent, but do not expand beyond it.
-User Input: ${query}
+- Keep it meaningful, concise, professional.
+- Preserve intent but do NOT expand beyond scope.
+Input: ${query}
 Rewritten:
 `;
 
@@ -166,18 +164,15 @@ Rewritten:
     });
 
     let rewritten = out.choices[0].message.content.trim();
-
-    // Clean quotes
     rewritten = rewritten.replace(/["“”‘’]/g, "").trim();
 
-    // If it's empty or meaningless → return blank
-    if (rewritten.length < 3) return res.json({ rewritten: "" });
-
-    // If it produced more than 2 sentences, trim it
+    // Only allow 1–2 sentences max
     const sentences = rewritten.split(".").filter(s => s.trim());
     if (sentences.length > 2) {
       rewritten = sentences.slice(0, 2).join(". ") + ".";
     }
+
+    if (rewritten.length < 3) return res.json({ rewritten: "" });
 
     res.json({ rewritten });
 
@@ -192,29 +187,31 @@ Rewritten:
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
-const io = new Server(httpServer,{ cors:{origin:"*"} });
+const io = new Server(httpServer, { cors: { origin: "*" } });
 
-io.on("connection", socket=>{
+io.on("connection", socket => {
   console.log("Client connected:", socket.id);
 
-  socket.on("personaSearch", async rewrittenQuery=>{
-    try{
+  socket.on("personaSearch", async rewrittenQuery => {
+    try {
       const location = extractLocation(rewrittenQuery);
 
       ////////////////////////////////////////////////////////////
-      // ✔ FIXED SERP QUERY BUILDER — INSIDE THE HANDLER
+      // SERP QUERY BUILDER (INSIDE HANDLER)
       ////////////////////////////////////////////////////////////
 
       const serpQuery = rewrittenQuery
+        .replace(/[^a-zA-Z0-9 ]/g, " ")
         .split(" ")
         .filter(w => w.length > 2)
         .slice(0, 6)
         .join(" ");
 
       let serpContext = "No verified data.";
+
       if (SERP_KEY) {
-        try{
-          const url = `https://serpapi.com/search.json?q=${encodeURIComponent(serpQuery+" market trends 2025")}&num=5&api_key=${SERP_KEY}`;
+        try {
+          const url = `https://serpapi.com/search.json?q=${encodeURIComponent(serpQuery + " market trends 2025")}&num=5&api_key=${SERP_KEY}`;
           const r = await fetch(url);
           const j = await r.json();
 
@@ -225,7 +222,7 @@ io.on("connection", socket=>{
             .join(" | ");
 
           if (titles) serpContext = titles;
-        }catch(err){
+        } catch (err) {
           console.log("SERP ERROR:", err.message);
         }
       }
@@ -234,41 +231,45 @@ io.on("connection", socket=>{
 
       const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
 
-      for (let i=0; i<10; i++){
+      for (let i = 0; i < 10; i++) {
         const cat = CAT_ORDER[i];
         const major = pick(PROF[cat]);
-        const demo  = { gender:pick(genders), race:pick(races), age:pick(ages) };
+        const demo = {
+          gender: pick(genders),
+          race: pick(races),
+          age: pick(ages)
+        };
 
         ////////////////////////////////////////////////////////////
-        // 3-LAYER THOUGHT ENGINE (FINAL)
+        // THOUGHT ENGINE (3-LAYER FINAL)
         ////////////////////////////////////////////////////////////
 
         const fullPrompt = `
-You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.  
-Write a **single paragraph** with 6–8 sentences following this structure:
+You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
+Write a **single paragraph, 6–8 sentences**, following:
 
 LAYER 1 — Identity Analysis
-- Analyze the topic through the worldview of ${major}.
-- Explain why this subject matters in your field.
-- Do NOT quote the user's query.
+- Analyze the topic through the lens of ${major}
+- Explain why it matters in your field
+- Do NOT quote the user direction
 
 LAYER 2 — SERP Data Explanation
-- Interpret the SERP data: "${serpContext}".
-- Explain what public interest signals mean.
-- Keep it realistic (no fake stats).
+- Interpret SERP data: "${serpContext}"
+- Explain what public trend signals mean
+- No fake numbers
 
 LAYER 3 — Personal Integrated Idea
-- Combine insights from Layer 1 + Layer 2.
-- Include one personal observation, memory, or anecdote.
-- End with a forward-looking strategic insight.
+- Combine identity + SERP reasoning
+- Add one soft anecdote or real observation
+- End with a forward-looking strategic insight
 
 USER DIRECTION (do not quote): ${rewrittenQuery}
 `;
 
         const ai = await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          messages:[{role:"user",content:fullPrompt}],
-          temperature:0.85
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: fullPrompt }],
+          temperature: 0.85
         });
 
         const finalThought = ai.choices[0].message.content.trim();
@@ -277,10 +278,10 @@ USER DIRECTION (do not quote): ${rewrittenQuery}
           major,
           gender: demo.gender,
           race: demo.race,
-          age:   demo.age,
+          age: demo.age,
           thought: finalThought,
           serpContext,
-          hashtags: ["analysis","trend","insight"],
+          hashtags: ["analysis", "trend", "insight"],
           category: cat
         };
 
@@ -289,35 +290,42 @@ USER DIRECTION (do not quote): ${rewrittenQuery}
 
       socket.emit("personaDone");
 
-    }catch(err){
+    } catch (err) {
       console.error("ENGINE ERROR:", err);
-      socket.emit("personaError","Engine error");
+      socket.emit("personaError", "Engine error");
     }
   });
 
-  socket.on("disconnect", ()=>console.log("Client left:",socket.id));
+  socket.on("disconnect", () => console.log("Client left:", socket.id));
 });
 
 //////////////////////////////////////////////////////////////
-// VIEWS + STATIC
+// VIEW COUNTER + STATIC SERVER
 //////////////////////////////////////////////////////////////
 
-const VIEW_FILE="/data/views.json";
-function readViews(){ try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"))}catch{return{total:0}} }
-function writeViews(v){ try{fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2))}catch{} }
+const VIEW_FILE = "/data/views.json";
+function readViews() {
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
+  catch { return { total: 0 }; }
+}
+function writeViews(v) {
+  try { fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2)); } catch {}
+}
 
-app.get("/api/views",(req,res)=>{
-  const v = readViews(); 
-  v.total++; 
+app.get("/api/views", (req, res) => {
+  const v = readViews();
+  v.total++;
   writeViews(v);
-  res.json({total:v.total});
+  res.json({ total: v.total });
 });
 
-app.use(express.static(path.join(__dirname,"public")));
+app.use(express.static(path.join(__dirname, "public")));
 
 //////////////////////////////////////////////////////////////
 // START SERVER
 //////////////////////////////////////////////////////////////
 
-const PORT=process.env.PORT||3000;
-httpServer.listen(PORT,()=>console.log("🔥 Final Engine running on",PORT));
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () =>
+  console.log("🔥 Final Engine running on port", PORT)
+);
