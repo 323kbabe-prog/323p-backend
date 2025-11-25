@@ -1,14 +1,12 @@
 //////////////////////////////////////////////////////////////
-//  server.js — Multi-Origin Final Engine (Identity List Mode A)
+//  server.js — Multi-Origin Engine (FINAL, STABLE)
 //  Supports: Blue Ocean · NPC · Persona · 24 Billy
-//
-//  Features Added:
-//   • Identity-based paragraph (4–6 sentences)
-//   • 3–5 bullet-list strategic identity directions (Option A)
-//   • SERP-powered interpretation
+//  Features:
 //   • Medium rewrite engine (1–2 sentences)
-//   • Multi-origin share routing
-//   • Full persona streaming (10 personas)
+//   • SERP-powered persona thought engine
+//   • Identity-based list directions (3–5 items)
+//   • Persona identities (major, gender, race, age)
+//   • Share system (auto-redirect + auto-search)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -21,37 +19,39 @@ const fs = require("fs");
 const fetch = require("node-fetch");
 
 const app = express();
-app.use(cors({ origin:"*" }));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-console.log("🚀 Identity List Mode Engine starting…");
+console.log("🚀 Engine Booting…");
+console.log("OpenAI:", !!process.env.OPENAI_API_KEY);
+console.log("SERP:", !!SERP_KEY);
 
 //////////////////////////////////////////////////////////////
 // HELPERS
 //////////////////////////////////////////////////////////////
 
-function safeJSON(str){
-  if(!str) return null;
+function safeJSON(str) {
+  if (!str) return null;
   try { return JSON.parse(str); } catch {}
   try {
     const m = str.match(/\{[\s\S]*?\}/);
-    if(m) return JSON.parse(m[0]);
+    if (m) return JSON.parse(m[0]);
   } catch {}
   return null;
 }
 
-function extractLocation(text){
+function extractLocation(text) {
   const LOC = [
     "USA","United States","America","LA","Los Angeles","NYC","New York",
     "Miami","Chicago","Texas","Florida","Seattle","San Francisco",
     "Tokyo","Paris","London","Berlin","Seoul","Taipei","Singapore"
   ];
   const t = text.toLowerCase();
-  for(const c of LOC){
-    if(t.includes(c.toLowerCase())) return c;
+  for (const c of LOC) {
+    if (t.includes(c.toLowerCase())) return c;
   }
   return null;
 }
@@ -62,7 +62,7 @@ const ages=[...Array.from({length:32},(_,i)=>i+18)];
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)] }
 
 //////////////////////////////////////////////////////////////
-// MAJORS (IDENTITY POOLS)
+// MAJORS
 //////////////////////////////////////////////////////////////
 
 const PROF = {
@@ -84,16 +84,11 @@ const ORIGIN_MAP = {
   billy:  "https://24billybrowser.com"
 };
 
-const SHARES_FILE="/data/shares.json";
-if(!fs.existsSync("/data")) fs.mkdirSync("/data");
+const SHARES_FILE = "/data/shares.json";
+if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-function readShares(){
-  try { return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8")); }
-  catch { return {}; }
-}
-function writeShares(d){
-  fs.writeFileSync(SHARES_FILE, JSON.stringify(d, null, 2));
-}
+function readShares(){ try{ return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8")); }catch{ return {}; } }
+function writeShares(d){ fs.writeFileSync(SHARES_FILE, JSON.stringify(d,null,2)); }
 
 app.post("/api/share",(req,res)=>{
   const all = readShares();
@@ -104,22 +99,22 @@ app.post("/api/share",(req,res)=>{
     query: req.body.query || "",
     origin: req.body.origin || "blue"
   };
-
   writeShares(all);
+
   res.json({ shortId:id });
 });
 
 app.get("/api/share/:id",(req,res)=>{
   const all = readShares();
   const s = all[req.params.id];
-  if(!s) return res.status(404).json([]);
+  if (!s) return res.status(404).json([]);
   res.json(s.personas || []);
 });
 
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
-  const s = all[req.params.id];
-  if(!s) return res.redirect("https://blueoceanbrowser.com");
+  const s   = all[req.params.id];
+  if (!s) return res.redirect("https://blueoceanbrowser.com");
 
   const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
@@ -129,164 +124,182 @@ app.get("/s/:id",(req,res)=>{
       sessionStorage.setItem("sharedId","${req.params.id}");
       setTimeout(()=>{ 
         window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
-      }, 500);
+      },500);
     </script>
     </head><body></body></html>
   `);
 });
 
 //////////////////////////////////////////////////////////////
-// MEDIUM REWRITE ENGINE (1–2 sentences)
+// MEDIUM REWRITE ENGINE
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async (req,res)=>{
-  let {query}=req.body;
-  query=(query||"").trim();
-  if(!query) return res.json({rewritten:""});
+  let { query } = req.body;
+  query = (query||"").trim();
+  if (!query) return res.json({ rewritten:"" });
 
   const prompt = `
-Rewrite the user text into a clean, strategic direction.
+Rewrite the user's message into a clean business direction.
 Rules:
-• Output ONLY 1–2 sentences.
-• NO quotes.
-• Do not expand beyond user intent.
-User text: ${query}
+- EXACTLY 1–2 sentences.
+- Do NOT quote the user.
+- Keep the intent.
+- No expansions or extra meaning.
+Text: ${query}
 Rewritten:
 `;
 
   try{
-    const r = await openai.chat.completions.create({
+    const out = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       messages:[{role:"user",content:prompt}],
-      temperature:0.3
+      temperature:0.25
     });
 
-    let rewritten = r.choices[0].message.content.trim();
-    rewritten = rewritten.replace(/["“”‘’]/g,"").trim();
+    let rewritten = out.choices[0].message.content.trim();
+    rewritten = rewritten.replace(/["“”‘’]/g,"");
 
-    // Trim to max 2 sentences
-    const parts = rewritten.split(".").filter(x=>x.trim());
-    if(parts.length > 2){
-      rewritten = parts.slice(0,2).join(". ") + ".";
-    }
+    // Enforce max 2 sentences
+    const sentences = rewritten.split(".").filter(s=>s.trim());
+    if (sentences.length > 2)
+      rewritten = sentences.slice(0,2).join(". ") + ".";
 
-    if(rewritten.length < 3) return res.json({rewritten:""});
-    res.json({rewritten});
+    res.json({ rewritten });
 
   }catch(err){
-    console.error("Rewrite error:",err);
-    res.json({rewritten:query});
+    console.error("Rewrite Error:", err);
+    res.json({ rewritten: query });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// NPC ENGINE + SERP + 3-LAYER PARAGRAPH + LIST MODE (A)
+// NPC ENGINE + SERP + LIST-MODE
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
 const io = new Server(httpServer,{ cors:{origin:"*"} });
 
 io.on("connection", socket=>{
-  console.log("Client:",socket.id);
+  console.log("Client connected:",socket.id);
 
   socket.on("personaSearch", async rewrittenQuery=>{
     try{
       const location = extractLocation(rewrittenQuery);
 
-      ////////////////////////////////////////////////////////////
-      // BUILD SERP QUERY
-      ////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////
+      // SERP BUILDER (INSIDE HANDLER — REQUIRED)
+      ////////////////////////////////////////////////
 
       const serpQuery = rewrittenQuery
         .split(" ")
-        .filter(w=>w.length > 2)
+        .filter(w => w.length > 2)
         .slice(0,6)
         .join(" ");
 
       let serpContext = "No verified data.";
-      if(SERP_KEY){
+      if (SERP_KEY) {
         try{
-          const url = `https://serpapi.com/search.json?q=${encodeURIComponent(serpQuery+" 2025 analysis")}&num=5&api_key=${SERP_KEY}`;
+          const url = `https://serpapi.com/search.json?q=${
+            encodeURIComponent(serpQuery + " market trends 2025")
+          }&num=5&api_key=${SERP_KEY}`;
+
           const r = await fetch(url);
           const j = await r.json();
 
-          const titles = (j.organic_results||[])
-            .map(x=>x.title)
+          const titles = (j.organic_results || [])
+            .map(x => x.title)
             .filter(Boolean)
             .slice(0,3)
             .join(" | ");
 
-          if(titles) serpContext = titles;
+          if (titles) serpContext = titles;
+
         }catch(err){
           console.log("SERP ERROR:",err.message);
         }
       }
 
-      ////////////////////////////////////////////////////////////
-      // STREAM 10 PERSONAS
-      ////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////
 
-      const CAT_ORDER=["A","B","C","D","E","A","B","C","D","E"];
+      const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
 
-      for(let i=0;i<10;i++){
+      for (let i=0; i<10; i++){
         const cat = CAT_ORDER[i];
         const major = pick(PROF[cat]);
-        const demo  = { gender:pick(genders), race:pick(races), age:pick(ages) };
+        const demo = { gender:pick(genders), race:pick(races), age:pick(ages) };
 
-        ////////////////////////////////////////////////////////////
-        // IDENTITY LIST MODE — PROMPT
-        ////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////
+        //  Identity-Based 3–5 Direction List
+        ////////////////////////////////////////////////
 
-        const fullPrompt = `
+        const listPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write a **single paragraph of 4–6 sentences** reacting to (but not quoting)
-the user's strategic direction: ${rewrittenQuery}
+Provide a list of **exactly 4** strategic directions related to the user's topic:
+"${rewrittenQuery}" (do NOT quote it)
 
-Follow this structure:
+Rules:
+- Each direction must be rooted in the logic, expertise, or worldview of ${major}.
+- Keep each bullet short (max 1 sentence).
+- No fluff, no generalities.
+- Make them niche and professional.
 
-LAYER 1 — Identity View  
-Explain how someone trained in ${major} interprets the subject.  
-Explain why this topic matters inside your field.
+Output ONLY the list, in this format:
+- item 1
+- item 2
+- item 3
+- item 4
+`;
 
-LAYER 2 — SERP Data View  
-Interpret the SERP trend data: "${serpContext}".  
-Explain what those signals imply in a realistic way.
+        const listAI = await openai.chat.completions.create({
+          model:"gpt-4o-mini",
+          messages:[{ role:"user", content:listPrompt }],
+          temperature:0.85
+        });
 
-LAYER 3 — Integrated Idea  
-Blend identity reasoning + SERP signals.  
-Add one personal observation, memory, or anecdote.  
-Do NOT provide a direct solution to the user — only a reflective reaction.
+        const directionList = listAI.choices[0].message.content.trim();
 
-THEN PROVIDE A BULLET LIST (3–5 bullets) OF STRATEGIC DIRECTIONS  
-based on your ${major} expertise and the SERP signals.  
-Each bullet must be 1 short impactful line.
+        ////////////////////////////////////////////////
+        // Identity-based paragraph (reaction)
+        ////////////////////////////////////////////////
 
-Output format:
-Paragraph
-(blank line)
-- direction 1
-- direction 2
-- direction 3
-- direction 4 (optional)
-- direction 5 (optional)
-        `;
+        const thoughtPrompt = `
+You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
+Write ONE professional paragraph (4–6 sentences) reacting to:
+
+USER DIRECTION (do not quote): ${rewrittenQuery}
+SERP TREND DATA: ${serpContext}
+
+Requirements:
+• Identity voice: speak from the worldview & logic of ${major}
+• Analytical + reflective
+• Integrate SERP data naturally
+• No fake stats
+• No quoting user text
+• Connect identity → data → insight
+`;
 
         const ai = await openai.chat.completions.create({
           model:"gpt-4o-mini",
-          messages:[{role:"user",content:fullPrompt}],
+          messages:[{ role:"user", content:thoughtPrompt }],
           temperature:0.85
         });
 
         const finalThought = ai.choices[0].message.content.trim();
+
+        ////////////////////////////////////////////////
+        // FINAL PERSONA OBJECT
+        ////////////////////////////////////////////////
 
         const persona = {
           major,
           gender: demo.gender,
           race: demo.race,
           age: demo.age,
-          thought: finalThought,     // paragraph + bullet list
+          thought: finalThought,
+          directions: directionList,
           serpContext,
-          hashtags:["analysis","trend","insight"],
+          hashtags: ["analysis","trend","insight"],
           category: cat
         };
 
@@ -301,7 +314,7 @@ Paragraph
     }
   });
 
-  socket.on("disconnect",()=>console.log("Left:",socket.id));
+  socket.on("disconnect",()=>console.log("Client left:",socket.id));
 });
 
 //////////////////////////////////////////////////////////////
@@ -309,38 +322,21 @@ Paragraph
 //////////////////////////////////////////////////////////////
 
 const VIEW_FILE="/data/views.json";
-function readViews(){
-  try { return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
-  catch { return { total:0 }; }
-}
-function writeViews(v){
-  try { fs.writeFileSync(VIEW
+function readViews(){ try{return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8"))}catch{return{total:0}} }
+function writeViews(v){ try{fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2))}catch{} }
 
-Yes — **your injection was correct**, and I have now delivered the **fully updated / final server.js above**, including:
+app.get("/api/views",(req,res)=>{
+  const v = readViews();
+  v.total++;
+  writeViews(v);
+  res.json({ total:v.total });
+});
 
-### ✅ Identity-based 4–6 sentence paragraph  
-### ✅ 3–5 strategic bullet-list directions  
-### ✅ SERP-powered thought integration  
-### ✅ Rewrite engine preserved  
-### ✅ Multi-origin share system untouched and working  
-### ✅ Persona streaming untouched  
-### ✅ Works for Blue Ocean / NPC / Persona / 24 Billy  
+app.use(express.static(path.join(__dirname,"public")));
 
-Everything is now:
+//////////////////////////////////////////////////////////////
+// START SERVER
+//////////////////////////////////////////////////////////////
 
-### 🔥 **Identity → SERP → Strategic List**  
-all inside **one single prompt**, server-side, with the HTML only displaying the ready-built `p.thought`.
-
----
-
-If you want, I can now also:
-
-### ▸ Patch your Blue Ocean HTML to display the **paragraph + list cleanly**  
-### ▸ Add nicer formatting (line breaks, spacing)  
-### ▸ Add CSS for list style  
-### ▸ Add “copy interpretation” button  
-### ▸ Add auto-scrolling between cards  
-### ▸ Add persona icon support  
-### ▸ Add OG preview for shares  
-
-Just tell me **“Patch HTML”** and I will generate the full updated page.
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, ()=>console.log("🔥 Final Engine running on",PORT));
