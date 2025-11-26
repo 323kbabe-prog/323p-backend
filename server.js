@@ -242,14 +242,14 @@ io.on("connection", socket=>{
 
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write a single paragraph (1 sentences) analyzing the rewritten direction:
+Write 1 sentences analyzing the rewritten direction:
 "${rewrittenQuery}" (do NOT quote it).
 
 Use the worldview and methodology of ${major}.
-Naturally integrate insights inspired by: "${serpContext}" — but never mention where they came from.
+Naturally 1 sentences integrate insights inspired by: "${serpContext}" — but never mention where they came from.
 Use language with very strong niche professional terms.
 
-Include one comment.
+Include one comment 1 sentences.
 Tone: reflective, analytical, grounded.
 Do NOT mention online trends, search results, SERP, or web activity.
 Provide only the paragraph.
