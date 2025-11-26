@@ -149,7 +149,7 @@ app.post("/api/rewrite", async (req,res)=>{
   if(!query) return res.json({ rewritten:"" });
 
   const prompt = `
-Rewrite the user’s input into a clear strategic direction, including employee persona thoughts. Keep it to 2 sentences.
+Rewrite the user's text into a clear strategic direction.
 Rules:
 - 1–2 sentences only.
 - No quoting.
