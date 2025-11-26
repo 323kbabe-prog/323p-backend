@@ -1,11 +1,11 @@
 //////////////////////////////////////////////////////////////
-//  server.js — Multi-Origin Final Engine (Identity + Bullet List Mode)
+//  server.js — Multi-Origin Final Engine (RAIN MAN MODE)
 //  Supports: Blue Ocean · NPC · Persona · 24 Billy
-//  Features:
+//
+//  FEATURES:
 //   • Smart rewrite engine (1–2 sentences)
-//   • SERP-powered thought generator
-//   • Identity-based paragraph (4–6 sentences)
-//   • Bullet list directions (Option A format)
+//   • SERP-powered 3-sentence Rain-Man-style thought
+//   • Bullet list (Rain Man–style actionable steps)
 //   • Identity-niche hashtags
 //   • Multi-origin share system
 //   • Share links return to correct browser + auto-search
@@ -27,7 +27,7 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-console.log("🚀 FINAL ENGINE STARTING…");
+console.log("🚀 FINAL RAIN MAN ENGINE STARTING…");
 console.log("OpenAI:", !!process.env.OPENAI_API_KEY);
 console.log("SERP Enabled:", !!SERP_KEY);
 
@@ -52,25 +52,30 @@ function extractLocation(text){
     "Tokyo","Paris","London","Berlin","Seoul","Taipei","Singapore"
   ];
   const t = text.toLowerCase();
-  for (const c of LOC) if (t.includes(c.toLowerCase())) return c;
+  for (const c of LOC){
+    if (t.includes(c.toLowerCase())) return c;
+  }
   return null;
 }
 
-const genders = ["Female","Male","Nonbinary"];
-const races = ["Asian","Black","White","Latino","Middle Eastern","Mixed"];
-const ages = [...Array.from({length:32}, (_,i) => i+18)];
-function pick(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+function pick(arr){
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+const genders=["Female","Male","Nonbinary"];
+const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
+const ages=[...Array.from({length:32},(_,i)=>i+18)];
 
 //////////////////////////////////////////////////////////////
 // IDENTITY MAJORS
 //////////////////////////////////////////////////////////////
 
 const PROF = {
-  A: ["Human Biology","Psychology","Sociology","Public Health","Bioengineering"],
-  B: ["Political Science","Public Policy","International Relations","Ethics in Society","Science, Technology & Society"],
-  C: ["Computer Science","Mechanical Engineering","Electrical Engineering","Symbolic Systems","Aeronautics & Astronautics"],
-  D: ["Economics","Management Science & Engineering","Data Science","Mathematical & Computational Science","Statistics"],
-  E: ["Art Practice","Communication","Film & Media Studies","Linguistics","Music"]
+  A:["Human Biology","Psychology","Sociology","Public Health","Bioengineering"],
+  B:["Political Science","Public Policy","International Relations","Ethics in Society","Science, Technology & Society"],
+  C:["Computer Science","Mechanical Engineering","Electrical Engineering","Symbolic Systems","Aeronautics & Astronautics"],
+  D:["Economics","Management Science & Engineering","Data Science","Mathematical & Computational Science","Statistics"],
+  E:["Art Practice","Communication","Film & Media Studies","Linguistics","Music"]
 };
 
 //////////////////////////////////////////////////////////////
@@ -84,52 +89,51 @@ const ORIGIN_MAP = {
   billy:"https://24billybrowser.com"
 };
 
-const SHARES_FILE = "/data/shares.json";
+const SHARES_FILE="/data/shares.json";
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 function readShares(){
-  try { return JSON.parse(fs.readFileSync(SHARES_FILE, "utf8")); }
+  try { return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8")); }
   catch { return {}; }
 }
-function writeShares(data){
-  fs.writeFileSync(SHARES_FILE, JSON.stringify(data, null, 2));
+function writeShares(d){
+  fs.writeFileSync(SHARES_FILE, JSON.stringify(d,null,2));
 }
 
-app.post("/api/share", (req,res)=>{
+app.post("/api/share",(req,res)=>{
   const all = readShares();
-  const id = Math.random().toString(36).substring(2,8);
+  const id  = Math.random().toString(36).substring(2,8);
 
   all[id] = {
     personas: req.body.personas || [],
     query: req.body.query || "",
     origin: req.body.origin || "blue"
   };
-
   writeShares(all);
+
   res.json({ shortId:id });
 });
 
-app.get("/api/share/:id", (req,res)=>{
+app.get("/api/share/:id",(req,res)=>{
   const all = readShares();
-  const s = all[req.params.id];
-  if (!s) return res.status(404).json([]);
+  const s   = all[req.params.id];
+  if(!s) return res.status(404).json([]);
   res.json(s.personas || []);
 });
 
-app.get("/s/:id", (req,res)=>{
+app.get("/s/:id",(req,res)=>{
   const all = readShares();
-  const s = all[req.params.id];
-  if (!s) return res.redirect("https://blueoceanbrowser.com");
-
+  const s   = all[req.params.id];
+  if(!s) return res.redirect("https://blueoceanbrowser.com");
   const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
   res.send(`
     <!doctype html><html><head><meta charset="utf-8"/>
     <script>
       sessionStorage.setItem("sharedId","${req.params.id}");
-      setTimeout(()=> {
-        window.location.href = "${redirectURL}?query=" + encodeURIComponent("${s.query||""}");
-      }, 500);
+      setTimeout(()=>{
+        window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query || ""}");
+      },500);
     </script>
     </head><body></body></html>
   `);
@@ -141,17 +145,16 @@ app.get("/s/:id", (req,res)=>{
 
 app.post("/api/rewrite", async (req,res)=>{
   let { query } = req.body;
-  query = (query || "").trim();
-  if (!query) return res.json({ rewritten:"" });
+  query = (query||"").trim();
+  if(!query) return res.json({ rewritten:"" });
 
   const prompt = `
-Rewrite the user input into a clean, strategic business direction.
+Rewrite the user's text into a clear strategic direction.
 Rules:
-- EXACTLY 1–2 sentences.
-- Don’t use the word “business.”
-- No quoting the user.
-- No unnecessary details.
-- Preserve intent without expanding scope.
+- 1–2 sentences only.
+- No quoting.
+- No emotional language.
+- No expansion of scope.
 User Input: ${query}
 Rewritten:
   `;
@@ -163,12 +166,12 @@ Rewritten:
       temperature:0.25
     });
 
-    let rewritten = out.choices[0].message.content.trim();
-    rewritten = rewritten.replace(/["“”‘’]/g, "");
+    let rewritten = out.choices[0].message.content.trim()
+      .replace(/["“”‘’]/g,"");
 
-    let s = rewritten.split(".").filter(x=>x.trim());
-    if (s.length > 2)
-      rewritten = s.slice(0,2).join(". ") + ".";
+    const sentences = rewritten.split(".").filter(s=>s.trim());
+    if(sentences.length > 2)
+      rewritten = sentences.slice(0,2).join(". ") + ".";
 
     res.json({ rewritten });
 
@@ -178,128 +181,140 @@ Rewritten:
 });
 
 //////////////////////////////////////////////////////////////
-// NPC ENGINE + SERP + 3-LAYER THOUGHT + BULLET LIST MODE
+// MAIN ENGINE — RAIN MAN THOUGHT + BULLETS + HASHTAGS
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors:{origin:"*"} });
+const io         = new Server(httpServer,{ cors:{origin:"*"} });
 
 io.on("connection", socket=>{
-  console.log("Client connected:", socket.id);
+  console.log("Client connected:",socket.id);
 
   socket.on("personaSearch", async rewrittenQuery=>{
     try{
       const location = extractLocation(rewrittenQuery);
 
       ////////////////////////////////////////////////////////
-      //  SERP Query Builder
+      // SERP CONTEXT
       ////////////////////////////////////////////////////////
       const serpQuery = rewrittenQuery
         .split(" ")
-        .filter(w => w.length > 2)
-        .slice(0, 6)
+        .filter(w=>w.length>2)
+        .slice(0,6)
         .join(" ");
 
       let serpContext = "No verified data.";
-      if (SERP_KEY) {
+      if(SERP_KEY){
         try{
-          const url = `https://serpapi.com/search.json?q=${
-            encodeURIComponent(serpQuery+" market trends 2025")
-          }&num=5&api_key=${SERP_KEY}`;
-
-          const r = await fetch(url);
+          const r = await fetch(
+            `https://serpapi.com/search.json?q=${encodeURIComponent(serpQuery)}&num=5&api_key=${SERP_KEY}`
+          );
           const j = await r.json();
-
-          const titles = (j.organic_results || [])
-            .map(x => x.title)
+          const titles = (j.organic_results||[])
+            .map(x=>x.title)
             .filter(Boolean)
-            .slice(0,3)
+            .slice(0,2)
             .join(" | ");
-
-          if (titles) serpContext = titles;
-
+          if(titles) serpContext = titles;
         }catch(err){
-          console.log("SERP ERROR:", err.message);
+          console.log("SERP ERROR:",err.message);
         }
       }
 
       ////////////////////////////////////////////////////////
 
-      const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
+      const CAT_ORDER=["A","B","C","D","E","A","B","C","D","E"];
 
-      for (let i=0; i<10; i++){
-        const cat = CAT_ORDER[i];
+      for(let i=0;i<10;i++){
+        const cat   = CAT_ORDER[i];
         const major = pick(PROF[cat]);
-        const demo = {
-          gender: pick(genders),
-          race: pick(races),
-          age: pick(ages)
+        const demo  = {
+          gender:pick(genders),
+          race:pick(races),
+          age:pick(ages)
         };
 
         ////////////////////////////////////////////////////////
-        //  PROMPT — Identity Paragraph + Bullet List (Option A)
+        // RAIN MAN MODE PROMPT (FINAL)
         ////////////////////////////////////////////////////////
 
         const fullPrompt = `
-You are Forrest Gump in persona as ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-${rewrittenQuery} (do NOT quote it). Use the worldview and methodology of ${major}.
-Report detailed insights as Forrest Gump reading “${serpContext}” — but never mention where they came from.
-Do NOT mention online trends, search results, SERP, or web activity.
-After the report, produce exactly 4 bullet points using this format:
+You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
+
+Your communication style must follow a Rain Man–like cognitive pattern:
+- literal, factual, precise
+- clipped short sentences
+- minimal emotion
+- no metaphors, no abstract language
+- focuses on details, numbers, sequences, routines
+- flat observational tone
+- repeats key words for confirmation
+- avoids interpretation
+- no figurative language
+- never over-explains
+
+Write a single paragraph **(3 sentences)** about the rewritten direction:
+${rewrittenQuery}
+Do NOT quote it.
+
+Use ${major} methodology.
+Include **one very small anecdote** stated in literal form.
+Integrate ideas inspired by: "${serpContext}" (but do NOT mention any source).
+
+After the paragraph, output EXACTLY 4 bullet points in this format:
 Key directions to consider:
 - direction 1
 - direction 2
 - direction 3
 - direction 4
 
-The directions must:
-- be niche to the identity field (${major})
-- be relevant to inferred subject from the rewritten direction
-- NOT be generic
-- be actionable and strategic
+Directions must:
+- be niche to ${major}
+- be literal and Rain-Man-style
+- be actionable steps
+- short, detail-focused, specific
+- NO metaphors
+
+Return plain text. No JSON.
         `;
 
         const ai = await openai.chat.completions.create({
           model:"gpt-4o-mini",
           messages:[{role:"user",content:fullPrompt}],
-          temperature:0.85
+          temperature:0.65
         });
 
         const fullThought = ai.choices[0].message.content.trim();
 
         ////////////////////////////////////////////////////////
-        // Identity-Niche Hashtags
+        // HASHTAGS — identity + direction + location
         ////////////////////////////////////////////////////////
 
-        const majorKeyword = major.split(" ")[0];
-        const serpKeywords = serpContext.split(" ").slice(0,3);
-        const queryKeywords = rewrittenQuery.split(" ").slice(0,3);
+        const majorKeyword   = major.split(" ")[0];
+        const serpKeywords   = serpContext.split(" ").slice(0,2);
+        const queryKeywords  = rewrittenQuery.split(" ").slice(0,2);
 
         const hashtags = [
-          `#${majorKeyword}Insight`,
-          `#${majorKeyword}Strategy`,
-          ...serpKeywords.map(k => "#" + k.replace(/[^a-zA-Z]/g,"")),
-          ...queryKeywords.map(k => "#" + k.replace(/[^a-zA-Z]/g,""))
+          `#${majorKeyword}Mode`,
+          `#${majorKeyword}Detail`,
+          ...serpKeywords.map(k=>"#" + k.replace(/[^a-zA-Z]/g,"")),
+          ...queryKeywords.map(k=>"#" + k.replace(/[^a-zA-Z]/g,""))
         ].slice(0,5);
+
+        if (location){
+          hashtags.push("#"+location.replace(/\s+/g,""));
+        }
 
         const persona = {
           major,
-          gender: demo.gender,
-          race: demo.race,
-          age: demo.age,
-          thought: fullThought,
+          gender:demo.gender,
+          race:demo.race,
+          age:demo.age,
+          thought:fullThought,
           serpContext,
           hashtags,
-          category: cat
+          category:cat
         };
-        
-// Append location as hashtag if found
-if (location) {
-  const locTag = location.replace(/\s+/g, "").toLowerCase();
-  if (!persona.hashtags.includes(locTag)) {
-    persona.hashtags.push(locTag);   // e.g. "nyc"
-  }
-}
 
         socket.emit("personaChunk", persona);
       }
@@ -307,7 +322,7 @@ if (location) {
       socket.emit("personaDone");
 
     }catch(err){
-      console.error("ENGINE ERROR:", err);
+      console.error("ENGINE ERROR:",err);
       socket.emit("personaError","Engine error");
     }
   });
@@ -320,16 +335,17 @@ if (location) {
 //////////////////////////////////////////////////////////////
 
 const VIEW_FILE="/data/views.json";
+
 function readViews(){
-  try{ return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
   catch{ return {total:0}; }
 }
 function writeViews(v){
-  fs.writeFileSync(VIEW_FILE, JSON.stringify(v,null,2));
+  fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2));
 }
 
 app.get("/api/views",(req,res)=>{
-  const v = readViews(); 
+  const v=readViews();
   v.total++; 
   writeViews(v);
   res.json({ total:v.total });
@@ -342,4 +358,4 @@ app.use(express.static(path.join(__dirname,"public")));
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, ()=>console.log("🔥 Final Engine running on", PORT));
+httpServer.listen(PORT, ()=>console.log("🔥 Final Rain Man Engine running on",PORT));
