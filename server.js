@@ -241,13 +241,13 @@ io.on("connection", socket=>{
         ////////////////////////////////////////////////////////
 
         const fullPrompt = `
-You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write 1 sentences analyzing the rewritten direction:
-"${rewrittenQuery}" (do NOT quote it).
+You are Forrest Gump in persona as ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
+Write one sentence analyzing the rewritten direction:
+${rewrittenQuery} (do NOT quote it).
 
 Use the worldview and methodology of ${major}.
-Naturally 1 sentences integrate insights inspired by: "${serpContext}" — but never mention where they came from.
-Use language with very strong niche professional terms.
+integrate insights inspired by: "${serpContext}" — but never mention where they came from.
+Use language with only niche professional terms.
 
 Include one comment 1 sentences.
 Tone: reflective, analytical, grounded.
