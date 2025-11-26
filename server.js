@@ -253,13 +253,9 @@ Your communication style must follow a Rain Man–like cognitive pattern:
 - no figurative language
 - never over-explains
 
-Write a single paragraph **(3 sentences)** from key word in rewritten direction:
-${rewrittenQuery}
-Do NOT quote it.
-
 Use ${major} methodology.
-Include **one very small anecdote** stated in literal form.
-Integrate ideas inspired by: "${serpContext}" (but do NOT mention any source).
+Include one very small anecdote stated in literal form.
+Integrate ideas inspired by: ${rewrittenQuery} and "${serpContext}" — but do NOT mention any source, data, search results, or trends.
 
 After the paragraph, output EXACTLY 4 bullet points in this format:
 Key directions to consider:
