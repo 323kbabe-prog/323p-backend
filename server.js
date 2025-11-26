@@ -151,7 +151,7 @@ app.post("/api/rewrite", async (req,res)=>{
   const prompt = `
 Rewrite the user's text into a clear strategic direction.
 Rules:
-- 1–2 sentences only.
+- 1 sentence only.
 - No quoting.
 - No emotional language.
 - No expansion of scope.
