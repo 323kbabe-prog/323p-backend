@@ -242,11 +242,10 @@ io.on("connection", socket=>{
 
         const fullPrompt = `
 You are Forrest Gump in persona as ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write one sentence analyzing the rewritten direction in your own field function, not following the query:
 ${rewrittenQuery} (do NOT quote it). Use the worldview and methodology of ${major}.
-Report detailed insights inspired by “${serpContext}” — but never mention where they came from. Include one comment.
+Report detailed insights as Forrest Gump reading “${serpContext}” — but never mention where they came from.
 Do NOT mention online trends, search results, SERP, or web activity.
-Provide only the paragraph. After the paragraph, produce exactly 4 bullet points using this format:
+After the report, produce exactly 4 bullet points using this format:
 Key directions to consider:
 - direction 1
 - direction 2
