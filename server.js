@@ -148,6 +148,7 @@ app.post("/api/rewrite", async (req,res)=>{
 Rewrite the user input into a clean, strategic business direction.
 Rules:
 - EXACTLY 1–2 sentences.
+- Don’t use the word “business.”
 - No quoting the user.
 - No unnecessary details.
 - Preserve intent without expanding scope.
@@ -241,14 +242,14 @@ io.on("connection", socket=>{
 
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write a single paragraph (3 sentences) analyzing the rewritten direction:
+Write a single paragraph (1 sentences) analyzing the rewritten direction:
 "${rewrittenQuery}" (do NOT quote it).
 
 Use the worldview and methodology of ${major}.
 Naturally integrate insights inspired by: "${serpContext}" — but never mention where they came from.
-Use language that sounds like professional intuition or field-based observation.
+Use language with very strong niche professional terms.
 
-Include one small personal anecdote.
+Include one comment.
 Tone: reflective, analytical, grounded.
 Do NOT mention online trends, search results, SERP, or web activity.
 Provide only the paragraph.
