@@ -149,7 +149,11 @@ app.post("/api/rewrite", async (req,res)=>{
   if(!query) return res.json({ rewritten:"" });
 
   const prompt = `
-Rewrite the user's text into a clear strategic direction.
+Rewrite the user's text into a short literal sentence.  
+Correct grammar only.  
+Do not add interpretation.  
+Do not change tone.  
+Do not make it strategic or business-like.
 Rules:
 - 1 sentence only.
 - No quoting.
