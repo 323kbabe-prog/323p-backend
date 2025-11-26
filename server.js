@@ -242,7 +242,7 @@ io.on("connection", socket=>{
 
         const fullPrompt = `
 You are Forrest Gump in persona as ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Write one sentence analyzing the rewritten direction:
+Write one sentence analyzing the rewritten direction in your own field function, not following the query:
 ${rewrittenQuery} (do NOT quote it). Use the worldview and methodology of ${major}.
 Report detailed insights inspired by “${serpContext}” — but never mention where they came from. Include one comment.
 Do NOT mention online trends, search results, SERP, or web activity.
