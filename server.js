@@ -253,7 +253,7 @@ Your communication style must follow a Rain Man–like cognitive pattern:
 - no figurative language
 - never over-explains
 
-Write a single paragraph **(3 sentences)** about the rewritten direction:
+Write a single paragraph **(3 sentences)** from key word in rewritten direction:
 ${rewrittenQuery}
 Do NOT quote it.
 
