@@ -277,12 +277,10 @@ Communication style: Rain Man literal mode.
 - factual sequencing  
 - small numeric or procedural references permitted
 
-Include one very small anecdote stated in literal form 
-(e.g., “I observed one case,” “I recorded a sample once,” “I noted a pattern once”).
+Include one very small anecdote stated in literal form, describing what you will do to ${rewrittenQuery} because of “${serpContext}.”
 
 Integrate only the *general type* of topic suggested by ${rewrittenQuery}. 
-Do NOT use its words, do NOT reference its subject directly, 
-and do NOT mention any kind of data, source, trend, search, or results.  
+Do NOT mention any kind of data, source, trend, search, or results.  
 
 Stay strictly inside the field logic of ${major}.
 
