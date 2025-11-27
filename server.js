@@ -276,7 +276,7 @@ Communication style: Rain Man literal mode.
 - factual sequencing  
 - small numeric or procedural references permitted
 
-One paragraph, beginning with a very short sentence referring to ${rewrittenQuery} in literal form, describing what you personally noted to your ${major},  then personality will do to ${rewrittenQuery} because of “${serpContext}.” Integrate only the *general type* of topic suggested by ${rewrittenQuery}. 
+One paragraph, beginning with a very short sentence start with "I will" referring to ${rewrittenQuery} in literal form, describing what you personally noted to your ${major},  then personality will do to ${rewrittenQuery} because of “${serpContext}.” Integrate only the *general type* of topic suggested by ${rewrittenQuery}. 
 Do NOT mention any kind of data, source, trend, search, or results.  
 
 Stay strictly inside the field logic of ${major}.
