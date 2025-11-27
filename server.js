@@ -276,7 +276,10 @@ Communication style: Rain Man literal mode.
 - factual sequencing  
 - small numeric or procedural references permitted
 
-One paragraph beginning with a very short 3 sentences start with "I will" referring to ${rewrittenQuery} in literal form, describing what you personally noted to your ${major}, then personality will do to ${rewrittenQuery} because of “${serpContext}.” Integrate only the *general type* of topic suggested by ${rewrittenQuery}. 
+One paragraph Begin with exactly three short literal sentences in this structure:
+1) First sentence MUST start with “I will”, directly referring to the general topic of "${rewrittenQuery}" in rephrased literal form and staying inside the field logic of ${major}.
+2) Second sentence MUST be a short literal statement with NO “I will”.
+3) Third sentence MUST be a short literal statement with NO “I will”, then personality will do to ${rewrittenQuery} because of “${serpContext}.” Integrate only the *general type* of topic suggested by ${rewrittenQuery}. 
 Do NOT mention any kind of data, source, trend, search, or results.  
 
 Stay strictly inside the field logic of ${major}.
