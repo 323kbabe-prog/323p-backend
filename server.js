@@ -1,15 +1,14 @@
 //////////////////////////////////////////////////////////////
-//  server.js — Rain Man Business Engine (Final Version C)
-//  Supports: Blue Ocean · NPC · Persona · 24 Billy
+//  server.js — Rain Man Business Engine (Final Version D)
 //
 //  FEATURES:
-//   • Executive rewrite engine (1 sentence business direction)
-//   • SERP → extract ONLY numbers (1.2, 48, 2025)
-//   • Rain-Man-style unified paragraph using numbers
+//   • Executive rewrite engine (1-sentence business strategy)
+//   • SERP → full phrase extraction + numeric extraction
+//   • Rain-Man-style unified paragraph using phrases + numbers
 //   • One tiny anecdote
 //   • Procedural “I will” chain
-//   • 4 Rain-Man business bullet directions
-//   • Identity-niche hashtags
+//   • 4 Rain-Man business bullet steps
+//   • Identity persona rotation
 //   • Multi-origin share system
 //////////////////////////////////////////////////////////////
 
@@ -26,14 +25,12 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 console.log("🚀 Rain Man Business Engine Started");
 console.log("OpenAI:", !!process.env.OPENAI_API_KEY);
-console.log("SERP:", !!SERP_KEY);
+console.log("SERP Enabled:", !!SERP_KEY);
 
 //////////////////////////////////////////////////////////////
 // HELPERS
@@ -41,7 +38,7 @@ console.log("SERP:", !!SERP_KEY);
 
 function safeJSON(str){
   if(!str) return null;
-  try{ return JSON.parse(str); }catch{}
+  try{ return JSON.parse(str); }catch(e){}
   try{
     const m = str.match(/\{[\s\S]*?\}/);
     if(m) return JSON.parse(m[0]);
@@ -55,6 +52,7 @@ function extractLocation(text){
     "Miami","Chicago","Texas","Florida","Seattle","San Francisco",
     "Tokyo","Paris","London","Berlin","Seoul","Taipei","Singapore"
   ];
+
   const low = text.toLowerCase();
   for(const c of LOC){
     if(low.includes(c.toLowerCase())) return c;
@@ -63,12 +61,12 @@ function extractLocation(text){
 }
 
 function pick(arr){
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(Math.random()*arr.length)];
 }
 
 const genders = ["Female","Male","Nonbinary"];
-const races = ["Asian","Black","White","Latino","Middle Eastern","Mixed"];
-const ages = [...Array.from({length:32},(_,i)=>i+18)];
+const races   = ["Asian","Black","White","Latino","Middle Eastern","Mixed"];
+const ages    = [...Array.from({length:32},(_,i)=>i+18)];
 
 //////////////////////////////////////////////////////////////
 // MAJORS
@@ -93,26 +91,25 @@ const ORIGIN_MAP = {
   billy:"https://24billybrowser.com"
 };
 
-const SHARES_FILE = "/data/shares.json";
+const SHARES_FILE="/data/shares.json";
 if(!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 function readShares(){
   try{return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8"));}
   catch{return{};}
 }
-
 function writeShares(v){
   fs.writeFileSync(SHARES_FILE, JSON.stringify(v,null,2));
 }
 
 app.post("/api/share",(req,res)=>{
-  const all = readShares();
-  const id = Math.random().toString(36).substring(2,8);
+  const all=readShares();
+  const id=Math.random().toString(36).substring(2,8);
 
-  all[id] = {
-    personas:req.body.personas || [],
-    query:req.body.query || "",
-    origin:req.body.origin || "blue"
+  all[id]={
+    personas:req.body.personas||[],
+    query:req.body.query||"",
+    origin:req.body.origin||"blue"
   };
 
   writeShares(all);
@@ -120,26 +117,25 @@ app.post("/api/share",(req,res)=>{
 });
 
 app.get("/api/share/:id",(req,res)=>{
-  const all = readShares();
-  const s = all[req.params.id];
+  const all=readShares();
+  const s=all[req.params.id];
   if(!s) return res.status(404).json([]);
-  res.json(s.personas || []);
+  res.json(s.personas||[]);
 });
 
 app.get("/s/:id",(req,res)=>{
-  const all = readShares();
-  const s = all[req.params.id];
-
+  const all=readShares();
+  const s=all[req.params.id];
   if(!s) return res.redirect("https://blueoceanbrowser.com");
 
   const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
   res.send(`
-    <!doctype html><html><head><meta charset="utf-8"/>
+    <!doctype html><html><head><meta charset="utf-8" />
     <script>
       sessionStorage.setItem("sharedId","${req.params.id}");
-      setTimeout(()=>{
-        window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
+      setTimeout(()=>{ 
+        window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}"); 
       },400);
     </script>
     </head><body></body></html>
@@ -156,16 +152,15 @@ app.post("/api/rewrite", async(req,res)=>{
   if(!query) return res.json({ rewritten:"" });
 
   const prompt = `
-Rewrite the user's text into a sharp, executive business strategic direction.
+Rewrite the user's text into a sharp business strategic direction.
 Rules:
-- Output EXACTLY 1 sentence.
+- EXACTLY 1 sentence.
 - No quoting the user.
 - No emotion.
 - No metaphors.
-- Must sound like corporate strategic guidance.
-- Strengthen intent, increase clarity, increase direction.
+- Sound like executive corporate strategy.
+- Strengthen clarity, focus, and direction.
 - Remove personal details.
-- Preserve meaning, make it business-executable.
 
 User Input: ${query}
 Rewritten:
@@ -179,14 +174,12 @@ Rewritten:
     });
 
     let rewritten = out.choices[0].message.content.trim()
-      .replace(/["“”‘’]/g,"");
+      .replace(/["“”‘’]/g,'');
 
-    // ensure single sentence
     rewritten = rewritten.split(".")[0] + ".";
 
     res.json({ rewritten });
-  }catch(err){
-    console.log("Rewrite ERROR:",err);
+  }catch(e){
     res.json({ rewritten:query });
   }
 });
@@ -195,8 +188,8 @@ Rewritten:
 // MAIN ENGINE — RAIN MAN BUSINESS THOUGHT ENGINE
 //////////////////////////////////////////////////////////////
 
-const httpServer = createServer(app);
-const io = new Server(httpServer,{ cors:{origin:"*"} });
+const httpServer=createServer(app);
+const io=new Server(httpServer,{ cors:{origin:"*"} });
 
 io.on("connection",socket=>{
 
@@ -206,7 +199,7 @@ try{
   const location = extractLocation(rewrittenQuery);
 
   ////////////////////////////////////////////////////////
-  // SERP FETCH + NUMBER EXTRACTION
+  // SERP FETCH + FULL PHRASE + NUMBER EXTRACTION
   ////////////////////////////////////////////////////////
 
   const serpQuery = rewrittenQuery
@@ -220,27 +213,23 @@ try{
   if(SERP_KEY){
     try{
       const url = `https://serpapi.com/search.json?q=${encodeURIComponent(serpQuery)}&num=5&api_key=${SERP_KEY}`;
-      const r   = await fetch(url);
-      const j   = await r.json();
+      const r=await fetch(url);
+      const j=await r.json();
 
-      const titles = (j.organic_results||[])
+      const titles=(j.organic_results||[])
         .map(x=>x.title)
         .filter(Boolean)
         .slice(0,3)
         .join(" | ");
 
-      if(titles) serpContext = titles;
+      if(titles) serpContext=titles;
 
-    }catch(e){
-      console.log("SERP FAIL:",e.message);
-    }
+    }catch(e){}
   }
 
-  // extract ONLY digits + decimals + percents
+  // Extract decimals, percents, integers
   const serpNumbers = serpContext.match(/[0-9]+(\.[0-9]+)?%?/g) || [];
 
-  ////////////////////////////////////////////////////////
-  // LOOP THROUGH PERSONAS
   ////////////////////////////////////////////////////////
 
   const CAT_ORDER=["A","B","C","D","E","A","B","C","D","E"];
@@ -256,70 +245,62 @@ try{
     };
 
 //////////////////////////////////////////////////////////////
-// RAIN MAN THOUGHT PROMPT — FINAL VERSION C
+// FINAL VERSION D — RAIN MAN BUSINESS PROMPT
 //////////////////////////////////////////////////////////////
 
 const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
 
-COMMUNICATION RULES:
-- Rain Man literal cognitive mode
-- clipped short statements
-- factual, numeric, procedural
-- no metaphors
-- no abstractions
+STYLE RULES:
+- short statements
+- flat business tone
+- repetitive
 - no emotion
+- no metaphor
 - no figurative language
+- no abstraction
 - no interpretation
-- narrow scope
 - field vocabulary only
+
+ALLOWED:
+- You may repeat full SERP phrases:
+  "${serpContext}"
+- You may repeat these numbers:
+  ${serpNumbers.join(", ") || "none"}
 
 FORBIDDEN:
 - no vocabulary from rewritten direction
-- no vocabulary from this external text: "${serpContext}"
-- never reference “query”, “user”, “search”, “data”, “trend”, “metric”, “result”
+- do not mention “user”, “query”, “search”, “data”, “trend”, “metric”, “result”
 
-ALLOWED:
-- You MAY use numbers extracted from external text: ${serpNumbers.join(", ") || "none"}  
-- Use numbers literally, without explaining where they came from.
+Write ONE unified paragraph that begins with:
 
-first PARAGRAPH STRUCTURE:
-Sentence 1:
-- MUST start with “I will”
-- MUST describe a ${major}-logic field action
-- MUST loosely reflect the category of "${rewrittenQuery}" WITHOUT using any of its words
-- must include literal number and topic from: ${serpNumbers.join(", ") || "none"}
+1) A sentence that starts with “I will”,  
+   uses ${major} field logic,  
+   loosely corresponds to the category of "${rewrittenQuery}" without using any of its words,  
+   and MUST include a SERP number and MUST include a SERP phrase from: "${serpContext}"
 
-Sentence 2:
-- short literal factual sentence, no “I will”
+2) A short business factual sentence repeating one SERP number.
 
-Sentence 3:
-- short literal factual sentence, no “I will”
+3) A short business factual sentence repeating one SERP phrase.
 
-next paragraph:
-- ALL must start with “I will”
-- ALL must be field routines, steps, evaluations
-- MAY include numbers literally (e.g., 1.2, 48%, 2025)
-- MUST keep Rain Man literal style
-- MUST avoid abstractions
+Continue the SAME paragraph with:
+- many “I will” procedural business steps  
+- each step MUST include a SERP number OR a SERP phrase  
+- include one tiny anecdote (“I observed one case once.”)
 
+Then output EXACTLY:
 
-After the paragraph, output EXACTLY 4 bullet points in this format:
 Key directions to consider:
 - direction 1
 - direction 2
 - direction 3
 - direction 4
 
-Bullet rules:
-- niche to ${major}
-- literal Rain Man style
-- procedural
-- may include numbers literally
-- no metaphors
-- no references to query or SERP
-
-Return plain text only.
+Each direction:
+- must be niche to ${major}
+- must be short procedural commands
+- must include a SERP number OR SERP phrase
+- Rain Man style
 `;
 
 //////////////////////////////////////////////////////////////
@@ -329,7 +310,7 @@ Return plain text only.
 const ai = await openai.chat.completions.create({
   model:"gpt-4o-mini",
   messages:[{role:"user",content:fullPrompt}],
-  temperature:0.55
+  temperature:0.50
 });
 
 const fullThought = ai.choices[0].message.content.trim();
@@ -338,7 +319,7 @@ const fullThought = ai.choices[0].message.content.trim();
 // HASHTAGS
 //////////////////////////////////////////////////////////////
 
-const majorKeyword = major.split(" ")[0];
+const majorKeyword=major.split(" ")[0];
 const serpWords = serpContext.split(" ").slice(0,2);
 const qWords = rewrittenQuery.split(" ").slice(0,2);
 
@@ -369,16 +350,14 @@ socket.emit("personaChunk",{
 socket.emit("personaDone");
 
 }catch(err){
-  console.log("ENGINE ERROR:",err);
   socket.emit("personaError","Engine failed");
 }
 });
 
 });
 
-
 //////////////////////////////////////////////////////////////
-// VIEWS + STATIC
+// VIEWS
 //////////////////////////////////////////////////////////////
 
 const VIEW_FILE="/data/views.json";
@@ -387,13 +366,12 @@ function readViews(){
   try { return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
   catch { return { total:0 }; }
 }
-
 function writeViews(v){
   fs.writeFileSync(VIEW_FILE, JSON.stringify(v,null,2));
 }
 
 app.get("/api/views",(req,res)=>{
-  const v = readViews();
+  const v=readViews();
   v.total++;
   writeViews(v);
   res.json({ total:v.total });
@@ -405,7 +383,5 @@ app.use(express.static(path.join(__dirname,"public")));
 // START SERVER
 //////////////////////////////////////////////////////////////
 
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT,()=>{
-  console.log("🔥 Final Rain Man Business Engine running on",PORT);
-});
+const PORT=process.env.PORT||3000;
+httpServer.listen(PORT,()=>console.log("🔥 Final Rain Man Business Engine running on",PORT));
