@@ -289,8 +289,6 @@ Return plain text only.
     const qWords = rewrittenQuery.split(" ").slice(0,2);
 
     const hashtags = [
-      `#${majorKeyword}Mode`,
-      `#${majorKeyword}Logic`,
       ...serpWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,"")),
       ...qWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,""))
     ].slice(0,5);
