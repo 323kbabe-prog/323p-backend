@@ -207,7 +207,7 @@ try{
   // SERP NEWS FETCH + NUMBER EXTRACTION
   ////////////////////////////////////////////////////////
 
-  const serpQuery = rewrittenQuery
+  const serpQuery = `${major} latest news ${new Date().getFullYear()}`;
     .split(" ")
     .filter(w => w.length > 2)
     .slice(0, 6)
