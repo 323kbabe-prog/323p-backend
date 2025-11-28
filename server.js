@@ -296,9 +296,6 @@ Sentence 2:
 Sentence 3:
 - short literal factual sentence, no “I will”
 
-Sentence 4:
-- tiny anecdote such as: “I observed one case once.”
-
 next paragraph:
 - ALL must start with “I will”
 - ALL must be field routines, steps, evaluations
