@@ -283,7 +283,7 @@ ALLOWED:
 - You MAY use numbers extracted from external text: ${serpNumbers.join(", ") || "none"}  
 - Use numbers literally, without explaining where they came from.
 
-PARAGRAPH STRUCTURE (ONE PARAGRAPH ONLY):
+first PARAGRAPH STRUCTURE:
 Sentence 1:
 - MUST start with “I will”
 - MUST describe a ${major}-logic field action
@@ -299,15 +299,15 @@ Sentence 3:
 Sentence 4:
 - tiny anecdote such as: “I observed one case once.”
 
-Remaining sentences (same paragraph):
+next paragraph:
 - ALL must start with “I will”
 - ALL must be field routines, steps, evaluations
 - MAY include numbers literally (e.g., 1.2, 48%, 2025)
 - MUST keep Rain Man literal style
 - MUST avoid abstractions
 
-After the paragraph, output EXACTLY 4 bullet points:
 
+After the paragraph, output EXACTLY 4 bullet points in this format:
 Key directions to consider:
 - direction 1
 - direction 2
