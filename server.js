@@ -288,7 +288,7 @@ Sentence 1:
 - MUST start with “I will”
 - MUST describe a ${major}-logic field action
 - MUST loosely reflect the category of "${rewrittenQuery}" WITHOUT using any of its words
-- MAY include one literal number from: ${serpNumbers.join(", ") || "none"}
+- must include literal number and topic from: ${serpNumbers.join(", ") || "none"}
 
 Sentence 2:
 - short literal factual sentence, no “I will”
