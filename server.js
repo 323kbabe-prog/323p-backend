@@ -3,12 +3,12 @@
 //  Supports: Blue Ocean · NPC · Persona · 24 Billy
 //
 //  FEATURES:
-//   • Smart rewrite engine (1–2 sentences)
-//   • SERP-powered 3-sentence Rain-Man-style thought
-//   • Bullet list (Rain Man–style actionable steps)
-//   • Identity-niche hashtags
-//   • Multi-origin share system
-//   • Share links return to correct browser + auto-search
+//   • Smart rewrite engine (1–2 sentences, literal mode)
+//   • SERP-powered Rain-Man-style thought generator
+//   • Extracts ONLY numbers from SERP
+//   • Procedural "I will" paragraph + Rain-Man bullets
+//   • Identity-based personas
+//   • Multi-origin share + auto-load
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -21,27 +21,29 @@ const fs = require("fs");
 const fetch = require("node-fetch");
 
 const app = express();
-app.use(cors({ origin: "*" }));
+app.use(cors({ origin:"*" }));
 app.use(express.json());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-console.log("🚀 FINAL RAIN MAN ENGINE STARTING…");
+console.log("🚀 RAIN MAN ENGINE STARTING…");
 console.log("OpenAI:", !!process.env.OPENAI_API_KEY);
-console.log("SERP Enabled:", !!SERP_KEY);
+console.log("SERP:", !!SERP_KEY);
 
 //////////////////////////////////////////////////////////////
 // HELPERS
 //////////////////////////////////////////////////////////////
 
 function safeJSON(str){
-  if (!str) return null;
-  try { return JSON.parse(str); } catch {}
+  if(!str) return null;
+  try { return JSON.parse(str); } catch{}
   try {
     const m = str.match(/\{[\s\S]*?\}/);
-    if (m) return JSON.parse(m[0]);
-  } catch {}
+    if(m) return JSON.parse(m[0]);
+  }catch{}
   return null;
 }
 
@@ -51,9 +53,10 @@ function extractLocation(text){
     "Miami","Chicago","Texas","Florida","Seattle","San Francisco",
     "Tokyo","Paris","London","Berlin","Seoul","Taipei","Singapore"
   ];
-  const t = text.toLowerCase();
-  for (const c of LOC){
-    if (t.includes(c.toLowerCase())) return c;
+
+  const low = text.toLowerCase();
+  for(const c of LOC){
+    if(low.includes(c.toLowerCase())) return c;
   }
   return null;
 }
@@ -67,7 +70,7 @@ const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
 const ages=[...Array.from({length:32},(_,i)=>i+18)];
 
 //////////////////////////////////////////////////////////////
-// IDENTITY MAJORS
+// MAJORS
 //////////////////////////////////////////////////////////////
 
 const PROF = {
@@ -89,15 +92,16 @@ const ORIGIN_MAP = {
   billy:"https://24billybrowser.com"
 };
 
-const SHARES_FILE="/data/shares.json";
-if (!fs.existsSync("/data")) fs.mkdirSync("/data");
+const SHARES_FILE = "/data/shares.json";
+if(!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 function readShares(){
   try { return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8")); }
   catch { return {}; }
 }
-function writeShares(d){
-  fs.writeFileSync(SHARES_FILE, JSON.stringify(d,null,2));
+
+function writeShares(v){
+  fs.writeFileSync(SHARES_FILE, JSON.stringify(v,null,2));
 }
 
 app.post("/api/share",(req,res)=>{
@@ -105,12 +109,12 @@ app.post("/api/share",(req,res)=>{
   const id  = Math.random().toString(36).substring(2,8);
 
   all[id] = {
-    personas: req.body.personas || [],
-    query: req.body.query || "",
-    origin: req.body.origin || "blue"
+    personas:req.body.personas || [],
+    query:req.body.query || "",
+    origin:req.body.origin || "blue"
   };
-  writeShares(all);
 
+  writeShares(all);
   res.json({ shortId:id });
 });
 
@@ -124,40 +128,39 @@ app.get("/api/share/:id",(req,res)=>{
 app.get("/s/:id",(req,res)=>{
   const all = readShares();
   const s   = all[req.params.id];
+
   if(!s) return res.redirect("https://blueoceanbrowser.com");
   const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
   res.send(`
-    <!doctype html><html><head><meta charset="utf-8"/>
+    <!doctype html>
+    <html><head><meta charset="utf-8"/>
     <script>
       sessionStorage.setItem("sharedId","${req.params.id}");
       setTimeout(()=>{
-        window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query || ""}");
-      },500);
+        window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
+      },400);
     </script>
     </head><body></body></html>
   `);
 });
 
 //////////////////////////////////////////////////////////////
-// SMART REWRITE ENGINE — 1–2 Sentence Output
+// SMART REWRITE ENGINE — STRICT LITERAL MODE
 //////////////////////////////////////////////////////////////
 
-app.post("/api/rewrite", async (req,res)=>{
+app.post("/api/rewrite", async(req,res)=>{
   let { query } = req.body;
   query = (query||"").trim();
   if(!query) return res.json({ rewritten:"" });
 
   const prompt = `
-Rewrite the user's text into a short literal logical deep strategy sentence.  
-Do not add interpretation.  
-Do not change tone.  
-Do not make it strategic or business-like.
-Rules:
-- 1 sentence only.
-- No quoting.
-- No emotional language.
-- No expansion of scope.
+Rewrite the user's text into ONE literal sentence.
+Do NOT add interpretation.
+Do NOT change tone.
+Do NOT make it strategic, emotional, or business-like.
+ONE sentence only.
+No quoting.
 User Input: ${query}
 Rewritten:
   `;
@@ -165,40 +168,41 @@ Rewritten:
   try{
     const out = await openai.chat.completions.create({
       model:"gpt-4o-mini",
-      messages:[{role:"user",content:prompt}],
+      messages:[{ role:"user", content:prompt }],
       temperature:0.25
     });
 
     let rewritten = out.choices[0].message.content.trim()
       .replace(/["“”‘’]/g,"");
 
-    const sentences = rewritten.split(".").filter(s=>s.trim());
-    if(sentences.length > 2)
-      rewritten = sentences.slice(0,2).join(". ") + ".";
+    const s = rewritten.split(".").filter(x=>x.trim());
+    if(s.length > 1)
+      rewritten = s[0] + ".";
 
     res.json({ rewritten });
 
   }catch(err){
+    console.log("Rewrite ERROR:",err);
     res.json({ rewritten:query });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// MAIN ENGINE — RAIN MAN THOUGHT + BULLETS + HASHTAGS
+// MAIN ENGINE — RAIN MAN THOUGHT ENGINE
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
-const io         = new Server(httpServer,{ cors:{origin:"*"} });
+const io = new Server(httpServer,{ cors:{origin:"*"} });
 
 io.on("connection", socket=>{
-  console.log("Client connected:",socket.id);
 
   socket.on("personaSearch", async rewrittenQuery=>{
     try{
+
       const location = extractLocation(rewrittenQuery);
 
       ////////////////////////////////////////////////////////
-      // SERP CONTEXT
+      // SERP FETCH
       ////////////////////////////////////////////////////////
       const serpQuery = rewrittenQuery
         .split(" ")
@@ -207,28 +211,35 @@ io.on("connection", socket=>{
         .join(" ");
 
       let serpContext = "No verified data.";
+
       if(SERP_KEY){
         try{
-          const r = await fetch(
-            `https://serpapi.com/search.json?q=${encodeURIComponent(serpQuery)}&num=5&api_key=${SERP_KEY}`
-          );
-          const j = await r.json();
+          const url = `https://serpapi.com/search.json?q=${encodeURIComponent(serpQuery)}&num=5&api_key=${SERP_KEY}`;
+          const r   = await fetch(url);
+          const j   = await r.json();
+
           const titles = (j.organic_results||[])
             .map(x=>x.title)
             .filter(Boolean)
-            .slice(0,2)
+            .slice(0,3)
             .join(" | ");
+
           if(titles) serpContext = titles;
-        }catch(err){
-          console.log("SERP ERROR:",err.message);
+
+        }catch(e){
+          console.log("SERP FAIL:",e.message);
         }
       }
+
+      // ⭐ Extract ONLY numbers from SERP text
+      const serpNumbers = serpContext.match(/\d+/g) || [];
 
       ////////////////////////////////////////////////////////
 
       const CAT_ORDER=["A","B","C","D","E","A","B","C","D","E"];
 
       for(let i=0;i<10;i++){
+
         const cat   = CAT_ORDER[i];
         const major = pick(PROF[cat]);
         const demo  = {
@@ -238,108 +249,100 @@ io.on("connection", socket=>{
         };
 
         ////////////////////////////////////////////////////////
-        // RAIN MAN MODE PROMPT
+        // RAIN MAN THOUGHT PROMPT — FINAL VERSION
         ////////////////////////////////////////////////////////
 
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
 
-Your communication style must follow a Rain Man–like cognitive pattern:
-- literal, factual, precise
-- clipped short sentences
-- minimal emotion
-- no metaphors, no abstract language
-- focuses on details, numbers, sequences, routines
-- flat observational tone
-- repeats key words for confirmation
-- avoids interpretation
-- no figurative language
-- never over-explains
-
-Use only the conceptual vocabulary, analytical patterns, and literal terminology found in the field of ${major}.
-Do not use any words, terms, or phrases taken from the rewritten direction or from “${serpContext}.”
-Do not react to the user’s query or its intent.
-Write as if you have never seen the query at all.
-
-Your reasoning must stay inside the worldview, logic, and constraints of ${major}.
-Use short, precise, literal Rain Man–style statements. No metaphors, no abstractions, no emotional tone, no interpretation of outside intent.
-Include one very small anecdote stated in literal form, describing what you will do to ${rewrittenQuery} because of “${serpContext}.”
-Integrate only general conceptual inspiration from the user’s direction, but never use its vocabulary or reference its subject directly.
-Remain fully field-focused and independent.
-
-Communication style: Rain Man literal mode.
-- short statements  
-- precise, clipped  
+Your communication style MUST follow a Rain Man–like cognitive pattern:
+- literal, clipped, flat  
+- precise short statements  
 - no metaphors  
+- no abstractions  
 - no figurative language  
-- minimal emotion  
-- factual sequencing  
-- small numeric or procedural references permitted
+- no emotional tone  
+- procedural steps  
+- numeric references allowed  
+- do not interpret  
 
-One paragraph only.
+Use only vocabulary from the field of ${major}.  
+NEVER use vocabulary from the rewritten direction.  
+NEVER use vocabulary from this external text: "${serpContext}".  
+Write as if you have never seen the user's query.
 
-Begin with exactly three short literal sentences in this structure:
-1) First sentence MUST start with “I will”, referring to the general topic of "${rewrittenQuery}" in rephrased literal form, staying inside the field logic of ${major}, and incorporating a literal reaction to "${serpContext}" without calling it data, trend, search, or results.
-2) Second sentence MUST be a short literal statement with NO “I will”.
-3) Third sentence MUST be a short literal statement with NO “I will”.
+You MAY use numbers extracted from external text: ${serpNumbers.join(", ") || "none"}.  
+Use numbers literally, without stating where they came from.
 
-After these three sentences, continue with a longer unified paragraph written in Rain Man literal mode, using many “I will” statements in a procedural, field-specific way that reflects your ${major} worldview.  
-You may reference "${serpContext}" only as an external condition, signal, or situation, never as data, trend, search, analysis, or results.
+Include **one very tiny anecdote** in literal form:
+“I observed one case.”  
+“I counted one sample.”  
+“I noted one instance.”
 
-Rules:
-- Stay strictly inside the cognitive style and terminology of ${major}.
-- Keep all statements literal, clipped, and factual.
-- No metaphors, no abstractions, no emotional tone.
-- Do NOT use vocabulary directly from the user’s text.
-- Do NOT mention trends, data, analytics, results, evidence, metrics, or research.
+Write **one paragraph** starting with three strict sentences:
 
-Stay strictly inside the field logic of ${major}.
+1) First sentence MUST begin with “I will”  
+   and must restate a field-specific action loosely inspired by the general *category* of ${rewrittenQuery}  
+   but without using any vocabulary from it.  
+   You MAY include one of these numbers literally: ${serpNumbers.join(", ") || "none"}.
 
-After the paragraph, output EXACTLY 4 bullet points in this format:
+2) Second sentence = short literal factual sentence with NO “I will”.
+
+3) Third sentence = short literal factual sentence with NO “I will”.
+
+Then continue the paragraph with multiple “I will” sentences written as field routines,  
+using ${major} methodology, optionally inserting numbers literally.  
+Do NOT describe where numbers came from.
+
+After the paragraph, output EXACTLY 4 bullet points:
+
 Key directions to consider:
 - direction 1
 - direction 2
 - direction 3
 - direction 4
 
-Directions must:
-- be niche to ${major}
-- be literal and Rain-Man-style
-- be actionable steps
-- short, detail-focused, specific
-- NO metaphors
+Rules for the directions:
+- must be niche to ${major}
+- must be literal Rain Man style
+- must be procedural steps
+- may include numbers literally
+- no metaphors
+- no references to query or SERP  
 
-Return plain text. No JSON.
+Return plain text only.
         `;
+
+        ////////////////////////////////////////////////////////
 
         const ai = await openai.chat.completions.create({
           model:"gpt-4o-mini",
-          messages:[{role:"user",content:fullPrompt}],
-          temperature:0.65
+          messages:[ {role:"user",content:fullPrompt} ],
+          temperature:0.55
         });
 
         const fullThought = ai.choices[0].message.content.trim();
 
         ////////////////////////////////////////////////////////
-        // HASHTAGS — identity + direction + location
+        // HASHTAGS
         ////////////////////////////////////////////////////////
 
-        const majorKeyword   = major.split(" ")[0];
-        const serpKeywords   = serpContext.split(" ").slice(0,2);
-        const queryKeywords  = rewrittenQuery.split(" ").slice(0,2);
+        const majorKeyword = major.split(" ")[0];
+        const serpWords    = serpContext.split(" ").slice(0,2);
+        const qWords       = rewrittenQuery.split(" ").slice(0,2);
 
         const hashtags = [
           `#${majorKeyword}Mode`,
-          `#${majorKeyword}Detail`,
-          ...serpKeywords.map(k=>"#" + k.replace(/[^a-zA-Z]/g,"")),
-          ...queryKeywords.map(k=>"#" + k.replace(/[^a-zA-Z]/g,""))
+          `#${majorKeyword}Logic`,
+          ...serpWords.map(w=>"#"+w.replace(/[^a-zA-Z]/g,"")),
+          ...qWords.map(w=>"#"+w.replace(/[^a-zA-Z]/g,""))
         ].slice(0,5);
 
-        if (location){
+        if(location){
           hashtags.push("#"+location.replace(/\s+/g,""));
         }
 
-        const persona = {
+        socket.emit("personaChunk",{
           major,
           gender:demo.gender,
           race:demo.race,
@@ -348,20 +351,19 @@ Return plain text. No JSON.
           serpContext,
           hashtags,
           category:cat
-        };
+        });
 
-        socket.emit("personaChunk", persona);
-      }
+      } // END LOOP
 
       socket.emit("personaDone");
 
     }catch(err){
       console.error("ENGINE ERROR:",err);
-      socket.emit("personaError","Engine error");
+      socket.emit("personaError","Engine failed");
     }
   });
 
-  socket.on("disconnect", ()=>console.log("Client left:",socket.id));
+  socket.on("disconnect",()=>console.log("Client left:",socket.id));
 });
 
 //////////////////////////////////////////////////////////////
@@ -372,15 +374,16 @@ const VIEW_FILE="/data/views.json";
 
 function readViews(){
   try { return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
-  catch{ return {total:0}; }
+  catch { return { total:0 }; }
 }
+
 function writeViews(v){
-  fs.writeFileSync(VIEW_FILE,JSON.stringify(v,null,2));
+  fs.writeFileSync(VIEW_FILE, JSON.stringify(v,null,2));
 }
 
 app.get("/api/views",(req,res)=>{
-  const v=readViews();
-  v.total++; 
+  const v = readViews();
+  v.total++;
   writeViews(v);
   res.json({ total:v.total });
 });
@@ -392,4 +395,4 @@ app.use(express.static(path.join(__dirname,"public")));
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, ()=>console.log("🔥 Final Rain Man Engine running on",PORT));
+httpServer.listen(PORT,()=>console.log("🔥 Final Rain Man Engine running on",PORT));
