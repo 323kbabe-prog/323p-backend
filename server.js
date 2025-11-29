@@ -250,13 +250,16 @@ try{
     const numList = serpNumbers.join(", ") || "none";
 
     // --------------------------------------------
-// Extract FULL proper names from rewrittenQuery
+// Extract FULL PERSON / ENTITY NAMES from rewrittenQuery
 // --------------------------------------------
 
-// Tokenize
-const tokens = rewrittenQuery.split(/\s+/);
+// Clean possessives (Swift’s → Swift)
+const cleaned = rewrittenQuery.replace(/’s|\'s/g, "");
 
-// Collect sequences of Capitalized words
+// Tokenize again after cleaning
+const tokens = cleaned.split(/\s+/);
+
+// Detect proper-noun sequences
 let properNames = [];
 let current = [];
 
@@ -265,12 +268,11 @@ for (let w of tokens) {
     current.push(w);
   } else {
     if (current.length > 0) {
-      properNames.push(current.join("")); // merge → SabrinaCarpenter
+      properNames.push(current.join(""));  // Taylor Swift → TaylorSwift
       current = [];
     }
   }
 }
-// Finalize last collected block
 if (current.length > 0) {
   properNames.push(current.join(""));
 }
@@ -278,7 +280,7 @@ if (current.length > 0) {
 // Remove duplicates
 properNames = [...new Set(properNames)];
 
-// Convert into hashtags
+// Build name hashtags
 const nameTags = properNames.map(n => "#" + n);
 
     ////////////////////////////////////////////////////////
@@ -354,11 +356,21 @@ Return plain text only.
 
     const hashtags = [
   `#${majorKeyword}`,
+  ...nameTags,     // #TaylorSwift, #SabrinaCarpenter, #ElonMusk
+];
 
-  ...nameTags,     // ⭐ ADD THIS LINE
-  ...serpWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,"")),
-  ...qWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,""))
-].slice(0,7);
+if (location) {
+  hashtags.push("#" + location);   // #Tokyo, #USA, #Seoul
+}
+
+// Add 1–2 general action tags based on rewrite
+const actionWord = rewrittenQuery.split(" ")[0];  // first verb
+if (/^[A-Za-z]+$/.test(actionWord)) {
+  hashtags.push("#" + actionWord);
+}
+
+// Limit length
+const finalHashtags = [...new Set(hashtags)].slice(0,6);
 
     if(location){
       hashtags.push("#" + location.replace(/\s+/g,""));
