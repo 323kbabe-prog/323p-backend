@@ -44,7 +44,7 @@ function extractLocationAI(text){
   if(locWords.length >= 2) return locWords[0] + locWords[1];
   if(locWords.length === 1) return locWords[0];
 
-  return null;
+  retur
 }
 
 function pick(arr){
@@ -249,27 +249,37 @@ try{
 
     const numList = serpNumbers.join(", ") || "none";
 
-    ////////////////////////////////////////////////////////
-    // NAME ENTITY HASHTAG EXTRACTION FROM rewrittenQuery
-    ////////////////////////////////////////////////////////
+    // --------------------------------------------
+// Extract FULL proper names from rewrittenQuery
+// --------------------------------------------
 
-    const tokens = rewrittenQuery.split(/\s+/);
-    let properChunks = [];
+// Tokenize
+const tokens = rewrittenQuery.split(/\s+/);
 
-    for (let i = 0; i < tokens.length - 1; i++) {
-      const w1 = tokens[i];
-      const w2 = tokens[i+1];
-      if(/^[A-Z][a-zA-Z]+$/.test(w1) && /^[A-Z][a-zA-Z]+$/.test(w2)){
-        properChunks.push(w1 + w2);
-      }
+// Collect sequences of Capitalized words
+let properNames = [];
+let current = [];
+
+for (let w of tokens) {
+  if (/^[A-Z][a-zA-Z]+$/.test(w)) {
+    current.push(w);
+  } else {
+    if (current.length > 0) {
+      properNames.push(current.join("")); // merge → SabrinaCarpenter
+      current = [];
     }
+  }
+}
+// Finalize last collected block
+if (current.length > 0) {
+  properNames.push(current.join(""));
+}
 
-    const singleProper = tokens.filter(w => /^[A-Z][a-zA-Z]+$/.test(w));
-    if(singleProper.length === 1){
-      properChunks.push(singleProper[0]);
-    }
+// Remove duplicates
+properNames = [...new Set(properNames)];
 
-    const nameTags = properChunks.map(n => "#" + n);
+// Convert into hashtags
+const nameTags = properNames.map(n => "#" + n);
 
     ////////////////////////////////////////////////////////
     // RAIN MAN PROMPT — Single Paragraph Only
