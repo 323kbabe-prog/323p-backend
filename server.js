@@ -25,19 +25,41 @@ const SERP_KEY = process.env.SERPAPI_KEY || null;
 console.log("🚀 Rain Man Business Engine Started");
 console.log("SERP Active:", !!SERP_KEY);
 
-// ---------- Helpers ----------
-function extractLocation(text){
-  const LOC = [
-    "USA","United States","America","LA","Los Angeles","NYC","New York",
-    "Miami","Chicago","Texas","Florida","Seattle","San Francisco",
-    "Tokyo","Paris","London","Berlin","Seoul","Taipei","Singapore"
-  ];
-  const t = text.toLowerCase();
-  return LOC.find(c => t.includes(c.toLowerCase())) || null;
-}
+// --------------------------------------------
+// AI LOCATION EXTRACTOR — NO FIXED LIST
+// --------------------------------------------
+async function extractLocationAI(text, openai) {
+  if (!text || text.trim().length < 2) return null;
 
-function pick(arr){
-  return arr[Math.floor(Math.random()*arr.length)];
+  const prompt = `
+Extract the most likely geographic location mentioned in this sentence.
+Rules:
+- Return ONLY the location name.
+- It must be a real city, state, region, or country.
+- If multiple appear, pick the most specific one (city > region > country).
+- If no valid location is found, return: NONE
+
+Input: ${text}
+Output:
+  `;
+
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.0
+    });
+
+    let loc = out.choices[0].message.content.trim();
+
+    if (!loc || loc.toUpperCase() === "NONE") return null;
+
+    // return clean hashtag-friendly label (New York → NewYork)
+    return loc.replace(/\s+/g, "");
+  } catch (err) {
+    console.log("AI-Location Error:", err);
+    return null;
+  }
 }
 
 // ---------- Identity Pools ----------
@@ -226,6 +248,17 @@ try{
 
     const numList = serpNumbers.join(", ") || "none";
 
+// Build SERP bullet entries
+let serpBulletItems = [];
+
+if (serpContext && serpContext !== "No verified data.") {
+  // Split each news headline into its own bullet
+  serpBulletItems = serpContext
+    .split(" | ")
+    .map(line => line.trim())
+    .filter(Boolean);
+}
+
     // --------------------------------------------
     // FULL RAIN MAN BUSINESS PROMPT
     // --------------------------------------------
@@ -257,13 +290,14 @@ Must include steps, routines, evaluations.
 Must incorporate numbers (e.g., 1.2 million, 48%, 2025) without explanation.
 Must include one tiny anecdote: “I noted one instance once.”
 
-After the paragraph, output EXACTLY four bullets:
+After the paragraph, output the following bullets:
 
 Key directions to consider:
 - direction 1
 - direction 2
 - direction 3
 - direction 4
+${serpBulletItems.map(x => `- ${x}`).join("\n")}
 
 All bullets must be procedural, ${major}-specific, clipped, and may use numbers.
 
@@ -282,43 +316,78 @@ Return plain text only.
     const fullThought = ai.choices[0].message.content.trim();
 
     // --------------------------------------------
-    // HASHTAGS
-    // --------------------------------------------
-    const majorKeyword = major.split(" ")[0];
-    const serpWords = serpContext.split(" ").slice(0,2);
-    const qWords = rewrittenQuery.split(" ").slice(0,2);
+// AI-GENERATED HASHTAGS (Final Version)
+// --------------------------------------------
 
-    const hashtags = [
-      ...serpWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,"")),
-      ...qWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,""))
-    ].slice(0,5);
+// 1. Base tag for the major
+const majorKeyword = major.split(" ")[0];
+let hashtags = [`#${majorKeyword}`];
 
-    if(location){
-      hashtags.push("#" + location.replace(/\s+/g,""));
-    }
+// 2. Ask AI to create 3 business-relevant hashtags
+const hashPrompt = `
+Generate exactly 3 business-style hashtags based on this rewritten strategic direction:
 
-    // Emit card
-    socket.emit("personaChunk",{
-      major,
-      gender:demo.gender,
-      race:demo.race,
-      age:demo.age,
-      thought:fullThought,
-      serpContext,
-      hashtags,
-      category:cat
-    });
+"${rewrittenQuery}"
 
-  } // end for
+Rules:
+- Output ONLY hashtags.
+- No explanation.
+- No numbering.
+- Use real business language.
+- Do NOT invent weird words.
+- Use 1–2 word hashtags only.
+- No metaphors.
+- No locations.
+- No emojis.
+- No more than 18 characters per hashtag.
+Output:
+`;
 
-  socket.emit("personaDone");
+try {
+  const aiHash = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: hashPrompt }],
+    temperature: 0.3
+  });
 
-}catch(err){
-  console.log("ENGINE ERROR:",err);
-  socket.emit("personaError","Engine failed");
+  const raw = aiHash.choices[0].message.content.trim();
+
+  // Clean + extract hashtags
+  const aiTags = raw
+    .split(/\s+/)
+    .filter(t => t.startsWith("#"))
+    .map(t => t.replace(/[^#A-Za-z0-9]/g, "")) // remove strange chars
+    .filter(Boolean);
+
+  hashtags.push(...aiTags);
+
+} catch (err) {
+  console.log("AI hashtag error:", err);
 }
 
-});
+// 3. AI location tag (if exists)
+if (location) {
+  hashtags.push(`#${location}`);
+}
+
+// Clean duplicates + blanks
+hashtags = [...new Set(hashtags)].filter(Boolean);
+
+// 4. FORCE EXACTLY 4 HASHTAGS
+hashtags = hashtags.slice(0, 4);
+
+// --------------------------------------------
+// Emit final persona card
+// --------------------------------------------
+socket.emit("personaChunk", {
+  major,
+  gender: demo.gender,
+  race: demo.race,
+  age: demo.age,
+  thought: fullThought,
+  serpContext,
+  hashtags,
+  category: cat
 });
 
 //////////////////////////////////////////////////////////////
