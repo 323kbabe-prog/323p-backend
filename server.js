@@ -292,13 +292,15 @@ Then: continuous "I will" steps in strict ${major} logic including routines, eva
 
 After the paragraph, output:
 
+const fullPrompt = `
+Your entire prompt text...
 Key directions to consider:
 - direction 1
 - direction 2
 - direction 3
 - direction 4
 ${serpBulletItems.map(x => `- ${x}`).join("\n")}
-
+`;
         //------------------------------------------------------
         // CALL OPENAI FOR THOUGHT
         //------------------------------------------------------
