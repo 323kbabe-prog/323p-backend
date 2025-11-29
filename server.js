@@ -135,31 +135,40 @@ app.get("/s/:id",(req,res)=>{
 // EXECUTIVE REWRITE ENGINE — 1 Sentence Business Direction
 //////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////
+// BLOCK 2 — Executive Rewrite Engine (KEEP NAMES)
+//////////////////////////////////////////////////////////////
+
 app.post("/api/rewrite", async(req,res)=>{
   let { query } = req.body;
   query = (query||"").trim();
-
   if(!query) return res.json({ rewritten:"" });
 
   const prompt = `
-Rewrite this into ONE executive business strategic direction.
-Rules:
+Rewrite the user's text into ONE sharp executive business strategy sentence.
+
+RULES:
 - EXACTLY 1 sentence.
-- No quoting.
+- No quoting the user.
 - No emotion.
 - No metaphors.
-- Corporate strategic tone.
-- Strengthen clarity and direction.
-- Remove personal details.
-Input: ${query}
+- No filler language.
+- Must sound like senior-executive strategic direction.
+- STAY FOCUSED on clarity & business action.
+- PRESERVE ALL proper nouns (people, companies, cities, brands).
+- DO NOT remove names such as: Taylor Swift, Elon Musk, Tesla, Amazon, New York, etc.
+- Preserve any proper nouns exactly as they appear.
+- Strengthen the intent, remove informal phrasing.
+
+User Input: ${query}
 Rewritten:
-`;
+  `;
 
   try{
     const out = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       messages:[{role:"user",content:prompt}],
-      temperature:0.15
+      temperature:0.2
     });
 
     let rewritten = out.choices[0].message.content
