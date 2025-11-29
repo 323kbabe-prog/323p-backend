@@ -287,7 +287,7 @@ Numbers allowed: ${numList}
 Sentence 1: MUST start with "I will"...
 Sentence 2: ...
 Sentence 3: ...
-Then: 6–7 more "I will" statements including the anecdote.
+Then: 4-5 more "I will" statements including the anecdote.
 
 After the paragraph, output:
 
@@ -297,6 +297,7 @@ Key directions to consider:
 - direction 3
 - direction 4
 
+then, output:
 SERP insights:
 ${serpBulletItems.map(x => `- ${x}`).join("\n")}
 `;
