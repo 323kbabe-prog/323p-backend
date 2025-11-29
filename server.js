@@ -308,11 +308,9 @@ Return plain text only.
     //-------------------------------------------------------------
     const majorKeyword = major.split(" ")[0];
     const serpWords = serpContext.split(" ").slice(0,2);
-    const qWords = rewrittenQuery.split(" ").slice(0,2);
 
     const hashtags = [
       `#${majorKeyword}Mode`,
-      `#${majorKeyword}Logic`,
       ...nameTags,
       ...serpWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,"")),
       ...qWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,""))
