@@ -158,7 +158,8 @@ Rewritten:
     let rewritten = out.choices[0].message.content.trim()
       .replace(/["“”‘’]/g,"");
 
-    rewritten = rewritten.split(".")[0] + ".";
+    // Prevent breaking abbreviations like U.S.A. by trimming only final dots
+rewritten = rewritten.replace(/\s*\.+$/, "") + ".";
 
     res.json({ rewritten });
 
