@@ -1,7 +1,8 @@
 //////////////////////////////////////////////////////////////
-//  server.js — Rain Man Business Engine (Final Version C)
-//  News-Only SERP Signal Mode
-//  Supports: Blue Ocean · NPC · Persona · 24 Billy
+//  Rain Man Business Engine — Final Version B (Clean Build)
+//  NEWS-ONLY SERP MODE + Full Number Extraction
+//  Persona-Based SERP by Major
+//  Executive Rewrite + Rain-Man Paragraph Engine
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -14,7 +15,7 @@ const fs = require("fs");
 const fetch = require("node-fetch");
 
 //////////////////////////////////////////////////////////////
-// APP + OPENAI + SERP INIT
+// APP + OPENAI + SERP
 //////////////////////////////////////////////////////////////
 
 const app = express();
@@ -24,24 +25,26 @@ app.use(express.json());
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-console.log("🚀 Final Rain Man Business Engine Started");
-console.log("OpenAI:", !!process.env.OPENAI_API_KEY);
+console.log("🚀 Rain Man Business Engine Started");
 console.log("SERP Active:", !!SERP_KEY);
 
 //////////////////////////////////////////////////////////////
 // HELPERS
 //////////////////////////////////////////////////////////////
 
-function extractLocation(text){
-  const LOC = [
-    "USA","United States","America","LA","Los Angeles","NYC","New York",
-    "Miami","Chicago","Texas","Florida","Seattle","San Francisco",
-    "Tokyo","Paris","London","Berlin","Seoul","Taipei","Singapore"
-  ];
-  const t = text.toLowerCase();
-  return LOC.find(c => t.includes(c.toLowerCase())) || null;
+// AI-style location extraction (from rewrittenQuery)
+function extractLocationAI(text){
+  if(!text) return null;
+
+  const locWords = text.split(/\s+/).filter(w => /^[A-Z][a-zA-Z]+$/.test(w));
+
+  if(locWords.length >= 2) return locWords[0] + locWords[1];
+  if(locWords.length === 1) return locWords[0];
+
+  return null;
 }
 
 function pick(arr){
@@ -52,11 +55,11 @@ function pick(arr){
 // IDENTITY POOLS
 //////////////////////////////////////////////////////////////
 
-const genders=["Female","Male","Nonbinary"];
-const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
-const ages=[...Array.from({length:32},(_,i)=>i+18)];
+const genders = ["Female","Male","Nonbinary"];
+const races   = ["Asian","Black","White","Latino","Middle Eastern","Mixed"];
+const ages    = [...Array.from({length:32},(_,i)=>i+18)];
 
-const PROF={
+const PROF = {
   A:["Human Biology","Psychology","Sociology","Public Health","Bioengineering"],
   B:["Political Science","Public Policy","International Relations","Ethics in Society","Science, Technology & Society"],
   C:["Computer Science","Mechanical Engineering","Electrical Engineering","Symbolic Systems","Aeronautics & Astronautics"],
@@ -68,14 +71,14 @@ const PROF={
 // SHARE SYSTEM
 //////////////////////////////////////////////////////////////
 
-const ORIGIN_MAP={
+const ORIGIN_MAP = {
   blue:"https://blueoceanbrowser.com",
   npc:"https://npcbrowser.com",
   persona:"https://personabrowser.com",
   billy:"https://24billybrowser.com"
 };
 
-const SHARES_FILE="/data/shares.json";
+const SHARES_FILE = "/data/shares.json";
 if(!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 function readShares(){
@@ -88,10 +91,10 @@ function writeShares(v){
 }
 
 app.post("/api/share",(req,res)=>{
-  const all=readShares();
-  const id=Math.random().toString(36).substring(2,8);
+  const all = readShares();
+  const id  = Math.random().toString(36).substring(2,8);
 
-  all[id]={
+  all[id] = {
     personas:req.body.personas || [],
     query:req.body.query || "",
     origin:req.body.origin || "blue"
@@ -102,16 +105,18 @@ app.post("/api/share",(req,res)=>{
 });
 
 app.get("/api/share/:id",(req,res)=>{
-  const all=readShares();
-  const s=all[req.params.id];
+  const all = readShares();
+  const s   = all[req.params.id];
   if(!s) return res.status(404).json([]);
   res.json(s.personas || []);
 });
 
 app.get("/s/:id",(req,res)=>{
-  const all=readShares();
-  const s=all[req.params.id];
+  const all = readShares();
+  const s   = all[req.params.id];
+
   if(!s) return res.redirect("https://blueoceanbrowser.com");
+
   const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
   res.send(`
@@ -127,50 +132,52 @@ app.get("/s/:id",(req,res)=>{
 });
 
 //////////////////////////////////////////////////////////////
-// BLOCK 2 — EXECUTIVE REWRITE ENGINE
+// EXECUTIVE REWRITE ENGINE — 1 Sentence Business Direction
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async(req,res)=>{
   let { query } = req.body;
-  query=(query||"").trim();
+  query = (query||"").trim();
+
   if(!query) return res.json({ rewritten:"" });
 
-  const prompt=`
-Rewrite the user's text into a direct business strategy instruction.
+  const prompt = `
+Rewrite this into ONE executive business strategic direction.
 Rules:
 - EXACTLY 1 sentence.
-- No quotes.
-- No emotional words.
+- No quoting.
+- No emotion.
 - No metaphors.
-- Must sound like senior executive direction.
-- Must increase clarity and business actionability.
+- Corporate strategic tone.
+- Strengthen clarity and direction.
+- Remove personal details.
 Input: ${query}
 Rewritten:
-  `;
+`;
 
   try{
     const out = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       messages:[{role:"user",content:prompt}],
-      temperature:0.2
+      temperature:0.15
     });
 
-    let rewritten = out.choices[0].message.content.trim()
-      .replace(/["“”‘’]/g,"");
+    let rewritten = out.choices[0].message.content
+      .replace(/["“”‘’]/g,"")
+      .trim();
 
-    // Prevent breaking abbreviations like U.S.A. by trimming only final dots
-rewritten = rewritten.replace(/\s*\.+$/, "") + ".";
+    rewritten = rewritten.split(".")[0] + ".";
 
     res.json({ rewritten });
 
   }catch(err){
-    console.log("Rewrite Error:",err);
+    console.log("Rewrite ERROR:",err);
     res.json({ rewritten:query });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// BLOCK 3 — RAIN MAN BUSINESS THOUGHT ENGINE (NEWS ONLY)
+// MAIN ENGINE — Rain Man Business Thought Engine (NEWS ONLY)
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
@@ -181,31 +188,33 @@ io.on("connection", socket => {
 socket.on("personaSearch", async rewrittenQuery => {
 try{
 
-  const location = extractLocation(rewrittenQuery);
-  const CAT_ORDER=["A","B","C","D","E","A","B","C","D","E"];
+  // AI-LOCATION from rewrittenQuery ONLY
+  const location = extractLocationAI(rewrittenQuery);
 
-  for (let i=0; i<10; i++){
+  const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
+
+  for(let i=0;i<10;i++){
 
     const cat   = CAT_ORDER[i];
     const major = pick(PROF[cat]);
     const demo  = {
-      gender:pick(genders),
-      race:pick(races),
-      age:pick(ages)
+      gender: pick(genders),
+      race:   pick(races),
+      age:    pick(ages)
     };
 
-    //-------------------------------------------------------------
-    // NEWS-ONLY SERP SEARCH BASED ON MAJOR
-    //-------------------------------------------------------------
-    const serpQuery = `${major} business news ${new Date().getFullYear()}`;
+    ////////////////////////////////////////////////////////
+    // SERP NEWS FETCH — major-specific
+    ////////////////////////////////////////////////////////
 
+    const serpQuery = `${major} business news ${new Date().getFullYear()}`;
     let serpContext = "No verified data.";
 
     if(SERP_KEY){
       try{
-        const url = `https://serpapi.com/search.json?q=${
-          encodeURIComponent(serpQuery)
-        }&tbm=nws&num=5&api_key=${SERP_KEY}`;
+        const url = `https://serpapi.com/search.json?q=${encodeURIComponent(
+          serpQuery
+        )}&tbm=nws&num=5&api_key=${SERP_KEY}`;
 
         const r = await fetch(url);
         const j = await r.json();
@@ -223,46 +232,76 @@ try{
       }
     }
 
-    //-------------------------------------------------------------
-    // NUMBER EXTRACTION (all numeric patterns)
-    //-------------------------------------------------------------
+    ////////////////////////////////////////////////////////
+    // NUMBER EXTRACTION — % , decimals , million , billion
+    ////////////////////////////////////////////////////////
+
     const serpNumbers = [
       ...(serpContext.match(/[0-9]+(\.[0-9]+)?%/g) || []),
       ...(serpContext.match(/[0-9]+(\.[0-9]+)?/g) || []),
       ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*million\b/gi) || []),
       ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*billion\b/gi) || [])
     ];
+
     const numList = serpNumbers.join(", ") || "none";
 
-    //-------------------------------------------------------------
-    // RAIN MAN BUSINESS PROMPT
-    //-------------------------------------------------------------
+    ////////////////////////////////////////////////////////
+    // NAME ENTITY HASHTAG EXTRACTION FROM rewrittenQuery
+    ////////////////////////////////////////////////////////
+
+    const tokens = rewrittenQuery.split(/\s+/);
+    let properChunks = [];
+
+    for (let i = 0; i < tokens.length - 1; i++) {
+      const w1 = tokens[i];
+      const w2 = tokens[i+1];
+      if(/^[A-Z][a-zA-Z]+$/.test(w1) && /^[A-Z][a-zA-Z]+$/.test(w2)){
+        properChunks.push(w1 + w2);
+      }
+    }
+
+    const singleProper = tokens.filter(w => /^[A-Z][a-zA-Z]+$/.test(w));
+    if(singleProper.length === 1){
+      properChunks.push(singleProper[0]);
+    }
+
+    const nameTags = properChunks.map(n => "#" + n);
+
+    ////////////////////////////////////////////////////////
+    // RAIN MAN PROMPT — Single Paragraph Only
+    ////////////////////////////////////////////////////////
+
     const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Speak in clipped business steps. No emotion. No metaphor. No abstraction.
-Use only ${major} vocabulary.
+Business reasoning only. No emotion. No metaphor. No abstraction.
+Use only ${major} vocabulary. No words from rewritten direction. 
+Do not use any wording from: "${serpContext}".
 
-Forbidden: rewritten-direction words, SERP context words.
+Allowed numeric values: ${numList}
 
-Allowed numbers: ${numList}
-
-ONE PARAGRAPH.
+Write ONE SINGLE PARAGRAPH:
 
 Sentence 1:
-- MUST start with “I will”
-- MUST be a ${major}-logic business action
-- MUST reflect the category of "${rewrittenQuery}" without using its words
-- MUST include at least one of these numbers: ${numList}
+- Begins with “I will”
+- ${major}-logic business action
+- Loosely reflects category of "${rewrittenQuery}" (no shared words)
+- Includes at least one of: ${numList}
 
-Sentence 2: short factual statement (no “I will”)
-Sentence 3: short factual statement (no “I will”)
+Sentence 2:
+- Short factual sentence (no “I will”).
+
+Sentence 3:
+- Short factual sentence (no “I will”).
 
 Then:
-- continuous “I will” business-method steps
-- must include numbers naturally
-- must include: “I noted one instance once.”
+- 6–10 more “I will” statements
+- All business procedural steps
+- Use ${major} reasoning
+- Incorporate numbers naturally (not explained)
+- Include the anecdote: “I noted one instance once.”
 
-After that paragraph, output EXACTLY four bullets:
+After paragraph:
+Output EXACTLY four bullets:
 
 Key directions to consider:
 - direction 1
@@ -270,13 +309,20 @@ Key directions to consider:
 - direction 3
 - direction 4
 
-Bullets must be ${major}-specific, clipped, procedural.
-Return plain text only.
-    `;
+Bullets must be:
+- procedural
+- ${major}-specific
+- clipped
+- may use numbers
+- NO reference to query or SERP.
 
-    //-------------------------------------------------------------
+Return plain text only.
+`;
+
+    ////////////////////////////////////////////////////////
     // CALL OPENAI
-    //-------------------------------------------------------------
+    ////////////////////////////////////////////////////////
+
     const ai = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       messages:[{role:"user",content:fullPrompt}],
@@ -285,56 +331,42 @@ Return plain text only.
 
     const fullThought = ai.choices[0].message.content.trim();
 
-    //-------------------------------------------------------------
-    // NAME EXTRACTION (Rewritten only)
-    //-------------------------------------------------------------
-    const tokens = rewrittenQuery.split(/\s+/);
-    let properChunks = [];
+    ////////////////////////////////////////////////////////
+    // HASHTAG LOGIC
+    ////////////////////////////////////////////////////////
 
-    for (let j=0; j<tokens.length-1; j++){
-      const w1=tokens[j], w2=tokens[j+1];
-      if (/^[A-Z][a-zA-Z]+$/.test(w1) && /^[A-Z][a-zA-Z]+$/.test(w2)){
-        properChunks.push(w1 + w2);
-      }
-    }
-
-    const singles = tokens.filter(w => /^[A-Z][a-zA-Z]+$/.test(w));
-    if(singles.length===1) properChunks.push(singles[0]);
-
-    const nameTags = properChunks.map(n => "#" + n);
-
-    //-------------------------------------------------------------
-    // HASHTAGS
-    //-------------------------------------------------------------
     const majorKeyword = major.split(" ")[0];
     const serpWords = serpContext.split(" ").slice(0,2);
+    const qWords = rewrittenQuery.split(" ").slice(0,2);
 
-    const hashtags = [
+    let hashtags = [
       `#${majorKeyword}Mode`,
+      `#${majorKeyword}Logic`,
       ...nameTags,
       ...serpWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,"")),
       ...qWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,""))
-    ].slice(0,7);
+    ].filter(Boolean).slice(0,7);
 
     if(location){
-      hashtags.push("#"+location.replace(/\s+/g,""));
+      hashtags.push("#" + location.replace(/\s+/g,""));
     }
 
-    //-------------------------------------------------------------
-    // EMIT CARD
-    //-------------------------------------------------------------
+    ////////////////////////////////////////////////////////
+    // EMIT TO FRONTEND
+    ////////////////////////////////////////////////////////
+
     socket.emit("personaChunk",{
       major,
-      gender:demo.gender,
-      race:demo.race,
-      age:demo.age,
-      thought:fullThought,
+      gender: demo.gender,
+      race: demo.race,
+      age: demo.age,
+      thought: fullThought,
       serpContext,
       hashtags,
-      category:cat
+      category: cat
     });
 
-  } // end loop
+  } // END LOOP
 
   socket.emit("personaDone");
 
@@ -348,10 +380,10 @@ Return plain text only.
 }); // END connection
 
 //////////////////////////////////////////////////////////////
-// BLOCK 4 — VIEWS + STATIC + START
+// VIEWS + STATIC
 //////////////////////////////////////////////////////////////
 
-const VIEW_FILE="/data/views.json";
+const VIEW_FILE = "/data/views.json";
 
 function readViews(){
   try{ return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
@@ -372,11 +404,10 @@ app.get("/api/views",(req,res)=>{
 app.use(express.static(path.join(__dirname,"public")));
 
 //////////////////////////////////////////////////////////////
-// SERVER START
+// START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 3000;
-
 httpServer.listen(PORT,()=>{
   console.log("🔥 Final Rain Man Business Engine running on", PORT);
 });
