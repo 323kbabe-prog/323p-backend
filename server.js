@@ -288,12 +288,10 @@ Sentence 1: MUST start with "I will", reflect ${major} logic, include one number
 Sentence 2: short factual.
 Sentence 3: short factual.
 
-Then: continuous "I will" steps in strict ${major} logic including routines, evaluations, numbers, one anecdote ("I noted one instance once").
+Then: continuous "I will" steps in strict ${major} logic including routines, evaluations, numbers, one anecdote ("I noted one instance once.").
 
 After the paragraph, output:
 
-const fullPrompt = `
-Your entire prompt text...
 Key directions to consider:
 - direction 1
 - direction 2
