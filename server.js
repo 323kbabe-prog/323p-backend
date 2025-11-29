@@ -284,11 +284,10 @@ Mode: clipped Rain Man business logic. No metaphor. No emotion.
 
 Numbers allowed: ${numList}
 
-Sentence 1: MUST start with "I will", reflect ${major} logic, include one number, no words from rewrittenQuery or serpContext.
-Sentence 2: short factual.
-Sentence 3: short factual.
-
-Then: continuous "I will" steps in strict ${major} logic including routines, evaluations, numbers, one anecdote ("I noted one instance once.").
+Sentence 1: MUST start with "I will"...
+Sentence 2: ...
+Sentence 3: ...
+Then: 6–7 more "I will" statements including the anecdote.
 
 After the paragraph, output:
 
@@ -297,6 +296,8 @@ Key directions to consider:
 - direction 2
 - direction 3
 - direction 4
+
+SERP insights:
 ${serpBulletItems.map(x => `- ${x}`).join("\n")}
 `;
         //------------------------------------------------------
