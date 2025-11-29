@@ -290,16 +290,14 @@ Sentence 3: short factual.
 
 Then: continuous "I will" steps in strict ${major} logic including routines, evaluations, numbers, one anecdote ("I noted one instance once").
 
-After the paragraph, output the following bullets:
+After the paragraph, output:
 
 Key directions to consider:
 - direction 1
 - direction 2
 - direction 3
 - direction 4
-${serpBulletItems.length > 0 
-  ? serpBulletItems.map(x => `- ${x}`).join("\n")
-  : ""}
+${serpBulletItems.map(x => `- ${x}`).join("\n")}
 
         //------------------------------------------------------
         // CALL OPENAI FOR THOUGHT
