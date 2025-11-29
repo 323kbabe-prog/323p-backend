@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////
-// Rain Man Business Engine — BLOCK 1
-// Imports, Setup, Helpers, Majors, Share System
+//  server.js — Rain Man Business Engine (Final Version C)
+//  News-Only SERP Signal Mode
+//  Supports: Blue Ocean · NPC · Persona · 24 Billy
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -12,6 +13,10 @@ const cors = require("cors");
 const fs = require("fs");
 const fetch = require("node-fetch");
 
+//////////////////////////////////////////////////////////////
+// APP + OPENAI + SERP INIT
+//////////////////////////////////////////////////////////////
+
 const app = express();
 app.use(cors({ origin:"*" }));
 app.use(express.json());
@@ -19,13 +24,16 @@ app.use(express.json());
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
-
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-console.log("🚀 Rain Man Business Engine Started");
+console.log("🚀 Final Rain Man Business Engine Started");
+console.log("OpenAI:", !!process.env.OPENAI_API_KEY);
 console.log("SERP Active:", !!SERP_KEY);
 
-// ---------- Helpers ----------
+//////////////////////////////////////////////////////////////
+// HELPERS
+//////////////////////////////////////////////////////////////
+
 function extractLocation(text){
   const LOC = [
     "USA","United States","America","LA","Los Angeles","NYC","New York",
@@ -40,7 +48,10 @@ function pick(arr){
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
-// ---------- Identity Pools ----------
+//////////////////////////////////////////////////////////////
+// IDENTITY POOLS
+//////////////////////////////////////////////////////////////
+
 const genders=["Female","Male","Nonbinary"];
 const races=["Asian","Black","White","Latino","Middle Eastern","Mixed"];
 const ages=[...Array.from({length:32},(_,i)=>i+18)];
@@ -53,7 +64,10 @@ const PROF={
   E:["Art Practice","Communication","Film & Media Studies","Linguistics","Music"]
 };
 
-// ---------- Share System ----------
+//////////////////////////////////////////////////////////////
+// SHARE SYSTEM
+//////////////////////////////////////////////////////////////
+
 const ORIGIN_MAP={
   blue:"https://blueoceanbrowser.com",
   npc:"https://npcbrowser.com",
@@ -73,12 +87,11 @@ function writeShares(v){
   fs.writeFileSync(SHARES_FILE, JSON.stringify(v,null,2));
 }
 
-// POST /share
 app.post("/api/share",(req,res)=>{
-  const all = readShares();
-  const id = Math.random().toString(36).substring(2,8);
+  const all=readShares();
+  const id=Math.random().toString(36).substring(2,8);
 
-  all[id] = {
+  all[id]={
     personas:req.body.personas || [],
     query:req.body.query || "",
     origin:req.body.origin || "blue"
@@ -88,21 +101,17 @@ app.post("/api/share",(req,res)=>{
   res.json({ shortId:id });
 });
 
-// GET /share/:id
 app.get("/api/share/:id",(req,res)=>{
-  const all = readShares();
-  const s = all[req.params.id];
+  const all=readShares();
+  const s=all[req.params.id];
   if(!s) return res.status(404).json([]);
   res.json(s.personas || []);
 });
 
-// /s/:id → redirect with auto-load
 app.get("/s/:id",(req,res)=>{
-  const all = readShares();
-  const s = all[req.params.id];
-
+  const all=readShares();
+  const s=all[req.params.id];
   if(!s) return res.redirect("https://blueoceanbrowser.com");
-
   const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
   res.send(`
@@ -118,25 +127,23 @@ app.get("/s/:id",(req,res)=>{
 });
 
 //////////////////////////////////////////////////////////////
-// BLOCK 2 — Executive Rewrite Engine
+// BLOCK 2 — EXECUTIVE REWRITE ENGINE
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async(req,res)=>{
   let { query } = req.body;
-  query = (query||"").trim();
+  query=(query||"").trim();
   if(!query) return res.json({ rewritten:"" });
 
-  const prompt = `
-Rewrite the user's text into a single sharp business strategy directive.
+  const prompt=`
+Rewrite the user's text into a direct business strategy instruction.
 Rules:
 - EXACTLY 1 sentence.
-- No quoting.
-- No emotion.
+- No quotes.
+- No emotional words.
 - No metaphors.
-- No filler.
-- Must sound like senior executive instruction.
-- Strengthen direction and clarity.
-- Make it business-executable.
+- Must sound like senior executive direction.
+- Must increase clarity and business actionability.
 Input: ${query}
 Rewritten:
   `;
@@ -148,11 +155,10 @@ Rewritten:
       temperature:0.2
     });
 
-    let rewritten = out.choices[0].message.content
-      .replace(/["“”‘’]/g,"")
-      .trim();
+    let rewritten = out.choices[0].message.content.trim()
+      .replace(/["“”‘’]/g,"");
 
-    rewritten = rewritten.split(".")[0] + "."; // force single sentence
+    rewritten = rewritten.split(".")[0] + ".";
 
     res.json({ rewritten });
 
@@ -163,7 +169,7 @@ Rewritten:
 });
 
 //////////////////////////////////////////////////////////////
-// BLOCK 3 — Rain Man Business Thought Engine (News-Only SERP)
+// BLOCK 3 — RAIN MAN BUSINESS THOUGHT ENGINE (NEWS ONLY)
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
@@ -175,9 +181,9 @@ socket.on("personaSearch", async rewrittenQuery => {
 try{
 
   const location = extractLocation(rewrittenQuery);
-  const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
+  const CAT_ORDER=["A","B","C","D","E","A","B","C","D","E"];
 
-  for(let i=0;i<10;i++){
+  for (let i=0; i<10; i++){
 
     const cat   = CAT_ORDER[i];
     const major = pick(PROF[cat]);
@@ -187,9 +193,9 @@ try{
       age:pick(ages)
     };
 
-    // --------------------------------------------
-    // SERP NEWS SEARCH — identity-specific
-    // --------------------------------------------
+    //-------------------------------------------------------------
+    // NEWS-ONLY SERP SEARCH BASED ON MAJOR
+    //-------------------------------------------------------------
     const serpQuery = `${major} business news ${new Date().getFullYear()}`;
 
     let serpContext = "No verified data.";
@@ -216,48 +222,46 @@ try{
       }
     }
 
-    // Extract ALL number forms
+    //-------------------------------------------------------------
+    // NUMBER EXTRACTION (all numeric patterns)
+    //-------------------------------------------------------------
     const serpNumbers = [
       ...(serpContext.match(/[0-9]+(\.[0-9]+)?%/g) || []),
       ...(serpContext.match(/[0-9]+(\.[0-9]+)?/g) || []),
       ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*million\b/gi) || []),
       ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*billion\b/gi) || [])
     ];
-
     const numList = serpNumbers.join(", ") || "none";
 
-    // --------------------------------------------
-    // FULL RAIN MAN BUSINESS PROMPT
-    // --------------------------------------------
-
+    //-------------------------------------------------------------
+    // RAIN MAN BUSINESS PROMPT
+    //-------------------------------------------------------------
     const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
-Your communication mode is ultra-clipped Rain Man business logic.
-No metaphors. No emotion. No abstraction. No figurative language.
+Speak in clipped business steps. No emotion. No metaphor. No abstraction.
 Use only ${major} vocabulary.
 
-Forbidden:
-- No vocabulary from rewritten direction.
-- No vocabulary from this external text: "${serpContext}"
-- No references to “query”, “user”, “search”, “trend”, “online”, “data”, “metric”, “result”.
+Forbidden: rewritten-direction words, SERP context words.
 
-Allowed:
-Numbers extracted from external context: ${numList}.
+Allowed numbers: ${numList}
 
-ONE PARAGRAPH ONLY.
+ONE PARAGRAPH.
 
-FORMAT:
-Sentence 1 — MUST begin with “I will”, MUST describe a ${major}-logic business action, MUST loosely reflect the category of "${rewrittenQuery}" but without using its words, MUST include at least one number from: ${numList}.
-Sentence 2 — short factual sentence (no “I will”).
-Sentence 3 — short factual sentence (no “I will”).
+Sentence 1:
+- MUST start with “I will”
+- MUST be a ${major}-logic business action
+- MUST reflect the category of "${rewrittenQuery}" without using its words
+- MUST include at least one of these numbers: ${numList}
+
+Sentence 2: short factual statement (no “I will”)
+Sentence 3: short factual statement (no “I will”)
 
 Then:
-A continuous sequence of “I will” statements, all in ${major} logic.
-Must include steps, routines, evaluations.
-Must incorporate numbers (e.g., 1.2 million, 48%, 2025) without explanation.
-Must include one tiny anecdote: “I noted one instance once.”
+- continuous “I will” business-method steps
+- must include numbers naturally
+- must include: “I noted one instance once.”
 
-After the paragraph, output EXACTLY four bullets:
+After that paragraph, output EXACTLY four bullets:
 
 Key directions to consider:
 - direction 1
@@ -265,14 +269,13 @@ Key directions to consider:
 - direction 3
 - direction 4
 
-All bullets must be procedural, ${major}-specific, clipped, and may use numbers.
-
+Bullets must be ${major}-specific, clipped, procedural.
 Return plain text only.
     `;
 
-    // --------------------------------------------
+    //-------------------------------------------------------------
     // CALL OPENAI
-    // --------------------------------------------
+    //-------------------------------------------------------------
     const ai = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       messages:[{role:"user",content:fullPrompt}],
@@ -281,23 +284,46 @@ Return plain text only.
 
     const fullThought = ai.choices[0].message.content.trim();
 
-    // --------------------------------------------
+    //-------------------------------------------------------------
+    // NAME EXTRACTION (Rewritten only)
+    //-------------------------------------------------------------
+    const tokens = rewrittenQuery.split(/\s+/);
+    let properChunks = [];
+
+    for (let j=0; j<tokens.length-1; j++){
+      const w1=tokens[j], w2=tokens[j+1];
+      if (/^[A-Z][a-zA-Z]+$/.test(w1) && /^[A-Z][a-zA-Z]+$/.test(w2)){
+        properChunks.push(w1 + w2);
+      }
+    }
+
+    const singles = tokens.filter(w => /^[A-Z][a-zA-Z]+$/.test(w));
+    if(singles.length===1) properChunks.push(singles[0]);
+
+    const nameTags = properChunks.map(n => "#" + n);
+
+    //-------------------------------------------------------------
     // HASHTAGS
-    // --------------------------------------------
+    //-------------------------------------------------------------
     const majorKeyword = major.split(" ")[0];
     const serpWords = serpContext.split(" ").slice(0,2);
     const qWords = rewrittenQuery.split(" ").slice(0,2);
 
     const hashtags = [
+      `#${majorKeyword}Mode`,
+      `#${majorKeyword}Logic`,
+      ...nameTags,
       ...serpWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,"")),
       ...qWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,""))
-    ].slice(0,5);
+    ].slice(0,7);
 
     if(location){
-      hashtags.push("#" + location.replace(/\s+/g,""));
+      hashtags.push("#"+location.replace(/\s+/g,""));
     }
 
-    // Emit card
+    //-------------------------------------------------------------
+    // EMIT CARD
+    //-------------------------------------------------------------
     socket.emit("personaChunk",{
       major,
       gender:demo.gender,
@@ -309,7 +335,7 @@ Return plain text only.
       category:cat
     });
 
-  } // end for
+  } // end loop
 
   socket.emit("personaDone");
 
@@ -318,18 +344,19 @@ Return plain text only.
   socket.emit("personaError","Engine failed");
 }
 
-});
-});
+}); // END personaSearch
+
+}); // END connection
 
 //////////////////////////////////////////////////////////////
-// BLOCK 4 — Views, Static Serve, Server Start
+// BLOCK 4 — VIEWS + STATIC + START
 //////////////////////////////////////////////////////////////
 
 const VIEW_FILE="/data/views.json";
 
 function readViews(){
   try{ return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
-  catch{ return {total:0}; }
+  catch{ return { total:0 }; }
 }
 
 function writeViews(v){
@@ -343,8 +370,11 @@ app.get("/api/views",(req,res)=>{
   res.json({ total:v.total });
 });
 
-// Serve static frontend (HTML, JS, CSS)
 app.use(express.static(path.join(__dirname,"public")));
+
+//////////////////////////////////////////////////////////////
+// SERVER START
+//////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 3000;
 
