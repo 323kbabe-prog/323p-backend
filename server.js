@@ -307,16 +307,15 @@ Sentence 2:
 Sentence 3:
 - Short factual sentence (no “I will”).
 
-Then:
-- 6–10 more “I will” statements
+Sentence 4:
+- 6–7 more “I will” statements
 - All business procedural steps
 - Use ${major} reasoning
 - Incorporate numbers naturally (not explained)
 - Include the anecdote: “I noted one instance once.”
 
-After paragraph:
+Sentence 4:
 Output EXACTLY four bullets:
-
 Key directions to consider:
 - direction 1
 - direction 2
@@ -353,18 +352,18 @@ Return plain text only.
     const serpWords = serpContext.split(" ").slice(0,2);
     const qWords = rewrittenQuery.split(" ").slice(0,2);
 
-    let hashtags = [
-      `#${majorKeyword}Mode`,
-      `#${majorKeyword}Logic`,
-      ...nameTags,
-      ...serpWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,"")),
-      ...qWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,""))
-    ].filter(Boolean).slice(0,7);
+    const hashtags = [
+  `#${majorKeyword}`,
+
+  ...nameTags,     // ⭐ ADD THIS LINE
+  ...serpWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,"")),
+  ...qWords.map(w => "#" + w.replace(/[^a-zA-Z]/g,""))
+].slice(0,7);
 
     if(location){
       hashtags.push("#" + location.replace(/\s+/g,""));
     }
-
+    
     ////////////////////////////////////////////////////////
     // EMIT TO FRONTEND
     ////////////////////////////////////////////////////////
