@@ -1,12 +1,12 @@
 //////////////////////////////////////////////////////////////
-//  Rain Man Business Engine — FULL FINAL VERSION (Option A)
-//  • AI Rewrite Engine
-//  • AI Location Extractor (OpenAI)
-//  • SERP NEWS Engine
-//  • 10-NPC Rain Man Business Generator
-//  • Share System w/ Cross-Origin Redirect
-//  • View Counter
-//  • Static Hosting
+//  Rain Man Business Engine — FULL FINAL VERSION (Option A)
+//  • AI Rewrite Engine
+//  • AI Location Extractor (OpenAI)
+//  • SERP NEWS Engine
+//  • 10-NPC Rain Man Business Generator
+//  • Share System w/ Cross-Origin Redirect
+//  • View Counter
+//  • Static Hosting
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -23,7 +23,7 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 const SERP_KEY = process.env.SERPAPI_KEY || null;
@@ -36,9 +36,9 @@ console.log("SERP Active:", !!SERP_KEY);
 //////////////////////////////////////////////////////////////
 
 async function extractLocationAI(text, openai) {
-  if (!text || text.trim().length < 2) return null;
+  if (!text || text.trim().length < 2) return null;
 
-  const prompt = `
+  const prompt = `
 Extract the most likely geographic location mentioned in this sentence.
 Rules:
 - Return ONLY the location name.
@@ -49,22 +49,22 @@ Input: ${text}
 Output:
 `;
 
-  try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-5.1",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.0
-    });
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.0
+    });
 
-    let loc = out.choices[0].message.content.trim();
+    let loc = out.choices[0].message.content.trim();
 
-    if (!loc || loc.toUpperCase() === "NONE") return null;
+    if (!loc || loc.toUpperCase() === "NONE") return null;
 
-    return loc.replace(/\s+/g, "");
-  } catch (err) {
-    console.log("AI-Location Error:", err);
-    return null;
-  }
+    return loc.replace(/\s+/g, ""); // Hashtag-friendly: "New York" → "NewYork"
+  } catch (err) {
+    console.log("AI-Location Error:", err);
+    return null;
+  }
 }
 
 //////////////////////////////////////////////////////////////
@@ -76,92 +76,95 @@ const races = ["Asian", "Black", "White", "Latino", "Middle Eastern", "Mixed"];
 const ages = [...Array.from({ length: 32 }, (_, i) => i + 18)];
 
 function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 const PROF = {
-  A: ["Human Biology", "Psychology", "Sociology", "Public Health", "Bioengineering"],
-  B: ["Political Science", "Public Policy", "International Relations", "Ethics in Society", "Science, Technology & Society"],
-  C: ["Computer Science", "Mechanical Engineering", "Electrical Engineering", "Symbolic Systems", "Aeronautics & Astronautics"],
-  D: ["Economics", "Management Science & Engineering", "Data Science", "Mathematical & Computational Science", "Statistics"],
-  E: ["Art Practice", "Communication", "Film & Media Studies", "Linguistics", "Music"]
+  A: ["Human Biology", "Psychology", "Sociology", "Public Health", "Bioengineering"],
+  B: ["Political Science", "Public Policy", "International Relations", "Ethics in Society", "Science, Technology & Society"],
+  C: ["Computer Science", "Mechanical Engineering", "Electrical Engineering", "Symbolic Systems", "Aeronautics & Astronautics"],
+  D: ["Economics", "Management Science & Engineering", "Data Science", "Mathematical & Computational Science", "Statistics"],
+  E: ["Art Practice", "Communication", "Film & Media Studies", "Linguistics", "Music"]
 };
 
 //////////////////////////////////////////////////////////////
-// Share System
+// Share System (Supports multi-domain browser family)
 //////////////////////////////////////////////////////////////
 
 const ORIGIN_MAP = {
-  blue:  "https://blueoceanbrowser.com",
-  npc:   "https://npcbrowser.com",
-  persona:"https://personabrowser.com",
-  billy: "https://24billybrowser.com"
+  blue:  "https://blueoceanbrowser.com",
+  npc:   "https://npcbrowser.com",
+  persona:"https://personabrowser.com",
+  billy: "https://24billybrowser.com"
 };
 
 const SHARES_FILE = "/data/shares.json";
 if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
 function readShares() {
-  try { return JSON.parse(fs.readFileSync(SHARES_FILE, "utf8")); }
-  catch { return {}; }
+  try { return JSON.parse(fs.readFileSync(SHARES_FILE, "utf8")); }
+  catch { return {}; }
 }
 
 function writeShares(v) {
-  fs.writeFileSync(SHARES_FILE, JSON.stringify(v, null, 2));
+  fs.writeFileSync(SHARES_FILE, JSON.stringify(v, null, 2));
 }
 
+// POST /api/share
 app.post("/api/share", (req, res) => {
-  const all = readShares();
-  const id = Math.random().toString(36).substring(2, 8);
+  const all = readShares();
+  const id = Math.random().toString(36).substring(2, 8);
 
-  all[id] = {
-    personas: req.body.personas || [],
-    query: req.body.query || "",
-    origin: req.body.origin || "blue"
-  };
+  all[id] = {
+    personas: req.body.personas || [],
+    query: req.body.query || "",
+    origin: req.body.origin || "blue"
+  };
 
-  writeShares(all);
-  res.json({ shortId: id });
+  writeShares(all);
+  res.json({ shortId: id });
 });
 
+// GET /api/share/:id
 app.get("/api/share/:id", (req, res) => {
-  const all = readShares();
-  const s = all[req.params.id];
-  if (!s) return res.status(404).json([]);
-  res.json(s.personas || []);
+  const all = readShares();
+  const s = all[req.params.id];
+  if (!s) return res.status(404).json([]);
+  res.json(s.personas || []);
 });
 
+// Redirect to correct browser
 app.get("/s/:id", (req, res) => {
-  const all = readShares();
-  const s = all[req.params.id];
+  const all = readShares();
+  const s = all[req.params.id];
 
-  if (!s) return res.redirect("https://blueoceanbrowser.com");
+  if (!s) return res.redirect("https://blueoceanbrowser.com");
 
-  const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
+  const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
-  res.send(`
-    <!doctype html><html><head><meta charset="utf-8"/>
-    <script>
-      sessionStorage.setItem("sharedId","${req.params.id}");
-      setTimeout(()=>{
-        window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
-      },400);
-    </script>
-    </head><body></body></html>
-  `);
+  res.send(`
+    <!doctype html><html><head><meta charset="utf-8"/>
+    <script>
+      sessionStorage.setItem("sharedId","${req.params.id}");
+      setTimeout(()=>{
+        window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
+      },400);
+    </script>
+    </head><body></body></html>
+  `);
 });
 
 //////////////////////////////////////////////////////////////
-// Executive Rewrite — NOW GPT-5.1
+// Executive Rewrite Engine
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async (req, res) => {
-  let { query } = req.body;
-  query = (query || "").trim();
+  let { query } = req.body;
+  query = (query || "").trim();
 
-  if (!query) return res.json({ rewritten: "" });
+  if (!query) return res.json({ rewritten: "" });
 
-  const prompt = `
+  const prompt = `
 Rewrite the user's text into a single sharp business strategy directive.
 Rules:
 - EXACTLY 1 sentence.
@@ -174,29 +177,29 @@ Input: ${query}
 Rewritten:
 `;
 
-  try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-5.1",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2
-    });
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2
+    });
 
-    let rewritten = out.choices[0].message.content
-      .replace(/["“”‘’]/g, "")
-      .trim();
+    let rewritten = out.choices[0].message.content
+      .replace(/["“”‘’]/g, "")
+      .trim();
 
-    rewritten = rewritten.split(".")[0] + ".";
+    rewritten = rewritten.split(".")[0] + ".";
 
-    res.json({ rewritten });
+    res.json({ rewritten });
 
-  } catch (err) {
-    console.log("Rewrite Error:", err);
-    res.json({ rewritten: query });
-  }
+  } catch (err) {
+    console.log("Rewrite Error:", err);
+    res.json({ rewritten: query });
+  }
 });
 
 //////////////////////////////////////////////////////////////
-// Rain Man Business Thought Engine — NOW GPT-5.1
+// Rain Man Business Generator — 10 Personas
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
@@ -204,73 +207,82 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 io.on("connection", socket => {
 
-  socket.on("personaSearch", async rewrittenQuery => {
-    try {
+  socket.on("personaSearch", async rewrittenQuery => {
+    try {
 
-      const location = await extractLocationAI(rewrittenQuery, openai);
-      const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
+      //------------------------------------------------------
+      // AI Location Extraction
+      //------------------------------------------------------
+      const location = await extractLocationAI(rewrittenQuery, openai);
 
-      for (let i = 0; i < 10; i++) {
+      const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
 
-        const cat   = CAT_ORDER[i];
-        const major = pick(PROF[cat]);
-        const demo  = {
-          gender: pick(genders),
-          race:   pick(races),
-          age:    pick(ages)
-        };
+      for (let i = 0; i < 10; i++) {
 
-        const serpQuery = `${major} business news ${new Date().getFullYear()}`;
-        let serpContext = "No verified data.";
+        const cat   = CAT_ORDER[i];
+        const major = pick(PROF[cat]);
+        const demo  = {
+          gender: pick(genders),
+          race: pick(races),
+          age: pick(ages)
+        };
 
-        if (SERP_KEY) {
-          try {
-            const url = `https://serpapi.com/search.json?q=${
-              encodeURIComponent(serpQuery)
-            }&tbm=nws&num=5&api_key=${SERP_KEY}`;
+        //------------------------------------------------------
+        // SERP NEWS Context
+        //------------------------------------------------------
+        const serpQuery = `${major} business news ${new Date().getFullYear()}`;
 
-            const r = await fetch(url);
-            const j = await r.json();
+        let serpContext = "No verified data.";
 
-            const titles = (j.news_results || [])
-              .map(x => x.title)
-              .filter(Boolean)
-              .slice(0, 5)
-              .join(" | ");
+        if (SERP_KEY) {
+          try {
+            const url = `https://serpapi.com/search.json?q=${
+              encodeURIComponent(serpQuery)
+            }&tbm=nws&num=5&api_key=${SERP_KEY}`;
 
-            if (titles) serpContext = titles;
+            const r = await fetch(url);
+            const j = await r.json();
 
-          } catch (e) {
-            console.log("SERP NEWS FAIL:", e.message);
-          }
-        }
+            const titles = (j.news_results || [])
+              .map(x => x.title)
+              .filter(Boolean)
+              .slice(0, 5)
+              .join(" | ");
 
-        const serpNumbers = [
-          ...(serpContext.match(/[0-9]+(\.[0-9]+)?%/g) || []),
-          ...(serpContext.match(/[0-9]+(\.[0-9]+)?/g) || []),
-          ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*million\b/gi) || []),
-          ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*billion\b/gi) || [])
-        ];
+            if (titles) serpContext = titles;
 
-        const numList = serpNumbers.join(", ") || "none";
+          } catch (e) {
+            console.log("SERP NEWS FAIL:", e.message);
+          }
+        }
 
-        let serpBulletItems = [];
-        if (serpContext && serpContext !== "No verified data.") {
-          serpBulletItems = serpContext.split(" | ")
-            .map(line => line.trim())
-            .filter(Boolean);
-        }
+        //------------------------------------------------------
+        // Extract numbers for Rain Man logic
+        //------------------------------------------------------
+        const serpNumbers = [
+          ...(serpContext.match(/[0-9]+(\.[0-9]+)?%/g) || []),
+          ...(serpContext.match(/[0-9]+(\.[0-9]+)?/g) || []),
+          ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*million\b/gi) || []),
+          ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*billion\b/gi) || [])
+        ];
 
-        //------------------------------------------------------
-        // FULL RAIN MAN PROMPT — using GPT-5.1
-        //------------------------------------------------------
+        const numList = serpNumbers.join(", ") || "none";
 
-        const fullPrompt = `
+        let serpBulletItems = [];
+        if (serpContext && serpContext !== "No verified data.") {
+          serpBulletItems = serpContext.split(" | ")
+            .map(line => line.trim())
+            .filter(Boolean);
+        }
+
+        //------------------------------------------------------
+        // FULL RAIN MAN PROMPT
+        //------------------------------------------------------
+        const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
 Mode: clipped Rain Man business logic. No metaphor. No emotion.
 
 Numbers allowed: ${numList}
-
 6-8 more "I will" statements including the anecdote.
 
 After the paragraph, output:
@@ -281,26 +293,28 @@ Key directions to consider:
 - direction 3
 - direction 4
 
+then, output:
 SERP insights:
 ${serpBulletItems.map(x => `- ${x}`).join("\n")}
 `;
+        //------------------------------------------------------
+        // CALL OPENAI FOR THOUGHT
+        //------------------------------------------------------
+        const ai = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: fullPrompt }],
+          temperature: 0.55
+        });
 
-        const ai = await openai.chat.completions.create({
-          model: "gpt-5.1",
-          messages: [{ role: "user", content: fullPrompt }],
-          temperature: 0.55
-        });
+        const fullThought = ai.choices[0].message.content.trim();
 
-        const fullThought = ai.choices[0].message.content.trim();
+        //------------------------------------------------------
+        // HASHTAGS (4 total)
+        //------------------------------------------------------
+        const majorKeyword = major.split(" ")[0];
+        let hashtags = [`#${majorKeyword}`];
 
-        //------------------------------------------------------
-        // AI HASHTAGS (GPT-5.1)
-        //------------------------------------------------------
-
-        const majorKeyword = major.split(" ")[0];
-        let hashtags = [`#${majorKeyword}`];
-
-        const hashPrompt = `
+        const hashPrompt = `
 Generate exactly 3 business-style hashtags based on:
 
 ${rewrittenQuery}
@@ -313,55 +327,54 @@ Rules:
 - No metaphors
 `;
 
-        try {
-          const aiHash = await openai.chat.completions.create({
-            model: "gpt-5.1",
-            messages: [{ role: "user", content: hashPrompt }],
-            temperature: 0.3
-          });
+        try {
+          const aiHash = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: hashPrompt }],
+            temperature: 0.3
+          });
 
-          const raw = aiHash.choices[0].message.content.trim();
+          const raw = aiHash.choices[0].message.content.trim();
 
-          const aiTags = raw
-            .split(/\s+/)
-            .filter(t => t.startsWith("#"))
-            .map(t => t.replace(/[^#A-Za-z0-9]/g, ""))
-            .filter(Boolean);
+          const aiTags = raw
+            .split(/\s+/)
+            .filter(t => t.startsWith("#"))
+            .map(t => t.replace(/[^#A-Za-z0-9]/g, ""))
+            .filter(Boolean);
 
-          hashtags.push(...aiTags);
+          hashtags.push(...aiTags);
 
-        } catch (err) {
-          console.log("AI hashtag error:", err);
-        }
+        } catch (err) {
+          console.log("AI hashtag error:", err);
+        }
 
-        if (location) hashtags.push(`#${location}`);
+        if (location) hashtags.push(`#${location}`);
 
-        hashtags = [...new Set(hashtags)].slice(0, 4);
+        hashtags = [...new Set(hashtags)].slice(0, 4);
 
-        //------------------------------------------------------
-        // EMIT CARD
-        //------------------------------------------------------
+        //------------------------------------------------------
+        // EMIT NPC CARD
+        //------------------------------------------------------
+        socket.emit("personaChunk", {
+          major,
+          gender: demo.gender,
+          race: demo.race,
+          age: demo.age,
+          thought: fullThought,
+          serpContext,
+          hashtags,
+          category: cat
+        });
 
-        socket.emit("personaChunk", {
-          major,
-          gender: demo.gender,
-          race: demo.race,
-          age: demo.age,
-          thought: fullThought,
-          serpContext,
-          hashtags,
-          category: cat
-        });
+      } // END FOR LOOP
 
-      }
+      socket.emit("personaDone");
 
-      socket.emit("personaDone");
-
-    } catch (err) {
-      console.log("RainMan Engine Error:", err);
-      socket.emit("personaError", "Internal error.");
-    }
-  });
+    } catch (err) {
+      console.log("RainMan Engine Error:", err);
+      socket.emit("personaError", "Internal error.");
+    }
+  });
 });
 
 //////////////////////////////////////////////////////////////
@@ -371,19 +384,19 @@ Rules:
 const VIEW_FILE = "/data/views.json";
 
 function readViews() {
-  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8")); }
-  catch { return { total: 0 }; }
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8")); }
+  catch { return { total: 0 }; }
 }
 
 function writeViews(v) {
-  fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
+  fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
 }
 
 app.get("/api/views", (req, res) => {
-  const v = readViews();
-  v.total++;
-  writeViews(v);
-  res.json({ total: v.total });
+  const v = readViews();
+  v.total++;
+  writeViews(v);
+  res.json({ total: v.total });
 });
 
 //////////////////////////////////////////////////////////////
@@ -395,5 +408,5 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
-  console.log("🔥 Final Rain Man Business Engine running on", PORT);
+  console.log("🔥 Final Rain Man Business Engine running on", PORT);
 });
