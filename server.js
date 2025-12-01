@@ -159,12 +159,12 @@ app.get("/s/:id", (req, res) => {
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async (req, res) => {
-  let { query } = req.body;
-  query = (query || "").trim();
+  let { query } = req.body;
+  query = (query || "").trim();
 
-  if (!query) return res.json({ rewritten: "" });
+  if (!query) return res.json({ rewritten: "" });
 
-  const prompt = `
+  const prompt = `
 Rewrite the user's text into a single sharp business strategy directive.
 Rules:
 - EXACTLY 1 sentence.
@@ -177,27 +177,25 @@ Input: ${query}
 Rewritten:
 `;
 
-  try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2
-    });
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2
+    });
 
-    incrementUsage("rewrite");   // ⭐ ONLY THIS PART ADDED
+    let rewritten = out.choices[0].message.content
+      .replace(/["“”‘’]/g, "")
+      .trim();
 
-    let rewritten = out.choices[0].message.content
-      .replace(/["“”‘’]/g, "")
-      .trim();
+    rewritten = rewritten.split(".")[0] + ".";
 
-    rewritten = rewritten.split(".")[0] + ".";
+    res.json({ rewritten });
 
-    res.json({ rewritten });
-
-  } catch (err) {
-    console.log("Rewrite Error:", err);
-    res.json({ rewritten: query });
-  }
+  } catch (err) {
+    console.log("Rewrite Error:", err);
+    res.json({ rewritten: query });
+  }
 });
 
 //////////////////////////////////////////////////////////////
