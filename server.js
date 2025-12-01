@@ -51,7 +51,7 @@ Output:
 
   try {
     const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.1",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.0
     });
@@ -60,7 +60,7 @@ Output:
 
     if (!loc || loc.toUpperCase() === "NONE") return null;
 
-    return loc.replace(/\s+/g, ""); // Hashtag-friendly: "New York" → "NewYork"
+    return loc.replace(/\s+/g, "");
   } catch (err) {
     console.log("AI-Location Error:", err);
     return null;
@@ -88,7 +88,7 @@ const PROF = {
 };
 
 //////////////////////////////////////////////////////////////
-// Share System (Supports multi-domain browser family)
+// Share System
 //////////////////////////////////////////////////////////////
 
 const ORIGIN_MAP = {
@@ -110,7 +110,6 @@ function writeShares(v) {
   fs.writeFileSync(SHARES_FILE, JSON.stringify(v, null, 2));
 }
 
-// POST /api/share
 app.post("/api/share", (req, res) => {
   const all = readShares();
   const id = Math.random().toString(36).substring(2, 8);
@@ -125,7 +124,6 @@ app.post("/api/share", (req, res) => {
   res.json({ shortId: id });
 });
 
-// GET /api/share/:id
 app.get("/api/share/:id", (req, res) => {
   const all = readShares();
   const s = all[req.params.id];
@@ -133,7 +131,6 @@ app.get("/api/share/:id", (req, res) => {
   res.json(s.personas || []);
 });
 
-// Redirect to correct browser
 app.get("/s/:id", (req, res) => {
   const all = readShares();
   const s = all[req.params.id];
@@ -155,7 +152,7 @@ app.get("/s/:id", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// Executive Rewrite Engine
+// Executive Rewrite — NOW GPT-5.1
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async (req, res) => {
@@ -179,7 +176,7 @@ Rewritten:
 
   try {
     const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.1",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2
     });
@@ -199,7 +196,7 @@ Rewritten:
 });
 
 //////////////////////////////////////////////////////////////
-// Rain Man Business Generator — 10 Personas
+// Rain Man Business Thought Engine — NOW GPT-5.1
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
@@ -210,11 +207,7 @@ io.on("connection", socket => {
   socket.on("personaSearch", async rewrittenQuery => {
     try {
 
-      //------------------------------------------------------
-      // AI Location Extraction
-      //------------------------------------------------------
       const location = await extractLocationAI(rewrittenQuery, openai);
-
       const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
 
       for (let i = 0; i < 10; i++) {
@@ -223,15 +216,11 @@ io.on("connection", socket => {
         const major = pick(PROF[cat]);
         const demo  = {
           gender: pick(genders),
-          race: pick(races),
-          age: pick(ages)
+          race:   pick(races),
+          age:    pick(ages)
         };
 
-        //------------------------------------------------------
-        // SERP NEWS Context
-        //------------------------------------------------------
         const serpQuery = `${major} business news ${new Date().getFullYear()}`;
-
         let serpContext = "No verified data.";
 
         if (SERP_KEY) {
@@ -256,9 +245,6 @@ io.on("connection", socket => {
           }
         }
 
-        //------------------------------------------------------
-        // Extract numbers for Rain Man logic
-        //------------------------------------------------------
         const serpNumbers = [
           ...(serpContext.match(/[0-9]+(\.[0-9]+)?%/g) || []),
           ...(serpContext.match(/[0-9]+(\.[0-9]+)?/g) || []),
@@ -276,13 +262,15 @@ io.on("connection", socket => {
         }
 
         //------------------------------------------------------
-        // FULL RAIN MAN PROMPT
+        // FULL RAIN MAN PROMPT — using GPT-5.1
         //------------------------------------------------------
+
         const fullPrompt = `
 You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
 Mode: clipped Rain Man business logic. No metaphor. No emotion.
 
 Numbers allowed: ${numList}
+
 6-8 more "I will" statements including the anecdote.
 
 After the paragraph, output:
@@ -293,15 +281,12 @@ Key directions to consider:
 - direction 3
 - direction 4
 
-then, output:
 SERP insights:
 ${serpBulletItems.map(x => `- ${x}`).join("\n")}
 `;
-        //------------------------------------------------------
-        // CALL OPENAI FOR THOUGHT
-        //------------------------------------------------------
+
         const ai = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: "gpt-5.1",
           messages: [{ role: "user", content: fullPrompt }],
           temperature: 0.55
         });
@@ -309,8 +294,9 @@ ${serpBulletItems.map(x => `- ${x}`).join("\n")}
         const fullThought = ai.choices[0].message.content.trim();
 
         //------------------------------------------------------
-        // HASHTAGS (4 total)
+        // AI HASHTAGS (GPT-5.1)
         //------------------------------------------------------
+
         const majorKeyword = major.split(" ")[0];
         let hashtags = [`#${majorKeyword}`];
 
@@ -329,7 +315,7 @@ Rules:
 
         try {
           const aiHash = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: "gpt-5.1",
             messages: [{ role: "user", content: hashPrompt }],
             temperature: 0.3
           });
@@ -353,8 +339,9 @@ Rules:
         hashtags = [...new Set(hashtags)].slice(0, 4);
 
         //------------------------------------------------------
-        // EMIT NPC CARD
+        // EMIT CARD
         //------------------------------------------------------
+
         socket.emit("personaChunk", {
           major,
           gender: demo.gender,
@@ -366,7 +353,7 @@ Rules:
           category: cat
         });
 
-      } // END FOR LOOP
+      }
 
       socket.emit("personaDone");
 
