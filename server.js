@@ -410,6 +410,15 @@ app.get("/api/views", (req, res) => {
   });
 });
 
+// READ-ONLY — does NOT increase count
+app.get("/api/views/read", (req, res) => {
+  const v = readViews();
+  res.json({
+    total: v.total,
+    start: v.start || "2025-11-11",
+    today: new Date().toISOString().split("T")[0]
+  });
+});
 //////////////////////////////////////////////////////////////
 // ENTER COUNTER (Hit Enter Count)
 //////////////////////////////////////////////////////////////
