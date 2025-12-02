@@ -393,10 +393,23 @@ function writeViews(v) {
 }
 
 app.get("/api/views", (req, res) => {
-  const v = readViews();
-  v.total++;
-  writeViews(v);
-  res.json({ total: v.total });
+  const v = readViews();
+
+  // If first time, set start date
+  if (!v.start) {
+    v.start = new Date().toISOString().split("T")[0];  // YYYY-MM-DD
+  }
+
+  // Increase total views
+  v.total++;
+
+  writeViews(v);
+
+  res.json({
+    total: v.total,
+    start: v.start,
+    today: new Date().toISOString().split("T")[0]
+  });
 });
 
 //////////////////////////////////////////////////////////////
