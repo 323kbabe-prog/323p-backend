@@ -400,6 +400,35 @@ app.get("/api/views", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
+// ENTER COUNTER (Hit Enter Count)
+//////////////////////////////////////////////////////////////
+
+const ENTER_FILE = "/data/enter.json";
+
+function readEnter() {
+  try { return JSON.parse(fs.readFileSync(ENTER_FILE, "utf8")); }
+  catch { return { total: 0 }; }
+}
+
+function writeEnter(v) {
+  fs.writeFileSync(ENTER_FILE, JSON.stringify(v, null, 2));
+}
+
+// Return current total
+app.get("/api/enter", (req, res) => {
+  const c = readEnter();
+  res.json({ total: c.total });
+});
+
+// Increment total
+app.post("/api/enter", (req, res) => {
+  const c = readEnter();
+  c.total++;
+  writeEnter(c);
+  res.json({ total: c.total });
+});
+
+//////////////////////////////////////////////////////////////
 // STATIC SERVE + START SERVER
 //////////////////////////////////////////////////////////////
 
