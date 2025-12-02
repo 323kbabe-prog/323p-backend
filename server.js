@@ -395,10 +395,8 @@ function writeViews(v) {
 app.get("/api/views", (req, res) => {
   const v = readViews();
 
-  // If first time, set start date
-  if (!v.start) {
-    v.start = new Date().toISOString().split("T")[0];  // YYYY-MM-DD
-  }
+  // ⭐ FIXED START DATE
+  v.start = "2025-11-11";
 
   // Increase total views
   v.total++;
