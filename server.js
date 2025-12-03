@@ -309,48 +309,61 @@ ${serpBulletItems.map(x => `- ${x}`).join("\n")}
         const fullThought = ai.choices[0].message.content.trim();
 
         //------------------------------------------------------
-        // HASHTAGS (4 total)
-        //------------------------------------------------------
-        const majorKeyword = major.split(" ")[0];
-        let hashtags = [`#${majorKeyword}`];
+// HASHTAGS (4 total) — Full Major + Location-Aware
+//------------------------------------------------------
+const majorKeyword = "#" + major.replace(/[^A-Za-z0-9]/g, "");
+let hashtags = [majorKeyword];
 
-        const hashPrompt = `
-Generate exactly 3 business-style hashtags based on:
+const humanLocation = location
+  ? location.replace(/([A-Z])/g, " $1").trim()
+  : "";
 
-${rewrittenQuery}
+const hashPrompt = `
+Generate exactly 3 business-style hashtags based on this rewritten query:
+
+"${rewrittenQuery}"
+
+If a location is provided, integrate it meaningfully:
+Examples:
+- #NewYorkTech
+- #LosAngelesBusiness
+- #TokyoInnovation
+- #ParisStartups
 
 Rules:
+- EXACTLY 3 hashtags
 - ONLY hashtags
-- No explanation
-- 1–2 words max
-- No locations
+- No emojis
 - No metaphors
+- 1–3 words per hashtag
+- Make location contextual (if provided)
+
+Location: ${humanLocation || "NONE"}
 `;
 
-        try {
-          const aiHash = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: hashPrompt }],
-            temperature: 0.3
-          });
+try {
+  const aiHash = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: hashPrompt }],
+    temperature: 0.35
+  });
 
-          const raw = aiHash.choices[0].message.content.trim();
+  const raw = aiHash.choices[0].message.content.trim();
 
-          const aiTags = raw
-            .split(/\s+/)
-            .filter(t => t.startsWith("#"))
-            .map(t => t.replace(/[^#A-Za-z0-9]/g, ""))
-            .filter(Boolean);
+  const aiTags = raw
+    .split(/\s+/)
+    .filter(t => t.startsWith("#"))
+    .map(t => t.replace(/[^#A-Za-z0-9]/g, ""))
+    .filter(Boolean);
 
-          hashtags.push(...aiTags);
+  hashtags.push(...aiTags);
 
-        } catch (err) {
-          console.log("AI hashtag error:", err);
-        }
+} catch (err) {
+  console.log("AI hashtag error:", err);
+}
 
-        if (location) hashtags.push(`#${location}`);
-
-        hashtags = [...new Set(hashtags)].slice(0, 4);
+// Remove duplicates + limit to 4
+hashtags = [...new Set(hashtags)].slice(0, 4);
 
         //------------------------------------------------------
         // EMIT NPC CARD
