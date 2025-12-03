@@ -215,9 +215,9 @@ io.on("connection", socket => {
       //------------------------------------------------------
       const location = await extractLocationAI(rewrittenQuery, openai);
 
-      const CAT_ORDER = ["A","B","C","D","E","A","B","C","D","E"];
+      const CAT_ORDER = ["A","B","C","D","E"]; 
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 5; i++) {
 
         const cat   = CAT_ORDER[i];
         const major = pick(PROF[cat]);
