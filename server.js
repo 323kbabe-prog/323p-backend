@@ -283,7 +283,7 @@ You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
 Mode: clipped Rain Man business logic. No metaphor. No emotion.
 
 Numbers allowed: ${numList}
-6-8 more "I will" statements including the anecdote.
+6-8 more "You will" statements including the anecdote.
 
 After the paragraph, output:
 
