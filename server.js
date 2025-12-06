@@ -199,6 +199,38 @@ Rewritten:
 });
 
 //////////////////////////////////////////////////////////////
+// AI CLARITY SCORE — Backend Protected Version
+//////////////////////////////////////////////////////////////
+
+app.post("/api/score", async (req, res) => {
+  const raw = req.body.text || "";
+
+  const prompt = `
+Rate the user's input ONLY on clarity, focus, and business-readiness.
+Rules:
+- Return ONLY a number from 1 to 100.
+- No explanation.
+User input:
+"${raw}"
+`;
+
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.0
+    });
+
+    const score = (out.choices[0].message.content || "").trim();
+    res.json({ score });
+
+  } catch (err) {
+    console.log("Score Engine Error:", err);
+    res.json({ score: "-" });
+  }
+});
+
+//////////////////////////////////////////////////////////////
 // Rain Man Business Generator — 10 Personas
 //////////////////////////////////////////////////////////////
 
