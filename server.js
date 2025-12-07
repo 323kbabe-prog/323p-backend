@@ -1,17 +1,5 @@
 //////////////////////////////////////////////////////////////
 //  Rain Man Business Engine — FINAL VERSION + Suggest Engine
-
-Rewrite Engine
-✅ Score Engine
-✅ Suggestion Engine (/api/suggest)
-✅ Nonsense Detector
-✅ Persona Engine (5 cards)
-✅ View Counter
-✅ Enter Counter
-✅ Share System
-✅ Location Extractor
-✅ 100% deploy-ready
-
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
