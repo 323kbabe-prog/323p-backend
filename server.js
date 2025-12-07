@@ -155,6 +155,40 @@ app.get("/s/:id", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
+// INPUT VALIDATION — Nonsense Detector
+//////////////////////////////////////////////////////////////
+
+app.post("/api/validate", async (req, res) => {
+  const text = (req.body.text || "").trim();
+
+  const prompt = `
+Determine if this input is meaningful or nonsense.
+Return ONLY one word:
+
+VALID = meaningful, understandable, not gibberish
+NONSENSE = random characters, gibberish, meaningless, spam
+
+Input: "${text}"
+Output:
+`;
+
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages:[{role:"user",content:prompt}],
+      temperature:0
+    });
+
+    const result = out.choices[0].message.content.trim().toUpperCase();
+
+    res.json({ valid: result === "VALID" });
+
+  } catch {
+    res.json({ valid: true }); // fail-open (does not block)
+  }
+});
+
+//////////////////////////////////////////////////////////////
 // Executive Rewrite Engine
 //////////////////////////////////////////////////////////////
 
