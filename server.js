@@ -155,36 +155,70 @@ app.get("/s/:id", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// INPUT VALIDATION — Nonsense Detector
+// INPUT VALIDATION — Strong Nonsense Detector (NEW VERSION)
 //////////////////////////////////////////////////////////////
 
 app.post("/api/validate", async (req, res) => {
   const text = (req.body.text || "").trim();
 
+  // 🔒 RULE 1: auto-fail empty or 1–2 chars
+  if (text.length < 3) {
+    return res.json({ valid: false });
+  }
+
+  // 🔒 RULE 2: auto-fail one meaningless word
+  if (text.split(/\s+/).length === 1) {
+    const word = text.toLowerCase();
+    const englishLike = /^[a-zA-Z]+$/.test(word);
+
+    // If just letters but not a meaningful word, block it
+    if (word.length < 4 || !englishLike) {
+      return res.json({ valid: false });
+    }
+  }
+
+  // 🔒 RULE 3: use AI to classify meaning
   const prompt = `
-Determine if this input is meaningful or nonsense.
+Determine if this user input is meaningful or nonsense.
+Follow STRICT rules:
+
 Return ONLY one word:
+VALID or NONSENSE
 
-VALID = meaningful, understandable, not gibberish
-NONSENSE = random characters, gibberish, meaningless, spam
+NONSENSE = 
+- single letter ("b", "x", "q")
+- two letters
+- one word with no clear intent
+- gibberish, random characters
+- no verbs, no actionable meaning
+- spam or unrelated symbols
 
-Input: "${text}"
+VALID = 
+- has intent
+- has verbs or clear meaning
+- resembles a real command or question
+
+User input:
+"${text}"
+
 Output:
 `;
 
   try {
     const out = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages:[{role:"user",content:prompt}],
-      temperature:0
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0
     });
 
-    const result = out.choices[0].message.content.trim().toUpperCase();
+    const raw = out.choices[0].message.content.trim().toUpperCase();
+    const valid = raw === "VALID";
 
-    res.json({ valid: result === "VALID" });
+    res.json({ valid });
 
-  } catch {
-    res.json({ valid: true }); // fail-open (does not block)
+  } catch (err) {
+    // fail-open fallback
+    res.json({ valid: true });
   }
 });
 
