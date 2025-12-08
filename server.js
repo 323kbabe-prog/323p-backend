@@ -176,6 +176,7 @@ Provide EXACTLY 3 bullet points explaining:
 
 Rules:
 - Start each bullet with "• "
+- Put ONE blank line between each bullet
 - Only 3 bullets
 - No intro or closing text
 `;
