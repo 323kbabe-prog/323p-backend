@@ -1,5 +1,12 @@
 //////////////////////////////////////////////////////////////
-//  Rain Man Business Engine — FINAL VERSION + Suggest Engine
+//  Rain Man Business Engine — FULL FINAL VERSION (Option A)
+//  • AI Rewrite Engine
+//  • AI Location Extractor (OpenAI)
+//  • SERP NEWS Engine
+//  • 10-NPC Rain Man Business Generator
+//  • Share System w/ Cross-Origin Redirect
+//  • View Counter
+//  • Static Hosting
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -25,7 +32,7 @@ console.log("🚀 Rain Man Business Engine Started");
 console.log("SERP Active:", !!SERP_KEY);
 
 //////////////////////////////////////////////////////////////
-// AI LOCATION EXTRACTOR
+// AI LOCATION EXTRACTOR (Option A — AI Powered)
 //////////////////////////////////////////////////////////////
 
 async function extractLocationAI(text, openai) {
@@ -35,9 +42,9 @@ async function extractLocationAI(text, openai) {
 Extract the most likely geographic location mentioned in this sentence.
 Rules:
 - Return ONLY the location name.
-- Must be real.
-- If multiple appear, return the smallest/specific.
-- If no valid location exists: NONE.
+- Must be a real city, region, state, or country.
+- If multiple appear, return the smallest/specific (city > region > nation).
+- If no valid location exists, output NONE.
 Input: ${text}
 Output:
 `;
@@ -45,63 +52,68 @@ Output:
   try {
     const out = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages:[{role:"user",content:prompt}],
-      temperature: 0
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.0
     });
 
     let loc = out.choices[0].message.content.trim();
+
     if (!loc || loc.toUpperCase() === "NONE") return null;
 
-    return loc.replace(/\s+/g, "");
-  } catch {
+    return loc.replace(/\s+/g, ""); // Hashtag-friendly: "New York" → "NewYork"
+  } catch (err) {
+    console.log("AI-Location Error:", err);
     return null;
   }
 }
 
 //////////////////////////////////////////////////////////////
-// Identity Pools
+// Identity Pools (Gender / Race / Age / Stanford Majors)
 //////////////////////////////////////////////////////////////
 
-const genders = ["Female","Male","Nonbinary"];
-const races   = ["Asian","Black","White","Latino","Middle Eastern","Mixed"];
-const ages    = [...Array.from({length:32},(_,i)=>i+18)];
+const genders = ["Female", "Male", "Nonbinary"];
+const races = ["Asian", "Black", "White", "Latino", "Middle Eastern", "Mixed"];
+const ages = [...Array.from({ length: 32 }, (_, i) => i + 18)];
 
-function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 const PROF = {
-  A: ["Human Biology","Psychology","Sociology","Public Health","Bioengineering"],
-  B: ["Political Science","Public Policy","International Relations","Ethics in Society","Science, Technology & Society"],
-  C: ["Computer Science","Mechanical Engineering","Electrical Engineering","Symbolic Systems","Aeronautics & Astronautics"],
-  D: ["Economics","Management Science & Engineering","Data Science","Mathematical & Computational Science","Statistics"],
-  E: ["Art Practice","Communication","Film & Media Studies","Linguistics","Music"]
+  A: ["Human Biology", "Psychology", "Sociology", "Public Health", "Bioengineering"],
+  B: ["Political Science", "Public Policy", "International Relations", "Ethics in Society", "Science, Technology & Society"],
+  C: ["Computer Science", "Mechanical Engineering", "Electrical Engineering", "Symbolic Systems", "Aeronautics & Astronautics"],
+  D: ["Economics", "Management Science & Engineering", "Data Science", "Mathematical & Computational Science", "Statistics"],
+  E: ["Art Practice", "Communication", "Film & Media Studies", "Linguistics", "Music"]
 };
 
 //////////////////////////////////////////////////////////////
-// Share System
+// Share System (Supports multi-domain browser family)
 //////////////////////////////////////////////////////////////
 
 const ORIGIN_MAP = {
-  blue: "https://blueoceanbrowser.com",
-  npc: "https://npcbrowser.com",
-  persona: "https://personabrowser.com",
+  blue:  "https://blueoceanbrowser.com",
+  npc:   "https://npcbrowser.com",
+  persona:"https://personabrowser.com",
   billy: "https://24billybrowser.com"
 };
 
 const SHARES_FILE = "/data/shares.json";
-if(!fs.existsSync("/data")) fs.mkdirSync("/data");
+if (!fs.existsSync("/data")) fs.mkdirSync("/data");
 
-function readShares(){
-  try{ return JSON.parse(fs.readFileSync(SHARES_FILE,"utf8")); }
-  catch{ return {}; }
+function readShares() {
+  try { return JSON.parse(fs.readFileSync(SHARES_FILE, "utf8")); }
+  catch { return {}; }
 }
 
-function writeShares(v){
-  fs.writeFileSync(SHARES_FILE, JSON.stringify(v,null,2));
+function writeShares(v) {
+  fs.writeFileSync(SHARES_FILE, JSON.stringify(v, null, 2));
 }
 
-app.post("/api/share",(req,res)=>{
+// POST /api/share
+app.post("/api/share", (req, res) => {
   const all = readShares();
-  const id = Math.random().toString(36).substring(2,8);
+  const id = Math.random().toString(36).substring(2, 8);
 
   all[id] = {
     personas: req.body.personas || [],
@@ -110,20 +122,23 @@ app.post("/api/share",(req,res)=>{
   };
 
   writeShares(all);
-  res.json({ shortId:id });
+  res.json({ shortId: id });
 });
 
-app.get("/api/share/:id",(req,res)=>{
+// GET /api/share/:id
+app.get("/api/share/:id", (req, res) => {
   const all = readShares();
   const s = all[req.params.id];
-  if(!s) return res.status(404).json([]);
+  if (!s) return res.status(404).json([]);
   res.json(s.personas || []);
 });
 
-app.get("/s/:id",(req,res)=>{
+// Redirect to correct browser
+app.get("/s/:id", (req, res) => {
   const all = readShares();
   const s = all[req.params.id];
-  if(!s) return res.redirect("https://blueoceanbrowser.com");
+
+  if (!s) return res.redirect("https://blueoceanbrowser.com");
 
   const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
 
@@ -134,255 +149,370 @@ app.get("/s/:id",(req,res)=>{
       setTimeout(()=>{
         window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
       },400);
-    </script></head><body></body></html>
+    </script>
+    </head><body></body></html>
   `);
 });
 
 //////////////////////////////////////////////////////////////
-// Strong Nonsense Detector
+// INPUT VALIDATION — Strong Nonsense Detector (NEW VERSION)
 //////////////////////////////////////////////////////////////
 
-app.post("/api/validate", async (req,res)=>{
-  const text = (req.body.text||"").trim();
+app.post("/api/validate", async (req, res) => {
+  const text = (req.body.text || "").trim();
 
-  if(text.length < 3) return res.json({ valid:false });
-
-  if(text.split(/\s+/).length === 1){
-    if(text.length < 4) return res.json({ valid:false });
+  // 🔒 RULE 1: auto-fail empty or 1–2 chars
+  if (text.length < 3) {
+    return res.json({ valid: false });
   }
 
+  // 🔒 RULE 2: auto-fail one meaningless word
+  if (text.split(/\s+/).length === 1) {
+    const word = text.toLowerCase();
+    const englishLike = /^[a-zA-Z]+$/.test(word);
+
+    // If just letters but not a meaningful word, block it
+    if (word.length < 4 || !englishLike) {
+      return res.json({ valid: false });
+    }
+  }
+
+  // 🔒 RULE 3: use AI to classify meaning
   const prompt = `
-Classify text as VALID or NONSENSE.
+Determine if this user input is meaningful or nonsense.
+Follow STRICT rules:
 
-NONSENSE = very short, unclear, random, one-word with no meaning.
-VALID = has intent or meaning.
+Return ONLY one word:
+VALID or NONSENSE
 
-Input: "${text}"
+NONSENSE = 
+- single letter ("b", "x", "q")
+- two letters
+- one word with no clear intent
+- gibberish, random characters
+- no verbs, no actionable meaning
+- spam or unrelated symbols
+
+VALID = 
+- has intent
+- has verbs or clear meaning
+- resembles a real command or question
+
+User input:
+"${text}"
+
 Output:
 `;
 
   try {
     const out = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      messages:[{role:"user",content:prompt}],
-      temperature:0
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0
     });
 
     const raw = out.choices[0].message.content.trim().toUpperCase();
-    res.json({ valid: raw === "VALID" });
+    const valid = raw === "VALID";
 
-  } catch {
-    res.json({ valid:true });
+    res.json({ valid });
+
+  } catch (err) {
+    // fail-open fallback
+    res.json({ valid: true });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// Rewrite Engine
+// Executive Rewrite Engine
 //////////////////////////////////////////////////////////////
 
-app.post("/api/rewrite", async (req,res)=>{
-  let {query} = req.body;
-  query = (query||"").trim();
-  if(!query) return res.json({ rewritten:"" });
+app.post("/api/rewrite", async (req, res) => {
+  let { query } = req.body;
+  query = (query || "").trim();
+
+  if (!query) return res.json({ rewritten: "" });
 
   const prompt = `
-Rewrite the user's text into one senior executive directive.
-1 sentence. No emotion. No metaphors.
+Rewrite the user's text into a single sharp business strategy directive.
+Rules:
+- EXACTLY 1 sentence.
+- No quoting.
+- No emotion.
+- No metaphors.
+- No filler.
+- Must sound like senior executive instruction.
 Input: ${query}
 Rewritten:
 `;
 
-  try{
+  try {
     const out = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      messages:[{role:"user",content:prompt}],
-      temperature:0.2
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2
     });
 
     let rewritten = out.choices[0].message.content
-      .replace(/["“”‘’]/g,"")
+      .replace(/["“”‘’]/g, "")
       .trim();
 
     rewritten = rewritten.split(".")[0] + ".";
+
     res.json({ rewritten });
 
-  }catch{
-    res.json({ rewritten:query });
+  } catch (err) {
+    console.log("Rewrite Error:", err);
+    res.json({ rewritten: query });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// Score Engine
+// AI CLARITY SCORE — Backend Protected Version
 //////////////////////////////////////////////////////////////
 
-app.post("/api/score", async (req,res)=>{
+app.post("/api/score", async (req, res) => {
   const raw = req.body.text || "";
 
   const prompt = `
-Rate clarity and business focus from 1-100.
-Return ONLY the number.
-Input: "${raw}"
+Rate the user's input ONLY on clarity, focus, and business-readiness.
+Rules:
+- Return ONLY a number from 1 to 100.
+- No explanation.
+User input:
+"${raw}"
 `;
 
-  try{
+  try {
     const out = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      messages:[{role:"user",content:prompt}],
-      temperature:0
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.0
     });
 
-    const score = out.choices[0].message.content.trim();
+    const score = (out.choices[0].message.content || "").trim();
     res.json({ score });
 
-  }catch{
-    res.json({ score:"-" });
+  } catch (err) {
+    console.log("Score Engine Error:", err);
+    res.json({ score: "-" });
   }
 });
-
 //////////////////////////////////////////////////////////////
-// ⭐ NEW Suggestion Engine
+// AI SUGGESTION ENGINE — Explains Score (NEW)
 //////////////////////////////////////////////////////////////
-
-app.post("/api/suggest", async (req,res)=>{
-  const raw = req.body.raw || "";
-  const rewritten = req.body.rewritten || "";
-  const score = req.body.score || "";
+app.post("/api/suggest", async (req, res) => {
+  const { raw, rewritten, score } = req.body;
 
   const prompt = `
-Explain WHY the user received score ${score}.
-Return EXACTLY 3 bullet points.
-Tone: helpful, not critical.
+You are an AI communication coach.
 
-Focus on:
-- clarity
-- missing context
-- missing objective
-- confusing structure
-- weak verbs
-- lack of specificity
+The user wrote:
+"${raw}"
 
-User: "${raw}"
-Rewrite: "${rewritten}"
+The system rewrote it as:
+"${rewritten}"
 
-Output:
-- point 1
-- point 2
-- point 3
+The clarity score was: ${score}/100
+
+Give EXACTLY 3 bullet-point suggestions that explain:
+- why the user's score is what it is
+- how to improve their command
+- what they should change next time
+
+RULES:
+- Output ONLY the three bullet points.
+- No intro.
+- No summary.
+- Each bullet must start with "• "
+- Each bullet must be one sentence.
 `;
 
-  try{
+  try {
     const out = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      messages:[{role:"user",content:prompt}],
-      temperature:0.2
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.4
     });
 
-    res.json({ suggestions: out.choices[0].message.content.trim() });
+    const suggestions = out.choices[0].message.content.trim();
+    res.json({ suggestions });
 
-  }catch{
-    res.json({ suggestions:"- Unable to generate suggestions." });
+  } catch (err) {
+    console.log("Suggestion Engine Error:", err);
+    res.json({ suggestions: "• Unable to generate suggestions right now.\n• Try rewriting your command and testing again.\n• The AI will provide guidance once available." });
   }
 });
-
 //////////////////////////////////////////////////////////////
-// Persona Generator (5 Cards)
+// Rain Man Business Generator — 10 Personas
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
-const io = new Server(httpServer,{ cors:{origin:"*"} });
+const io = new Server(httpServer, { cors: { origin: "*" } });
 
-io.on("connection",socket=>{
+io.on("connection", socket => {
+
   socket.on("personaSearch", async rewrittenQuery => {
-
     try {
-      const location = await extractLocationAI(rewrittenQuery, openai);
-      const CAT_ORDER = ["A","B","C","D","E"];
 
-      for(let i=0;i<5;i++){
-        const cat = CAT_ORDER[i];
+      //------------------------------------------------------
+      // AI Location Extraction
+      //------------------------------------------------------
+      const location = await extractLocationAI(rewrittenQuery, openai);
+
+      const CAT_ORDER = ["A","B","C","D","E"]; 
+
+      for (let i = 0; i < 5; i++) {
+
+        const cat   = CAT_ORDER[i];
         const major = pick(PROF[cat]);
-        const demo = {
+        const demo  = {
           gender: pick(genders),
           race: pick(races),
           age: pick(ages)
         };
 
+        //------------------------------------------------------
+        // SERP NEWS Context
+        //------------------------------------------------------
         const serpQuery = `${major} business news ${new Date().getFullYear()}`;
+
         let serpContext = "No verified data.";
 
-        if(SERP_KEY){
-          try{
-            const url = `https://serpapi.com/search.json?q=${encodeURIComponent(serpQuery)}&tbm=nws&num=5&api_key=${SERP_KEY}`;
+        if (SERP_KEY) {
+          try {
+            const url = `https://serpapi.com/search.json?q=${
+              encodeURIComponent(serpQuery)
+            }&tbm=nws&num=5&api_key=${SERP_KEY}`;
+
             const r = await fetch(url);
             const j = await r.json();
-            const titles = (j.news_results||[])
-              .map(x=>x.title)
+
+            const titles = (j.news_results || [])
+              .map(x => x.title)
               .filter(Boolean)
-              .slice(0,5)
+              .slice(0, 5)
               .join(" | ");
-            if(titles) serpContext = titles;
-          }catch{}
+
+            if (titles) serpContext = titles;
+
+          } catch (e) {
+            console.log("SERP NEWS FAIL:", e.message);
+          }
         }
 
-        const serpNumbers = (serpContext.match(/[0-9]+/g) || []);
+        //------------------------------------------------------
+        // Extract numbers for Rain Man logic
+        //------------------------------------------------------
+        const serpNumbers = [
+          ...(serpContext.match(/[0-9]+(\.[0-9]+)?%/g) || []),
+          ...(serpContext.match(/[0-9]+(\.[0-9]+)?/g) || []),
+          ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*million\b/gi) || []),
+          ...(serpContext.match(/\b[0-9]+(\.[0-9]+)?\s*billion\b/gi) || [])
+        ];
+
         const numList = serpNumbers.join(", ") || "none";
 
-        const serpBulletItems =
-          serpContext==="No verified data."
-          ? []
-          : serpContext.split(" | ").map(x=>x.trim());
+        let serpBulletItems = [];
+        if (serpContext && serpContext !== "No verified data.") {
+          serpBulletItems = serpContext.split(" | ")
+            .map(line => line.trim())
+            .filter(Boolean);
+        }
 
+        //------------------------------------------------------
+        // FULL RAIN MAN PROMPT
+        //------------------------------------------------------
         const fullPrompt = `
-You are a ${demo.gender}, ${demo.race}, ${demo.age}, expert in ${major}.
-Mode: clipped Rain Man logic.
+You are a ${demo.gender}, ${demo.race}, age ${demo.age}, trained in ${major}.
+Mode: clipped Rain Man business logic. No metaphor. No emotion.
 
 Numbers allowed: ${numList}
+6-8 more "You will" statements including the anecdote.
 
-Provide:
-1 paragraph + 6 “You will …” statements
-+ 4 key directions
-+ SERP insights
+After the paragraph, output:
 
-SERP:
-${serpBulletItems.map(x=>"- "+x).join("\n")}
+Key directions to consider:
+- direction 1
+- direction 2
+- direction 3
+- direction 4
+
+then, output:
+SERP insights:
+${serpBulletItems.map(x => `- ${x}`).join("\n")}
 `;
-
+        //------------------------------------------------------
+        // CALL OPENAI FOR THOUGHT
+        //------------------------------------------------------
         const ai = await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          messages:[{role:"user",content:fullPrompt}],
-          temperature:0.55
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: fullPrompt }],
+          temperature: 0.55
         });
 
         const fullThought = ai.choices[0].message.content.trim();
 
-        const majorKeyword = "#" + major.replace(/[^A-Za-z0-9]/g,"");
-        let hashtags = [majorKeyword];
+        //------------------------------------------------------
+// HASHTAGS (4 total) — Full Major + Location-Aware
+//------------------------------------------------------
+const majorKeyword = "#" + major.replace(/[^A-Za-z0-9]/g, "");
+let hashtags = [majorKeyword];
 
-        const humanLocation = location ? location.replace(/([A-Z])/g," $1").trim() : "";
+const humanLocation = location
+  ? location.replace(/([A-Z])/g, " $1").trim()
+  : "";
 
-        const hashPrompt = `
-Generate 3 professional hashtags based on:
+const hashPrompt = `
+Generate exactly 3 business-style hashtags based on this rewritten query:
+
 "${rewrittenQuery}"
-Location:${humanLocation||"NONE"}
-Rules: ONLY hashtags
+
+If a location is provided, integrate it meaningfully:
+Examples:
+- #NewYorkTech
+- #LosAngelesBusiness
+- #TokyoInnovation
+- #ParisStartups
+
+Rules:
+- EXACTLY 3 hashtags
+- ONLY hashtags
+- No emojis
+- No metaphors
+- 1–3 words per hashtag
+- Make location contextual (if provided)
+
+Location: ${humanLocation || "NONE"}
 `;
 
-        try{
-          const aiHash = await openai.chat.completions.create({
-            model:"gpt-4o-mini",
-            messages:[{role:"user",content:hashPrompt}],
-            temperature:0.35
-          });
+try {
+  const aiHash = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: hashPrompt }],
+    temperature: 0.35
+  });
 
-          const raw = aiHash.choices[0].message.content.trim();
-          const aiTags = raw.split(/\s+/).filter(x=>x.startsWith("#"));
-          hashtags.push(...aiTags);
+  const raw = aiHash.choices[0].message.content.trim();
 
-        }catch{}
+  const aiTags = raw
+    .split(/\s+/)
+    .filter(t => t.startsWith("#"))
+    .map(t => t.replace(/[^#A-Za-z0-9]/g, ""))
+    .filter(Boolean);
 
-        hashtags = [...new Set(hashtags)].slice(0,4);
+  hashtags.push(...aiTags);
 
-        socket.emit("personaChunk",{
+} catch (err) {
+  console.log("AI hashtag error:", err);
+}
+
+// Remove duplicates + limit to 4
+hashtags = [...new Set(hashtags)].slice(0, 4);
+
+        //------------------------------------------------------
+        // EMIT NPC CARD
+        //------------------------------------------------------
+        socket.emit("personaChunk", {
           major,
           gender: demo.gender,
           race: demo.race,
@@ -390,14 +520,16 @@ Rules: ONLY hashtags
           thought: fullThought,
           serpContext,
           hashtags,
-          category:cat
+          category: cat
         });
-      }
+
+      } // END FOR LOOP
 
       socket.emit("personaDone");
 
-    } catch (err){
-      socket.emit("personaError","Internal error.");
+    } catch (err) {
+      console.log("RainMan Engine Error:", err);
+      socket.emit("personaError", "Internal error.");
     }
   });
 });
@@ -408,72 +540,79 @@ Rules: ONLY hashtags
 
 const VIEW_FILE = "/data/views.json";
 
-function readViews(){
-  try{ return JSON.parse(fs.readFileSync(VIEW_FILE,"utf8")); }
-  catch{ return { total:0 }; }
+function readViews() {
+  try { return JSON.parse(fs.readFileSync(VIEW_FILE, "utf8")); }
+  catch { return { total: 0 }; }
 }
 
-function writeViews(v){
-  fs.writeFileSync(VIEW_FILE, JSON.stringify(v,null,2));
+function writeViews(v) {
+  fs.writeFileSync(VIEW_FILE, JSON.stringify(v, null, 2));
 }
 
-app.get("/api/views",(req,res)=>{
+app.get("/api/views", (req, res) => {
   const v = readViews();
+
+  // ⭐ FIXED START DATE
   v.start = "2025-11-11";
+
+  // Increase total views
   v.total++;
+
   writeViews(v);
 
   res.json({
-    total:v.total,
-    start:v.start,
-    today:new Date().toISOString().split("T")[0]
+    total: v.total,
+    start: v.start,
+    today: new Date().toISOString().split("T")[0]
   });
 });
 
-app.get("/api/views/read",(req,res)=>{
+// READ-ONLY — does NOT increase count
+app.get("/api/views/read", (req, res) => {
   const v = readViews();
   res.json({
-    total:v.total,
-    start:v.start||"2025-11-11",
-    today:new Date().toISOString().split("T")[0]
+    total: v.total,
+    start: v.start || "2025-11-11",
+    today: new Date().toISOString().split("T")[0]
   });
 });
-
 //////////////////////////////////////////////////////////////
-// ENTER COUNTER
+// ENTER COUNTER (Hit Enter Count)
 //////////////////////////////////////////////////////////////
 
 const ENTER_FILE = "/data/enter.json";
 
-function readEnter(){
-  try{ return JSON.parse(fs.readFileSync(ENTER_FILE,"utf8")); }
-  catch{ return { total:0 }; }
+function readEnter() {
+  try { return JSON.parse(fs.readFileSync(ENTER_FILE, "utf8")); }
+  catch { return { total: 0 }; }
 }
 
-function writeEnter(v){
-  fs.writeFileSync(ENTER_FILE, JSON.stringify(v,null,2));
+function writeEnter(v) {
+  fs.writeFileSync(ENTER_FILE, JSON.stringify(v, null, 2));
 }
 
-app.get("/api/enter",(req,res)=>{
+// Return current total
+app.get("/api/enter", (req, res) => {
   const c = readEnter();
-  res.json({ total:c.total });
+  res.json({ total: c.total });
 });
 
-app.post("/api/enter",(req,res)=>{
+// Increment total
+app.post("/api/enter", (req, res) => {
   const c = readEnter();
   c.total++;
   writeEnter(c);
-  res.json({ total:c.total });
+  res.json({ total: c.total });
 });
 
 //////////////////////////////////////////////////////////////
-// Static Serve + Start
+// STATIC SERVE + START SERVER
 //////////////////////////////////////////////////////////////
 
-app.use(express.static(path.join(__dirname,"public")));
+app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
 
-httpServer.listen(PORT,()=>{
+httpServer.listen(PORT, () => {
   console.log("🔥 Final Rain Man Business Engine running on", PORT);
 });
