@@ -82,7 +82,7 @@ app.post("/api/rewrite", async (req, res) => {
   if (!query) return res.json({ rewritten: "" });
 
   const prompt = `
-Rewrite the user's text into a single sharp business strategy directive.
+Rewrite the user's text into one concise, strategic directive using business-level reasoning.
 
 Rules:
 - ALWAYS rewrite, even if it's a question.
