@@ -134,42 +134,42 @@ Rate this input ONLY on clarity (1–100):
 });
 
 //////////////////////////////////////////////////////////////
-// SUGGESTION ENGINE
+// CLARITY SCORE ENGINE — returns score + explanation
 //////////////////////////////////////////////////////////////
 
-app.post("/api/suggest", async (req, res) => {
-  const { raw, rewritten, score } = req.body;
+app.post("/api/score", async (req, res) => {
+  const raw = req.body.text || "";
 
   const prompt = `
-Explain 3 ways to improve clarity next time.
+Evaluate the clarity of this user message:
 
-User wrote:
 "${raw}"
 
-Rewrite:
-"${rewritten}"
-
-Score: ${score}
+Return the result in this EXACT format:
+Score: 90/100 The statement is clear and straightforward, expressing a desire to travel. However, it could be improved by providing context such as purpose or timeframe.
 
 Rules:
-• EXACTLY 3 bullets
-• ONE blank line between bullets
-• No intro text
+- Always begin with: Score: <number>/100
+- Then a space, then a single clean explanation sentence
+- No line breaks
+- No bullet points
+- No extra formatting
 `;
 
   try {
     const out = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.4
+      temperature: 0
     });
 
-    res.json({ suggestions: out.choices[0].message.content.trim() });
+    const result = out.choices[0].message.content.trim();
+    res.json({ score: result });
 
-  } catch {
+  } catch (err) {
+    console.log("Score Error:", err);
     res.json({
-      suggestions:
-        "• Unable to generate.\n\n• Try again.\n\n• AI will respond shortly."
+      score: "Score: -/100 Unable to evaluate clarity."
     });
   }
 });
