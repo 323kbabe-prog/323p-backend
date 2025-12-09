@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-//  Rain Man Business Engine — CLEAN VERSION + YOUTUBE SEARCH
+//  Rain Man Business Engine — CLEAN VERSION + YOUTUBE ENGINE
 //  • Rewrite Engine
 //  • Nonsense Detector
 //  • Clarity Score Engine
@@ -7,8 +7,8 @@
 //  • Share System
 //  • View Counter
 //  • Enter Counter
-//  • YOUTUBE VIDEO ENGINE (Uses personaSearch)
-//  • Socket streaming (personaChunk → sends video autoplay result)
+//  • YOUTUBE SEARCH ENGINE (Never Repeat)
+//  • personaSearch -> emits single YouTube result
 //  • Static Hosting
 //////////////////////////////////////////////////////////////
 
@@ -29,7 +29,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-console.log("🚀 Rain Man Business Engine Started — YouTube Search Mode");
+console.log("🚀 Rain Man Business Engine Started — YOUTUBE MODE");
 
 //////////////////////////////////////////////////////////////
 // INPUT VALIDATION — Strong Nonsense Detector
@@ -39,7 +39,6 @@ app.post("/api/validate", async (req, res) => {
   const text = (req.body.text || "").trim();
   if (text.length < 3) return res.json({ valid: false });
 
-  // 1-word meaningless
   if (text.split(/\s+/).length === 1) {
     if (text.length < 4 || !/^[a-zA-Z]+$/.test(text)) {
       return res.json({ valid: false });
@@ -61,7 +60,6 @@ Return ONLY VALID or NONSENSE.
     });
 
     res.json({ valid: out.choices[0].message.content.trim().toUpperCase() === "VALID" });
-
   } catch {
     res.json({ valid: true });
   }
@@ -81,11 +79,10 @@ Rewrite the user's text into one concise, strategic directive.
 
 Rules:
 - ALWAYS rewrite.
-- NEVER answer the question.
-- Exactly 1 sentence.
-- No emotion.
+- NEVER answer.
+- EXACTLY 1 sentence.
 - No filler.
-- Senior executive tone.
+- Executive tone.
 
 User:
 ${query}
@@ -144,7 +141,7 @@ app.post("/api/suggest", async (req, res) => {
   const { raw, rewritten, score } = req.body;
 
   const prompt = `
-Explain exactly 3 ways to improve clarity next time.
+Explain 3 ways to improve clarity next time.
 
 User wrote:
 "${raw}"
@@ -172,13 +169,13 @@ Rules:
   } catch {
     res.json({
       suggestions:
-        "• Unable to generate.\n\n• Try again.\n\n• AI will process shortly."
+        "• Unable to generate.\n\n• Try again.\n\n• AI will respond shortly."
     });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// SHARE SYSTEM
+// SHARE SYSTEM (unchanged)
 //////////////////////////////////////////////////////////////
 
 const ORIGIN_MAP = {
@@ -305,20 +302,40 @@ app.post("/api/enter", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ⭐ YOUTUBE VIDEO ENGINE (replaces persona engine)
+// ⭐ YOUTUBE ENGINE — NEVER REPEAT
 //////////////////////////////////////////////////////////////
 
-// Scrape YouTube (no API key needed)
+// Memory bucket per query
+const ytMemory = {};
+
 async function fetchYouTubeVideo(query) {
   try {
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-    const response = await fetch(url);
-    const html = await response.text();
+    // init bucket
+    if (!ytMemory[query]) ytMemory[query] = { list: [], used: new Set() };
 
-    const match = html.match(/"videoId":"(.*?)"/);
-    if (!match) return null;
+    const bucket = ytMemory[query];
 
-    const videoId = match[1];
+    // If list empty or all used → rescrape
+    if (bucket.list.length === 0 || bucket.used.size >= bucket.list.length) {
+
+      const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+      const response = await fetch(url);
+      const html = await response.text();
+
+      const matches = [...html.matchAll(/"videoId":"(.*?)"/g)].map(m => m[1]);
+      const unique = [...new Set(matches)];
+
+      bucket.list = unique;
+      bucket.used = new Set();
+    }
+
+    const available = bucket.list.filter(id => !bucket.used.has(id));
+    if (available.length === 0) return null;
+
+    // pick first unused (sequential)
+    const videoId = available[0];
+
+    bucket.used.add(videoId);
 
     return {
       videoId,
@@ -333,21 +350,21 @@ async function fetchYouTubeVideo(query) {
 }
 
 //////////////////////////////////////////////////////////////
-// SOCKET → personaSearch now returns 1 YOUTUBE RESULT
+// SOCKET → personaSearch now returns one YouTube video
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
 io.on("connection", socket => {
-  console.log("Socket connected: YouTube Search Mode");
+  console.log("Socket Connected — YouTube Search Mode Enabled");
 
   socket.on("personaSearch", async query => {
     try {
       const video = await fetchYouTubeVideo(query);
 
       if (!video) {
-        socket.emit("personaChunk", { error: "No YouTube video found." });
+        socket.emit("personaChunk", { error: "No video found." });
         socket.emit("personaDone");
         return;
       }
@@ -363,7 +380,7 @@ io.on("connection", socket => {
 });
 
 //////////////////////////////////////////////////////////////
-// STATIC FILES + START SERVER
+// STATIC HOSTING
 //////////////////////////////////////////////////////////////
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -371,5 +388,5 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
-  console.log("🔥 Rain Man Engine running — YOUTUBE SEARCH MODE — on", PORT);
+  console.log("🔥 Rain Man Engine running — YOUTUBE MODE — on", PORT);
 });
