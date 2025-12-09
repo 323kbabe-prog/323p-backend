@@ -1,12 +1,14 @@
 //////////////////////////////////////////////////////////////
-//  Rain Man Business Engine — CLEAN VERSION (NO DROP CARDS)
-//  • Rewrite Engine (always rewrite, never answer)
+//  Rain Man Business Engine — CLEAN VERSION + YOUTUBE SEARCH
+//  • Rewrite Engine
 //  • Nonsense Detector
 //  • Clarity Score Engine
 //  • Suggestion Engine
-//  • Share System (kept for safety)
+//  • Share System
 //  • View Counter
 //  • Enter Counter
+//  • YOUTUBE VIDEO ENGINE (Uses personaSearch)
+//  • Socket streaming (personaChunk → sends video autoplay result)
 //  • Static Hosting
 //////////////////////////////////////////////////////////////
 
@@ -27,9 +29,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const SERP_KEY = process.env.SERPAPI_KEY || null;
-
-console.log("🚀 Rain Man Business Engine Started — Drop Cards OFF");
+console.log("🚀 Rain Man Business Engine Started — YouTube Search Mode");
 
 //////////////////////////////////////////////////////////////
 // INPUT VALIDATION — Strong Nonsense Detector
@@ -37,23 +37,19 @@ console.log("🚀 Rain Man Business Engine Started — Drop Cards OFF");
 
 app.post("/api/validate", async (req, res) => {
   const text = (req.body.text || "").trim();
-
-  // RULE 1 — auto-fail empty or <3 chars
   if (text.length < 3) return res.json({ valid: false });
 
-  // RULE 2 — 1-word but meaningless
+  // 1-word meaningless
   if (text.split(/\s+/).length === 1) {
-    const word = text.toLowerCase();
-    const englishLike = /^[a-zA-Z]+$/.test(word);
-    if (word.length < 4 || !englishLike) return res.json({ valid: false });
+    if (text.length < 4 || !/^[a-zA-Z]+$/.test(text)) {
+      return res.json({ valid: false });
+    }
   }
 
-  // RULE 3 — AI meaning check
   const prompt = `
 Determine if this text is meaningful or nonsense.
-Return ONLY one word: VALID or NONSENSE.
+Return ONLY VALID or NONSENSE.
 
-User text:
 "${text}"
 `;
 
@@ -64,16 +60,15 @@ User text:
       temperature: 0
     });
 
-    const answer = out.choices[0].message.content.trim().toUpperCase();
-    res.json({ valid: answer === "VALID" });
+    res.json({ valid: out.choices[0].message.content.trim().toUpperCase() === "VALID" });
 
-  } catch (err) {
-    res.json({ valid: true }); // fail-open
+  } catch {
+    res.json({ valid: true });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// EXECUTIVE REWRITE ENGINE — always rewrites, never answers
+// EXECUTIVE REWRITE ENGINE
 //////////////////////////////////////////////////////////////
 
 app.post("/api/rewrite", async (req, res) => {
@@ -82,19 +77,17 @@ app.post("/api/rewrite", async (req, res) => {
   if (!query) return res.json({ rewritten: "" });
 
   const prompt = `
-Rewrite the user's text into one concise, strategic directive using reasoning.
+Rewrite the user's text into one concise, strategic directive.
 
 Rules:
-- ALWAYS rewrite, even if it's a question.
+- ALWAYS rewrite.
 - NEVER answer the question.
-- Convert ALL questions into decisive executive instructions.
-- EXACTLY 1 sentence.
+- Exactly 1 sentence.
 - No emotion.
-- No metaphors.
 - No filler.
-- Must sound like senior executive instruction.
+- Senior executive tone.
 
-User input:
+User:
 ${query}
 
 Rewritten:
@@ -107,16 +100,11 @@ Rewritten:
       temperature: 0.2
     });
 
-    let rewritten = out.choices[0].message.content
-      .replace(/["“”‘’]/g, "")
-      .trim();
-
+    let rewritten = out.choices[0].message.content.replace(/["“”‘’]/g, "").trim();
     rewritten = rewritten.split(".")[0] + ".";
-
     res.json({ rewritten });
 
-  } catch (err) {
-    console.log("Rewrite Error:", err);
+  } catch {
     res.json({ rewritten: query });
   }
 });
@@ -129,8 +117,7 @@ app.post("/api/score", async (req, res) => {
   const raw = req.body.text || "";
 
   const prompt = `
-Rate this input ONLY on clarity and business-readiness.
-Return ONLY a number from 1 to 100.
+Rate this input ONLY on clarity (1–100):
 
 "${raw}"
 `;
@@ -142,24 +129,22 @@ Return ONLY a number from 1 to 100.
       temperature: 0
     });
 
-    const score = out.choices[0].message.content.trim();
-    res.json({ score });
+    res.json({ score: out.choices[0].message.content.trim() });
 
-  } catch (err) {
-    console.log("Score Error:", err);
+  } catch {
     res.json({ score: "-" });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// SUGGESTION ENGINE — explains why user scored low
+// SUGGESTION ENGINE
 //////////////////////////////////////////////////////////////
 
 app.post("/api/suggest", async (req, res) => {
   const { raw, rewritten, score } = req.body;
 
   const prompt = `
-You are an AI communication coach.
+Explain exactly 3 ways to improve clarity next time.
 
 User wrote:
 "${raw}"
@@ -167,18 +152,12 @@ User wrote:
 Rewrite:
 "${rewritten}"
 
-Score: ${score}/100
-
-Provide EXACTLY 3 bullet points explaining:
-- why the score is what it is
-- how to improve clarity next time
-- what the user should change
+Score: ${score}
 
 Rules:
-- Start each bullet with "• "
-- Put ONE blank line between each bullet
-- Only 3 bullets
-- No intro or closing text
+• EXACTLY 3 bullets
+• ONE blank line between bullets
+• No intro text
 `;
 
   try {
@@ -190,17 +169,16 @@ Rules:
 
     res.json({ suggestions: out.choices[0].message.content.trim() });
 
-  } catch (err) {
-    console.log("Suggestion Error:", err);
+  } catch {
     res.json({
       suggestions:
-        "• Unable to generate suggestions.\n• Try again.\n• AI will provide guidance shortly."
+        "• Unable to generate.\n\n• Try again.\n\n• AI will process shortly."
     });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// SHARE SYSTEM (kept intact)
+// SHARE SYSTEM
 //////////////////////////////////////////////////////////////
 
 const ORIGIN_MAP = {
@@ -253,12 +231,12 @@ app.get("/s/:id", (req, res) => {
 
   res.send(`
     <!doctype html><html><head><meta charset="utf-8"/>
-    <script>
-      sessionStorage.setItem("sharedId","${req.params.id}");
-      setTimeout(()=>{ 
-        window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
-      },400);
-    </script>
+      <script>
+        sessionStorage.setItem("sharedId","${req.params.id}");
+        setTimeout(()=>{ 
+          window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
+        },400);
+      </script>
     </head><body></body></html>
   `);
 });
@@ -280,12 +258,9 @@ function writeViews(v) {
 
 app.get("/api/views", (req, res) => {
   const v = readViews();
-
   v.start = "2025-11-11";
   v.total++;
-
   writeViews(v);
-
   res.json({
     total: v.total,
     start: v.start,
@@ -297,7 +272,7 @@ app.get("/api/views/read", (req, res) => {
   const v = readViews();
   res.json({
     total: v.total,
-    start: v.start || "2025-11-11",
+    start: v.start,
     today: new Date().toISOString().split("T")[0]
   });
 });
@@ -330,19 +305,65 @@ app.post("/api/enter", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// PERSONA ENGINE — DISABLED (NO DROP CARDS)
+// ⭐ YOUTUBE VIDEO ENGINE (replaces persona engine)
+//////////////////////////////////////////////////////////////
+
+// Scrape YouTube (no API key needed)
+async function fetchYouTubeVideo(query) {
+  try {
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+    const response = await fetch(url);
+    const html = await response.text();
+
+    const match = html.match(/"videoId":"(.*?)"/);
+    if (!match) return null;
+
+    const videoId = match[1];
+
+    return {
+      videoId,
+      title: "YouTube Result",
+      embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1`
+    };
+
+  } catch (err) {
+    console.log("YouTube scrape error:", err);
+    return null;
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// SOCKET → personaSearch now returns 1 YOUTUBE RESULT
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
 io.on("connection", socket => {
-  console.log("Socket connected — Persona Engine is disabled.");
-  socket.on("personaSearch", () => socket.emit("personaDone"));
+  console.log("Socket connected: YouTube Search Mode");
+
+  socket.on("personaSearch", async query => {
+    try {
+      const video = await fetchYouTubeVideo(query);
+
+      if (!video) {
+        socket.emit("personaChunk", { error: "No YouTube video found." });
+        socket.emit("personaDone");
+        return;
+      }
+
+      socket.emit("personaChunk", video);
+      socket.emit("personaDone");
+
+    } catch (err) {
+      socket.emit("personaChunk", { error: "Search failed." });
+      socket.emit("personaDone");
+    }
+  });
 });
 
 //////////////////////////////////////////////////////////////
-// STATIC HOSTING + START
+// STATIC FILES + START SERVER
 //////////////////////////////////////////////////////////////
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -350,5 +371,5 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
-  console.log("🔥 Final Rain Man Business Engine running (Drop Cards OFF) on", PORT);
+  console.log("🔥 Rain Man Engine running — YOUTUBE SEARCH MODE — on", PORT);
 });
