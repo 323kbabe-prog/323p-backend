@@ -381,10 +381,10 @@ async function fetchYouTubeVideo(query) {
 
     // ⭐ ONLY PATCH — clean embed URL, no autoplay
     return {
-      videoId,
-      title: "YouTube Result",
-      embedUrl: `https://www.youtube.com/embed/${videoId}`  // ⭐ PATCH APPLIED
-    };
+  videoId,
+  title: "YouTube Result",
+  embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`
+};
 
   } catch (err) {
     console.log("YouTube scrape error:", err);
