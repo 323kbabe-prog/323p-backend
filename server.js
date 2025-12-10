@@ -7,6 +7,7 @@
 //  • Share System
 //  • View Counter
 //  • Enter Counter
+//  • ⭐ Next Counter (added)
 //  • YOUTUBE SEARCH ENGINE (Never Repeat)
 //  • personaSearch -> emits single YouTube result
 //  • Static Hosting
@@ -302,20 +303,44 @@ app.post("/api/enter", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
+// ⭐ NEXT COUNTER (ONLY NEW FEATURE)
+//////////////////////////////////////////////////////////////
+
+const NEXT_FILE = "/data/next.json";
+
+function readNext() {
+  try { return JSON.parse(fs.readFileSync(NEXT_FILE, "utf8")); }
+  catch { return { total: 0 }; }
+}
+
+function writeNext(v) {
+  fs.writeFileSync(NEXT_FILE, JSON.stringify(v, null, 2));
+}
+
+app.get("/api/next", (req, res) => {
+  const c = readNext();
+  res.json({ total: c.total });
+});
+
+app.post("/api/next", (req, res) => {
+  const c = readNext();
+  c.total++;
+  writeNext(c);
+  res.json({ total: c.total });
+});
+
+//////////////////////////////////////////////////////////////
 // ⭐ YOUTUBE ENGINE — NEVER REPEAT
 //////////////////////////////////////////////////////////////
 
-// Memory bucket per query
 const ytMemory = {};
 
 async function fetchYouTubeVideo(query) {
   try {
-    // init bucket
     if (!ytMemory[query]) ytMemory[query] = { list: [], used: new Set() };
 
     const bucket = ytMemory[query];
 
-    // If list empty or all used → rescrape
     if (bucket.list.length === 0 || bucket.used.size >= bucket.list.length) {
 
       const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
@@ -332,9 +357,7 @@ async function fetchYouTubeVideo(query) {
     const available = bucket.list.filter(id => !bucket.used.has(id));
     if (available.length === 0) return null;
 
-    // pick first unused (sequential)
     const videoId = available[0];
-
     bucket.used.add(videoId);
 
     return {
@@ -350,7 +373,7 @@ async function fetchYouTubeVideo(query) {
 }
 
 //////////////////////////////////////////////////////////////
-// SOCKET → personaSearch now returns one YouTube video
+// SOCKET — personaSearch returns ONE YouTube video
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
@@ -360,6 +383,12 @@ io.on("connection", socket => {
   console.log("Socket Connected — YouTube Search Mode Enabled");
 
   socket.on("personaSearch", async query => {
+
+    // ⭐ Increment next counter for every NEXT video request
+    const c = readNext();
+    c.total++;
+    writeNext(c);
+
     try {
       const video = await fetchYouTubeVideo(query);
 
