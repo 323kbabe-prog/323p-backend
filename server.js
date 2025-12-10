@@ -88,7 +88,7 @@ Rewritten:
 `;
 
   try {
-    const out = await openai.chat.completions.create({
+    const out = await openai.chat_completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2
@@ -312,7 +312,7 @@ app.post("/api/next", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ⭐ YOUTUBE ENGINE — WITH CURRENT YEAR FILTER (PATCHED)
+// ⭐ YOUTUBE ENGINE — WITH ~3 MONTH FILTER (UPDATED)
 //////////////////////////////////////////////////////////////
 
 const ytMemory = {};
@@ -324,7 +324,7 @@ async function fetchYouTubeVideo(query) {
 
     const bucket = ytMemory[query];
 
-    // reload list when empty
+    // reload list when empty or all used
     if (bucket.list.length === 0 || bucket.used.size >= bucket.list.length) {
 
       const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
@@ -335,8 +335,6 @@ async function fetchYouTubeVideo(query) {
         .map(m => m[1]);
       const unique = [...new Set(matches)];
 
-      const CURRENT_YEAR = new Date().getFullYear();
-
       const publishedMatches = [...html.matchAll(/"publishedTimeText":\{"simpleText":"(.*?)"\}/g)]
         .map(m => m[1]);
 
@@ -345,24 +343,41 @@ async function fetchYouTubeVideo(query) {
 
       const idsWithYearFilter = [];
 
+      // ✅ strict-ish 3-month window (~90 days)
+      const NOW = Date.now();
+      const THREE_MONTHS_MS = 1000 * 60 * 60 * 24 * 90; // ~90 days
+
       for (let i = 0; i < unique.length; i++) {
-        let id = unique[i];
+        const id = unique[i];
+        let accept = false;
 
         const iso = dateMatches[i];
-        if (iso && iso.startsWith(String(CURRENT_YEAR))) {
-          idsWithYearFilter.push(id);
-          continue;
+
+        // 1) Prefer real ISO date if available
+        if (iso) {
+          const t = Date.parse(iso);
+          if (!Number.isNaN(t)) {
+            const ageMs = NOW - t;
+            if (ageMs >= 0 && ageMs <= THREE_MONTHS_MS) {
+              accept = true;
+            }
+          }
         }
 
-        const rel = (publishedMatches[i] || "").toLowerCase();
-        if (
-          rel.includes("hour") ||
-          rel.includes("day") ||
-          rel.includes("week") ||
-          rel.includes("month")
-        ) {
-          idsWithYearFilter.push(id);
+        // 2) Fallback: relative text like "3 weeks ago", "2 months ago"
+        if (!accept) {
+          const rel = (publishedMatches[i] || "").toLowerCase();
+          if (
+            rel.includes("hour") ||
+            rel.includes("day") ||
+            rel.includes("week") ||
+            rel.includes("month")
+          ) {
+            accept = true;
+          }
         }
+
+        if (accept) idsWithYearFilter.push(id);
       }
 
       const finalList =
@@ -379,12 +394,12 @@ async function fetchYouTubeVideo(query) {
     const videoId = available[0];
     bucket.used.add(videoId);
 
-    // ⭐ ONLY PATCH — clean embed URL, no autoplay
+    // embed URL (unchanged)
     return {
-  videoId,
-  title: "YouTube Result",
-  embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`
-};
+      videoId,
+      title: "YouTube Result",
+      embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`
+    };
 
   } catch (err) {
     console.log("YouTube scrape error:", err);
