@@ -88,7 +88,7 @@ Rewritten:
 `;
 
   try {
-    const out = await openai.chat_completions.create({
+    const out = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2
