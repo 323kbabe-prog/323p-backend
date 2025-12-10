@@ -33,7 +33,7 @@ const openai = new OpenAI({
 console.log("🚀 Rain Man Business Engine Started — YOUTUBE MODE");
 
 //////////////////////////////////////////////////////////////
-// INPUT VALIDATION — Strong Nonsense Detector
+// INPUT VALIDATION
 //////////////////////////////////////////////////////////////
 
 app.post("/api/validate", async (req, res) => {
@@ -135,7 +135,7 @@ Rate this input ONLY on clarity (1–100):
 });
 
 //////////////////////////////////////////////////////////////
-// CLARITY SCORE ENGINE — returns score + explanation
+// CLARITY SCORE ENGINE with explanation
 //////////////////////////////////////////////////////////////
 
 app.post("/api/score", async (req, res) => {
@@ -146,15 +146,8 @@ Evaluate the clarity of this user message:
 
 "${raw}"
 
-Return the result in this EXACT format:
-Score: 90/100 The statement is clear and straightforward, expressing a desire to travel. However, it could be improved by providing context such as purpose or timeframe.
-
-Rules:
-- Always begin with: Score: <number>/100
-- Then a space, then a single clean explanation sentence
-- No line breaks
-- No bullet points
-- No extra formatting
+Return EXACTLY:
+Score: <number>/100 <one clean explanation sentence>
 `;
 
   try {
@@ -164,19 +157,15 @@ Rules:
       temperature: 0
     });
 
-    const result = out.choices[0].message.content.trim();
-    res.json({ score: result });
+    res.json({ score: out.choices[0].message.content.trim() });
 
   } catch (err) {
-    console.log("Score Error:", err);
-    res.json({
-      score: "Score: -/100 Unable to evaluate clarity."
-    });
+    res.json({ score: "Score: -/100 Unable to evaluate clarity." });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// SHARE SYSTEM (unchanged)
+// SHARE SYSTEM
 //////////////////////////////////////////////////////////////
 
 const ORIGIN_MAP = {
@@ -303,7 +292,7 @@ app.post("/api/enter", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ⭐ NEXT COUNTER (ONLY NEW FEATURE)
+// ⭐ NEXT COUNTER
 //////////////////////////////////////////////////////////////
 
 const NEXT_FILE = "/data/next.json";
@@ -330,7 +319,7 @@ app.post("/api/next", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ⭐ YOUTUBE ENGINE — NEVER REPEAT
+// ⭐ YOUTUBE ENGINE — WITH CURRENT YEAR FILTER
 //////////////////////////////////////////////////////////////
 
 const ytMemory = {};
@@ -350,7 +339,42 @@ async function fetchYouTubeVideo(query) {
       const matches = [...html.matchAll(/"videoId":"(.*?)"/g)].map(m => m[1]);
       const unique = [...new Set(matches)];
 
-      bucket.list = unique;
+      //////////////////////////////////////////////////////////
+      // ⭐ CURRENT YEAR FILTERING ADDED HERE — ONLY CHANGE
+      //////////////////////////////////////////////////////////
+      const CURRENT_YEAR = new Date().getFullYear();
+
+      const publishedMatches = [...html.matchAll(/"publishedTimeText":\{"simpleText":"(.*?)"\}/g)]
+        .map(m => m[1]);
+
+      const dateMatches = [...html.matchAll(/"publishedAt":"(.*?)"/g)]
+        .map(m => m[1]);
+
+      const idsWithYearFilter = [];
+
+      for (let i = 0; i < unique.length; i++) {
+        let id = unique[i];
+
+        const iso = dateMatches[i];
+        if (iso && iso.startsWith(String(CURRENT_YEAR))) {
+          idsWithYearFilter.push(id);
+          continue;
+        }
+
+        const rel = (publishedMatches[i] || "").toLowerCase();
+        if (
+          rel.includes("hour") ||
+          rel.includes("day") ||
+          rel.includes("week") ||
+          rel.includes("month")
+        ) {
+          idsWithYearFilter.push(id);
+        }
+      }
+
+      const finalList = idsWithYearFilter.length > 0 ? idsWithYearFilter : unique;
+
+      bucket.list = finalList;
       bucket.used = new Set();
     }
 
@@ -384,7 +408,6 @@ io.on("connection", socket => {
 
   socket.on("personaSearch", async query => {
 
-    // ⭐ Increment next counter for every NEXT video request
     const c = readNext();
     c.total++;
     writeNext(c);
