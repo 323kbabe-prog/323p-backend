@@ -1,16 +1,5 @@
 //////////////////////////////////////////////////////////////
 //  Rain Man Business Engine — CLEAN VERSION + YOUTUBE ENGINE
-//  • Rewrite Engine
-//  • Nonsense Detector
-//  • Clarity Score Engine
-//  • Suggestion Engine
-//  • Share System
-//  • View Counter
-//  • Enter Counter
-//  • ⭐ Next Counter (added)
-//  • YOUTUBE SEARCH ENGINE (Never Repeat)
-//  • personaSearch -> emits single YouTube result
-//  • Static Hosting
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -312,7 +301,48 @@ app.post("/api/next", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ⭐ YOUTUBE ENGINE — WITH ~3 MONTH FILTER (UPDATED)
+// ⭐ NEW: GOOGLE VIDEO SEARCH → YouTube, TikTok, Instagram
+//////////////////////////////////////////////////////////////
+
+const SERP_KEY = process.env.SERP_KEY || "dc9b9d70304e66d123e5177b66e20c72a9c81db54dccad13333ead7432368540";
+
+app.post("/api/searchVideos", async (req, res) => {
+  const query = req.body.query || "";
+  if (!query) return res.json({ results: [] });
+
+  try {
+    const url =
+      `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(query + " video")}&api_key=${SERP_KEY}`;
+
+    const raw = await fetch(url);
+    const data = await raw.json();
+
+    const results = [];
+
+    if (data.video_results) {
+      for (const v of data.video_results.slice(0, 3)) {
+        results.push({
+          thumb: v.thumbnail || "",
+          openUrl: v.link || "",
+          source:
+            v.link.includes("youtube") ? "youtube" :
+            v.link.includes("tiktok") ? "tiktok" :
+            v.link.includes("instagram") ? "instagram" :
+            "other"
+        });
+      }
+    }
+
+    return res.json({ results });
+
+  } catch (err) {
+    console.log("SERP API ERROR:", err);
+    return res.json({ results: [] });
+  }
+});
+
+//////////////////////////////////////////////////////////////
+// ⭐ YOUTUBE ENGINE — WITH ~3 MONTH FILTER (UNCHANGED)
 //////////////////////////////////////////////////////////////
 
 const ytMemory = {};
@@ -324,15 +354,13 @@ async function fetchYouTubeVideo(query) {
 
     const bucket = ytMemory[query];
 
-    // reload list when empty or all used
     if (bucket.list.length === 0 || bucket.used.size >= bucket.list.length) {
 
       const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
       const response = await fetch(url);
       const html = await response.text();
 
-      const matches = [...html.matchAll(/"videoId":"(.*?)"/g)]
-        .map(m => m[1]);
+      const matches = [...html.matchAll(/"videoId":"(.*?)"/g)].map(m => m[1]);
       const unique = [...new Set(matches)];
 
       const publishedMatches = [...html.matchAll(/"publishedTimeText":\{"simpleText":"(.*?)"\}/g)]
@@ -343,9 +371,8 @@ async function fetchYouTubeVideo(query) {
 
       const idsWithYearFilter = [];
 
-      // ✅ strict-ish 3-month window (~90 days)
       const NOW = Date.now();
-      const THREE_MONTHS_MS = 1000 * 60 * 60 * 24 * 90; // ~90 days
+      const THREE_MONTHS_MS = 1000 * 60 * 60 * 24 * 90;
 
       for (let i = 0; i < unique.length; i++) {
         const id = unique[i];
@@ -353,18 +380,14 @@ async function fetchYouTubeVideo(query) {
 
         const iso = dateMatches[i];
 
-        // 1) Prefer real ISO date if available
         if (iso) {
           const t = Date.parse(iso);
           if (!Number.isNaN(t)) {
             const ageMs = NOW - t;
-            if (ageMs >= 0 && ageMs <= THREE_MONTHS_MS) {
-              accept = true;
-            }
+            if (ageMs >= 0 && ageMs <= THREE_MONTHS_MS) accept = true;
           }
         }
 
-        // 2) Fallback: relative text like "3 weeks ago", "2 months ago"
         if (!accept) {
           const rel = (publishedMatches[i] || "").toLowerCase();
           if (
@@ -372,9 +395,7 @@ async function fetchYouTubeVideo(query) {
             rel.includes("day") ||
             rel.includes("week") ||
             rel.includes("month")
-          ) {
-            accept = true;
-          }
+          ) accept = true;
         }
 
         if (accept) idsWithYearFilter.push(id);
@@ -387,14 +408,12 @@ async function fetchYouTubeVideo(query) {
       bucket.used = new Set();
     }
 
-    // pick unused ID
     const available = bucket.list.filter(id => !bucket.used.has(id));
     if (available.length === 0) return null;
 
     const videoId = available[0];
     bucket.used.add(videoId);
 
-    // embed URL (unchanged)
     return {
       videoId,
       title: "YouTube Result",
