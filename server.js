@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-//  Rain Man Business Engine — CLEAN VERSION + YOUTUBE ENGINE
+//  Rain Man Business Engine — YOUTUBE + TIKTOK + INSTAGRAM
 //  • Rewrite Engine
 //  • Nonsense Detector
 //  • Clarity Score Engine
@@ -7,9 +7,9 @@
 //  • Share System
 //  • View Counter
 //  • Enter Counter
-//  • ⭐ Next Counter (added)
-//  • YOUTUBE SEARCH ENGINE (Never Repeat)
-//  • personaSearch -> emits single YouTube result
+//  • Next Counter
+//  • RANDOM VIDEO ENGINE (YT / TikTok / IG)
+//  • personaSearch -> emits single video
 //  • Static Hosting
 //////////////////////////////////////////////////////////////
 
@@ -30,7 +30,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-console.log("🚀 Rain Man Business Engine Started — YOUTUBE MODE");
+console.log("🚀 Rain Man Business Engine Started — MULTI VIDEO MODE");
 
 //////////////////////////////////////////////////////////////
 // INPUT VALIDATION
@@ -41,14 +41,13 @@ app.post("/api/validate", async (req, res) => {
   if (text.length < 3) return res.json({ valid: false });
 
   if (text.split(/\s+/).length === 1) {
-    if (text.length < 4 || !/^[a-zA-Z]+$/.test(text)) {
-      return res.json({ valid: false });
-    }
+    if (text.length < 4 || !/^[a-zA-Z]+$/.test(text)) return res.json({ valid: false });
   }
 
   const prompt = `
 Determine if this text is meaningful or nonsense.
 Return ONLY VALID or NONSENSE.
+
 "${text}"
 `;
 
@@ -59,7 +58,10 @@ Return ONLY VALID or NONSENSE.
       temperature: 0
     });
 
-    res.json({ valid: out.choices[0].message.content.trim().toUpperCase() === "VALID" });
+    res.json({
+      valid: out.choices[0].message.content.trim().toUpperCase() === "VALID"
+    });
+
   } catch {
     res.json({ valid: true });
   }
@@ -82,8 +84,10 @@ Rules:
 - EXACTLY 1 sentence.
 - No filler.
 - Executive tone.
+
 User:
 ${query}
+
 Rewritten:
 `;
 
@@ -104,33 +108,7 @@ Rewritten:
 });
 
 //////////////////////////////////////////////////////////////
-// CLARITY SCORE ENGINE
-//////////////////////////////////////////////////////////////
-
-app.post("/api/score", async (req, res) => {
-  const raw = req.body.text || "";
-
-  const prompt = `
-Rate this input ONLY on clarity (1–100):
-"${raw}"
-`;
-
-  try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0
-    });
-
-    res.json({ score: out.choices[0].message.content.trim() });
-
-  } catch {
-    res.json({ score: "-" });
-  }
-});
-
-//////////////////////////////////////////////////////////////
-// CLARITY SCORE ENGINE with explanation
+// CLARITY SCORE
 //////////////////////////////////////////////////////////////
 
 app.post("/api/score", async (req, res) => {
@@ -138,7 +116,9 @@ app.post("/api/score", async (req, res) => {
 
   const prompt = `
 Evaluate the clarity of this user message:
+
 "${raw}"
+
 Return EXACTLY:
 Score: <number>/100 <one clean explanation sentence>
 `;
@@ -152,7 +132,7 @@ Score: <number>/100 <one clean explanation sentence>
 
     res.json({ score: out.choices[0].message.content.trim() });
 
-  } catch (err) {
+  } catch {
     res.json({ score: "Score: -/100 Unable to evaluate clarity." });
   }
 });
@@ -201,26 +181,6 @@ app.get("/api/share/:id", (req, res) => {
   res.json(s.personas || []);
 });
 
-app.get("/s/:id", (req, res) => {
-  const all = readShares();
-  const s = all[req.params.id];
-
-  if (!s) return res.redirect("https://blueoceanbrowser.com");
-
-  const redirectURL = ORIGIN_MAP[s.origin] || ORIGIN_MAP.blue;
-
-  res.send(`
-    <!doctype html><html><head><meta charset="utf-8"/>
-      <script>
-        sessionStorage.setItem("sharedId","${req.params.id}");
-        setTimeout(()=>{ 
-          window.location.href="${redirectURL}?query="+encodeURIComponent("${s.query||""}");
-        },400);
-      </script>
-    </head><body></body></html>
-  `);
-});
-
 //////////////////////////////////////////////////////////////
 // VIEW COUNTER
 //////////////////////////////////////////////////////////////
@@ -241,15 +201,6 @@ app.get("/api/views", (req, res) => {
   v.start = "2025-11-11";
   v.total++;
   writeViews(v);
-  res.json({
-    total: v.total,
-    start: v.start,
-    today: new Date().toISOString().split("T")[0]
-  });
-});
-
-app.get("/api/views/read", (req, res) => {
-  const v = readViews();
   res.json({
     total: v.total,
     start: v.start,
@@ -285,7 +236,7 @@ app.post("/api/enter", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ⭐ NEXT COUNTER
+// NEXT COUNTER
 //////////////////////////////////////////////////////////////
 
 const NEXT_FILE = "/data/next.json";
@@ -312,133 +263,100 @@ app.post("/api/next", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ⭐ YOUTUBE ENGINE — WITH ~3 MONTH FILTER (UPDATED)
+// ⚡ RANDOM VIDEO ENGINE (YT + TikTok + Instagram)
 //////////////////////////////////////////////////////////////
 
-const ytMemory = {};
-
+// --- YouTube (already existed) ---
 async function fetchYouTubeVideo(query) {
+  console.log("Trying YouTube…");
+
   try {
-    if (!ytMemory[query])
-      ytMemory[query] = { list: [], used: new Set() };
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+    const html = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }}).then(r => r.text());
+    const matches = [...html.matchAll(/"videoId":"(.*?)"/g)].map(m => m[1]);
+    if (!matches.length) return null;
 
-    const bucket = ytMemory[query];
-
-    // reload list when empty or all used
-    if (bucket.list.length === 0 || bucket.used.size >= bucket.list.length) {
-
-      const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-      const response = await fetch(url);
-      const html = await response.text();
-
-      const matches = [...html.matchAll(/"videoId":"(.*?)"/g)]
-        .map(m => m[1]);
-      const unique = [...new Set(matches)];
-
-      const publishedMatches = [...html.matchAll(/"publishedTimeText":\{"simpleText":"(.*?)"\}/g)]
-        .map(m => m[1]);
-
-      const dateMatches = [...html.matchAll(/"publishedAt":"(.*?)"/g)]
-        .map(m => m[1]);
-
-      const idsWithYearFilter = [];
-
-      // ✅ strict-ish 3-month window (~90 days)
-      const NOW = Date.now();
-      const THREE_MONTHS_MS = 1000 * 60 * 60 * 24 * 90; // ~90 days
-
-      for (let i = 0; i < unique.length; i++) {
-        const id = unique[i];
-        let accept = false;
-
-        const iso = dateMatches[i];
-
-        // 1) Prefer real ISO date if available
-        if (iso) {
-          const t = Date.parse(iso);
-          if (!Number.isNaN(t)) {
-            const ageMs = NOW - t;
-            if (ageMs >= 0 && ageMs <= THREE_MONTHS_MS) {
-              accept = true;
-            }
-          }
-        }
-
-        // 2) Fallback: relative text like "3 weeks ago", "2 months ago"
-        if (!accept) {
-          const rel = (publishedMatches[i] || "").toLowerCase();
-          if (
-            rel.includes("hour") ||
-            rel.includes("day") ||
-            rel.includes("week") ||
-            rel.includes("month")
-          ) {
-            accept = true;
-          }
-        }
-
-        if (accept) idsWithYearFilter.push(id);
-      }
-
-      const finalList =
-        idsWithYearFilter.length > 0 ? idsWithYearFilter : unique;
-
-      bucket.list = finalList;
-      bucket.used = new Set();
-    }
-
-    // pick unused ID
-    const available = bucket.list.filter(id => !bucket.used.has(id));
-    if (available.length === 0) return null;
-
-    const videoId = available[0];
-    bucket.used.add(videoId);
-
-    // embed URL (unchanged)
+    const id = matches[0];
     return {
-      videoId,
-      title: "YouTube Result",
-      embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`
+      provider: "youtube",
+      embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1`
     };
+  } catch { return null; }
+}
 
-  } catch (err) {
-    console.log("YouTube scrape error:", err);
-    return null;
-  }
+// --- TikTok ---
+async function fetchTikTokVideo(query) {
+  console.log("Trying TikTok…");
+
+  try {
+    const url = `https://www.tiktok.com/search?q=${encodeURIComponent(query)}`;
+    const html = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }}).then(r => r.text());
+    const match = html.match(/"videoId":"(.*?)"/);
+    if (!match) return null;
+
+    return {
+      provider: "tiktok",
+      embedUrl: `https://www.tiktok.com/embed/${match[1]}`
+    };
+  } catch { return null; }
+}
+
+// --- Instagram Reels ---
+async function fetchInstagramVideo(query) {
+  console.log("Trying Instagram…");
+
+  try {
+    const url = `https://www.instagram.com/explore/tags/${encodeURIComponent(query)}/`;
+    const html = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }}).then(r => r.text());
+    const match = html.match(/"shortcode":"(.*?)"/);
+    if (!match) return null;
+
+    return {
+      provider: "instagram",
+      embedUrl: `https://www.instagram.com/reel/${match[1]}/embed/`
+    };
+  } catch { return null; }
+}
+
+// --- Randomizer ---
+async function fetchRandomVideo(query) {
+  const providers = ["youtube", "tiktok", "instagram"];
+  const pick = providers[Math.floor(Math.random() * providers.length)];
+
+  console.log("🎬 Random provider:", pick);
+
+  if (pick === "youtube") return await fetchYouTubeVideo(query);
+  if (pick === "tiktok") return await fetchTikTokVideo(query);
+  if (pick === "instagram") return await fetchInstagramVideo(query);
+
+  return null;
 }
 
 //////////////////////////////////////////////////////////////
-// SOCKET — personaSearch returns ONE YouTube video
+// SOCKET HANDLER — Return ONE Random Video
 //////////////////////////////////////////////////////////////
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
 io.on("connection", socket => {
-  console.log("Socket Connected — YouTube Search Mode Enabled");
+  console.log("Socket connected.");
 
   socket.on("personaSearch", async query => {
 
+    // Increase NEXT counter
     const c = readNext();
     c.total++;
     writeNext(c);
 
-    try {
-      const video = await fetchYouTubeVideo(query);
+    const video = await fetchRandomVideo(query);
 
-      if (!video) {
-        socket.emit("personaChunk", { error: "No video found." });
-        socket.emit("personaDone");
-        return;
-      }
-
-      socket.emit("personaChunk", video);
-      socket.emit("personaDone");
-
-    } catch (err) {
-      socket.emit("personaChunk", { error: "Search failed." });
-      socket.emit("personaDone");
+    if (!video) {
+      socket.emit("personaChunk", { error: "No video found." });
+      return;
     }
+
+    socket.emit("personaChunk", video);
   });
 });
 
@@ -451,5 +369,5 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
-  console.log("🔥 Rain Man Engine running — YOUTUBE MODE — on", PORT);
+  console.log("🔥 Final Engine Running — Multi Video Mode on", PORT);
 });
