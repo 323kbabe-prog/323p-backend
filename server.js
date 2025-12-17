@@ -15,11 +15,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Match your working reference
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 // ------------------------------------------------------------
-// Utility — relative freshness label
+// Utility — relative freshness label (still used for sources)
 // ------------------------------------------------------------
 function relativeTime(dateStr) {
   if (!dateStr) return "recent";
@@ -32,7 +31,7 @@ function relativeTime(dateStr) {
 }
 
 // ------------------------------------------------------------
-// Step 2 — Semantic clarity check (reject nonsense)
+// Step 2 — Semantic clarity check
 // ------------------------------------------------------------
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
@@ -52,7 +51,7 @@ Reply ONLY YES or NO.
 }
 
 // ------------------------------------------------------------
-// Step 3 — Background rewrite (SERP-DOABLE, event-driven)
+// Step 3 — SERP-doable rewrite
 // ------------------------------------------------------------
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
@@ -61,23 +60,18 @@ async function rewriteForSerp(topic) {
       role: "user",
       content: `
 Rewrite the following topic into a short,
-NEWS-DOABLE business headline phrase that would
-realistically appear in Google News.
+NEWS-DOABLE business headline phrase.
 
 Rules:
-- Imply real-world action or change
+- Real-world action
 - Business / workforce / policy framing
-- Prefer verbs: expands, announces, launches, updates, cuts
-- Implicitly reference institutions (companies, governments, universities)
-- 5–8 words total
-- Neutral, factual tone
-- NO opinions
+- Verbs preferred
+- 5–8 words
+- Neutral
 - NO future tense
 
 Input:
 "${topic}"
-
-Output:
 `
     }],
     temperature: 0
@@ -86,7 +80,7 @@ Output:
 }
 
 // ------------------------------------------------------------
-// Step 4 — SERP NEWS (reference-aligned, tolerant but real)
+// Step 4 — Fetch SERP News
 // ------------------------------------------------------------
 async function fetchSerpSources(rewrittenTopic) {
   let sources = [];
@@ -121,7 +115,7 @@ async function fetchSerpSources(rewrittenTopic) {
 }
 
 // ------------------------------------------------------------
-// Step 5 — Rank signals by business impact
+// Step 5 — Rank signals (still internal)
 // ------------------------------------------------------------
 async function rankSignalsByImpact(sources) {
   if (!sources.length) return sources;
@@ -135,10 +129,8 @@ async function rankSignalsByImpact(sources) {
     messages: [{
       role: "user",
       content: `
-Rank the following news headlines by expected BUSINESS IMPACT
-over the next six months (highest impact first).
-
-Return ONLY a list of numbers in order.
+Rank these headlines by BUSINESS IMPACT over six months.
+Return ONLY numbers in order.
 
 ${list}
 `
@@ -156,37 +148,63 @@ ${list}
 }
 
 // ------------------------------------------------------------
-// Step 6 — Generate foresight using ranked sources
+// Step 6 — Generate FUTURE STORY (KEY CHANGE)
 // ------------------------------------------------------------
-async function generatePrediction(topic, sources) {
-  const signalText = sources.map(s =>
+async function generateFutureStory(topic, sources) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+
+  const dateLabel = d.toLocaleString("en-US", {
+    month: "long",
+    year: "numeric"
+  });
+
+  const hiddenContext = sources.map(s =>
     `• ${s.title} — ${s.source}`
   ).join("\n");
 
   const prompt = `
-You are an AI foresight analyst.
+Date: ${dateLabel}
+
+You are not analyzing the future.
+You are speaking from this date as if six months have already passed.
+
+Do NOT explain how this future was predicted.
+Do NOT mention trends, signals, data, forecasts, or analysis.
+
+Write in present tense only.
+
+This is a calm, realistic narrative report.
+It should feel like a documentary voiceover or lived experience.
+
+Describe:
+- What feels normal now
+- How people talk about this topic
+- How work, habits, or decisions have quietly changed
+- What no longer feels surprising
 
 Topic:
 ${topic}
 
-Recent high-impact business news:
-${signalText}
+(Background context — DO NOT mention explicitly)
+${hiddenContext}
 
-Task:
-Write a realistic six-month outlook that is clearly derived
-from these signals.
-
-Rules:
-- Reference concrete developments from the news
-- No hype, no certainty claims
-- Neutral, analytical tone
-- 3–5 short paragraphs
+Begin the story naturally.
 `;
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.4
+    messages: [
+      {
+        role: "system",
+        content: "You are a future narrator telling lived reality, not an analyst."
+      },
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    temperature: 0.7
   });
 
   return out.choices[0].message.content.trim();
@@ -210,36 +228,30 @@ app.post("/run", async (req, res) => {
   }
 
   try {
-    // SERP-doable rewrite (hidden)
     const rewritten = await rewriteForSerp(topic);
-
-    // Fetch SERP news
     const rawSources = await fetchSerpSources(rewritten);
 
-    // Enforce 3–5 source rule
     if (rawSources.length < 3) {
       return res.json({
         report:
-          "Fewer than three verified business news sources were found for this topic. Please try a more specific or timely query."
+          "Not enough verified business activity was found for this topic. Try a more specific or timely query."
       });
     }
 
-    // Rank + cap
     const ranked = await rankSignalsByImpact(rawSources);
     const finalSources = ranked.slice(0, 5);
 
-    // Generate foresight
-    const prediction = await generatePrediction(topic, finalSources);
+    const story = await generateFutureStory(topic, finalSources);
 
-    // Build visible report
-    let reportText = "Current Signals (Ranked by Business Impact)\n";
+    // Visible report (sources stay factual, story stays immersive)
+    let reportText = "Reference Activity\n";
     finalSources.forEach(s => {
       reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
       if (s.link) reportText += `  ${s.link}\n`;
     });
 
-    reportText += "\nSix-Month Outlook\n";
-    reportText += prediction;
+    reportText += "\n";
+    reportText += story;
 
     res.json({ report: reportText });
 
@@ -254,5 +266,5 @@ app.post("/run", async (req, res) => {
 // ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser (SERP-doable, final) running on port", PORT);
+  console.log("🌊 Blue Ocean Browser (SERP-doable, future-story mode) running on port", PORT);
 });
