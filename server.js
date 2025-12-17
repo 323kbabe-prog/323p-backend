@@ -1,7 +1,6 @@
 //////////////////////////////////////////////////////////////
 // Blue Ocean Browser — FINAL SERP-DOABLE FORESIGHT SERVER
 //////////////////////////////////////////////////////////////
-
 const express = require("express");
 const cors = require("cors");
 const fetch = require("node-fetch");
@@ -42,7 +41,6 @@ async function isClearTopic(topic) {
       content: `
 Is the following text a meaningful topic or question that a human would ask?
 Reply ONLY YES or NO.
-
 "${topic}"
 `
     }],
@@ -174,25 +172,25 @@ async function generatePrediction(topic, sources) {
   const prompt = `
 Date: ${dateLabel}
 
-You are speaking from this point in time, six months after today.
-This future has already arrived.
+You are speaking from this moment in time.
+Six months have already passed.
 
-Write in present tense.
+Write in present tense only.
 Do NOT explain how this future was predicted.
 Do NOT mention analysis, trends, signals, or forecasts.
 
-This is a calm, realistic narrative account of what life feels like now.
+This is a calm, realistic story about what life feels like now.
 
 Describe:
-- How people talk about this topic today
-- What has quietly become normal
-- How work, habits, or decisions feel different
+- What feels normal today
+- How people talk about this topic now
+- How work, habits, or decisions have quietly changed
 - What no longer surprises anyone
 
 Topic:
 ${topic}
 
-(Background context — not to be mentioned explicitly)
+(Background context — do not reference explicitly)
 ${signalText}
 
 Write 3–5 short paragraphs.
@@ -241,7 +239,7 @@ app.post("/run", async (req, res) => {
 
     const prediction = await generatePrediction(topic, finalSources);
 
-    let reportText = "Current Signals (Reference Only)\n";
+    let reportText = "Reference Activity\n";
     finalSources.forEach(s => {
       reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
       if (s.link) reportText += `  ${s.link}\n`;
@@ -263,5 +261,5 @@ app.post("/run", async (req, res) => {
 // ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser (SERP-doable, tone-updated) running on port", PORT);
+  console.log("🌊 Blue Ocean Browser (SERP-doable, tone-updated only) running on port", PORT);
 });
