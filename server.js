@@ -1,11 +1,11 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — Server (Text Report + AI Voice Podcast)
+// Blue Ocean Browser — Stable Server (Text + Voice Podcast)
 //////////////////////////////////////////////////////////////
 
-import express from "express";
-import cors from "cors";
-import fetch from "node-fetch";
-import OpenAI from "openai";
+const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch");
+const OpenAI = require("openai");
 
 const app = express();
 app.use(cors());
@@ -15,7 +15,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const SERP_KEY = process.env.SERP_KEY;
+const SERP_KEY = process.env.SERP_KEY || null;
 
 // ----------------------------
 // In-memory cache & rate guard
@@ -27,7 +27,7 @@ function allowRequest(ip) {
   const now = Date.now();
   const prev = lastHit.get(ip) || 0;
   lastHit.set(ip, now);
-  return now - prev > 3000;
+  return now - prev > 2500;
 }
 
 // ----------------------------
@@ -67,8 +67,13 @@ ${topic}
 
 // ----------------------------
 // Step 4: Fetch recent news (7 days)
+// SAFE even if SERP_KEY is missing
 // ----------------------------
 async function fetchRecentNews(query) {
+  if (!SERP_KEY) {
+    return "No live news key available. Using general market context.";
+  }
+
   try {
     const url =
       `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(query)}&api_key=${SERP_KEY}`;
@@ -76,15 +81,16 @@ async function fetchRecentNews(query) {
     const data = await raw.json();
 
     if (!data.news_results || !data.news_results.length) {
-      return "No recent news found. Use broader context.";
+      return "No recent news found. Using broader context.";
     }
 
     return data.news_results
       .slice(0, 5)
       .map(n => `- ${n.title}`)
       .join("\n");
-  } catch {
-    return "No recent news found. Use broader context.";
+
+  } catch (err) {
+    return "News source unavailable. Using broader context.";
   }
 }
 
@@ -98,7 +104,7 @@ You are an AI foresight system.
 Current directive:
 ${rewrite}
 
-Recent real-world signals (past 7 days):
+Recent real-world signals:
 ${news}
 
 Task:
@@ -122,24 +128,31 @@ Rules:
 }
 
 // ----------------------------
-// Step 7: Text-to-speech podcast
+// Step 7: Text-to-speech (NON-BLOCKING)
 // ----------------------------
-async function narrateReport(text) {
-  const audio = await openai.audio.speech.create({
-    model: "gpt-4o-mini-tts",
-    voice: "alloy",
-    input: text
-  });
+async function narrateReportSafe(text) {
+  try {
+    const audio = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "alloy",
+      input: text
+    });
 
-  const buffer = Buffer.from(await audio.arrayBuffer());
-  return `data:audio/mp3;base64,${buffer.toString("base64")}`;
+    const buffer = Buffer.from(await audio.arrayBuffer());
+    return `data:audio/mp3;base64,${buffer.toString("base64")}`;
+
+  } catch (err) {
+    // Audio failure should NEVER kill text
+    return "";
+  }
 }
 
 // ----------------------------
 // Main endpoint
 // ----------------------------
 app.post("/run", async (req, res) => {
-  const ip = req.ip;
+  const ip = req.ip || "unknown";
+
   if (!allowRequest(ip)) {
     return res.json({
       report: "Please wait a moment before generating another future.",
@@ -155,7 +168,6 @@ app.post("/run", async (req, res) => {
     });
   }
 
-  // Cache by topic
   if (cache.has(topic)) {
     return res.json(cache.get(topic));
   }
@@ -164,7 +176,7 @@ app.post("/run", async (req, res) => {
     const rewrite = await rewriteSilently(topic);
     const news = await fetchRecentNews(rewrite);
     const report = await generateFutureReport(rewrite, news);
-    const audio = await narrateReport(report);
+    const audio = await narrateReportSafe(report);
 
     const result = { report, audio };
     cache.set(topic, result);
@@ -172,7 +184,7 @@ app.post("/run", async (req, res) => {
 
   } catch (err) {
     res.json({
-      report: "Unable to generate a future scenario at this time.",
+      report: "The system is temporarily unavailable. Please try again shortly.",
       audio: ""
     });
   }
@@ -183,5 +195,5 @@ app.post("/run", async (req, res) => {
 // ----------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser server running on", PORT);
+  console.log("🌊 Blue Ocean Browser server running on port", PORT);
 });
