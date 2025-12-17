@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — FINAL SERP-GROUNDED FORESIGHT SERVER
+// Blue Ocean Browser — FINAL SERP-DOABLE FORESIGHT SERVER
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -15,7 +15,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// IMPORTANT: matches your working reference
+// Match your working reference
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 // ------------------------------------------------------------
@@ -37,61 +37,63 @@ function relativeTime(dateStr) {
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "user",
-        content: `
+    messages: [{
+      role: "user",
+      content: `
 Is the following text a meaningful topic or question that a human would ask?
 Reply ONLY YES or NO.
 
 "${topic}"
 `
-      }
-    ],
+    }],
     temperature: 0
   });
-
   return out.choices[0].message.content.trim() === "YES";
 }
 
 // ------------------------------------------------------------
-// Step 3 — Background rewrite (SERP-aware, news tone)
+// Step 3 — Background rewrite (SERP-DOABLE, event-driven)
 // ------------------------------------------------------------
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "user",
-        content: `
-Rewrite the input into a short, business-news-searchable phrase.
+    messages: [{
+      role: "user",
+      content: `
+Rewrite the following topic into a short,
+NEWS-DOABLE business headline phrase that would
+realistically appear in Google News.
 
 Rules:
-- Neutral, journalistic tone
-- Business / policy / workforce focus
-- 3–6 words
-- No opinions
+- Imply real-world action or change
+- Business / workforce / policy framing
+- Prefer verbs: expands, announces, launches, updates, cuts
+- Implicitly reference institutions (companies, governments, universities)
+- 5–8 words total
+- Neutral, factual tone
+- NO opinions
+- NO future tense
 
 Input:
 "${topic}"
+
+Output:
 `
-      }
-    ],
+    }],
     temperature: 0
   });
-
   return out.choices[0].message.content.trim();
 }
 
 // ------------------------------------------------------------
-// Step 4 — SERP NEWS Context (reference-aligned)
+// Step 4 — SERP NEWS (reference-aligned, tolerant but real)
 // ------------------------------------------------------------
 async function fetchSerpSources(rewrittenTopic) {
   let sources = [];
-
   if (!SERP_KEY) return sources;
 
-  const serpQuery = `${rewrittenTopic} business news ${new Date().getFullYear()}`;
+  const year = new Date().getFullYear();
+  const serpQuery = `${rewrittenTopic} business news ${year}`;
 
   try {
     const url = `https://serpapi.com/search.json?q=${
@@ -130,10 +132,9 @@ async function rankSignalsByImpact(sources) {
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "user",
-        content: `
+    messages: [{
+      role: "user",
+      content: `
 Rank the following news headlines by expected BUSINESS IMPACT
 over the next six months (highest impact first).
 
@@ -141,8 +142,7 @@ Return ONLY a list of numbers in order.
 
 ${list}
 `
-      }
-    ],
+    }],
     temperature: 0
   });
 
@@ -152,7 +152,6 @@ ${list}
 
   const ranked = [];
   order.forEach(i => sources[i] && ranked.push(sources[i]));
-
   return ranked.length ? ranked : sources;
 }
 
@@ -199,12 +198,10 @@ Rules:
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
 
-  // Basic guard
   if (topic.length < 3) {
     return res.json({ report: "Please enter a clearer topic." });
   }
 
-  // Semantic validation
   const ok = await isClearTopic(topic);
   if (!ok) {
     return res.json({
@@ -213,13 +210,13 @@ app.post("/run", async (req, res) => {
   }
 
   try {
-    // Background rewrite
+    // SERP-doable rewrite (hidden)
     const rewritten = await rewriteForSerp(topic);
 
-    // SERP fetch
+    // Fetch SERP news
     const rawSources = await fetchSerpSources(rewritten);
 
-    // 🔒 Enforce 3–5 source rule
+    // Enforce 3–5 source rule
     if (rawSources.length < 3) {
       return res.json({
         report:
@@ -227,9 +224,9 @@ app.post("/run", async (req, res) => {
       });
     }
 
-    // Rank and cap at 5
-    const rankedSources = await rankSignalsByImpact(rawSources);
-    const finalSources = rankedSources.slice(0, 5);
+    // Rank + cap
+    const ranked = await rankSignalsByImpact(rawSources);
+    const finalSources = ranked.slice(0, 5);
 
     // Generate foresight
     const prediction = await generatePrediction(topic, finalSources);
@@ -257,5 +254,5 @@ app.post("/run", async (req, res) => {
 // ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser (final) running on port", PORT);
+  console.log("🌊 Blue Ocean Browser (SERP-doable, final) running on port", PORT);
 });
