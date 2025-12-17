@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — SERP-Enhanced Foresight Server (FINAL)
+// Blue Ocean Browser — FINAL SERP-GROUNDED FORESIGHT SERVER
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -15,15 +15,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// IMPORTANT: match your working reference
+// IMPORTANT: matches your working reference
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 // ------------------------------------------------------------
-// Utility — relative time label
+// Utility — relative freshness label
 // ------------------------------------------------------------
 function relativeTime(dateStr) {
   if (!dateStr) return "recent";
   const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "recent";
   const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
   if (diff <= 1) return "today";
   if (diff <= 7) return `${diff} days ago`;
@@ -31,22 +32,25 @@ function relativeTime(dateStr) {
 }
 
 // ------------------------------------------------------------
-// Step 2 — Semantic clarity check
+// Step 2 — Semantic clarity check (reject nonsense)
 // ------------------------------------------------------------
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Is the following text a meaningful topic or question a human would ask?
+    messages: [
+      {
+        role: "user",
+        content: `
+Is the following text a meaningful topic or question that a human would ask?
 Reply ONLY YES or NO.
 
 "${topic}"
 `
-    }],
+      }
+    ],
     temperature: 0
   });
+
   return out.choices[0].message.content.trim() === "YES";
 }
 
@@ -56,9 +60,10 @@ Reply ONLY YES or NO.
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+    messages: [
+      {
+        role: "user",
+        content: `
 Rewrite the input into a short, business-news-searchable phrase.
 
 Rules:
@@ -70,14 +75,16 @@ Rules:
 Input:
 "${topic}"
 `
-    }],
+      }
+    ],
     temperature: 0
   });
+
   return out.choices[0].message.content.trim();
 }
 
 // ------------------------------------------------------------
-// SERP NEWS Context — reference-aligned
+// Step 4 — SERP NEWS Context (reference-aligned)
 // ------------------------------------------------------------
 async function fetchSerpSources(rewrittenTopic) {
   let sources = [];
@@ -112,7 +119,7 @@ async function fetchSerpSources(rewrittenTopic) {
 }
 
 // ------------------------------------------------------------
-// Step 4 — Rank signals by business impact (AI-assisted)
+// Step 5 — Rank signals by business impact
 // ------------------------------------------------------------
 async function rankSignalsByImpact(sources) {
   if (!sources.length) return sources;
@@ -123,17 +130,19 @@ async function rankSignalsByImpact(sources) {
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+    messages: [
+      {
+        role: "user",
+        content: `
 Rank the following news headlines by expected BUSINESS IMPACT
 over the next six months (highest impact first).
 
-Only return a list of numbers in order.
+Return ONLY a list of numbers in order.
 
 ${list}
 `
-    }],
+      }
+    ],
     temperature: 0
   });
 
@@ -144,12 +153,11 @@ ${list}
   const ranked = [];
   order.forEach(i => sources[i] && ranked.push(sources[i]));
 
-  // fallback if ranking fails
   return ranked.length ? ranked : sources;
 }
 
 // ------------------------------------------------------------
-// Step 5 — Generate foresight using ranked signals
+// Step 6 — Generate foresight using ranked sources
 // ------------------------------------------------------------
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -170,7 +178,7 @@ Write a realistic six-month outlook that is clearly derived
 from these signals.
 
 Rules:
-- Reference concrete developments
+- Reference concrete developments from the news
 - No hype, no certainty claims
 - Neutral, analytical tone
 - 3–5 short paragraphs
@@ -191,10 +199,12 @@ Rules:
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
 
+  // Basic guard
   if (topic.length < 3) {
     return res.json({ report: "Please enter a clearer topic." });
   }
 
+  // Semantic validation
   const ok = await isClearTopic(topic);
   if (!ok) {
     return res.json({
@@ -203,21 +213,30 @@ app.post("/run", async (req, res) => {
   }
 
   try {
+    // Background rewrite
     const rewritten = await rewriteForSerp(topic);
+
+    // SERP fetch
     const rawSources = await fetchSerpSources(rewritten);
 
-    if (!rawSources.length) {
+    // 🔒 Enforce 3–5 source rule
+    if (rawSources.length < 3) {
       return res.json({
-        report: "No verified recent business news was found for this topic."
+        report:
+          "Fewer than three verified business news sources were found for this topic. Please try a more specific or timely query."
       });
     }
 
+    // Rank and cap at 5
     const rankedSources = await rankSignalsByImpact(rawSources);
-    const prediction = await generatePrediction(topic, rankedSources);
+    const finalSources = rankedSources.slice(0, 5);
+
+    // Generate foresight
+    const prediction = await generatePrediction(topic, finalSources);
 
     // Build visible report
     let reportText = "Current Signals (Ranked by Business Impact)\n";
-    rankedSources.slice(0, 5).forEach(s => {
+    finalSources.forEach(s => {
       reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
       if (s.link) reportText += `  ${s.link}\n`;
     });
@@ -238,5 +257,5 @@ app.post("/run", async (req, res) => {
 // ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser (SERP-enhanced) running on", PORT);
+  console.log("🌊 Blue Ocean Browser (final) running on port", PORT);
 });
