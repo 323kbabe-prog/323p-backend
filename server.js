@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — Reference-Aligned Foresight Server
+// Blue Ocean Browser — SERP-Enhanced Foresight Server (FINAL)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -15,7 +15,20 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// IMPORTANT: match your working reference
 const SERP_KEY = process.env.SERPAPI_KEY || null;
+
+// ------------------------------------------------------------
+// Utility — relative time label
+// ------------------------------------------------------------
+function relativeTime(dateStr) {
+  if (!dateStr) return "recent";
+  const d = new Date(dateStr);
+  const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (diff <= 1) return "today";
+  if (diff <= 7) return `${diff} days ago`;
+  return "recent";
+}
 
 // ------------------------------------------------------------
 // Step 2 — Semantic clarity check
@@ -38,7 +51,7 @@ Reply ONLY YES or NO.
 }
 
 // ------------------------------------------------------------
-// Step 3 — Background rewrite (news-searchable)
+// Step 3 — Background rewrite (SERP-aware, news tone)
 // ------------------------------------------------------------
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
@@ -47,11 +60,12 @@ async function rewriteForSerp(topic) {
       role: "user",
       content: `
 Rewrite the input into a short, business-news-searchable phrase.
+
 Rules:
-- Neutral
-- No opinion
+- Neutral, journalistic tone
+- Business / policy / workforce focus
 - 3–6 words
-- Suitable for Google News headlines
+- No opinions
 
 Input:
 "${topic}"
@@ -63,61 +77,103 @@ Input:
 }
 
 // ------------------------------------------------------------
-// SERP NEWS Context — SAME AS WORKING REFERENCE
+// SERP NEWS Context — reference-aligned
 // ------------------------------------------------------------
-async function fetchSerpContext(rewrittenTopic) {
-  let serpContext = "No verified data.";
+async function fetchSerpSources(rewrittenTopic) {
+  let sources = [];
 
-  if (!SERP_KEY) return serpContext;
+  if (!SERP_KEY) return sources;
 
   const serpQuery = `${rewrittenTopic} business news ${new Date().getFullYear()}`;
 
   try {
     const url = `https://serpapi.com/search.json?q=${
       encodeURIComponent(serpQuery)
-    }&tbm=nws&num=5&api_key=${SERP_KEY}`;
+    }&tbm=nws&num=8&api_key=${SERP_KEY}`;
 
     const r = await fetch(url);
     const j = await r.json();
 
-    const titles = (j.news_results || [])
-      .map(x => x.title)
+    sources = (j.news_results || [])
       .filter(Boolean)
-      .slice(0, 5)
-      .join(" | ");
-
-    if (titles) serpContext = titles;
+      .map(x => ({
+        title: x.title || "",
+        source: x.source || "Unknown",
+        link: x.link || "",
+        date: x.date || "",
+        snippet: x.snippet || ""
+      }));
 
   } catch (e) {
     console.log("SERP NEWS FAIL:", e.message);
   }
 
-  return serpContext;
+  return sources;
 }
 
 // ------------------------------------------------------------
-// Step 4 — Foresight generation (grounded, tolerant)
+// Step 4 — Rank signals by business impact (AI-assisted)
 // ------------------------------------------------------------
-async function generateForesight(topic, serpContext) {
+async function rankSignalsByImpact(sources) {
+  if (!sources.length) return sources;
+
+  const list = sources.map(
+    (s, i) => `${i + 1}. ${s.title} — ${s.source}`
+  ).join("\n");
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Rank the following news headlines by expected BUSINESS IMPACT
+over the next six months (highest impact first).
+
+Only return a list of numbers in order.
+
+${list}
+`
+    }],
+    temperature: 0
+  });
+
+  const order = out.choices[0].message.content
+    .match(/\d+/g)
+    ?.map(n => parseInt(n, 10) - 1) || [];
+
+  const ranked = [];
+  order.forEach(i => sources[i] && ranked.push(sources[i]));
+
+  // fallback if ranking fails
+  return ranked.length ? ranked : sources;
+}
+
+// ------------------------------------------------------------
+// Step 5 — Generate foresight using ranked signals
+// ------------------------------------------------------------
+async function generatePrediction(topic, sources) {
+  const signalText = sources.map(s =>
+    `• ${s.title} — ${s.source}`
+  ).join("\n");
+
   const prompt = `
 You are an AI foresight analyst.
 
 Topic:
 ${topic}
 
-Recent business news signals:
-${serpContext}
+Recent high-impact business news:
+${signalText}
 
 Task:
-Write a realistic six-month outlook that reflects
-what the news signals suggest.
+Write a realistic six-month outlook that is clearly derived
+from these signals.
 
 Rules:
-- Use the news signals as grounding
-- If signals are thin, be cautious, not generic
-- No hype, no certainty
-- 3–5 short paragraphs
+- Reference concrete developments
+- No hype, no certainty claims
 - Neutral, analytical tone
+- 3–5 short paragraphs
 `;
 
   const out = await openai.chat.completions.create({
@@ -148,21 +204,31 @@ app.post("/run", async (req, res) => {
 
   try {
     const rewritten = await rewriteForSerp(topic);
-    const serpContext = await fetchSerpContext(rewritten);
-    const report = await generateForesight(topic, serpContext);
+    const rawSources = await fetchSerpSources(rewritten);
 
-    let reportText = "Current Signals (Business News)\n";
-    reportText += serpContext === "No verified data."
-      ? "• No strong recent headlines were detected.\n\n"
-      : serpContext.split(" | ").map(x => `• ${x}`).join("\n") + "\n\n";
+    if (!rawSources.length) {
+      return res.json({
+        report: "No verified recent business news was found for this topic."
+      });
+    }
 
-    reportText += "Six-Month Outlook\n";
-    reportText += report;
+    const rankedSources = await rankSignalsByImpact(rawSources);
+    const prediction = await generatePrediction(topic, rankedSources);
+
+    // Build visible report
+    let reportText = "Current Signals (Ranked by Business Impact)\n";
+    rankedSources.slice(0, 5).forEach(s => {
+      reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
+      if (s.link) reportText += `  ${s.link}\n`;
+    });
+
+    reportText += "\nSix-Month Outlook\n";
+    reportText += prediction;
 
     res.json({ report: reportText });
 
   } catch (err) {
-    console.log("RUN ERROR:", err);
+    console.error("RUN ERROR:", err);
     res.json({
       report: "The system is temporarily unavailable."
     });
@@ -172,5 +238,5 @@ app.post("/run", async (req, res) => {
 // ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser (reference-aligned) running on", PORT);
+  console.log("🌊 Blue Ocean Browser (SERP-enhanced) running on", PORT);
 });
