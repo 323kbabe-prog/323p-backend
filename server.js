@@ -1,215 +1,168 @@
 //////////////////////////////////////////////////////////////
-// Rain Man Business Engine — CLEAN VERSION + YOUTUBE ENGINE
-// + ADDED /run ENDPOINT FOR NEW UI
+// Blue Ocean Browser — SERP-GROUNDED FORESIGHT SERVER
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
-const { createServer } = require("http");
-const { Server } = require("socket.io");
-const path = require("path");
-const OpenAI = require("openai");
 const cors = require("cors");
-const fs = require("fs");
 const fetch = require("node-fetch");
+const OpenAI = require("openai");
 
 const app = express();
-app.use(cors({ origin: "*" }));
+app.use(cors());
 app.use(express.json());
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-console.log("🚀 Rain Man Business Engine Started");
+const SERP_KEY = process.env.SERP_KEY;
 
-//////////////////////////////////////////////////////////////
-// 🔹 NEW UNIFIED ENDPOINT FOR BLUE OCEAN UI
-//////////////////////////////////////////////////////////////
+// ---------------------------------
+// STEP 2 — Semantic clarity check
+// ---------------------------------
+async function isClearTopic(topic) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Is the following text a meaningful topic or question a human would ask?
+Reply ONLY YES or NO.
+
+"${topic}"
+`
+    }],
+    temperature: 0
+  });
+
+  return out.choices[0].message.content.trim() === "YES";
+}
+
+// ---------------------------------
+// STEP 4 — Fetch SERP news (7 days)
+// ---------------------------------
+async function fetchSerpSignals(topic) {
+  if (!SERP_KEY) return [];
+
+  try {
+    const url =
+      `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(topic)}&api_key=${SERP_KEY}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.news_results) return [];
+
+    return data.news_results.slice(0, 5).map(n => ({
+      title: n.title,
+      source: n.source,
+      snippet: n.snippet || ""
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------
+// STEP 5 — Compress SERP signals
+// ---------------------------------
+async function summarizeSignals(signals) {
+  if (signals.length === 0) {
+    return "No strong recent news signals were found. Use general market context.";
+  }
+
+  const text = signals.map(s =>
+    `• ${s.title} (${s.source}) — ${s.snippet}`
+  ).join("\n");
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Summarize the following recent news signals into a concise brief
+that captures what is currently happening.
+
+${text}
+`
+    }],
+    temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+// ---------------------------------
+// STEP 6 — 6-month foresight report
+// ---------------------------------
+async function generateFutureReport(topic, signalBrief) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are an AI foresight analyst.
+
+Topic:
+${topic}
+
+Recent real-world signals (past 7 days):
+${signalBrief}
+
+Task:
+Write a clear, realistic report describing how this topic is
+likely to evolve over the next six months.
+
+Rules:
+- Base predictions directly on the signals above
+- Reference concrete developments (policies, hiring, products, education, investment)
+- No hype, no certainty claims
+- Neutral, analytical tone
+- 3–5 short paragraphs
+`
+    }],
+    temperature: 0.4
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+// ---------------------------------
+// MAIN /run ENDPOINT
+// ---------------------------------
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
 
   if (topic.length < 3) {
     return res.json({
-      report: "Please enter a clearer topic.",
-      audio: ""
+      report: "Please enter a clearer topic."
+    });
+  }
+
+  const ok = await isClearTopic(topic);
+  if (!ok) {
+    return res.json({
+      report: "That doesn’t look like a meaningful topic. Try a short phrase or question."
     });
   }
 
   try {
-    // 1. Background rewrite (silent)
-    const rewriteOut = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: `Rewrite into one clear strategic directive:\n${topic}`
-      }],
-      temperature: 0.2
-    });
+    const signals = await fetchSerpSignals(topic);
+    const signalBrief = await summarizeSignals(signals);
+    const report = await generateFutureReport(topic, signalBrief);
 
-    const rewrite = rewriteOut.choices[0].message.content.trim();
-
-    // 2. Generate future report (simple, stable)
-    const futureOut = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: `
-You are an AI foresight system.
-
-Directive:
-${rewrite}
-
-Write a calm, realistic report describing the world
-six months from now if trends continue.
-
-Rules:
-- Neutral tone
-- 3–5 short paragraphs
-- Focus on everyday impact
-`
-      }],
-      temperature: 0.4
-    });
-
-    const report = futureOut.choices[0].message.content.trim();
-
-    res.json({
-      report,
-      audio: "" // audio added later
-    });
+    res.json({ report });
 
   } catch (err) {
-    console.error("RUN ERROR:", err);
+    console.error(err);
     res.json({
-      report: "The system is temporarily unavailable.",
-      audio: ""
+      report: "The system is temporarily unavailable."
     });
   }
 });
 
-//////////////////////////////////////////////////////////////
-// INPUT VALIDATION (OLD SYSTEM)
-//////////////////////////////////////////////////////////////
-app.post("/api/validate", async (req, res) => {
-  const text = (req.body.text || "").trim();
-  if (text.length < 3) return res.json({ valid: false });
-  if (text.split(/\s+/).length === 1) {
-    if (text.length < 4 || !/^[a-zA-Z]+$/.test(text)) {
-      return res.json({ valid: false });
-    }
-  }
-  const prompt = `
-Determine if this text is meaningful or nonsense.
-Return ONLY VALID or NONSENSE.
-"${text}"
-`;
-  try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0
-    });
-    res.json({
-      valid: out.choices[0].message.content.trim().toUpperCase() === "VALID"
-    });
-  } catch {
-    res.json({ valid: true });
-  }
-});
-
-//////////////////////////////////////////////////////////////
-// EXECUTIVE REWRITE ENGINE (OLD)
-//////////////////////////////////////////////////////////////
-app.post("/api/rewrite", async (req, res) => {
-  let { query } = req.body;
-  query = (query || "").trim();
-  if (!query) return res.json({ rewritten: "" });
-
-  const prompt = `
-Rewrite the user's text into one concise, strategic directive.
-Rules:
-- ALWAYS rewrite.
-- NEVER answer.
-- EXACTLY 1 sentence.
-- No filler.
-- Executive tone.
-User:
-${query}
-Rewritten:
-`;
-
-  try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2
-    });
-
-    let rewritten = out.choices[0].message.content
-      .replace(/["“”‘’]/g, "")
-      .trim();
-
-    rewritten = rewritten.split(".")[0] + ".";
-    res.json({ rewritten });
-  } catch {
-    res.json({ rewritten: query });
-  }
-});
-
-//////////////////////////////////////////////////////////////
-// VIEW / ENTER / NEXT COUNTERS (UNCHANGED)
-//////////////////////////////////////////////////////////////
-const DATA_DIR = "/data";
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
-
-function readJSON(file, def) {
-  try { return JSON.parse(fs.readFileSync(file, "utf8")); }
-  catch { return def; }
-}
-function writeJSON(file, v) {
-  fs.writeFileSync(file, JSON.stringify(v, null, 2));
-}
-
-app.get("/api/views", (req, res) => {
-  const f = `${DATA_DIR}/views.json`;
-  const v = readJSON(f, { total: 0 });
-  v.total++;
-  writeJSON(f, v);
-  res.json(v);
-});
-
-app.post("/api/enter", (req, res) => {
-  const f = `${DATA_DIR}/enter.json`;
-  const v = readJSON(f, { total: 0 });
-  v.total++;
-  writeJSON(f, v);
-  res.json(v);
-});
-
-app.post("/api/next", (req, res) => {
-  const f = `${DATA_DIR}/next.json`;
-  const v = readJSON(f, { total: 0 });
-  v.total++;
-  writeJSON(f, v);
-  res.json(v);
-});
-
-//////////////////////////////////////////////////////////////
-// SOCKET.IO (UNCHANGED)
-//////////////////////////////////////////////////////////////
-const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
-
-io.on("connection", socket => {
-  console.log("Socket connected");
-});
-
-//////////////////////////////////////////////////////////////
-// STATIC HOSTING (UNCHANGED)
-//////////////////////////////////////////////////////////////
-app.use(express.static(path.join(__dirname, "public")));
-
+// ---------------------------------
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log("🔥 Rain Man Engine running on", PORT);
+app.listen(PORT, () => {
+  console.log("🌊 Blue Ocean Browser (SERP-grounded) running on", PORT);
 });
