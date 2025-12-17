@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — SERP-Sourced Foresight Server
+// Blue Ocean Browser — SERP-REQUIRED FORESIGHT SERVER
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -15,7 +15,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const SERP_KEY = process.env.SERP_KEY || null;
+const SERP_KEY = process.env.SERP_KEY;
 
 // ------------------------------------------------------------
 // Step 2 — Semantic clarity check (reject nonsense)
@@ -27,7 +27,7 @@ async function isClearTopic(topic) {
       {
         role: "user",
         content: `
-Is the following text a meaningful topic or question a human would ask?
+Is the following text a meaningful topic or question that a human would ask?
 Reply ONLY YES or NO.
 
 "${topic}"
@@ -41,43 +41,42 @@ Reply ONLY YES or NO.
 }
 
 // ------------------------------------------------------------
-// Step 4 — Fetch SERP sources (Google News, last ~7 days)
+// SERP NEWS Context — REQUIRED (no fallback)
 // ------------------------------------------------------------
 async function fetchSerpSources(topic) {
-  if (!SERP_KEY) return [];
+  if (!SERP_KEY) {
+    throw new Error("SERP_KEY is missing");
+  }
 
-  try {
-    const url =
-      `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(topic)}&api_key=${SERP_KEY}`;
+  const year = new Date().getFullYear();
+  const serpQuery = `${topic} business news ${year}`;
 
-    const res = await fetch(url);
-    const data = await res.json();
+  const url = `https://serpapi.com/search.json?q=${
+    encodeURIComponent(serpQuery)
+  }&tbm=nws&num=5&api_key=${SERP_KEY}`;
 
-    if (!data.news_results || !Array.isArray(data.news_results)) {
-      return [];
-    }
+  const r = await fetch(url);
+  const j = await r.json();
 
-    return data.news_results.slice(0, 5).map(n => ({
-      title: n.title || "",
-      source: n.source || "Unknown",
-      snippet: n.snippet || ""
+  const sources = (j.news_results || [])
+    .filter(Boolean)
+    .slice(0, 5)
+    .map(x => ({
+      title: x.title || "",
+      source: x.source || "Unknown",
+      snippet: x.snippet || ""
     }));
 
-  } catch (err) {
-    console.error("SERP ERROR:", err);
-    return [];
-  }
+  return sources;
 }
 
 // ------------------------------------------------------------
-// Step 5 + 6 — Generate foresight using SERP sources
+// Step 5 + 6 — Generate foresight USING SOURCES ONLY
 // ------------------------------------------------------------
 async function generatePrediction(topic, sources) {
-  const sourceBlock = sources.length
-    ? sources.map(s =>
-        `• ${s.title} — ${s.source}${s.snippet ? `: ${s.snippet}` : ""}`
-      ).join("\n")
-    : "No strong recent sources were found. Use general market context.";
+  const sourceBlock = sources.map(s =>
+    `• ${s.title} — ${s.source}${s.snippet ? `: ${s.snippet}` : ""}`
+  ).join("\n");
 
   const prompt = `
 You are an AI foresight analyst.
@@ -85,20 +84,19 @@ You are an AI foresight analyst.
 Topic:
 ${topic}
 
-Recent real-world sources (past 7 days):
+Recent real-world business news (past 7 days):
 ${sourceBlock}
 
 Task:
-1. Identify the key signals implied by the sources above.
-2. Then write a realistic six-month outlook that clearly builds on those signals.
+Write a realistic six-month outlook that is directly derived
+from the news signals above.
 
 Rules:
-- Explicitly reference developments from the sources
-- Do not invent facts beyond the sources
+- Reference the developments in the sources
+- Do NOT invent facts beyond the sources
 - No hype, no certainty claims
 - Neutral, analytical tone
-- 3–5 short paragraphs total
-- Write for general readers
+- 3–5 short paragraphs
 `;
 
   const out = await openai.chat.completions.create({
@@ -124,45 +122,40 @@ app.post("/run", async (req, res) => {
   }
 
   // Semantic validation
-  try {
-    const ok = await isClearTopic(topic);
-    if (!ok) {
-      return res.json({
-        report: "That doesn’t look like a meaningful topic. Try a short phrase or question."
-      });
-    }
-  } catch {
+  const ok = await isClearTopic(topic);
+  if (!ok) {
     return res.json({
-      report: "Unable to validate the topic at this time."
+      report: "That doesn’t look like a meaningful topic. Try a short phrase or question."
     });
   }
 
   try {
     const sources = await fetchSerpSources(topic);
-    const prediction = await generatePrediction(topic, sources);
 
-    // Build visible report
-    let reportText = "";
-
-    if (sources.length) {
-      reportText += "Current Signals (Past 7 Days)\n";
-      sources.forEach(s => {
-        reportText += `• ${s.title} — ${s.source}\n`;
+    // 🔴 SERP REQUIRED — stop if no sources
+    if (!sources.length) {
+      return res.json({
+        report:
+          "No recent business news was found for this topic. Please try a more specific or timely query."
       });
-      reportText += "\n";
-    } else {
-      reportText += "Current Signals\n• No strong recent news signals were found.\n\n";
     }
 
-    reportText += "Six-Month Outlook\n";
+    const prediction = await generatePrediction(topic, sources);
+
+    // Build final report
+    let reportText = "Current Signals (Business News)\n";
+    sources.forEach(s => {
+      reportText += `• ${s.title} — ${s.source}\n`;
+    });
+    reportText += "\nSix-Month Outlook\n";
     reportText += prediction;
 
     res.json({ report: reportText });
 
   } catch (err) {
-    console.error("RUN ERROR:", err);
+    console.error("RUN ERROR:", err.message);
     res.json({
-      report: "The system is temporarily unavailable."
+      report: "Unable to retrieve verified news sources at this time."
     });
   }
 });
@@ -170,5 +163,5 @@ app.post("/run", async (req, res) => {
 // ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser (SERP-sourced) running on port", PORT);
+  console.log("🌊 Blue Ocean Browser (SERP REQUIRED) running on port", PORT);
 });
