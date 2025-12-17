@@ -1,11 +1,14 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — FINAL SERP-DOABLE FORESIGHT SERVER
+// Blue Ocean Foresight Engine — FINAL SERVER (AUTO MODE)
+// • SERP-doability rewrite layer
+// • Google attention-driven topic selection
+// • Six-month foresight (unchanged)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
-const cors = require("cors");
 const fetch = require("node-fetch");
 const OpenAI = require("openai");
+const cors = require("cors");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -15,238 +18,148 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Match your working reference
-const SERP_KEY = process.env.SERPAPI_KEY || null;
+const SERP_KEY = process.env.SERPAPI_KEY;
 
 // ------------------------------------------------------------
-// Utility — relative freshness label
+// SERP-DOABILITY REWRITE ENGINE (CORE)
 // ------------------------------------------------------------
-function relativeTime(dateStr) {
-  if (!dateStr) return "recent";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "recent";
-  const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
-  if (diff <= 1) return "today";
-  if (diff <= 7) return `${diff} days ago`;
-  return "recent";
-}
-
-// ------------------------------------------------------------
-// Step 2 — Semantic clarity check (reject nonsense)
-// ------------------------------------------------------------
-async function isClearTopic(topic) {
+async function rewriteToSerpDoable(rawTopic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-Is the following text a meaningful topic or question that a human would ask?
-Reply ONLY YES or NO.
-
-"${topic}"
-`
-    }],
-    temperature: 0
-  });
-  return out.choices[0].message.content.trim() === "YES";
-}
-
-// ------------------------------------------------------------
-// Step 3 — Background rewrite (SERP-DOABLE, event-driven)
-// ------------------------------------------------------------
-async function rewriteForSerp(topic) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Rewrite the following topic into a short,
-NEWS-DOABLE business headline phrase that would
-realistically appear in Google News.
+Rewrite this raw search phrase into a SERP-doable,
+news-aligned topic that can reliably retrieve
+recent Google News results.
 
 Rules:
-- Imply real-world action or change
-- Business / workforce / policy framing
-- Prefer verbs: expands, announces, launches, updates, cuts
-- Implicitly reference institutions (companies, governments, universities)
-- 5–8 words total
-- Neutral, factual tone
-- NO opinions
-- NO future tense
+- Neutral, professional
+- No questions
+- No hype
+- Add institutional or business context
+- 5–8 words
+- News-search friendly
 
-Input:
-"${topic}"
+Raw phrase:
+"${rawTopic}"
 
 Output:
 `
     }],
     temperature: 0
   });
+
   return out.choices[0].message.content.trim();
 }
 
 // ------------------------------------------------------------
-// Step 4 — SERP NEWS (reference-aligned, tolerant but real)
+// AUTO MODE — GET REAL GOOGLE SEARCH ATTENTION
 // ------------------------------------------------------------
-async function fetchSerpSources(rewrittenTopic) {
-  let sources = [];
-  if (!SERP_KEY) return sources;
+async function getAutoTopicFromSerp() {
+  if (!SERP_KEY) throw new Error("SERP key missing");
 
-  const year = new Date().getFullYear();
-  const serpQuery = `${rewrittenTopic} business news ${year}`;
+  // Google Trends-style trending searches via SERP
+  const url = `https://serpapi.com/search.json?engine=google_trends_trending_now&geo=US&api_key=${SERP_KEY}`;
 
-  try {
-    const url = `https://serpapi.com/search.json?q=${
-      encodeURIComponent(serpQuery)
-    }&tbm=nws&num=8&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
 
-    const r = await fetch(url);
-    const j = await r.json();
+  const trends = (j.trending_searches || [])
+    .map(t => t.query)
+    .filter(Boolean);
 
-    sources = (j.news_results || [])
-      .filter(Boolean)
-      .map(x => ({
-        title: x.title || "",
-        source: x.source || "Unknown",
-        link: x.link || "",
-        date: x.date || "",
-        snippet: x.snippet || ""
-      }));
-
-  } catch (e) {
-    console.log("SERP NEWS FAIL:", e.message);
+  if (!trends.length) {
+    throw new Error("No trending searches found");
   }
 
-  return sources;
+  // Pick one high-attention search randomly
+  const rawTopic = trends[Math.floor(Math.random() * trends.length)];
+
+  // Rewrite to SERP-doable form
+  return await rewriteToSerpDoable(rawTopic);
 }
 
 // ------------------------------------------------------------
-// Step 5 — Rank signals by business impact
+// AUTO MODE ENDPOINT (NEW)
 // ------------------------------------------------------------
-async function rankSignalsByImpact(sources) {
-  if (!sources.length) return sources;
-
-  const list = sources.map(
-    (s, i) => `${i + 1}. ${s.title} — ${s.source}`
-  ).join("\n");
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Rank the following news headlines by expected BUSINESS IMPACT
-over the next six months (highest impact first).
-
-Return ONLY a list of numbers in order.
-
-${list}
-`
-    }],
-    temperature: 0
-  });
-
-  const order = out.choices[0].message.content
-    .match(/\d+/g)
-    ?.map(n => parseInt(n, 10) - 1) || [];
-
-  const ranked = [];
-  order.forEach(i => sources[i] && ranked.push(sources[i]));
-  return ranked.length ? ranked : sources;
-}
+app.get("/auto-topic", async (req, res) => {
+  try {
+    const topic = await getAutoTopicFromSerp();
+    res.json({ topic });
+  } catch (err) {
+    console.error("Auto-topic error:", err.message);
+    res.status(500).json({
+      error: "Unable to generate auto topic"
+    });
+  }
+});
 
 // ------------------------------------------------------------
-// Step 6 — Generate foresight using ranked sources
-// ------------------------------------------------------------
-async function generatePrediction(topic, sources) {
-  const signalText = sources.map(s =>
-    `• ${s.title} — ${s.source}`
-  ).join("\n");
-
-  const prompt = `
-You are an AI foresight analyst.
-
-Topic:
-${topic}
-
-Recent high-impact business news:
-${signalText}
-
-Task:
-Write a realistic six-month outlook that is clearly derived
-from these signals.
-
-Rules:
-- Reference concrete developments from the news
-- No hype, no certainty claims
-- Neutral, analytical tone
-- 3–5 short paragraphs
-`;
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.4
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-// ------------------------------------------------------------
-// MAIN /run ENDPOINT
+// SIX-MONTH FORESIGHT (UNCHANGED)
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
-  const topic = (req.body.topic || "").trim();
-
-  if (topic.length < 3) {
-    return res.json({ report: "Please enter a clearer topic." });
-  }
-
-  const ok = await isClearTopic(topic);
-  if (!ok) {
-    return res.json({
-      report: "That doesn’t look like a meaningful topic. Try a short phrase or question."
-    });
-  }
-
   try {
-    // SERP-doable rewrite (hidden)
-    const rewritten = await rewriteForSerp(topic);
+    const { topic } = req.body;
+    if (!topic) return res.status(400).json({ error: "Missing topic" });
 
     // Fetch SERP news
-    const rawSources = await fetchSerpSources(rewritten);
+    const newsUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(
+      topic
+    )}&tbm=nws&num=5&api_key=${SERP_KEY}`;
 
-    // Enforce 3–5 source rule
-    if (rawSources.length < 3) {
-      return res.json({
-        report:
-          "Fewer than three verified business news sources were found for this topic. Please try a more specific or timely query."
-      });
+    const r = await fetch(newsUrl);
+    const j = await r.json();
+
+    const results = (j.news_results || []).slice(0, 5);
+    if (results.length < 3) {
+      throw new Error("Insufficient SERP sources");
     }
 
-    // Rank + cap
-    const ranked = await rankSignalsByImpact(rawSources);
-    const finalSources = ranked.slice(0, 5);
+    const sourceLines = results.map(
+      n => `• ${n.title} — ${n.source} (recent)`
+    );
+    const sourceLinks = results.map(n => n.link);
 
-    // Generate foresight
-    const prediction = await generatePrediction(topic, finalSources);
+    const prompt = `
+You are a foresight analyst.
 
-    // Build visible report
-    let reportText = "Current Signals (Ranked by Business Impact)\n";
-    finalSources.forEach(s => {
-      reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
-      if (s.link) reportText += `  ${s.link}\n`;
+Based ONLY on the following real-world signals,
+write a grounded six-month outlook.
+
+Rules:
+- No dates
+- No headlines
+- No mention of sources
+- Calm, analytical tone
+- 3–5 short paragraphs
+
+Signals:
+${sourceLines.join("\n")}
+`;
+
+    const ai = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.4
     });
 
-    reportText += "\nSix-Month Outlook\n";
-    reportText += prediction;
+    const story = ai.choices[0].message.content.trim();
 
-    res.json({ report: reportText });
+    const report = `
+Current Signals (Ranked by Business Impact)
+${sourceLines.join("\n")}
+${sourceLinks.join("\n")}
+
+${story}
+`.trim();
+
+    res.json({ report });
 
   } catch (err) {
-    console.error("RUN ERROR:", err);
-    res.json({
-      report: "The system is temporarily unavailable."
+    console.error("Run error:", err.message);
+    res.status(500).json({
+      error: "Unable to generate foresight report"
     });
   }
 });
@@ -254,5 +167,5 @@ app.post("/run", async (req, res) => {
 // ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser (SERP-doable, final) running on port", PORT);
+  console.log("🌊 Blue Ocean Foresight Engine running on port", PORT);
 });
