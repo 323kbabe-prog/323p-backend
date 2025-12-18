@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — REAL AI GD-J (STATELESS)
+// Blue Ocean Browser — REAL AI GD-J (STATELESS, DIVERSE)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -181,7 +181,7 @@ Rules:
 }
 
 /* ------------------------------------------------------------
-   GD-J — REAL AI TOPIC DECIDER (STATELESS)
+   GD-J — REAL AI TOPIC DECIDER (STATELESS, DIVERSE)
 ------------------------------------------------------------ */
 async function generateNextTopic(lastTopic = "") {
   const out = await openai.chat.completions.create({
@@ -207,12 +207,18 @@ Task:
 Generate ONE realistic Google-News-searchable topic
 you would want to explore next.
 
-Rules:
+Diversity rules (CRITICAL):
+- Do NOT reuse the same main verb as the last topic
+- Do NOT reuse the same primary industry noun
+- Change the angle (e.g. tools, hiring, contracts, platforms, policy, creators, travel behavior)
+- Rotate naturally between interests over time
+
+Hard rules:
 - 6–12 words
 - Business / industry / culture framing
 - AI-related
 - Relevant to the next 3–6 months
-- Not too similar to:
+- Not a paraphrase of:
 "${lastTopic}"
 - Output ONLY the topic text
 `
@@ -307,5 +313,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — REAL AI GD-J running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — REAL AI GD-J (diverse) running on port", PORT);
 });
