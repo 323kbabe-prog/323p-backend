@@ -156,12 +156,21 @@ ${list}
 }
 
 // ------------------------------------------------------------
-// Step 6 — Generate foresight using ranked sources
+// Step 6 — Generate foresight using ranked sources (ANGLE-AWARE)
 // ------------------------------------------------------------
-async function generatePrediction(topic, sources) {
+async function generatePrediction(topic, sources, angleLabel) {
   const signalText = sources.map(s =>
     `• ${s.title} — ${s.source}`
   ).join("\n");
+
+  const angleInstruction = angleLabel
+    ? `
+Focus ONLY on this perspective:
+${angleLabel}
+
+Do not repeat other perspectives.
+`
+    : "";
 
   const prompt = `
 You are an AI foresight analyst.
@@ -169,12 +178,17 @@ You are an AI foresight analyst.
 Topic:
 ${topic}
 
+Perspective:
+${angleLabel || "General"}
+
 Recent high-impact business news:
 ${signalText}
 
 Task:
 Write a realistic six-month outlook that is clearly derived
 from these signals.
+
+${angleInstruction}
 
 Rules:
 - Reference concrete developments from the news
@@ -197,6 +211,7 @@ Rules:
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
+  const angleLabel = req.body.angleLabel || "";
 
   if (topic.length < 3) {
     return res.json({ report: "Please enter a clearer topic." });
@@ -228,8 +243,12 @@ app.post("/run", async (req, res) => {
     const ranked = await rankSignalsByImpact(rawSources);
     const finalSources = ranked.slice(0, 5);
 
-    // Generate foresight
-    const prediction = await generatePrediction(topic, finalSources);
+    // Generate foresight (angle-aware)
+    const prediction = await generatePrediction(
+      topic,
+      finalSources,
+      angleLabel
+    );
 
     // Build visible report
     let reportText = "Current Signals (Ranked by Business Impact)\n";
