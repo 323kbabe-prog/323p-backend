@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — FINAL SERP-DOABLE FORESIGHT SERVER
+// Blue Ocean Browser — REAL AI GD-J (STATELESS)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -15,12 +15,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Match your working reference
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-// ------------------------------------------------------------
-// Utility — relative freshness label
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   Utility — relative freshness label
+------------------------------------------------------------ */
 function relativeTime(dateStr) {
   if (!dateStr) return "recent";
   const d = new Date(dateStr);
@@ -31,16 +30,17 @@ function relativeTime(dateStr) {
   return "recent";
 }
 
-// ------------------------------------------------------------
-// Step 2 — Semantic clarity check (reject nonsense)
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   STEP 1 — Semantic clarity check
+------------------------------------------------------------ */
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-Is the following text a meaningful topic or question that a human would ask?
+Is the following text a meaningful topic or question
+that a human would realistically search?
 Reply ONLY YES or NO.
 
 "${topic}"
@@ -51,9 +51,9 @@ Reply ONLY YES or NO.
   return out.choices[0].message.content.trim() === "YES";
 }
 
-// ------------------------------------------------------------
-// Step 3 — Background rewrite (SERP-DOABLE, event-driven)
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   STEP 2 — Rewrite into SERP-doable headline
+------------------------------------------------------------ */
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -61,18 +61,15 @@ async function rewriteForSerp(topic) {
       role: "user",
       content: `
 Rewrite the following topic into a short,
-NEWS-DOABLE business headline phrase that would
-realistically appear in Google News.
+NEWS-DOABLE business headline phrase.
 
 Rules:
-- Imply real-world action or change
-- Business / workforce / policy framing
-- Prefer verbs: expands, announces, launches, updates, cuts
-- Implicitly reference institutions (companies, governments, universities)
-- 5–8 words total
+- 5–8 words
 - Neutral, factual tone
-- NO opinions
-- NO future tense
+- Business / industry framing
+- Implies real-world change
+- No opinions
+- No future tense
 
 Input:
 "${topic}"
@@ -85,46 +82,37 @@ Output:
   return out.choices[0].message.content.trim();
 }
 
-// ------------------------------------------------------------
-// Step 4 — SERP NEWS (reference-aligned, tolerant but real)
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   STEP 3 — Fetch SERP News
+------------------------------------------------------------ */
 async function fetchSerpSources(rewrittenTopic) {
-  let sources = [];
-  if (!SERP_KEY) return sources;
+  if (!SERP_KEY) return [];
 
   const year = new Date().getFullYear();
-  const serpQuery = `${rewrittenTopic} business news ${year}`;
+  const q = `${rewrittenTopic} business news ${year}`;
 
   try {
-    const url = `https://serpapi.com/search.json?q=${
-      encodeURIComponent(serpQuery)
-    }&tbm=nws&num=8&api_key=${SERP_KEY}`;
-
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=8&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    sources = (j.news_results || [])
-      .filter(Boolean)
-      .map(x => ({
-        title: x.title || "",
-        source: x.source || "Unknown",
-        link: x.link || "",
-        date: x.date || "",
-        snippet: x.snippet || ""
-      }));
-
-  } catch (e) {
-    console.log("SERP NEWS FAIL:", e.message);
+    return (j.news_results || []).map(x => ({
+      title: x.title || "",
+      source: x.source || "Unknown",
+      link: x.link || "",
+      date: x.date || "",
+      snippet: x.snippet || ""
+    }));
+  } catch {
+    return [];
   }
-
-  return sources;
 }
 
-// ------------------------------------------------------------
-// Step 5 — Rank signals by business impact
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   STEP 4 — Rank signals by business impact
+------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
-  if (!sources.length) return sources;
+  if (sources.length < 2) return sources;
 
   const list = sources.map(
     (s, i) => `${i + 1}. ${s.title} — ${s.source}`
@@ -135,10 +123,9 @@ async function rankSignalsByImpact(sources) {
     messages: [{
       role: "user",
       content: `
-Rank the following news headlines by expected BUSINESS IMPACT
-over the next six months (highest impact first).
-
-Return ONLY a list of numbers in order.
+Rank the following headlines by expected BUSINESS IMPACT
+over the next 3–6 months.
+Return ONLY the ordered list of numbers.
 
 ${list}
 `
@@ -155,104 +142,170 @@ ${list}
   return ranked.length ? ranked : sources;
 }
 
-// ------------------------------------------------------------
-// Step 6 — Generate foresight using ranked sources
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   STEP 5 — Generate foresight
+------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
     `• ${s.title} — ${s.source}`
   ).join("\n");
 
-  const prompt = `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
 You are an AI foresight analyst.
 
 Topic:
 ${topic}
 
-Recent high-impact business news:
+Recent high-impact business signals:
 ${signalText}
 
 Task:
-Write a realistic six-month outlook that is clearly derived
-from these signals.
+Write a realistic 3–6 month outlook
+derived from these signals.
 
 Rules:
-- Reference concrete developments from the news
-- No hype, no certainty claims
 - Neutral, analytical tone
+- No hype, no certainty
+- Reference concrete developments
 - 3–5 short paragraphs
-`;
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
+`
+    }],
     temperature: 0.4
   });
 
   return out.choices[0].message.content.trim();
 }
 
-// ------------------------------------------------------------
-// MAIN /run ENDPOINT
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   GD-J — REAL AI TOPIC DECIDER (STATELESS)
+------------------------------------------------------------ */
+async function generateNextTopic(lastTopic = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are GD-J.
+
+Profile:
+- Age: 23
+- Background: business
+- Thinking style: analytical (GPT-like)
+- Time horizon: 3–6 months
+- Core curiosity: how the world is changing with AI
+- Interests:
+  • companies & markets
+  • music / K-pop / US entertainment
+  • travel
+- Blind spot: small local issues
+
+Task:
+Generate ONE realistic Google-News-searchable topic
+you would want to explore next.
+
+Rules:
+- 6–12 words
+- Business / industry / culture framing
+- AI-related
+- Relevant to the next 3–6 months
+- Not too similar to:
+"${lastTopic}"
+- Output ONLY the topic text
+`
+    }],
+    temperature: 0.6
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+/* ------------------------------------------------------------
+   CORE PIPELINE (shared)
+------------------------------------------------------------ */
+async function runPipeline(topic) {
+  const rewritten = await rewriteForSerp(topic);
+  const rawSources = await fetchSerpSources(rewritten);
+
+  if (rawSources.length < 3) {
+    return {
+      report:
+        "Fewer than three verified business news sources were found. Try another topic."
+    };
+  }
+
+  const ranked = await rankSignalsByImpact(rawSources);
+  const finalSources = ranked.slice(0, 5);
+  const prediction = await generatePrediction(topic, finalSources);
+
+  let reportText = "Current Signals (Ranked by Business Impact)\n";
+  finalSources.forEach(s => {
+    reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
+    if (s.link) reportText += `  ${s.link}\n`;
+  });
+
+  reportText += "\nSix-Month Outlook\n";
+  reportText += prediction;
+
+  return { report: reportText };
+}
+
+/* ------------------------------------------------------------
+   /run — user-supplied topic
+------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
-
   if (topic.length < 3) {
     return res.json({ report: "Please enter a clearer topic." });
   }
 
-  const ok = await isClearTopic(topic);
-  if (!ok) {
+  if (!(await isClearTopic(topic))) {
     return res.json({
-      report: "That doesn’t look like a meaningful topic. Try a short phrase or question."
+      report: "That doesn’t look like a meaningful topic."
     });
   }
 
   try {
-    // SERP-doable rewrite (hidden)
-    const rewritten = await rewriteForSerp(topic);
-
-    // Fetch SERP news
-    const rawSources = await fetchSerpSources(rewritten);
-
-    // Enforce 3–5 source rule
-    if (rawSources.length < 3) {
-      return res.json({
-        report:
-          "Fewer than three verified business news sources were found for this topic. Please try a more specific or timely query."
-      });
-    }
-
-    // Rank + cap
-    const ranked = await rankSignalsByImpact(rawSources);
-    const finalSources = ranked.slice(0, 5);
-
-    // Generate foresight
-    const prediction = await generatePrediction(topic, finalSources);
-
-    // Build visible report
-    let reportText = "Current Signals (Ranked by Business Impact)\n";
-    finalSources.forEach(s => {
-      reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
-      if (s.link) reportText += `  ${s.link}\n`;
-    });
-
-    reportText += "\nSix-Month Outlook\n";
-    reportText += prediction;
-
-    res.json({ report: reportText });
-
-  } catch (err) {
-    console.error("RUN ERROR:", err);
-    res.json({
-      report: "The system is temporarily unavailable."
-    });
+    const result = await runPipeline(topic);
+    res.json(result);
+  } catch {
+    res.json({ report: "System temporarily unavailable." });
   }
 });
 
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   /next — REAL AI GD-J decides next topic
+------------------------------------------------------------ */
+app.post("/next", async (req, res) => {
+  const lastTopic = (req.body.lastTopic || "").trim();
+
+  try {
+    const nextTopic = await generateNextTopic(lastTopic);
+
+    if (!(await isClearTopic(nextTopic))) {
+      return res.json({
+        report: "GD-J could not generate a clear next topic."
+      });
+    }
+
+    const result = await runPipeline(nextTopic);
+    res.json({
+      topic: nextTopic,
+      report: result.report
+    });
+
+  } catch {
+    res.json({ report: "Unable to generate next GD-J topic." });
+  }
+});
+
+/* ------------------------------------------------------------
+   START SERVER
+------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser (SERP-doable, final) running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — REAL AI GD-J running on port", PORT);
 });
