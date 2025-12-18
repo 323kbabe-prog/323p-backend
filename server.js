@@ -32,20 +32,6 @@ function relativeTime(dateStr) {
 }
 
 // ------------------------------------------------------------
-// NEW — Angle-aware SERP modifier
-// ------------------------------------------------------------
-function angleSerpModifier(angleLabel) {
-  const MAP = {
-    "Workforce & Hiring": "hiring workforce jobs layoffs",
-    "Education & Skills": "education skills training certification",
-    "Policy & Regulation": "government policy regulation labor law",
-    "Corporate Strategy": "corporate strategy investment productivity",
-    "Market Structure": "industry market competition ecosystem"
-  };
-  return MAP[angleLabel] || "";
-}
-
-// ------------------------------------------------------------
 // Step 2 — Semantic clarity check (reject nonsense)
 // ------------------------------------------------------------
 async function isClearTopic(topic) {
@@ -100,15 +86,14 @@ Output:
 }
 
 // ------------------------------------------------------------
-// Step 4 — SERP NEWS (ANGLE-AWARE, real separation)
+// Step 4 — SERP NEWS (reference-aligned, tolerant but real)
 // ------------------------------------------------------------
-async function fetchSerpSources(rewrittenTopic, angleLabel) {
+async function fetchSerpSources(rewrittenTopic) {
   let sources = [];
   if (!SERP_KEY) return sources;
 
   const year = new Date().getFullYear();
-  const modifier = angleSerpModifier(angleLabel);
-  const serpQuery = `${rewrittenTopic} ${modifier} business news ${year}`;
+  const serpQuery = `${rewrittenTopic} business news ${year}`;
 
   try {
     const url = `https://serpapi.com/search.json?q=${
@@ -171,83 +156,12 @@ ${list}
 }
 
 // ------------------------------------------------------------
-// Step 6 — Generate foresight using ranked sources (HARD ANGLES)
+// Step 6 — Generate foresight using ranked sources
 // ------------------------------------------------------------
-async function generatePrediction(topic, sources, angleLabel) {
+async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
     `• ${s.title} — ${s.source}`
   ).join("\n");
-
-  const ANGLE_RULES = {
-    "Workforce & Hiring": `
-You may discuss:
-- Hiring patterns
-- Job roles
-- Workforce restructuring
-- Entry-level vs senior roles
-
-You must NOT discuss:
-- Education systems
-- Government policy
-- Corporate investment strategy
-`,
-
-    "Education & Skills": `
-You may discuss:
-- Skills demand
-- Training, certificates, education
-- Reskilling and upskilling
-
-You must NOT discuss:
-- Hiring numbers
-- Unemployment rates
-- Government regulation
-`,
-
-    "Policy & Regulation": `
-You may discuss:
-- Government policy
-- Regulation
-- Labor law
-- Immigration rules
-
-You must NOT discuss:
-- Individual job roles
-- Corporate hiring strategy
-- Education programs
-`,
-
-    "Corporate Strategy": `
-You may discuss:
-- Company decisions
-- Investment
-- Cost cutting
-- AI adoption strategy
-
-You must NOT discuss:
-- Worker sentiment
-- Education systems
-- Public policy
-`,
-
-    "Market Structure": `
-You may discuss:
-- Industry shifts
-- Market concentration
-- Vendor ecosystems
-- Competitive dynamics
-
-You must NOT discuss:
-- Individual job seekers
-- Education pathways
-- Company HR policies
-`
-  };
-
-  const angleInstruction =
-    angleLabel && ANGLE_RULES[angleLabel]
-      ? `Perspective Rules:\n${ANGLE_RULES[angleLabel]}`
-      : "";
 
   const prompt = `
 You are an AI foresight analyst.
@@ -255,17 +169,12 @@ You are an AI foresight analyst.
 Topic:
 ${topic}
 
-Perspective:
-${angleLabel || "General"}
-
 Recent high-impact business news:
 ${signalText}
 
 Task:
 Write a realistic six-month outlook that is clearly derived
 from these signals.
-
-${angleInstruction}
 
 Rules:
 - Reference concrete developments from the news
@@ -288,7 +197,6 @@ Rules:
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
-  const angleLabel = req.body.angleLabel || "";
 
   if (topic.length < 3) {
     return res.json({ report: "Please enter a clearer topic." });
@@ -302,9 +210,13 @@ app.post("/run", async (req, res) => {
   }
 
   try {
+    // SERP-doable rewrite (hidden)
     const rewritten = await rewriteForSerp(topic);
-    const rawSources = await fetchSerpSources(rewritten, angleLabel);
 
+    // Fetch SERP news
+    const rawSources = await fetchSerpSources(rewritten);
+
+    // Enforce 3–5 source rule
     if (rawSources.length < 3) {
       return res.json({
         report:
@@ -312,15 +224,14 @@ app.post("/run", async (req, res) => {
       });
     }
 
+    // Rank + cap
     const ranked = await rankSignalsByImpact(rawSources);
     const finalSources = ranked.slice(0, 5);
 
-    const prediction = await generatePrediction(
-      topic,
-      finalSources,
-      angleLabel
-    );
+    // Generate foresight
+    const prediction = await generatePrediction(topic, finalSources);
 
+    // Build visible report
     let reportText = "Current Signals (Ranked by Business Impact)\n";
     finalSources.forEach(s => {
       reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
