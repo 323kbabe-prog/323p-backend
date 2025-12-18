@@ -32,6 +32,20 @@ function relativeTime(dateStr) {
 }
 
 // ------------------------------------------------------------
+// NEW — Angle-aware SERP modifier
+// ------------------------------------------------------------
+function angleSerpModifier(angleLabel) {
+  const MAP = {
+    "Workforce & Hiring": "hiring workforce jobs layoffs",
+    "Education & Skills": "education skills training certification",
+    "Policy & Regulation": "government policy regulation labor law",
+    "Corporate Strategy": "corporate strategy investment productivity",
+    "Market Structure": "industry market competition ecosystem"
+  };
+  return MAP[angleLabel] || "";
+}
+
+// ------------------------------------------------------------
 // Step 2 — Semantic clarity check (reject nonsense)
 // ------------------------------------------------------------
 async function isClearTopic(topic) {
@@ -86,14 +100,15 @@ Output:
 }
 
 // ------------------------------------------------------------
-// Step 4 — SERP NEWS (reference-aligned, tolerant but real)
+// Step 4 — SERP NEWS (ANGLE-AWARE, real separation)
 // ------------------------------------------------------------
-async function fetchSerpSources(rewrittenTopic) {
+async function fetchSerpSources(rewrittenTopic, angleLabel) {
   let sources = [];
   if (!SERP_KEY) return sources;
 
   const year = new Date().getFullYear();
-  const serpQuery = `${rewrittenTopic} business news ${year}`;
+  const modifier = angleSerpModifier(angleLabel);
+  const serpQuery = `${rewrittenTopic} ${modifier} business news ${year}`;
 
   try {
     const url = `https://serpapi.com/search.json?q=${
@@ -288,7 +303,7 @@ app.post("/run", async (req, res) => {
 
   try {
     const rewritten = await rewriteForSerp(topic);
-    const rawSources = await fetchSerpSources(rewritten);
+    const rawSources = await fetchSerpSources(rewritten, angleLabel);
 
     if (rawSources.length < 3) {
       return res.json({
