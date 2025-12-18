@@ -143,7 +143,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight
+   STEP 5 — Generate foresight (PREDICTIVE + FAILURE MODE)
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -155,26 +155,36 @@ async function generatePrediction(topic, sources) {
     messages: [{
       role: "user",
       content: `
-You are an AI foresight analyst.
+You are an AI foresight system.
 
 Topic:
 ${topic}
 
-Recent high-impact business signals:
+Verified business signals:
 ${signalText}
 
 Task:
-Write a realistic 3–6 month outlook
-derived from these signals.
+1) State what the business reality WILL look like
+   six months from now.
+2) Then state what BREAKS if this forecast is wrong.
 
-Rules:
-- Neutral, analytical tone
-- No hype, no certainty
-- Reference concrete developments
+Rules (STRICT):
+- Use direct future statements (will / will not)
+- No hedging language (no may, could, likely, suggest)
+- No observation of signals — only outcomes
+- No hype or emotion
+- No speculation beyond signal logic
+- Write as if six months have already passed
+
+Output structure (MANDATORY):
+Six-Month Reality:
 - 3–5 short paragraphs
+
+What Breaks If This Forecast Is Wrong:
+- 3–5 short bullet points
 `
     }],
-    temperature: 0.4
+    temperature: 0.3
   });
 
   return out.choices[0].message.content.trim();
@@ -313,5 +323,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — REAL AI GD-J (diverse) running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — REAL AI GD-J running on port", PORT);
 });
