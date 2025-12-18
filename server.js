@@ -32,7 +32,7 @@ function relativeTime(dateStr) {
 }
 
 // ------------------------------------------------------------
-// NEW — Angle-aware SERP modifier
+// Angle-aware SERP modifier
 // ------------------------------------------------------------
 function angleSerpModifier(angleLabel) {
   const MAP = {
@@ -46,7 +46,7 @@ function angleSerpModifier(angleLabel) {
 }
 
 // ------------------------------------------------------------
-// Step 2 — Semantic clarity check (reject nonsense)
+// Semantic clarity check
 // ------------------------------------------------------------
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
@@ -66,7 +66,7 @@ Reply ONLY YES or NO.
 }
 
 // ------------------------------------------------------------
-// Step 3 — Background rewrite (SERP-DOABLE, event-driven)
+// SERP-doable rewrite
 // ------------------------------------------------------------
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
@@ -82,7 +82,7 @@ Rules:
 - Imply real-world action or change
 - Business / workforce / policy framing
 - Prefer verbs: expands, announces, launches, updates, cuts
-- Implicitly reference institutions (companies, governments, universities)
+- Implicitly reference institutions
 - 5–8 words total
 - Neutral, factual tone
 - NO opinions
@@ -100,7 +100,7 @@ Output:
 }
 
 // ------------------------------------------------------------
-// Step 4 — SERP NEWS (ANGLE-AWARE, real separation)
+// SERP NEWS (ANGLE-AWARE)
 // ------------------------------------------------------------
 async function fetchSerpSources(rewrittenTopic, angleLabel) {
   let sources = [];
@@ -136,7 +136,7 @@ async function fetchSerpSources(rewrittenTopic, angleLabel) {
 }
 
 // ------------------------------------------------------------
-// Step 5 — Rank signals by business impact
+// Rank signals by business impact
 // ------------------------------------------------------------
 async function rankSignalsByImpact(sources) {
   if (!sources.length) return sources;
@@ -171,7 +171,7 @@ ${list}
 }
 
 // ------------------------------------------------------------
-// Step 6 — Generate foresight using ranked sources (HARD ANGLES)
+// Generate foresight (HARD ANGLES)
 // ------------------------------------------------------------
 async function generatePrediction(topic, sources, angleLabel) {
   const signalText = sources.map(s =>
@@ -191,7 +191,6 @@ You must NOT discuss:
 - Government policy
 - Corporate investment strategy
 `,
-
     "Education & Skills": `
 You may discuss:
 - Skills demand
@@ -203,7 +202,6 @@ You must NOT discuss:
 - Unemployment rates
 - Government regulation
 `,
-
     "Policy & Regulation": `
 You may discuss:
 - Government policy
@@ -216,7 +214,6 @@ You must NOT discuss:
 - Corporate hiring strategy
 - Education programs
 `,
-
     "Corporate Strategy": `
 You may discuss:
 - Company decisions
@@ -229,7 +226,6 @@ You must NOT discuss:
 - Education systems
 - Public policy
 `,
-
     "Market Structure": `
 You may discuss:
 - Industry shifts
@@ -287,6 +283,13 @@ Rules:
 // MAIN /run ENDPOINT
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
+  // 🚫 HARD NO-CACHE HEADERS (FINAL FIX)
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0"
+  });
+
   const topic = (req.body.topic || "").trim();
   const angleLabel = req.body.angleLabel || "";
 
