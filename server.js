@@ -31,6 +31,35 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
+   REAL STANFORD UNIVERSITY MAJORS (BUSINESS LENSES)
+------------------------------------------------------------ */
+const STANFORD_MAJORS = [
+  "Computer Science",
+  "Economics",
+  "Management Science and Engineering",
+  "Political Science",
+  "Psychology",
+  "Sociology",
+  "Symbolic Systems",
+  "Statistics",
+  "Electrical Engineering",
+  "Biomedical Engineering",
+  "Biology",
+  "Environmental Science",
+  "International Relations",
+  "Communication",
+  "Design",
+  "Education",
+  "Philosophy",
+  "Law"
+];
+
+function pickNextMajor(lastMajor = "") {
+  const pool = STANFORD_MAJORS.filter(m => m !== lastMajor);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* ------------------------------------------------------------
    STEP 1 — Semantic clarity check
 ------------------------------------------------------------ */
 async function isClearTopic(topic) {
@@ -81,7 +110,7 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang chooses WHAT TO BUY (RESET)
+   AMAZON — A. Wang chooses WHAT TO BUY (unchanged)
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
   const out = await openai.chat.completions.create({
@@ -233,9 +262,11 @@ What Breaks If This Forecast Is Wrong:
 }
 
 /* ------------------------------------------------------------
-   8-BALL TOPIC GENERATORS (BUSINESS unchanged)
+   8-BALL TOPIC GENERATORS
 ------------------------------------------------------------ */
-async function generateNextTopicGDJ(lastTopic = "") {
+async function generateNextTopicGDJ(lastTopic = "", lastMajor = "") {
+  const major = pickNextMajor(lastMajor);
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
@@ -243,16 +274,28 @@ async function generateNextTopicGDJ(lastTopic = "") {
       content: `
 You are GD-J, an analytical business thinker.
 
+Academic lens:
+${major} (Stanford University)
+
+Task:
 Generate ONE future-facing business topic
 for the next 3–6 months.
-Avoid repeating: "${lastTopic}"
 
-Output ONLY the topic.
+Rules:
+- View the topic through the academic lens above
+- Relevant to real-world business decisions
+- Avoid repeating: "${lastTopic}"
+- Neutral, analytical tone
+- Output ONLY the topic text
 `
     }],
-    temperature: 0.6
+    temperature: 0.7
   });
-  return out.choices[0].message.content.trim();
+
+  return {
+    topic: out.choices[0].message.content.trim(),
+    major
+  };
 }
 
 /* ------------------------------------------------------------
@@ -260,7 +303,7 @@ Output ONLY the topic.
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
 
-  // BUSINESS unchanged
+  // BUSINESS
   if (persona === "BUSINESS") {
     const baseTopic = await rewriteForSerp(topic);
     const sources = await fetchSerpSources(baseTopic, "BUSINESS");
@@ -278,15 +321,13 @@ async function runPipeline(topic, persona) {
     return { report: report + "\n" + body };
   }
 
-  // AMAZON — RESET LOGIC
+  // AMAZON (unchanged)
   const product = await fetchSingleAmazonProduct(topic);
   if (!product) {
     return { report: "No Amazon product found for this topic." };
   }
 
-  // Extract brand heuristically (first word)
   const brand = product.title.split(" ")[0];
-
   const body = await generatePredictionBody(
     [{ title: product.title, source: "Amazon" }],
     "AMAZON"
@@ -322,18 +363,24 @@ app.post("/run", async (req, res) => {
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
   const lastTopic = (req.body.lastTopic || "").trim();
+  const lastMajor = (req.body.lastMajor || "").trim();
 
-  const topic =
-    persona === "AMAZON"
-      ? await generateNextTopicAWang(lastTopic)
-      : await generateNextTopicGDJ(lastTopic);
+  if (persona === "BUSINESS") {
+    const result = await generateNextTopicGDJ(lastTopic, lastMajor);
+    const report = await runPipeline(result.topic, "BUSINESS");
 
-  if (!(await isClearTopic(topic))) {
-    return res.json({ report: "Persona failed to generate topic." });
+    res.json({
+      topic: result.topic,
+      major: result.major,
+      report: report.report
+    });
+    return;
   }
 
-  const result = await runPipeline(topic, persona);
-  res.json({ topic: result.topic || topic, report: result.report });
+  const topic = await generateNextTopicAWang(lastTopic);
+  const report = await runPipeline(topic, "AMAZON");
+
+  res.json({ topic: report.topic || topic, report: report.report });
 });
 
 /* ------------------------------------------------------------
