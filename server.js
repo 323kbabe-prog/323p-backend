@@ -52,7 +52,7 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   STEP 2 — Rewrite into SERP-doable headline
+   STEP 2 — Rewrite into SERP-doable headline (BUSINESS stays same)
 ------------------------------------------------------------ */
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
@@ -83,50 +83,71 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP News (PERSONA-AWARE)
+   STEP 3 — Fetch SERP Sources (PERSONA-AWARE)
+   - BUSINESS: Google News (tbm=nws)
+   - AMAZON: Amazon PRODUCT PAGES ONLY (organic results filtered to /dp/ or /gp/product)
 ------------------------------------------------------------ */
-async function fetchSerpSources(rewrittenTopic, persona = "BUSINESS") {
+async function fetchSerpSources(queryTerm, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
 
-  let query;
-  if (persona === "AMAZON") {
-    query = `${rewrittenTopic} site:amazon.com OR site:aboutamazon.com OR site:sellercentral.amazon.com OR site:advertising.amazon.com`;
-  } else {
-    const year = new Date().getFullYear();
-    query = `${rewrittenTopic} business news ${year}`;
-  }
-
   try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
+    // BUSINESS = keep your original news pipeline
+    if (persona !== "AMAZON") {
+      const year = new Date().getFullYear();
+      const q = `${queryTerm} business news ${year}`;
+
+      const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
+      const r = await fetch(url);
+      const j = await r.json();
+
+      return (j.news_results || []).map(x => ({
+        title: x.title || "",
+        source: x.source || "Unknown",
+        link: x.link || "",
+        date: x.date || "",
+        snippet: x.snippet || ""
+      }));
+    }
+
+    // AMAZON = product pages only (NOT news)
+    // Use normal Google search (no tbm=nws), then hard-filter product URLs.
+    const amazonQuery = `${queryTerm} site:amazon.com (beauty OR skincare OR makeup OR haircare)`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(amazonQuery)}&num=20&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    let results = (j.news_results || []).map(x => ({
+    let results = (j.organic_results || []).map(x => ({
       title: x.title || "",
-      source: x.source || "Unknown",
+      source: "Amazon",
       link: x.link || "",
-      date: x.date || "",
+      date: "",
       snippet: x.snippet || ""
     }));
 
-    // 🔥 HARD FILTER: Amazon persona must be Amazon-owned only
-    if (persona === "AMAZON") {
-      results = results.filter(r =>
-        r.link.includes("amazon.com") ||
-        r.link.includes("aboutamazon.com") ||
-        r.link.includes("sellercentral.amazon.com") ||
-        r.link.includes("advertising.amazon.com")
+    // HARD FILTER: only Amazon product detail pages
+    results = results.filter(it => {
+      const u = (it.link || "").toLowerCase();
+      return (
+        u.includes("amazon.com") &&
+        (
+          u.includes("/dp/") ||
+          u.includes("/gp/product/") ||
+          u.includes("/gp/aw/d/") ||
+          u.includes("/dp?") ||
+          u.includes("/dp/") // keep common pattern
+        )
       );
-    }
+    });
 
     return results;
+
   } catch {
     return [];
   }
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by business impact
+   STEP 4 — Rank signals by business impact (unchanged)
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -160,7 +181,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight (UNCHANGED)
+   STEP 5 — Generate foresight (UNCHANGED format)
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -248,18 +269,24 @@ async function generateNextTopicAmazon(lastTopic = "") {
     messages: [{
       role: "user",
       content: `
-You are AMAZON persona.
+You are A Wang (AMAZON persona).
 
-Focus:
-- pricing & cost structure
-- consumer behavior
-- fashion demand
-- execution efficiency
+Goal:
+Help users buy better on Amazon by predicting the next 6-month beauty trends
+and recommending purchasing methods.
 
-Generate ONE Amazon-commerce-focused topic
-for the next 3 months.
-Avoid repeating: "${lastTopic}"
-Output ONLY the topic text.
+Rules:
+- Topic must be about beauty (skincare, makeup, haircare, fragrance)
+- Topic must include purchasing method language (buying strategy, bundles, subscribe & save, dupes, value packs, timing, coupons)
+- 6–12 words
+- No hype words
+- Avoid repeating: "${lastTopic}"
+- Output ONLY the topic text
+
+Examples of style (do not copy):
+"Buying strategies for skincare value packs"
+"How to purchase trending peptide serums"
+"Amazon beauty dupes and bundle buying methods"
 `
     }],
     temperature: 0.6
@@ -272,8 +299,12 @@ Output ONLY the topic text.
    CORE PIPELINE (PERSONA-AWARE)
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona = "BUSINESS") {
+  // BUSINESS keeps rewrite-for-news.
+  // AMAZON uses topic directly to find product pages.
   const rewritten = await rewriteForSerp(topic);
-  const rawSources = await fetchSerpSources(rewritten, persona);
+  const queryTerm = (persona === "AMAZON") ? topic : rewritten;
+
+  const rawSources = await fetchSerpSources(queryTerm, persona);
 
   if (rawSources.length < 3) {
     return {
