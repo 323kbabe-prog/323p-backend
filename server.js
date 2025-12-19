@@ -118,9 +118,9 @@ async function generateNextTopicAWang(lastTopic = "") {
     messages: [{
       role: "user",
       content: `
-You are A. Wang, an Amazon beauty buyer.
+You are A. Wang, an Amazon cosmetics buyer.
 
-Choose ONE beauty product category or product
+Choose ONE cosmetics category or product
 that you would consider buying this season.
 
 Rules:
