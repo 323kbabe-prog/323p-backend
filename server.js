@@ -108,6 +108,45 @@ async function fetchGoogleTopBeautySearches(seed = "beauty products") {
 }
 
 /* ------------------------------------------------------------
+   AMAZON ONLY — A. Wang topic rewrite (NEW)
+------------------------------------------------------------ */
+async function applyAWangTopicRewrite(googleQuery) {
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        role: "user",
+        content: `
+You are A. Wang, Amazon’s Head of Beauty.
+
+Rewrite this REAL Google search query into an
+Amazon-buying-focused topic.
+
+Input query:
+"${googleQuery}"
+
+Rules:
+- Keep original search intent
+- Emphasize buying, sales, or demand on Amazon
+- 6–10 words
+- Neutral, analytical tone
+- No hype words
+
+Output ONLY the rewritten topic.
+`
+      }],
+      temperature: 0.3
+    });
+
+    return out.choices[0].message.content.trim();
+
+  } catch (err) {
+    console.error("A. Wang topic rewrite failed:", err.message);
+    return `top selling ${googleQuery} on amazon`;
+  }
+}
+
+/* ------------------------------------------------------------
    STEP 3 — Fetch SERP Sources (persona-aware)
 ------------------------------------------------------------ */
 async function fetchSerpSources(topic, persona = "BUSINESS") {
@@ -116,7 +155,6 @@ async function fetchSerpSources(topic, persona = "BUSINESS") {
   let query, url;
 
   if (persona === "AMAZON") {
-    // 🔥 Google Web search → Amazon PRODUCT pages only
     query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
     url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=20&api_key=${SERP_KEY}`;
   } else {
@@ -186,39 +224,37 @@ ${list}
 /* ------------------------------------------------------------
    STEP 5 — Generate foresight BODY ONLY
 ------------------------------------------------------------ */
-async function applyAWangFraming(googleQuery) {
-  try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: `
-You are A. Wang, Amazon’s Head of Beauty.
+async function generatePredictionBody(sources, persona) {
+  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
 
-Take this REAL Google search query:
-"${googleQuery}"
+  const personaHint =
+    persona === "AMAZON"
+      ? "Focus on buying behavior, pricing, demand, and purchasing strategy."
+      : "Focus on business strategy, market structure, and decision-making.";
 
-Rewrite it into an Amazon-buying-focused topic.
-Rules:
-- Keep original intent
-- Emphasize purchasing, sales, or demand
-- 6–10 words
-- Neutral, analytical tone
-- No hype words
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are an AI foresight system.
+${personaHint}
 
-Output ONLY the rewritten topic.
+Verified signals:
+${signalText}
+
+Write ONLY:
+Six-Month Reality:
+- 3–5 short paragraphs
+
+What Breaks If This Forecast Is Wrong:
+- 3–5 bullet points
 `
-      }],
-      temperature: 0.3
-    });
+    }],
+    temperature: 0.3
+  });
 
-    return out.choices[0].message.content.trim();
-
-  } catch (err) {
-    console.error("A. Wang framing failed:", err.message);
-    // 🔒 HARD FAILSAFE
-    return `top selling ${googleQuery} on amazon`;
-  }
+  return out.choices[0].message.content.trim();
 }
 
 /* ------------------------------------------------------------
@@ -246,7 +282,13 @@ Output ONLY the topic text.
 
 async function generateNextTopicAWang() {
   const searches = await fetchGoogleTopBeautySearches("beauty products");
-  return searches.length ? searches[0] : "best selling beauty products on amazon";
+
+  if (!searches.length) {
+    return "top selling beauty products on amazon";
+  }
+
+  // 🔥 REAL GOOGLE DEMAND → A. WANG TOPIC REWRITE
+  return await applyAWangTopicRewrite(searches[0]);
 }
 
 /* ------------------------------------------------------------
@@ -258,8 +300,8 @@ async function runPipeline(topic, persona) {
   if (persona === "BUSINESS") {
     baseTopic = await rewriteForSerp(topic);
   } else {
-    // AMAZON: topic from Google search demand
-    baseTopic = (await fetchGoogleTopBeautySearches(topic))[0] || topic;
+    // AMAZON: topic already persona-shaped
+    baseTopic = topic;
   }
 
   const sources = await fetchSerpSources(baseTopic, persona);
