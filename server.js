@@ -187,11 +187,12 @@ ${list}
    STEP 5 — Generate foresight BODY ONLY
 ------------------------------------------------------------ */
 async function applyAWangFraming(googleQuery) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        role: "user",
+        content: `
 You are A. Wang, Amazon’s Head of Beauty.
 
 Take this REAL Google search query:
@@ -207,11 +208,17 @@ Rules:
 
 Output ONLY the rewritten topic.
 `
-    }],
-    temperature: 0.3
-  });
+      }],
+      temperature: 0.3
+    });
 
-  return out.choices[0].message.content.trim();
+    return out.choices[0].message.content.trim();
+
+  } catch (err) {
+    console.error("A. Wang framing failed:", err.message);
+    // 🔒 HARD FAILSAFE
+    return `top selling ${googleQuery} on amazon`;
+  }
 }
 
 /* ------------------------------------------------------------
