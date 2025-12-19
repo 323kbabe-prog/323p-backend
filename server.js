@@ -186,31 +186,26 @@ ${list}
 /* ------------------------------------------------------------
    STEP 5 — Generate foresight BODY ONLY
 ------------------------------------------------------------ */
-async function generatePredictionBody(sources, persona) {
-  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
-
-  const personaHint =
-    persona === "AMAZON"
-      ? "Focus on buying behavior, pricing, demand, and purchasing strategy."
-      : "Focus on business strategy, market structure, and decision-making.";
-
+async function applyAWangFraming(googleQuery) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-You are an AI foresight system.
-${personaHint}
+You are A. Wang, Amazon’s Head of Beauty.
 
-Verified signals:
-${signalText}
+Take this REAL Google search query:
+"${googleQuery}"
 
-Write ONLY:
-Six-Month Reality:
-- 3–5 short paragraphs
+Rewrite it into an Amazon-buying-focused topic.
+Rules:
+- Keep original intent
+- Emphasize purchasing, sales, or demand
+- 6–10 words
+- Neutral, analytical tone
+- No hype words
 
-What Breaks If This Forecast Is Wrong:
-- 3–5 bullet points
+Output ONLY the rewritten topic.
 `
     }],
     temperature: 0.3
