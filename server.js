@@ -81,34 +81,37 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   AMAZON — Google SERP demand
+   AMAZON — A. Wang chooses WHAT TO BUY (RESET)
 ------------------------------------------------------------ */
-async function fetchGoogleTopBeautySearches(seed = "beauty products") {
-  if (!SERP_KEY) return [];
+async function generateNextTopicAWang(lastTopic = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are A. Wang, an Amazon beauty buyer.
 
-  try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(seed)}&num=10&api_key=${SERP_KEY}`;
-    const r = await fetch(url);
-    const j = await r.json();
+Choose ONE beauty product category or product
+that you would consider buying this season.
 
-    const set = new Set();
+Rules:
+- Buyer mindset
+- Practical, purchase-oriented
+- Can be a product type or specific item
+- Avoid repeating: "${lastTopic}"
+- 4–8 words
 
-    if (j.related_searches) {
-      j.related_searches.forEach(x => x.query && set.add(x.query.toLowerCase()));
-    }
+Output ONLY the topic.
+`
+    }],
+    temperature: 0.7
+  });
 
-    if (j.organic_results) {
-      j.organic_results.forEach(x => x.title && set.add(x.title.toLowerCase()));
-    }
-
-    return Array.from(set).slice(0, 10);
-  } catch {
-    return [];
-  }
+  return out.choices[0].message.content.trim();
 }
 
 /* ------------------------------------------------------------
-   AMAZON — Fetch ONE Amazon product from Google
+   AMAZON — Find ONE Amazon product via Google
 ------------------------------------------------------------ */
 async function fetchSingleAmazonProduct(query) {
   if (!SERP_KEY) return null;
@@ -136,80 +139,26 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang rewrites topic USING PRODUCT NAME
------------------------------------------------------------- */
-async function applyAWangProductRewrite(productTitle) {
-  try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: `
-You are A. Wang.
-You are a society behavior professor studying consumer behavior on Amazon.
-
-Given this Amazon product:
-"${productTitle}"
-
-Rewrite the topic to explain what this product represents
-about collective buying behavior and social demand.
-
-Rules:
-- Must include the product name
-- Focus on mass adoption / social proof
-- Analytical, academic tone
-- 8–14 words
-- No hype
-
-Output ONLY the rewritten topic.
-`
-      }],
-      temperature: 0.3
-    });
-
-    return out.choices[0].message.content.trim();
-  } catch {
-    return `social adoption patterns around ${productTitle} on amazon`;
-  }
-}
-
-/* ------------------------------------------------------------
-   STEP 3 — Fetch SERP Sources (unchanged)
+   STEP 3 — Fetch SERP Sources (BUSINESS unchanged)
 ------------------------------------------------------------ */
 async function fetchSerpSources(topic, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
 
-  let query, url;
-
-  if (persona === "AMAZON") {
-    query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
-    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=20&api_key=${SERP_KEY}`;
-  } else {
-    const year = new Date().getFullYear();
-    query = `${topic} business news ${year}`;
-    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
-  }
+  const year = new Date().getFullYear();
+  const query = `${topic} business news ${year}`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
 
   try {
     const r = await fetch(url);
     const j = await r.json();
 
-    const results = persona === "AMAZON"
-      ? (j.organic_results || [])
-      : (j.news_results || []);
-
-    return results
-      .filter(x =>
-        persona !== "AMAZON" ||
-        (x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/")))
-      )
-      .map(x => ({
-        title: x.title || "",
-        source: persona === "AMAZON" ? "Amazon" : (x.source || "Unknown"),
-        link: x.link || "",
-        date: x.date || "",
-        snippet: x.snippet || ""
-      }));
+    return (j.news_results || []).map(x => ({
+      title: x.title || "",
+      source: x.source || "Unknown",
+      link: x.link || "",
+      date: x.date || "",
+      snippet: x.snippet || ""
+    }));
   } catch {
     return [];
   }
@@ -255,7 +204,7 @@ async function generatePredictionBody(sources, persona) {
 
   const personaHint =
     persona === "AMAZON"
-      ? "Analyze consumer behavior, social signals, and purchasing psychology."
+      ? "Analyze purchasing rationale, price sensitivity, and buyer behavior."
       : "Analyze business strategy and market structure.";
 
   const out = await openai.chat.completions.create({
@@ -284,7 +233,7 @@ What Breaks If This Forecast Is Wrong:
 }
 
 /* ------------------------------------------------------------
-   8-BALL TOPIC GENERATORS
+   8-BALL TOPIC GENERATORS (BUSINESS unchanged)
 ------------------------------------------------------------ */
 async function generateNextTopicGDJ(lastTopic = "") {
   const out = await openai.chat.completions.create({
@@ -298,32 +247,12 @@ Generate ONE future-facing business topic
 for the next 3–6 months.
 Avoid repeating: "${lastTopic}"
 
-Output ONLY the topic text.
+Output ONLY the topic.
 `
     }],
     temperature: 0.6
   });
   return out.choices[0].message.content.trim();
-}
-
-async function generateNextTopicAWang() {
-  const searches = await fetchGoogleTopBeautySearches("beauty products");
-
-  if (!searches.length) {
-    return "social adoption patterns around beauty products on amazon";
-  }
-
-  // 1️⃣ pick a real Google search
-  const pick = searches[Math.floor(Math.random() * searches.length)];
-
-  // 2️⃣ find ONE Amazon product for that query
-  const product = await fetchSingleAmazonProduct(pick);
-  if (!product) {
-    return `social adoption patterns around ${pick} on amazon`;
-  }
-
-  // 3️⃣ A. Wang rewrites topic USING PRODUCT NAME
-  return await applyAWangProductRewrite(product.title);
 }
 
 /* ------------------------------------------------------------
@@ -349,13 +278,14 @@ async function runPipeline(topic, persona) {
     return { report: report + "\n" + body };
   }
 
-  // AMAZON — NEW FINAL LOGIC
+  // AMAZON — RESET LOGIC
   const product = await fetchSingleAmazonProduct(topic);
   if (!product) {
-    return { report: "Not enough verified Amazon product signals." };
+    return { report: "No Amazon product found for this topic." };
   }
 
-  const awangTopic = await applyAWangProductRewrite(product.title);
+  // Extract brand heuristically (first word)
+  const brand = product.title.split(" ")[0];
 
   const body = await generatePredictionBody(
     [{ title: product.title, source: "Amazon" }],
@@ -363,11 +293,11 @@ async function runPipeline(topic, persona) {
   );
 
   let report = "Current Signals (Ranked by Impact Level)\n";
-  report += `• ${product.title} — Amazon\n`;
+  report += `• ${product.title} — ${brand}\n`;
   report += `  ${product.link}\n`;
 
   return {
-    topic: awangTopic,
+    topic: `${brand} ${topic}`,
     report: report + "\n" + body
   };
 }
@@ -391,13 +321,12 @@ app.post("/run", async (req, res) => {
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
-
   const lastTopic = (req.body.lastTopic || "").trim();
 
-const topic =
-  persona === "AMAZON"
-    ? await generateNextTopicAWang()
-    : await generateNextTopicGDJ(lastTopic);
+  const topic =
+    persona === "AMAZON"
+      ? await generateNextTopicAWang(lastTopic)
+      : await generateNextTopicGDJ(lastTopic);
 
   if (!(await isClearTopic(topic))) {
     return res.json({ report: "Persona failed to generate topic." });
