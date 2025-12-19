@@ -71,6 +71,8 @@ Rules:
 
 Input:
 "${topic}"
+
+Output:
 `
     }],
     temperature: 0
@@ -106,7 +108,7 @@ async function fetchGoogleTopBeautySearches(seed = "beauty products") {
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang as society behavior professor (RETHINK)
+   AMAZON — A. Wang as society behavior professor
 ------------------------------------------------------------ */
 async function applyAWangSociologyRewrite(googleQuery) {
   try {
@@ -122,7 +124,7 @@ Take this REAL Google search query:
 "${googleQuery}"
 
 Rethink it as a social behavior signal.
-Rewrite it into an Amazon-focused topic that reflects:
+Rewrite it into an Amazon-focused topic reflecting:
 - collective buying behavior
 - social proof
 - mass adoption or anxiety-driven demand
@@ -140,40 +142,83 @@ Output ONLY the rewritten topic.
     });
 
     return out.choices[0].message.content.trim();
-
   } catch {
     return `mass adoption patterns around ${googleQuery} on amazon`;
   }
 }
 
 /* ------------------------------------------------------------
-   AMAZON — Fetch ONE representative product (SECOND SERP)
+   STEP 3 — Fetch SERP Sources (RESTORED)
 ------------------------------------------------------------ */
-async function fetchSingleAmazonProduct(topic) {
-  if (!SERP_KEY) return null;
+async function fetchSerpSources(topic, persona = "BUSINESS") {
+  if (!SERP_KEY) return [];
+
+  let query, url;
+
+  if (persona === "AMAZON") {
+    query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
+    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=20&api_key=${SERP_KEY}`;
+  } else {
+    const year = new Date().getFullYear();
+    query = `${topic} business news ${year}`;
+    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
+  }
 
   try {
-    const query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    const first = (j.organic_results || []).find(
-      x => x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/"))
-    );
+    const results = persona === "AMAZON"
+      ? (j.organic_results || [])
+      : (j.news_results || []);
 
-    if (!first) return null;
-
-    return {
-      title: first.title || "",
-      source: "Amazon",
-      link: first.link || "",
-      date: "",
-      snippet: first.snippet || ""
-    };
+    return results
+      .filter(x =>
+        persona !== "AMAZON" ||
+        (x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/")))
+      )
+      .map(x => ({
+        title: x.title || "",
+        source: persona === "AMAZON" ? "Amazon" : (x.source || "Unknown"),
+        link: x.link || "",
+        date: x.date || "",
+        snippet: x.snippet || ""
+      }));
   } catch {
-    return null;
+    return [];
   }
+}
+
+/* ------------------------------------------------------------
+   STEP 4 — Rank signals by impact (RESTORED)
+------------------------------------------------------------ */
+async function rankSignalsByImpact(sources) {
+  if (sources.length < 2) return sources;
+
+  const list = sources.map(
+    (s, i) => `${i + 1}. ${s.title} — ${s.source}`
+  ).join("\n");
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Rank the following headlines by expected BUSINESS IMPACT
+over the next 3–6 months.
+Return ONLY the ordered list of numbers.
+
+${list}
+`
+    }],
+    temperature: 0
+  });
+
+  const order = out.choices[0].message.content
+    .match(/\d+/g)
+    ?.map(n => parseInt(n, 10) - 1) || [];
+
+  return order.map(i => sources[i]).filter(Boolean);
 }
 
 /* ------------------------------------------------------------
@@ -238,8 +283,6 @@ Output ONLY the topic text.
 async function generateNextTopicAWang() {
   const searches = await fetchGoogleTopBeautySearches("beauty products");
   if (!searches.length) return "collective buying behavior in beauty products on amazon";
-
-  // 🔥 Google demand → sociology reframing
   return await applyAWangSociologyRewrite(searches[0]);
 }
 
@@ -247,27 +290,28 @@ async function generateNextTopicAWang() {
    CORE PIPELINE
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
-  let sources = [];
+  let baseTopic;
 
   if (persona === "BUSINESS") {
-    const baseTopic = await rewriteForSerp(topic);
-    // BUSINESS keeps original multi-source logic
-    return { report: "BUSINESS pipeline unchanged." };
+    baseTopic = await rewriteForSerp(topic);
+  } else {
+    baseTopic = topic;
   }
 
-  // AMAZON PIPELINE
-  const rewrittenTopic = topic;
-  const product = await fetchSingleAmazonProduct(rewrittenTopic);
+  const sources = await fetchSerpSources(baseTopic, persona);
 
-  if (!product) {
-    return { report: "Not enough verified Amazon product signals." };
+  if (sources.length < 3) {
+    return { report: "Not enough verified sources." };
   }
 
-  const body = await generatePredictionBody([product], "AMAZON");
+  const ranked = await rankSignalsByImpact(sources);
+  const body = await generatePredictionBody(ranked.slice(0, 10), persona);
 
   let report = "Current Signals (Ranked by Impact Level)\n";
-  report += `• ${product.title} — ${product.source}\n`;
-  report += `  ${product.link}\n`;
+  ranked.slice(0, 10).forEach(s => {
+    report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
+    if (s.link) report += `  ${s.link}\n`;
+  });
 
   report += "\n" + body;
   return { report };
