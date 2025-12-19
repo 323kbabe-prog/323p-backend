@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — REAL AI GD-J (STATELESS, DIVERSE)
+// Blue Ocean Browser — MULTI-PERSONA (BUSINESS + AMAZON)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -83,16 +83,28 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP News
+   STEP 3 — Fetch SERP sources (PERSONA-AWARE)
 ------------------------------------------------------------ */
-async function fetchSerpSources(rewrittenTopic) {
+async function fetchSerpSources(rewrittenTopic, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
 
   const year = new Date().getFullYear();
-  const q = `${rewrittenTopic} business news ${year}`;
+
+  let query;
+  if (persona === "AMAZON") {
+    query = `
+site:amazon.com
+OR site:sellercentral.amazon.com
+OR site:aboutamazon.com
+OR site:advertising.amazon.com
+${rewrittenTopic}
+    `;
+  } else {
+    query = `${rewrittenTopic} business news ${year}`;
+  }
 
   try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=10&api_key=${SERP_KEY}`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=10&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
@@ -109,7 +121,7 @@ async function fetchSerpSources(rewrittenTopic) {
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by business impact
+   STEP 4 — Rank signals
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -143,7 +155,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight (PREDICTIVE + FAILURE MODE)
+   STEP 5 — Generate foresight
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -168,20 +180,11 @@ Task:
    six months from now.
 2) Then state what BREAKS if this forecast is wrong.
 
-Rules (STRICT):
-- Use direct future statements (will / will not)
-- No hedging language (no may, could, likely, suggest)
-- No observation of signals — only outcomes
-- No hype or emotion
-- No speculation beyond signal logic
-- Write as if six months have already passed
-
-Output structure (MANDATORY):
-Six-Month Reality:
-- 3–5 short paragraphs
-
-What Breaks If This Forecast Is Wrong:
-- 3–5 short bullet points
+Rules:
+- Use direct future statements
+- No hedging
+- No hype
+- Write as if six months already passed
 `
     }],
     temperature: 0.3
@@ -191,73 +194,74 @@ What Breaks If This Forecast Is Wrong:
 }
 
 /* ------------------------------------------------------------
-   GD-J — REAL AI TOPIC DECIDER (STATELESS, DIVERSE)
+   PERSONA TOPIC DECIDERS
 ------------------------------------------------------------ */
-async function generateNextTopic(lastTopic = "") {
+async function generateNextTopicGDJ(lastTopic = "") {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-You are GD-J.
+You are GD-J (BUSINESS persona).
 
-Profile:
-- Age: 23
-- Background: business
-- Thinking style: analytical (GPT-like)
-- Time horizon: 3–6 months
-- Core curiosity: how the world is changing with AI
-- Interests:
-  • companies & markets
-  • music / K-pop / US entertainment
-  • travel
-- Blind spot: small local issues
+Generate ONE realistic business-focused AI topic
+for the next 3–6 months.
 
-Task:
-Generate ONE realistic Google-News-searchable topic
-you would want to explore next.
-
-Diversity rules (CRITICAL):
-- Do NOT reuse the same main verb as the last topic
-- Do NOT reuse the same primary industry noun
-- Change the angle (e.g. tools, hiring, contracts, platforms, policy, creators, travel behavior)
-- Rotate naturally between interests over time
-
-Hard rules:
-- 6–12 words
-- Business / industry / culture framing
-- AI-related
-- Relevant to the next 3–6 months
-- Not a paraphrase of:
+Avoid repeating:
 "${lastTopic}"
-- Output ONLY the topic text
+
+Output ONLY the topic text.
 `
     }],
     temperature: 0.6
   });
+  return out.choices[0].message.content.trim();
+}
 
+async function generateNextTopicAWang(lastTopic = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are A Wang (AMAZON persona).
+
+Mindset:
+- efficiency & execution
+- pricing & cost structure
+- consumer behavior
+- fashion as demand signal
+
+Generate ONE Amazon-commerce-focused topic
+relevant to the next 3 months.
+
+Avoid repeating:
+"${lastTopic}"
+
+Output ONLY the topic text.
+`
+    }],
+    temperature: 0.6
+  });
   return out.choices[0].message.content.trim();
 }
 
 /* ------------------------------------------------------------
-   CORE PIPELINE (shared)
+   CORE PIPELINE
 ------------------------------------------------------------ */
-async function runPipeline(topic) {
+async function runPipeline(topic, persona) {
   const rewritten = await rewriteForSerp(topic);
-  const rawSources = await fetchSerpSources(rewritten);
+  const rawSources = await fetchSerpSources(rewritten, persona);
 
   if (rawSources.length < 3) {
-    return {
-      report:
-        "Fewer than three verified business news sources were found. Try another topic."
-    };
+    return { report: "Not enough verified sources found." };
   }
 
   const ranked = await rankSignalsByImpact(rawSources);
   const finalSources = ranked.slice(0, 10);
   const prediction = await generatePrediction(topic, finalSources);
 
-  let reportText = "Current Signals (Ranked by Impact Level)\n";
+  let reportText = "Current Signals\n";
   finalSources.forEach(s => {
     reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
     if (s.link) reportText += `  ${s.link}\n`;
@@ -270,52 +274,38 @@ async function runPipeline(topic) {
 }
 
 /* ------------------------------------------------------------
-   /run — user-supplied topic
+   /run
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
-  if (topic.length < 3) {
-    return res.json({ report: "Please enter a clearer topic." });
-  }
+  const persona = req.body.persona || "BUSINESS";
 
   if (!(await isClearTopic(topic))) {
-    return res.json({
-      report: "That doesn’t look like a meaningful topic."
-    });
+    return res.json({ report: "Invalid topic." });
   }
 
-  try {
-    const result = await runPipeline(topic);
-    res.json(result);
-  } catch {
-    res.json({ report: "System temporarily unavailable." });
-  }
+  const result = await runPipeline(topic, persona);
+  res.json(result);
 });
 
 /* ------------------------------------------------------------
-   /next — REAL AI GD-J decides next topic
+   /next
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const lastTopic = (req.body.lastTopic || "").trim();
+  const persona = req.body.persona || "BUSINESS";
 
-  try {
-    const nextTopic = await generateNextTopic(lastTopic);
+  const nextTopic =
+    persona === "AMAZON"
+      ? await generateNextTopicAWang(lastTopic)
+      : await generateNextTopicGDJ(lastTopic);
 
-    if (!(await isClearTopic(nextTopic))) {
-      return res.json({
-        report: "GD-J could not generate a clear next topic."
-      });
-    }
-
-    const result = await runPipeline(nextTopic);
-    res.json({
-      topic: nextTopic,
-      report: result.report
-    });
-
-  } catch {
-    res.json({ report: "Unable to generate next GD-J topic." });
+  if (!(await isClearTopic(nextTopic))) {
+    return res.json({ report: "Persona failed to generate topic." });
   }
+
+  const result = await runPipeline(nextTopic, persona);
+  res.json({ topic: nextTopic, report: result.report });
 });
 
 /* ------------------------------------------------------------
@@ -323,5 +313,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — REAL AI GD-J running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — BUSINESS & AMAZON running on", PORT);
 });
