@@ -308,8 +308,22 @@ Output ONLY the topic text.
 
 async function generateNextTopicAWang() {
   const searches = await fetchGoogleTopBeautySearches("beauty products");
-  if (!searches.length) return "collective buying behavior in beauty products on amazon";
-  return searches[0];
+
+  if (!searches.length) {
+    return "social adoption patterns around beauty products on amazon";
+  }
+
+  // 1️⃣ pick a real Google search
+  const pick = searches[Math.floor(Math.random() * searches.length)];
+
+  // 2️⃣ find ONE Amazon product for that query
+  const product = await fetchSingleAmazonProduct(pick);
+  if (!product) {
+    return `social adoption patterns around ${pick} on amazon`;
+  }
+
+  // 3️⃣ A. Wang rewrites topic USING PRODUCT NAME
+  return await applyAWangProductRewrite(product.title);
 }
 
 /* ------------------------------------------------------------
