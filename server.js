@@ -83,7 +83,7 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP News
+   STEP 3 — Fetch SERP News (TOP 10)
 ------------------------------------------------------------ */
 async function fetchSerpSources(rewrittenTopic) {
   if (!SERP_KEY) return [];
@@ -92,7 +92,7 @@ async function fetchSerpSources(rewrittenTopic) {
   const q = `${rewrittenTopic} business news ${year}`;
 
   try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=8&api_key=${SERP_KEY}`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=10&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
@@ -191,55 +191,6 @@ What Breaks If This Forecast Is Wrong:
 }
 
 /* ------------------------------------------------------------
-   GD-J — REAL AI TOPIC DECIDER (STATELESS, DIVERSE)
------------------------------------------------------------- */
-async function generateNextTopic(lastTopic = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are GD-J.
-
-Profile:
-- Age: 23
-- Background: business
-- Thinking style: analytical (GPT-like)
-- Time horizon: 3–6 months
-- Core curiosity: how the world is changing with AI
-- Interests:
-  • companies & markets
-  • music / K-pop / US entertainment
-  • travel
-- Blind spot: small local issues
-
-Task:
-Generate ONE realistic Google-News-searchable topic
-you would want to explore next.
-
-Diversity rules (CRITICAL):
-- Do NOT reuse the same main verb as the last topic
-- Do NOT reuse the same primary industry noun
-- Change the angle (e.g. tools, hiring, contracts, platforms, policy, creators, travel behavior)
-- Rotate naturally between interests over time
-
-Hard rules:
-- 6–12 words
-- Business / industry / culture framing
-- AI-related
-- Relevant to the next 3–6 months
-- Not a paraphrase of:
-"${lastTopic}"
-- Output ONLY the topic text
-`
-    }],
-    temperature: 0.6
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-/* ------------------------------------------------------------
    CORE PIPELINE (shared)
 ------------------------------------------------------------ */
 async function runPipeline(topic) {
@@ -254,7 +205,7 @@ async function runPipeline(topic) {
   }
 
   const ranked = await rankSignalsByImpact(rawSources);
-  const finalSources = ranked.slice(0, 5);
+  const finalSources = ranked.slice(0, 10);
   const prediction = await generatePrediction(topic, finalSources);
 
   let reportText = "Current Signals (Ranked by Business Impact)\n";
