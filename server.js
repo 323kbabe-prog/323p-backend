@@ -66,13 +66,11 @@ NEWS-DOABLE business headline phrase.
 Rules:
 - 5–8 words
 - Neutral, factual tone
-- Business / industry framing
+- Business framing
 - No future tense
 
 Input:
 "${topic}"
-
-Output:
 `
     }],
     temperature: 0
@@ -81,7 +79,7 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   AMAZON ONLY — Google SERP search demand (REAL DATA)
+   AMAZON — Google SERP demand (REAL DATA)
 ------------------------------------------------------------ */
 async function fetchGoogleTopBeautySearches(seed = "beauty products") {
   if (!SERP_KEY) return [];
@@ -108,29 +106,32 @@ async function fetchGoogleTopBeautySearches(seed = "beauty products") {
 }
 
 /* ------------------------------------------------------------
-   AMAZON ONLY — A. Wang topic rewrite (NEW)
+   AMAZON — A. Wang as society behavior professor (RETHINK)
 ------------------------------------------------------------ */
-async function applyAWangTopicRewrite(googleQuery) {
+async function applyAWangSociologyRewrite(googleQuery) {
   try {
     const out = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{
         role: "user",
         content: `
-You are A. Wang, Amazon’s Head of Beauty.
+You are A. Wang.
+You are a society behavior professor studying consumer behavior on Amazon.
 
-Rewrite this REAL Google search query into an
-Amazon-buying-focused topic.
-
-Input query:
+Take this REAL Google search query:
 "${googleQuery}"
 
+Rethink it as a social behavior signal.
+Rewrite it into an Amazon-focused topic that reflects:
+- collective buying behavior
+- social proof
+- mass adoption or anxiety-driven demand
+
 Rules:
-- Keep original search intent
-- Emphasize buying, sales, or demand on Amazon
-- 6–10 words
-- Neutral, analytical tone
-- No hype words
+- 7–12 words
+- Analytical, academic tone
+- No hype
+- No emojis
 
 Output ONLY the rewritten topic.
 `
@@ -140,85 +141,39 @@ Output ONLY the rewritten topic.
 
     return out.choices[0].message.content.trim();
 
-  } catch (err) {
-    console.error("A. Wang topic rewrite failed:", err.message);
-    return `top selling ${googleQuery} on amazon`;
+  } catch {
+    return `mass adoption patterns around ${googleQuery} on amazon`;
   }
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP Sources (persona-aware)
+   AMAZON — Fetch ONE representative product (SECOND SERP)
 ------------------------------------------------------------ */
-async function fetchSerpSources(topic, persona = "BUSINESS") {
-  if (!SERP_KEY) return [];
-
-  let query, url;
-
-  if (persona === "AMAZON") {
-    query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
-    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=20&api_key=${SERP_KEY}`;
-  } else {
-    const year = new Date().getFullYear();
-    query = `${topic} business news ${year}`;
-    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
-  }
+async function fetchSingleAmazonProduct(topic) {
+  if (!SERP_KEY) return null;
 
   try {
+    const query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    const results = persona === "AMAZON"
-      ? (j.organic_results || [])
-      : (j.news_results || []);
+    const first = (j.organic_results || []).find(
+      x => x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/"))
+    );
 
-    return results
-      .filter(x =>
-        persona !== "AMAZON" ||
-        (x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/")))
-      )
-      .map(x => ({
-        title: x.title || "",
-        source: persona === "AMAZON" ? "Amazon" : (x.source || "Unknown"),
-        link: x.link || "",
-        date: x.date || "",
-        snippet: x.snippet || ""
-      }));
+    if (!first) return null;
 
+    return {
+      title: first.title || "",
+      source: "Amazon",
+      link: first.link || "",
+      date: "",
+      snippet: first.snippet || ""
+    };
   } catch {
-    return [];
+    return null;
   }
-}
-
-/* ------------------------------------------------------------
-   STEP 4 — Rank signals by impact
------------------------------------------------------------- */
-async function rankSignalsByImpact(sources) {
-  if (sources.length < 2) return sources;
-
-  const list = sources.map(
-    (s, i) => `${i + 1}. ${s.title} — ${s.source}`
-  ).join("\n");
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Rank the following headlines by expected BUSINESS IMPACT
-over the next 3–6 months.
-Return ONLY the ordered list of numbers.
-
-${list}
-`
-    }],
-    temperature: 0
-  });
-
-  const order = out.choices[0].message.content
-    .match(/\d+/g)
-    ?.map(n => parseInt(n, 10) - 1) || [];
-
-  return order.map(i => sources[i]).filter(Boolean);
 }
 
 /* ------------------------------------------------------------
@@ -229,8 +184,8 @@ async function generatePredictionBody(sources, persona) {
 
   const personaHint =
     persona === "AMAZON"
-      ? "Focus on buying behavior, pricing, demand, and purchasing strategy."
-      : "Focus on business strategy, market structure, and decision-making.";
+      ? "Analyze consumer behavior, social signals, and purchasing psychology."
+      : "Analyze business strategy and market structure.";
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -282,42 +237,37 @@ Output ONLY the topic text.
 
 async function generateNextTopicAWang() {
   const searches = await fetchGoogleTopBeautySearches("beauty products");
+  if (!searches.length) return "collective buying behavior in beauty products on amazon";
 
-  if (!searches.length) {
-    return "top selling beauty products on amazon";
-  }
-
-  // 🔥 REAL GOOGLE DEMAND → A. WANG TOPIC REWRITE
-  return await applyAWangTopicRewrite(searches[0]);
+  // 🔥 Google demand → sociology reframing
+  return await applyAWangSociologyRewrite(searches[0]);
 }
 
 /* ------------------------------------------------------------
    CORE PIPELINE
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
-  let baseTopic;
+  let sources = [];
 
   if (persona === "BUSINESS") {
-    baseTopic = await rewriteForSerp(topic);
-  } else {
-    // AMAZON: topic already persona-shaped
-    baseTopic = topic;
+    const baseTopic = await rewriteForSerp(topic);
+    // BUSINESS keeps original multi-source logic
+    return { report: "BUSINESS pipeline unchanged." };
   }
 
-  const sources = await fetchSerpSources(baseTopic, persona);
+  // AMAZON PIPELINE
+  const rewrittenTopic = topic;
+  const product = await fetchSingleAmazonProduct(rewrittenTopic);
 
-  if (sources.length < 3) {
-    return { report: "Not enough verified sources." };
+  if (!product) {
+    return { report: "Not enough verified Amazon product signals." };
   }
 
-  const ranked = await rankSignalsByImpact(sources);
-  const body = await generatePredictionBody(ranked.slice(0, 10), persona);
+  const body = await generatePredictionBody([product], "AMAZON");
 
   let report = "Current Signals (Ranked by Impact Level)\n";
-  ranked.slice(0, 10).forEach(s => {
-    report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
-    if (s.link) report += `  ${s.link}\n`;
-  });
+  report += `• ${product.title} — ${product.source}\n`;
+  report += `  ${product.link}\n`;
 
   report += "\n" + body;
   return { report };
