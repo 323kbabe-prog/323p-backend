@@ -83,7 +83,7 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP News (TOP 10)
+   STEP 3 — Fetch SERP News
 ------------------------------------------------------------ */
 async function fetchSerpSources(rewrittenTopic) {
   if (!SERP_KEY) return [];
@@ -92,7 +92,7 @@ async function fetchSerpSources(rewrittenTopic) {
   const q = `${rewrittenTopic} business news ${year}`;
 
   try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=10&api_key=${SERP_KEY}`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=8&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
@@ -143,7 +143,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight (PREDICTIVE + FAILURE MODE)
+   STEP 5 — Generate foresight
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -155,36 +155,26 @@ async function generatePrediction(topic, sources) {
     messages: [{
       role: "user",
       content: `
-You are an AI foresight system.
+You are an AI foresight analyst.
 
 Topic:
 ${topic}
 
-Verified business signals:
+Recent high-impact business signals:
 ${signalText}
 
 Task:
-1) State what the business reality WILL look like
-   six months from now.
-2) Then state what BREAKS if this forecast is wrong.
+Write a realistic 3–6 month outlook
+derived from these signals.
 
-Rules (STRICT):
-- Use direct future statements (will / will not)
-- No hedging language (no may, could, likely, suggest)
-- No observation of signals — only outcomes
-- No hype or emotion
-- No speculation beyond signal logic
-- Write as if six months have already passed
-
-Output structure (MANDATORY):
-Six-Month Reality:
+Rules:
+- Neutral, analytical tone
+- No hype, no certainty
+- Reference concrete developments
 - 3–5 short paragraphs
-
-What Breaks If This Forecast Is Wrong:
-- 3–5 short bullet points
 `
     }],
-    temperature: 0.3
+    temperature: 0.4
   });
 
   return out.choices[0].message.content.trim();
@@ -205,7 +195,7 @@ async function runPipeline(topic) {
   }
 
   const ranked = await rankSignalsByImpact(rawSources);
-  const finalSources = ranked.slice(0, 10);
+  const finalSources = ranked.slice(0, 5);
   const prediction = await generatePrediction(topic, finalSources);
 
   let reportText = "Current Signals (Ranked by Business Impact)\n";
@@ -221,7 +211,7 @@ async function runPipeline(topic) {
 }
 
 /* ------------------------------------------------------------
-   /run — user-supplied topic
+   /run — FULL ANALYSIS
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
@@ -244,7 +234,7 @@ app.post("/run", async (req, res) => {
 });
 
 /* ------------------------------------------------------------
-   /next — REAL AI GD-J decides next topic
+   /next — TOPIC ONLY (Option B)
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const lastTopic = (req.body.lastTopic || "").trim();
@@ -254,18 +244,14 @@ app.post("/next", async (req, res) => {
 
     if (!(await isClearTopic(nextTopic))) {
       return res.json({
-        report: "GD-J could not generate a clear next topic."
+        topic: ""
       });
     }
 
-    const result = await runPipeline(nextTopic);
-    res.json({
-      topic: nextTopic,
-      report: result.report
-    });
+    res.json({ topic: nextTopic });
 
   } catch {
-    res.json({ report: "Unable to generate next GD-J topic." });
+    res.json({ topic: "" });
   }
 });
 
@@ -274,5 +260,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — REAL AI GD-J running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — REAL AI GD-J (Option B) running on port", PORT);
 });
