@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — REAL AI GD-J + AMAZON (STATELESS)
+// Blue Ocean Browser — REAL AI GD-J + 8-BALL + AMAZON (STATELESS)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -31,19 +31,6 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
-   Utility — compute outlook date (JS-locked)
------------------------------------------------------------- */
-function computeSixMonthOutlookDate() {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 6);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  });
-}
-
-/* ------------------------------------------------------------
    STEP 1 — Semantic clarity check
 ------------------------------------------------------------ */
 async function isClearTopic(topic) {
@@ -65,7 +52,7 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   STEP 2 — Rewrite into SERP-doable headline
+   STEP 2 — Rewrite topic for SERP (BUSINESS only)
 ------------------------------------------------------------ */
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
@@ -80,8 +67,6 @@ Rules:
 - 5–8 words
 - Neutral, factual tone
 - Business / industry framing
-- Implies real-world change
-- No opinions
 - No future tense
 
 Input:
@@ -96,17 +81,17 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP News (PERSONA-AWARE)
+   STEP 3 — Fetch SERP News (persona-aware)
 ------------------------------------------------------------ */
-async function fetchSerpSources(rewrittenTopic, persona = "BUSINESS") {
+async function fetchSerpSources(topic, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
 
   let query;
   if (persona === "AMAZON") {
-    query = `${rewrittenTopic} site:amazon.com OR site:aboutamazon.com OR site:sellercentral.amazon.com OR site:advertising.amazon.com`;
+    query = `${topic} site:amazon.com OR site:aboutamazon.com OR site:sellercentral.amazon.com`;
   } else {
     const year = new Date().getFullYear();
-    query = `${rewrittenTopic} business news ${year}`;
+    query = `${topic} business news ${year}`;
   }
 
   try {
@@ -114,31 +99,20 @@ async function fetchSerpSources(rewrittenTopic, persona = "BUSINESS") {
     const r = await fetch(url);
     const j = await r.json();
 
-    let results = (j.news_results || []).map(x => ({
+    return (j.news_results || []).map(x => ({
       title: x.title || "",
       source: x.source || "Unknown",
       link: x.link || "",
       date: x.date || "",
       snippet: x.snippet || ""
     }));
-
-    if (persona === "AMAZON") {
-      results = results.filter(r =>
-        r.link.includes("amazon.com") ||
-        r.link.includes("aboutamazon.com") ||
-        r.link.includes("sellercentral.amazon.com") ||
-        r.link.includes("advertising.amazon.com")
-      );
-    }
-
-    return results;
   } catch {
     return [];
   }
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by business impact
+   STEP 4 — Rank signals by impact
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -166,18 +140,19 @@ ${list}
     .match(/\d+/g)
     ?.map(n => parseInt(n, 10) - 1) || [];
 
-  const ranked = [];
-  order.forEach(i => sources[i] && ranked.push(sources[i]));
-  return ranked.length ? ranked : sources;
+  return order.map(i => sources[i]).filter(Boolean);
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight BODY ONLY (LOCKED)
+   STEP 5 — Generate foresight BODY ONLY
 ------------------------------------------------------------ */
-async function generatePredictionBody(sources) {
-  const signalText = sources.map(s =>
-    `• ${s.title} — ${s.source}`
-  ).join("\n");
+async function generatePredictionBody(sources, persona) {
+  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
+
+  const personaHint =
+    persona === "AMAZON"
+      ? "Focus on buying behavior, pricing, demand, and purchasing strategy."
+      : "Focus on business strategy, market structure, and decision-making.";
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -185,25 +160,17 @@ async function generatePredictionBody(sources) {
       role: "user",
       content: `
 You are an AI foresight system.
+${personaHint}
 
-Verified business signals:
+Verified signals:
 ${signalText}
 
-Write ONLY the following sections:
-
+Write ONLY:
 Six-Month Reality:
 - 3–5 short paragraphs
 
 What Breaks If This Forecast Is Wrong:
-- 3–5 short bullet points
-
-Rules:
-- No title
-- No date
-- No headers other than the two above
-- No markdown symbols
-- No hype
-- Write as if six months have already passed
+- 3–5 bullet points
 `
     }],
     temperature: 0.3
@@ -213,78 +180,105 @@ Rules:
 }
 
 /* ------------------------------------------------------------
-   CORE PIPELINE (HEADERS LOCKED IN JS)
+   8-BALL TOPIC GENERATORS (RESTORED)
 ------------------------------------------------------------ */
-async function runPipeline(topic, persona = "BUSINESS") {
-  const rewritten = await rewriteForSerp(topic);
-  const rawSources = await fetchSerpSources(rewritten, persona);
+async function generateNextTopicGDJ(lastTopic = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are GD-J, an analytical business thinker.
 
-  if (rawSources.length < 3) {
-    return {
-      report:
-        "Fewer than three verified business news sources were found. Try another topic."
-    };
-  }
+Generate ONE future-facing business topic
+for the next 3–6 months.
+Avoid repeating: "${lastTopic}"
 
-  const ranked = await rankSignalsByImpact(rawSources);
-  const finalSources = ranked.slice(0, 10);
-
-  const body = await generatePredictionBody(finalSources);
-  const outlookDate = computeSixMonthOutlookDate();
-
-  let reportText = "Current Signals (Ranked by Impact Level)\n";
-  finalSources.forEach(s => {
-    reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
-    if (s.link) reportText += `  ${s.link}\n`;
+Output ONLY the topic text.
+`
+    }],
+    temperature: 0.6
   });
+  return out.choices[0].message.content.trim();
+}
 
-  reportText += `\n${topic}\n`;
-  reportText += `Outlook · ${outlookDate}\n\n`;
-  reportText += body;
+async function generateNextTopicAWang(lastTopic = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are A Wang, an Amazon-native buyer strategist.
 
-  return { report: reportText };
+Generate ONE purchasing-focused topic
+about how people will buy products on Amazon
+in the next 3–6 months.
+Avoid repeating: "${lastTopic}"
+
+Output ONLY the topic text.
+`
+    }],
+    temperature: 0.6
+  });
+  return out.choices[0].message.content.trim();
 }
 
 /* ------------------------------------------------------------
-   /run — persona-aware
+   CORE PIPELINE
+------------------------------------------------------------ */
+async function runPipeline(topic, persona) {
+  const baseTopic = persona === "BUSINESS" ? await rewriteForSerp(topic) : topic;
+  const sources = await fetchSerpSources(baseTopic, persona);
+
+  if (sources.length < 3) {
+    return { report: "Not enough verified sources." };
+  }
+
+  const ranked = await rankSignalsByImpact(sources);
+  const body = await generatePredictionBody(ranked.slice(0, 10), persona);
+
+  let report = "Current Signals (Ranked by Impact Level)\n";
+  ranked.slice(0, 10).forEach(s => {
+    report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
+    if (s.link) report += `  ${s.link}\n`;
+  });
+
+  report += "\n" + body;
+  return { report };
+}
+
+/* ------------------------------------------------------------
+   /run — run with provided topic
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
   const persona = req.body.persona || "BUSINESS";
 
   if (!(await isClearTopic(topic))) {
-    return res.json({
-      report: "That doesn’t look like a meaningful topic."
-    });
+    return res.json({ report: "Invalid topic." });
   }
 
-  const result = await runPipeline(topic, persona);
-  res.json(result);
+  res.json(await runPipeline(topic, persona));
 });
 
 /* ------------------------------------------------------------
-   /next — persona generates new topic first
+   /next — 8-BALL (generate NEW topic first)
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const lastTopic = (req.body.lastTopic || "").trim();
   const persona = req.body.persona || "BUSINESS";
 
-  const nextTopic =
+  const topic =
     persona === "AMAZON"
-      ? await generateNextTopicAmazon(lastTopic)
+      ? await generateNextTopicAWang(lastTopic)
       : await generateNextTopicGDJ(lastTopic);
 
-  if (!(await isClearTopic(nextTopic))) {
-    return res.json({
-      report: "Persona could not generate a clear topic."
-    });
+  if (!(await isClearTopic(topic))) {
+    return res.json({ report: "Persona failed to generate topic." });
   }
 
-  const result = await runPipeline(nextTopic, persona);
-  res.json({
-    topic: nextTopic,
-    report: result.report
-  });
+  const result = await runPipeline(topic, persona);
+  res.json({ topic, report: result.report });
 });
 
 /* ------------------------------------------------------------
@@ -292,5 +286,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — GD-J + AMAZON running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — GD-J + 8-BALL + AMAZON running on port", PORT);
 });
