@@ -31,7 +31,7 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
-   STEP 1 — Semantic clarity check
+   STEP 1 — Semantic clarity check (UNCHANGED)
 ------------------------------------------------------------ */
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
@@ -52,7 +52,7 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   STEP 2 — Rewrite into SERP-doable headline
+   STEP 2 — Rewrite into SERP-doable headline (UNCHANGED)
 ------------------------------------------------------------ */
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
@@ -121,7 +121,7 @@ ${rewrittenTopic}
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by business impact
+   STEP 4 — Rank signals by business impact (UNCHANGED)
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -194,7 +194,7 @@ Rules (STRICT):
 }
 
 /* ------------------------------------------------------------
-   PERSONA TOPIC DECIDERS
+   PERSONA TOPIC GENERATORS
 ------------------------------------------------------------ */
 async function generateNextTopicGDJ(lastTopic = "") {
   return (await openai.chat.completions.create({
@@ -202,8 +202,9 @@ async function generateNextTopicGDJ(lastTopic = "") {
     messages: [{
       role: "user",
       content: `
-You are GD-J (BUSINESS persona).
-Generate ONE AI business foresight topic.
+You are GD-J.
+
+Generate ONE realistic AI business foresight topic.
 Avoid repeating: "${lastTopic}"
 Output ONLY the topic text.
 `
@@ -237,14 +238,14 @@ Output ONLY the topic text.
 }
 
 /* ------------------------------------------------------------
-   CORE PIPELINE
+   CORE PIPELINE (PERSONA-AWARE)
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
   const rewritten = await rewriteForSerp(topic);
   const rawSources = await fetchSerpSources(rewritten, persona);
 
   if (rawSources.length < 3) {
-    return { report: "Fewer than three verified sources found." };
+    return { report: "Fewer than three verified business news sources were found. Try another topic." };
   }
 
   const ranked = await rankSignalsByImpact(rawSources);
@@ -264,14 +265,14 @@ async function runPipeline(topic, persona) {
 }
 
 /* ------------------------------------------------------------
-   /run
+   /run — persona-aware
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
   const persona = req.body.persona || "BUSINESS";
 
   if (!(await isClearTopic(topic))) {
-    return res.json({ report: "Invalid topic." });
+    return res.json({ report: "That doesn’t look like a meaningful topic." });
   }
 
   const result = await runPipeline(topic, persona);
@@ -279,7 +280,7 @@ app.post("/run", async (req, res) => {
 });
 
 /* ------------------------------------------------------------
-   /next
+   /next — persona generates NEW topic first (8-BALL)
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const lastTopic = (req.body.lastTopic || "").trim();
@@ -291,7 +292,7 @@ app.post("/next", async (req, res) => {
       : await generateNextTopicGDJ(lastTopic);
 
   if (!(await isClearTopic(nextTopic))) {
-    return res.json({ report: "Persona failed to generate topic." });
+    return res.json({ report: "Persona failed to generate a clear next topic." });
   }
 
   const result = await runPipeline(nextTopic, persona);
