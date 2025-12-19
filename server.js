@@ -90,30 +90,36 @@ async function fetchSerpSources(rewrittenTopic, persona = "BUSINESS") {
 
   let query;
   if (persona === "AMAZON") {
-    query = `
-site:amazon.com
-OR site:sellercentral.amazon.com
-OR site:aboutamazon.com
-OR site:advertising.amazon.com
-${rewrittenTopic}
-    `;
+    query = `${rewrittenTopic} site:amazon.com OR site:aboutamazon.com OR site:sellercentral.amazon.com OR site:advertising.amazon.com`;
   } else {
     const year = new Date().getFullYear();
     query = `${rewrittenTopic} business news ${year}`;
   }
 
   try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=10&api_key=${SERP_KEY}`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    return (j.news_results || []).map(x => ({
+    let results = (j.news_results || []).map(x => ({
       title: x.title || "",
       source: x.source || "Unknown",
       link: x.link || "",
       date: x.date || "",
       snippet: x.snippet || ""
     }));
+
+    // 🔥 HARD FILTER: Amazon persona must be Amazon-owned only
+    if (persona === "AMAZON") {
+      results = results.filter(r =>
+        r.link.includes("amazon.com") ||
+        r.link.includes("aboutamazon.com") ||
+        r.link.includes("sellercentral.amazon.com") ||
+        r.link.includes("advertising.amazon.com")
+      );
+    }
+
+    return results;
   } catch {
     return [];
   }
