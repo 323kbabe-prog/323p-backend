@@ -392,10 +392,12 @@ app.post("/run", async (req, res) => {
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
 
-  const topic =
-    persona === "AMAZON"
-      ? await generateNextTopicAWang()
-      : await generateNextTopicGDJ();
+  const lastTopic = (req.body.lastTopic || "").trim();
+
+const topic =
+  persona === "AMAZON"
+    ? await generateNextTopicAWang()
+    : await generateNextTopicGDJ(lastTopic);
 
   if (!(await isClearTopic(topic))) {
     return res.json({ report: "Persona failed to generate topic." });
