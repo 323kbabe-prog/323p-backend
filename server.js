@@ -31,6 +31,22 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
+   Utility — remove duplicate Outlook lines (Option A)
+------------------------------------------------------------ */
+function cleanDuplicateOutlook(text) {
+  const lines = text.split("\n");
+  let seen = false;
+
+  return lines.filter(line => {
+    if (line.trim().startsWith("Outlook ·")) {
+      if (seen) return false;
+      seen = true;
+    }
+    return true;
+  }).join("\n");
+}
+
+/* ------------------------------------------------------------
    STEP 1 — Semantic clarity check
 ------------------------------------------------------------ */
 async function isClearTopic(topic) {
@@ -109,7 +125,6 @@ async function fetchSerpSources(rewrittenTopic, persona = "BUSINESS") {
       snippet: x.snippet || ""
     }));
 
-    // 🔥 HARD FILTER: Amazon persona must be Amazon-owned only
     if (persona === "AMAZON") {
       results = results.filter(r =>
         r.link.includes("amazon.com") ||
@@ -160,7 +175,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight (UNCHANGED)
+   STEP 5 — Generate foresight
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -284,7 +299,9 @@ async function runPipeline(topic, persona = "BUSINESS") {
 
   const ranked = await rankSignalsByImpact(rawSources);
   const finalSources = ranked.slice(0, 10);
-  const prediction = await generatePrediction(topic, finalSources);
+
+  const predictionRaw = await generatePrediction(topic, finalSources);
+  const prediction = cleanDuplicateOutlook(predictionRaw);
 
   let reportText = "Current Signals (Ranked by Impact Level)\n";
   finalSources.forEach(s => {
