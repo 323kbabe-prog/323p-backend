@@ -87,19 +87,27 @@ async function fetchSerpSources(topic, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
 
   let query;
+  let url;
+
   if (persona === "AMAZON") {
-    query = `${topic} site:amazon.com OR site:aboutamazon.com OR site:sellercentral.amazon.com`;
+    query = `${topic} site:amazon.com`;
+    // 🔥 NO tbm=nws for Amazon
+    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=20&api_key=${SERP_KEY}`;
   } else {
     const year = new Date().getFullYear();
     query = `${topic} business news ${year}`;
+    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
   }
 
   try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    return (j.news_results || []).map(x => ({
+    const results = persona === "AMAZON"
+      ? (j.organic_results || [])
+      : (j.news_results || []);
+
+    return results.map(x => ({
       title: x.title || "",
       source: x.source || "Unknown",
       link: x.link || "",
