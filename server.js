@@ -81,7 +81,7 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   AMAZON — Google SERP demand (REAL DATA)
+   AMAZON — Google SERP demand
 ------------------------------------------------------------ */
 async function fetchGoogleTopBeautySearches(seed = "beauty products") {
   if (!SERP_KEY) return [];
@@ -108,9 +108,37 @@ async function fetchGoogleTopBeautySearches(seed = "beauty products") {
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang as society behavior professor
+   AMAZON — Fetch ONE Amazon product from Google
 ------------------------------------------------------------ */
-async function applyAWangSociologyRewrite(googleQuery) {
+async function fetchSingleAmazonProduct(query) {
+  if (!SERP_KEY) return null;
+
+  try {
+    const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const product = (j.organic_results || []).find(
+      x => x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/"))
+    );
+
+    if (!product) return null;
+
+    return {
+      title: product.title || "",
+      link: product.link || "",
+      source: "Amazon"
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------
+   AMAZON — A. Wang rewrites topic USING PRODUCT NAME
+------------------------------------------------------------ */
+async function applyAWangProductRewrite(productTitle) {
   try {
     const out = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -120,20 +148,18 @@ async function applyAWangSociologyRewrite(googleQuery) {
 You are A. Wang.
 You are a society behavior professor studying consumer behavior on Amazon.
 
-Take this REAL Google search query:
-"${googleQuery}"
+Given this Amazon product:
+"${productTitle}"
 
-Rethink it as a social behavior signal.
-Rewrite it into an Amazon-focused topic reflecting:
-- collective buying behavior
-- social proof
-- mass adoption or anxiety-driven demand
+Rewrite the topic to explain what this product represents
+about collective buying behavior and social demand.
 
 Rules:
-- 7–12 words
+- Must include the product name
+- Focus on mass adoption / social proof
 - Analytical, academic tone
+- 8–14 words
 - No hype
-- No emojis
 
 Output ONLY the rewritten topic.
 `
@@ -143,12 +169,12 @@ Output ONLY the rewritten topic.
 
     return out.choices[0].message.content.trim();
   } catch {
-    return `mass adoption patterns around ${googleQuery} on amazon`;
+    return `social adoption patterns around ${productTitle} on amazon`;
   }
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP Sources (RESTORED)
+   STEP 3 — Fetch SERP Sources (unchanged)
 ------------------------------------------------------------ */
 async function fetchSerpSources(topic, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
@@ -190,7 +216,7 @@ async function fetchSerpSources(topic, persona = "BUSINESS") {
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by impact (RESTORED)
+   STEP 4 — Rank signals by impact (unchanged)
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -283,38 +309,53 @@ Output ONLY the topic text.
 async function generateNextTopicAWang() {
   const searches = await fetchGoogleTopBeautySearches("beauty products");
   if (!searches.length) return "collective buying behavior in beauty products on amazon";
-  return await applyAWangSociologyRewrite(searches[0]);
+  return searches[0];
 }
 
 /* ------------------------------------------------------------
    CORE PIPELINE
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
-  let baseTopic;
 
+  // BUSINESS unchanged
   if (persona === "BUSINESS") {
-    baseTopic = await rewriteForSerp(topic);
-  } else {
-    baseTopic = topic;
+    const baseTopic = await rewriteForSerp(topic);
+    const sources = await fetchSerpSources(baseTopic, "BUSINESS");
+    if (sources.length < 3) return { report: "Not enough verified sources." };
+
+    const ranked = await rankSignalsByImpact(sources);
+    const body = await generatePredictionBody(ranked.slice(0,10), "BUSINESS");
+
+    let report = "Current Signals (Ranked by Impact Level)\n";
+    ranked.slice(0,10).forEach(s=>{
+      report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
+      if (s.link) report += `  ${s.link}\n`;
+    });
+
+    return { report: report + "\n" + body };
   }
 
-  const sources = await fetchSerpSources(baseTopic, persona);
-
-  if (sources.length < 3) {
-    return { report: "Not enough verified sources." };
+  // AMAZON — NEW FINAL LOGIC
+  const product = await fetchSingleAmazonProduct(topic);
+  if (!product) {
+    return { report: "Not enough verified Amazon product signals." };
   }
 
-  const ranked = await rankSignalsByImpact(sources);
-  const body = await generatePredictionBody(ranked.slice(0, 10), persona);
+  const awangTopic = await applyAWangProductRewrite(product.title);
+
+  const body = await generatePredictionBody(
+    [{ title: product.title, source: "Amazon" }],
+    "AMAZON"
+  );
 
   let report = "Current Signals (Ranked by Impact Level)\n";
-  ranked.slice(0, 10).forEach(s => {
-    report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
-    if (s.link) report += `  ${s.link}\n`;
-  });
+  report += `• ${product.title} — Amazon\n`;
+  report += `  ${product.link}\n`;
 
-  report += "\n" + body;
-  return { report };
+  return {
+    topic: awangTopic,
+    report: report + "\n" + body
+  };
 }
 
 /* ------------------------------------------------------------
@@ -347,7 +388,7 @@ app.post("/next", async (req, res) => {
   }
 
   const result = await runPipeline(topic, persona);
-  res.json({ topic, report: result.report });
+  res.json({ topic: result.topic || topic, report: result.report });
 });
 
 /* ------------------------------------------------------------
