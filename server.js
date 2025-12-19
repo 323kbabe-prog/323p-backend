@@ -52,7 +52,7 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   STEP 2 — Rewrite into SERP-doable headline (BUSINESS stays same)
+   STEP 2 — Rewrite into SERP-doable headline (BUSINESS ONLY)
 ------------------------------------------------------------ */
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
@@ -83,19 +83,16 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP Sources (PERSONA-AWARE)
-   - BUSINESS: Google News (tbm=nws)
-   - AMAZON: Amazon PRODUCT PAGES ONLY (organic results filtered to /dp/ or /gp/product)
+   STEP 3 — Fetch SERP Sources (PERSONA-LOCKED)
 ------------------------------------------------------------ */
-async function fetchSerpSources(queryTerm, persona = "BUSINESS") {
+async function fetchSerpSources(queryTerm, persona) {
   if (!SERP_KEY) return [];
 
   try {
-    // BUSINESS = keep your original news pipeline
-    if (persona !== "AMAZON") {
+    // BUSINESS = Google News
+    if (persona === "BUSINESS") {
       const year = new Date().getFullYear();
       const q = `${queryTerm} business news ${year}`;
-
       const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
       const r = await fetch(url);
       const j = await r.json();
@@ -109,37 +106,31 @@ async function fetchSerpSources(queryTerm, persona = "BUSINESS") {
       }));
     }
 
-    // AMAZON = product pages only (NOT news)
-    // Use normal Google search (no tbm=nws), then hard-filter product URLs.
-    const amazonQuery = `${queryTerm} site:amazon.com (beauty OR skincare OR makeup OR haircare)`;
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(amazonQuery)}&num=20&api_key=${SERP_KEY}`;
+    // AMAZON = PRODUCT PAGES ONLY
+    const amazonQuery =
+      `${queryTerm} site:amazon.com (beauty OR skincare OR makeup OR haircare OR fragrance)`;
+
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(amazonQuery)}&num=30&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    let results = (j.organic_results || []).map(x => ({
-      title: x.title || "",
-      source: "Amazon",
-      link: x.link || "",
-      date: "",
-      snippet: x.snippet || ""
-    }));
-
-    // HARD FILTER: only Amazon product detail pages
-    results = results.filter(it => {
-      const u = (it.link || "").toLowerCase();
-      return (
-        u.includes("amazon.com") &&
-        (
-          u.includes("/dp/") ||
-          u.includes("/gp/product/") ||
-          u.includes("/gp/aw/d/") ||
-          u.includes("/dp?") ||
-          u.includes("/dp/") // keep common pattern
-        )
-      );
-    });
-
-    return results;
+    return (j.organic_results || [])
+      .map(x => ({
+        title: x.title || "",
+        source: "Amazon",
+        link: x.link || "",
+        date: "",
+        snippet: x.snippet || ""
+      }))
+      .filter(it => {
+        const u = (it.link || "").toLowerCase();
+        return (
+          u.includes("amazon.com") &&
+          (u.includes("/dp/") ||
+           u.includes("/gp/product/") ||
+           u.includes("/gp/aw/d/"))
+        );
+      });
 
   } catch {
     return [];
@@ -147,7 +138,7 @@ async function fetchSerpSources(queryTerm, persona = "BUSINESS") {
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by business impact (unchanged)
+   STEP 4A — Rank BUSINESS signals (unchanged)
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -171,21 +162,18 @@ ${list}
     temperature: 0
   });
 
-  const order = out.choices[0].message.content
-    .match(/\d+/g)
-    ?.map(n => parseInt(n, 10) - 1) || [];
-
-  const ranked = [];
-  order.forEach(i => sources[i] && ranked.push(sources[i]));
-  return ranked.length ? ranked : sources;
+  const order = out.choices[0].message.content.match(/\d+/g)?.map(n => +n - 1) || [];
+  return order.map(i => sources[i]).filter(Boolean);
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight (UNCHANGED format)
+   STEP 4B — Rank AMAZON signals (PURCHASE INTENT)
 ------------------------------------------------------------ */
-async function generatePrediction(topic, sources) {
-  const signalText = sources.map(s =>
-    `• ${s.title} — ${s.source}`
+async function rankAmazonPurchaseSignals(sources) {
+  if (sources.length < 2) return sources;
+
+  const list = sources.map(
+    (s, i) => `${i + 1}. ${s.title}`
   ).join("\n");
 
   const out = await openai.chat.completions.create({
@@ -193,40 +181,60 @@ async function generatePrediction(topic, sources) {
     messages: [{
       role: "user",
       content: `
-You are an AI foresight system.
+Rank the following Amazon product pages by
+PURCHASE SIGNAL STRENGTH over the next 6 months.
 
+Signals include:
+- Bundles / value packs
+- Subscribe & Save
+- Dupes
+- Refill / eco language
+- Price efficiency
+
+Return ONLY ordered list of numbers.
+
+${list}
+`
+    }],
+    temperature: 0
+  });
+
+  const order = out.choices[0].message.content.match(/\d+/g)?.map(n => +n - 1) || [];
+  return order.map(i => sources[i]).filter(Boolean);
+}
+
+/* ------------------------------------------------------------
+   STEP 5 — Generate foresight (persona-aware)
+------------------------------------------------------------ */
+async function generatePrediction(topic, sources, persona) {
+  const signalText = sources.map(s => `• ${s.title}`).join("\n");
+
+  const system =
+    persona === "AMAZON"
+      ? `You are an Amazon beauty purchasing foresight engine.
+         Focus ONLY on buying behavior, pricing, bundles, and methods.`
+      : `You are an AI business foresight system.`;
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "system",
+      content: system
+    },{
+      role: "user",
+      content: `
 Title:
 ${topic}
 
-Date:
 Generate a date exactly six months from today.
 
-Verified business signals:
+Verified signals:
 ${signalText}
 
-Task:
-1) State what the business reality WILL look like
-   six months from now.
-2) Then state what BREAKS if this forecast is wrong.
-
-Rules (STRICT):
-- Start with the title on its own line
-- Then write: "Outlook · <date>"
-- Do NOT add any other headers
-- Do NOT add markdown symbols
-- No hedging language
-- No hype or emotion
-- Write as if six months have already passed
-
-Output structure (MANDATORY — EXACT ORDER):
-<Title>
-Outlook · <date>
-
-Six-Month Reality:
-- 3–5 short paragraphs
-
-What Breaks If This Forecast Is Wrong:
-- 3–5 short bullet points
+Rules:
+- No hype
+- No news commentary
+- Write as if six months already passed
 `
     }],
     temperature: 0.3
@@ -236,139 +244,63 @@ What Breaks If This Forecast Is Wrong:
 }
 
 /* ------------------------------------------------------------
-   PERSONA TOPIC GENERATORS
+   CORE PIPELINE
 ------------------------------------------------------------ */
-async function generateNextTopicGDJ(lastTopic = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are GD-J.
+async function runPipeline(topic, persona) {
+  const query =
+    persona === "AMAZON" ? topic : await rewriteForSerp(topic);
 
-Profile:
-- Age: 23
-- Background: business
-- Thinking style: analytical (GPT-like)
-- Time horizon: 3–6 months
+  const sources = await fetchSerpSources(query, persona);
 
-Generate ONE AI business foresight topic.
-Avoid repeating: "${lastTopic}"
-Output ONLY the topic text.
-`
-    }],
-    temperature: 0.6
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-async function generateNextTopicAmazon(lastTopic = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are A Wang (AMAZON persona).
-
-Goal:
-Help users buy better on Amazon by predicting the next 6-month beauty trends
-and recommending purchasing methods.
-
-Rules:
-- Topic must be about beauty (skincare, makeup, haircare, fragrance)
-- Topic must include purchasing method language (buying strategy, bundles, subscribe & save, dupes, value packs, timing, coupons)
-- 6–12 words
-- No hype words
-- Avoid repeating: "${lastTopic}"
-- Output ONLY the topic text
-
-Examples of style (do not copy):
-"Buying strategies for skincare value packs"
-"How to purchase trending peptide serums"
-"Amazon beauty dupes and bundle buying methods"
-`
-    }],
-    temperature: 0.6
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-/* ------------------------------------------------------------
-   CORE PIPELINE (PERSONA-AWARE)
------------------------------------------------------------- */
-async function runPipeline(topic, persona = "BUSINESS") {
-  // BUSINESS keeps rewrite-for-news.
-  // AMAZON uses topic directly to find product pages.
-  const rewritten = await rewriteForSerp(topic);
-  const queryTerm = (persona === "AMAZON") ? topic : rewritten;
-
-  const rawSources = await fetchSerpSources(queryTerm, persona);
-
-  if (rawSources.length < 3) {
-    return {
-      report:
-        "Fewer than three verified business news sources were found. Try another topic."
-    };
+  if (sources.length < 3) {
+    return { report: "Not enough verified sources." };
   }
 
-  const ranked = await rankSignalsByImpact(rawSources);
-  const finalSources = ranked.slice(0, 10);
-  const prediction = await generatePrediction(topic, finalSources);
+  const ranked =
+    persona === "AMAZON"
+      ? await rankAmazonPurchaseSignals(sources)
+      : await rankSignalsByImpact(sources);
 
-  let reportText = "Current Signals (Ranked by Impact Level)\n";
+  const finalSources = ranked.slice(0, 10);
+  const prediction = await generatePrediction(topic, finalSources, persona);
+
+  let report = "Current Signals\n";
   finalSources.forEach(s => {
-    reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
-    if (s.link) reportText += `  ${s.link}\n`;
+    report += `• ${s.title}\n`;
+    if (s.link) report += `  ${s.link}\n`;
   });
 
-  reportText += "\nSix-Month Outlook\n";
-  reportText += prediction;
-
-  return { report: reportText };
+  report += "\n" + prediction;
+  return { report };
 }
 
 /* ------------------------------------------------------------
-   /run — persona-aware
+   ROUTES
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
-  const topic = (req.body.topic || "").trim();
-  const persona = req.body.persona || "BUSINESS";
+  const { topic = "", persona = "BUSINESS" } = req.body;
 
   if (!(await isClearTopic(topic))) {
-    return res.json({
-      report: "That doesn’t look like a meaningful topic."
-    });
+    return res.json({ report: "Invalid topic." });
   }
 
-  const result = await runPipeline(topic, persona);
-  res.json(result);
+  res.json(await runPipeline(topic, persona));
 });
 
-/* ------------------------------------------------------------
-   /next — persona generates new topic first
------------------------------------------------------------- */
 app.post("/next", async (req, res) => {
-  const lastTopic = (req.body.lastTopic || "").trim();
-  const persona = req.body.persona || "BUSINESS";
+  const { lastTopic = "", persona = "BUSINESS" } = req.body;
 
-  const nextTopic =
+  const topic =
     persona === "AMAZON"
       ? await generateNextTopicAmazon(lastTopic)
       : await generateNextTopicGDJ(lastTopic);
 
-  if (!(await isClearTopic(nextTopic))) {
-    return res.json({
-      report: "Persona could not generate a clear topic."
-    });
+  if (!(await isClearTopic(topic))) {
+    return res.json({ report: "Persona failed to generate topic." });
   }
 
-  const result = await runPipeline(nextTopic, persona);
-  res.json({
-    topic: nextTopic,
-    report: result.report
-  });
+  const result = await runPipeline(topic, persona);
+  res.json({ topic, report: result.report });
 });
 
 /* ------------------------------------------------------------
