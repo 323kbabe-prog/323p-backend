@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — BUSINESS (GD-J) + AMAZON (A Wang)
+// Blue Ocean Browser — REAL AI GD-J (STATELESS, DIVERSE)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -31,7 +31,7 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
-   STEP 1 — Semantic clarity check (UNCHANGED)
+   STEP 1 — Semantic clarity check
 ------------------------------------------------------------ */
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
@@ -52,7 +52,7 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   STEP 2 — Rewrite into SERP-doable headline (UNCHANGED)
+   STEP 2 — Rewrite into SERP-doable headline
 ------------------------------------------------------------ */
 async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
@@ -83,28 +83,16 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP Sources (PERSONA-AWARE)
+   STEP 3 — Fetch SERP News
 ------------------------------------------------------------ */
-async function fetchSerpSources(rewrittenTopic, persona = "BUSINESS") {
+async function fetchSerpSources(rewrittenTopic) {
   if (!SERP_KEY) return [];
 
   const year = new Date().getFullYear();
-
-  let query;
-  if (persona === "AMAZON") {
-    query = `
-site:amazon.com
-OR site:sellercentral.amazon.com
-OR site:aboutamazon.com
-OR site:advertising.amazon.com
-${rewrittenTopic}
-    `;
-  } else {
-    query = `${rewrittenTopic} business news ${year}`;
-  }
+  const q = `${rewrittenTopic} business news ${year}`;
 
   try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=10&api_key=${SERP_KEY}`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=10&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
@@ -121,7 +109,7 @@ ${rewrittenTopic}
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by business impact (UNCHANGED)
+   STEP 4 — Rank signals by business impact
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -155,7 +143,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight (UNCHANGED)
+   STEP 5 — Generate foresight (TITLE + DATE + STRUCTURE)
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -169,8 +157,11 @@ async function generatePrediction(topic, sources) {
       content: `
 You are an AI foresight system.
 
-Topic:
+Title:
 ${topic}
+
+Date:
+Generate a date exactly six months from today.
 
 Verified business signals:
 ${signalText}
@@ -181,10 +172,23 @@ Task:
 2) Then state what BREAKS if this forecast is wrong.
 
 Rules (STRICT):
-- Use direct future statements
-- No hedging
-- No hype
-- Write as if six months already passed
+- Start with the title on its own line
+- Then write: "Outlook · <date>"
+- Do NOT add any other headers
+- Do NOT add markdown symbols
+- No hedging language
+- No hype or emotion
+- Write as if six months have already passed
+
+Output structure (MANDATORY — EXACT ORDER):
+<Title>
+Outlook · <date>
+
+Six-Month Reality:
+- 3–5 short paragraphs
+
+What Breaks If This Forecast Is Wrong:
+- 3–5 short bullet points
 `
     }],
     temperature: 0.3
@@ -194,58 +198,60 @@ Rules (STRICT):
 }
 
 /* ------------------------------------------------------------
-   PERSONA TOPIC GENERATORS
+   GD-J — REAL AI TOPIC DECIDER (UNCHANGED)
 ------------------------------------------------------------ */
-async function generateNextTopicGDJ(lastTopic = "") {
-  return (await openai.chat.completions.create({
+async function generateNextTopic(lastTopic = "") {
+  const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
 You are GD-J.
 
-Generate ONE realistic AI business foresight topic.
-Avoid repeating: "${lastTopic}"
-Output ONLY the topic text.
+Profile:
+- Age: 23
+- Background: business
+- Thinking style: analytical (GPT-like)
+- Time horizon: 3–6 months
+- Core curiosity: how the world is changing with AI
+- Interests:
+  • companies & markets
+  • music / K-pop / US entertainment
+  • travel
+- Blind spot: small local issues
+
+Task:
+Generate ONE realistic Google-News-searchable topic
+you would want to explore next.
+
+Hard rules:
+- 6–12 words
+- Business / industry / culture framing
+- AI-related
+- Relevant to the next 3–6 months
+- Not a paraphrase of:
+"${lastTopic}"
+- Output ONLY the topic text
 `
     }],
     temperature: 0.6
-  })).choices[0].message.content.trim();
-}
+  });
 
-async function generateNextTopicAWang(lastTopic = "") {
-  return (await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are A Wang (AMAZON persona).
-
-Focus:
-- pricing & cost structure
-- consumer behavior
-- fashion as demand signal
-- execution efficiency
-
-Generate ONE Amazon-commerce-focused topic
-for the next 3 months.
-Avoid repeating: "${lastTopic}"
-Output ONLY the topic text.
-`
-    }],
-    temperature: 0.6
-  })).choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 /* ------------------------------------------------------------
-   CORE PIPELINE (PERSONA-AWARE)
+   CORE PIPELINE (UNCHANGED)
 ------------------------------------------------------------ */
-async function runPipeline(topic, persona) {
+async function runPipeline(topic) {
   const rewritten = await rewriteForSerp(topic);
-  const rawSources = await fetchSerpSources(rewritten, persona);
+  const rawSources = await fetchSerpSources(rewritten);
 
   if (rawSources.length < 3) {
-    return { report: "Fewer than three verified business news sources were found. Try another topic." };
+    return {
+      report:
+        "Fewer than three verified business news sources were found. Try another topic."
+    };
   }
 
   const ranked = await rankSignalsByImpact(rawSources);
@@ -265,38 +271,49 @@ async function runPipeline(topic, persona) {
 }
 
 /* ------------------------------------------------------------
-   /run — persona-aware
+   /run — user-supplied topic
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
-  const persona = req.body.persona || "BUSINESS";
 
   if (!(await isClearTopic(topic))) {
-    return res.json({ report: "That doesn’t look like a meaningful topic." });
+    return res.json({
+      report: "That doesn’t look like a meaningful topic."
+    });
   }
 
-  const result = await runPipeline(topic, persona);
-  res.json(result);
+  try {
+    const result = await runPipeline(topic);
+    res.json(result);
+  } catch {
+    res.json({ report: "System temporarily unavailable." });
+  }
 });
 
 /* ------------------------------------------------------------
-   /next — persona generates NEW topic first (8-BALL)
+   /next — REAL AI GD-J decides next topic
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const lastTopic = (req.body.lastTopic || "").trim();
-  const persona = req.body.persona || "BUSINESS";
 
-  const nextTopic =
-    persona === "AMAZON"
-      ? await generateNextTopicAWang(lastTopic)
-      : await generateNextTopicGDJ(lastTopic);
+  try {
+    const nextTopic = await generateNextTopic(lastTopic);
 
-  if (!(await isClearTopic(nextTopic))) {
-    return res.json({ report: "Persona failed to generate a clear next topic." });
+    if (!(await isClearTopic(nextTopic))) {
+      return res.json({
+        report: "GD-J could not generate a clear next topic."
+      });
+    }
+
+    const result = await runPipeline(nextTopic);
+    res.json({
+      topic: nextTopic,
+      report: result.report
+    });
+
+  } catch {
+    res.json({ report: "Unable to generate next GD-J topic." });
   }
-
-  const result = await runPipeline(nextTopic, persona);
-  res.json({ topic: nextTopic, report: result.report });
 });
 
 /* ------------------------------------------------------------
@@ -304,5 +321,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — BUSINESS & AMAZON running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — REAL AI GD-J running on port", PORT);
 });
