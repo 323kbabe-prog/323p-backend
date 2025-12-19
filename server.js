@@ -143,7 +143,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight
+   STEP 5 — Generate foresight (PREDICTIVE + FAILURE MODE)
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -155,26 +155,85 @@ async function generatePrediction(topic, sources) {
     messages: [{
       role: "user",
       content: `
-You are an AI foresight analyst.
+You are an AI foresight system.
 
 Topic:
 ${topic}
 
-Recent high-impact business signals:
+Verified business signals:
 ${signalText}
 
 Task:
-Write a realistic 3–6 month outlook
-derived from these signals.
+1) State what the business reality WILL look like
+   six months from now.
+2) Then state what BREAKS if this forecast is wrong.
 
-Rules:
-- Neutral, analytical tone
-- No hype, no certainty
-- Reference concrete developments
+Rules (STRICT):
+- Use direct future statements (will / will not)
+- No hedging language (no may, could, likely, suggest)
+- No observation of signals — only outcomes
+- No hype or emotion
+- No speculation beyond signal logic
+- Write as if six months have already passed
+
+Output structure (MANDATORY):
+Six-Month Reality:
 - 3–5 short paragraphs
+
+What Breaks If This Forecast Is Wrong:
+- 3–5 short bullet points
 `
     }],
-    temperature: 0.4
+    temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+/* ------------------------------------------------------------
+   GD-J — REAL AI TOPIC DECIDER (STATELESS, DIVERSE)
+------------------------------------------------------------ */
+async function generateNextTopic(lastTopic = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are GD-J.
+
+Profile:
+- Age: 23
+- Background: business
+- Thinking style: analytical (GPT-like)
+- Time horizon: 3–6 months
+- Core curiosity: how the world is changing with AI
+- Interests:
+  • companies & markets
+  • music / K-pop / US entertainment
+  • travel
+- Blind spot: small local issues
+
+Task:
+Generate ONE realistic Google-News-searchable topic
+you would want to explore next.
+
+Diversity rules (CRITICAL):
+- Do NOT reuse the same main verb as the last topic
+- Do NOT reuse the same primary industry noun
+- Change the angle (e.g. tools, hiring, contracts, platforms, policy, creators, travel behavior)
+- Rotate naturally between interests over time
+
+Hard rules:
+- 6–12 words
+- Business / industry / culture framing
+- AI-related
+- Relevant to the next 3–6 months
+- Not a paraphrase of:
+"${lastTopic}"
+- Output ONLY the topic text
+`
+    }],
+    temperature: 0.6
   });
 
   return out.choices[0].message.content.trim();
@@ -211,7 +270,7 @@ async function runPipeline(topic) {
 }
 
 /* ------------------------------------------------------------
-   /run — FULL ANALYSIS
+   /run — user-supplied topic
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
@@ -234,7 +293,7 @@ app.post("/run", async (req, res) => {
 });
 
 /* ------------------------------------------------------------
-   /next — TOPIC ONLY (Option B)
+   /next — REAL AI GD-J decides next topic
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const lastTopic = (req.body.lastTopic || "").trim();
@@ -244,14 +303,18 @@ app.post("/next", async (req, res) => {
 
     if (!(await isClearTopic(nextTopic))) {
       return res.json({
-        topic: ""
+        report: "GD-J could not generate a clear next topic."
       });
     }
 
-    res.json({ topic: nextTopic });
+    const result = await runPipeline(nextTopic);
+    res.json({
+      topic: nextTopic,
+      report: result.report
+    });
 
   } catch {
-    res.json({ topic: "" });
+    res.json({ report: "Unable to generate next GD-J topic." });
   }
 });
 
@@ -260,5 +323,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — REAL AI GD-J (Option B) running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — REAL AI GD-J running on port", PORT);
 });
