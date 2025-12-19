@@ -31,33 +31,16 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
-   Utility — post-generation cleanup (FINAL)
-   Removes duplicated:
-   - Title
-   - Outlook · <date>
+   Utility — compute outlook date (JS-locked)
 ------------------------------------------------------------ */
-function cleanForesightOutput(text, title) {
-  const lines = text.split("\n");
-  let seenTitle = false;
-  let seenOutlook = false;
-
-  return lines.filter(line => {
-    const t = line.trim();
-
-    if (t === title.trim()) {
-      if (seenTitle) return false;
-      seenTitle = true;
-      return true;
-    }
-
-    if (t.startsWith("Outlook ·")) {
-      if (seenOutlook) return false;
-      seenOutlook = true;
-      return true;
-    }
-
-    return true;
-  }).join("\n");
+function computeSixMonthOutlookDate() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
 }
 
 /* ------------------------------------------------------------
@@ -189,9 +172,9 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight (UNCHANGED)
+   STEP 5 — Generate foresight BODY ONLY (LOCKED)
 ------------------------------------------------------------ */
-async function generatePrediction(topic, sources) {
+async function generatePredictionBody(sources) {
   const signalText = sources.map(s =>
     `• ${s.title} — ${s.source}`
   ).join("\n");
@@ -203,38 +186,24 @@ async function generatePrediction(topic, sources) {
       content: `
 You are an AI foresight system.
 
-Title:
-${topic}
-
-Date:
-Generate a date exactly six months from today.
-
 Verified business signals:
 ${signalText}
 
-Task:
-1) State what the business reality WILL look like
-   six months from now.
-2) Then state what BREAKS if this forecast is wrong.
-
-Rules (STRICT):
-- Start with the title on its own line
-- Then write: "Outlook · <date>"
-- Do NOT add any other headers
-- Do NOT add markdown symbols
-- No hedging language
-- No hype or emotion
-- Write as if six months have already passed
-
-Output structure (MANDATORY — EXACT ORDER):
-<Title>
-Outlook · <date>
+Write ONLY the following sections:
 
 Six-Month Reality:
 - 3–5 short paragraphs
 
 What Breaks If This Forecast Is Wrong:
 - 3–5 short bullet points
+
+Rules:
+- No title
+- No date
+- No headers other than the two above
+- No markdown symbols
+- No hype
+- Write as if six months have already passed
 `
     }],
     temperature: 0.3
@@ -244,61 +213,7 @@ What Breaks If This Forecast Is Wrong:
 }
 
 /* ------------------------------------------------------------
-   PERSONA TOPIC GENERATORS
------------------------------------------------------------- */
-async function generateNextTopicGDJ(lastTopic = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are GD-J.
-
-Profile:
-- Age: 23
-- Background: business
-- Thinking style: analytical (GPT-like)
-- Time horizon: 3–6 months
-
-Generate ONE AI business foresight topic.
-Avoid repeating: "${lastTopic}"
-Output ONLY the topic text.
-`
-    }],
-    temperature: 0.6
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-async function generateNextTopicAmazon(lastTopic = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are AMAZON persona.
-
-Focus:
-- pricing & cost structure
-- consumer behavior
-- fashion demand
-- execution efficiency
-
-Generate ONE Amazon-commerce-focused topic
-for the next 3 months.
-Avoid repeating: "${lastTopic}"
-Output ONLY the topic text.
-`
-    }],
-    temperature: 0.6
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-/* ------------------------------------------------------------
-   CORE PIPELINE (POST-GENERATION CLEANUP ONLY)
+   CORE PIPELINE (HEADERS LOCKED IN JS)
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona = "BUSINESS") {
   const rewritten = await rewriteForSerp(topic);
@@ -314,8 +229,8 @@ async function runPipeline(topic, persona = "BUSINESS") {
   const ranked = await rankSignalsByImpact(rawSources);
   const finalSources = ranked.slice(0, 10);
 
-  const predictionRaw = await generatePrediction(topic, finalSources);
-  const prediction = cleanForesightOutput(predictionRaw, topic);
+  const body = await generatePredictionBody(finalSources);
+  const outlookDate = computeSixMonthOutlookDate();
 
   let reportText = "Current Signals (Ranked by Impact Level)\n";
   finalSources.forEach(s => {
@@ -323,8 +238,9 @@ async function runPipeline(topic, persona = "BUSINESS") {
     if (s.link) reportText += `  ${s.link}\n`;
   });
 
-  reportText += "\nSix-Month Outlook\n";
-  reportText += prediction;
+  reportText += `\n${topic}\n`;
+  reportText += `Outlook · ${outlookDate}\n\n`;
+  reportText += body;
 
   return { report: reportText };
 }
