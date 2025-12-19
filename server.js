@@ -208,10 +208,8 @@ async function generateNextTopicAWang(lastTopic = "") {
     messages: [{
       role: "user",
       content: `
-You are A Wang, an Amazon-native buyer strategist.
-
-Generate ONE purchasing-focused topic
-about how people will buy products on Amazon
+You are A. Wang, Amazon’s Head of Beauty.
+Generate ONE purchasing-focused topic about what people are buying in beauty on Amazon, and include the specific product and brand.
 in the next 3–6 months.
 Avoid repeating: "${lastTopic}"
 
