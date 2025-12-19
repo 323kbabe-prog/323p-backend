@@ -81,17 +81,43 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP News (persona-aware)
+   AMAZON ONLY — Google SERP search demand (REAL DATA)
+------------------------------------------------------------ */
+async function fetchGoogleTopBeautySearches(seed = "beauty products") {
+  if (!SERP_KEY) return [];
+
+  try {
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(seed)}&num=10&api_key=${SERP_KEY}`;
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const set = new Set();
+
+    if (j.related_searches) {
+      j.related_searches.forEach(x => x.query && set.add(x.query.toLowerCase()));
+    }
+
+    if (j.organic_results) {
+      j.organic_results.forEach(x => x.title && set.add(x.title.toLowerCase()));
+    }
+
+    return Array.from(set).slice(0, 10);
+  } catch {
+    return [];
+  }
+}
+
+/* ------------------------------------------------------------
+   STEP 3 — Fetch SERP Sources (persona-aware)
 ------------------------------------------------------------ */
 async function fetchSerpSources(topic, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
 
-  let query;
-  let url;
+  let query, url;
 
   if (persona === "AMAZON") {
-    query = `${topic} site:amazon.com`;
-    // 🔥 NO tbm=nws for Amazon
+    // 🔥 Google Web search → Amazon PRODUCT pages only
+    query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
     url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=20&api_key=${SERP_KEY}`;
   } else {
     const year = new Date().getFullYear();
@@ -107,13 +133,19 @@ async function fetchSerpSources(topic, persona = "BUSINESS") {
       ? (j.organic_results || [])
       : (j.news_results || []);
 
-    return results.map(x => ({
-      title: x.title || "",
-      source: x.source || "Unknown",
-      link: x.link || "",
-      date: x.date || "",
-      snippet: x.snippet || ""
-    }));
+    return results
+      .filter(x =>
+        persona !== "AMAZON" ||
+        (x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/")))
+      )
+      .map(x => ({
+        title: x.title || "",
+        source: persona === "AMAZON" ? "Amazon" : (x.source || "Unknown"),
+        link: x.link || "",
+        date: x.date || "",
+        snippet: x.snippet || ""
+      }));
+
   } catch {
     return [];
   }
@@ -188,7 +220,7 @@ What Breaks If This Forecast Is Wrong:
 }
 
 /* ------------------------------------------------------------
-   8-BALL TOPIC GENERATORS (RESTORED)
+   8-BALL TOPIC GENERATORS
 ------------------------------------------------------------ */
 async function generateNextTopicGDJ(lastTopic = "") {
   const out = await openai.chat.completions.create({
@@ -210,30 +242,24 @@ Output ONLY the topic text.
   return out.choices[0].message.content.trim();
 }
 
-async function generateNextTopicAWang(lastTopic = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are A. Wang, Amazon’s Head of Beauty.
-Generate ONE purchasing-focused topic about what people are buying in beauty on Amazon, and include the specific product and brand.
-in the next 3–6 months.
-Avoid repeating: "${lastTopic}"
-
-Output ONLY the topic text.
-`
-    }],
-    temperature: 0.6
-  });
-  return out.choices[0].message.content.trim();
+async function generateNextTopicAWang() {
+  const searches = await fetchGoogleTopBeautySearches("beauty products");
+  return searches.length ? searches[0] : "best selling beauty products on amazon";
 }
 
 /* ------------------------------------------------------------
    CORE PIPELINE
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
-  const baseTopic = persona === "BUSINESS" ? await rewriteForSerp(topic) : topic;
+  let baseTopic;
+
+  if (persona === "BUSINESS") {
+    baseTopic = await rewriteForSerp(topic);
+  } else {
+    // AMAZON: topic from Google search demand
+    baseTopic = (await fetchGoogleTopBeautySearches(topic))[0] || topic;
+  }
+
   const sources = await fetchSerpSources(baseTopic, persona);
 
   if (sources.length < 3) {
@@ -254,7 +280,7 @@ async function runPipeline(topic, persona) {
 }
 
 /* ------------------------------------------------------------
-   /run — run with provided topic
+   /run
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
@@ -268,16 +294,15 @@ app.post("/run", async (req, res) => {
 });
 
 /* ------------------------------------------------------------
-   /next — 8-BALL (generate NEW topic first)
+   /next — 8-BALL
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
-  const lastTopic = (req.body.lastTopic || "").trim();
   const persona = req.body.persona || "BUSINESS";
 
   const topic =
     persona === "AMAZON"
-      ? await generateNextTopicAWang(lastTopic)
-      : await generateNextTopicGDJ(lastTopic);
+      ? await generateNextTopicAWang()
+      : await generateNextTopicGDJ();
 
   if (!(await isClearTopic(topic))) {
     return res.json({ report: "Persona failed to generate topic." });
