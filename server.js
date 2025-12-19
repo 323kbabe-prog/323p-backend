@@ -31,17 +31,31 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
-   Utility — remove duplicate Outlook lines (Option A)
+   Utility — post-generation cleanup (FINAL)
+   Removes duplicated:
+   - Title
+   - Outlook · <date>
 ------------------------------------------------------------ */
-function cleanDuplicateOutlook(text) {
+function cleanForesightOutput(text, title) {
   const lines = text.split("\n");
-  let seen = false;
+  let seenTitle = false;
+  let seenOutlook = false;
 
   return lines.filter(line => {
-    if (line.trim().startsWith("Outlook ·")) {
-      if (seen) return false;
-      seen = true;
+    const t = line.trim();
+
+    if (t === title.trim()) {
+      if (seenTitle) return false;
+      seenTitle = true;
+      return true;
     }
+
+    if (t.startsWith("Outlook ·")) {
+      if (seenOutlook) return false;
+      seenOutlook = true;
+      return true;
+    }
+
     return true;
   }).join("\n");
 }
@@ -175,7 +189,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight
+   STEP 5 — Generate foresight (UNCHANGED)
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -284,7 +298,7 @@ Output ONLY the topic text.
 }
 
 /* ------------------------------------------------------------
-   CORE PIPELINE (PERSONA-AWARE)
+   CORE PIPELINE (POST-GENERATION CLEANUP ONLY)
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona = "BUSINESS") {
   const rewritten = await rewriteForSerp(topic);
@@ -301,7 +315,7 @@ async function runPipeline(topic, persona = "BUSINESS") {
   const finalSources = ranked.slice(0, 10);
 
   const predictionRaw = await generatePrediction(topic, finalSources);
-  const prediction = cleanDuplicateOutlook(predictionRaw);
+  const prediction = cleanForesightOutput(predictionRaw, topic);
 
   let reportText = "Current Signals (Ranked by Impact Level)\n";
   finalSources.forEach(s => {
