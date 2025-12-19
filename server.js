@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — MULTI-PERSONA (BUSINESS + AMAZON)
+// Blue Ocean Browser — BUSINESS (GD-J) + AMAZON (A Wang)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -83,7 +83,7 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP sources (PERSONA-AWARE)
+   STEP 3 — Fetch SERP Sources (PERSONA-AWARE)
 ------------------------------------------------------------ */
 async function fetchSerpSources(rewrittenTopic, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
@@ -121,7 +121,7 @@ ${rewrittenTopic}
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals
+   STEP 4 — Rank signals by business impact
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -155,7 +155,7 @@ ${list}
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight
+   STEP 5 — Generate foresight (UNCHANGED)
 ------------------------------------------------------------ */
 async function generatePrediction(topic, sources) {
   const signalText = sources.map(s =>
@@ -180,7 +180,7 @@ Task:
    six months from now.
 2) Then state what BREAKS if this forecast is wrong.
 
-Rules:
+Rules (STRICT):
 - Use direct future statements
 - No hedging
 - No hype
@@ -197,53 +197,43 @@ Rules:
    PERSONA TOPIC DECIDERS
 ------------------------------------------------------------ */
 async function generateNextTopicGDJ(lastTopic = "") {
-  const out = await openai.chat.completions.create({
+  return (await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
 You are GD-J (BUSINESS persona).
-
-Generate ONE realistic business-focused AI topic
-for the next 3–6 months.
-
-Avoid repeating:
-"${lastTopic}"
-
+Generate ONE AI business foresight topic.
+Avoid repeating: "${lastTopic}"
 Output ONLY the topic text.
 `
     }],
     temperature: 0.6
-  });
-  return out.choices[0].message.content.trim();
+  })).choices[0].message.content.trim();
 }
 
 async function generateNextTopicAWang(lastTopic = "") {
-  const out = await openai.chat.completions.create({
+  return (await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
 You are A Wang (AMAZON persona).
 
-Mindset:
-- efficiency & execution
+Focus:
 - pricing & cost structure
 - consumer behavior
 - fashion as demand signal
+- execution efficiency
 
 Generate ONE Amazon-commerce-focused topic
-relevant to the next 3 months.
-
-Avoid repeating:
-"${lastTopic}"
-
+for the next 3 months.
+Avoid repeating: "${lastTopic}"
 Output ONLY the topic text.
 `
     }],
     temperature: 0.6
-  });
-  return out.choices[0].message.content.trim();
+  })).choices[0].message.content.trim();
 }
 
 /* ------------------------------------------------------------
@@ -254,14 +244,14 @@ async function runPipeline(topic, persona) {
   const rawSources = await fetchSerpSources(rewritten, persona);
 
   if (rawSources.length < 3) {
-    return { report: "Not enough verified sources found." };
+    return { report: "Fewer than three verified sources found." };
   }
 
   const ranked = await rankSignalsByImpact(rawSources);
   const finalSources = ranked.slice(0, 10);
   const prediction = await generatePrediction(topic, finalSources);
 
-  let reportText = "Current Signals\n";
+  let reportText = "Current Signals (Ranked by Impact Level)\n";
   finalSources.forEach(s => {
     reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
     if (s.link) reportText += `  ${s.link}\n`;
@@ -313,5 +303,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — BUSINESS & AMAZON running on", PORT);
+  console.log("🌊 Blue Ocean Browser — BUSINESS & AMAZON running on port", PORT);
 });
