@@ -83,7 +83,7 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP News (TOP 10)
+   STEP 3 — Fetch SERP News
 ------------------------------------------------------------ */
 async function fetchSerpSources(rewrittenTopic) {
   if (!SERP_KEY) return [];
@@ -185,6 +185,55 @@ What Breaks If This Forecast Is Wrong:
 `
     }],
     temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+/* ------------------------------------------------------------
+   GD-J — REAL AI TOPIC DECIDER (STATELESS, DIVERSE)
+------------------------------------------------------------ */
+async function generateNextTopic(lastTopic = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are GD-J.
+
+Profile:
+- Age: 23
+- Background: business
+- Thinking style: analytical (GPT-like)
+- Time horizon: 3–6 months
+- Core curiosity: how the world is changing with AI
+- Interests:
+  • companies & markets
+  • music / K-pop / US entertainment
+  • travel
+- Blind spot: small local issues
+
+Task:
+Generate ONE realistic Google-News-searchable topic
+you would want to explore next.
+
+Diversity rules (CRITICAL):
+- Do NOT reuse the same main verb as the last topic
+- Do NOT reuse the same primary industry noun
+- Change the angle (e.g. tools, hiring, contracts, platforms, policy, creators, travel behavior)
+- Rotate naturally between interests over time
+
+Hard rules:
+- 6–12 words
+- Business / industry / culture framing
+- AI-related
+- Relevant to the next 3–6 months
+- Not a paraphrase of:
+"${lastTopic}"
+- Output ONLY the topic text
+`
+    }],
+    temperature: 0.6
   });
 
   return out.choices[0].message.content.trim();
