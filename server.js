@@ -257,7 +257,7 @@ async function runPipeline(topic) {
   const finalSources = ranked.slice(0, 10);
   const prediction = await generatePrediction(topic, finalSources);
 
-  let reportText = "Current Signals (Ranked by Business Impact)\n";
+  let reportText = "Current Signals (Ranked by Impact Level)\n";
   finalSources.forEach(s => {
     reportText += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
     if (s.link) reportText += `  ${s.link}\n`;
