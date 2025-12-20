@@ -31,35 +31,6 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
-   REAL STANFORD UNIVERSITY MAJORS (BUSINESS LENSES)
------------------------------------------------------------- */
-const STANFORD_MAJORS = [
-  "Computer Science",
-  "Economics",
-  "Management Science and Engineering",
-  "Political Science",
-  "Psychology",
-  "Sociology",
-  "Symbolic Systems",
-  "Statistics",
-  "Electrical Engineering",
-  "Biomedical Engineering",
-  "Biology",
-  "Environmental Science",
-  "International Relations",
-  "Communication",
-  "Design",
-  "Education",
-  "Philosophy",
-  "Law"
-];
-
-function pickNextMajor(lastMajor = "") {
-  const pool = STANFORD_MAJORS.filter(m => m !== lastMajor);
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
-/* ------------------------------------------------------------
    STEP 1 — Semantic clarity check
 ------------------------------------------------------------ */
 async function isClearTopic(topic) {
@@ -81,100 +52,146 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang chooses WHAT TO BUY (unchanged)
+   STEP 2 — Rewrite topic for SERP (BUSINESS only)
 ------------------------------------------------------------ */
-async function generateNextTopicAWang(lastTopic = "") {
+async function rewriteForSerp(topic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-You are A. Wang, an Amazon cosmetics buyer.
-
-Choose ONE cosmetics category or product
-that you would consider buying this season.
+Rewrite the following topic into a short,
+NEWS-DOABLE business headline phrase.
 
 Rules:
-- Buyer mindset
-- Practical, purchase-oriented
-- Avoid repeating: "${lastTopic}"
-- 4–8 words
+- 5–8 words
+- Neutral, factual tone
+- Business / industry framing
+- No future tense
 
-Output ONLY the topic.
+Input:
+"${topic}"
+
+Output:
 `
     }],
-    temperature: 0.7
+    temperature: 0
   });
-
   return out.choices[0].message.content.trim();
 }
 
 /* ------------------------------------------------------------
-   AMAZON — Find ONE Amazon product via Google
+   AMAZON ONLY — Google SERP search demand
 ------------------------------------------------------------ */
-async function fetchSingleAmazonProduct(query) {
-  if (!SERP_KEY) return null;
+async function fetchGoogleTopBeautySearches(seed = "beauty products") {
+  if (!SERP_KEY) return [];
 
   try {
-    const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(seed)}&num=10&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    const product = (j.organic_results || []).find(
-      x => x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/"))
-    );
+    const set = new Set();
 
-    if (!product) return null;
+    if (j.related_searches) {
+      j.related_searches.forEach(x => x.query && set.add(x.query.toLowerCase()));
+    }
 
-    return {
-      title: product.title || "",
-      link: product.link || "",
-      source: "Amazon"
-    };
+    if (j.organic_results) {
+      j.organic_results.forEach(x => x.title && set.add(x.title.toLowerCase()));
+    }
+
+    return Array.from(set).slice(0, 10);
   } catch {
-    return null;
+    return [];
   }
 }
 
 /* ------------------------------------------------------------
-   BUSINESS — Fetch ONE LinkedIn job (NEW)
+   STEP 3 — Fetch SERP Sources (persona-aware)
 ------------------------------------------------------------ */
-async function fetchSingleLinkedInJob(jobTitle) {
-  if (!SERP_KEY) return null;
+async function fetchSerpSources(topic, persona = "BUSINESS") {
+  if (!SERP_KEY) return [];
+
+  let query, url;
+
+  if (persona === "AMAZON") {
+    query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
+    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=20&api_key=${SERP_KEY}`;
+  } else {
+    const year = new Date().getFullYear();
+    query = `${topic} business news ${year}`;
+    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
+  }
 
   try {
-    const q = `${jobTitle} site:linkedin.com/jobs`;
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    const job = (j.organic_results || []).find(
-      x => x.link && x.link.includes("linkedin.com/jobs")
-    );
+    const results = persona === "AMAZON"
+      ? (j.organic_results || [])
+      : (j.news_results || []);
 
-    if (!job) return null;
+    return results
+      .filter(x =>
+        persona !== "AMAZON" ||
+        (x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/")))
+      )
+      .map(x => ({
+        title: x.title || "",
+        source: persona === "AMAZON" ? "Amazon" : (x.source || "Unknown"),
+        link: x.link || "",
+        date: x.date || "",
+        snippet: x.snippet || ""
+      }));
 
-    return {
-      title: job.title || jobTitle,
-      link: job.link || "",
-      source: "LinkedIn"
-    };
   } catch {
-    return null;
+    return [];
   }
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight BODY ONLY (unchanged)
+   STEP 4 — Rank signals by impact
+------------------------------------------------------------ */
+async function rankSignalsByImpact(sources) {
+  if (sources.length < 2) return sources;
+
+  const list = sources.map(
+    (s, i) => `${i + 1}. ${s.title} — ${s.source}`
+  ).join("\n");
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Rank the following headlines by expected BUSINESS IMPACT
+over the next 3–6 months.
+Return ONLY the ordered list of numbers.
+
+${list}
+`
+    }],
+    temperature: 0
+  });
+
+  const order = out.choices[0].message.content
+    .match(/\d+/g)
+    ?.map(n => parseInt(n, 10) - 1) || [];
+
+  return order.map(i => sources[i]).filter(Boolean);
+}
+
+/* ------------------------------------------------------------
+   STEP 5 — Generate foresight BODY ONLY
 ------------------------------------------------------------ */
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
 
   const personaHint =
     persona === "AMAZON"
-      ? "Analyze purchasing rationale, price sensitivity, and buyer behavior."
-      : "Analyze hiring intent, labor demand, and organizational priorities.";
+      ? "Focus on buying behavior, pricing, demand, and purchasing strategy."
+      : "Focus on business strategy, market structure, and decision-making.";
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -204,78 +221,69 @@ What Breaks If This Forecast Is Wrong:
 /* ------------------------------------------------------------
    8-BALL TOPIC GENERATORS
 ------------------------------------------------------------ */
-async function generateNextTopicGDJ(lastTopic = "", lastMajor = "") {
-  const major = pickNextMajor(lastMajor);
-
+async function generateNextTopicGDJ(lastTopic = "") {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-You are GD-J, a LinkedIn job-market advisor.
+You are GD-J, an analytical business thinker.
 
-Academic lens:
-${major} (Stanford University)
+Generate ONE future-facing business topic
+for the next 3–6 months.
+Avoid repeating: "${lastTopic}"
 
-Generate ONE job title
-that companies are likely hiring for in the next 3–6 months.
-
-Rules:
-- Use real job titles
-- Avoid repeating: "${lastTopic}"
-- Neutral, analytical tone
-- Output ONLY the job title
+Output ONLY the topic text.
 `
     }],
-    temperature: 0.7
+    temperature: 0.6
   });
+  return out.choices[0].message.content.trim();
+}
 
-  return {
-    topic: out.choices[0].message.content.trim(),
-    major
-  };
+async function generateNextTopicAWang() {
+  const searches = await fetchGoogleTopBeautySearches("beauty products");
+  return searches.length ? searches[0] : "best selling beauty products on amazon";
 }
 
 /* ------------------------------------------------------------
    CORE PIPELINE
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
+  let baseTopic;
 
-  // BUSINESS = LinkedIn Job Advisor
   if (persona === "BUSINESS") {
-    const job = await fetchSingleLinkedInJob(topic);
-    if (!job) return { report: "No LinkedIn job signals found." };
-
-    const body = await generatePredictionBody(
-      [{ title: job.title, source: "LinkedIn" }],
-      "BUSINESS"
-    );
-
-    let report = "Current Signals (Ranked by Impact Level)\n";
-    report += `• ${job.title} — LinkedIn\n`;
-    report += `  ${job.link}\n`;
-
-    return { report: report + "\n" + body };
+    baseTopic = await rewriteForSerp(topic);
+  } else {
+    baseTopic = (await fetchGoogleTopBeautySearches(topic))[0] || topic;
   }
 
-  // AMAZON (unchanged)
-  const product = await fetchSingleAmazonProduct(topic);
-  if (!product) return { report: "No Amazon product found for this topic." };
+  const sources = await fetchSerpSources(baseTopic, persona);
 
-  const brand = product.title.split(" ")[0];
-  const body = await generatePredictionBody(
-    [{ title: product.title, source: "Amazon" }],
-    "AMAZON"
-  );
+  if (sources.length < 3) {
+    return { report: "Not enough verified sources." };
+  }
+
+  const ranked = await rankSignalsByImpact(sources);
+  const body = await generatePredictionBody(ranked.slice(0, 10), persona);
 
   let report = "Current Signals (Ranked by Impact Level)\n";
-  report += `• ${product.title} — ${brand}\n`;
-  report += `  ${product.link}\n`;
+  ranked.slice(0, 10).forEach(s => {
+    report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
+    if (s.link) report += `  ${s.link}\n`;
+  });
 
-  return {
-    topic: `${brand} ${topic}`,
-    report: report + "\n" + body
-  };
+  report += "\n" + body;
+
+  // ✅ ONLY CHANGE IS HERE
+  if (persona === "AMAZON") {
+    return {
+      topic: ranked[0].title,
+      report
+    };
+  }
+
+  return { report };
 }
 
 /* ------------------------------------------------------------
@@ -297,24 +305,18 @@ app.post("/run", async (req, res) => {
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
-  const lastTopic = (req.body.lastTopic || "").trim();
-  const lastMajor = (req.body.lastMajor || "").trim();
 
-  if (persona === "BUSINESS") {
-    const result = await generateNextTopicGDJ(lastTopic, lastMajor);
-    const report = await runPipeline(result.topic, "BUSINESS");
+  const topic =
+    persona === "AMAZON"
+      ? await generateNextTopicAWang()
+      : await generateNextTopicGDJ();
 
-    return res.json({
-      topic: result.topic,
-      major: result.major,
-      report: report.report
-    });
+  if (!(await isClearTopic(topic))) {
+    return res.json({ report: "Persona failed to generate topic." });
   }
 
-  const topic = await generateNextTopicAWang(lastTopic);
-  const report = await runPipeline(topic, "AMAZON");
-
-  res.json({ topic: report.topic || topic, report: report.report });
+  const result = await runPipeline(topic, persona);
+  res.json({ topic: result.topic || topic, report: result.report });
 });
 
 /* ------------------------------------------------------------
