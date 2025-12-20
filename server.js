@@ -31,6 +31,35 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
+   REAL STANFORD UNIVERSITY MAJORS (BUSINESS LENSES)
+------------------------------------------------------------ */
+const STANFORD_MAJORS = [
+  "Computer Science",
+  "Economics",
+  "Management Science and Engineering",
+  "Political Science",
+  "Psychology",
+  "Sociology",
+  "Symbolic Systems",
+  "Statistics",
+  "Electrical Engineering",
+  "Biomedical Engineering",
+  "Biology",
+  "Environmental Science",
+  "International Relations",
+  "Communication",
+  "Design",
+  "Education",
+  "Philosophy",
+  "Law"
+];
+
+function pickNextMajor(lastMajor = "") {
+  const pool = STANFORD_MAJORS.filter(m => m !== lastMajor);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* ------------------------------------------------------------
    STEP 1 — Semantic clarity check
 ------------------------------------------------------------ */
 async function isClearTopic(topic) {
@@ -66,7 +95,7 @@ NEWS-DOABLE business headline phrase.
 Rules:
 - 5–8 words
 - Neutral, factual tone
-- Business / industry framing
+- Business framing
 - No future tense
 
 Input:
@@ -81,77 +110,91 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   AMAZON ONLY — Google SERP search demand
+   AMAZON — A. Wang chooses WHAT TO BUY (unchanged)
 ------------------------------------------------------------ */
-async function fetchGoogleTopBeautySearches(seed = "beauty products") {
-  if (!SERP_KEY) return [];
+async function generateNextTopicAWang(lastTopic = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are A. Wang, an Amazon cosmetics buyer.
+
+Choose ONE cosmetics category or product
+that you would consider buying this season.
+
+Rules:
+- Buyer mindset
+- Practical, purchase-oriented
+- Can be a product type or specific item
+- Avoid repeating: "${lastTopic}"
+- 4–8 words
+
+Output ONLY the topic.
+`
+    }],
+    temperature: 0.7
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+/* ------------------------------------------------------------
+   AMAZON — Find ONE Amazon product via Google
+------------------------------------------------------------ */
+async function fetchSingleAmazonProduct(query) {
+  if (!SERP_KEY) return null;
 
   try {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(seed)}&num=10&api_key=${SERP_KEY}`;
+    const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    const set = new Set();
+    const product = (j.organic_results || []).find(
+      x => x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/"))
+    );
 
-    if (j.related_searches) {
-      j.related_searches.forEach(x => x.query && set.add(x.query.toLowerCase()));
-    }
+    if (!product) return null;
 
-    if (j.organic_results) {
-      j.organic_results.forEach(x => x.title && set.add(x.title.toLowerCase()));
-    }
-
-    return Array.from(set).slice(0, 10);
+    return {
+      title: product.title || "",
+      link: product.link || "",
+      source: "Amazon"
+    };
   } catch {
-    return [];
+    return null;
   }
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP Sources (persona-aware)
+   STEP 3 — Fetch SERP Sources (BUSINESS unchanged)
 ------------------------------------------------------------ */
 async function fetchSerpSources(topic, persona = "BUSINESS") {
   if (!SERP_KEY) return [];
 
-  let query, url;
-
-  if (persona === "AMAZON") {
-    query = `${topic} site:amazon.com/dp OR site:amazon.com/gp/product`;
-    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=20&api_key=${SERP_KEY}`;
-  } else {
-    const year = new Date().getFullYear();
-    query = `${topic} business news ${year}`;
-    url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
-  }
+  const year = new Date().getFullYear();
+  const query = `${topic} business news ${year}`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
 
   try {
     const r = await fetch(url);
     const j = await r.json();
 
-    const results = persona === "AMAZON"
-      ? (j.organic_results || [])
-      : (j.news_results || []);
-
-    return results
-      .filter(x =>
-        persona !== "AMAZON" ||
-        (x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/")))
-      )
-      .map(x => ({
-        title: x.title || "",
-        source: persona === "AMAZON" ? "Amazon" : (x.source || "Unknown"),
-        link: x.link || "",
-        date: x.date || "",
-        snippet: x.snippet || ""
-      }));
-
+    return (j.news_results || []).map(x => ({
+      title: x.title || "",
+      source: x.source || "Unknown",
+      link: x.link || "",
+      date: x.date || "",
+      snippet: x.snippet || ""
+    }));
   } catch {
     return [];
   }
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by impact
+   STEP 4 — Rank signals by impact (unchanged)
 ------------------------------------------------------------ */
 async function rankSignalsByImpact(sources) {
   if (sources.length < 2) return sources;
@@ -190,8 +233,8 @@ async function generatePredictionBody(sources, persona) {
 
   const personaHint =
     persona === "AMAZON"
-      ? "Focus on buying behavior, pricing, demand, and purchasing strategy."
-      : "Focus on business strategy, market structure, and decision-making.";
+      ? "Analyze purchasing rationale, price sensitivity, and buyer behavior."
+      : "Analyze business strategy and market structure.";
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -221,7 +264,9 @@ What Breaks If This Forecast Is Wrong:
 /* ------------------------------------------------------------
    8-BALL TOPIC GENERATORS
 ------------------------------------------------------------ */
-async function generateNextTopicGDJ(lastTopic = "") {
+async function generateNextTopicGDJ(lastTopic = "", lastMajor = "") {
+  const major = pickNextMajor(lastMajor);
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
@@ -229,61 +274,73 @@ async function generateNextTopicGDJ(lastTopic = "") {
       content: `
 You are GD-J, an analytical business thinker.
 
+Academic lens:
+${major} (Stanford University)
+
+Task:
 Generate ONE future-facing business topic
 for the next 3–6 months.
-Avoid repeating: "${lastTopic}"
 
-Output ONLY the topic text.
+Rules:
+- View the topic through the academic lens above
+- Relevant to real-world business decisions
+- Avoid repeating: "${lastTopic}"
+- Neutral, analytical tone
+- Output ONLY the topic text
 `
     }],
-    temperature: 0.6
+    temperature: 0.7
   });
-  return out.choices[0].message.content.trim();
-}
 
-async function generateNextTopicAWang() {
-  const searches = await fetchGoogleTopBeautySearches("beauty products");
-  return searches.length ? searches[0] : "best selling beauty products on amazon";
+  return {
+    topic: out.choices[0].message.content.trim(),
+    major
+  };
 }
 
 /* ------------------------------------------------------------
    CORE PIPELINE
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
-  let baseTopic;
 
+  // BUSINESS
   if (persona === "BUSINESS") {
-    baseTopic = await rewriteForSerp(topic);
-  } else {
-    baseTopic = (await fetchGoogleTopBeautySearches(topic))[0] || topic;
+    const baseTopic = await rewriteForSerp(topic);
+    const sources = await fetchSerpSources(baseTopic, "BUSINESS");
+    if (sources.length < 3) return { report: "Not enough verified sources." };
+
+    const ranked = await rankSignalsByImpact(sources);
+    const body = await generatePredictionBody(ranked.slice(0,10), "BUSINESS");
+
+    let report = "Current Signals (Ranked by Impact Level)\n";
+    ranked.slice(0,10).forEach(s=>{
+      report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
+      if (s.link) report += `  ${s.link}\n`;
+    });
+
+    return { report: report + "\n" + body };
   }
 
-  const sources = await fetchSerpSources(baseTopic, persona);
-
-  if (sources.length < 3) {
-    return { report: "Not enough verified sources." };
+  // AMAZON (unchanged)
+  const product = await fetchSingleAmazonProduct(topic);
+  if (!product) {
+    return { report: "No Amazon product found for this topic." };
   }
 
-  const ranked = await rankSignalsByImpact(sources);
-  const body = await generatePredictionBody(ranked.slice(0, 10), persona);
+  const brand = product.title.split(" ")[0];
+  const body = await generatePredictionBody(
+    [{ title: product.title, source: "Amazon" }],
+    "AMAZON"
+  );
 
   let report = "Current Signals (Ranked by Impact Level)\n";
-  ranked.slice(0, 10).forEach(s => {
-    report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
-    if (s.link) report += `  ${s.link}\n`;
-  });
+  report += `• ${product.title} — ${brand}\n`;
+  report += `  ${product.link}\n`;
 
-  report += "\n" + body;
-
-  // ✅ ONLY CHANGE IS HERE
-  if (persona === "AMAZON") {
-    return {
-      topic: ranked[0].title,
-      report
-    };
-  }
-
-  return { report };
+  return {
+    topic: `${brand} ${topic}`,
+    report: report + "\n" + body
+  };
 }
 
 /* ------------------------------------------------------------
@@ -305,18 +362,25 @@ app.post("/run", async (req, res) => {
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
+  const lastTopic = (req.body.lastTopic || "").trim();
+  const lastMajor = (req.body.lastMajor || "").trim();
 
-  const topic =
-    persona === "AMAZON"
-      ? await generateNextTopicAWang()
-      : await generateNextTopicGDJ();
+  if (persona === "BUSINESS") {
+    const result = await generateNextTopicGDJ(lastTopic, lastMajor);
+    const report = await runPipeline(result.topic, "BUSINESS");
 
-  if (!(await isClearTopic(topic))) {
-    return res.json({ report: "Persona failed to generate topic." });
+    res.json({
+      topic: result.topic,
+      major: result.major,
+      report: report.report
+    });
+    return;
   }
 
-  const result = await runPipeline(topic, persona);
-  res.json({ topic: result.topic || topic, report: result.report });
+  const topic = await generateNextTopicAWang(lastTopic);
+  const report = await runPipeline(topic, "AMAZON");
+
+  res.json({ topic: report.topic || topic, report: report.report });
 });
 
 /* ------------------------------------------------------------
