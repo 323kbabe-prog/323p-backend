@@ -81,35 +81,6 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   STEP 2 — Rewrite topic for SERP (BUSINESS only)
------------------------------------------------------------- */
-async function rewriteForSerp(topic) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Rewrite the following topic into a short,
-NEWS-DOABLE business headline phrase.
-
-Rules:
-- 5–8 words
-- Neutral, factual tone
-- Business framing
-- No future tense
-
-Input:
-"${topic}"
-
-Output:
-`
-    }],
-    temperature: 0
-  });
-  return out.choices[0].message.content.trim();
-}
-
-/* ------------------------------------------------------------
    AMAZON — A. Wang chooses WHAT TO BUY (unchanged)
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
@@ -126,7 +97,6 @@ that you would consider buying this season.
 Rules:
 - Buyer mindset
 - Practical, purchase-oriented
-- Can be a product type or specific item
 - Avoid repeating: "${lastTopic}"
 - 4–8 words
 
@@ -168,65 +138,35 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 /* ------------------------------------------------------------
-   STEP 3 — Fetch SERP Sources (BUSINESS unchanged)
+   BUSINESS — Fetch ONE LinkedIn job (NEW)
 ------------------------------------------------------------ */
-async function fetchSerpSources(topic, persona = "BUSINESS") {
-  if (!SERP_KEY) return [];
-
-  const year = new Date().getFullYear();
-  const query = `${topic} business news ${year}`;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbm=nws&num=20&api_key=${SERP_KEY}`;
+async function fetchSingleLinkedInJob(jobTitle) {
+  if (!SERP_KEY) return null;
 
   try {
+    const q = `${jobTitle} site:linkedin.com/jobs`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    return (j.news_results || []).map(x => ({
-      title: x.title || "",
-      source: x.source || "Unknown",
-      link: x.link || "",
-      date: x.date || "",
-      snippet: x.snippet || ""
-    }));
+    const job = (j.organic_results || []).find(
+      x => x.link && x.link.includes("linkedin.com/jobs")
+    );
+
+    if (!job) return null;
+
+    return {
+      title: job.title || jobTitle,
+      link: job.link || "",
+      source: "LinkedIn"
+    };
   } catch {
-    return [];
+    return null;
   }
 }
 
 /* ------------------------------------------------------------
-   STEP 4 — Rank signals by impact (unchanged)
------------------------------------------------------------- */
-async function rankSignalsByImpact(sources) {
-  if (sources.length < 2) return sources;
-
-  const list = sources.map(
-    (s, i) => `${i + 1}. ${s.title} — ${s.source}`
-  ).join("\n");
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Rank the following headlines by expected BUSINESS IMPACT
-over the next 3–6 months.
-Return ONLY the ordered list of numbers.
-
-${list}
-`
-    }],
-    temperature: 0
-  });
-
-  const order = out.choices[0].message.content
-    .match(/\d+/g)
-    ?.map(n => parseInt(n, 10) - 1) || [];
-
-  return order.map(i => sources[i]).filter(Boolean);
-}
-
-/* ------------------------------------------------------------
-   STEP 5 — Generate foresight BODY ONLY
+   STEP 5 — Generate foresight BODY ONLY (unchanged)
 ------------------------------------------------------------ */
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
@@ -234,7 +174,7 @@ async function generatePredictionBody(sources, persona) {
   const personaHint =
     persona === "AMAZON"
       ? "Analyze purchasing rationale, price sensitivity, and buyer behavior."
-      : "Analyze business strategy and market structure.";
+      : "Analyze hiring intent, labor demand, and organizational priorities.";
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -272,21 +212,19 @@ async function generateNextTopicGDJ(lastTopic = "", lastMajor = "") {
     messages: [{
       role: "user",
       content: `
-You are GD-J, an analytical business thinker.
+You are GD-J, a LinkedIn job-market advisor.
 
 Academic lens:
 ${major} (Stanford University)
 
-Task:
-Generate ONE future-facing business topic
-for the next 3–6 months.
+Generate ONE job title
+that companies are likely hiring for in the next 3–6 months.
 
 Rules:
-- View the topic through the academic lens above
-- Relevant to real-world business decisions
+- Use real job titles
 - Avoid repeating: "${lastTopic}"
 - Neutral, analytical tone
-- Output ONLY the topic text
+- Output ONLY the job title
 `
     }],
     temperature: 0.7
@@ -303,29 +241,26 @@ Rules:
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
 
-  // BUSINESS
+  // BUSINESS = LinkedIn Job Advisor
   if (persona === "BUSINESS") {
-    const baseTopic = await rewriteForSerp(topic);
-    const sources = await fetchSerpSources(baseTopic, "BUSINESS");
-    if (sources.length < 3) return { report: "Not enough verified sources." };
+    const job = await fetchSingleLinkedInJob(topic);
+    if (!job) return { report: "No LinkedIn job signals found." };
 
-    const ranked = await rankSignalsByImpact(sources);
-    const body = await generatePredictionBody(ranked.slice(0,10), "BUSINESS");
+    const body = await generatePredictionBody(
+      [{ title: job.title, source: "LinkedIn" }],
+      "BUSINESS"
+    );
 
     let report = "Current Signals (Ranked by Impact Level)\n";
-    ranked.slice(0,10).forEach(s=>{
-      report += `• ${s.title} — ${s.source} (${relativeTime(s.date)})\n`;
-      if (s.link) report += `  ${s.link}\n`;
-    });
+    report += `• ${job.title} — LinkedIn\n`;
+    report += `  ${job.link}\n`;
 
     return { report: report + "\n" + body };
   }
 
   // AMAZON (unchanged)
   const product = await fetchSingleAmazonProduct(topic);
-  if (!product) {
-    return { report: "No Amazon product found for this topic." };
-  }
+  if (!product) return { report: "No Amazon product found for this topic." };
 
   const brand = product.title.split(" ")[0];
   const body = await generatePredictionBody(
@@ -369,12 +304,11 @@ app.post("/next", async (req, res) => {
     const result = await generateNextTopicGDJ(lastTopic, lastMajor);
     const report = await runPipeline(result.topic, "BUSINESS");
 
-    res.json({
+    return res.json({
       topic: result.topic,
       major: result.major,
       report: report.report
     });
-    return;
   }
 
   const topic = await generateNextTopicAWang(lastTopic);
