@@ -251,7 +251,7 @@ Write EXACTLY 5 short paragraphs, in this order:
 4. What is likely to shift over the next six months
 5. What assumptions this prediction depends on
 
-If This Prediction Is Wrong, What Breaks:
+If This Prediction Is Correct, What Works:
 - 3 bullet points
 `
     }],
