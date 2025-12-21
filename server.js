@@ -242,6 +242,8 @@ ${signalText}
 
 Write ONLY:
 
+Persona: ${persona}
+
 Reality · ${sixMonthDateLabel()}:
 Write EXACTLY 5 short paragraphs, in this order:
 
@@ -259,6 +261,25 @@ If This Prediction Is Wrong, What Breaks:
   });
 
   return out.choices[0].message.content.trim();
+}
+
+async function generatePredictionBodySafe(sources, persona) {
+  const text = await generatePredictionBody(sources, persona);
+
+  // background persona guard
+  if (!text.startsWith(`Persona: ${persona}`)) {
+    // silently retry once
+    const retryText = await generatePredictionBody(sources, persona);
+
+    if (!retryText.startsWith(`Persona: ${persona}`)) {
+      // final fail-safe: do not leak wrong persona
+      return "";
+    }
+
+    return retryText;
+  }
+
+  return text;
 }
 
 /* ------------------------------------------------------------
@@ -306,10 +327,10 @@ async function runPipeline(topic, persona) {
     const job = await fetchSingleLinkedInJob(topic);
     if (!job) return { report: "No LinkedIn job signals found." };
 
-    const body = await generatePredictionBody(
-      [{ title: job.title, source: "LinkedIn" }],
-      "BUSINESS"
-    );
+    const body = await generatePredictionBodySafe(
+  [{ title: job.title, source: "LinkedIn" }],
+  "BUSINESS"
+);
 
     let report = "Current Signals (Ranked by Impact Level)\n";
     report += `• ${job.title} — LinkedIn\n`;
@@ -323,10 +344,11 @@ async function runPipeline(topic, persona) {
   if (!product) return { report: "No Amazon product found for this topic." };
 
   const brand = product.title.split(" ")[0];
-  const body = await generatePredictionBody(
-    [{ title: product.title, source: "Amazon" }],
-    "AMAZON"
-  );
+  
+  const body = await generatePredictionBodySafe(
+  [{ title: product.title, source: "Amazon" }],
+  "AMAZON"
+);
 
   let report = "Current Signals (Ranked by Impact Level)\n";
   report += `• ${product.title} — ${brand}\n`;
