@@ -35,6 +35,19 @@ function relativeTime(dateStr) {
 }
 
 /* ------------------------------------------------------------
+   6-month future date label
+------------------------------------------------------------ */
+function sixMonthDateLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+
+/* ------------------------------------------------------------
    REAL STANFORD UNIVERSITY MAJORS (BUSINESS LENSES)
 ------------------------------------------------------------ */
 const STANFORD_MAJORS = [
@@ -85,7 +98,7 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang chooses WHAT TO BUY (unchanged)
+   AMAZON — A. Wang chooses WHAT TO BUY
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
   const recent = AMAZON_TOPIC_MEMORY.join(", ");
@@ -117,7 +130,6 @@ Output ONLY the topic.
 
   const topic = out.choices[0].message.content.trim();
 
-  // Update memory
   AMAZON_TOPIC_MEMORY.push(topic);
   if (AMAZON_TOPIC_MEMORY.length > AMAZON_MEMORY_LIMIT) {
     AMAZON_TOPIC_MEMORY.shift();
@@ -155,7 +167,7 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 /* ------------------------------------------------------------
-   BUSINESS — Fetch ONE LinkedIn job (NEW)
+   BUSINESS — Fetch ONE LinkedIn job
 ------------------------------------------------------------ */
 async function fetchSingleLinkedInJob(jobTitle) {
   if (!SERP_KEY) return null;
@@ -183,10 +195,11 @@ async function fetchSingleLinkedInJob(jobTitle) {
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight BODY ONLY (unchanged)
+   STEP 5 — Generate foresight BODY ONLY
 ------------------------------------------------------------ */
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
+  const futureLabel = sixMonthDateLabel();
 
   const personaPrompt =
     persona === "AMAZON"
@@ -194,27 +207,9 @@ async function generatePredictionBody(sources, persona) {
 You are an AI product-use analyst.
 
 Focus ONLY on the product itself, from a real user perspective.
-
-Analyze:
-- Why people use this product
-- What problem it solves
-- How people evaluate it before buying
-- How daily or seasonal usage may change in the next six months
-- What could cause user disappointment or abandonment
-
-DO NOT discuss:
-- business strategy
-- brand competition
-- pricing strategy
-- market share
 `
       : `
 You are an AI labor-market foresight system.
-
-Analyze:
-- hiring intent
-- labor demand
-- organizational priorities
 `;
 
   const out = await openai.chat.completions.create({
@@ -229,7 +224,7 @@ ${signalText}
 
 Write ONLY:
 
-Six-Month Product Reality:
+Product Reality · ${futureLabel}:
 - 3–5 short paragraphs
 
 What Could Go Wrong For Users:
@@ -243,46 +238,9 @@ What Could Go Wrong For Users:
 }
 
 /* ------------------------------------------------------------
-   8-BALL TOPIC GENERATORS
------------------------------------------------------------- */
-async function generateNextTopicGDJ(lastTopic = "", lastMajor = "") {
-  const major = pickNextMajor(lastMajor);
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are GD-J, a LinkedIn job-market advisor.
-
-Academic lens:
-${major} (Stanford University)
-
-Generate ONE job title
-that companies are likely hiring for in the next 3–6 months.
-
-Rules:
-- Use real job titles
-- Avoid repeating: "${lastTopic}"
-- Neutral, analytical tone
-- Output ONLY the job title
-`
-    }],
-    temperature: 0.7
-  });
-
-  return {
-    topic: out.choices[0].message.content.trim(),
-    major
-  };
-}
-
-/* ------------------------------------------------------------
-   CORE PIPELINE
+   CORE PIPELINE (unchanged)
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
-
-  // BUSINESS = LinkedIn Job Advisor
   if (persona === "BUSINESS") {
     const job = await fetchSingleLinkedInJob(topic);
     if (!job) return { report: "No LinkedIn job signals found." };
@@ -299,7 +257,6 @@ async function runPipeline(topic, persona) {
     return { report: report + "\n" + body };
   }
 
-  // AMAZON (unchanged)
   const product = await fetchSingleAmazonProduct(topic);
   if (!product) return { report: "No Amazon product found for this topic." };
 
@@ -313,29 +270,19 @@ async function runPipeline(topic, persona) {
   report += `• ${product.title} — ${brand}\n`;
   report += `  ${product.link}\n`;
 
-  return {
-    topic: `${brand} ${topic}`,
-    report: report + "\n" + body
-  };
+  return { topic: `${brand} ${topic}`, report: report + "\n" + body };
 }
 
 /* ------------------------------------------------------------
-   /run
+   /run & /next (unchanged)
 ------------------------------------------------------------ */
 app.post("/run", async (req, res) => {
   const topic = (req.body.topic || "").trim();
   const persona = req.body.persona || "BUSINESS";
-
-  if (!(await isClearTopic(topic))) {
-    return res.json({ report: "Invalid topic." });
-  }
-
+  if (!(await isClearTopic(topic))) return res.json({ report: "Invalid topic." });
   res.json(await runPipeline(topic, persona));
 });
 
-/* ------------------------------------------------------------
-   /next — 8-BALL
------------------------------------------------------------- */
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
   const lastTopic = (req.body.lastTopic || "").trim();
@@ -344,17 +291,11 @@ app.post("/next", async (req, res) => {
   if (persona === "BUSINESS") {
     const result = await generateNextTopicGDJ(lastTopic, lastMajor);
     const report = await runPipeline(result.topic, "BUSINESS");
-
-    return res.json({
-      topic: result.topic,
-      major: result.major,
-      report: report.report
-    });
+    return res.json({ topic: result.topic, major: result.major, report: report.report });
   }
 
   const topic = await generateNextTopicAWang(lastTopic);
   const report = await runPipeline(topic, "AMAZON");
-
   res.json({ topic: report.topic || topic, report: report.report });
 });
 
@@ -363,5 +304,5 @@ app.post("/next", async (req, res) => {
 ------------------------------------------------------------ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🌊 Blue Ocean Browser — GD-J + 8-BALL + AMAZON running on port", PORT);
+  console.log("🌊 Blue Ocean Browser — running on port", PORT);
 });
