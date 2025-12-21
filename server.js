@@ -171,27 +171,51 @@ async function fetchSingleLinkedInJob(jobTitle) {
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
 
-  const personaHint =
+  const personaPrompt =
     persona === "AMAZON"
-      ? "Analyze purchasing rationale, price sensitivity, and buyer behavior."
-      : "Analyze hiring intent, labor demand, and organizational priorities.";
+      ? `
+You are an AI product-use analyst.
+
+Focus ONLY on the product itself, from a real user perspective.
+
+Analyze:
+- Why people use this product
+- What problem it solves
+- How people evaluate it before buying
+- How daily or seasonal usage may change in the next six months
+- What could cause user disappointment or abandonment
+
+DO NOT discuss:
+- business strategy
+- brand competition
+- pricing strategy
+- market share
+`
+      : `
+You are an AI labor-market foresight system.
+
+Analyze:
+- hiring intent
+- labor demand
+- organizational priorities
+`;
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-You are an AI foresight system.
-${personaHint}
+${personaPrompt}
 
-Verified signals:
+Verified real-world signal:
 ${signalText}
 
 Write ONLY:
-Six-Month Reality:
+
+Six-Month Product Reality:
 - 3–5 short paragraphs
 
-What Breaks If This Forecast Is Wrong:
+What Could Go Wrong For Users:
 - 3–5 bullet points
 `
     }],
