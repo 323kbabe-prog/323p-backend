@@ -17,6 +17,10 @@ const openai = new OpenAI({
 
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
+// Keep last N Amazon topics to reduce repetition
+const AMAZON_TOPIC_MEMORY = [];
+const AMAZON_MEMORY_LIMIT = 5;
+
 /* ------------------------------------------------------------
    Utility — relative freshness label
 ------------------------------------------------------------ */
@@ -84,6 +88,8 @@ Reply ONLY YES or NO.
    AMAZON — A. Wang chooses WHAT TO BUY (unchanged)
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
+  const recent = AMAZON_TOPIC_MEMORY.join(", ");
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
@@ -94,10 +100,13 @@ You are A. Wang, an Amazon cosmetics buyer.
 Choose ONE cosmetics category or product
 that you would consider buying this season.
 
+Avoid choosing anything similar to:
+${recent || lastTopic}
+
 Rules:
 - Buyer mindset
 - Practical, purchase-oriented
-- Avoid repeating: "${lastTopic}"
+- Avoid repetition or near-duplicates
 - 4–8 words
 
 Output ONLY the topic.
@@ -106,7 +115,15 @@ Output ONLY the topic.
     temperature: 0.7
   });
 
-  return out.choices[0].message.content.trim();
+  const topic = out.choices[0].message.content.trim();
+
+  // Update memory
+  AMAZON_TOPIC_MEMORY.push(topic);
+  if (AMAZON_TOPIC_MEMORY.length > AMAZON_MEMORY_LIMIT) {
+    AMAZON_TOPIC_MEMORY.shift();
+  }
+
+  return topic;
 }
 
 /* ------------------------------------------------------------
