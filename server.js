@@ -243,10 +243,16 @@ ${signalText}
 Write ONLY:
 
 Reality · ${sixMonthDateLabel()}:
-- 3–5 short paragraphs
+Write EXACTLY 5 short paragraphs, in this order:
 
-What Could Go Wrong For Users:
-- 3–5 bullet points
+1. What is actually happening right now (grounded in signals)
+2. Why users or organizations are behaving this way
+3. How decisions are being made today
+4. What is likely to shift over the next six months
+5. What assumptions this prediction depends on
+
+If This Prediction Is Wrong, What Breaks:
+- 3 bullet points
 `
     }],
     temperature: 0.3
@@ -256,7 +262,7 @@ What Could Go Wrong For Users:
 }
 
 /* ------------------------------------------------------------
-   8-BALL TOPIC GENERATORS
+   2×-AI Engine TOPIC GENERATORS
 ------------------------------------------------------------ */
 async function generateNextTopicGDJ(lastTopic = "", lastMajor = "") {
   const major = pickNextMajor(lastMajor);
