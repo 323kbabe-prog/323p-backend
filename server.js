@@ -183,6 +183,19 @@ async function fetchSingleLinkedInJob(jobTitle) {
 }
 
 /* ------------------------------------------------------------
+   6-month future date label
+------------------------------------------------------------ */
+function sixMonthDateLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+
+/* ------------------------------------------------------------
    STEP 5 — Generate foresight BODY ONLY (unchanged)
 ------------------------------------------------------------ */
 async function generatePredictionBody(sources, persona) {
@@ -229,7 +242,7 @@ ${signalText}
 
 Write ONLY:
 
-Six-Month Product Reality:
+Reality · ${sixMonthDateLabel()}:
 - 3–5 short paragraphs
 
 What Could Go Wrong For Users:
