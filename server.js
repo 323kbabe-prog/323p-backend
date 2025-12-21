@@ -266,22 +266,18 @@ If This Prediction Is Wrong, What Breaks:
 async function generatePredictionBodySafe(sources, persona) {
   const text = await generatePredictionBody(sources, persona);
 
-  // background persona guard
-  if (!text.startsWith(`Persona: ${persona}`)) {
-    // silently retry once
+  if (!text.trimStart().startsWith(`Persona: ${persona}`)) {
     const retryText = await generatePredictionBody(sources, persona);
 
-    if (!retryText.startsWith(`Persona: ${persona}`)) {
-      // final fail-safe: do not leak wrong persona
+    if (!retryText.trimStart().startsWith(`Persona: ${persona}`)) {
       return "";
     }
 
-    return retryText;
+    return retryText.replace(/^Persona:\s*\w+\s*/i, "");
   }
 
-  return text;
+  return text.replace(/^Persona:\s*\w+\s*/i, "");
 }
-
 /* ------------------------------------------------------------
    2×-AI Engine TOPIC GENERATORS
 ------------------------------------------------------------ */
