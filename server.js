@@ -109,17 +109,36 @@ Input: "${input}"
 }
 
 // ------------------------------------------------------------
-// MARKETS — Reuters SERP (unchanged)
+// MARKETS — Google Finance signal (UPDATED)
 // ------------------------------------------------------------
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
-  const q = `${theme} site:reuters.com`;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
-  const r = await fetch(url);
-  const j = await r.json();
-  const hit = (j.organic_results || [])[0];
-  if (!hit) return null;
-  return { title: hit.title, link: hit.link, source: "Reuters" };
+
+  try {
+    const url = `https://serpapi.com/search.json?engine=google_finance&q=${encodeURIComponent(
+      theme
+    )}&api_key=${SERP_KEY}`;
+
+    const r = await fetch(url);
+    const j = await r.json();
+
+    // Google Finance usually returns finance_results or knowledge_graph
+    const entity =
+      j.finance_results?.[0] ||
+      j.knowledge_graph ||
+      null;
+
+    if (!entity) return null;
+
+    return {
+      title: entity.title || entity.name || theme,
+      link: entity.link || "https://www.google.com/finance",
+      source: "Google Finance"
+    };
+  } catch (err) {
+    console.error("Finance fetch error:", err);
+    return null;
+  }
 }
 
 // ------------------------------------------------------------
