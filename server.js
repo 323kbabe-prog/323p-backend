@@ -194,7 +194,7 @@ async function generateNextJobTitle(lens) {
       content: `
 Academic lens: ${lens}
 
-Generate ONE real job title companies are hiring for.
+Generate ONE real AI job title companies are hiring for.
 Output ONLY the title.
 `
     }],
