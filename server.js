@@ -234,6 +234,7 @@ async function fetchSingleLinkedInJob(jobTitle) {
 // ------------------------------------------------------------
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
