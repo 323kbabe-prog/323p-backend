@@ -91,7 +91,7 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   ⭐ MARKETS — Fetch market signal (Reuters only)
+   ⭐ MARKETS — Fetch ONE Reuters article
 ------------------------------------------------------------ */
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
@@ -116,7 +116,7 @@ async function fetchMarketSignal(theme) {
 }
 
 /* ------------------------------------------------------------
-   ⭐ MARKETS — Extract company name from title (NEW)
+   ⭐ MARKETS — Extract company name from Reuters title (ONLY X)
 ------------------------------------------------------------ */
 async function extractCompanyNameFromTitle(title) {
   const out = await openai.chat.completions.create({
@@ -147,7 +147,6 @@ Headline:
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
   const recent = AMAZON_TOPIC_MEMORY.join(", ");
-
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
@@ -242,7 +241,7 @@ async function fetchSingleLinkedInJob(jobTitle) {
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
 
-  // ⭐ MARKETS (UPDATED WITH COMPANY NAME)
+  // ⭐ MARKETS (ONLY X APPLIED)
   if (persona === "MARKETS") {
     const theme = await rewriteMarketTheme(topic);
     const signal = await fetchMarketSignal(theme);
@@ -260,10 +259,7 @@ async function runPipeline(topic, persona) {
     report += `• ${signal.title} — Reuters\n`;
     report += `  ${signal.link}\n`;
 
-    return {
-      topic: company,
-      report: report + "\n" + body
-    };
+    return { topic: company, report: report + "\n" + body };
   }
 
   // BUSINESS (UNCHANGED)
