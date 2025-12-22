@@ -243,7 +243,7 @@ async function generatePredictionBody(sources, persona) {
 Verified real-world signal:
 ${signalText}
 
-START THE RESPONSE WITH THIS LINE EXACTLY:
+START WITH THIS LINE:
 Reality · ${sixMonthDateLabel()}
 
 Write a 6-month foresight.
@@ -252,6 +252,7 @@ Write a 6-month foresight.
     }],
     temperature: 0.3
   });
+
   return out.choices[0].message.content.trim();
 }
 
