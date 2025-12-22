@@ -242,6 +242,9 @@ async function generatePredictionBody(sources, persona) {
 Verified real-world signal:
 ${signalText}
 
+START THE RESPONSE WITH THIS LINE EXACTLY:
+Reality · ${sixMonthDateLabel()}
+
 Write a 6-month foresight.
 5 short paragraphs + 3 bullets: "If this prediction is correct, what works".
 `
