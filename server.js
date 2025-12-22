@@ -217,24 +217,93 @@ async function fetchSingleLinkedInJob(jobTitle) {
 }
 
 // ------------------------------------------------------------
-// BODY GENERATION (unchanged structure)
+// 6-month future date label (REQUIRED)
+// ------------------------------------------------------------
+function sixMonthDateLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+
+// ------------------------------------------------------------
+// BODY GENERATION (persona-aware, SAME structure)
 // ------------------------------------------------------------
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
+
+  const personaInstruction =
+    persona === "AMAZON"
+      ? `
+You are an AI product-use analyst.
+
+Focus ONLY on the product itself.
+
+Analyze:
+- What the product actually does
+- Core functional features
+- How users use it day-to-day
+- What problem it solves in real life
+- Where users may feel friction or disappointment
+
+Do NOT discuss:
+- Brand strategy
+- Market share
+- Pricing
+- Competitors
+`
+      : persona === "BUSINESS"
+      ? `
+You are an AI labor-market foresight analyst.
+
+Focus on:
+- Job responsibilities and skills
+- How this role is evolving
+- Why companies are hiring for it
+- How work patterns may shift in six months
+`
+      : `
+You are an AI market signal analyst.
+
+Focus on:
+- Company-level attention
+- Capital and narrative shifts
+- Strategic positioning
+
+Do NOT:
+- Predict prices
+- Give investment advice
+`;
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
+${personaInstruction}
+
 Verified real-world signal:
 ${signalText}
 
+START WITH THIS LINE:
+Reality · ${sixMonthDateLabel()}
+
 Write a 6-month foresight.
-5 short paragraphs + 3 bullets: "If this prediction is correct, what works".
+5 short paragraphs.
+
+Then write:
+If this prediction is correct, what works:
+3 short sentences.
+Do not use markdown.
+Do not use bullets.
 `
     }],
     temperature: 0.3
   });
+
   return out.choices[0].message.content.trim();
 }
 
