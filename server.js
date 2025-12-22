@@ -264,7 +264,7 @@ Focus on:
 - Core functional features (ingredients, formulation, usage)
 - How users apply it in daily routines
 - What skin, beauty, or self-care problem it solves
-- Where users may feel friction, irritation, or disappointment
+- Where users feel supported, understood, and empowered
 
 DO NOT discuss:
 - Brand strategy
