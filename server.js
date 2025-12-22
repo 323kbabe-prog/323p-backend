@@ -115,28 +115,22 @@ async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
 
   try {
-    const url = `https://serpapi.com/search.json?engine=google_finance&q=${encodeURIComponent(
+    const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(
       theme
-    )}&api_key=${SERP_KEY}`;
+    )}&num=5&api_key=${SERP_KEY}`;
 
     const r = await fetch(url);
     const j = await r.json();
 
-    // Google Finance usually returns finance_results or knowledge_graph
-    const entity =
-      j.finance_results?.[0] ||
-      j.knowledge_graph ||
-      null;
-
-    if (!entity) return null;
+    const hit = (j.news_results || [])[0];
+    if (!hit) return null;
 
     return {
-      title: entity.title || entity.name || theme,
-      link: entity.link || "https://www.google.com/finance",
-      source: "Google Finance"
+      title: hit.title,
+      link: hit.link,
+      source: hit.source || "Google News"
     };
-  } catch (err) {
-    console.error("Finance fetch error:", err);
+  } catch {
     return null;
   }
 }
@@ -395,7 +389,7 @@ if (MARKETS_ENTITY_MEMORY.length > MARKETS_MEMORY_LIMIT) {
 
     return {
       topic: company,
-      report: `Current Signals\n• ${signal.title} — Reuters\n${signal.link}\n\n${body}`
+      report: `Current Signals\n• ${signal.title} — Google News\n${signal.link}\n\n${body}`
     };
   }
 
