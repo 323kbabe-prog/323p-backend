@@ -17,6 +17,12 @@ const openai = new OpenAI({
 
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
+// ⭐ MARKETS — Reuters anchor (ONLY ADDITION)
+const MARKETS_SIGNAL_SOURCE = {
+  name: "Reuters",
+  url: "https://www.reuters.com"
+};
+
 // Keep last N Amazon topics to reduce repetition
 const AMAZON_TOPIC_MEMORY = [];
 const AMAZON_MEMORY_LIMIT = 5;
@@ -85,6 +91,61 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
+   ⭐ MARKETS — Rewrite market theme (ONLY ADDITION)
+------------------------------------------------------------ */
+async function rewriteMarketTheme(input) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Rewrite the following text into a neutral market theme.
+
+Rules:
+- 3–7 words
+- No stock tickers
+- No price direction
+- No buy/sell language
+- Focus on market attention or capital narratives only
+
+Input:
+"${input}"
+
+Output:
+`
+    }],
+    temperature: 0.2
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+/* ------------------------------------------------------------
+   ⭐ MARKETS — Fetch market signal (Reuters only)
+------------------------------------------------------------ */
+async function fetchMarketSignal(theme) {
+  if (!SERP_KEY) return null;
+
+  try {
+    const q = `${theme} site:reuters.com`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const hit = (j.organic_results || [])[0];
+    if (!hit) return null;
+
+    return {
+      title: theme,
+      link: MARKETS_SIGNAL_SOURCE.url,
+      source: "Reuters"
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------
    AMAZON — A. Wang chooses WHAT TO BUY (unchanged)
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
@@ -117,7 +178,6 @@ Output ONLY the topic.
 
   const topic = out.choices[0].message.content.trim();
 
-  // Update memory
   AMAZON_TOPIC_MEMORY.push(topic);
   if (AMAZON_TOPIC_MEMORY.length > AMAZON_MEMORY_LIMIT) {
     AMAZON_TOPIC_MEMORY.shift();
@@ -155,7 +215,7 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 /* ------------------------------------------------------------
-   BUSINESS — Fetch ONE LinkedIn job (NEW)
+   BUSINESS — Fetch ONE LinkedIn job
 ------------------------------------------------------------ */
 async function fetchSingleLinkedInJob(jobTitle) {
   if (!SERP_KEY) return null;
@@ -196,7 +256,7 @@ function sixMonthDateLabel() {
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight BODY ONLY (unchanged)
+   STEP 5 — Generate foresight BODY ONLY
 ------------------------------------------------------------ */
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
@@ -220,6 +280,20 @@ DO NOT discuss:
 - brand competition
 - pricing strategy
 - market share
+`
+      : persona === "MARKETS"
+      ? `
+You are an AI market signal analyst.
+
+Focus ONLY on:
+- market attention
+- capital narratives
+- sector-level behavior
+
+DO NOT:
+- predict prices
+- give investment advice
+- recommend buying or selling
 `
       : `
 You are an AI labor-market foresight system.
@@ -301,6 +375,24 @@ Rules:
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
 
+  // ⭐ MARKETS = Stock / market signals (ONLY ADDITION)
+  if (persona === "MARKETS") {
+    const theme = await rewriteMarketTheme(topic);
+    const signal = await fetchMarketSignal(theme);
+    if (!signal) return { report: "No strong live market signals found." };
+
+    const body = await generatePredictionBody(
+      [{ title: theme, source: "Reuters" }],
+      "MARKETS"
+    );
+
+    let report = "Current Signals (Market Attention)\n";
+    report += `• ${theme} — Reuters\n`;
+    report += `  ${MARKETS_SIGNAL_SOURCE.url}\n`;
+
+    return { report: report + "\n" + body };
+  }
+
   // BUSINESS = LinkedIn Job Advisor
   if (persona === "BUSINESS") {
     const job = await fetchSingleLinkedInJob(topic);
@@ -359,6 +451,12 @@ app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
   const lastTopic = (req.body.lastTopic || "").trim();
   const lastMajor = (req.body.lastMajor || "").trim();
+
+  if (persona === "MARKETS") {
+    const theme = "AI infrastructure stocks";
+    const report = await runPipeline(theme, "MARKETS");
+    return res.json({ topic: theme, report: report.report });
+  }
 
   if (persona === "BUSINESS") {
     const result = await generateNextTopicGDJ(lastTopic, lastMajor);
