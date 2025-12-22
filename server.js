@@ -116,14 +116,15 @@ async function fetchMarketSignal(theme) {
 }
 
 /* ------------------------------------------------------------
-   ⭐ MARKETS — Extract company name from Reuters title (ONLY X)
+   ⭐ MARKETS — Extract company name (SAFE)
 ------------------------------------------------------------ */
 async function extractCompanyNameFromTitle(title) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+  try {
+    const out = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        role: "user",
+        content: `
 Extract the primary company name mentioned in the following news headline.
 
 Rules:
@@ -135,18 +136,22 @@ Rules:
 Headline:
 "${title}"
 `
-    }],
-    temperature: 0
-  });
+      }],
+      temperature: 0
+    });
 
-  return out.choices[0].message.content.trim();
+    return out.choices[0].message.content.trim() || "Unknown";
+  } catch {
+    return "Unknown";
+  }
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang chooses WHAT TO BUY (UNCHANGED)
+   AMAZON — A. Wang chooses WHAT TO BUY
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
   const recent = AMAZON_TOPIC_MEMORY.join(", ");
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
@@ -181,7 +186,7 @@ Output ONLY the topic.
 }
 
 /* ------------------------------------------------------------
-   AMAZON — Find ONE Amazon product via Google (UNCHANGED)
+   AMAZON — Find ONE Amazon product
 ------------------------------------------------------------ */
 async function fetchSingleAmazonProduct(query) {
   if (!SERP_KEY) return null;
@@ -209,7 +214,7 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 /* ------------------------------------------------------------
-   BUSINESS — Fetch ONE LinkedIn job (UNCHANGED)
+   BUSINESS — Fetch ONE LinkedIn job
 ------------------------------------------------------------ */
 async function fetchSingleLinkedInJob(jobTitle) {
   if (!SERP_KEY) return null;
@@ -237,11 +242,80 @@ async function fetchSingleLinkedInJob(jobTitle) {
 }
 
 /* ------------------------------------------------------------
+   6-month future date label
+------------------------------------------------------------ */
+function sixMonthDateLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+
+/* ------------------------------------------------------------
+   STEP 5 — Generate foresight BODY ONLY
+------------------------------------------------------------ */
+async function generatePredictionBody(sources, persona) {
+  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
+
+  const personaPrompt =
+    persona === "AMAZON"
+      ? `You are an AI product-use analyst.`
+      : persona === "MARKETS"
+      ? `You are an AI market signal analyst.`
+      : `You are an AI labor-market foresight system.`;
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+${personaPrompt}
+
+Verified real-world signal:
+${signalText}
+
+Reality · ${sixMonthDateLabel()}:
+Write EXACTLY 5 short paragraphs.
+
+If this prediction is correct, what works:
+- 3 bullet points
+`
+    }],
+    temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+/* ------------------------------------------------------------
+   2×-AI Engine — Job title generator
+------------------------------------------------------------ */
+async function generateNextTopicGDJ() {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Generate ONE realistic job title
+companies are likely hiring for in the next 3–6 months.
+
+Output ONLY the job title.
+`
+    }],
+    temperature: 0.7
+  });
+
+  return { topic: out.choices[0].message.content.trim() };
+}
+
+/* ------------------------------------------------------------
    CORE PIPELINE
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
 
-  // ⭐ MARKETS (ONLY X APPLIED)
   if (persona === "MARKETS") {
     const theme = await rewriteMarketTheme(topic);
     const signal = await fetchMarketSignal(theme);
@@ -262,7 +336,6 @@ async function runPipeline(topic, persona) {
     return { topic: company, report: report + "\n" + body };
   }
 
-  // BUSINESS (UNCHANGED)
   if (persona === "BUSINESS") {
     const job = await fetchSingleLinkedInJob(topic);
     if (!job) return { report: "No LinkedIn job signals found." };
@@ -272,14 +345,13 @@ async function runPipeline(topic, persona) {
       "BUSINESS"
     );
 
-    let report = "Current Signals (Ranked by Impact Level)\n";
+    let report = "Current Signals (Hiring)\n";
     report += `• ${job.title} — LinkedIn\n`;
     report += `  ${job.link}\n`;
 
     return { report: report + "\n" + body };
   }
 
-  // AMAZON (UNCHANGED)
   const product = await fetchSingleAmazonProduct(topic);
   if (!product) return { report: "No Amazon product found for this topic." };
 
@@ -288,7 +360,7 @@ async function runPipeline(topic, persona) {
     "AMAZON"
   );
 
-  let report = "Current Signals (Ranked by Impact Level)\n";
+  let report = "Current Signals (Product Usage)\n";
   report += `• ${product.title} — Amazon\n`;
   report += `  ${product.link}\n`;
 
@@ -310,26 +382,25 @@ app.post("/run", async (req, res) => {
 });
 
 /* ------------------------------------------------------------
-   /next — 8-BALL
+   /next
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
 
   if (persona === "MARKETS") {
-    const theme = "AI infrastructure stocks";
-    const result = await runPipeline(theme, "MARKETS");
+    const result = await runPipeline("AI infrastructure stocks", "MARKETS");
     return res.json(result);
   }
 
   if (persona === "BUSINESS") {
-    const result = await generateNextTopicGDJ("", "");
-    const report = await runPipeline(result.topic, "BUSINESS");
-    return res.json({ topic: result.topic, report: report.report });
+    const next = await generateNextTopicGDJ();
+    const result = await runPipeline(next.topic, "BUSINESS");
+    return res.json({ topic: next.topic, report: result.report });
   }
 
   const topic = await generateNextTopicAWang("");
-  const report = await runPipeline(topic, "AMAZON");
-  res.json({ topic, report: report.report });
+  const result = await runPipeline(topic, "AMAZON");
+  res.json({ topic, report: result.report });
 });
 
 /* ------------------------------------------------------------
