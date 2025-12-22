@@ -149,8 +149,7 @@ async function generateNextAmazonTopic(lens) {
       content: `
 Academic lens: ${lens}
 
-Choose ONE real-world consumer product or product category
-people are likely to buy soon.
+Choose ONE real-world cosmetics product or beauty category with strong near-term consumer buying interest.
 
 Rules:
 - Buyer mindset
@@ -195,8 +194,8 @@ async function generateNextJobTitle(lens) {
       content: `
 Academic lens: ${lens}
 
-Generate ONE real job title companies are hiring for.
-Output ONLY the title.
+Generate ONE real AI job title companies are actively recruiting for right now.
+Output ONLY the job title.
 `
     }],
     temperature: 0.7
