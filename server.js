@@ -57,11 +57,16 @@ function pickStanfordLens() {
 }
 
 // ------------------------------------------------------------
-// Amazon no-repeat memory (unchanged behavior, reused)
+// Entity no-repeat memory (per persona)
 // ------------------------------------------------------------
 const AMAZON_TOPIC_MEMORY = [];
 const AMAZON_MEMORY_LIMIT = 5;
 
+const BUSINESS_ENTITY_MEMORY = [];
+const BUSINESS_MEMORY_LIMIT = 5;
+
+const MARKETS_ENTITY_MEMORY = [];
+const MARKETS_MEMORY_LIMIT = 5;
 // ------------------------------------------------------------
 // STEP 1 — Semantic clarity check (unchanged)
 // ------------------------------------------------------------
@@ -245,7 +250,25 @@ async function runPipeline(topic, persona) {
     const signal = await fetchMarketSignal(theme);
     if (!signal) return { report: "No market signal found." };
 
-    const company = await extractCompanyNameFromTitle(signal.title);
+    let company = await extractCompanyNameFromTitle(signal.title);
+let attempts = 0;
+
+while (
+  MARKETS_ENTITY_MEMORY.includes(company) &&
+  attempts < 3
+) {
+  const retryTheme = await rewriteMarketTheme(topic, pickStanfordLens());
+  const retrySignal = await fetchMarketSignal(retryTheme);
+  if (!retrySignal) break;
+
+  company = await extractCompanyNameFromTitle(retrySignal.title);
+  attempts++;
+}
+
+MARKETS_ENTITY_MEMORY.push(company);
+if (MARKETS_ENTITY_MEMORY.length > MARKETS_MEMORY_LIMIT) {
+  MARKETS_ENTITY_MEMORY.shift();
+}
     const body = await generatePredictionBody([{ title: signal.title, source: "Reuters" }], "MARKETS");
 
     return {
@@ -255,7 +278,21 @@ async function runPipeline(topic, persona) {
   }
 
   if (persona === "BUSINESS") {
-    const jobTitle = await generateNextJobTitle(lens);
+    let jobTitle;
+let attempts = 0;
+
+do {
+  jobTitle = await generateNextJobTitle(lens);
+  attempts++;
+} while (
+  BUSINESS_ENTITY_MEMORY.includes(jobTitle) &&
+  attempts < 3
+);
+
+BUSINESS_ENTITY_MEMORY.push(jobTitle);
+if (BUSINESS_ENTITY_MEMORY.length > BUSINESS_MEMORY_LIMIT) {
+  BUSINESS_ENTITY_MEMORY.shift();
+}
     const job = await fetchSingleLinkedInJob(jobTitle);
     if (!job) return { report: "No hiring signal found." };
 
