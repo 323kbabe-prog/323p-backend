@@ -44,11 +44,24 @@ function relativeTime(dateStr) {
    REAL STANFORD UNIVERSITY MAJORS (BUSINESS LENSES)
 ------------------------------------------------------------ */
 const STANFORD_MAJORS = [
-  "Computer Science","Economics","Management Science and Engineering",
-  "Political Science","Psychology","Sociology","Symbolic Systems",
-  "Statistics","Electrical Engineering","Biomedical Engineering",
-  "Biology","Environmental Science","International Relations",
-  "Communication","Design","Education","Philosophy","Law"
+  "Computer Science",
+  "Economics",
+  "Management Science and Engineering",
+  "Political Science",
+  "Psychology",
+  "Sociology",
+  "Symbolic Systems",
+  "Statistics",
+  "Electrical Engineering",
+  "Biomedical Engineering",
+  "Biology",
+  "Environmental Science",
+  "International Relations",
+  "Communication",
+  "Design",
+  "Education",
+  "Philosophy",
+  "Law"
 ];
 
 function pickNextMajor(lastMajor = "") {
@@ -103,6 +116,7 @@ Output:
     }],
     temperature: 0.2
   });
+
   return out.choices[0].message.content.trim();
 }
 
@@ -119,7 +133,9 @@ async function fetchMarketSignal(theme) {
     const j = await r.json();
 
     const article = (j.organic_results || []).find(
-      x => x.link && x.link.includes("reuters.com") && !x.link.endsWith("reuters.com")
+      x => x.link &&
+           x.link.includes("reuters.com") &&
+           !x.link.endsWith("reuters.com")
     );
 
     if (!article) return null;
@@ -170,6 +186,7 @@ Output ONLY the topic.
   if (AMAZON_TOPIC_MEMORY.length > AMAZON_MEMORY_LIMIT) {
     AMAZON_TOPIC_MEMORY.shift();
   }
+
   return topic;
 }
 
@@ -236,7 +253,9 @@ function sixMonthDateLabel() {
   const d = new Date();
   d.setMonth(d.getMonth() + 6);
   return d.toLocaleDateString("en-US", {
-    year: "numeric", month: "long", day: "numeric"
+    year: "numeric",
+    month: "long",
+    day: "numeric"
   });
 }
 
@@ -248,10 +267,27 @@ async function generatePredictionBody(sources, persona) {
 
   const personaPrompt =
     persona === "AMAZON"
-      ? `You are an AI product-use analyst.`
+      ? `
+You are an AI product-use analyst.
+
+Focus ONLY on the product itself, from a real user perspective.
+`
       : persona === "MARKETS"
-      ? `You are an AI market signal analyst.`
-      : `You are an AI labor-market foresight system.`;
+      ? `
+You are an AI market signal analyst.
+
+Focus ONLY on:
+- market attention
+- capital narratives
+- sector-level behavior
+
+DO NOT:
+- predict prices
+- give investment advice
+`
+      : `
+You are an AI labor-market foresight system.
+`;
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
