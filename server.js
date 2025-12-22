@@ -149,8 +149,7 @@ async function generateNextAmazonTopic(lens) {
       content: `
 Academic lens: ${lens}
 
-Choose ONE real-world consumer product or product category
-people are likely to buy soon.
+Choose ONE beauty product or beauty category with strong near-term buying interest.
 
 Rules:
 - Buyer mindset
