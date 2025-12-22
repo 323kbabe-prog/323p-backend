@@ -93,7 +93,7 @@ async function rewriteMarketTheme(input, lens) {
       content: `
 Academic lens: ${lens}
 
-Rewrite into a neutral market attention theme.
+Rewrite into a neutral market attention theme focused on AI-related companies.
 Rules:
 - 3–7 words
 - No tickers
