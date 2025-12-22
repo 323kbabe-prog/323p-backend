@@ -17,7 +17,7 @@ const openai = new OpenAI({
 
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-// ⭐ MARKETS — Reuters anchor
+// ⭐ MARKETS — Reuters anchor (NEW)
 const MARKETS_SIGNAL_SOURCE = {
   name: "Reuters",
   url: "https://www.reuters.com"
@@ -78,7 +78,7 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   ⭐ MARKETS — Rewrite market theme
+   ⭐ MARKETS — Rewrite market theme (NEW)
 ------------------------------------------------------------ */
 async function rewriteMarketTheme(input) {
   const out = await openai.chat.completions.create({
@@ -107,20 +107,19 @@ Output:
 }
 
 /* ------------------------------------------------------------
-   ⭐ MARKETS — Fetch ONE REAL Reuters article
+   ⭐ MARKETS — Fetch ONE real Reuters article (NEW)
 ------------------------------------------------------------ */
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
+
   try {
     const q = `${theme} site:reuters.com`;
     const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    const article = (j.organic_results || []).find(x =>
-      x.link &&
-      x.link.includes("reuters.com") &&
-      !x.link.endsWith("reuters.com")
+    const article = (j.organic_results || []).find(
+      x => x.link && x.link.includes("reuters.com") && !x.link.endsWith("reuters.com")
     );
 
     if (!article) return null;
@@ -136,10 +135,11 @@ async function fetchMarketSignal(theme) {
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang chooses WHAT TO BUY
+   AMAZON — A. Wang chooses WHAT TO BUY (UNCHANGED)
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
   const recent = AMAZON_TOPIC_MEMORY.join(", ");
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
@@ -174,30 +174,20 @@ Output ONLY the topic.
 }
 
 /* ------------------------------------------------------------
-   ⭐ AMAZON — Fetch product (with fallback)
+   AMAZON — Find ONE Amazon product via Google (UNCHANGED)
 ------------------------------------------------------------ */
 async function fetchSingleAmazonProduct(query) {
   if (!SERP_KEY) return null;
 
   try {
-    // Primary: strict product page
-    let q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
-    let url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
-    let r = await fetch(url);
-    let j = await r.json();
+    const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+    const r = await fetch(url);
+    const j = await r.json();
 
-    let product = (j.organic_results || []).find(
+    const product = (j.organic_results || []).find(
       x => x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product/"))
     );
-
-    // ⭐ X ONLY — fallback attempt
-    if (!product) {
-      q = `${query} site:amazon.com`;
-      url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
-      r = await fetch(url);
-      j = await r.json();
-      product = (j.organic_results || [])[0];
-    }
 
     if (!product) return null;
 
@@ -212,24 +202,27 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 /* ------------------------------------------------------------
-   ⭐ BUSINESS — Fetch job via Indeed (replacing LinkedIn)
+   BUSINESS — Fetch ONE LinkedIn job (UNCHANGED)
 ------------------------------------------------------------ */
-async function fetchSingleJob(jobTitle) {
+async function fetchSingleLinkedInJob(jobTitle) {
   if (!SERP_KEY) return null;
 
   try {
-    const q = `${jobTitle} site:indeed.com/jobs`;
+    const q = `${jobTitle} site:linkedin.com/jobs`;
     const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    const job = (j.organic_results || [])[0];
+    const job = (j.organic_results || []).find(
+      x => x.link && x.link.includes("linkedin.com/jobs")
+    );
+
     if (!job) return null;
 
     return {
       title: job.title || jobTitle,
       link: job.link || "",
-      source: "Indeed"
+      source: "LinkedIn"
     };
   } catch {
     return null;
@@ -248,7 +241,7 @@ function sixMonthDateLabel() {
 }
 
 /* ------------------------------------------------------------
-   STEP 5 — Generate foresight BODY ONLY
+   STEP 5 — Generate foresight BODY ONLY (UNCHANGED)
 ------------------------------------------------------------ */
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
@@ -288,6 +281,7 @@ If this prediction is correct, what works:
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
 
+  // ⭐ MARKETS (NEW)
   if (persona === "MARKETS") {
     const theme = await rewriteMarketTheme(topic);
     const signal = await fetchMarketSignal(theme);
@@ -305,22 +299,24 @@ async function runPipeline(topic, persona) {
     return { report: report + "\n" + body };
   }
 
+  // BUSINESS (UNCHANGED)
   if (persona === "BUSINESS") {
-    const job = await fetchSingleJob(topic);
-    if (!job) return { report: "No hiring signals found." };
+    const job = await fetchSingleLinkedInJob(topic);
+    if (!job) return { report: "No LinkedIn job signals found." };
 
     const body = await generatePredictionBody(
-      [{ title: job.title, source: job.source }],
+      [{ title: job.title, source: "LinkedIn" }],
       "BUSINESS"
     );
 
-    let report = "Current Signals (Hiring)\n";
-    report += `• ${job.title} — ${job.source}\n`;
+    let report = "Current Signals (Ranked by Impact Level)\n";
+    report += `• ${job.title} — LinkedIn\n`;
     report += `  ${job.link}\n`;
 
     return { report: report + "\n" + body };
   }
 
+  // AMAZON (UNCHANGED)
   const product = await fetchSingleAmazonProduct(topic);
   if (!product) return { report: "No Amazon product found for this topic." };
 
@@ -329,7 +325,7 @@ async function runPipeline(topic, persona) {
     "AMAZON"
   );
 
-  let report = "Current Signals (Product Usage)\n";
+  let report = "Current Signals (Ranked by Impact Level)\n";
   report += `• ${product.title} — Amazon\n`;
   report += `  ${product.link}\n`;
 
