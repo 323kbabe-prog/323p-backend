@@ -17,7 +17,7 @@ const openai = new OpenAI({
 
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-// ⭐ MARKETS — Reuters anchor (ONLY ADDITION)
+// ⭐ MARKETS — Reuters anchor
 const MARKETS_SIGNAL_SOURCE = {
   name: "Reuters",
   url: "https://www.reuters.com"
@@ -38,35 +38,6 @@ function relativeTime(dateStr) {
   if (diff <= 1) return "today";
   if (diff <= 7) return `${diff} days ago`;
   return "recent";
-}
-
-/* ------------------------------------------------------------
-   REAL STANFORD UNIVERSITY MAJORS (BUSINESS LENSES)
------------------------------------------------------------- */
-const STANFORD_MAJORS = [
-  "Computer Science",
-  "Economics",
-  "Management Science and Engineering",
-  "Political Science",
-  "Psychology",
-  "Sociology",
-  "Symbolic Systems",
-  "Statistics",
-  "Electrical Engineering",
-  "Biomedical Engineering",
-  "Biology",
-  "Environmental Science",
-  "International Relations",
-  "Communication",
-  "Design",
-  "Education",
-  "Philosophy",
-  "Law"
-];
-
-function pickNextMajor(lastMajor = "") {
-  const pool = STANFORD_MAJORS.filter(m => m !== lastMajor);
-  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 /* ------------------------------------------------------------
@@ -91,7 +62,7 @@ Reply ONLY YES or NO.
 }
 
 /* ------------------------------------------------------------
-   ⭐ MARKETS — Rewrite market theme (ONLY ADDITION)
+   ⭐ MARKETS — Rewrite market theme
 ------------------------------------------------------------ */
 async function rewriteMarketTheme(input) {
   const out = await openai.chat.completions.create({
@@ -116,7 +87,6 @@ Output:
     }],
     temperature: 0.2
   });
-
   return out.choices[0].message.content.trim();
 }
 
@@ -136,8 +106,8 @@ async function fetchMarketSignal(theme) {
     if (!hit) return null;
 
     return {
-      title: theme,
-      link: MARKETS_SIGNAL_SOURCE.url,
+      title: hit.title,
+      link: hit.link,
       source: "Reuters"
     };
   } catch {
@@ -146,7 +116,34 @@ async function fetchMarketSignal(theme) {
 }
 
 /* ------------------------------------------------------------
-   AMAZON — A. Wang chooses WHAT TO BUY (unchanged)
+   ⭐ MARKETS — Extract company name from title (NEW)
+------------------------------------------------------------ */
+async function extractCompanyNameFromTitle(title) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Extract the primary company name mentioned in the following news headline.
+
+Rules:
+- Return ONLY the company name
+- No tickers
+- No extra words
+- If no clear company exists, return "Unknown"
+
+Headline:
+"${title}"
+`
+    }],
+    temperature: 0
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+/* ------------------------------------------------------------
+   AMAZON — A. Wang chooses WHAT TO BUY (UNCHANGED)
 ------------------------------------------------------------ */
 async function generateNextTopicAWang(lastTopic = "") {
   const recent = AMAZON_TOPIC_MEMORY.join(", ");
@@ -177,17 +174,15 @@ Output ONLY the topic.
   });
 
   const topic = out.choices[0].message.content.trim();
-
   AMAZON_TOPIC_MEMORY.push(topic);
   if (AMAZON_TOPIC_MEMORY.length > AMAZON_MEMORY_LIMIT) {
     AMAZON_TOPIC_MEMORY.shift();
   }
-
   return topic;
 }
 
 /* ------------------------------------------------------------
-   AMAZON — Find ONE Amazon product via Google
+   AMAZON — Find ONE Amazon product via Google (UNCHANGED)
 ------------------------------------------------------------ */
 async function fetchSingleAmazonProduct(query) {
   if (!SERP_KEY) return null;
@@ -215,7 +210,7 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 /* ------------------------------------------------------------
-   BUSINESS — Fetch ONE LinkedIn job
+   BUSINESS — Fetch ONE LinkedIn job (UNCHANGED)
 ------------------------------------------------------------ */
 async function fetchSingleLinkedInJob(jobTitle) {
   if (!SERP_KEY) return null;
@@ -243,157 +238,35 @@ async function fetchSingleLinkedInJob(jobTitle) {
 }
 
 /* ------------------------------------------------------------
-   6-month future date label
------------------------------------------------------------- */
-function sixMonthDateLabel() {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 6);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  });
-}
-
-/* ------------------------------------------------------------
-   STEP 5 — Generate foresight BODY ONLY
------------------------------------------------------------- */
-async function generatePredictionBody(sources, persona) {
-  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
-
-  const personaPrompt =
-    persona === "AMAZON"
-      ? `
-You are an AI product-use analyst.
-
-Focus ONLY on the product itself, from a real user perspective.
-
-Analyze:
-- Why people use this product
-- What problem it solves
-- How people evaluate it before buying
-- How daily or seasonal usage may change in the next six months
-- What could cause user disappointment or abandonment
-
-DO NOT discuss:
-- business strategy
-- brand competition
-- pricing strategy
-- market share
-`
-      : persona === "MARKETS"
-      ? `
-You are an AI market signal analyst.
-
-Focus ONLY on:
-- market attention
-- capital narratives
-- sector-level behavior
-
-DO NOT:
-- predict prices
-- give investment advice
-- recommend buying or selling
-`
-      : `
-You are an AI labor-market foresight system.
-
-Analyze:
-- hiring intent
-- labor demand
-- organizational priorities
-`;
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-${personaPrompt}
-
-Verified real-world signal:
-${signalText}
-
-Write ONLY:
-
-Reality · ${sixMonthDateLabel()}:
-Write EXACTLY 5 short paragraphs, in this order:
-
-1. What is actually happening right now (grounded in signals)
-2. Why users or organizations are behaving this way
-3. How decisions are being made today
-4. What is likely to shift over the next six months
-5. What assumptions this prediction depends on
-
-If this prediction is correct, what works:
-- 3 bullet points
-`
-    }],
-    temperature: 0.3
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-/* ------------------------------------------------------------
-   2×-AI Engine TOPIC GENERATORS
------------------------------------------------------------- */
-async function generateNextTopicGDJ(lastTopic = "", lastMajor = "") {
-  const major = pickNextMajor(lastMajor);
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-You are GD-J, a LinkedIn job-market advisor.
-
-Academic lens:
-${major} (Stanford University)
-
-Generate ONE job title
-that companies are likely hiring for in the next 3–6 months.
-
-Rules:
-- Use real job titles
-- Avoid repeating: "${lastTopic}"
-- Neutral, analytical tone
-- Output ONLY the job title
-`
-    }],
-    temperature: 0.7
-  });
-
-  return {
-    topic: out.choices[0].message.content.trim(),
-    major
-  };
-}
-
-/* ------------------------------------------------------------
    CORE PIPELINE
 ------------------------------------------------------------ */
 async function runPipeline(topic, persona) {
 
-  // ⭐ MARKETS = Stock / market signals (ONLY ADDITION)
+  // ⭐ MARKETS (UPDATED WITH COMPANY NAME)
   if (persona === "MARKETS") {
     const theme = await rewriteMarketTheme(topic);
     const signal = await fetchMarketSignal(theme);
     if (!signal) return { report: "No strong live market signals found." };
 
+    const company = await extractCompanyNameFromTitle(signal.title);
+
     const body = await generatePredictionBody(
-      [{ title: theme, source: "Reuters" }],
+      [{ title: signal.title, source: "Reuters" }],
       "MARKETS"
     );
 
     let report = "Current Signals (Market Attention)\n";
-    report += `• ${theme} — Reuters\n`;
-    report += `  ${MARKETS_SIGNAL_SOURCE.url}\n`;
+    report += `Company in focus: ${company}\n\n`;
+    report += `• ${signal.title} — Reuters\n`;
+    report += `  ${signal.link}\n`;
 
-    return { report: report + "\n" + body };
+    return {
+      topic: company,
+      report: report + "\n" + body
+    };
   }
 
-  // BUSINESS = LinkedIn Job Advisor
+  // BUSINESS (UNCHANGED)
   if (persona === "BUSINESS") {
     const job = await fetchSingleLinkedInJob(topic);
     if (!job) return { report: "No LinkedIn job signals found." };
@@ -410,24 +283,20 @@ async function runPipeline(topic, persona) {
     return { report: report + "\n" + body };
   }
 
-  // AMAZON (unchanged)
+  // AMAZON (UNCHANGED)
   const product = await fetchSingleAmazonProduct(topic);
   if (!product) return { report: "No Amazon product found for this topic." };
 
-  const brand = product.title.split(" ")[0];
   const body = await generatePredictionBody(
     [{ title: product.title, source: "Amazon" }],
     "AMAZON"
   );
 
   let report = "Current Signals (Ranked by Impact Level)\n";
-  report += `• ${product.title} — ${brand}\n`;
+  report += `• ${product.title} — Amazon\n`;
   report += `  ${product.link}\n`;
 
-  return {
-    topic: `${brand} ${topic}`,
-    report: report + "\n" + body
-  };
+  return { report: report + "\n" + body };
 }
 
 /* ------------------------------------------------------------
@@ -449,30 +318,22 @@ app.post("/run", async (req, res) => {
 ------------------------------------------------------------ */
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
-  const lastTopic = (req.body.lastTopic || "").trim();
-  const lastMajor = (req.body.lastMajor || "").trim();
 
   if (persona === "MARKETS") {
     const theme = "AI infrastructure stocks";
-    const report = await runPipeline(theme, "MARKETS");
-    return res.json({ topic: theme, report: report.report });
+    const result = await runPipeline(theme, "MARKETS");
+    return res.json(result);
   }
 
   if (persona === "BUSINESS") {
-    const result = await generateNextTopicGDJ(lastTopic, lastMajor);
+    const result = await generateNextTopicGDJ("", "");
     const report = await runPipeline(result.topic, "BUSINESS");
-
-    return res.json({
-      topic: result.topic,
-      major: result.major,
-      report: report.report
-    });
+    return res.json({ topic: result.topic, report: report.report });
   }
 
-  const topic = await generateNextTopicAWang(lastTopic);
+  const topic = await generateNextTopicAWang("");
   const report = await runPipeline(topic, "AMAZON");
-
-  res.json({ topic: report.topic || topic, report: report.report });
+  res.json({ topic, report: report.report });
 });
 
 /* ------------------------------------------------------------
