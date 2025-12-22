@@ -93,7 +93,7 @@ async function rewriteMarketTheme(input, lens) {
       content: `
 Academic lens: ${lens}
 
-Rewrite into a neutral market attention theme focused on AI-related companies.
+Rewrite into a neutral market attention theme.
 Rules:
 - 3–7 words
 - No tickers
@@ -113,27 +113,13 @@ Input: "${input}"
 // ------------------------------------------------------------
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
-
-  try {
-    const q = `${theme}`;
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=5&api_key=${SERP_KEY}`;
-    const r = await fetch(url);
-    const j = await r.json();
-
-    const results = (j.news_results || []);
-    if (!results.length) return null;
-
-    // pick one news result (avoid always the first)
-    const hit = results[Math.floor(Math.random() * results.length)];
-
-    return {
-      title: hit.title,
-      link: hit.link,
-      source: "Google News"
-    };
-  } catch {
-    return null;
-  }
+  const q = `${theme} site:reuters.com`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  const hit = (j.organic_results || [])[0];
+  if (!hit) return null;
+  return { title: hit.title, link: hit.link, source: "Reuters" };
 }
 
 // ------------------------------------------------------------
@@ -163,7 +149,8 @@ async function generateNextAmazonTopic(lens) {
       content: `
 Academic lens: ${lens}
 
-Choose ONE beauty product or beauty category with strong near-term buying interest.
+Choose ONE real-world consumer product or product category
+people are likely to buy soon.
 
 Rules:
 - Buyer mindset
@@ -208,7 +195,7 @@ async function generateNextJobTitle(lens) {
       content: `
 Academic lens: ${lens}
 
-Generate ONE real AI job title companies are hiring for.
+Generate ONE real job title companies are hiring for.
 Output ONLY the title.
 `
     }],
@@ -234,7 +221,6 @@ async function fetchSingleLinkedInJob(jobTitle) {
 // ------------------------------------------------------------
 async function generatePredictionBody(sources, persona) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
-
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
@@ -243,16 +229,12 @@ async function generatePredictionBody(sources, persona) {
 Verified real-world signal:
 ${signalText}
 
-START WITH THIS LINE:
-Reality · ${sixMonthDateLabel()}
-
 Write a 6-month foresight.
 5 short paragraphs + 3 bullets: "If this prediction is correct, what works".
 `
     }],
     temperature: 0.3
   });
-
   return out.choices[0].message.content.trim();
 }
 
@@ -291,7 +273,7 @@ if (MARKETS_ENTITY_MEMORY.length > MARKETS_MEMORY_LIMIT) {
 
     return {
       topic: company,
-      report: `Current Signals\n•  ${signal.title} — Google News\n${signal.link}\n\n${body}`
+      report: `Current Signals\n• ${signal.title} — Reuters\n${signal.link}\n\n${body}`
     };
   }
 
