@@ -233,50 +233,80 @@ function sixMonthDateLabel() {
 // BODY GENERATION (persona-aware, SAME structure)
 // ------------------------------------------------------------
 async function generatePredictionBody(sources, persona) {
-  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
+  const signalText = sources
+    .map(s => `• ${s.title} — ${s.source}`)
+    .join("\n");
 
-  const personaInstruction =
-    persona === "AMAZON"
-      ? `
+  let personaInstruction = "";
+
+  // ---------------- AMAZON (COSMETICS ONLY) ----------------
+  if (persona === "AMAZON") {
+    personaInstruction = `
 You are an AI product-use analyst.
 
-Focus ONLY on the product itself.
+Scope:
+- Cosmetics and personal beauty products ONLY
 
-Analyze:
-- What the product actually does
-- Core functional features
-- How users use it day-to-day
-- What problem it solves in real life
-- Where users may feel friction or disappointment
+Focus on:
+- What this cosmetic product actually does
+- Core functional features (ingredients, formulation, usage)
+- How users apply it in daily routines
+- What skin, beauty, or self-care problem it solves
+- Where users may feel friction, irritation, or disappointment
 
-Do NOT discuss:
+DO NOT discuss:
 - Brand strategy
 - Market share
-- Pricing
+- Pricing tactics
 - Competitors
-`
-      : persona === "BUSINESS"
-      ? `
+- General retail trends
+`;
+  }
+
+  // ---------------- BUSINESS (JOB MARKET) ----------------
+  else if (persona === "BUSINESS") {
+    personaInstruction = `
 You are an AI labor-market foresight analyst.
 
 Focus on:
-- Job responsibilities and skills
-- How this role is evolving
-- Why companies are hiring for it
-- How work patterns may shift in six months
-`
-      : `
+- Core responsibilities of this role
+- Skills and experience companies expect
+- Why organizations are hiring for this role now
+- How the role may evolve over the next six months
+- Changes in workflows, tools, or team structure
+
+DO NOT:
+- Give career advice
+- Recommend specific companies
+- Discuss salaries or compensation
+`;
+  }
+
+  // ---------------- MARKETS (STOCK / COMPANY SIGNALS) ----------------
+  else if (persona === "MARKETS") {
+    personaInstruction = `
 You are an AI market signal analyst.
 
-Focus on:
-- Company-level attention
-- Capital and narrative shifts
-- Strategic positioning
+Focus ONLY on:
+- Company-level attention and visibility
+- Capital flow narratives
+- Strategic positioning and momentum
+- How institutions, media, or sectors are reacting
 
-Do NOT:
-- Predict prices
+DO NOT:
+- Predict stock prices
 - Give investment advice
+- Suggest buying or selling
+- Mention price targets or tickers
 `;
+  }
+
+  // ---------------- SAFETY FALLBACK ----------------
+  else {
+    personaInstruction = `
+You are an AI analyst producing neutral foresight from real-world signals.
+`;
+  }
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -288,17 +318,22 @@ ${personaInstruction}
 Verified real-world signal:
 ${signalText}
 
-START WITH THIS LINE:
+START WITH THIS LINE EXACTLY:
 Reality · ${sixMonthDateLabel()}
 
 Write a 6-month foresight.
-5 short paragraphs.
 
-Then write:
+Rules:
+- EXACTLY 5 short paragraphs
+- Neutral, analytical tone
+- No markdown symbols (**, ###, -, *)
+- No bullet points in the paragraphs
+
+Then write this section header exactly:
 If this prediction is correct, what works:
-3 short sentences.
-Do not use markdown.
-Do not use bullets.
+
+Then write EXACTLY 3 short sentences.
+No bullets. No numbering. No markdown.
 `
     }],
     temperature: 0.3
