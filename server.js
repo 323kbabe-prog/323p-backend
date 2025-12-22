@@ -113,13 +113,27 @@ Input: "${input}"
 // ------------------------------------------------------------
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
-  const q = `${theme} site:reuters.com`;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
-  const r = await fetch(url);
-  const j = await r.json();
-  const hit = (j.organic_results || [])[0];
-  if (!hit) return null;
-  return { title: hit.title, link: hit.link, source: "Reuters" };
+
+  try {
+    const q = `${theme}`;
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&tbm=nws&num=5&api_key=${SERP_KEY}`;
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const results = (j.news_results || []);
+    if (!results.length) return null;
+
+    // pick one news result (avoid always the first)
+    const hit = results[Math.floor(Math.random() * results.length)];
+
+    return {
+      title: hit.title,
+      link: hit.link,
+      source: "Google News"
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ------------------------------------------------------------
@@ -272,7 +286,7 @@ if (MARKETS_ENTITY_MEMORY.length > MARKETS_MEMORY_LIMIT) {
 
     return {
       topic: company,
-      report: `Current Signals\n• ${signal.title} — Reuters\n${signal.link}\n\n${body}`
+      report: `Current Signals\n•  ${signal.title} — Google News\n${signal.link}\n\n${body}`
     };
   }
 
