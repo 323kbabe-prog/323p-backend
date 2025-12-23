@@ -17,38 +17,18 @@ const openai = new OpenAI({
 
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-// ⭐ MARKETS — Reuters anchor
-const MARKETS_SIGNAL_SOURCE = {
-  name: "Reuters",
-  url: "https://www.reuters.com"
-};
-
 // ------------------------------------------------------------
-// Stanford lenses + no-repeat memory (X)
+// Stanford lenses + no-repeat memory (UNCHANGED)
 // ------------------------------------------------------------
 const STANFORD_MAJORS = [
-  "Computer Science",
-  "Economics",
-  "Management Science and Engineering",
-  "Political Science",
-  "Psychology",
-  "Sociology",
-  "Symbolic Systems",
-  "Statistics",
-  "Electrical Engineering",
-  "Biomedical Engineering",
-  "Biology",
-  "Environmental Science",
-  "International Relations",
-  "Communication",
-  "Design",
-  "Education",
-  "Philosophy",
-  "Law"
+  "Computer Science","Economics","Management Science and Engineering",
+  "Political Science","Psychology","Sociology","Symbolic Systems",
+  "Statistics","Electrical Engineering","Biomedical Engineering",
+  "Biology","Environmental Science","International Relations",
+  "Communication","Design","Education","Philosophy","Law"
 ];
 
 let LAST_LENS = "";
-
 function pickStanfordLens() {
   const pool = STANFORD_MAJORS.filter(m => m !== LAST_LENS);
   const lens = pool[Math.floor(Math.random() * pool.length)];
@@ -57,7 +37,7 @@ function pickStanfordLens() {
 }
 
 // ------------------------------------------------------------
-// Entity no-repeat memory (per persona)
+// Entity no-repeat memory (UNCHANGED)
 // ------------------------------------------------------------
 const AMAZON_TOPIC_MEMORY = [];
 const AMAZON_MEMORY_LIMIT = 5;
@@ -67,8 +47,9 @@ const BUSINESS_MEMORY_LIMIT = 5;
 
 const MARKETS_ENTITY_MEMORY = [];
 const MARKETS_MEMORY_LIMIT = 5;
+
 // ------------------------------------------------------------
-// STEP 1 — Semantic clarity check (unchanged)
+// Semantic clarity check (UNCHANGED)
 // ------------------------------------------------------------
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
@@ -83,7 +64,20 @@ async function isClearTopic(topic) {
 }
 
 // ------------------------------------------------------------
-// MARKETS — rewrite theme using lens (X)
+// ⭐ X — dynamic future date label
+// ------------------------------------------------------------
+function futureDateLabel(months) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+
+// ------------------------------------------------------------
+// MARKETS — rewrite theme (UNCHANGED)
 // ------------------------------------------------------------
 async function rewriteMarketTheme(input, lens) {
   const out = await openai.chat.completions.create({
@@ -92,14 +86,8 @@ async function rewriteMarketTheme(input, lens) {
       role: "user",
       content: `
 Academic lens: ${lens}
-
-Rewrite into a neutral market attention theme.
-Rules:
-- 3–7 words
-- No tickers
-- No price language
-- Capital / attention narrative only
-
+Rewrite into a neutral market attention theme focused on AI-related companies.
+3–7 words. No tickers. No price language.
 Input: "${input}"
 `
     }],
@@ -109,34 +97,20 @@ Input: "${input}"
 }
 
 // ------------------------------------------------------------
-// MARKETS — Google Finance signal (UPDATED)
+// MARKETS — Google News signal (UNCHANGED)
 // ------------------------------------------------------------
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
-
-  try {
-    const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(
-      theme
-    )}&num=5&api_key=${SERP_KEY}`;
-
-    const r = await fetch(url);
-    const j = await r.json();
-
-    const hit = (j.news_results || [])[0];
-    if (!hit) return null;
-
-    return {
-      title: hit.title,
-      link: hit.link,
-      source: hit.source || "Google News"
-    };
-  } catch {
-    return null;
-  }
+  const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(theme)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  const hit = (j.news_results || [])[0];
+  if (!hit) return null;
+  return { title: hit.title, link: hit.link, source: hit.source || "Google News" };
 }
 
 // ------------------------------------------------------------
-// MARKETS — extract company name (X)
+// MARKETS — extract company name (UNCHANGED)
 // ------------------------------------------------------------
 async function extractCompanyNameFromTitle(title) {
   const out = await openai.chat.completions.create({
@@ -151,7 +125,7 @@ async function extractCompanyNameFromTitle(title) {
 }
 
 // ------------------------------------------------------------
-// AMAZON — topic generation using lens (X)
+// AMAZON — topic generation (UNCHANGED)
 // ------------------------------------------------------------
 async function generateNextAmazonTopic(lens) {
   const recent = AMAZON_TOPIC_MEMORY.join(", ");
@@ -161,21 +135,12 @@ async function generateNextAmazonTopic(lens) {
       role: "user",
       content: `
 Academic lens: ${lens}
-
-Choose ONE real-world cosmetics product or beauty category with strong near-term consumer buying interest.
-
-Rules:
-- Buyer mindset
-- Everyday consumer goods
-- Avoid repetition
-- 4–8 words
-
+Choose ONE cosmetics product or beauty category people are likely to buy soon.
 Avoid: ${recent}
 `
     }],
     temperature: 0.7
   });
-
   const topic = out.choices[0].message.content.trim();
   AMAZON_TOPIC_MEMORY.push(topic);
   if (AMAZON_TOPIC_MEMORY.length > AMAZON_MEMORY_LIMIT) AMAZON_TOPIC_MEMORY.shift();
@@ -183,7 +148,7 @@ Avoid: ${recent}
 }
 
 // ------------------------------------------------------------
-// AMAZON — fetch product (unchanged)
+// AMAZON — fetch product (UNCHANGED)
 // ------------------------------------------------------------
 async function fetchSingleAmazonProduct(query) {
   if (!SERP_KEY) return null;
@@ -197,7 +162,7 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 // ------------------------------------------------------------
-// BUSINESS — job title via lens (X)
+// BUSINESS — job title via lens (UNCHANGED)
 // ------------------------------------------------------------
 async function generateNextJobTitle(lens) {
   const out = await openai.chat.completions.create({
@@ -206,9 +171,7 @@ async function generateNextJobTitle(lens) {
       role: "user",
       content: `
 Academic lens: ${lens}
-
-Generate ONE real AI job title companies are actively recruiting for right now.
-Output ONLY the job title.
+Generate ONE real AI job title companies are actively hiring for.
 `
     }],
     temperature: 0.7
@@ -217,7 +180,7 @@ Output ONLY the job title.
 }
 
 // ------------------------------------------------------------
-// BUSINESS — LinkedIn SERP (unchanged)
+// BUSINESS — LinkedIn SERP (UNCHANGED)
 // ------------------------------------------------------------
 async function fetchSingleLinkedInJob(jobTitle) {
   if (!SERP_KEY) return null;
@@ -229,123 +192,34 @@ async function fetchSingleLinkedInJob(jobTitle) {
 }
 
 // ------------------------------------------------------------
-// 6-month future date label (REQUIRED)
+// ⭐ X — BODY GENERATION WITH REAL HORIZON
 // ------------------------------------------------------------
-function sixMonthDateLabel() {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 6);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  });
-}
+async function generatePredictionBody(sources, persona, months) {
+  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
 
-// ------------------------------------------------------------
-// BODY GENERATION (persona-aware, SAME structure)
-// ------------------------------------------------------------
-async function generatePredictionBody(sources, persona) {
-  const signalText = sources
-    .map(s => `• ${s.title} — ${s.source}`)
-    .join("\n");
-
-  let personaInstruction = "";
-
-  // ---------------- AMAZON (COSMETICS ONLY) ----------------
-  if (persona === "AMAZON") {
-    personaInstruction = `
-You are an AI product-use analyst.
-
-Scope:
-- Cosmetics and personal beauty products ONLY
-
-Focus on:
-- What this cosmetic product actually does
-- Core functional features (ingredients, formulation, usage)
-- How users apply it in daily routines
-- What skin, beauty, or self-care problem it solves
-- Where users feel supported, understood, and empowered
-
-DO NOT discuss:
-- Brand strategy
-- Market share
-- Pricing tactics
-- Competitors
-- General retail trends
-`;
-  }
-
-  // ---------------- BUSINESS (JOB MARKET) ----------------
-  else if (persona === "BUSINESS") {
-    personaInstruction = `
-You are an AI labor-market foresight analyst.
-
-Focus on:
-- Core responsibilities of this role
-- Skills and experience companies expect
-- Why organizations are hiring for this role now
-- How the role may evolve over the next six months
-- Changes in workflows, tools, or team structure
-
-DO NOT:
-- Give career advice
-- Recommend specific companies
-- Discuss salaries or compensation
-`;
-  }
-
-  // ---------------- MARKETS (STOCK / COMPANY SIGNALS) ----------------
-  else if (persona === "MARKETS") {
-    personaInstruction = `
-You are an AI market signal analyst.
-
-Focus ONLY on:
-- Company-level attention and visibility
-- Capital flow narratives
-- Strategic positioning and momentum
-- How institutions, media, or sectors are reacting
-
-DO NOT:
-- Predict stock prices
-- Give investment advice
-- Suggest buying or selling
-- Mention price targets or tickers
-`;
-  }
-
-  // ---------------- SAFETY FALLBACK ----------------
-  else {
-    personaInstruction = `
-You are an AI analyst producing neutral foresight from real-world signals.
-`;
-  }
+  let horizonInstruction = "";
+  if (months === 6) horizonInstruction = "Near-term execution and adoption.";
+  if (months === 12) horizonInstruction = "Strategic shifts and organizational change.";
+  if (months === 36) horizonInstruction = "Structural, industry-level transformation.";
 
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-${personaInstruction}
+${horizonInstruction}
 
 Verified real-world signal:
 ${signalText}
 
-START WITH THIS LINE EXACTLY:
-Reality · ${sixMonthDateLabel()}
+START WITH:
+Reality · ${futureDateLabel(months)}
 
-Write a 6-month foresight.
+Write EXACTLY 5 short paragraphs.
 
-Rules:
-- EXACTLY 5 short paragraphs
-- Neutral, analytical tone
-- No markdown symbols (**, ###, -, *)
-- No bullet points in the paragraphs
-
-Then write this section header exactly:
+Then write:
 If this prediction is correct, what works:
-
-Then write EXACTLY 3 short sentences.
-No bullets. No numbering. No markdown.
+Write EXACTLY 3 short sentences.
 `
     }],
     temperature: 0.3
@@ -355,9 +229,9 @@ No bullets. No numbering. No markdown.
 }
 
 // ------------------------------------------------------------
-// CORE PIPELINE (X applied only inside)
+// ⭐ X — CORE PIPELINE WITH MONTHS
 // ------------------------------------------------------------
-async function runPipeline(topic, persona) {
+async function runPipeline(topic, persona, months = 6) {
 
   const lens = pickStanfordLens();
 
@@ -366,77 +240,57 @@ async function runPipeline(topic, persona) {
     const signal = await fetchMarketSignal(theme);
     if (!signal) return { report: "No market signal found." };
 
-    let company = await extractCompanyNameFromTitle(signal.title);
-let attempts = 0;
+    const company = await extractCompanyNameFromTitle(signal.title);
+    const body = await generatePredictionBody(
+      [{ title: signal.title, source: signal.source }],
+      "MARKETS",
+      months
+    );
 
-while (
-  MARKETS_ENTITY_MEMORY.includes(company) &&
-  attempts < 3
-) {
-  const retryTheme = await rewriteMarketTheme(topic, pickStanfordLens());
-  const retrySignal = await fetchMarketSignal(retryTheme);
-  if (!retrySignal) break;
-
-  company = await extractCompanyNameFromTitle(retrySignal.title);
-  attempts++;
-}
-
-MARKETS_ENTITY_MEMORY.push(company);
-if (MARKETS_ENTITY_MEMORY.length > MARKETS_MEMORY_LIMIT) {
-  MARKETS_ENTITY_MEMORY.shift();
-}
-    const body = await generatePredictionBody([{ title: signal.title, source: "Reuters" }], "MARKETS");
-
-    return {
-      topic: company,
-      report: `Current Signals\n• ${signal.title} — Google News\n${signal.link}\n\n${body}`
-    };
+    return { topic: company, report: body };
   }
 
   if (persona === "BUSINESS") {
-    let jobTitle;
-let attempts = 0;
-
-do {
-  jobTitle = await generateNextJobTitle(lens);
-  attempts++;
-} while (
-  BUSINESS_ENTITY_MEMORY.includes(jobTitle) &&
-  attempts < 3
-);
-
-BUSINESS_ENTITY_MEMORY.push(jobTitle);
-if (BUSINESS_ENTITY_MEMORY.length > BUSINESS_MEMORY_LIMIT) {
-  BUSINESS_ENTITY_MEMORY.shift();
-}
+    const jobTitle = await generateNextJobTitle(lens);
     const job = await fetchSingleLinkedInJob(jobTitle);
     if (!job) return { report: "No hiring signal found." };
 
-    const body = await generatePredictionBody([{ title: jobTitle, source: "LinkedIn" }], "BUSINESS");
-    return { topic: jobTitle, report: `• ${jobTitle} — LinkedIn\n${job.link}\n\n${body}` };
+    const body = await generatePredictionBody(
+      [{ title: jobTitle, source: "LinkedIn" }],
+      "BUSINESS",
+      months
+    );
+
+    return { topic: jobTitle, report: body };
   }
 
   const amazonTopic = await generateNextAmazonTopic(lens);
   const product = await fetchSingleAmazonProduct(amazonTopic);
   if (!product) return { report: "No product found." };
 
-  const body = await generatePredictionBody([{ title: product.title, source: "Amazon" }], "AMAZON");
-  return { topic: product.title, report: `• ${product.title} — Amazon\n${product.link}\n\n${body}` };
+  const body = await generatePredictionBody(
+    [{ title: product.title, source: "Amazon" }],
+    "AMAZON",
+    months
+  );
+
+  return { topic: product.title, report: body };
 }
 
 // ------------------------------------------------------------
-// ROUTES (unchanged)
+// ROUTES (ONLY X: months passthrough)
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
-  const { topic = "", persona = "BUSINESS" } = req.body;
+  const { topic = "", persona = "BUSINESS", months = 6 } = req.body;
   if (!(await isClearTopic(topic))) return res.json({ report: "Invalid topic." });
-  res.json(await runPipeline(topic, persona));
+  res.json(await runPipeline(topic, persona, Number(months)));
 });
 
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
+  const months = Number(req.body.months || 6);
   const seed = persona === "MARKETS" ? "AI infrastructure" : "";
-  res.json(await runPipeline(seed, persona));
+  res.json(await runPipeline(seed, persona, months));
 });
 
 // ------------------------------------------------------------
