@@ -17,78 +17,124 @@ const openai = new OpenAI({
 
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-// ------------------------------------------------------------
-// USER QUERY REWRITE LAYER (NEW, SHARED)
-// ------------------------------------------------------------
-async function rewriteUserQuery(input) {
-  if (!input || typeof input !== "string") return null;
+// ⭐ MARKETS — Reuters anchor
+const MARKETS_SIGNAL_SOURCE = {
+  name: "Reuters",
+  url: "https://www.reuters.com"
+};
 
+// ------------------------------------------------------------
+// Stanford lenses + no-repeat memory
+// ------------------------------------------------------------
+const STANFORD_MAJORS = [
+  "Computer Science",
+  "Economics",
+  "Management Science and Engineering",
+  "Political Science",
+  "Psychology",
+  "Sociology",
+  "Symbolic Systems",
+  "Statistics",
+  "Electrical Engineering",
+  "Biomedical Engineering",
+  "Biology",
+  "Environmental Science",
+  "International Relations",
+  "Communication",
+  "Design",
+  "Education",
+  "Philosophy",
+  "Law"
+];
+
+let LAST_LENS = "";
+
+function pickStanfordLens() {
+  const pool = STANFORD_MAJORS.filter(m => m !== LAST_LENS);
+  const lens = pool[Math.floor(Math.random() * pool.length)];
+  LAST_LENS = lens;
+  return lens;
+}
+
+// ------------------------------------------------------------
+// Entity no-repeat memory (per persona)
+// ------------------------------------------------------------
+const AMAZON_TOPIC_MEMORY = [];
+const AMAZON_MEMORY_LIMIT = 5;
+
+const BUSINESS_ENTITY_MEMORY = [];
+const BUSINESS_MEMORY_LIMIT = 5;
+
+const MARKETS_ENTITY_MEMORY = [];
+const MARKETS_MEMORY_LIMIT = 5;
+
+// ------------------------------------------------------------
+// Semantic clarity gate — MANUAL INPUT ONLY
+// ------------------------------------------------------------
+async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
-      content: `
-If the text contains NO real human words, reply ONLY: NONE.
-Otherwise:
-- extract meaningful real words
-- correct misspellings
-- remove questions / commands
-- rewrite as a short, world-observable topic (2–6 words)
-
-Text:
-"${input}"
-
-Reply ONLY with the rewritten topic or NONE.
-`
+      content: `Is the following text a meaningful topic a human would search? Reply YES or NO.\n"${topic}"`
     }],
     temperature: 0
   });
-
-  const t = out.choices[0].message.content.trim();
-  return t === "NONE" ? null : t;
+  return out.choices[0].message.content.trim() === "YES";
 }
 
 // ------------------------------------------------------------
-// SEMANTIC GATE (MODIFIED: tolerant)
-// ------------------------------------------------------------
-async function isClearTopic(topic) {
-  if (!topic) return false;
-  return true; // only gibberish is rejected earlier
-}
-
-// ------------------------------------------------------------
-// (ALL EXISTING PIPELINE CODE BELOW IS UNCHANGED)
-// MARKETS / BUSINESS / AMAZON LOGIC
-// Stanford lenses
-// Memories
-// runPipeline()
+// (ALL EXISTING PIPELINE FUNCTIONS UNCHANGED)
+// rewriteMarketTheme
+// fetchMarketSignal
+// extractCompanyNameFromTitle
+// generateNextAmazonTopic
+// fetchSingleAmazonProduct
+// generateNextJobTitle
+// fetchSingleLinkedInJob
+// sixMonthDateLabel
+// generatePredictionBody
+// runPipeline
 // ------------------------------------------------------------
 
-// ---------------- ROUTES ----------------
 
-app.post("/run", async (req, res) => {
-  const { topic = "", persona = "BUSINESS" } = req.body;
+// ============================================================
+// ROUTES — CLEAN SEPARATION
+// ============================================================
 
-  const rewritten = await rewriteUserQuery(topic);
-  if (!rewritten) {
-    return res.json({ report: "No observable signal found." });
-  }
-
-  if (!(await isClearTopic(rewritten))) {
-    return res.json({ report: "No observable signal found." });
-  }
-
-  const result = await runPipeline(rewritten, persona);
-  result.topic = rewritten;
-  res.json(result);
-});
-
-app.post("/next", async (req, res) => {
+/**
+ * AUTO SEARCH
+ * - system driven
+ * - no user input
+ * - NEVER validated
+ */
+app.post("/auto", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
   const seed = persona === "MARKETS" ? "AI infrastructure" : "";
   res.json(await runPipeline(seed, persona));
 });
 
+/**
+ * MANUAL SEARCH
+ * - user driven
+ * - validated
+ * - never auto-triggered
+ */
+app.post("/run", async (req, res) => {
+  const { topic, persona = "BUSINESS" } = req.body;
+
+  if (!topic || !topic.trim()) {
+    return res.json({ report: "No topic provided." });
+  }
+
+  if (!(await isClearTopic(topic))) {
+    return res.json({ report: "Invalid topic." });
+  }
+
+  res.json(await runPipeline(topic.trim(), persona));
+});
+
+// ------------------------------------------------------------
 app.listen(process.env.PORT || 3000, () =>
   console.log("🌊 Blue Ocean Browser running")
 );
