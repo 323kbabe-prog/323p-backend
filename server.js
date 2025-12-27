@@ -129,6 +129,42 @@ Text:
   return result === "NO" ? null : result;
 }
 
+// ⭐ YOUTUBER — normalize real YouTube / Google search intent
+async function normalizeYouTubeSearchIntent(rawInput, location) {
+  const locationLine = location ? `Geographic context: ${location}` : "";
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+${locationLine}
+
+Rewrite the following into a clean, high-signal
+YouTube / Google search query that reflects
+what people are actually searching for.
+
+Rules:
+- 3–6 words
+- Neutral, factual phrasing
+- No emotion
+- No "I", no opinion
+- Use standard search language
+- If music-related, prefer:
+  "new songs", "music", "new releases"
+
+Input:
+"${rawInput}"
+
+Output ONLY the rewritten search query.
+`
+    }],
+    temperature: 0
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
 // ------------------------------------------------------------
 // MARKETS — rewrite theme using lens (+ location)
 // ------------------------------------------------------------
@@ -435,21 +471,27 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
-  const ytTopic = manual && topic
-    ? topic
-    : await generateNextYouTuberSignal(lens);
+  let searchQuery;
 
-  const ytUrl = buildYouTubeChannelSearchUrl(ytTopic);
+  if (manual && topic) {
+    // ⭐ REAL backend normalization
+    searchQuery = await normalizeYouTubeSearchIntent(topic, location);
+  } else {
+    // auto mode stays engine-driven
+    searchQuery = await generateNextYouTuberSignal(lens);
+  }
+
+  const ytUrl = buildYouTubeChannelSearchUrl(searchQuery);
 
   const body = await generatePredictionBody(
-    [{ title: ytTopic, source: "YouTube" }],
+    [{ title: searchQuery, source: "YouTube / Google" }],
     "YOUTUBER",
     null
   );
 
   return {
-    topic: ytTopic,
-    report: `• ${ytTopic} — YouTube\n${ytUrl}\n\n${body}`
+    topic: searchQuery,
+    report: `• ${searchQuery} — YouTube\n${ytUrl}\n\n${body}`
   };
 }
 
