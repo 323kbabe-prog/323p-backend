@@ -257,8 +257,8 @@ async function generatePredictionBody(sources, persona, location) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
   let personaInstruction = "";
 
-  if (persona === "AMAZON") {
-    personaInstruction = `
+if (persona === "AMAZON") {
+  personaInstruction = `
 You are an AI product-use analyst.
 
 If a geographic context is provided, you MUST:
@@ -266,9 +266,13 @@ If a geographic context is provided, you MUST:
 - Reflect climate, culture, or regulation differences
 - Ground usage patterns in local context
 
+If the location is a specific city or place,
+explicitly reference it once in the analysis
+when it first becomes relevant.
+
 If no location is provided, write globally.
 `;
-  } else if (persona === "BUSINESS") {
+} else if (persona === "BUSINESS") {
     personaInstruction = `You are an AI labor-market foresight analyst.`;
   } else if (persona === "MARKETS") {
     personaInstruction = `You are an AI market signal analyst.`;
