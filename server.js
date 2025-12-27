@@ -290,11 +290,8 @@ async function normalizeYouTubeSearchIntent(rawInput, location) {
 
     if (!videos.length) return rawInput;
 
-    return videos[0].title
-      .replace(/[-–|].*$/, "")
-      .replace(/\(.*?\)/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    return videos[0].link;
+   
 
   } catch {
     return rawInput;
