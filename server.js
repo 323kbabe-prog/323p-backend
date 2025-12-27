@@ -24,7 +24,7 @@ const MARKETS_SIGNAL_SOURCE = {
 };
 
 // ------------------------------------------------------------
-// Stanford lenses + no-repeat memory (X)
+// Stanford lenses + no-repeat memory
 // ------------------------------------------------------------
 const STANFORD_MAJORS = [
   "Computer Science","Economics","Management Science and Engineering",
@@ -56,7 +56,7 @@ const MARKETS_ENTITY_MEMORY = [];
 const MARKETS_MEMORY_LIMIT = 5;
 
 // ------------------------------------------------------------
-// STEP 1 — Semantic clarity check (unchanged)
+// Semantic clarity check
 // ------------------------------------------------------------
 async function isClearTopic(topic) {
   const out = await openai.chat.completions.create({
@@ -71,7 +71,7 @@ async function isClearTopic(topic) {
 }
 
 // ------------------------------------------------------------
-// ⭐ X — Explicit location extraction (manual only)
+// Explicit location extraction (manual only)
 // ------------------------------------------------------------
 async function extractExplicitLocation(text) {
   const out = await openai.chat.completions.create({
@@ -97,7 +97,7 @@ Text:
 }
 
 // ------------------------------------------------------------
-// MARKETS — rewrite theme using lens (X + location)
+// MARKETS — rewrite theme using lens (+ location)
 // ------------------------------------------------------------
 async function rewriteMarketTheme(input, lens, location) {
   const locationLine = location ? `Geographic context: ${location}` : "";
@@ -125,7 +125,7 @@ Input: "${input}"
 }
 
 // ------------------------------------------------------------
-// MARKETS — Google Finance signal (unchanged)
+// MARKETS — Google Finance signal
 // ------------------------------------------------------------
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
@@ -142,7 +142,7 @@ async function fetchMarketSignal(theme) {
 }
 
 // ------------------------------------------------------------
-// MARKETS — extract company name (unchanged)
+// MARKETS — extract company name
 // ------------------------------------------------------------
 async function extractCompanyNameFromTitle(title) {
   const out = await openai.chat.completions.create({
@@ -157,7 +157,7 @@ async function extractCompanyNameFromTitle(title) {
 }
 
 // ------------------------------------------------------------
-// AMAZON — topic generation using lens (X + location)
+// AMAZON — topic generation using lens (+ location)
 // ------------------------------------------------------------
 async function generateNextAmazonTopic(lens, location) {
   const recent = AMAZON_TOPIC_MEMORY.join(", ");
@@ -194,7 +194,7 @@ Avoid: ${recent}
 }
 
 // ------------------------------------------------------------
-// AMAZON — fetch product (unchanged)
+// AMAZON — fetch product
 // ------------------------------------------------------------
 async function fetchSingleAmazonProduct(query) {
   if (!SERP_KEY) return null;
@@ -208,7 +208,7 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 // ------------------------------------------------------------
-// BUSINESS — job title via lens (X + location)
+// BUSINESS — job title via lens (+ location)
 // ------------------------------------------------------------
 async function generateNextJobTitle(lens, location) {
   const locationLine = location ? `Geographic context: ${location}` : "";
@@ -230,7 +230,7 @@ Output ONLY the job title.
 }
 
 // ------------------------------------------------------------
-// BUSINESS — LinkedIn SERP (unchanged)
+// BUSINESS — LinkedIn SERP
 // ------------------------------------------------------------
 async function fetchSingleLinkedInJob(jobTitle) {
   if (!SERP_KEY) return null;
@@ -242,7 +242,7 @@ async function fetchSingleLinkedInJob(jobTitle) {
 }
 
 // ------------------------------------------------------------
-// 6-month future date label (unchanged)
+// 6-month future date label
 // ------------------------------------------------------------
 function sixMonthDateLabel() {
   const d = new Date();
@@ -251,14 +251,23 @@ function sixMonthDateLabel() {
 }
 
 // ------------------------------------------------------------
-// BODY GENERATION (unchanged)
+// BODY GENERATION (Option A applied safely)
 // ------------------------------------------------------------
-async function generatePredictionBody(sources, persona) {
+async function generatePredictionBody(sources, persona, location) {
   const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
   let personaInstruction = "";
 
   if (persona === "AMAZON") {
-    personaInstruction = `You are an AI product-use analyst.`;
+    personaInstruction = `
+You are an AI product-use analyst.
+
+If a geographic context is provided, you MUST:
+- Explain consumer behavior specific to that region
+- Reflect climate, culture, or regulation differences
+- Ground usage patterns in local context
+
+If no location is provided, write globally.
+`;
   } else if (persona === "BUSINESS") {
     personaInstruction = `You are an AI labor-market foresight analyst.`;
   } else if (persona === "MARKETS") {
@@ -298,7 +307,7 @@ Then write EXACTLY 3 short sentences.
 }
 
 // ------------------------------------------------------------
-// CORE PIPELINE (X applied only here)
+// CORE PIPELINE
 // ------------------------------------------------------------
 async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens();
@@ -313,36 +322,60 @@ async function runPipeline(topic, persona, manual) {
     const signal = await fetchMarketSignal(theme);
     if (!signal) return { report: "No market signal found." };
 
-    let company = await extractCompanyNameFromTitle(signal.title);
+    const company = await extractCompanyNameFromTitle(signal.title);
     MARKETS_ENTITY_MEMORY.push(company);
     if (MARKETS_ENTITY_MEMORY.length > MARKETS_MEMORY_LIMIT) MARKETS_ENTITY_MEMORY.shift();
 
-    const body = await generatePredictionBody([{ title: signal.title, source: "Reuters" }], "MARKETS");
-    return { topic: company, report: `Current Signals\n• ${signal.title} — Google News\n${signal.link}\n\n${body}` };
+    const body = await generatePredictionBody(
+      [{ title: signal.title, source: "Reuters" }],
+      "MARKETS",
+      null
+    );
+
+    return {
+      topic: company,
+      report: `Current Signals\n• ${signal.title} — Google News\n${signal.link}\n\n${body}`
+    };
   }
 
   if (persona === "BUSINESS") {
-    let jobTitle = await generateNextJobTitle(lens, location);
+    const jobTitle = await generateNextJobTitle(lens, location);
     BUSINESS_ENTITY_MEMORY.push(jobTitle);
     if (BUSINESS_ENTITY_MEMORY.length > BUSINESS_MEMORY_LIMIT) BUSINESS_ENTITY_MEMORY.shift();
 
     const job = await fetchSingleLinkedInJob(jobTitle);
     if (!job) return { report: "No hiring signal found." };
 
-    const body = await generatePredictionBody([{ title: jobTitle, source: "LinkedIn" }], "BUSINESS");
-    return { topic: jobTitle, report: `• ${jobTitle} — LinkedIn\n${job.link}\n\n${body}` };
+    const body = await generatePredictionBody(
+      [{ title: jobTitle, source: "LinkedIn" }],
+      "BUSINESS",
+      null
+    );
+
+    return {
+      topic: jobTitle,
+      report: `• ${jobTitle} — LinkedIn\n${job.link}\n\n${body}`
+    };
   }
 
   const amazonTopic = await generateNextAmazonTopic(lens, location);
   const product = await fetchSingleAmazonProduct(amazonTopic);
   if (!product) return { report: "No product found." };
 
-  const body = await generatePredictionBody([{ title: product.title, source: "Amazon" }], "AMAZON");
-  return { topic: product.title, report: `• ${product.title} — Amazon\n${product.link}\n\n${body}` };
+  const body = await generatePredictionBody(
+    [{ title: product.title, source: "Amazon" }],
+    "AMAZON",
+    location
+  );
+
+  return {
+    topic: product.title,
+    report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
+  };
 }
 
 // ------------------------------------------------------------
-// ROUTES (X applied only to /run)
+// ROUTES
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
   const { topic = "", persona = "BUSINESS", manual = false } = req.body;
