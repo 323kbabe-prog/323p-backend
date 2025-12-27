@@ -148,12 +148,16 @@ async function normalizeYouTubeSearchIntent(rawInput, location) {
     const j = await r.json();
 
     const hit = (j.organic_results || []).find(h =>
-      h.title &&
-      // ❌ block channel / brand / entity names
-      !/channel|official|vevo|records|entertainment|tv|studio/i.test(h.title) &&
-      // ✅ search-like length
-      h.title.split(" ").length <= 7
-    );
+  h.title &&
+  h.link &&
+  // ✅ ONLY real video pages
+  h.link.includes("watch?v=") &&
+  // ❌ exclude channels explicitly
+  !/\/@|\/c\/|\/user\//i.test(h.link) &&
+  // ✅ search-like length
+  h.title.split(" ").length >= 2 &&
+  h.title.split(" ").length <= 7
+);
 
     if (!hit) return rawInput;
 
