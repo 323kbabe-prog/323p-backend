@@ -291,12 +291,13 @@ async function normalizeYouTubeSearchIntent(rawInput, location) {
     if (!videos.length) return rawInput;
 
     return {
-      title: videos[0].title
-        .replace(/[-–|].*$/, "")
-        .replace(/\(.*?\)/g, "")
-        .trim(),
-      link: videos[0].link
-    };
+  title: videos[0].title
+    .replace(/[-–|].*$/, "")
+    .replace(/\(.*?\)/g, "")
+    .trim(),
+  link: videos[0].link
+};
+   
 
   } catch {
     return rawInput;
@@ -304,32 +305,38 @@ async function normalizeYouTubeSearchIntent(rawInput, location) {
 }
 
 // ⭐ X — YouTuber signal generator
-// ------------------------------------------------------------
-// YOUTUBER — manual-mode content insight rewrite (NO foresight)
-// ------------------------------------------------------------
-async function rewriteYouTubeManualInsight(videoTitle) {
+async function generateNextYouTuberSignal(lens) {
+  const recent = YOUTUBER_TOPIC_MEMORY.join(", ");
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-Explain why people are watching this content right now
-and what it reflects about music, culture, or emotion.
+Academic lens: ${lens}
+
+Identify ONE YouTube creator pattern or channel niche
+that is gaining attention right now.
 
 Rules:
-- 1–2 short paragraphs
-- Focus on content meaning (not platform, not creators)
-- No future prediction
-- No dates, no headers
+- Creator patterns only (not videos)
+- 3–6 words
+- Neutral, analytical phrasing
+- Avoid hype
+- Avoid repetition
 
-Video topic:
-"${videoTitle}"
+Avoid: ${recent}
 `
     }],
-    temperature: 0.4
+    temperature: 0.6
   });
 
-  return out.choices[0].message.content.trim();
+  const topic = out.choices[0].message.content.trim();
+  YOUTUBER_TOPIC_MEMORY.push(topic);
+  if (YOUTUBER_TOPIC_MEMORY.length > YOUTUBER_MEMORY_LIMIT) {
+    YOUTUBER_TOPIC_MEMORY.shift();
+  }
+  return topic;
 }
 
 // ------------------------------------------------------------
@@ -470,31 +477,17 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
-
-  // Step 1: always resolve to ONE real video (auto or manual)
-  let ytSignal = await normalizeYouTubeSearchIntent(
+  const ytSignal = await normalizeYouTubeSearchIntent(
     manual && topic ? topic : await generateNextYouTuberSignal(lens),
     location
   );
 
-  // Safety normalize
-  if (typeof ytSignal === "string") {
-    ytSignal = { title: ytSignal, link: "" };
-  }
+  const body = await generatePredictionBody(
+    [{ title: ytSignal.title, source: "YouTube" }],
+    "YOUTUBER",
+    null
+  );
 
-  // Step 2: manual = rewrite content meaning, auto = foresight
-  const body = manual
-    ? await rewriteYouTubeManualInsight(ytSignal.title)
-    : await generatePredictionBody(
-        [{
-          title: ytSignal.title,
-          source: "YouTube video signal"
-        }],
-        "YOUTUBER",
-        null
-      );
-
-  // Step 3: return ONE link, once
   return {
     topic: ytSignal.title,
     report: `• YouTube\n${ytSignal.link}\n\n${body}`
