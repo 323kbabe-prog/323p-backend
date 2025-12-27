@@ -37,11 +37,6 @@ function buildLinkedInJobUrl(jobTitle, location, manual) {
   return base + params.toString();
 }
 
-// ⭐ X — YouTuber helper
-function buildYouTubeChannelSearchUrl(query) {
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAg%253D%253D`;
-}
-
 // ------------------------------------------------------------
 // Stanford lenses + no-repeat memory
 // ------------------------------------------------------------
@@ -73,10 +68,6 @@ const BUSINESS_MEMORY_LIMIT = 5;
 
 const MARKETS_ENTITY_MEMORY = [];
 const MARKETS_MEMORY_LIMIT = 5;
-
-// ⭐ X — YouTuber memory
-const YOUTUBER_TOPIC_MEMORY = [];
-const YOUTUBER_MEMORY_LIMIT = 5;
 
 // ------------------------------------------------------------
 // Semantic clarity check
@@ -262,41 +253,6 @@ Output ONLY the job title.
   return out.choices[0].message.content.trim();
 }
 
-// ⭐ X — YouTuber signal generator
-async function generateNextYouTuberSignal(lens) {
-  const recent = YOUTUBER_TOPIC_MEMORY.join(", ");
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Academic lens: ${lens}
-
-Identify ONE YouTube creator pattern or channel niche
-that is gaining attention right now.
-
-Rules:
-- Creator patterns only (not videos)
-- 3–6 words
-- Neutral, analytical phrasing
-- Avoid hype
-- Avoid repetition
-
-Avoid: ${recent}
-`
-    }],
-    temperature: 0.6
-  });
-
-  const topic = out.choices[0].message.content.trim();
-  YOUTUBER_TOPIC_MEMORY.push(topic);
-  if (YOUTUBER_TOPIC_MEMORY.length > YOUTUBER_MEMORY_LIMIT) {
-    YOUTUBER_TOPIC_MEMORY.shift();
-  }
-  return topic;
-}
-
 // ------------------------------------------------------------
 // BUSINESS — LinkedIn SERP
 // ------------------------------------------------------------
@@ -433,26 +389,6 @@ return {
 };
   }
 
-// ⭐ X — YouTuber persona
-if (persona === "YOUTUBER") {
-  const ytTopic = manual && topic
-    ? topic
-    : await generateNextYouTuberSignal(lens);
-
-  const ytUrl = buildYouTubeChannelSearchUrl(ytTopic);
-
-  const body = await generatePredictionBody(
-    [{ title: ytTopic, source: "YouTube" }],
-    "YOUTUBER",
-    null
-  );
-
-  return {
-    topic: ytTopic,
-    report: `• ${ytTopic} — YouTube\n${ytUrl}\n\n${body}`
-  };
-}
-
   const amazonTopic = await generateNextAmazonTopic(lens, location);
   const product = await fetchSingleAmazonProduct(amazonTopic);
   if (!product) return { report: "No product found." };
@@ -468,7 +404,7 @@ if (persona === "YOUTUBER") {
     report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
   };
 }
-}
+
 // ------------------------------------------------------------
 // ROUTES
 // ------------------------------------------------------------
@@ -488,4 +424,3 @@ app.post("/next", async (req, res) => {
 app.listen(process.env.PORT || 3000, () =>
   console.log("🌊 Blue Ocean Browser running")
 );
-
