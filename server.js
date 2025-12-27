@@ -463,6 +463,7 @@ if (persona === "YOUTUBER") {
   report: `• ${searchQuery} — YouTube\n${ytUrl}\n\n${body}`
 };
 }
+}
 
 // ------------------------------------------------------------
 // ROUTES
