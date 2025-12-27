@@ -477,16 +477,27 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
-  const ytSignal = await normalizeYouTubeSearchIntent(
-    manual && topic ? topic : await generateNextYouTuberSignal(lens),
-    location
-  );
+  let ytSignal = await normalizeYouTubeSearchIntent(
+  manual && topic ? topic : await generateNextYouTuberSignal(lens),
+  location
+);
+
+// 🔒 normalize fallback
+if (typeof ytSignal === "string") {
+  ytSignal = {
+    title: ytSignal,
+    link: ""
+  };
+}
 
   const body = await generatePredictionBody(
-    [{ title: ytSignal.title, source: "YouTube" }],
-    "YOUTUBER",
-    null
-  );
+  [{
+    title: ytSignal.title,
+    source: "YouTube video signal"
+  }],
+  "YOUTUBER",
+  null
+);
 
   return {
     topic: ytSignal.title,
