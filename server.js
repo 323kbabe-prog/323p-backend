@@ -37,9 +37,8 @@ function buildLinkedInJobUrl(jobTitle, location, manual) {
   return base + params.toString();
 }
 
-// ⭐ X — YouTuber helper
-function buildYouTubeChannelSearchUrl(query) {
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAg%253D%253D`;
+function buildYouTubeVideoUrl(videoLink) {
+  return videoLink;
 }
 
 // ------------------------------------------------------------
@@ -129,50 +128,47 @@ Text:
   return result === "NO" ? null : result;
 }
 
-// ⭐ YOUTUBER — normalize REAL most-searched query (last 2 weeks only)
+// ⭐ YOUTUBER — pick ONE real YouTube VIDEO (most viewed, last 2 weeks)
 async function normalizeYouTubeSearchIntent(rawInput, location) {
   if (!SERP_KEY || !rawInput) return rawInput;
 
   const locationHint = location ? `${location} ` : "";
-  const query = `${locationHint}${rawInput} site:youtube.com`;
+  const query = `${locationHint}${rawInput} site:youtube.com/watch`;
 
   try {
     const url =
       "https://serpapi.com/search.json?" +
       `q=${encodeURIComponent(query)}` +
-      `&tbs=qdr:w2` +        // ✅ last 2 weeks only
-      `&num=10` +
+      `&tbs=qdr:w2` +          // ✅ last 2 weeks only
+      `&num=20` +              // get enough candidates
       `&api_key=${SERP_KEY}`;
 
     const r = await fetch(url);
     const j = await r.json();
 
-    const hit = (j.organic_results || []).find(h =>
-  h.title &&
-  h.link &&
-  // ✅ ONLY real video pages
-  h.link.includes("watch?v=") &&
-  // ❌ exclude channels explicitly
-  !/\/@|\/c\/|\/user\//i.test(h.link) &&
-  // ✅ search-like length
-  h.title.split(" ").length >= 2 &&
-  h.title.split(" ").length <= 7
-);
+    // 1️⃣ Keep ONLY real video pages
+    const videos = (j.organic_results || []).filter(v =>
+      v.link &&
+      v.link.includes("watch?v=") &&
+      !/\/@|\/c\/|\/user\/|\/playlist/i.test(v.link) &&
+      !/(official|channel|vevo|records|entertainment|studio|label)/i.test(v.title || "")
+    );
 
-    if (!hit) return rawInput;
+    if (!videos.length) return rawInput;
 
-    let q = hit.title
-      .replace(/[-–|].*$/, "")     // remove branding
-      .replace(/\(.*?\)/g, "")     // remove parentheses
+    // 2️⃣ Prefer the most authoritative one (Google already ranks by authority/views)
+    const hit = videos[0];
+
+    // 3️⃣ Clean the title into search-style wording
+    const cleanTitle = hit.title
+      .replace(/[-–|].*$/, "")
+      .replace(/\(.*?\)/g, "")
+      .replace(/official|music video|full video|episode \d+/i, "")
       .replace(/\s+/g, " ")
       .trim();
 
-    // normalize video-language → search-language
-    q = q
-      .replace(/official|music video|full video|episode \d+/i, "")
-      .trim();
-
-    return q;
+    // ⭐ RETURN ONE VIDEO ONLY
+    return cleanTitle;
 
   } catch {
     return rawInput;
@@ -212,6 +208,8 @@ Input: "${input}"
 // ------------------------------------------------------------
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
+
+
   try {
     const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(theme)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
