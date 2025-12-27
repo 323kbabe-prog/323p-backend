@@ -67,7 +67,6 @@ const BUSINESS_MEMORY_LIMIT = 5;
 
 const MARKETS_ENTITY_MEMORY = [];
 const MARKETS_MEMORY_LIMIT = 5;
-
 // ------------------------------------------------------------
 // STEP 1 — Semantic clarity check (unchanged)
 // ------------------------------------------------------------
@@ -252,19 +251,70 @@ async function generatePredictionBody(sources, persona) {
 
   let personaInstruction = "";
 
+  // ---------------- AMAZON (COSMETICS ONLY) ----------------
   if (persona === "AMAZON") {
     personaInstruction = `
 You are an AI product-use analyst.
+
+Scope:
+- Cosmetics and personal beauty products ONLY
+
+Focus on:
+- What this cosmetic product actually does
+- Core functional features (ingredients, formulation, usage)
+- How users apply it in daily routines
+- What skin, beauty, or self-care problem it solves
+- Where users feel supported, understood, and empowered
+
+DO NOT discuss:
+- Brand strategy
+- Market share
+- Pricing tactics
+- Competitors
+- General retail trends
 `;
-  } else if (persona === "BUSINESS") {
+  }
+
+  // ---------------- BUSINESS (JOB MARKET) ----------------
+  else if (persona === "BUSINESS") {
     personaInstruction = `
 You are an AI labor-market foresight analyst.
+
+Focus on:
+- Core responsibilities of this role
+- Skills and experience companies expect
+- Why organizations are hiring for this role now
+- How the role may evolve over the next six months
+- Changes in workflows, tools, or team structure
+
+DO NOT:
+- Give career advice
+- Recommend specific companies
+- Discuss salaries or compensation
 `;
-  } else if (persona === "MARKETS") {
+  }
+
+  // ---------------- MARKETS (STOCK / COMPANY SIGNALS) ----------------
+  else if (persona === "MARKETS") {
     personaInstruction = `
 You are an AI market signal analyst.
+
+Focus ONLY on:
+- Company-level attention and visibility
+- Capital flow narratives
+- Strategic positioning and momentum
+- How institutions, media, or sectors are reacting
+
+DO NOT:
+- Predict stock prices
+- Give investment advice
+- Suggest buying or selling
+- Mention price targets or tickers
 `;
-  } else {
+  }
+
+  // ---------------- SAFETY FALLBACK ----------------
+  else {
     personaInstruction = `
 You are an AI analyst producing neutral foresight from real-world signals.
 `;
@@ -284,6 +334,18 @@ START WITH THIS LINE EXACTLY:
 Reality · ${sixMonthDateLabel()}
 
 Write a 6-month foresight.
+
+Rules:
+- EXACTLY 5 short paragraphs
+- Neutral, analytical tone
+- No markdown symbols (**, ###, -, *)
+- No bullet points in the paragraphs
+
+Then write this section header exactly:
+If this prediction is correct, what works:
+
+Then write EXACTLY 3 short sentences.
+No bullets. No numbering. No markdown.
 `
     }],
     temperature: 0.3
@@ -293,9 +355,10 @@ Write a 6-month foresight.
 }
 
 // ------------------------------------------------------------
-// CORE PIPELINE (unchanged)
+// CORE PIPELINE (X applied only inside)
 // ------------------------------------------------------------
 async function runPipeline(topic, persona) {
+
   const lens = pickStanfordLens();
 
   if (persona === "MARKETS") {
@@ -303,63 +366,73 @@ async function runPipeline(topic, persona) {
     const signal = await fetchMarketSignal(theme);
     if (!signal) return { report: "No market signal found." };
 
-    const body = await generatePredictionBody(
-      [{ title: signal.title, source: "Reuters" }],
-      "MARKETS"
-    );
+    let company = await extractCompanyNameFromTitle(signal.title);
+let attempts = 0;
+
+while (
+  MARKETS_ENTITY_MEMORY.includes(company) &&
+  attempts < 3
+) {
+  const retryTheme = await rewriteMarketTheme(topic, pickStanfordLens());
+  const retrySignal = await fetchMarketSignal(retryTheme);
+  if (!retrySignal) break;
+
+  company = await extractCompanyNameFromTitle(retrySignal.title);
+  attempts++;
+}
+
+MARKETS_ENTITY_MEMORY.push(company);
+if (MARKETS_ENTITY_MEMORY.length > MARKETS_MEMORY_LIMIT) {
+  MARKETS_ENTITY_MEMORY.shift();
+}
+    const body = await generatePredictionBody([{ title: signal.title, source: "Reuters" }], "MARKETS");
 
     return {
-      topic: topic,
-      report: `Current Signals\n• ${signal.title}\n\n${body}`
+      topic: company,
+      report: `Current Signals\n• ${signal.title} — Google News\n${signal.link}\n\n${body}`
     };
   }
 
   if (persona === "BUSINESS") {
-    const jobTitle = await generateNextJobTitle(lens);
+    let jobTitle;
+let attempts = 0;
+
+do {
+  jobTitle = await generateNextJobTitle(lens);
+  attempts++;
+} while (
+  BUSINESS_ENTITY_MEMORY.includes(jobTitle) &&
+  attempts < 3
+);
+
+BUSINESS_ENTITY_MEMORY.push(jobTitle);
+if (BUSINESS_ENTITY_MEMORY.length > BUSINESS_MEMORY_LIMIT) {
+  BUSINESS_ENTITY_MEMORY.shift();
+}
     const job = await fetchSingleLinkedInJob(jobTitle);
     if (!job) return { report: "No hiring signal found." };
 
-    const body = await generatePredictionBody(
-      [{ title: jobTitle, source: "LinkedIn" }],
-      "BUSINESS"
-    );
-
-    return { topic: jobTitle, report: body };
+    const body = await generatePredictionBody([{ title: jobTitle, source: "LinkedIn" }], "BUSINESS");
+    return { topic: jobTitle, report: `• ${jobTitle} — LinkedIn\n${job.link}\n\n${body}` };
   }
 
   const amazonTopic = await generateNextAmazonTopic(lens);
   const product = await fetchSingleAmazonProduct(amazonTopic);
   if (!product) return { report: "No product found." };
 
-  const body = await generatePredictionBody(
-    [{ title: product.title, source: "Amazon" }],
-    "AMAZON"
-  );
-
-  return { topic: product.title, report: body };
+  const body = await generatePredictionBody([{ title: product.title, source: "Amazon" }], "AMAZON");
+  return { topic: product.title, report: `• ${product.title} — Amazon\n${product.link}\n\n${body}` };
 }
 
 // ------------------------------------------------------------
-// ROUTES — ONLY X CHANGED HERE
+// ROUTES (unchanged)
 // ------------------------------------------------------------
-
-// AUTO SEARCH (system-initiated)
-app.post("/auto", async (req, res) => {
-  const persona = req.body.persona || "BUSINESS";
-  const seed = persona === "MARKETS" ? "AI infrastructure" : "";
-  res.json(await runPipeline(seed, persona));
-});
-
-// MANUAL SEARCH (user-initiated)
 app.post("/run", async (req, res) => {
   const { topic = "", persona = "BUSINESS" } = req.body;
-  if (!(await isClearTopic(topic))) {
-    return res.json({ report: "Invalid topic." });
-  }
+  if (!(await isClearTopic(topic))) return res.json({ report: "Invalid topic." });
   res.json(await runPipeline(topic, persona));
 });
 
-// ORIGINAL NEXT ROUTE (left IDENTICAL)
 app.post("/next", async (req, res) => {
   const persona = req.body.persona || "BUSINESS";
   const seed = persona === "MARKETS" ? "AI infrastructure" : "";
