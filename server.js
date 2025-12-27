@@ -23,6 +23,20 @@ const MARKETS_SIGNAL_SOURCE = {
   url: "https://www.reuters.com"
 };
 
+function buildLinkedInJobUrl(jobTitle, location, manual) {
+  const base = "https://www.linkedin.com/jobs/search/?";
+
+  const params = new URLSearchParams();
+  params.set("keywords", jobTitle);
+
+  // Only add location in manual mode and when location exists
+  if (manual && location) {
+    params.set("location", location);
+  }
+
+  return base + params.toString();
+}
+
 // ------------------------------------------------------------
 // Stanford lenses + no-repeat memory
 // ------------------------------------------------------------
@@ -358,18 +372,21 @@ async function runPipeline(topic, persona, manual) {
     if (BUSINESS_ENTITY_MEMORY.length > BUSINESS_MEMORY_LIMIT) BUSINESS_ENTITY_MEMORY.shift();
 
     const job = await fetchSingleLinkedInJob(jobTitle);
-    if (!job) return { report: "No hiring signal found." };
+if (!job) return { report: "No hiring signal found." };
 
-    const body = await generatePredictionBody(
-      [{ title: jobTitle, source: "LinkedIn" }],
-      "BUSINESS",
-      null
-    );
+const body = await generatePredictionBody(
+  [{ title: jobTitle, source: "LinkedIn" }],
+  "BUSINESS",
+  null
+);
 
-    return {
-      topic: jobTitle,
-      report: `• ${jobTitle} — LinkedIn\n${job.link}\n\n${body}`
-    };
+// 🔹 NEW: location-aware LinkedIn URL
+const linkedinUrl = buildLinkedInJobUrl(jobTitle, location, manual);
+
+return {
+  topic: jobTitle,
+  report: `• ${jobTitle} — LinkedIn\n${linkedinUrl}\n\n${body}`
+};
   }
 
   const amazonTopic = await generateNextAmazonTopic(lens, location);
