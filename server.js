@@ -18,9 +18,9 @@ const openai = new OpenAI({
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 // ------------------------------------------------------------
-// X — SEMANTIC INPUT NORMALIZATION (REPLACES isClearTopic)
+// X — USER QUERY REWRITE LAYER (NEW, SHARED, PRE-PERSONA)
 // ------------------------------------------------------------
-async function normalizeTopic(input) {
+async function rewriteUserQuery(input) {
   if (!input || typeof input !== "string") return null;
 
   const out = await openai.chat.completions.create({
@@ -28,13 +28,13 @@ async function normalizeTopic(input) {
     messages: [{
       role: "user",
       content: `
-From the text below:
-1. If it contains NO real human words, reply ONLY: NONE
-2. Otherwise:
-   - extract meaningful real words
-   - fix misspellings
-   - remove questions, commands, emotions
-   - rewrite as a short, world-observable topic (2–6 words)
+If the text below contains NO real human words, reply ONLY: NONE.
+
+Otherwise:
+- extract real meaningful words
+- correct misspellings
+- remove questions, commands, and emotions
+- rewrite into a short, world-observable topic (2–6 words)
 
 Text:
 "${input}"
@@ -51,17 +51,30 @@ Reply ONLY with the rewritten topic or NONE.
 }
 
 // ------------------------------------------------------------
-// (UNCHANGED BELOW)
+// EXISTING SEMANTIC CLARITY GATE (UNCHANGED)
 // ------------------------------------------------------------
+async function isClearTopic(topic) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `Is the following text a meaningful topic a human would search? Reply YES or NO.\n"${topic}"`
+    }],
+    temperature: 0
+  });
+  return out.choices[0].message.content.trim() === "YES";
+}
 
-// ⭐ MARKETS — Reuters anchor
+// ------------------------------------------------------------
+// MARKETS — Reuters anchor (UNCHANGED)
+// ------------------------------------------------------------
 const MARKETS_SIGNAL_SOURCE = {
   name: "Reuters",
   url: "https://www.reuters.com"
 };
 
 // ------------------------------------------------------------
-// Stanford lenses + no-repeat memory (X)
+// Stanford lenses + no-repeat memory (UNCHANGED)
 // ------------------------------------------------------------
 const STANFORD_MAJORS = [
   "Computer Science",
@@ -94,13 +107,18 @@ function pickStanfordLens() {
 }
 
 // ------------------------------------------------------------
-// CORE PIPELINE (UNCHANGED)
+// (ALL OTHER FUNCTIONS UNCHANGED)
+// rewriteMarketTheme
+// fetchMarketSignal
+// extractCompanyNameFromTitle
+// generateNextAmazonTopic
+// fetchSingleAmazonProduct
+// generateNextJobTitle
+// fetchSingleLinkedInJob
+// sixMonthDateLabel
+// generatePredictionBody
+// runPipeline
 // ------------------------------------------------------------
-async function runPipeline(topic, persona) {
-  const lens = pickStanfordLens();
-  // (all existing logic exactly unchanged)
-  // ...
-}
 
 // ------------------------------------------------------------
 // ROUTES (ONLY X APPLIED HERE)
@@ -108,14 +126,19 @@ async function runPipeline(topic, persona) {
 app.post("/run", async (req, res) => {
   const { topic = "", persona = "BUSINESS" } = req.body;
 
-  const normalized = await normalizeTopic(topic);
-
-  if (!normalized) {
+  // X — user-query rewrite happens FIRST
+  const rewritten = await rewriteUserQuery(topic);
+  if (!rewritten) {
     return res.json({ report: "No observable signal found." });
   }
 
-  const result = await runPipeline(normalized, persona);
-  result.topic = normalized;
+  // Existing semantic gate remains
+  if (!(await isClearTopic(rewritten))) {
+    return res.json({ report: "No observable signal found." });
+  }
+
+  const result = await runPipeline(rewritten, persona);
+  result.topic = rewritten;
   res.json(result);
 });
 
