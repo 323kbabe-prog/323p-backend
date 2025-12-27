@@ -471,9 +471,10 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
-  const ytTopic = manual && topic
-  ? await normalizeYouTubeSearchIntent(topic, location)
-  : await generateNextYouTuberSignal(lens);
+  const ytTopic = await normalizeYouTubeSearchIntent(
+  manual && topic ? topic : await generateNextYouTuberSignal(lens),
+  location
+);
 
   const ytUrl = ytTopic;
 
@@ -485,7 +486,7 @@ if (persona === "YOUTUBER") {
 
   return {
     topic: ytTopic,
-    report: `• ${ytTopic} — YouTube\n${ytUrl}\n\n${body}`
+    report: `• YouTube\n${ytUrl}\n\n${body}`
   };
 }
 
