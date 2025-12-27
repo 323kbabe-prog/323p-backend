@@ -170,7 +170,10 @@ async function generateNextAmazonTopic(lens, location) {
 Academic lens: ${lens}
 ${locationLine}
 
-Choose ONE real-world cosmetics product or beauty category with strong near-term consumer buying interest.
+Choose ONE real-world cosmetics product or beauty category
+with strong near-term consumer buying interest
+that is culturally, climate, or regulation relevant
+to the geographic context if provided.
 
 Rules:
 - Buyer mindset
