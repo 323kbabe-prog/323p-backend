@@ -37,8 +37,9 @@ function buildLinkedInJobUrl(jobTitle, location, manual) {
   return base + params.toString();
 }
 
-function buildYouTubeVideoUrl(videoLink) {
-  return videoLink;
+// ⭐ X — YouTuber helper
+function buildYouTubeChannelSearchUrl(query) {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAg%253D%253D`;
 }
 
 // ------------------------------------------------------------
@@ -128,53 +129,6 @@ Text:
   return result === "NO" ? null : result;
 }
 
-// ⭐ YOUTUBER — pick ONE real YouTube VIDEO (most viewed, last 2 weeks)
-async function normalizeYouTubeSearchIntent(rawInput, location) {
-  if (!SERP_KEY || !rawInput) return rawInput;
-
-  const locationHint = location ? `${location} ` : "";
-  const query = `${locationHint}${rawInput} site:youtube.com/watch`;
-
-  try {
-    const url =
-      "https://serpapi.com/search.json?" +
-      `q=${encodeURIComponent(query)}` +
-      `&tbs=qdr:w2` +          // ✅ last 2 weeks only
-      `&num=20` +              // get enough candidates
-      `&api_key=${SERP_KEY}`;
-
-    const r = await fetch(url);
-    const j = await r.json();
-
-    // 1️⃣ Keep ONLY real video pages
-    const videos = (j.organic_results || []).filter(v =>
-      v.link &&
-      v.link.includes("watch?v=") &&
-      !/\/@|\/c\/|\/user\/|\/playlist/i.test(v.link) &&
-      !/(official|channel|vevo|records|entertainment|studio|label)/i.test(v.title || "")
-    );
-
-    if (!videos.length) return rawInput;
-
-    // 2️⃣ Prefer the most authoritative one (Google already ranks by authority/views)
-    const hit = videos[0];
-
-    // 3️⃣ Clean the title into search-style wording
-    const cleanTitle = hit.title
-      .replace(/[-–|].*$/, "")
-      .replace(/\(.*?\)/g, "")
-      .replace(/official|music video|full video|episode \d+/i, "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    // ⭐ RETURN ONE VIDEO ONLY
-    return cleanTitle;
-
-  } catch {
-    return rawInput;
-  }
-}
-
 // ------------------------------------------------------------
 // MARKETS — rewrite theme using lens (+ location)
 // ------------------------------------------------------------
@@ -208,8 +162,6 @@ Input: "${input}"
 // ------------------------------------------------------------
 async function fetchMarketSignal(theme) {
   if (!SERP_KEY) return null;
-
-
   try {
     const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(theme)}&num=5&api_key=${SERP_KEY}`;
     const r = await fetch(url);
@@ -483,27 +435,21 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
-  let searchQuery;
+  const ytTopic = manual && topic
+    ? topic
+    : await generateNextYouTuberSignal(lens);
 
-  if (manual && topic) {
-    // ⭐ REAL backend normalization
-    searchQuery = await normalizeYouTubeSearchIntent(topic, location);
-  } else {
-    // auto mode stays engine-driven
-    searchQuery = await generateNextYouTuberSignal(lens);
-  }
-
-  const ytUrl = buildYouTubeChannelSearchUrl(searchQuery);
+  const ytUrl = buildYouTubeChannelSearchUrl(ytTopic);
 
   const body = await generatePredictionBody(
-    [{ title: searchQuery, source: "YouTube / Google" }],
+    [{ title: ytTopic, source: "YouTube" }],
     "YOUTUBER",
     null
   );
 
   return {
-    topic: searchQuery,
-    report: `• ${searchQuery} — YouTube\n${ytUrl}\n\n${body}`
+    topic: ytTopic,
+    report: `• ${ytTopic} — YouTube\n${ytUrl}\n\n${body}`
   };
 }
 
