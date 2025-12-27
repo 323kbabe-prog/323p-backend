@@ -290,7 +290,13 @@ async function normalizeYouTubeSearchIntent(rawInput, location) {
 
     if (!videos.length) return rawInput;
 
-    return videos[0].link;
+    return {
+  title: videos[0].title
+    .replace(/[-–|].*$/, "")
+    .replace(/\(.*?\)/g, "")
+    .trim(),
+  link: videos[0].link
+};
    
 
   } catch {
@@ -471,26 +477,22 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
-  const ytTopic = await normalizeYouTubeSearchIntent(
-  manual && topic ? topic : await generateNextYouTuberSignal(lens),
-  location
-);
-
-  const ytUrl = ytTopic;
+  const ytSignal = await normalizeYouTubeSearchIntent(
+    manual && topic ? topic : await generateNextYouTuberSignal(lens),
+    location
+  );
 
   const body = await generatePredictionBody(
-    [{ title: ytTopic, source: "YouTube" }],
+    [{ title: ytSignal.title, source: "YouTube" }],
     "YOUTUBER",
     null
   );
 
   return {
-    topic: ytTopic,
-    report: `• YouTube\n${ytUrl}\n\n${body}`
+    topic: ytSignal.title,
+    report: `• YouTube\n${ytSignal.link}\n\n${body}`
   };
 }
-
-  
 
   const amazonTopic = await generateNextAmazonTopic(lens, location);
   const product = await fetchSingleAmazonProduct(amazonTopic);
