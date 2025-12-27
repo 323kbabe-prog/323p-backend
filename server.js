@@ -129,40 +129,42 @@ Text:
   return result === "NO" ? null : result;
 }
 
-// ⭐ YOUTUBER — normalize real YouTube / Google search intent
+// ⭐ YOUTUBER — normalize REAL most-searched query (last 2 weeks only)
 async function normalizeYouTubeSearchIntent(rawInput, location) {
-  const locationLine = location ? `Geographic context: ${location}` : "";
+  if (!SERP_KEY || !rawInput) return rawInput;
 
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-${locationLine}
+  // Optional geographic hint (does not force location)
+  const locationHint = location ? `${location} ` : "";
 
-Rewrite the following into a clean, high-signal
-YouTube / Google search query that reflects
-what people are actually searching for.
+  // Build Google-style query focused on YouTube intent
+  const query = `${locationHint}${rawInput} site:youtube.com`;
 
-Rules:
-- 3–6 words
-- Neutral, factual phrasing
-- No emotion
-- No "I", no opinion
-- Use standard search language
-- If music-related, prefer:
-  "new songs", "music", "new releases"
+  try {
+    const url =
+      "https://serpapi.com/search.json?" +
+      `q=${encodeURIComponent(query)}` +
+      `&tbs=qdr:w2` +        // ⭐ STRICT: last 2 weeks only
+      `&num=10` +
+      `&api_key=${SERP_KEY}`;
 
-Input:
-"${rawInput}"
+    const r = await fetch(url);
+    const j = await r.json();
 
-Output ONLY the rewritten search query.
-`
-    }],
-    temperature: 0
-  });
+    // Take the highest-ranking recent organic result
+    const hit = (j.organic_results || []).find(h => h.title);
+    if (!hit) return rawInput;
 
-  return out.choices[0].message.content.trim();
+    // Clean into neutral, high-signal search language
+    return hit.title
+      .replace(/[-–|].*$/, "")   // remove branding / channel names
+      .replace(/\(.*?\)/g, "")   // remove parentheses
+      .replace(/\s+/g, " ")
+      .trim();
+
+  } catch (err) {
+    // Safe fallback: never break the pipeline
+    return rawInput;
+  }
 }
 
 // ------------------------------------------------------------
