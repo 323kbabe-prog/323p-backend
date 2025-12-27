@@ -304,38 +304,32 @@ async function normalizeYouTubeSearchIntent(rawInput, location) {
 }
 
 // ⭐ X — YouTuber signal generator
-async function generateNextYouTuberSignal(lens) {
-  const recent = YOUTUBER_TOPIC_MEMORY.join(", ");
-
+// ------------------------------------------------------------
+// YOUTUBER — manual-mode content insight rewrite (NO foresight)
+// ------------------------------------------------------------
+async function rewriteYouTubeManualInsight(videoTitle) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-Academic lens: ${lens}
-
-Identify ONE YouTube creator pattern or channel niche
-that is gaining attention right now.
+Explain why people are watching this content right now
+and what it reflects about music, culture, or emotion.
 
 Rules:
-- Creator patterns only (not videos)
-- 3–6 words
-- Neutral, analytical phrasing
-- Avoid hype
-- Avoid repetition
+- 1–2 short paragraphs
+- Focus on content meaning (not platform, not creators)
+- No future prediction
+- No dates, no headers
 
-Avoid: ${recent}
+Video topic:
+"${videoTitle}"
 `
     }],
-    temperature: 0.6
+    temperature: 0.4
   });
 
-  const topic = out.choices[0].message.content.trim();
-  YOUTUBER_TOPIC_MEMORY.push(topic);
-  if (YOUTUBER_TOPIC_MEMORY.length > YOUTUBER_MEMORY_LIMIT) {
-    YOUTUBER_TOPIC_MEMORY.shift();
-  }
-  return topic;
+  return out.choices[0].message.content.trim();
 }
 
 // ------------------------------------------------------------
