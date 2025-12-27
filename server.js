@@ -291,13 +291,12 @@ async function normalizeYouTubeSearchIntent(rawInput, location) {
     if (!videos.length) return rawInput;
 
     return {
-  title: videos[0].title
-    .replace(/[-–|].*$/, "")
-    .replace(/\(.*?\)/g, "")
-    .trim(),
-  link: videos[0].link
-};
-   
+      title: videos[0].title
+        .replace(/[-–|].*$/, "")
+        .replace(/\(.*?\)/g, "")
+        .trim(),
+      link: videos[0].link
+    };
 
   } catch {
     return rawInput;
@@ -477,28 +476,31 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
+
+  // Step 1: always resolve to ONE real video (auto or manual)
   let ytSignal = await normalizeYouTubeSearchIntent(
-  manual && topic ? topic : await generateNextYouTuberSignal(lens),
-  location
-);
+    manual && topic ? topic : await generateNextYouTuberSignal(lens),
+    location
+  );
 
-// 🔒 normalize fallback
-if (typeof ytSignal === "string") {
-  ytSignal = {
-    title: ytSignal,
-    link: ""
-  };
-}
+  // Safety normalize
+  if (typeof ytSignal === "string") {
+    ytSignal = { title: ytSignal, link: "" };
+  }
 
-  const body = await generatePredictionBody(
-  [{
-    title: ytSignal.title,
-    source: "YouTube video signal"
-  }],
-  "YOUTUBER",
-  null
-);
+  // Step 2: manual = rewrite content meaning, auto = foresight
+  const body = manual
+    ? await rewriteYouTubeManualInsight(ytSignal.title)
+    : await generatePredictionBody(
+        [{
+          title: ytSignal.title,
+          source: "YouTube video signal"
+        }],
+        "YOUTUBER",
+        null
+      );
 
+  // Step 3: return ONE link, once
   return {
     topic: ytSignal.title,
     report: `• YouTube\n${ytSignal.link}\n\n${body}`
