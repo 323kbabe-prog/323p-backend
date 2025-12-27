@@ -63,7 +63,17 @@ async function isClearTopic(topic) {
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
-      content: `Is the following text a meaningful topic a human would search? Reply YES or NO.\n"${topic}"`
+      content: `
+Is the following text intelligible human language
+with a clear intent or subject?
+
+Reply YES if it is understandable and meaningful.
+Reply NO only if it is gibberish, random characters,
+or has no interpretable intent.
+
+Text:
+"${topic}"
+`
     }],
     temperature: 0
   });
