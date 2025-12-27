@@ -1,386 +1,343 @@
-<html lang="en">
-<head>
+//////////////////////////////////////////////////////////////
+// Blue Ocean Browser — REAL AI GD-J + 8-BALL + AMAZON (STATELESS)
+//////////////////////////////////////////////////////////////
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "2×-AI Engine",
-  "applicationCategory": "AI Foresight System",
-  "operatingSystem": "Web",
-  "publisher": {
-    "@type": "Organization",
-    "name": "Blue Ocean Browser",
-    "url": "https://blueoceanbrowser.com"
-  },
-  "description": "A real-time AI engine that reasons over public internet signals to generate six-month future insight."
-}
-</script>
+const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch");
+const OpenAI = require("openai");
 
-<meta name="description" content="Blue Ocean Browser powers the 2×-AI Engine — a real-time AI foresight system that reasons over public internet signals to generate six-month future insight.">
+const app = express();
+app.use(cors({ origin: "*" }));
+app.use(express.json());
 
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Blue Ocean Browser — 2×-AI Engine | Real-Time AI Foresight</title>
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
-<!-- Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-FB5FLT606Z"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){ dataLayer.push(arguments); }
-  gtag('js', new Date());
-  gtag('config', 'G-FB5FLT606Z');
-</script>
+const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+// ------------------------------------------------------------
+// MARKETS — Reuters anchor
+// ------------------------------------------------------------
+const MARKETS_SIGNAL_SOURCE = {
+  name: "Reuters",
+  url: "https://www.reuters.com"
+};
 
-<style>
-:root { --blue:#1e6bff; }
-body, html {
-  margin:0; padding:0; width:100%;
-  font-family:"Inter",sans-serif;
-  background:#f7fbff; color:#111;
-}
-.container {
-  max-width:720px;
-  margin:0 auto;
-  padding:36px 20px 60px;
-}
-h1 {
-  font-size:36px;
-  font-weight:700;
-  margin-bottom:6px;
-  color:var(--blue);
-}
-.subtitle { font-size:15px; color:var(--blue); margin-bottom:20px; }
-.summary { font-size:14px; margin-bottom:28px; }
-.search-row { display:flex; align-items:center; gap:8px; }
-#search-box {
-  flex:1; height:44px; padding:0 16px;
-  border-radius:24px; border:1px solid var(--blue);
-  font-size:16px; outline:none;
-}
-#search-box:focus { box-shadow:0 0 0 2px rgba(30,107,255,0.25); }
-#mic {
-  width:44px; height:44px; border-radius:50%;
-  border:1px solid var(--blue); background:#fff;
-  cursor:pointer; font-size:18px; color:var(--blue);
-}
-#status { margin-top:12px; font-size:14px; color:var(--blue); }
-
-#loader-text {
-  display:none;
-  margin-top:6px;
-  margin-bottom:12px;
-  font-size:16px;
-  font-weight:500;
-  color:var(--blue);
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+function buildLinkedInJobUrl(jobTitle, location, manual) {
+  const base = "https://www.linkedin.com/jobs/search/?";
+  const params = new URLSearchParams();
+  params.set("keywords", jobTitle);
+  if (manual && location) params.set("location", location);
+  return base + params.toString();
 }
 
-.controls { margin:16px 0; display:flex; gap:20px; align-items:center; }
-.control-btn {
-  margin-bottom: 0; background:none; border:0px solid var(--blue);
-  color:var(--blue); font-size:15px; font-weight:500;
-  cursor:pointer; padding:6px 0px; border-radius:18px;
+function buildYouTubeSearchUrl(query) {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 }
 
-/* Inactive */
-.control-btn.primary.persona-btn {
-  background:#fff;
-  border:1px solid var(--blue);
-  padding:6px 14px;
-  color:var(--blue);
+// ------------------------------------------------------------
+// Stanford lenses
+// ------------------------------------------------------------
+const STANFORD_MAJORS = [
+  "Computer Science","Economics","Management Science and Engineering",
+  "Political Science","Psychology","Sociology","Symbolic Systems",
+  "Statistics","Electrical Engineering","Biomedical Engineering",
+  "Biology","Environmental Science","International Relations",
+  "Communication","Design","Education","Philosophy","Law"
+];
+
+let LAST_LENS = "";
+function pickStanfordLens() {
+  const pool = STANFORD_MAJORS.filter(m => m !== LAST_LENS);
+  const lens = pool[Math.floor(Math.random() * pool.length)];
+  LAST_LENS = lens;
+  return lens;
 }
 
-/* Active */
-.control-btn.primary.persona-btn.active {
-  background:var(--blue);
-  color:#fff;
-}
+// ------------------------------------------------------------
+// Memory
+// ------------------------------------------------------------
+const AMAZON_TOPIC_MEMORY = [];
+const AMAZON_MEMORY_LIMIT = 5;
 
-.control-btn:hover { text-decoration:underline; }
-#report { margin:16px 0; font-size:16px; line-height:1.6; }
-#report a { color:var(--blue); text-decoration:none; }
-#report a:hover { text-decoration:underline; }
-footer { margin-top:50px; font-size:12px; color:var(--blue); }
-</style>
-</head>
+const BUSINESS_ENTITY_MEMORY = [];
+const BUSINESS_MEMORY_LIMIT = 5;
 
-<body>
-<div class="container">
+const MARKETS_ENTITY_MEMORY = [];
+const MARKETS_MEMORY_LIMIT = 5;
 
-<!-- Row 1 -->
-<div class="controls">
-  <button class="control-btn primary persona-btn"
-          onclick="window.location.href='?persona=MARKETS'">
-    Google Finance
-  </button>
+const YOUTUBER_TOPIC_MEMORY = [];
+const YOUTUBER_MEMORY_LIMIT = 5;
 
-  <button class="control-btn primary persona-btn"
-          onclick="window.location.href='?persona=BUSINESS'">
-    LinkedIn
-  </button>
-</div>
-
-<!-- Row 2 -->
-<div class="controls">
-  <button class="control-btn primary persona-btn"
-          onclick="window.location.href='?persona=AMAZON'">
-    amazon
-  </button>
-  
-  <button class="control-btn primary persona-btn"
-        onclick="window.location.href='?persona=YOUTUBER'">
-  YouTuber
-</button>
-  
-  <div style="display:none;">
-  2×-AI Engine is a real-time AI foresight system built by Blue Ocean Browser.
-  The engine reasons over public internet signals to model six-month future formation.
-</div>
-  
-</div>
-
-<h1> BLUE OCEAN BROWSER — Female </h1>
-<div class="subtitle">AI foresight reports and voice podcasts based on what’s happening now.</div>
-
-<h2 style="font-size:18px;font-weight:500;color:#1e6bff;">
-  Execution layer for the 2×-AI Engine — Real-Time AI Foresight
-</h2>
-
-<div class="summary">
-  <div>1. The system starts automatically and shows a future-focused report.</div>
-  <div>2. You can type a topic at any time to run it again.</div>
-  <div>3. <a href="blueoceanbrowser8ballengine.html" style="color:#0A6CFF;text-decoration:underline;">2×-AI Engine</a> — The AI Foresight Engine projects a plausible future six months ahead.</div>
-  <div>4. Reports generated from real-time data across the Internet.</div>
-</div>
-
-<div id="loader-text">0%</div>
-
-<div id="search-wrapper" class="search-row">
-  <input id="search-box" placeholder="Type a query" />
-  <button id="mic">2x</button>
-</div>
-
-<div id="status">2×-AI Engine Analyzing real-time internet…</div>
-
-<div class="controls action-controls">
-  <button class="control-btn listen-btn">&gt; Listen</button>
-  <button class="control-btn stop-btn">|| Stop</button>
-  <button class="control-btn next-btn">Next future angle →</button>
-</div>
-
-<div id="report"></div>
-
-<footer>© 2025 Blue Ocean Browser · All Rights Reserved</footer>
-</div>
-
-<script>
-const BACKEND = "https://three23p-backend.onrender.com";
-
-const params = new URLSearchParams(window.location.search);
-// ⭐ X — manual mode flag
-const IS_MANUAL = params.get("manual") === "1";
-
-let ACTIVE_PERSONA =
-  params.get("persona") === "MARKETS" ? "MARKETS" :
-  params.get("persona") === "AMAZON" ? "AMAZON" :
-  params.get("persona") === "YOUTUBER" ? "YOUTUBER" :
-  "BUSINESS";
-
-/* ===================== VOICE ===================== */
-const VOICE_SETTINGS = { lang:"en-US", rate:1, pitch:1, volume:1 };
-function stopSpeech(){ window.speechSynthesis.cancel(); }
-
-function getReadableText(){
-  const el=document.getElementById("report");
-  if(!el) return "";
-  const clone=el.cloneNode(true);
-  clone.querySelectorAll("a").forEach(a=>a.remove());
-  clone.querySelectorAll("strong").forEach(h=>{
-    if(h.textContent.includes("Current Signals")){
-      let n=h;
-      while(n.nextSibling) n.parentNode.removeChild(n.nextSibling);
-      h.parentNode.removeChild(h);
-    }
+// ------------------------------------------------------------
+// Semantic clarity
+// ------------------------------------------------------------
+async function isClearTopic(topic) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `Is this meaningful human language? Reply YES or NO.\n"${topic}"`
+    }],
+    temperature: 0
   });
-  return clone.textContent.replace(/\s+/g," ").trim();
+  return out.choices[0].message.content.trim() === "YES";
 }
 
-function speakReport(){
-  stopSpeech();
-  requestAnimationFrame(()=>{
-    const text=getReadableText();
-    if(!text) return;
-    const u=new SpeechSynthesisUtterance(text);
-    Object.assign(u,VOICE_SETTINGS);
-    u.onend=()=>{
-      const p=new SpeechSynthesisUtterance("If you want the next report, say next.");
-      Object.assign(p,VOICE_SETTINGS);
-      p.onend=()=>listenForNextCommand();
-      window.speechSynthesis.speak(p);
+// ------------------------------------------------------------
+// Location extraction (manual only)
+// ------------------------------------------------------------
+async function extractExplicitLocation(text) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `Extract a geographic location if present, else reply NO.\n"${text}"`
+    }],
+    temperature: 0
+  });
+  const r = out.choices[0].message.content.trim();
+  return r === "NO" ? null : r;
+}
+
+// ------------------------------------------------------------
+// MARKETS
+// ------------------------------------------------------------
+async function rewriteMarketTheme(input, lens, location) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Academic lens: ${lens}
+${location ? `Location: ${location}` : ""}
+
+Rewrite into a neutral market theme (3–7 words).
+Input: "${input}"
+`
+    }],
+    temperature: 0.2
+  });
+  return out.choices[0].message.content.trim();
+}
+
+async function fetchMarketSignal(theme) {
+  if (!SERP_KEY) return null;
+  const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(theme)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  const hit = (j.news_results || [])[0];
+  if (!hit) return null;
+  return { title: hit.title, link: hit.link, source: hit.source || "Google News" };
+}
+
+async function extractCompanyNameFromTitle(title) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: `Extract company name:\n"${title}"` }],
+    temperature: 0
+  });
+  return out.choices[0].message.content.trim() || "Unknown";
+}
+
+// ------------------------------------------------------------
+// AMAZON
+// ------------------------------------------------------------
+async function generateNextAmazonTopic(lens, location) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Academic lens: ${lens}
+${location ? `Location: ${location}` : ""}
+
+Suggest one beauty product (4–8 words).
+`
+    }],
+    temperature: 0.7
+  });
+  return out.choices[0].message.content.trim();
+}
+
+async function fetchSingleAmazonProduct(query) {
+  if (!SERP_KEY) return null;
+  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.organic_results || []).find(x => x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product")));
+}
+
+// ------------------------------------------------------------
+// BUSINESS
+// ------------------------------------------------------------
+async function generateNextJobTitle(lens, location) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Academic lens: ${lens}
+${location ? `Location: ${location}` : ""}
+
+Generate one AI job title.
+`
+    }],
+    temperature: 0.7
+  });
+  return out.choices[0].message.content.trim();
+}
+
+async function fetchSingleLinkedInJob(jobTitle) {
+  if (!SERP_KEY) return null;
+  const q = `${jobTitle} site:linkedin.com/jobs`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.organic_results || []).find(x => x.link && x.link.includes("linkedin.com/jobs"));
+}
+
+// ------------------------------------------------------------
+// YOUTUBER — REAL VIDEO (last 2 weeks)
+// ------------------------------------------------------------
+async function normalizeYouTubeSearchIntent(rawInput, location) {
+  if (!SERP_KEY || !rawInput) return { title: rawInput };
+
+  const query = `${location ? location + " " : ""}${rawInput} site:youtube.com/watch`;
+  const url =
+    `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbs=qdr:w2&num=20&api_key=${SERP_KEY}`;
+
+  try {
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const videos = (j.organic_results || []).filter(v =>
+      v.link &&
+      v.link.includes("watch?v=") &&
+      !/\/@|\/c\/|\/user\/|\/playlist/i.test(v.link) &&
+      !/(official|channel|vevo|records|studio|label)/i.test(v.title || "")
+    );
+
+    if (!videos.length) return { title: rawInput };
+
+    const hit = videos[0];
+    return {
+      title: hit.title
+        .replace(/[-–|].*$/, "")
+        .replace(/\(.*?\)/g, "")
+        .replace(/official|music video|full video|episode \d+/i, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+      link: hit.link
     };
-    window.speechSynthesis.speak(u);
-  });
+  } catch {
+    return { title: rawInput };
+  }
 }
 
-function listenForNextCommand(){
-  if(!("webkitSpeechRecognition" in window)) return;
-  const r=new webkitSpeechRecognition();
-  r.lang="en-US"; r.interimResults=false; r.continuous=true;
-  r.onresult=e=>{
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i][0].transcript.toLowerCase().includes("next")){
-        r.stop(); runNext(); break;
-      }
-    }
-  };
-  r.onerror=()=>{ try{r.start();}catch{} };
-  r.onend=()=>{ try{r.start();}catch{} };
-  r.start();
-}
-
-function linkify(t){ return t.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank">$1</a>'); }
-function sixMonthDateLabel(){
-  const d=new Date(); d.setMonth(d.getMonth()+6);
+// ------------------------------------------------------------
+// BODY
+// ------------------------------------------------------------
+function sixMonthDateLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
   return d.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
 }
 
-function sanitizeAndFormatReport(rawReport,topic){
-  let title=topic;
-  if(ACTIVE_PERSONA==="AMAZON"){
-    const m=rawReport.match(/•\s*([^\n]+)/);
-    if(m&&m[1]) title=m[1].trim();
-  }
-  const header=`<div style="font-weight:600;margin-bottom:4px;">${title}<br>Outlook · ${sixMonthDateLabel()}</div>`;
-  let story=rawReport.replace("Six-Month Reality:",header+"Six-Month Reality:");
+async function generatePredictionBody(sources, persona) {
+  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
 
-  // ⭐ SIGNAL SOURCE LABEL ONLY
-  if (ACTIVE_PERSONA === "MARKETS") {
-    story = story.replace(
-      /(https?:\/\/[^\s<]+)/,
-      'Signal source:<br>$1'
-    );
-  }
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Verified signal:
+${signalText}
 
-  return story.replace(/^\s*\*+\s*$/gm,"");
-}
+Reality · ${sixMonthDateLabel()}
 
-let loadTimer=null,loadValue=0;
-function startLoading(){
-  clearInterval(loadTimer); loadValue=0;
-  loaderText.style.display="block"; loaderText.textContent = "Auto searching: 0%";
-  loadTimer=setInterval(()=>{ loadValue=loadValue<90?loadValue+Math.random()*4|0:77; loaderText.textContent = `Auto searching: ${loadValue}%`; },180);
-}
-function finishLoading(){
-  clearInterval(loadTimer);
-  loaderText.textContent = "Auto searching: 100%";
-
-  /* ⭐ ONLY CHANGE X — scroll search bar to the top */
-  document.getElementById("search-wrapper").scrollIntoView({
-    behavior: "smooth",
-    block: "start"
+Write a 6-month foresight.
+5 short paragraphs.
+Then:
+If this prediction is correct, what works:
+3 sentences.
+`
+    }],
+    temperature: 0.3
   });
 
-  setTimeout(()=>loaderText.style.display="none",400);
+  return out.choices[0].message.content.trim();
 }
 
-const box=document.getElementById("search-box");
+// ------------------------------------------------------------
+// CORE PIPELINE
+// ------------------------------------------------------------
+async function runPipeline(topic, persona, manual) {
+  const lens = pickStanfordLens();
+  const location = manual ? await extractExplicitLocation(topic) : null;
 
-// ⭐ FINAL FIX — refresh ONLY on first interaction
-box.addEventListener("pointerdown", () => {
-  if (IS_MANUAL) return;   // ← this line fixes everything
-  const url = new URL(window.location.href);
-  url.searchParams.set("manual", "1");
-  window.location.href = url.toString();
+  if (persona === "MARKETS") {
+    const theme = await rewriteMarketTheme(topic, lens, location);
+    const signal = await fetchMarketSignal(theme);
+    if (!signal) return { report: "No market signal found." };
+
+    const company = await extractCompanyNameFromTitle(signal.title);
+    const body = await generatePredictionBody([{ title: signal.title, source: "Reuters" }], "MARKETS");
+
+    return { topic: company, report: `• ${signal.title}\n${signal.link}\n\n${body}` };
+  }
+
+  if (persona === "BUSINESS") {
+    const jobTitle = await generateNextJobTitle(lens, location);
+    const job = await fetchSingleLinkedInJob(jobTitle);
+    if (!job) return { report: "No hiring signal found." };
+
+    const body = await generatePredictionBody([{ title: jobTitle, source: "LinkedIn" }], "BUSINESS");
+    return { topic: jobTitle, report: `• ${jobTitle}\n${job.link}\n\n${body}` };
+  }
+
+  if (persona === "YOUTUBER") {
+    const result = manual && topic
+      ? await normalizeYouTubeSearchIntent(topic, location)
+      : { title: await generateNextYouTuberSignal(lens) };
+
+    const link = result.link || buildYouTubeSearchUrl(result.title);
+    const body = await generatePredictionBody([{ title: result.title, source: "YouTube" }], "YOUTUBER");
+
+    return { topic: result.title, report: `• ${result.title}\n${link}\n\n${body}` };
+  }
+
+  // AMAZON
+  const amazonTopic = await generateNextAmazonTopic(lens, location);
+  const product = await fetchSingleAmazonProduct(amazonTopic);
+  if (!product) return { report: "No product found." };
+
+  const body = await generatePredictionBody([{ title: product.title, source: "Amazon" }], "AMAZON");
+  return { topic: product.title, report: `• ${product.title}\n${product.link}\n\n${body}` };
+}
+
+// ------------------------------------------------------------
+// ROUTES
+// ------------------------------------------------------------
+app.post("/run", async (req, res) => {
+  const { topic="", persona="BUSINESS", manual=false } = req.body;
+  if (!(await isClearTopic(topic))) return res.json({ report: "Invalid topic." });
+  res.json(await runPipeline(topic, persona, manual));
 });
 
-const status=document.getElementById("status");
-const report=document.getElementById("report");
-const loaderText=document.getElementById("loader-text");
-
-async function run(topic){
-  if(!topic) return;
-  stopSpeech(); startLoading();
-  status.textContent="Analyzing real-time internet sources…";
-  report.textContent="";
-  try{
-    const r = await fetch(`${BACKEND}/run`,{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({
-    topic,
-    persona: ACTIVE_PERSONA,
-    manual: IS_MANUAL
-  })
+app.post("/next", async (req, res) => {
+  const persona = req.body.persona || "BUSINESS";
+  res.json(await runPipeline("", persona, false));
 });
-    const d=await r.json();
-    if(d.report){
-      report.innerHTML = linkify(
-        sanitizeAndFormatReport(d.report,box.value)
-      ).replace(/\n/g,"<br>");
-      speakReport();
-    }
-  } finally{ finishLoading(); }
-}
 
-async function runNext(){
-  stopSpeech(); startLoading();
-  report.textContent="";
-  box.value="";
-  status.textContent="2×-AI Engine Analyzing real-time internet...";
-  try{
-    const r=await fetch(`${BACKEND}/next`,{
-      method:"POST",headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ lastTopic:"", persona:ACTIVE_PERSONA })
-    });
-    const d=await r.json();
-
-    if (ACTIVE_PERSONA === "MARKETS") {
-      box.value = d.topic || "AI infrastructure stocks";
-    } else if (ACTIVE_PERSONA === "AMAZON") {
-      const m = d.report && d.report.match(/•\s*([^\n]+)/);
-      if (m && m[1]) box.value = m[1].trim();
-    } else if (ACTIVE_PERSONA === "YOUTUBER") {
-  box.value = d.topic || "";
-}
-
-    if(d.report){
-      report.innerHTML = linkify(
-        sanitizeAndFormatReport(d.report,box.value)
-      ).replace(/\n/g,"<br>");
-      speakReport();
-    }
-  } finally{ finishLoading(); }
-}
-
-document.querySelectorAll(".listen-btn").forEach(b=>b.onclick=speakReport);
-document.querySelectorAll(".stop-btn").forEach(b=>b.onclick=stopSpeech);
-document.querySelectorAll(".next-btn").forEach(b=>b.onclick=runNext);
-document.getElementById("mic").onclick = () => {
-  if (IS_MANUAL) {
-    run(box.value.trim());
-  } else {
-    runNext();
-  }
-};
-box.addEventListener("keydown",e=>{ if(e.key==="Enter") run(box.value.trim()); });
-
-window.onload = () => {
-  document.querySelectorAll(".persona-btn").forEach(btn=>{
-    if (btn.getAttribute("onclick").includes(ACTIVE_PERSONA)) {
-      btn.classList.add("active");
-    }
-  });
-
-  if (IS_MANUAL) {
-    // ⭐ ensure caret is visible and blinking
-    box.focus();
-    box.setSelectionRange(box.value.length, box.value.length);
-  } else {
-    runNext();
-  }
-};
-</script>
-</body>
-</html>
+// ------------------------------------------------------------
+app.listen(process.env.PORT || 3000, () =>
+  console.log("🌊 Blue Ocean Browser running")
+);
