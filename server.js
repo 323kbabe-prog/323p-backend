@@ -262,39 +262,46 @@ Output ONLY the job title.
   return out.choices[0].message.content.trim();
 }
 
-// ⭐ X — YouTuber signal generator
-async function generateNextYouTuberSignal(lens) {
-  const recent = YOUTUBER_TOPIC_MEMORY.join(", ");
 
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Academic lens: ${lens}
+// ⭐ X — YouTuber: normalize REAL most-searched video query (last 2 weeks)
+async function normalizeYouTubeSearchIntent(rawInput, location) {
+  if (!SERP_KEY || !rawInput) return rawInput;
 
-Identify ONE YouTube creator pattern or channel niche
-that is gaining attention right now.
+  const locationHint = location ? `${location} ` : "";
+  const query = `${locationHint}${rawInput} site:youtube.com/watch`;
 
-Rules:
-- Creator patterns only (not videos)
-- 3–6 words
-- Neutral, analytical phrasing
-- Avoid hype
-- Avoid repetition
+  try {
+    const url =
+      "https://serpapi.com/search.json?" +
+      `q=${encodeURIComponent(query)}` +
+      `&tbs=qdr:w2` + // last 2 weeks only
+      `&num=20` +
+      `&api_key=${SERP_KEY}`;
 
-Avoid: ${recent}
-`
-    }],
-    temperature: 0.6
-  });
+    const r = await fetch(url);
+    const j = await r.json();
 
-  const topic = out.choices[0].message.content.trim();
-  YOUTUBER_TOPIC_MEMORY.push(topic);
-  if (YOUTUBER_TOPIC_MEMORY.length > YOUTUBER_MEMORY_LIMIT) {
-    YOUTUBER_TOPIC_MEMORY.shift();
+    const videos = (j.organic_results || []).filter(v =>
+      v.link &&
+      v.link.includes("watch?v=") &&
+      !/\/@|\/c\/|\/user\/|\/playlist/i.test(v.link) &&
+      !/(official|channel|vevo|records|studio|label)/i.test(v.title || "")
+    );
+
+    if (!videos.length) return rawInput;
+
+    const hit = videos[0]; // Google-ranked → most viewed / relevant
+
+    return hit.title
+      .replace(/[-–|].*$/, "")
+      .replace(/\(.*?\)/g, "")
+      .replace(/official|music video|full video|episode \d+/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  } catch {
+    return rawInput;
   }
-  return topic;
 }
 
 // ------------------------------------------------------------
@@ -435,38 +442,26 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
-  const ytTopic = manual && topic
-    ? topic
-    : await generateNextYouTuberSignal(lens);
+  let searchQuery;
 
-  const ytUrl = buildYouTubeChannelSearchUrl(ytTopic);
+  if (manual && topic) {
+    searchQuery = await normalizeYouTubeSearchIntent(topic, location);
+  } else {
+    searchQuery = await generateNextYouTuberSignal(lens);
+  }
+
+  const ytUrl = buildYouTubeChannelSearchUrl(searchQuery);
 
   const body = await generatePredictionBody(
-    [{ title: ytTopic, source: "YouTube" }],
+    [{ title: searchQuery, source: "YouTube" }],
     "YOUTUBER",
     null
   );
 
   return {
-    topic: ytTopic,
-    report: `• ${ytTopic} — YouTube\n${ytUrl}\n\n${body}`
-  };
-}
-
-  const amazonTopic = await generateNextAmazonTopic(lens, location);
-  const product = await fetchSingleAmazonProduct(amazonTopic);
-  if (!product) return { report: "No product found." };
-
-  const body = await generatePredictionBody(
-    [{ title: product.title, source: "Amazon" }],
-    "AMAZON",
-    location
-  );
-
-  return {
-    topic: product.title,
-    report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
-  };
+  topic: searchQuery,
+  report: `• ${searchQuery} — YouTube\n${ytUrl}\n\n${body}`
+};
 }
 
 // ------------------------------------------------------------
