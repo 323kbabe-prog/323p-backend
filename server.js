@@ -37,9 +37,9 @@ function buildLinkedInJobUrl(jobTitle, location, manual) {
   return base + params.toString();
 }
 
-// ⭐ X — YouTuber helper
-function buildYouTubeChannelSearchUrl(query) {
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAg%253D%253D`;
+// ⭐ X — YouTube video link builder (SINGLE video only)
+function buildYouTubeChannelSearchUrl(videoUrl) {
+  return videoUrl;
 }
 
 // ------------------------------------------------------------
@@ -478,7 +478,7 @@ if (persona === "YOUTUBER") {
   ? await normalizeYouTubeSearchIntent(topic, location)
   : await generateNextYouTuberSignal(lens);
 
-  const ytUrl = buildYouTubeChannelSearchUrl(ytTopic);
+  const ytUrl = ytTopic;
 
   const body = await generatePredictionBody(
     [{ title: ytTopic, source: "YouTube" }],
