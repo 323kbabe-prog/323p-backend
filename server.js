@@ -325,6 +325,20 @@ async function generateYouTubeManualFullReport(videoTitle, lens) {
       content: `
 Academic lens: ${lens}
 
+Ground all analysis strictly in concepts, frameworks,
+and definitions commonly taught or published by
+accredited universities and official academic departments.
+
+Do NOT reference:
+- blogs
+- media commentary
+- creators
+- platforms
+- popular psychology
+
+The reasoning must reflect institutional academic understanding,
+as found on official university (.edu) sources.
+
 The following YouTube content is a stable signal
 of the present environment.
 
@@ -355,7 +369,6 @@ Then EXACTLY 3 short sentences.
 
   return out.choices[0].message.content.trim();
 }
-
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
@@ -363,29 +376,37 @@ async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens();
   let location = null;
 
-  if (manual && persona !== "YOUTUBER") {
-    location = await extractExplicitLocation(topic);
-  }
+const universityChannels = [
+  "Stanford University",
+  "MIT",
+  "Harvard University",
+  "UC Berkeley",
+  "Yale University",
+  "Princeton University"
+];
 
-  if (persona === "MARKETS") {
-    const theme = await rewriteMarketTheme(topic, lens, location);
-    const signal = await fetchMarketSignal(theme);
-    if (!signal) return { report: "No market signal found." };
+  if (persona === "YOUTUBER") {
 
-    const company = await extractCompanyNameFromTitle(signal.title);
-    MARKETS_ENTITY_MEMORY.push(company);
-    if (MARKETS_ENTITY_MEMORY.length > MEMORY_LIMIT) MARKETS_ENTITY_MEMORY.shift();
+  const searchQuery = manual
+    ? `${topic} site:youtube.com (${universityChannels.join(" OR ")})`
+    : "youtube trend";
 
-    const body = await generatePredictionBody(
-      [{ title: signal.title, source: "Reuters" }],
-      "MARKETS"
-    );
+  const ytSignal = await normalizeYouTubeSearchIntent(searchQuery);
 
-    return {
-      topic: company,
-      report: `• ${signal.title} — Google News\n${signal.link}\n\n${body}`
-    };
-  }
+  if (!ytSignal?.title) return { report: "No YouTube video found." };
+
+  const body = manual
+    ? await generateYouTubeManualFullReport(ytSignal.title, lens)
+    : await generatePredictionBody(
+        [{ title: ytSignal.title, source: "YouTube" }],
+        "YOUTUBER"
+      );
+
+  return {
+    topic: ytSignal.title,
+    report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
+  };
+}
 
   if (persona === "BUSINESS") {
     const jobTitle = await generateNextJobTitle(lens, location);
@@ -403,25 +424,27 @@ async function runPipeline(topic, persona, manual) {
     };
   }
 
-  if (persona === "YOUTUBER") {
-    const ytSignal = await normalizeYouTubeSearchIntent(
-      manual ? topic : "youtube trend"
-    );
+if (persona === "MARKETS") {
+  const theme = await rewriteMarketTheme(topic, lens, location);
+  const signal = await fetchMarketSignal(theme);
+  if (!signal) return { report: "No market signal found." };
 
-    if (!ytSignal?.title) return { report: "No YouTube video found." };
-
-    const body = manual
-      ? await generateYouTubeManualFullReport(ytSignal.title, lens)
-      : await generatePredictionBody(
-          [{ title: ytSignal.title, source: "YouTube" }],
-          "YOUTUBER"
-        );
-
-    return {
-      topic: ytSignal.title,
-      report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
-    };
+  const company = await extractCompanyNameFromTitle(signal.title);
+  MARKETS_ENTITY_MEMORY.push(company);
+  if (MARKETS_ENTITY_MEMORY.length > MEMORY_LIMIT) {
+    MARKETS_ENTITY_MEMORY.shift();
   }
+
+  const body = await generatePredictionBody(
+    [{ title: signal.title, source: "Reuters" }],
+    "MARKETS"
+  );
+
+  return {
+    topic: company,
+    report: `• ${signal.title} — Google News\n${signal.link}\n\n${body}`
+  };
+}
 
   const amazonTopic = await generateNextAmazonTopic(lens, location);
   const product = await fetchSingleAmazonProduct(amazonTopic);
