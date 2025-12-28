@@ -477,32 +477,36 @@ return {
 
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
-  let ytSignal = await normalizeYouTubeSearchIntent(
-  manual && topic ? topic : await generateNextYouTuberSignal(lens),
-  location
-);
 
-// 🔒 normalize fallback
-if (typeof ytSignal === "string") {
-  ytSignal = {
-    title: ytSignal,
-    link: ""
-  };
-}
+  // Always resolve ONE real YouTube video
+  const ytSignal = await normalizeYouTubeSearchIntent(
+    manual && topic ? topic : await generateNextYouTuberSignal(lens),
+    location
+  );
 
-  const body = await generatePredictionBody(
-  [{
-    title: ytSignal.title,
-    source: "YouTube video signal"
-  }],
-  "YOUTUBER",
-  null
-);
+  // Hard safety: must be an object with title + link
+  if (!ytSignal || typeof ytSignal !== "object" || !ytSignal.title) {
+    return { report: "No YouTube video found." };
+  }
 
+  // Manual = explain the content itself
+  // Auto = foresight about this content trend
+  const body = manual
+    ? await rewriteYouTubeManualInsight(ytSignal.title)
+    : await generatePredictionBody(
+        [{
+          title: ytSignal.title,
+          source: "YouTube video"
+        }],
+        "YOUTUBER",
+        null
+      );
+
+  // IMPORTANT: title comes ONLY from the video
   return {
-  topic: ytSignal.title,
-  report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
-};
+    topic: ytSignal.title,
+    report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
+  };
 }
 
   const amazonTopic = await generateNextAmazonTopic(lens, location);
@@ -521,6 +525,34 @@ if (typeof ytSignal === "string") {
   };
 }
   
+// ------------------------------------------------------------
+// YOUTUBER — manual-mode content insight rewrite (NO foresight)
+// ------------------------------------------------------------
+async function rewriteYouTubeManualInsight(videoTitle) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Explain why people are watching this content right now
+and what it reflects about music, culture, or emotion.
+
+Rules:
+- 1–2 short paragraphs
+- Focus on content meaning (not platform, not creators)
+- No future prediction
+- No dates, no headers
+
+Video title:
+"${videoTitle}"
+`
+    }],
+    temperature: 0.4
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
 // ------------------------------------------------------------
 // ROUTES
 // ------------------------------------------------------------
