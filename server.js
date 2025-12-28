@@ -433,11 +433,11 @@ async function runPipeline(topic, persona, manual) {
 
   // 4️⃣ Generate report body
   const body = manual
-    ? await generateYouTubeManualFullReport(subject, lens)
-    : await generatePredictionBody(
-        [{ title: subject, source: "Stanford University YouTube" }],
-        "YOUTUBER"
-      );
+  ? await generateYouTubeManualFullReport(subject, lens)
+  : await generatePredictionBody(
+      [{ title: ytSignal.title, source: "YouTube" }],
+      "YOUTUBER"
+    );
 
   // 5️⃣ Guard: no broken links
   if (!ytSignal || typeof ytSignal.link !== "string") {
