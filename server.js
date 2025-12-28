@@ -556,7 +556,12 @@ function isRelevantToQuery(query, title) {
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
   const { topic = "", persona = "BUSINESS", manual = false } = req.body;
-  if (!(await isClearTopic(topic))) return res.json({ report: "Invalid topic." });
+
+  // Only enforce semantic clarity for NON-BUSINESS modes
+  if (persona !== "BUSINESS" && !(await isClearTopic(topic))) {
+    return res.json({ report: "Invalid topic." });
+  }
+
   res.json(await runPipeline(topic, persona, manual));
 });
 
