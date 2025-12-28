@@ -33,6 +33,27 @@ function buildLinkedInJobUrl(jobTitle, location, manual) {
   return base + params.toString();
 }
 
+function lensToStanfordLink(lens) {
+  const MAP = {
+    "Psychology": "https://psychology.stanford.edu/",
+    "Sociology": "https://sociology.stanford.edu/",
+    "Economics": "https://economics.stanford.edu/",
+    "Communication": "https://comm.stanford.edu/",
+    "Design": "https://dschool.stanford.edu/",
+    "Political Science": "https://politicalscience.stanford.edu/",
+    "International Relations": "https://fsi.stanford.edu/",
+    "Statistics": "https://statistics.stanford.edu/",
+    "Computer Science": "https://cs.stanford.edu/",
+    "Law": "https://law.stanford.edu/",
+    "Education": "https://ed.stanford.edu/",
+    "Biology": "https://biology.stanford.edu/",
+    "Environmental Science": "https://woods.stanford.edu/",
+    "Philosophy": "https://philosophy.stanford.edu/"
+  };
+
+  return MAP[lens] || "https://www.stanford.edu/academics/";
+}
+
 // ------------------------------------------------------------
 // Stanford lenses + no-repeat memory
 // ------------------------------------------------------------
@@ -401,32 +422,18 @@ const universityChannels = [
 
   if (persona === "YOUTUBER") {
 
-  const isAcademicDomain = /student|university|campus|college|education|lecture/i.test(topic);
+  const stanfordLink = lensToStanfordLink(lens);
 
-const lensQueryHint = lens.toLowerCase();
-
-const searchQuery = manual
-  ? `${topic} ${lensQueryHint} site:youtube.com/watch`
-  : "youtube trend";
-
-  let ytSignal = await normalizeYouTubeSearchIntent(searchQuery);
-
-// STEP 2 — hard guarantee: never fail the signal layer
-if (!ytSignal || !ytSignal.title) {
-  ytSignal = await normalizeYouTubeSearchIntent(
-    `${topic} site:youtube.com/watch`
-  );
-}
   const body = manual
-    ? await generateYouTubeManualFullReport(ytSignal.title, lens)
+    ? await generateYouTubeManualFullReport(topic, lens)
     : await generatePredictionBody(
-        [{ title: ytSignal.title, source: "YouTube" }],
+        [{ title: topic, source: "Stanford University" }],
         "YOUTUBER"
       );
 
   return {
-    topic: ytSignal.title,
-    report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
+    topic: topic,
+    report: `• ${lens} perspective — Stanford University\n${stanfordLink}\n\n${body}`
   };
 }
 
