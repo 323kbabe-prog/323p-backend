@@ -423,21 +423,21 @@ async function runPipeline(topic, persona, manual) {
     ? topic
     : await fetchTrendingPopSubject();
 
-  // 2️⃣ Stanford lens → Stanford YouTube search
+  // 2️⃣ Stanford lens → Stanford academic framing
   const channelQuery = lensToStanfordYouTubeQuery(lens);
 
-  // 3️⃣ Resolve ONE Stanford YouTube video
+  // 3️⃣ Resolve ONE real pop-music YouTube video
   const ytSignal = await normalizeYouTubeSearchIntent(
-  `${subject} official music video site:youtube.com/watch`
-);#
+    `${subject} official music video site:youtube.com/watch`
+  );
 
   // 4️⃣ Generate report body
   const body = manual
-  ? await generateYouTubeManualFullReport(subject, lens)
-  : await generatePredictionBody(
-      [{ title: ytSignal.title, source: "YouTube" }],
-      "YOUTUBER"
-    );
+    ? await generateYouTubeManualFullReport(subject, lens)
+    : await generatePredictionBody(
+        [{ title: ytSignal?.title || subject, source: "YouTube" }],
+        "YOUTUBER"
+      );
 
   // 5️⃣ Guard: no broken links
   if (!ytSignal || typeof ytSignal.link !== "string") {
@@ -449,6 +449,16 @@ async function runPipeline(topic, persona, manual) {
         body
     };
   }
+
+  // 6️⃣ Final deterministic output
+  return {
+    topic: subject,
+    report:
+      `• ${lens} perspective — Stanford University (YouTube)\n` +
+      `${ytSignal.link}\n\n` +
+      body
+  };
+}
 
   // 🔹 Final deterministic output
   return {
