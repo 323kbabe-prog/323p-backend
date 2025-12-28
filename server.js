@@ -18,7 +18,7 @@ const openai = new OpenAI({
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 // ------------------------------------------------------------
-// MARKETS — Reuters anchor
+// MARKETS — Reuters anchor.
 // ------------------------------------------------------------
 const MARKETS_SIGNAL_SOURCE = {
   name: "Reuters",
@@ -382,6 +382,34 @@ Leave ONE blank line, then write EXACTLY 3 short sentences.
 
   return out.choices[0].message.content.trim();
 }
+
+// 🔹 REAL SERP pop-music subject (AUTO mode only)
+async function fetchTrendingPopSubject() {
+  if (!SERP_KEY) return "pop music";
+
+  try {
+    const url =
+      "https://serpapi.com/search.json?" +
+      "engine=youtube" +
+      "&search_query=pop%20music" +
+      "&sp=CAISAhAB" +
+      `&api_key=${SERP_KEY}`;
+
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const v = (j.video_results || [])[0];
+    if (!v || !v.title) return "pop music";
+
+    return v.title
+      .replace(/\(.*?\)/g, "")
+      .replace(/official|mv|music video|lyrics/gi, "")
+      .trim();
+
+  } catch {
+    return "pop music";
+  }
+}
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
@@ -389,41 +417,35 @@ async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens();
   let location = null;
 
-  if (persona === "YOUTUBER") {
+ if (persona === "YOUTUBER") {
 
+  // 🔹 AUTO vs MANUAL subject selection
+  const subject = manual
+    ? topic
+    : await fetchTrendingPopSubject();
+
+  // 🔹 Stanford YouTube channel query by lens
   const channelQuery = lensToStanfordYouTubeQuery(lens);
 
+  // 🔹 Resolve Stanford YouTube video related to pop-music subject
   const ytSignal = await normalizeYouTubeSearchIntent(
-    `${channelQuery} site:youtube.com/watch`
+    `${subject} ${channelQuery} site:youtube.com/watch`
   );
 
+  // 🔹 Report generation
   const body = manual
-    ? await generateYouTubeManualFullReport(topic, lens)
+    ? await generateYouTubeManualFullReport(subject, lens)
     : await generatePredictionBody(
-        [{ title: topic, source: "Stanford University YouTube" }],
+        [{ title: subject, source: "Stanford University YouTube" }],
         "YOUTUBER"
       );
 
+  // 🔹 Final deterministic output
   return {
-    topic: topic,
+    topic: subject,
     report: `• ${lens} perspective — Stanford University (YouTube)\n${ytSignal.link}\n\n${body}`
   };
 }
-  if (persona === "BUSINESS") {
-    const jobTitle = await generateNextJobTitle(lens, location);
-    const job = await fetchSingleLinkedInJob(jobTitle);
-    if (!job) return { report: "No hiring signal found." };
-
-    const body = await generatePredictionBody(
-      [{ title: jobTitle, source: "LinkedIn" }],
-      "BUSINESS"
-    );
-
-    return {
-      topic: jobTitle,
-      report: `• ${jobTitle} — LinkedIn\n${buildLinkedInJobUrl(jobTitle, location, manual)}\n\n${body}`
-    };
-  }
 
 if (persona === "MARKETS") {
   const theme = await rewriteMarketTheme(topic, lens, location);
@@ -488,4 +510,4 @@ app.post("/next", async (req, res) => {
 // ------------------------------------------------------------
 app.listen(process.env.PORT || 3000, () =>
   console.log("🌊 Blue Ocean Browser running")
-);
+);#
