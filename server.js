@@ -371,9 +371,10 @@ Rules:
 - No platform mechanics
 
 Then write:
+Then write:
 If this reading is correct, what works:
 
-Then EXACTLY 3 short sentences.
+Leave ONE blank line, then write EXACTLY 3 short sentences.
 `
     }],
     temperature: 0.3
