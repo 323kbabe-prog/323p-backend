@@ -418,20 +418,20 @@ async function runPipeline(topic, persona, manual) {
 
  if (persona === "YOUTUBER") {
 
-  // 🔹 AUTO vs MANUAL subject selection
+  // 1️⃣ Pick subject
   const subject = manual
     ? topic
     : await fetchTrendingPopSubject();
 
-  // 🔹 Stanford YouTube channel query by lens
+  // 2️⃣ Stanford lens → Stanford YouTube search
   const channelQuery = lensToStanfordYouTubeQuery(lens);
 
-  // 🔹 Resolve Stanford YouTube video related to pop-music subject
+  // 3️⃣ Resolve ONE Stanford YouTube video
   const ytSignal = await normalizeYouTubeSearchIntent(
     `${subject} ${channelQuery} site:youtube.com/watch`
   );
 
-  // 🔹 Report generation
+  // 4️⃣ Generate report body
   const body = manual
     ? await generateYouTubeManualFullReport(subject, lens)
     : await generatePredictionBody(
@@ -439,10 +439,21 @@ async function runPipeline(topic, persona, manual) {
         "YOUTUBER"
       );
 
+  // 5️⃣ Guard: no broken links
+  if (!ytSignal || typeof ytSignal.link !== "string") {
+    return {
+      topic: subject,
+      report:
+        `• ${lens} perspective — Stanford University (YouTube)\n` +
+        `No valid YouTube link found.\n\n` +
+        body
+    };
+  }
+
   // 🔹 Final deterministic output
   return {
     topic: subject,
-    report: `• ${lens} perspective — Stanford University (YouTube)\n${ytSignal.link}\n\n${body}`
+    report: `• ${lens} perspective — Stanford University (YouTube)\n${String(ytSignal.link || "")}\n\n${body}`
   };
 }
 
