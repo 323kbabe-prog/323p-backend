@@ -74,7 +74,7 @@ function lensToStanfordYouTubeQuery(lens) {
 
   return MAP[lens] || "Stanford University";
 }
-
+}
   
 // ------------------------------------------------------------
 // Entity no-repeat memory
