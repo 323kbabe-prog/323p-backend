@@ -450,21 +450,22 @@ async function runPipeline(topic, persona, manual) {
       content: `
 Stanford academic lens: ${lens}
 
-Primary analysis subject (do NOT rename):
-"${topic}"
+Primary subject (real-world example):
+"${popContext}"
 
-Real pop culture reference for context:
-"${popContext || "current mainstream pop music"}"
+Analytical framework (academic explanation):
+"${channelQuery}"
 
-Write a 6-month cultural analysis grounded ONLY in the
-specific YouTube music content named above.
+Task:
+Write a 6-month cultural analysis of the pop subject above.
 
 Rules:
-- Treat the title as the primary subject
-- Use the real pop song/artist/group ONLY as a comparative reference
-- Stay focused on pop music and fan culture
-- Explain how the real pop reference helps interpret the title
-- Do NOT rename the title
+- The pop song / artist / group is the MAIN focus
+- Refer to the pop song / artist / group by name throughout
+- Use the Stanford framework ONLY to explain why this pop behavior exists
+- Frame the pop subject as a real-world case study of the Stanford concept
+- Do NOT analyze the Stanford video itself
+- Do NOT rename or shift focus away from the pop subject
 - Do NOT generalize to the entire music industry
 - Do NOT discuss unrelated platforms or genres
 - EXACTLY 5 short paragraphs
