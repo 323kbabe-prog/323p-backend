@@ -429,9 +429,16 @@ async function fetchRealPopEntity() {
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
+
 async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens();
+
   let location = null;
+
+  // ✅ LOCATION-AWARE for BUSINESS (LinkedIn)
+  if (persona === "BUSINESS") {
+    location = await extractExplicitLocation(topic);
+  }
 
   if (persona === "YOUTUBER") {
 
