@@ -428,8 +428,8 @@ async function runPipeline(topic, persona, manual) {
 
   // 3️⃣ Resolve ONE Stanford YouTube video
   const ytSignal = await normalizeYouTubeSearchIntent(
-    `${subject} ${channelQuery} site:youtube.com/watch`
-  );
+  `${subject} official music video site:youtube.com/watch`
+);#
 
   // 4️⃣ Generate report body
   const body = manual
