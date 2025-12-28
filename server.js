@@ -403,10 +403,10 @@ const universityChannels = [
 
   const isAcademicDomain = /student|university|campus|college|education|lecture/i.test(topic);
 
+const lensQueryHint = lens.toLowerCase();
+
 const searchQuery = manual
-  ? isAcademicDomain
-    ? `${topic} site:youtube.com (${universityChannels.join(" OR ")})`
-    : `${topic} site:youtube.com/watch`
+  ? `${topic} ${lensQueryHint} site:youtube.com/watch`
   : "youtube trend";
 
   let ytSignal = await normalizeYouTubeSearchIntent(searchQuery);
