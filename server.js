@@ -265,8 +265,8 @@ Output ONLY the job title.
 // ------------------------------------------------------------
 // YOUTUBER — normalize most popular YouTube video (last 2 weeks)
 // ------------------------------------------------------------
-async function normalizeYouTubeSearchIntent(rawInput, location) {
-  if (!SERP_KEY || !rawInput) return rawInput;
+async function fetchYouTubeVideoList(rawInput, location, limit = 5) {
+  if (!SERP_KEY || !rawInput) return [];
 
   const locationHint = location ? `${location} ` : "";
   const query = `${locationHint}${rawInput} site:youtube.com/watch`;
@@ -276,31 +276,29 @@ async function normalizeYouTubeSearchIntent(rawInput, location) {
       "https://serpapi.com/search.json?" +
       `q=${encodeURIComponent(query)}` +
       `&tbs=qdr:w2` +
-      `&num=20` +
+      `&num=${limit}` +
       `&api_key=${SERP_KEY}`;
 
     const r = await fetch(url);
     const j = await r.json();
 
-    const videos = (j.organic_results || []).filter(v =>
-      v.link &&
-      v.link.includes("watch?v=") &&
-      !/\/@|\/c\/|\/user\/|\/playlist/i.test(v.link)
-    );
-
-    if (!videos.length) return rawInput;
-
-    return {
-  title: videos[0].title
-    .replace(/[-–|].*$/, "")
-    .replace(/\(.*?\)/g, "")
-    .trim(),
-  link: videos[0].link
-};
-   
+    return (j.organic_results || [])
+      .filter(v =>
+        v.link &&
+        v.link.includes("watch?v=") &&
+        !/\/@|\/c\/|\/user\/|\/playlist/i.test(v.link)
+      )
+      .slice(0, limit)
+      .map(v => ({
+        title: v.title
+          .replace(/[-–|].*$/, "")
+          .replace(/\(.*?\)/g, "")
+          .trim(),
+        link: v.link
+      }));
 
   } catch {
-    return rawInput;
+    return [];
   }
 }
 
@@ -478,79 +476,83 @@ return {
 // ⭐ X — YouTuber persona
 if (persona === "YOUTUBER") {
 
-  // Always resolve ONE real YouTube video
-  const ytSignal = await normalizeYouTubeSearchIntent(
+  // 1. Get supporting video list
+  const videos = await fetchYouTubeVideoList(
     manual && topic ? topic : await generateNextYouTuberSignal(lens),
-    location
+    location,
+    5
   );
 
-  // Hard safety: must be an object with title + link
-  if (!ytSignal || typeof ytSignal !== "object" || !ytSignal.title) {
-    return { report: "No YouTube video found." };
+  if (!videos.length) {
+    return { report: "No YouTube videos found." };
   }
 
-  // Manual = explain the content itself
-  // Auto = foresight about this content trend
-  const body = manual
-    ? await rewriteYouTubeManualInsight(ytSignal.title)
-    : await generatePredictionBody(
-        [{
-          title: ytSignal.title,
-          source: "YouTube video"
-        }],
-        "YOUTUBER",
-        null
-      );
+  // 2. Use the TOP video as the signal title
+  const primaryTitle = videos[0].title;
 
-  // IMPORTANT: title comes ONLY from the video
+  // 3. Build foresight body (FULL format)
+  const body = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+${youtuberForesightInstruction()}
+
+Verified content signals:
+${videos.map(v => `• ${v.title}`).join("\n")}
+
+START WITH THIS LINE EXACTLY:
+Reality · ${sixMonthDateLabel()}
+
+Write a 6-month foresight.
+
+Rules:
+- EXACTLY 5 short paragraphs
+- Neutral, analytical tone
+- Creator-focused (what to talk about)
+- No markdown
+
+Then write this section header exactly:
+If this prediction is correct, what works:
+
+Then write EXACTLY 3 short sentences.
+`
+    }],
+    temperature: 0.3
+  });
+
+  // 4. Append YouTube evidence list ONCE
+  const evidenceList = videos
+    .map(v => `${v.title}\n${v.link}`)
+    .join("\n\n");
+
   return {
-    topic: ytSignal.title,
-    report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
+    topic: primaryTitle,
+    report:
+      `• ${primaryTitle} — YouTube\n\n` +
+      body.choices[0].message.content.trim() +
+      `\n\nSupporting YouTube examples:\n${evidenceList}`
   };
-}
-
-  const amazonTopic = await generateNextAmazonTopic(lens, location);
-  const product = await fetchSingleAmazonProduct(amazonTopic);
-  if (!product) return { report: "No product found." };
-
-  const body = await generatePredictionBody(
-    [{ title: product.title, source: "Amazon" }],
-    "AMAZON",
-    location
-  );
-
-  return {
-    topic: product.title,
-    report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
-  };
 }
   
 // ------------------------------------------------------------
 // YOUTUBER — manual-mode content insight rewrite (NO foresight)
 // ------------------------------------------------------------
-async function rewriteYouTubeManualInsight(videoTitle) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Explain why people are watching this content right now
-and what it reflects about music, culture, or emotion.
+function youtuberForesightInstruction() {
+  return `
+You are writing for a YouTube creator.
 
-Rules:
-- 1–2 short paragraphs
-- Focus on content meaning (not platform, not creators)
-- No future prediction
-- No dates, no headers
+Explain:
+- What angles a YouTuber can talk about on this topic
+- Why audiences are responding now
+- What themes, emotions, or formats are emerging
+- How creators can position their content over the next 6 months
 
-Video title:
-"${videoTitle}"
-`
-    }],
-    temperature: 0.4
-  });
-
-  return out.choices[0].message.content.trim();
+Do NOT:
+- Explain the platform itself
+- Mention algorithms explicitly
+- Mention YouTube as a company
+`;
 }
 
 // ------------------------------------------------------------
