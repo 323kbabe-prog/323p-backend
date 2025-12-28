@@ -350,16 +350,6 @@ After the analysis, include a section titled exactly:
 
 University Lens Reference
 
-Provide EXACTLY ONE official university (.edu) link
-that explains the core academic concept used in this analysis.
-
-Rules:
-- The link MUST be from an official university domain (.edu)
-- It MUST correspond to the academic lens used
-- It MUST be an explanatory page (department, course, or research overview)
-- Do NOT include multiple links
-- Do NOT include non-university sites
-
 Ground all analysis strictly in concepts, frameworks,
 and definitions commonly taught or published by
 accredited universities and official academic departments.
@@ -395,7 +385,7 @@ Rules:
 
 Then write:
 If this reading is correct, what works:
-
+soace
 Then EXACTLY 3 short sentences.
 `
     }],
