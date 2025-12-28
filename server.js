@@ -18,7 +18,7 @@ const openai = new OpenAI({
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 // ------------------------------------------------------------
-// MARKETS — Reuters anchor.
+// MARKETS — Reuters anchor
 // ------------------------------------------------------------
 const MARKETS_SIGNAL_SOURCE = {
   name: "Reuters",
@@ -74,6 +74,7 @@ function lensToStanfordYouTubeQuery(lens) {
 
   return MAP[lens] || "Stanford University";
 }
+
   
 // ------------------------------------------------------------
 // Entity no-repeat memory
@@ -381,34 +382,6 @@ Leave ONE blank line, then write EXACTLY 3 short sentences.
 
   return out.choices[0].message.content.trim();
 }
-
-// 🔹 REAL SERP pop-music subject (AUTO mode only)
-async function fetchTrendingPopSubject() {
-  if (!SERP_KEY) return "pop music";
-
-  try {
-    const url =
-      "https://serpapi.com/search.json?" +
-      "engine=youtube" +
-      "&search_query=pop%20music" +
-      "&sp=CAISAhAB" +
-      `&api_key=${SERP_KEY}`;
-
-    const r = await fetch(url);
-    const j = await r.json();
-
-    const v = (j.video_results || [])[0];
-    if (!v || !v.title) return "pop music";
-
-    return v.title
-      .replace(/\(.*?\)/g, "")
-      .replace(/official|mv|music video|lyrics/gi, "")
-      .trim();
-
-  } catch {
-    return "pop music";
-  }
-}
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
@@ -416,56 +389,41 @@ async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens();
   let location = null;
 
- if (persona === "YOUTUBER") {
+  if (persona === "YOUTUBER") {
 
-  // 1️⃣ Pick subject
-  const subject = manual
-    ? topic
-    : await fetchTrendingPopSubject();
-
-  // 2️⃣ Stanford lens → Stanford academic framing
   const channelQuery = lensToStanfordYouTubeQuery(lens);
 
-  // 3️⃣ Resolve ONE real pop-music YouTube video
   const ytSignal = await normalizeYouTubeSearchIntent(
-    `${subject} official music video site:youtube.com/watch`
+    `${channelQuery} site:youtube.com/watch`
   );
 
-  // 4️⃣ Generate report body
   const body = manual
-    ? await generateYouTubeManualFullReport(subject, lens)
+    ? await generateYouTubeManualFullReport(topic, lens)
     : await generatePredictionBody(
-        [{ title: ytSignal?.title || subject, source: "YouTube" }],
+        [{ title: topic, source: "Stanford University YouTube" }],
         "YOUTUBER"
       );
 
-  // 5️⃣ Guard: no broken links
-  if (!ytSignal || typeof ytSignal.link !== "string") {
+  return {
+    topic: topic,
+    report: `• ${lens} perspective — Stanford University (YouTube)\n${ytSignal.link}\n\n${body}`
+  };
+}
+  if (persona === "BUSINESS") {
+    const jobTitle = await generateNextJobTitle(lens, location);
+    const job = await fetchSingleLinkedInJob(jobTitle);
+    if (!job) return { report: "No hiring signal found." };
+
+    const body = await generatePredictionBody(
+      [{ title: jobTitle, source: "LinkedIn" }],
+      "BUSINESS"
+    );
+
     return {
-      topic: subject,
-      report:
-        `• ${lens} perspective — Stanford University (YouTube)\n` +
-        `No valid YouTube link found.\n\n` +
-        body
+      topic: jobTitle,
+      report: `• ${jobTitle} — LinkedIn\n${buildLinkedInJobUrl(jobTitle, location, manual)}\n\n${body}`
     };
   }
-
-  // 6️⃣ Final deterministic output
-  return {
-    topic: subject,
-    report:
-      `• ${lens} perspective — Stanford University (YouTube)\n` +
-      `${ytSignal.link}\n\n` +
-      body
-  };
-}
-
-  // 🔹 Final deterministic output
-  return {
-    topic: subject,
-    report: `• ${lens} perspective — Stanford University (YouTube)\n${String(ytSignal.link || "")}\n\n${body}`
-  };
-}
 
 if (persona === "MARKETS") {
   const theme = await rewriteMarketTheme(topic, lens, location);
