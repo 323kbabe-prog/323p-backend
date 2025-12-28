@@ -387,13 +387,21 @@ const universityChannels = [
 
   if (persona === "YOUTUBER") {
 
-  const searchQuery = manual
+  const isAcademicDomain = /student|university|campus|college|education|lecture/i.test(topic);
+
+const searchQuery = manual
+  ? isAcademicDomain
     ? `${topic} site:youtube.com (${universityChannels.join(" OR ")})`
-    : "youtube trend";
+    : `${topic} site:youtube.com/watch`
+  : "youtube trend";
 
-  const ytSignal = await normalizeYouTubeSearchIntent(searchQuery);
+  const candidate = await normalizeYouTubeSearchIntent(searchQuery);
 
-  if (!ytSignal?.title) return { report: "No YouTube video found." };
+if (!candidate?.title || !isRelevantToQuery(topic, candidate.title)) {
+  return { report: "No relevant YouTube video found for this topic." };
+}
+
+const ytSignal = candidate;
 
   const body = manual
     ? await generateYouTubeManualFullReport(ytSignal.title, lens)
@@ -459,6 +467,14 @@ if (persona === "MARKETS") {
     topic: product.title,
     report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
   };
+}
+
+function isRelevantToQuery(query, title) {
+  const q = query.toLowerCase();
+  const t = title.toLowerCase();
+
+  const keywords = q.split(/\s+/).filter(w => w.length > 3);
+  return keywords.some(word => t.includes(word));
 }
 
 // ------------------------------------------------------------
