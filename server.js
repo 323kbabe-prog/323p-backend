@@ -500,9 +500,9 @@ if (typeof ytSignal === "string") {
 );
 
   return {
-    topic: ytSignal.title,
-    report: `• YouTube\n${ytSignal.link}\n\n${body}`
-  };
+  topic: ytSignal.title,
+  report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
+};
 }
 
   const amazonTopic = await generateNextAmazonTopic(lens, location);
