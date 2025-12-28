@@ -12,387 +12,285 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-// ⭐ MARKETS — Reuters anchor
+// ------------------------------------------------------------
+// MARKETS — Reuters anchor
+// ------------------------------------------------------------
 const MARKETS_SIGNAL_SOURCE = {
-  name: "Reuters",
-  url: "https://www.reuters.com"
+  name: "Reuters",
+  url: "https://www.reuters.com"
 };
 
 function buildLinkedInJobUrl(jobTitle, location, manual) {
-  const base = "https://www.linkedin.com/jobs/search/?";
-
-  const params = new URLSearchParams();
-  params.set("keywords", jobTitle);
-
-  // Only add location in manual mode and when location exists
-  if (manual && location) {
-    params.set("location", location);
-  }
-
-  return base + params.toString();
-}
-
-// ⭐ X — YouTube video link builder (SINGLE video only)
-function buildYouTubeChannelSearchUrl(videoUrl) {
-  return videoUrl;
+  const base = "https://www.linkedin.com/jobs/search/?";
+  const params = new URLSearchParams();
+  params.set("keywords", jobTitle);
+  if (manual && location) params.set("location", location);
+  return base + params.toString();
 }
 
 // ------------------------------------------------------------
 // Stanford lenses + no-repeat memory
 // ------------------------------------------------------------
 const STANFORD_MAJORS = [
-  "Computer Science","Economics","Management Science and Engineering",
-  "Political Science","Psychology","Sociology","Symbolic Systems",
-  "Statistics","Electrical Engineering","Biomedical Engineering",
-  "Biology","Environmental Science","International Relations",
-  "Communication","Design","Education","Philosophy","Law"
+  "Computer Science","Economics","Management Science and Engineering",
+  "Political Science","Psychology","Sociology","Symbolic Systems",
+  "Statistics","Electrical Engineering","Biomedical Engineering",
+  "Biology","Environmental Science","International Relations",
+  "Communication","Design","Education","Philosophy","Law"
 ];
 
 let LAST_LENS = "";
 
 function pickStanfordLens() {
-  const pool = STANFORD_MAJORS.filter(m => m !== LAST_LENS);
-  const lens = pool[Math.floor(Math.random() * pool.length)];
-  LAST_LENS = lens;
-  return lens;
+  const pool = STANFORD_MAJORS.filter(m => m !== LAST_LENS);
+  const lens = pool[Math.floor(Math.random() * pool.length)];
+  LAST_LENS = lens;
+  return lens;
 }
 
 // ------------------------------------------------------------
-// Entity no-repeat memory (per persona)
+// Entity no-repeat memory
 // ------------------------------------------------------------
 const AMAZON_TOPIC_MEMORY = [];
-const AMAZON_MEMORY_LIMIT = 5;
-
 const BUSINESS_ENTITY_MEMORY = [];
-const BUSINESS_MEMORY_LIMIT = 5;
-
 const MARKETS_ENTITY_MEMORY = [];
-const MARKETS_MEMORY_LIMIT = 5;
-
-// ⭐ X — YouTuber memory
 const YOUTUBER_TOPIC_MEMORY = [];
-const YOUTUBER_MEMORY_LIMIT = 5;
+
+const MEMORY_LIMIT = 5;
 
 // ------------------------------------------------------------
 // Semantic clarity check
 // ------------------------------------------------------------
 async function isClearTopic(topic) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
 Is the following text intelligible human language
 with a clear intent or subject?
 
-Reply YES if it is understandable and meaningful.
-Reply NO only if it is gibberish, random characters,
-or has no interpretable intent.
+Reply YES or NO.
 
 Text:
 "${topic}"
 `
-    }],
-    temperature: 0
-  });
-  return out.choices[0].message.content.trim() === "YES";
+    }],
+    temperature: 0
+  });
+  return out.choices[0].message.content.trim() === "YES";
 }
 
 // ------------------------------------------------------------
-// Explicit location extraction (manual only)
+// Date helpers
+// ------------------------------------------------------------
+function sixMonthDateLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+}
+
+function presentDateLabel() {
+  return new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+}
+
+// ------------------------------------------------------------
+// Explicit location extraction (manual, non-YOUTUBER only)
 // ------------------------------------------------------------
 async function extractExplicitLocation(text) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Does this text explicitly mention a geographic location
-(city, state, country, or region)?
-
-If YES, extract ONLY the location name.
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Does this text explicitly mention a geographic location?
+If YES, extract ONLY the location.
 If NO, reply NO.
 
 Text:
 "${text}"
 `
-    }],
-    temperature: 0
-  });
+    }],
+    temperature: 0
+  });
 
-  const result = out.choices[0].message.content.trim();
-  return result === "NO" ? null : result;
+  const r = out.choices[0].message.content.trim();
+  return r === "NO" ? null : r;
 }
 
 // ------------------------------------------------------------
-// MARKETS — rewrite theme using lens (+ location)
+// MARKETS — rewrite theme
 // ------------------------------------------------------------
 async function rewriteMarketTheme(input, lens, location) {
-  const locationLine = location ? `Geographic context: ${location}` : "";
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Academic lens: ${lens}
-${locationLine}
-
-Rewrite into a neutral market attention theme.
-Rules:
-- 3–7 words
-- No tickers
-- No price language
-- Capital / attention narrative only
-
-Input: "${input}"
-`
-    }],
-    temperature: 0.2
-  });
-  return out.choices[0].message.content.trim();
-}
-
-// ------------------------------------------------------------
-// MARKETS — Google Finance signal
-// ------------------------------------------------------------
-async function fetchMarketSignal(theme) {
-  if (!SERP_KEY) return null;
-  try {
-    const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(theme)}&num=5&api_key=${SERP_KEY}`;
-    const r = await fetch(url);
-    const j = await r.json();
-    const hit = (j.news_results || [])[0];
-    if (!hit) return null;
-    return { title: hit.title, link: hit.link, source: hit.source || "Google News" };
-  } catch {
-    return null;
-  }
-}
-
-// ------------------------------------------------------------
-// MARKETS — extract company name
-// ------------------------------------------------------------
-async function extractCompanyNameFromTitle(title) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `Extract the primary company name from this headline. Return ONLY the name.\n"${title}"`
-    }],
-    temperature: 0
-  });
-  return out.choices[0].message.content.trim() || "Unknown";
-}
-
-// ------------------------------------------------------------
-// AMAZON — topic generation using lens (+ location)
-// ------------------------------------------------------------
-async function generateNextAmazonTopic(lens, location) {
-  const recent = AMAZON_TOPIC_MEMORY.join(", ");
-  const locationLine = location ? `Geographic context: ${location}` : "";
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Academic lens: ${lens}
-${locationLine}
-
-Choose ONE real-world cosmetics product or beauty category
-with strong near-term consumer buying interest
-that is culturally, climate, or regulation relevant
-to the geographic context if provided.
-
-Rules:
-- Buyer mindset
-- Everyday consumer goods
-- Avoid repetition
-- 4–8 words
-
-Avoid: ${recent}
-`
-    }],
-    temperature: 0.7
-  });
-
-  const topic = out.choices[0].message.content.trim();
-  AMAZON_TOPIC_MEMORY.push(topic);
-  if (AMAZON_TOPIC_MEMORY.length > AMAZON_MEMORY_LIMIT) AMAZON_TOPIC_MEMORY.shift();
-  return topic;
-}
-
-// ------------------------------------------------------------
-// AMAZON — fetch product
-// ------------------------------------------------------------
-async function fetchSingleAmazonProduct(query) {
-  if (!SERP_KEY) return null;
-  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
-  const r = await fetch(url);
-  const j = await r.json();
-  return (j.organic_results || []).find(x =>
-    x.link && (x.link.includes("/dp/") || x.link.includes("/gp/product"))
-  );
-}
-
-// ------------------------------------------------------------
-// BUSINESS — job title via lens (+ location)
-// ------------------------------------------------------------
-async function generateNextJobTitle(lens, location) {
-  const locationLine = location ? `Geographic context: ${location}` : "";
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Academic lens: ${lens}
-${locationLine}
-
-Generate ONE real AI job title companies are actively recruiting for right now.
-Output ONLY the job title.
-`
-    }],
-    temperature: 0.7
-  });
-  return out.choices[0].message.content.trim();
-}
-
-// ------------------------------------------------------------
-// YOUTUBER — normalize most popular YouTube video (last 2 weeks)
-// ------------------------------------------------------------
-async function normalizeYouTubeSearchIntent(rawInput, location) {
-  if (!SERP_KEY || !rawInput) return rawInput;
-
-  const locationHint = location ? `${location} ` : "";
-  const query = `${locationHint}${rawInput} site:youtube.com/watch`;
-
-  try {
-    const url =
-      "https://serpapi.com/search.json?" +
-      `q=${encodeURIComponent(query)}` +
-      `&tbs=qdr:w2` +
-      `&num=20` +
-      `&api_key=${SERP_KEY}`;
-
-    const r = await fetch(url);
-    const j = await r.json();
-
-    const videos = (j.organic_results || []).filter(v =>
-      v.link &&
-      v.link.includes("watch?v=") &&
-      !/\/@|\/c\/|\/user\/|\/playlist/i.test(v.link)
-    );
-
-    if (!videos.length) return rawInput;
-
-    return {
-  title: videos[0].title
-    .replace(/[-–|].*$/, "")
-    .replace(/\(.*?\)/g, "")
-    .trim(),
-  link: videos[0].link
-};
-   
-
-  } catch {
-    return rawInput;
-  }
-}
-
-// ⭐ X — YouTuber signal generator
-async function generateNextYouTuberSignal(lens) {
-  const recent = YOUTUBER_TOPIC_MEMORY.join(", ");
-
+  const locationLine = location ? `Geographic context: ${location}` : "";
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
 Academic lens: ${lens}
+${locationLine}
 
-Identify ONE YouTube creator pattern or channel niche
-that is gaining attention right now.
+Rewrite into a neutral market attention theme.
+3–7 words. No tickers. No prices.
 
-Rules:
-- Creator patterns only (not videos)
-- 3–6 words
-- Neutral, analytical phrasing
-- Avoid hype
-- Avoid repetition
-
-Avoid: ${recent}
+Input: "${input}"
 `
     }],
-    temperature: 0.6
+    temperature: 0.2
+  });
+  return out.choices[0].message.content.trim();
+}
+
+// ------------------------------------------------------------
+// MARKETS — fetch signal
+// ------------------------------------------------------------
+async function fetchMarketSignal(theme) {
+  if (!SERP_KEY) return null;
+  try {
+    const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(theme)}&num=5&api_key=${SERP_KEY}`;
+    const r = await fetch(url);
+    const j = await r.json();
+    return (j.news_results || [])[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+// ------------------------------------------------------------
+// MARKETS — extract company
+// ------------------------------------------------------------
+async function extractCompanyNameFromTitle(title) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `Extract the primary company name only:\n"${title}"`
+    }],
+    temperature: 0
+  });
+  return out.choices[0].message.content.trim() || "Unknown";
+}
+
+// ------------------------------------------------------------
+// AMAZON — topic + product
+// ------------------------------------------------------------
+async function generateNextAmazonTopic(lens, location) {
+  const avoid = AMAZON_TOPIC_MEMORY.join(", ");
+  const locationLine = location ? `Geographic context: ${location}` : "";
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Academic lens: ${lens}
+${locationLine}
+
+Choose ONE real cosmetics product or beauty category.
+4–8 words. Buyer mindset.
+
+Avoid: ${avoid}
+`
+    }],
+    temperature: 0.7
   });
 
   const topic = out.choices[0].message.content.trim();
-  YOUTUBER_TOPIC_MEMORY.push(topic);
-  if (YOUTUBER_TOPIC_MEMORY.length > YOUTUBER_MEMORY_LIMIT) {
-    YOUTUBER_TOPIC_MEMORY.shift();
-  }
+  AMAZON_TOPIC_MEMORY.push(topic);
+  if (AMAZON_TOPIC_MEMORY.length > MEMORY_LIMIT) AMAZON_TOPIC_MEMORY.shift();
   return topic;
 }
 
+async function fetchSingleAmazonProduct(query) {
+  if (!SERP_KEY) return null;
+  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.organic_results || []).find(x => x.link?.includes("/dp/") || x.link?.includes("/gp/product"));
+}
+
 // ------------------------------------------------------------
-// BUSINESS — LinkedIn SERP
+// BUSINESS — job title + listing
 // ------------------------------------------------------------
+async function generateNextJobTitle(lens, location) {
+  const locationLine = location ? `Geographic context: ${location}` : "";
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Academic lens: ${lens}
+${locationLine}
+
+Generate ONE real AI job title companies are recruiting for.
+`
+    }],
+    temperature: 0.7
+  });
+  return out.choices[0].message.content.trim();
+}
+
 async function fetchSingleLinkedInJob(jobTitle) {
-  if (!SERP_KEY) return null;
-  const q = `${jobTitle} site:linkedin.com/jobs`;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
-  const r = await fetch(url);
-  const j = await r.json();
-  return (j.organic_results || []).find(x => x.link && x.link.includes("linkedin.com/jobs"));
+  if (!SERP_KEY) return null;
+  const q = `${jobTitle} site:linkedin.com/jobs`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.organic_results || []).find(x => x.link?.includes("linkedin.com/jobs"));
 }
 
 // ------------------------------------------------------------
-// 6-month future date label
+// YOUTUBER — normalize single real video
 // ------------------------------------------------------------
-function sixMonthDateLabel() {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 6);
-  return d.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+async function normalizeYouTubeSearchIntent(rawInput) {
+  if (!SERP_KEY || !rawInput) return rawInput;
+
+  const query = `${rawInput} site:youtube.com/watch`;
+
+  try {
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&tbs=qdr:w2&num=20&api_key=${SERP_KEY}`;
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const v = (j.organic_results || []).find(x =>
+      x.link?.includes("watch?v=") &&
+      !/\/@|\/c\/|\/user\/|\/playlist/i.test(x.link)
+    );
+
+    if (!v) return rawInput;
+
+    return {
+      title: v.title.replace(/[-–|].*$/, "").replace(/\(.*?\)/g, "").trim(),
+      link: v.link
+    };
+  } catch {
+    return rawInput;
+  }
 }
 
 // ------------------------------------------------------------
-// BODY GENERATION (Option A applied safely)
+// BODY — AUTO foresight
 // ------------------------------------------------------------
-async function generatePredictionBody(sources, persona, location) {
-  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
-  let personaInstruction = "";
+async function generatePredictionBody(sources, persona) {
+  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
 
-if (persona === "AMAZON") {
-  personaInstruction = `
-You are an AI product-use analyst.
+  const personaInstruction = {
+    AMAZON: "You are an AI product-use analyst.",
+    BUSINESS: "You are an AI labor-market foresight analyst.",
+    MARKETS: "You are an AI market signal analyst."
+  }[persona] || "";
 
-If a geographic context is provided, you MUST:
-- Explain why this forecast is relevant to that location
-- Connect local climate, environment, or lifestyle factors
-  to the product’s usage or demand
-- Do this in one clear sentence early in the analysis
-
-Then continue with broader climate, culture,
-and regulatory reasoning as appropriate.
-
-If no location is provided, write globally.
-`;
-} else if (persona === "BUSINESS") {
-    personaInstruction = `You are an AI labor-market foresight analyst.`;
-  } else if (persona === "MARKETS") {
-    personaInstruction = `You are an AI market signal analyst.`;
-  }
-
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
 ${personaInstruction}
 
 Verified real-world signal:
@@ -402,174 +300,160 @@ START WITH THIS LINE EXACTLY:
 Reality · ${sixMonthDateLabel()}
 
 Write a 6-month foresight.
+EXACTLY 5 short paragraphs.
 
-Rules:
-- EXACTLY 5 short paragraphs
-- Neutral, analytical tone
-- No markdown symbols
-
-Then write this section header exactly:
+Then write:
 If this prediction is correct, what works:
 
-Then write EXACTLY 3 short sentences.
-`
-    }],
-    temperature: 0.3
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-// ------------------------------------------------------------
-// CORE PIPELINE
-// ------------------------------------------------------------
-async function runPipeline(topic, persona, manual) {
-  const lens = pickStanfordLens();
-  let location = null;
-
-  if (manual === true) {
-    location = await extractExplicitLocation(topic);
-  }
-
-  if (persona === "MARKETS") {
-    const theme = await rewriteMarketTheme(topic, lens, location);
-    const signal = await fetchMarketSignal(theme);
-    if (!signal) return { report: "No market signal found." };
-
-    const company = await extractCompanyNameFromTitle(signal.title);
-    MARKETS_ENTITY_MEMORY.push(company);
-    if (MARKETS_ENTITY_MEMORY.length > MARKETS_MEMORY_LIMIT) MARKETS_ENTITY_MEMORY.shift();
-
-    const body = await generatePredictionBody(
-      [{ title: signal.title, source: "Reuters" }],
-      "MARKETS",
-      null
-    );
-
-    return {
-      topic: company,
-      report: `Current Signals\n• ${signal.title} — Google News\n${signal.link}\n\n${body}`
-    };
-  }
-
-  if (persona === "BUSINESS") {
-    const jobTitle = await generateNextJobTitle(lens, location);
-    BUSINESS_ENTITY_MEMORY.push(jobTitle);
-    if (BUSINESS_ENTITY_MEMORY.length > BUSINESS_MEMORY_LIMIT) BUSINESS_ENTITY_MEMORY.shift();
-
-    const job = await fetchSingleLinkedInJob(jobTitle);
-if (!job) return { report: "No hiring signal found." };
-
-const body = await generatePredictionBody(
-  [{ title: jobTitle, source: "LinkedIn" }],
-  "BUSINESS",
-  null
-);
-
-// 🔹 NEW: location-aware LinkedIn URL
-const linkedinUrl = buildLinkedInJobUrl(jobTitle, location, manual);
-
-return {
-  topic: jobTitle,
-  report: `• ${jobTitle} — LinkedIn\n${linkedinUrl}\n\n${body}`
-};
-  }
-
-// ⭐ X — YouTuber persona
-if (persona === "YOUTUBER") {
-
-  // Always resolve ONE real YouTube video
-  const ytSignal = await normalizeYouTubeSearchIntent(
-    manual && topic ? topic : await generateNextYouTuberSignal(lens),
-    location
-  );
-
-  // Hard safety: must be an object with title + link
-  if (!ytSignal || typeof ytSignal !== "object" || !ytSignal.title) {
-    return { report: "No YouTube video found." };
-  }
-
-  // Manual = explain the content itself
-  // Auto = foresight about this content trend
-  const body = manual
-    ? await rewriteYouTubeManualInsight(ytSignal.title)
-    : await generatePredictionBody(
-        [{
-          title: ytSignal.title,
-          source: "YouTube video"
-        }],
-        "YOUTUBER",
-        null
-      );
-
-  // IMPORTANT: title comes ONLY from the video
-  return {
-    topic: ytSignal.title,
-    report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
-  };
-}
-
-  const amazonTopic = await generateNextAmazonTopic(lens, location);
-  const product = await fetchSingleAmazonProduct(amazonTopic);
-  if (!product) return { report: "No product found." };
-
-  const body = await generatePredictionBody(
-    [{ title: product.title, source: "Amazon" }],
-    "AMAZON",
-    location
-  );
-
-  return {
-    topic: product.title,
-    report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
-  };
-}
-  
-// ------------------------------------------------------------
-// YOUTUBER — manual-mode content insight rewrite (NO foresight)
-// ------------------------------------------------------------
-async function rewriteYouTubeManualInsight(videoTitle) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Explain why people are watching this content right now
-and what it reflects about music, culture, or emotion.
-
-Rules:
-- 1–2 short paragraphs
-- Focus on content meaning (not platform, not creators)
-- No future prediction
-- No dates, no headers
-
-Video title:
-"${videoTitle}"
+Then EXACTLY 3 short sentences.
 `
     }],
-    temperature: 0.4
+    temperature: 0.3
   });
 
   return out.choices[0].message.content.trim();
 }
 
 // ------------------------------------------------------------
+// BODY — YOUTUBER manual full report
+// ------------------------------------------------------------
+async function generateYouTubeManualFullReport(videoTitle, lens) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Academic lens: ${lens}
+
+The following YouTube content is a stable signal
+of the present environment.
+
+Video title:
+"${videoTitle}"
+
+START WITH THIS LINE EXACTLY:
+Reality · ${presentDateLabel()}
+
+Write a full analytical report explaining
+what kind of system this content confirms.
+
+Rules:
+- EXACTLY 5 short paragraphs
+- No future tense
+- No prediction language
+- No creators
+- No platform mechanics
+
+Then write:
+If this reading is correct, what works:
+
+Then EXACTLY 3 short sentences.
+`
+    }],
+    temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+// ------------------------------------------------------------
+// CORE PIPELINE
+// ------------------------------------------------------------
+async function runPipeline(topic, persona, manual) {
+  const lens = pickStanfordLens();
+  let location = null;
+
+  if (manual && persona !== "YOUTUBER") {
+    location = await extractExplicitLocation(topic);
+  }
+
+  if (persona === "MARKETS") {
+    const theme = await rewriteMarketTheme(topic, lens, location);
+    const signal = await fetchMarketSignal(theme);
+    if (!signal) return { report: "No market signal found." };
+
+    const company = await extractCompanyNameFromTitle(signal.title);
+    MARKETS_ENTITY_MEMORY.push(company);
+    if (MARKETS_ENTITY_MEMORY.length > MEMORY_LIMIT) MARKETS_ENTITY_MEMORY.shift();
+
+    const body = await generatePredictionBody(
+      [{ title: signal.title, source: "Reuters" }],
+      "MARKETS"
+    );
+
+    return {
+      topic: company,
+      report: `• ${signal.title} — Google News\n${signal.link}\n\n${body}`
+    };
+  }
+
+  if (persona === "BUSINESS") {
+    const jobTitle = await generateNextJobTitle(lens, location);
+    const job = await fetchSingleLinkedInJob(jobTitle);
+    if (!job) return { report: "No hiring signal found." };
+
+    const body = await generatePredictionBody(
+      [{ title: jobTitle, source: "LinkedIn" }],
+      "BUSINESS"
+    );
+
+    return {
+      topic: jobTitle,
+      report: `• ${jobTitle} — LinkedIn\n${buildLinkedInJobUrl(jobTitle, location, manual)}\n\n${body}`
+    };
+  }
+
+  if (persona === "YOUTUBER") {
+    const ytSignal = await normalizeYouTubeSearchIntent(
+      manual ? topic : "youtube trend"
+    );
+
+    if (!ytSignal?.title) return { report: "No YouTube video found." };
+
+    const body = manual
+      ? await generateYouTubeManualFullReport(ytSignal.title, lens)
+      : await generatePredictionBody(
+          [{ title: ytSignal.title, source: "YouTube" }],
+          "YOUTUBER"
+        );
+
+    return {
+      topic: ytSignal.title,
+      report: `• ${ytSignal.title} — YouTube\n${ytSignal.link}\n\n${body}`
+    };
+  }
+
+  const amazonTopic = await generateNextAmazonTopic(lens, location);
+  const product = await fetchSingleAmazonProduct(amazonTopic);
+  if (!product) return { report: "No product found." };
+
+  const body = await generatePredictionBody(
+    [{ title: product.title, source: "Amazon" }],
+    "AMAZON"
+  );
+
+  return {
+    topic: product.title,
+    report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
+  };
+}
+
+// ------------------------------------------------------------
 // ROUTES
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
-  const { topic = "", persona = "BUSINESS", manual = false } = req.body;
-  if (!(await isClearTopic(topic))) return res.json({ report: "Invalid topic." });
-  res.json(await runPipeline(topic, persona, manual));
+  const { topic = "", persona = "BUSINESS", manual = false } = req.body;
+  if (!(await isClearTopic(topic))) return res.json({ report: "Invalid topic." });
+  res.json(await runPipeline(topic, persona, manual));
 });
 
 app.post("/next", async (req, res) => {
-  const persona = req.body.persona || "BUSINESS";
-  const seed = persona === "MARKETS" ? "AI infrastructure" : "";
-  res.json(await runPipeline(seed, persona, false));
+  const persona = req.body.persona || "BUSINESS";
+  const seed = persona === "MARKETS" ? "AI infrastructure" : "";
+  res.json(await runPipeline(seed, persona, false));
 });
 
 // ------------------------------------------------------------
 app.listen(process.env.PORT || 3000, () =>
-  console.log("🌊 Blue Ocean Browser running")
+  console.log("🌊 Blue Ocean Browser running")
 );
-
