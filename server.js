@@ -33,27 +33,6 @@ function buildLinkedInJobUrl(jobTitle, location, manual) {
   return base + params.toString();
 }
 
-function lensToStanfordLink(lens) {
-  const MAP = {
-    "Psychology": "https://psychology.stanford.edu/",
-    "Sociology": "https://sociology.stanford.edu/",
-    "Economics": "https://economics.stanford.edu/",
-    "Communication": "https://comm.stanford.edu/",
-    "Design": "https://dschool.stanford.edu/",
-    "Political Science": "https://politicalscience.stanford.edu/",
-    "International Relations": "https://fsi.stanford.edu/",
-    "Statistics": "https://statistics.stanford.edu/",
-    "Computer Science": "https://cs.stanford.edu/",
-    "Law": "https://law.stanford.edu/",
-    "Education": "https://ed.stanford.edu/",
-    "Biology": "https://biology.stanford.edu/",
-    "Environmental Science": "https://woods.stanford.edu/",
-    "Philosophy": "https://philosophy.stanford.edu/"
-  };
-
-  return MAP[lens] || "https://www.stanford.edu/academics/";
-}
-
 // ------------------------------------------------------------
 // Stanford lenses + no-repeat memory
 // ------------------------------------------------------------
@@ -74,6 +53,29 @@ function pickStanfordLens() {
   return lens;
 }
 
+// 🔹 Stanford lens → Stanford YouTube channel query
+function lensToStanfordYouTubeQuery(lens) {
+  const MAP = {
+    "Psychology": "Stanford University psychology",
+    "Sociology": "Stanford sociology",
+    "Economics": "Stanford economics",
+    "Communication": "Stanford communication",
+    "Design": "Stanford d.school",
+    "Political Science": "Stanford political science",
+    "International Relations": "Stanford FSI",
+    "Statistics": "Stanford statistics",
+    "Computer Science": "Stanford computer science",
+    "Law": "Stanford law",
+    "Education": "Stanford education",
+    "Biology": "Stanford biology",
+    "Environmental Science": "Stanford woods institute",
+    "Philosophy": "Stanford philosophy"
+  };
+
+  return MAP[lens] || "Stanford University";
+}
+
+  
 // ------------------------------------------------------------
 // Entity no-repeat memory
 // ------------------------------------------------------------
@@ -370,7 +372,7 @@ Rules:
 
 Then write:
 If this reading is correct, what works:
-soace
+
 Then EXACTLY 3 short sentences.
 `
     }],
@@ -386,32 +388,26 @@ async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens();
   let location = null;
 
-const universityChannels = [
-  "Stanford University",
-  "MIT",
-  "Harvard University",
-  "UC Berkeley",
-  "Yale University",
-  "Princeton University"
-];
-
   if (persona === "YOUTUBER") {
 
-  const stanfordLink = lensToStanfordLink(lens);
+  const channelQuery = lensToStanfordYouTubeQuery(lens);
+
+  const ytSignal = await normalizeYouTubeSearchIntent(
+    `${channelQuery} site:youtube.com/watch`
+  );
 
   const body = manual
     ? await generateYouTubeManualFullReport(topic, lens)
     : await generatePredictionBody(
-        [{ title: topic, source: "Stanford University" }],
+        [{ title: topic, source: "Stanford University YouTube" }],
         "YOUTUBER"
       );
 
   return {
     topic: topic,
-    report: `• ${lens} perspective — Stanford University\n${stanfordLink}\n\n${body}`
+    report: `• ${lens} perspective — Stanford University (YouTube)\n${ytSignal.link}\n\n${body}`
   };
 }
-
   if (persona === "BUSINESS") {
     const jobTitle = await generateNextJobTitle(lens, location);
     const job = await fetchSingleLinkedInJob(jobTitle);
