@@ -322,7 +322,15 @@ ${signalText}
 START WITH THIS LINE EXACTLY:
 Reality · ${sixMonthDateLabel()}
 
-Write a 6-month foresight.
+Write a 6-month cultural analysis grounded ONLY in the
+specific YouTube music content named above.
+
+Rules:
+- Treat the title as a pop song, artist, or group
+- Stay focused on pop music and fan culture
+- Explain what THIS song/artist/group signals about pop trends
+- Do NOT generalize to the entire music industry
+- Do NOT discuss unrelated platforms or genres
 EXACTLY 5 short paragraphs.
 
 Then write:
