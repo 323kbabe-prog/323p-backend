@@ -555,20 +555,41 @@ function isRelevantToQuery(query, title) {
 // ROUTES
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
-  const { topic = "", persona = "BUSINESS", manual = false } = req.body;
+  let { topic = "", persona = "BUSINESS", manual = false } = req.body;
 
-  // Only enforce semantic clarity for NON-BUSINESS modes
+  // 🔹 AI topic normalization layer (LOCATION-AWARE)
+  const normalized = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are a query-normalization AI.
+
+Rules:
+- Rewrite the input into a clean, search-ready phrase
+- Preserve original intent
+- Make location explicit if present
+- Do NOT add new topics
+- Output ONE short phrase only
+
+Input:
+"${topic}"
+
+Output:
+`
+    }],
+    temperature: 0
+  });
+
+  topic = normalized.choices[0].message.content.trim();
+
+  // 🔹 Semantic clarity check (unchanged)
   if (persona !== "BUSINESS" && !(await isClearTopic(topic))) {
     return res.json({ report: "Invalid topic." });
   }
 
+  // 🔹 Continue pipeline
   res.json(await runPipeline(topic, persona, manual));
-});
-
-app.post("/next", async (req, res) => {
-  const persona = req.body.persona || "BUSINESS";
-  const seed = persona === "MARKETS" ? "AI infrastructure" : "";
-  res.json(await runPipeline(seed, persona, false));
 });
 
 // ------------------------------------------------------------
