@@ -346,21 +346,6 @@ async function generateYouTubeManualFullReport(videoTitle, lens) {
       content: `
 Academic lens: ${lens}
 
-After the analysis, include a section titled exactly:
-
-University Lens Reference
-
-Ground all analysis strictly in concepts, frameworks,
-and definitions commonly taught or published by
-accredited universities and official academic departments.
-
-Do NOT reference:
-- blogs
-- media commentary
-- creators
-- platforms
-- popular psychology
-
 The reasoning must reflect institutional academic understanding,
 as found on official university (.edu) sources.
 
