@@ -325,6 +325,20 @@ async function generateYouTubeManualFullReport(videoTitle, lens) {
       content: `
 Academic lens: ${lens}
 
+After the analysis, include a section titled exactly:
+
+University Lens Reference
+
+Provide EXACTLY ONE official university (.edu) link
+that explains the core academic concept used in this analysis.
+
+Rules:
+- The link MUST be from an official university domain (.edu)
+- It MUST correspond to the academic lens used
+- It MUST be an explanatory page (department, course, or research overview)
+- Do NOT include multiple links
+- Do NOT include non-university sites
+
 Ground all analysis strictly in concepts, frameworks,
 and definitions commonly taught or published by
 accredited universities and official academic departments.
@@ -346,7 +360,7 @@ Video title:
 "${videoTitle}"
 
 START WITH THIS LINE EXACTLY:
-Reality · ${presentDateLabel()}
+Reality · ${sixMonthDateLabel()}
 
 Write a full analytical report explaining
 what kind of system this content confirms.
