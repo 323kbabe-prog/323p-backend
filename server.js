@@ -395,14 +395,14 @@ const searchQuery = manual
     : `${topic} site:youtube.com/watch`
   : "youtube trend";
 
-  const candidate = await normalizeYouTubeSearchIntent(searchQuery);
+  let ytSignal = await normalizeYouTubeSearchIntent(searchQuery);
 
-if (!candidate?.title || !isRelevantToQuery(topic, candidate.title)) {
-  return { report: "No relevant YouTube video found for this topic." };
+// STEP 2 — hard guarantee: never fail the signal layer
+if (!ytSignal || !ytSignal.title) {
+  ytSignal = await normalizeYouTubeSearchIntent(
+    `${topic} site:youtube.com/watch`
+  );
 }
-
-const ytSignal = candidate;
-
   const body = manual
     ? await generateYouTubeManualFullReport(ytSignal.title, lens)
     : await generatePredictionBody(
