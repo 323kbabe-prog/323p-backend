@@ -392,11 +392,22 @@ async function fetchRealPopEntity() {
   if (!SERP_KEY) return null;
 
   try {
+    const queries = [
+      "2025 pop hit official",
+      "new pop song 2025 official",
+      "trending pop artist 2025",
+      "viral pop music official",
+      "current pop chart song official"
+    ];
+
+    const q = queries[Math.floor(Math.random() * queries.length)];
+
     const url =
       "https://serpapi.com/search.json?" +
       "engine=youtube" +
-      "&search_query=popular pop music official" +
-      "&sp=EgIQAQ%253D%253D" +
+      `&search_query=${encodeURIComponent(q)}` +
+      "&tbs=qdr:m" +        // 🔑 last month
+      "&num=10" +
       `&api_key=${SERP_KEY}`;
 
     const r = await fetch(url);
