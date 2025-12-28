@@ -325,12 +325,15 @@ Reality · ${sixMonthDateLabel()}
 Write a 6-month cultural analysis grounded ONLY in the
 specific YouTube music content named above.
 
+
+
 Rules:
-- Treat the title as a pop song, artist, or group
+- refer the title to a real pop song, artist, or group
 - Stay focused on pop music and fan culture
 - Explain what THIS song/artist/group signals about pop trends
 - Do NOT generalize to the entire music industry
 - Do NOT discuss unrelated platforms or genres
+=
 EXACTLY 5 short paragraphs.
 
 Then write:
@@ -390,6 +393,34 @@ Leave ONE blank line, then write EXACTLY 3 short sentences.
 
   return out.choices[0].message.content.trim();
 }
+
+async function fetchRealPopEntity() {
+  if (!SERP_KEY) return null;
+
+  try {
+    const url =
+      "https://serpapi.com/search.json?" +
+      "engine=youtube" +
+      "&search_query=popular pop music official" +
+      "&sp=EgIQAQ%253D%253D" +
+      `&api_key=${SERP_KEY}`;
+
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const v = (j.video_results || []).find(x => x.title);
+
+    if (!v) return null;
+
+    return v.title
+      .replace(/\(.*?\)/g, "")
+      .replace(/official|mv|music video|lyrics/gi, "")
+      .trim();
+
+  } catch {
+    return null;
+  }
+}
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
@@ -405,18 +436,54 @@ async function runPipeline(topic, persona, manual) {
     `${channelQuery} site:youtube.com/watch`
   );
 
-  const body = manual
-    ? await generateYouTubeManualFullReport(topic, lens)
-    : await generatePredictionBody(
-        [{ title: topic, source: "Stanford University YouTube" }],
-        "YOUTUBER"
-      );
+  const popContext = await fetchRealPopEntity();
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Stanford academic lens: ${lens}
+
+Primary analysis subject (do NOT rename):
+"${topic}"
+
+Real pop culture reference for context:
+"${popContext || "current mainstream pop music"}"
+
+Write a 6-month cultural analysis grounded ONLY in the
+specific YouTube music content named above.
+
+Rules:
+- Treat the title as the primary subject
+- Use the real pop song/artist/group ONLY as a comparative reference
+- Stay focused on pop music and fan culture
+- Explain how the real pop reference helps interpret the title
+- Do NOT rename the title
+- Do NOT generalize to the entire music industry
+- Do NOT discuss unrelated platforms or genres
+- EXACTLY 5 short paragraphs
+
+Then write:
+If this reading is correct, what works:
+
+Then EXACTLY 3 short sentences.
+`
+    }],
+    temperature: 0.3
+  });
+
+  const body = completion.choices[0].message.content;
 
   return {
     topic: topic,
-    report: `• ${lens} perspective — Stanford University (YouTube)\n${ytSignal.link}\n\n${body}`
+    report:
+      `• ${lens} perspective — Stanford University (YouTube)\n` +
+      `${ytSignal?.link || "No link found"}\n\n` +
+      body
   };
 }
+
   if (persona === "BUSINESS") {
     const jobTitle = await generateNextJobTitle(lens, location);
     const job = await fetchSingleLinkedInJob(jobTitle);
