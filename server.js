@@ -470,20 +470,30 @@ async function isValidEntityForPersona(query, persona) {
 async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens(); // ✅ declare ONCE
 
-  // 🔑 SERP-backed reality gate
-  const isValid = await isValidEntityForPersona(topic, persona);
+  // 🔑 SERP-backed reality gate (MANUAL-FIRST)
+const isValid = await isValidEntityForPersona(topic, persona);
 
-  if (!isValid) {
-    if (persona === "YOUTUBER") {
-      topic = await fetchRealPopEntity();
-    } else if (persona === "MARKETS") {
-      topic = "AI infrastructure";
-    } else if (persona === "AMAZON") {
-      topic = await generateNextAmazonTopic(lens);
-    } else if (persona === "BUSINESS") {
-      topic = await generateNextJobTitle(lens);
-    }
+if (!isValid) {
+
+  // ✅ MANUAL MODE: reject for ALL personas
+  if (manual) {
+    return { guard: "fallback" };
   }
+
+  // ✅ AUTO MODE: system generates by persona
+  if (persona === "YOUTUBER") {
+    topic = await fetchRealPopEntity();
+
+  } else if (persona === "MARKETS") {
+    topic = "AI infrastructure";
+
+  } else if (persona === "AMAZON") {
+    topic = await generateNextAmazonTopic(lens);
+
+  } else if (persona === "BUSINESS") {
+    topic = await generateNextJobTitle(lens);
+  }
+}
 
   // ⬇️ everything below stays the same
   
