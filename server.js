@@ -478,9 +478,8 @@ function getFallbackHint(persona) {
 // CORE PIPELINE
 // ------------------------------------------------------------
 async function runPipeline(topic, persona, manual) {
-  const lens = pickStanfordLens(); // ✅ declare ONCE
+  const lens = pickStanfordLens();
 
-  // 🔑 SERP-backed reality gate
   const isValid = await isValidEntityForPersona(topic, persona);
 
   let guard = "ok";
@@ -490,17 +489,79 @@ async function runPipeline(topic, persona, manual) {
     guard = "fallback";
     fallbackHint = getFallbackHint(persona);
 
-    // existing auto systems (unchanged)
-    if (persona === "YOUTUBER")  topic = await fetchRealPopEntity();
-    if (persona === "MARKETS")   topic = "AI infrastructure";
-    if (persona === "AMAZON")    topic = await generateNextAmazonTopic(lens);
-    if (persona === "BUSINESS")  topic = await generateNextJobTitle(lens);
+    // AUTO MODE ONLY → substitute
+    if (!manual) {
+      if (persona === "BUSINESS") {
+        topic = await generateNextJobTitle(lens);
+      } else if (persona === "AMAZON") {
+        topic = await generateNextAmazonTopic(lens);
+      } else if (persona === "MARKETS") {
+        topic = "AI infrastructure";
+      } else if (persona === "YOUTUBER") {
+        topic = await fetchRealPopEntity();
+      }
+    }
+    // MANUAL MODE → do nothing (frontend rewrite)
   }
+
+  // =========================
+  // PERSONA PIPELINES
+  // =========================
+
+  if (persona === "BUSINESS") {
+    const location = await extractExplicitLocation(topic);
+    const jobTitle = await generateNextJobTitle(lens, location);
+    const job = await fetchSingleLinkedInJob(jobTitle);
+
+    if (!job) {
+      return { guard, fallbackHint, topic, report: "No hiring signal found." };
+    }
+
+    const body = await generatePredictionBody(
+      [{ title: jobTitle, source: "LinkedIn" }],
+      "BUSINESS"
+    );
+
+    return {
+      guard,
+      fallbackHint,
+      topic: jobTitle,
+      report: `• ${jobTitle} — LinkedIn\n${buildLinkedInJobUrl(jobTitle, location, manual)}\n\n${body}`
+    };
+  }
+
+  if (persona === "YOUTUBER") {
+    const channelQuery = lensToStanfordYouTubeQuery(lens);
+    const ytSignal = await normalizeYouTubeSearchIntent(
+      `${channelQuery} site:youtube.com/watch`
+    );
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: `...` }],
+      temperature: 0.3
+    });
+
+    return {
+      guard,
+      fallbackHint,
+      topic,
+      report: `• ${lens} perspective — Stanford University (YouTube)\n${ytSignal?.link || ""}\n\n${completion.choices[0].message.content}`
+    };
+  }
+
+  if (persona === "MARKETS") {
+    ...
+  }
+
+  if (persona === "AMAZON") {
+    ...
+  }
+}
 
   // ⬇️ EVERYTHING BELOW STAYS EXACTLY AS YOU WROTE IT
   
   
-
   let location = null;
 
   // ✅ LOCATION-AWARE for BUSINESS (LinkedIn)
