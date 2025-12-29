@@ -427,11 +427,67 @@ async function fetchRealPopEntity() {
   }
 }
 // ------------------------------------------------------------
+// SERP REALITY CHECK — persona aware
+// ------------------------------------------------------------
+async function isValidEntityForPersona(query, persona) {
+  if (!SERP_KEY || !query) return false;
+
+  let url;
+
+  switch (persona) {
+    case "YOUTUBER":
+      url = `https://serpapi.com/search.json?engine=youtube&search_query=${encodeURIComponent(query)}&num=5&api_key=${SERP_KEY}`;
+      break;
+
+    case "MARKETS":
+      url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(query)}&num=5&api_key=${SERP_KEY}`;
+      break;
+
+    case "AMAZON":
+      url = `https://serpapi.com/search.json?q=${encodeURIComponent(query + " site:amazon.com")}&num=5&api_key=${SERP_KEY}`;
+      break;
+
+    case "BUSINESS":
+      url = `https://serpapi.com/search.json?q=${encodeURIComponent(query + " site:linkedin.com/jobs")}&num=5&api_key=${SERP_KEY}`;
+      break;
+
+    default:
+      return false;
+  }
+
+  const r = await fetch(url);
+  const j = await r.json();
+
+  return Boolean(
+    (j.video_results && j.video_results.length) ||
+    (j.news_results && j.news_results.length) ||
+    (j.organic_results && j.organic_results.length)
+  );
+}
+// ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
-
 async function runPipeline(topic, persona, manual) {
-  const lens = pickStanfordLens();
+  const lens = pickStanfordLens(); // ✅ declare ONCE
+
+  // 🔑 SERP-backed reality gate
+  const isValid = await isValidEntityForPersona(topic, persona);
+
+  if (!isValid) {
+    if (persona === "YOUTUBER") {
+      topic = await fetchRealPopEntity();
+    } else if (persona === "MARKETS") {
+      topic = "AI infrastructure";
+    } else if (persona === "AMAZON") {
+      topic = await generateNextAmazonTopic(lens);
+    } else if (persona === "BUSINESS") {
+      topic = await generateNextJobTitle(lens);
+    }
+  }
+
+  // ⬇️ everything below stays the same
+  
+  
 
   let location = null;
 
@@ -448,7 +504,7 @@ async function runPipeline(topic, persona, manual) {
     `${channelQuery} site:youtube.com/watch`
   );
 
-  const popContext = await fetchRealPopEntity();
+  const popContext = topic;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
