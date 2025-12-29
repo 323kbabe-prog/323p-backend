@@ -464,6 +464,16 @@ async function isValidEntityForPersona(query, persona) {
     (j.organic_results && j.organic_results.length)
   );
 }
+
+function getFallbackHint(persona) {
+  switch (persona) {
+    case "MARKETS":  return "real company or market signal";
+    case "AMAZON":   return "cosmetics or beauty product";
+    case "BUSINESS": return "real job role or company";
+    case "YOUTUBER": return "pop song artist or group";
+    default:         return "something relevant";
+  }
+}
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
@@ -473,19 +483,21 @@ async function runPipeline(topic, persona, manual) {
   // 🔑 SERP-backed reality gate
   const isValid = await isValidEntityForPersona(topic, persona);
 
+  let guard = "ok";
+  let fallbackHint = null;
+
   if (!isValid) {
-    if (persona === "YOUTUBER") {
-      topic = await fetchRealPopEntity();
-    } else if (persona === "MARKETS") {
-      topic = "AI infrastructure";
-    } else if (persona === "AMAZON") {
-      topic = await generateNextAmazonTopic(lens);
-    } else if (persona === "BUSINESS") {
-      topic = await generateNextJobTitle(lens);
-    }
+    guard = "fallback";
+    fallbackHint = getFallbackHint(persona);
+
+    // existing auto systems (unchanged)
+    if (persona === "YOUTUBER")  topic = await fetchRealPopEntity();
+    if (persona === "MARKETS")   topic = "AI infrastructure";
+    if (persona === "AMAZON")    topic = await generateNextAmazonTopic(lens);
+    if (persona === "BUSINESS")  topic = await generateNextJobTitle(lens);
   }
 
-  // ⬇️ everything below stays the same
+  // ⬇️ EVERYTHING BELOW STAYS EXACTLY AS YOU WROTE IT
   
   
 
@@ -545,18 +557,27 @@ Then EXACTLY 3 short sentences.
   const body = completion.choices[0].message.content;
 
   return {
-    topic: topic,
-    report:
-      `• ${lens} perspective — Stanford University (YouTube)\n` +
-      `${ytSignal?.link || "No link found"}\n\n` +
-      body
-  };
+  guard,
+  fallbackHint,
+  topic: topic,
+  report:
+    `• ${lens} perspective — Stanford University (YouTube)\n` +
+    `${ytSignal?.link || "No link found"}\n\n` +
+    body
+};
 }
 
   if (persona === "BUSINESS") {
     const jobTitle = await generateNextJobTitle(lens, location);
     const job = await fetchSingleLinkedInJob(jobTitle);
-    if (!job) return { report: "No hiring signal found." };
+    if (!job) {
+  return {
+    guard,
+    fallbackHint,
+    topic,
+    report: "No hiring signal found."
+  };
+}
 
     const body = await generatePredictionBody(
       [{ title: jobTitle, source: "LinkedIn" }],
@@ -564,15 +585,24 @@ Then EXACTLY 3 short sentences.
     );
 
     return {
-      topic: jobTitle,
-      report: `• ${jobTitle} — LinkedIn\n${buildLinkedInJobUrl(jobTitle, location, manual)}\n\n${body}`
-    };
+  guard,
+  fallbackHint,
+  topic: jobTitle,
+  report: `• ${jobTitle} — LinkedIn\n${buildLinkedInJobUrl(jobTitle, location, manual)}\n\n${body}`
+};
   }
 
 if (persona === "MARKETS") {
   const theme = await rewriteMarketTheme(topic, lens, location);
   const signal = await fetchMarketSignal(theme);
-  if (!signal) return { report: "No market signal found." };
+  if (!signal) {
+  return {
+    guard,
+    fallbackHint,
+    topic,
+    report: "No market signal found."
+  };
+}
 
   const company = await extractCompanyNameFromTitle(signal.title);
   MARKETS_ENTITY_MEMORY.push(company);
@@ -586,24 +616,35 @@ if (persona === "MARKETS") {
   );
 
   return {
-    topic: company,
-    report: `• ${signal.title} — Google News\n${signal.link}\n\n${body}`
-  };
+  guard,
+  fallbackHint,
+  topic: company,
+  report: `• ${signal.title} — Google News\n${signal.link}\n\n${body}`
+};
 }
 
   const amazonTopic = await generateNextAmazonTopic(lens, location);
   const product = await fetchSingleAmazonProduct(amazonTopic);
-  if (!product) return { report: "No product found." };
+ if (!product) {
+  return {
+    guard,
+    fallbackHint,
+    topic,
+    report: "No product found."
+  };
+}
 
   const body = await generatePredictionBody(
     [{ title: product.title, source: "Amazon" }],
     "AMAZON"
   );
 
-  return {
-    topic: product.title,
-    report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
-  };
+ return {
+  guard,
+  fallbackHint,
+  topic: product.title,
+  report: `• ${product.title} — Amazon\n${product.link}\n\n${body}`
+};
 }
 
 function isRelevantToQuery(query, title) {
