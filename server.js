@@ -600,6 +600,29 @@ Output:
 });
 
 // ------------------------------------------------------------
+// AUTO MODE — NEXT
+// ------------------------------------------------------------
+app.post("/next", async (req, res) => {
+  try {
+    const persona = req.body.persona || "BUSINESS";
+
+    // Seed is intentionally light — pipeline decides content
+    const seed =
+      persona === "MARKETS" ? "AI infrastructure" :
+      persona === "AMAZON"  ? "" :
+      persona === "YOUTUBER"? "" :
+      "";
+
+    const result = await runPipeline(seed, persona, false);
+    res.json(result);
+
+  } catch (e) {
+    console.error("NEXT ERROR:", e);
+    res.status(500).json({ report: "Auto mode failed." });
+  }
+});
+
+// ------------------------------------------------------------
 app.listen(process.env.PORT || 3000, () =>
   console.log("🌊 Blue Ocean Browser running")
 );
