@@ -720,6 +720,8 @@ app.post("/next", async (req, res) => {
 });
 
 // ------------------------------------------------------------
-app.listen(process.env.PORT || 3000, () =>
-  console.log("🌊 Blue Ocean Browser running")
-);
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("🌊 Blue Ocean Browser running on port", PORT);
+});
