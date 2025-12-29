@@ -719,6 +719,10 @@ app.post("/next", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.status(200).send("Blue Ocean Browser backend is running.");
+});
+
 // ------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 
