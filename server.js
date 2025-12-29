@@ -470,6 +470,48 @@ async function isValidEntityForPersona(query, persona) {
 async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens(); // ✅ declare ONCE
 
+// ✅ MANUAL MODE HARD GUARD (intent-level, ALL SECTIONS)
+if (manual) {
+
+  const intentRules = {
+    BUSINESS: () => {
+      const looksLikeJob =
+        /\b(engineer|developer|designer|scientist|manager|analyst|specialist|director|lead|consultant|intern)\b/i
+          .test(topic);
+
+      const looksLikeCompany =
+        topic.split(" ").length <= 3 && topic[0] === topic[0].toUpperCase();
+
+      return looksLikeJob || looksLikeCompany;
+    },
+
+    AMAZON: () => {
+      // product / beauty / cosmetic intent
+      return /\b(beauty|cosmetic|skincare|makeup|lipstick|foundation|serum|cream|lotion|cleanser|perfume|shampoo|conditioner)\b/i
+        .test(topic);
+    },
+
+    YOUTUBER: () => {
+      // song / artist / group intent
+      return /\b(song|music|artist|band|group|album|single|track)\b/i
+        .test(topic);
+    },
+
+    MARKETS: () => {
+      // market / company / sector intent
+      return /\b(market|stock|company|industry|sector|economy|inflation|rates|ai)\b/i
+        .test(topic);
+    }
+  };
+
+  const isIntentValid =
+    intentRules[persona] ? intentRules[persona]() : true;
+
+  if (!isIntentValid) {
+    return { guard: "fallback" };
+  }
+}
+
   // 🔑 SERP-backed reality gate (MANUAL-FIRST)
 const isValid = await isValidEntityForPersona(topic, persona);
 
@@ -563,21 +605,30 @@ Then EXACTLY 3 short sentences.
   };
 }
 
-  if (persona === "BUSINESS") {
-    const jobTitle = await generateNextJobTitle(lens, location);
-    const job = await fetchSingleLinkedInJob(jobTitle);
-    if (!job) return { report: "No hiring signal found." };
+if (persona === "BUSINESS") {
+  const jobTitle = manual
+    ? topic
+    : await generateNextJobTitle(lens, location);
 
-    const body = await generatePredictionBody(
-      [{ title: jobTitle, source: "LinkedIn" }],
-      "BUSINESS"
-    );
-
-    return {
-      topic: jobTitle,
-      report: `• ${jobTitle} — LinkedIn\n${buildLinkedInJobUrl(jobTitle, location, manual)}\n\n${body}`
-    };
+  const job = await fetchSingleLinkedInJob(jobTitle);
+  if (!job) {
+    return { guard: "fallback" };
   }
+
+  const body = await generatePredictionBody(
+    [{ title: jobTitle, source: "LinkedIn" }],
+    "BUSINESS"
+  );
+
+  return {
+    topic: jobTitle,
+    report:
+      `• ${jobTitle} — LinkedIn\n` +
+      `${buildLinkedInJobUrl(jobTitle, location, manual)}\n\n` +
+      body
+  };
+}
+
 
 if (persona === "MARKETS") {
   const theme = await rewriteMarketTheme(topic, lens, location);
