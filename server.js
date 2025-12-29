@@ -475,15 +475,16 @@ if (manual) {
 
   const intentRules = {
     BUSINESS: () => {
-      const looksLikeJob =
-        /\b(engineer|developer|designer|scientist|manager|analyst|specialist|director|lead|consultant|intern)\b/i
-          .test(topic);
+  const looksLikeJob =
+    /\b(engineer|developer|designer|scientist|manager|analyst|specialist|director|lead|consultant|intern)\b/i
+      .test(topic);
 
-      const looksLikeCompany =
-        topic.split(" ").length <= 3 && topic[0] === topic[0].toUpperCase();
+  const looksLikeCompany =
+    /^[A-Z][a-zA-Z0-9&.\- ]{1,40}$/.test(topic) &&
+    !/\b(for sale|sale|buy|shop|deal|offer)\b/i.test(topic);
 
-      return looksLikeJob || looksLikeCompany;
-    },
+  return looksLikeJob || looksLikeCompany;
+},
 
     AMAZON: () => {
       // product / beauty / cosmetic intent
