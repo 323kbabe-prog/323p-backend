@@ -543,13 +543,16 @@ if (manual) {
   // 🔑 SERP-backed reality gate (MANUAL-FIRST)
 const isValid = await isValidEntityForPersona(topic, persona);
 
-// 🔒 HARD GUARD — SERP + intent must BOTH pass
-if (!isValid || !intentMatchesPersona(topic, persona)) {
+// 🔒 HARD GUARD — DOMAIN ONLY
+if (!isValid) {
   return {
     guard: "fallback",
     message: GUARD_COPY[persona]
   };
 }
+
+// ⚠️ Intent mismatch → allow frontend STRONG ARM
+// (DO NOTHING here)
 
   // ⬇️ everything below stays the same
   
