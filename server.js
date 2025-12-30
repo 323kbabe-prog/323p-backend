@@ -543,12 +543,12 @@ if (manual) {
   // 🔑 SERP-backed reality gate (MANUAL-FIRST)
 const isValid = await isValidEntityForPersona(topic, persona);
 
-// 🔒 HARD GUARD — SERP + intent must BOTH pass
-if (!isValid || !intentMatchesPersona(topic, persona)) {
-  return {
-    guard: "fallback",
-    message: GUARD_COPY[persona]
-  };
+// 🔒 HARD GUARD — MANUAL MODE ONLY
+if (manual && (!isValid || !intentMatchesPersona(topic, persona))) {
+  return {
+    guard: "fallback",
+    message: GUARD_COPY[persona]
+  };
 }
 
   // ⬇️ everything below stays the same
