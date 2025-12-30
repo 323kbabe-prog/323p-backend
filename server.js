@@ -500,6 +500,26 @@ Then EXACTLY 3 short sentences.
   return out.choices[0].message.content.trim();
 }
 
+function intentMatchesPersona(query, persona) {
+  const q = query.toLowerCase();
+
+  const RULES = {
+    BUSINESS: /\b(job|role|position|engineer|developer|manager|analyst|company|corp|inc|ltd)\b/,
+    AMAZON: /\b(cosmetic|beauty|skincare|makeup|mascara|lipstick|foundation|serum|cream)\b/,
+    MARKETS: /\b(ai|market|finance|stock|economy|investment|rates|company)\b/,
+    YOUTUBER: /\b(song|music|artist|band|group|album|single|track)\b/
+  };
+
+  return RULES[persona]?.test(q);
+}
+
+const GUARD_COPY = {
+  BUSINESS: "I don’t want this. I realize I should search for a job or a company.",
+  AMAZON: "I don’t want this. I realize I should search for a cosmetic or a beauty product.",
+  MARKETS: "I don’t want this. I realize I should search for a market or a company.",
+  YOUTUBER: "I don’t want this. I realize I should search for a song, an artist, or a group."
+};
+
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
@@ -523,26 +543,12 @@ if (manual) {
   // 🔑 SERP-backed reality gate (MANUAL-FIRST)
 const isValid = await isValidEntityForPersona(topic, persona);
 
-if (!isValid) {
-
-  // ✅ MANUAL MODE: reject for ALL personas
-  if (manual) {
-    return { guard: "fallback" };
-  }
-
-  // ✅ AUTO MODE: system generates by persona
-  if (persona === "YOUTUBER") {
-    topic = await fetchRealPopEntity();
-
-  } else if (persona === "MARKETS") {
-    topic = "AI infrastructure";
-
-  } else if (persona === "AMAZON") {
-    topic = await generateNextAmazonTopic(lens);
-
-  } else if (persona === "BUSINESS") {
-    topic = await generateNextJobTitle(lens);
-  }
+// 🔒 HARD GUARD — SERP + intent must BOTH pass
+if (!isValid || !intentMatchesPersona(topic, persona)) {
+  return {
+    guard: "fallback",
+    message: GUARD_COPY[persona]
+  };
 }
 
   // ⬇️ everything below stays the same
