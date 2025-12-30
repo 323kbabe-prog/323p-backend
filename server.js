@@ -465,6 +465,41 @@ async function isValidEntityForPersona(query, persona) {
     (j.organic_results && j.organic_results.length)
   );
 }
+
+async function generateBusinessPrediction(jobTitle) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are a labor-market foresight analyst.
+
+The hiring signal comes from this company or role:
+"${jobTitle}"
+
+START WITH THIS LINE EXACTLY:
+Labor Market Signal — LinkedIn
+Reality · ${sixMonthDateLabel()}
+
+Rules:
+- The company or role above is the ONLY subject
+- Do NOT mention any AI engine, system, product, or framework
+- Do NOT reference Stanford or foresight models
+- Do NOT generalize beyond this single employer or role
+- EXACTLY 5 short paragraphs
+
+Then write:
+If this prediction is correct, what works:
+
+Then EXACTLY 3 short sentences.
+`
+    }],
+    temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
@@ -593,10 +628,7 @@ if (persona === "BUSINESS") {
     return { guard: "fallback" };
   }
 
-  const body = await generatePredictionBody(
-    [{ title: jobTitle, source: "LinkedIn" }],
-    "BUSINESS"
-  );
+  const body = await generateBusinessPrediction(jobTitle);
 
   return {
     topic: jobTitle,
