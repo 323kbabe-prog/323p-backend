@@ -640,14 +640,19 @@ async function runMarketsEngine({
 //////////////////////////////////////////////////////////////
 // CHUNK-4B — HELPERS REGISTRY (CRITICAL)
 // Single dependency injection object
+// THIS FIXES AUTO MODE FAILURE
 //////////////////////////////////////////////////////////////
 
 const helpers = {
-  // core
+  // --------------------------------------------------------
+  // Core runtime
+  // --------------------------------------------------------
   openai,
   fetch,
 
-  // utilities
+  // --------------------------------------------------------
+  // Utilities
+  // --------------------------------------------------------
   buildLinkedInJobUrl,
   sixMonthDateLabel,
   presentDateLabel,
@@ -657,10 +662,14 @@ const helpers = {
   intentMatchesPersona,
   isRelevantToQuery,
 
-  // guards
+  // --------------------------------------------------------
+  // Guards
+  // --------------------------------------------------------
   GUARD_COPY,
 
-  // SERP + extraction
+  // --------------------------------------------------------
+  // SERP + extraction helpers
+  // --------------------------------------------------------
   extractExplicitLocation,
   rewriteMarketTheme,
   fetchMarketSignal,
@@ -669,12 +678,17 @@ const helpers = {
   fetchSingleLinkedInJob,
   isValidEntityForPersona,
 
-  // generators
+  // --------------------------------------------------------
+  // Generators (🔥 AUTO MODE DEPENDS ON THESE)
+  // --------------------------------------------------------
   generatePredictionBody,
   generateBusinessPrediction,
+  generateNextJobTitle,        // ✅ REQUIRED — FIXES AUTO MODE
   normalizeYouTubeSearchIntent,
 
-  // engines
+  // --------------------------------------------------------
+  // Persona engines
+  // --------------------------------------------------------
   runYouTuberEngine,
   runAmazonEngine,
   runBusinessEngine,
