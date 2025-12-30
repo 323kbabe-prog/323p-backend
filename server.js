@@ -231,11 +231,19 @@ Avoid: ${avoid}
 
 async function fetchSingleAmazonProduct(query) {
   if (!SERP_KEY) return null;
+
   const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=10&api_key=${SERP_KEY}`;
+
   const r = await fetch(url);
   const j = await r.json();
-  return (j.organic_results || []).find(x => x.link?.includes("/dp/") || x.link?.includes("/gp/product"));
+
+  // 🔒 HARD CATEGORY FILTER — beauty & cosmetics ONLY
+  return (j.organic_results || []).find(item => {
+    const text = ((item.title || "") + " " + (item.snippet || "")).toLowerCase();
+
+    return /beauty|skincare|cosmetic|makeup|face mask|serum|cream|lotion|cleanser/.test(text);
+  }) || null;
 }
 
 // ------------------------------------------------------------
@@ -543,16 +551,13 @@ if (manual) {
   // 🔑 SERP-backed reality gate (MANUAL-FIRST)
 const isValid = await isValidEntityForPersona(topic, persona);
 
-// 🔒 HARD GUARD — DOMAIN ONLY
-if (!isValid) {
+//// 🔒 HARD GUARD — MANUAL MODE ONLY
+if (manual && (!isValid || !intentMatchesPersona(topic, persona))) {
   return {
     guard: "fallback",
     message: GUARD_COPY[persona]
   };
 }
-
-// ⚠️ Intent mismatch → allow frontend STRONG ARM
-// (DO NOTHING here)
 
   // ⬇️ everything below stays the same
   
