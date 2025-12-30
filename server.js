@@ -683,8 +683,8 @@ const helpers = {
 
 //////////////////////////////////////////////////////////////
 // CHUNK-5 — PIPELINE ORCHESTRATOR
-// Decides flow. Enforces guards. Dispatches persona engines.
-// No I/O. No Express. No prompts.
+// Decides flow. Enforces guards ONLY in manual mode.
+// Auto mode = GPT leads, SERP follows (original behavior).
 //////////////////////////////////////////////////////////////
 
 async function runPipeline({
@@ -699,11 +699,14 @@ async function runPipeline({
     pickStanfordLens,
     extractExplicitLocation,
 
-    // guards
+    // SERP + guards
     isValidEntityForPersona,
     isLikelyArtistOrGroupName,
     intentMatchesPersona,
     GUARD_COPY,
+
+    // generators
+    generateNextJobTitle,
 
     // persona engines
     runYouTuberEngine,
@@ -723,10 +726,54 @@ async function runPipeline({
   }
 
   /* --------------------------------------------------------
-     SERP REALITY CHECK
-     - YOUTUBER uses rawTopic
-     - Others use normalized topic
+     AUTO MODE = NO GUARDS, NO SERP BLOCKS
+     (THIS IS THE ORIGINAL BEHAVIOR)
   -------------------------------------------------------- */
+  if (!manual) {
+    switch (persona) {
+
+      case "YOUTUBER":
+        return await runYouTuberEngine({
+          topic,
+          lens,
+          helpers
+        });
+
+      case "AMAZON":
+        return await runAmazonEngine({
+          topic,
+          helpers
+        });
+
+      case "BUSINESS": {
+        // 🔑 GPT generates the job title in AUTO mode
+        const jobTitle = await generateNextJobTitle(lens, location);
+
+        return await runBusinessEngine({
+          topic: jobTitle,
+          location,
+          helpers
+        });
+      }
+
+      case "MARKETS":
+        return await runMarketsEngine({
+          topic,
+          lens,
+          location,
+          helpers
+        });
+
+      default:
+        return { report: "Unknown persona." };
+    }
+  }
+
+  /* --------------------------------------------------------
+     MANUAL MODE = HARD LAW (STRICT)
+  -------------------------------------------------------- */
+
+  // SERP reality check
   const serpQuery =
     persona === "YOUTUBER" ? rawTopic : topic;
 
@@ -735,34 +782,27 @@ async function runPipeline({
     persona
   );
 
-  /* --------------------------------------------------------
-     MANUAL MODE — HARD LAW
-  -------------------------------------------------------- */
-  if (manual) {
-
-    // 🔒 YOUTUBER — ARTIST / GROUP ONLY
-    if (persona === "YOUTUBER") {
-      if (!isValid || !isLikelyArtistOrGroupName(rawTopic)) {
-        return {
-          guard: "fallback",
-          message: GUARD_COPY.YOUTUBER
-        };
-      }
+  // 🔒 YOUTUBER — ARTIST / GROUP ONLY
+  if (persona === "YOUTUBER") {
+    if (!isValid || !isLikelyArtistOrGroupName(rawTopic)) {
+      return {
+        guard: "fallback",
+        message: GUARD_COPY.YOUTUBER
+      };
     }
-
-    // 🔒 ALL OTHER PERSONAS
-    else {
-      if (!isValid || !intentMatchesPersona(topic, persona)) {
-        return {
-          guard: "fallback",
-          message: GUARD_COPY[persona]
-        };
-      }
+  }
+  // 🔒 ALL OTHER PERSONAS
+  else {
+    if (!isValid || !intentMatchesPersona(topic, persona)) {
+      return {
+        guard: "fallback",
+        message: GUARD_COPY[persona]
+      };
     }
   }
 
   /* --------------------------------------------------------
-     PERSONA DISPATCH
+     MANUAL MODE DISPATCH
   -------------------------------------------------------- */
   switch (persona) {
 
@@ -795,9 +835,7 @@ async function runPipeline({
       });
 
     default:
-      return {
-        report: "Unknown persona."
-      };
+      return { report: "Unknown persona." };
   }
 }
 
