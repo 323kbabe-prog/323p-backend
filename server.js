@@ -507,9 +507,25 @@ function intentMatchesPersona(query, persona) {
     BUSINESS: /\b(job|role|position|engineer|developer|manager|analyst|company|corp|inc|ltd)\b/,
     AMAZON: /\b(cosmetic|beauty|skincare|makeup|mascara|lipstick|foundation|serum|cream)\b/,
     MARKETS: /\b(ai|market|finance|stock|economy|investment|rates|company)\b/,
+    
   };
 
   return RULES[persona];
+}
+
+function isLikelyArtistOrGroupName(query) {
+  if (!query) return false;
+
+  const q = query.trim();
+
+  // ❌ block generic music concepts
+  if (/\b(music|songs|genre|playlist|beats|mix|album|lyrics)\b/i.test(q)) {
+    return false;
+  }
+
+  // ✅ allow artist / group name shapes
+  // Examples: BLACKPINK, Backstreet Boys, BTS, Ariana Grande
+  return /^[A-Za-z0-9][A-Za-z0-9\s&.-]{1,40}$/.test(q);
 }
 
 const GUARD_COPY = {
@@ -540,20 +556,21 @@ if (manual) {
 }
 
   // 🔑 SERP-backed reality gate (MANUAL-FIRST)
+// 🔑 SERP-backed reality gate
 const isValid = await isValidEntityForPersona(topic, persona);
 
 // 🔒 MANUAL HARD GUARD
-// YOUTUBER: SERP ONLY
-// OTHERS: SERP + intent
 if (manual) {
   if (persona === "YOUTUBER") {
-    if (!isValid) {
+    // ✅ YOUTUBER = artist / group name ONLY
+    if (!isValid || !isLikelyArtistOrGroupName(topic)) {
       return {
         guard: "fallback",
-        message: GUARD_COPY[persona]
+        message: GUARD_COPY.YOUTUBER
       };
     }
   } else {
+    // ✅ Other personas = SERP + intent
     if (!isValid || !intentMatchesPersona(topic, persona)) {
       return {
         guard: "fallback",
