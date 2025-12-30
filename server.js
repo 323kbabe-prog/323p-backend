@@ -561,6 +561,8 @@ const isValid = await isValidEntityForPersona(topic, persona);
 
 // 🔒 MANUAL HARD GUARD — YOUTUBER = artist / group name ONLY
 if (manual && persona === "YOUTUBER") {
+  const isValid = await isValidEntityForPersona(rawTopic, "YOUTUBER");
+
   if (!isValid || !isLikelyArtistOrGroupName(rawTopic)) {
     return {
       guard: "fallback",
@@ -723,14 +725,15 @@ function isRelevantToQuery(query, title) {
 // ROUTES
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
-  let { topic = "", persona = "BUSINESS", manual = false } = req.body;
+ let rawTopic = topic;
 
-  // 🔹 AI topic normalization layer (LOCATION-AWARE)
-  const normalized = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+// 🔴 IMPORTANT: NEVER normalize YouTUBER input
+if (persona !== "YOUTUBER") {
+  const normalized = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
 You are a query-normalization AI.
 
 Rules:
@@ -745,11 +748,12 @@ Input:
 
 Output:
 `
-    }],
-    temperature: 0
-  });
+    }],
+    temperature: 0
+  });
 
-  topic = normalized.choices[0].message.content.trim();
+  topic = normalized.choices[0].message.content.trim();
+}
 
   // 🔹 Semantic clarity check — AUTO MODE ONLY
 if (!manual && !(await isClearTopic(topic))) {
