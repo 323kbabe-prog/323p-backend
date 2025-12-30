@@ -475,36 +475,22 @@ async function runPipeline(topic, persona, manual) {
 if (manual) {
 
   const intentRules = {
-    BUSINESS: () => {
-  const looksLikeJob =
-    /\b(engineer|developer|designer|scientist|manager|analyst|specialist|director|lead|consultant|intern)\b/i
-      .test(topic);
-
-  const looksLikeCompany =
-    /^[A-Z][a-zA-Z0-9&.\- ]{1,40}$/.test(topic) &&
-    !/\b(for sale|sale|buy|shop|deal|offer)\b/i.test(topic);
-
-  return looksLikeJob || looksLikeCompany;
-},
-
-    AMAZON: () => {
-      // product / beauty / cosmetic intent
-      return /\b(beauty|cosmetic|skincare|makeup|lipstick|foundation|serum|cream|lotion|cleanser|perfume|shampoo|conditioner)\b/i
+  BUSINESS: () => {
+    const looksLikeJob =
+      /\b(engineer|developer|designer|scientist|manager|analyst|specialist|director|lead|consultant|intern)\b/i
         .test(topic);
-    },
 
-    YOUTUBER: () => {
-      // song / artist / group intent
-      return /\b(song|music|artist|band|group|album|single|track)\b/i
-        .test(topic);
-    },
+    const looksLikeCompany =
+      /^[A-Z][a-zA-Z0-9&.\- ]{1,40}$/.test(topic) &&
+      !/\b(for sale|sale|buy|shop|deal|offer)\b/i.test(topic);
 
-    MARKETS: () => {
-      // market / company / sector intent
-      return /\b(market|stock|company|industry|sector|economy|inflation|rates|ai)\b/i
-        .test(topic);
-    }
-  };
+    return looksLikeJob || looksLikeCompany;
+  },
+
+  AMAZON: () => true,   // SERP decides
+  YOUTUBER: () => true, // SERP decides
+  MARKETS: () => true   // SERP decides
+};
 
   const isIntentValid =
     intentRules[persona] ? intentRules[persona]() : true;
