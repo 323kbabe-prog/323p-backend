@@ -559,16 +559,15 @@ if (manual) {
 // 🔑 SERP-backed reality gate
 const isValid = await isValidEntityForPersona(topic, persona);
 
-// 🔒 MANUAL HARD GUARD
-if (manual) {
-  if (persona === "YOUTUBER") {
-    // ✅ YOUTUBER = artist / group name ONLY
-    if (!isValid || !isLikelyArtistOrGroupName(topic)) {
-      return {
-        guard: "fallback",
-        message: GUARD_COPY.YOUTUBER
-      };
-    }
+// 🔒 MANUAL HARD GUARD — YOUTUBER = artist / group name ONLY
+if (manual && persona === "YOUTUBER") {
+  if (!isValid || !isLikelyArtistOrGroupName(rawTopic)) {
+    return {
+      guard: "fallback",
+      message: GUARD_COPY.YOUTUBER
+    };
+  }
+}
   } else {
     // ✅ Other personas = SERP + intent
     if (!isValid || !intentMatchesPersona(topic, persona)) {
