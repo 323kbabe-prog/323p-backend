@@ -320,6 +320,7 @@ Verified real-world signal:
 ${signalText}
 
 START WITH THIS LINE EXACTLY:
+2×-AI Engine — Real-Time AI Foresight
 Reality · ${sixMonthDateLabel()}
 
 Write a 6-month foresight analysis based on the signal above.
@@ -363,6 +364,7 @@ Video title:
 "${videoTitle}"
 
 START WITH THIS LINE EXACTLY:
+2×-AI Engine — Real-Time AI Foresight
 Reality · ${sixMonthDateLabel()}
 
 Write a full analytical report explaining
@@ -375,7 +377,6 @@ Rules:
 - No creators
 - No platform mechanics
 
-Then write:
 Then write:
 If this reading is correct, what works:
 
@@ -586,10 +587,11 @@ Rules:
 - Do NOT discuss unrelated platforms or genres
 - EXACTLY 5 short paragraphs
 
-Then write:
+Then write exactly this line:
 If this reading is correct, what works:
 
-Then EXACTLY 3 short sentences.
+Leave ONE completely empty line after that sentence.
+Then write EXACTLY 3 short sentences.
 `
     }],
     temperature: 0.3
