@@ -473,29 +473,14 @@ async function runPipeline(topic, persona, manual) {
 
 // ✅ MANUAL MODE HARD GUARD (intent-level, ALL SECTIONS)
 if (manual) {
-
   const intentRules = {
-  BUSINESS: () => {
-    const looksLikeJob =
-      /\b(engineer|developer|designer|scientist|manager|analyst|specialist|director|lead|consultant|intern)\b/i
-        .test(topic);
+    BUSINESS: () => true,   // ✅ SERP decides
+    AMAZON:   () => true,
+    YOUTUBER: () => true,
+    MARKETS:  () => true
+  };
 
-    const looksLikeCompany =
-      /^[A-Z][a-zA-Z0-9&.\- ]{1,40}$/.test(topic) &&
-      !/\b(for sale|sale|buy|shop|deal|offer)\b/i.test(topic);
-
-    return looksLikeJob || looksLikeCompany;
-  },
-
-  AMAZON: () => true,   // SERP decides
-  YOUTUBER: () => true, // SERP decides
-  MARKETS: () => true   // SERP decides
-};
-
-  const isIntentValid =
-    intentRules[persona] ? intentRules[persona]() : true;
-
-  if (!isIntentValid) {
+  if (!intentRules[persona]()) {
     return { guard: "fallback" };
   }
 }
