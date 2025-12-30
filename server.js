@@ -402,6 +402,41 @@ async function isClearTopic(topic) {
 }
 
 //////////////////////////////////////////////////////////////
+// CHUNK-2C — AUTO MODE JOB GENERATOR (REQUIRED)
+//////////////////////////////////////////////////////////////
+
+// ------------------------------------------------------------
+// BUSINESS — auto job title generator (LinkedIn)
+// Used ONLY in AUTO MODE
+// ------------------------------------------------------------
+async function generateNextJobTitle(lens, location) {
+  const locationLine = location ? `Geographic context: ${location}` : "";
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Academic lens: ${lens}
+${locationLine}
+
+Generate ONE real AI-related job title
+that companies are actively recruiting for on LinkedIn.
+
+Rules:
+- Job title only
+- No explanation
+- No company names
+- No punctuation
+`
+    }],
+    temperature: 0.7
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+//////////////////////////////////////////////////////////////
 // CHUNK-3 — GUARDS (THE LAW)
 ////////////////////////////////////////////////////////////////
 
