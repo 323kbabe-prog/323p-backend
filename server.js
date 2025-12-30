@@ -515,7 +515,10 @@ function intentMatchesPersona(query, persona) {
     BUSINESS: /\b(job|role|position|engineer|developer|manager|analyst|company|corp|inc|ltd)\b/,
     AMAZON: /\b(cosmetic|beauty|skincare|makeup|mascara|lipstick|foundation|serum|cream)\b/,
     MARKETS: /\b(ai|market|finance|stock|economy|investment|rates|company)\b/,
-    YOUTUBER: /\b(song|music|artist|band|group|album|single|track|kpop|pop)\b/
+    YOUTUBER: q =>
+  /\b(song|music|artist|band|group|album|single|track|kpop|pop)\b/.test(q)
+  || /^[a-z\s]{2,30}$/i.test(q)
+  || /^[a-z]{2,20}$/i.test(q)   // 👈 single-token artist names
   };
 
   return RULES[persona]?.test(q);
