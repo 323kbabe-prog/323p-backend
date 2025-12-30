@@ -189,6 +189,219 @@ function isRelevantToQuery(query, title) {
 }
 
 //////////////////////////////////////////////////////////////
+// CHUNK-2B — SERP & EXTRACTION UTILITIES (REQUIRED)
+//////////////////////////////////////////////////////////////
+
+// ------------------------------------------------------------
+// Explicit location extraction (BUSINESS only)
+// ------------------------------------------------------------
+async function extractExplicitLocation(text) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Does this text explicitly mention a geographic location?
+If YES, extract ONLY the location.
+If NO, reply NO.
+
+Text:
+"${text}"
+`
+    }],
+    temperature: 0
+  });
+
+  const r = out.choices[0].message.content.trim();
+  return r === "NO" ? null : r;
+}
+
+// ------------------------------------------------------------
+// MARKETS helpers
+// ------------------------------------------------------------
+async function rewriteMarketTheme(input, lens, location) {
+  const locationLine = location ? `Geographic context: ${location}` : "";
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Academic lens: ${lens}
+${locationLine}
+
+Rewrite into a neutral market attention theme.
+3–7 words. No tickers. No prices.
+
+Input: "${input}"
+`
+    }],
+    temperature: 0.2
+  });
+  return out.choices[0].message.content.trim();
+}
+
+async function fetchMarketSignal(theme) {
+  if (!SERP_KEY) return null;
+  const url = `https://serpapi.com/search.json?tbm=nws&q=${encodeURIComponent(theme)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.news_results || [])[0] || null;
+}
+
+async function extractCompanyNameFromTitle(title) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `Extract the primary company name only:\n"${title}"`
+    }],
+    temperature: 0
+  });
+  return out.choices[0].message.content.trim() || "Unknown";
+}
+
+// ------------------------------------------------------------
+// AMAZON helpers
+// ------------------------------------------------------------
+async function fetchSingleAmazonProduct(query) {
+  if (!SERP_KEY) return null;
+  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.organic_results || []).find(
+    x => x.link?.includes("/dp/") || x.link?.includes("/gp/product")
+  );
+}
+
+// ------------------------------------------------------------
+// BUSINESS helpers
+// ------------------------------------------------------------
+async function fetchSingleLinkedInJob(jobTitle) {
+  if (!SERP_KEY) return null;
+  const q = `${jobTitle} site:linkedin.com/jobs`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.organic_results || []).find(x =>
+    x.link?.includes("linkedin.com/jobs")
+  );
+}
+
+// ------------------------------------------------------------
+// YOUTUBE helpers
+// ------------------------------------------------------------
+async function normalizeYouTubeSearchIntent(rawInput) {
+  if (!SERP_KEY || !rawInput) return rawInput;
+
+  const q = `${rawInput} site:youtube.com/watch`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=10&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+
+  const v = (j.organic_results || []).find(x =>
+    x.link?.includes("watch?v=")
+  );
+
+  if (!v) return rawInput;
+
+  return { title: v.title, link: v.link };
+}
+
+// ------------------------------------------------------------
+// SERP reality validator
+// ------------------------------------------------------------
+async function isValidEntityForPersona(query, persona) {
+  if (!SERP_KEY || !query) return false;
+
+  const map = {
+    YOUTUBER: `engine=youtube&search_query=${encodeURIComponent(query)}`,
+    MARKETS: `tbm=nws&q=${encodeURIComponent(query)}`,
+    AMAZON: `q=${encodeURIComponent(query + " site:amazon.com")}`,
+    BUSINESS: `q=${encodeURIComponent(query + " site:linkedin.com/jobs")}`
+  };
+
+  const url = `https://serpapi.com/search.json?${map[persona]}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+
+  return Boolean(
+    (j.video_results && j.video_results.length) ||
+    (j.news_results && j.news_results.length) ||
+    (j.organic_results && j.organic_results.length)
+  );
+}
+
+// ------------------------------------------------------------
+// GENERATORS
+// ------------------------------------------------------------
+async function generatePredictionBody(sources, persona) {
+  const signalText = sources.map(s => `• ${s.title} — ${s.source}`).join("\n");
+
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Verified real-world signal:
+${signalText}
+
+START WITH THIS LINE EXACTLY:
+2×-AI Engine — Real-Time AI Foresight
+Reality · ${sixMonthDateLabel()}
+
+Write a 6-month foresight analysis.
+EXACTLY 5 short paragraphs.
+
+Then write:
+If this prediction is correct, what works:
+
+Then EXACTLY 3 short sentences.
+`
+    }],
+    temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+async function generateBusinessPrediction(jobTitle) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+Labor Market Signal — LinkedIn
+"${jobTitle}"
+
+Reality · ${sixMonthDateLabel()}
+
+Write EXACTLY 5 short paragraphs.
+Then EXACTLY 3 short sentences.
+`
+    }],
+    temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+// ------------------------------------------------------------
+// AUTO MODE CLARITY CHECK
+// ------------------------------------------------------------
+async function isClearTopic(topic) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `Is this intelligible human language?\n"${topic}"\nReply YES or NO.`
+    }],
+    temperature: 0
+  });
+  return out.choices[0].message.content.trim() === "YES";
+}
+
+//////////////////////////////////////////////////////////////
 // CHUNK-3 — GUARDS (THE LAW)
 ////////////////////////////////////////////////////////////////
 
@@ -425,7 +638,7 @@ async function runMarketsEngine({
 }
 
 //////////////////////////////////////////////////////////////
-// CHUNK-7 — HELPERS REGISTRY (CRITICAL)
+// CHUNK-4B — HELPERS REGISTRY (CRITICAL)
 // Single dependency injection object
 //////////////////////////////////////////////////////////////
 
