@@ -538,7 +538,7 @@ const GUARD_COPY = {
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
-async function runPipeline(topic, persona, manual) {
+async function runPipeline(topic, persona, manual, rawTopic) {
   const lens = pickStanfordLens(); // ✅ declare ONCE
 
 // ✅ MANUAL MODE HARD GUARD (intent-level, ALL SECTIONS)
@@ -555,21 +555,22 @@ if (manual) {
   }
 }
 
-  // 🔑 SERP-backed reality gate (MANUAL-FIRST)
-// 🔑 SERP-backed reality gate
-const isValid = await isValidEntityForPersona(topic, persona);
+ // 🔑 SERP-backed reality gate
+const isValid = await isValidEntityForPersona(
+  persona === "YOUTUBER" ? rawTopic : topic,
+  persona
+);
 
-// 🔒 MANUAL HARD GUARD — YOUTUBER = artist / group name ONLY
-if (manual && persona === "YOUTUBER") {
-  const isValid = await isValidEntityForPersona(rawTopic, "YOUTUBER");
-
-  if (!isValid || !isLikelyArtistOrGroupName(rawTopic)) {
-    return {
-      guard: "fallback",
-      message: GUARD_COPY.YOUTUBER
-    };
-  }
-}
+// 🔒 MANUAL HARD GUARD
+if (manual) {
+  if (persona === "YOUTUBER") {
+    // ✅ ONLY artist / group names allowed
+    if (!isValid || !isLikelyArtistOrGroupName(rawTopic)) {
+      return {
+        guard: "fallback",
+        message: GUARD_COPY.YOUTUBER
+      };
+    }
   } else {
     // ✅ Other personas = SERP + intent
     if (!isValid || !intentMatchesPersona(topic, persona)) {
@@ -725,15 +726,17 @@ function isRelevantToQuery(query, title) {
 // ROUTES
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
- let rawTopic = topic;
+  let { topic = "", persona = "BUSINESS", manual = false } = req.body;
 
-// 🔴 IMPORTANT: NEVER normalize YouTUBER input
-if (persona !== "YOUTUBER") {
-  const normalized = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+  const rawTopic = topic; // 🔑 IMMUTABLE identity
+
+  // ❌ NEVER normalize YouTUBER
+  if (persona !== "YOUTUBER") {
+    const normalized = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        role: "user",
+        content: `
 You are a query-normalization AI.
 
 Rules:
@@ -748,19 +751,18 @@ Input:
 
 Output:
 `
-    }],
-    temperature: 0
-  });
+      }],
+      temperature: 0
+    });
 
-  topic = normalized.choices[0].message.content.trim();
-}
+    topic = normalized.choices[0].message.content.trim();
+  }
 
-  // 🔹 Semantic clarity check — AUTO MODE ONLY
-if (!manual && !(await isClearTopic(topic))) {
-  return res.json({ report: "Invalid topic." });
-}
-  // 🔹 Continue pipeline
-  res.json(await runPipeline(topic, persona, manual));
+  if (!manual && !(await isClearTopic(topic))) {
+    return res.json({ report: "Invalid topic." });
+  }
+
+  res.json(await runPipeline(topic, persona, manual, rawTopic));
 });
 
 // ------------------------------------------------------------
