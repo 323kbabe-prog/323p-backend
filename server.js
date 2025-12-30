@@ -437,6 +437,47 @@ Rules:
 }
 
 //////////////////////////////////////////////////////////////
+// CHUNK-2D — LINKEDIN PREDICTION GENERATOR (FINAL)
+//////////////////////////////////////////////////////////////
+
+async function generateBusinessPrediction(jobTitle) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role: "user",
+      content: `
+You are a labor-market foresight analyst.
+
+The hiring signal comes from this job role:
+"${jobTitle}"
+
+START WITH THIS LINE EXACTLY:
+Labor Market Signal — LinkedIn
+Reality · ${sixMonthDateLabel()}
+
+Write EXACTLY 5 short paragraphs analyzing
+why this role exists and what it signals.
+
+Do NOT:
+- Mention AI engines or platforms
+- Mention Stanford
+- Mention predictions explicitly
+- Mention companies by name
+
+Then write EXACTLY this line:
+If this prediction is correct, what works:
+
+Then write EXACTLY 3 short sentences
+describing practical actions for job seekers or employers.
+`
+    }],
+    temperature: 0.3
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+//////////////////////////////////////////////////////////////
 // CHUNK-3 — GUARDS (THE LAW)
 ////////////////////////////////////////////////////////////////
 
