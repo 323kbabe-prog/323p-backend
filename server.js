@@ -501,16 +501,15 @@ Then EXACTLY 3 short sentences.
 }
 
 function intentMatchesPersona(query, persona) {
-  const q = query.toLowerCase();
+  const q = query.trim().toLowerCase();
 
-  const RULES = {
-    BUSINESS: /\b(job|role|position|engineer|developer|manager|analyst|company|corp|inc|ltd)\b/,
-    AMAZON: /\b(cosmetic|beauty|skincare|makeup|mascara|lipstick|foundation|serum|cream)\b/,
-    MARKETS: /\b(ai|market|finance|stock|economy|investment|rates|company)\b/,
-    YOUTUBER: /\b(song|music|artist|band|group|album|single|track)\b/
-  };
+  const RULES = {
+    BUSINESS: /\b(job|role|position|engineer|developer|manager|analyst|company|corp|inc|ltd)\b/,
+    AMAZON: /\b(cosmetic|beauty|skincare|makeup|mascara|lipstick|foundation|serum|cream)\b/,
+    MARKETS: /\b(ai|market|finance|stock|economy|investment|rates|company)\b/,
+  };
 
-  return RULES[persona]?.test(q);
+  return RULES[persona];
 }
 
 const GUARD_COPY = {
@@ -543,12 +542,25 @@ if (manual) {
   // 🔑 SERP-backed reality gate (MANUAL-FIRST)
 const isValid = await isValidEntityForPersona(topic, persona);
 
-// 🔒 HARD GUARD — MANUAL MODE ONLY
-if (manual && (!isValid || !intentMatchesPersona(topic, persona))) {
-  return {
-    guard: "fallback",
-    message: GUARD_COPY[persona]
-  };
+// 🔒 MANUAL HARD GUARD
+// YOUTUBER: SERP ONLY
+// OTHERS: SERP + intent
+if (manual) {
+  if (persona === "YOUTUBER") {
+    if (!isValid) {
+      return {
+        guard: "fallback",
+        message: GUARD_COPY[persona]
+      };
+    }
+  } else {
+    if (!isValid || !intentMatchesPersona(topic, persona)) {
+      return {
+        guard: "fallback",
+        message: GUARD_COPY[persona]
+      };
+    }
+  }
 }
 
   // ⬇️ everything below stays the same
