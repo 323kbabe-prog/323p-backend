@@ -589,6 +589,7 @@ Rules:
 - Do NOT rename or shift focus away from the pop subject
 - Do NOT generalize to the entire music industry
 - Do NOT discuss unrelated platforms or genres
+- Do NOT mention specific years, dates, or time labels (e.g., 2024, 2025, this year)
 - EXACTLY 5 short paragraphs
 
 Then write exactly this line:
