@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — REAL AI GD-J + 8-BALL + AMAZON (STATELESS)
+// CHUNK-0 — BOOTSTRAP
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -26,6 +26,10 @@ const openai = new OpenAI({
 // ------------------------------------------------------------
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
+//////////////////////////////////////////////////////////////
+// CHUNK-1 — CONSTANTS & MEMORY
+//////////////////////////////////////////////////////////////
+
 // ------------------------------------------------------------
 // External signal anchors (static)
 // ------------------------------------------------------------
@@ -40,7 +44,45 @@ const MARKETS_SIGNAL_SOURCE = {
 const MEMORY_LIMIT = 5;
 
 // ------------------------------------------------------------
-// Utilities — URLs
+// Entity no-repeat memory (stateful, in-memory)
+// ------------------------------------------------------------
+const AMAZON_TOPIC_MEMORY = [];
+const BUSINESS_ENTITY_MEMORY = [];
+const MARKETS_ENTITY_MEMORY = [];
+const YOUTUBER_TOPIC_MEMORY = [];
+
+// ------------------------------------------------------------
+// Stanford academic lenses (rotation pool)
+// ------------------------------------------------------------
+const STANFORD_MAJORS = [
+  "Computer Science",
+  "Economics",
+  "Management Science and Engineering",
+  "Political Science",
+  "Psychology",
+  "Sociology",
+  "Symbolic Systems",
+  "Statistics",
+  "Electrical Engineering",
+  "Biomedical Engineering",
+  "Biology",
+  "Environmental Science",
+  "International Relations",
+  "Communication",
+  "Design",
+  "Education",
+  "Philosophy",
+  "Law"
+];
+
+let LAST_LENS = "";
+
+//////////////////////////////////////////////////////////////
+// CHUNK-2 — PURE UTILITIES
+//////////////////////////////////////////////////////////////
+
+// ------------------------------------------------------------
+// URL utilities
 // ------------------------------------------------------------
 function buildLinkedInJobUrl(jobTitle, location, manual) {
   const base = "https://www.linkedin.com/jobs/search/?";
@@ -51,7 +93,7 @@ function buildLinkedInJobUrl(jobTitle, location, manual) {
 }
 
 // ------------------------------------------------------------
-// Utilities — Dates
+// Date utilities
 // ------------------------------------------------------------
 function sixMonthDateLabel() {
   const d = new Date();
@@ -72,19 +114,53 @@ function presentDateLabel() {
 }
 
 // ------------------------------------------------------------
-// Utilities — Text / Shape Validators
+// Stanford lens selector (no repetition)
+// ------------------------------------------------------------
+function pickStanfordLens() {
+  const pool = STANFORD_MAJORS.filter(l => l !== LAST_LENS);
+  const lens = pool[Math.floor(Math.random() * pool.length)];
+  LAST_LENS = lens;
+  return lens;
+}
+
+// ------------------------------------------------------------
+// Stanford lens → official Stanford YouTube query
+// ------------------------------------------------------------
+function lensToStanfordYouTubeQuery(lens) {
+  const MAP = {
+    "Psychology": "Stanford University psychology",
+    "Sociology": "Stanford sociology",
+    "Economics": "Stanford economics",
+    "Communication": "Stanford communication",
+    "Design": "Stanford d.school",
+    "Political Science": "Stanford political science",
+    "International Relations": "Stanford FSI",
+    "Statistics": "Stanford statistics",
+    "Computer Science": "Stanford computer science",
+    "Law": "Stanford law",
+    "Education": "Stanford education",
+    "Biology": "Stanford biology",
+    "Environmental Science": "Stanford woods institute",
+    "Philosophy": "Stanford philosophy"
+  };
+
+  return MAP[lens] || "Stanford University";
+}
+
+// ------------------------------------------------------------
+// Text shape validators
 // ------------------------------------------------------------
 function isLikelyArtistOrGroupName(query) {
   if (!query) return false;
 
   const q = query.trim();
 
-  // ❌ Block generic music concepts
+  // ❌ block generic music concepts
   if (/\b(music|songs|genre|playlist|beats|mix|album|lyrics)\b/i.test(q)) {
     return false;
   }
 
-  // ✅ Allow artist / group name shapes
+  // ✅ allow artist / group name shapes
   // Examples: BLACKPINK, Backstreet Boys, BTS, Ariana Grande
   return /^[A-Za-z0-9][A-Za-z0-9\s&.-]{1,40}$/.test(q);
 }
@@ -102,7 +178,7 @@ function intentMatchesPersona(query, persona) {
 }
 
 // ------------------------------------------------------------
-// Utilities — Relevance Scoring
+// Relevance scoring (keyword overlap)
 // ------------------------------------------------------------
 function isRelevantToQuery(query, title) {
   const q = query.toLowerCase();
@@ -112,8 +188,12 @@ function isRelevantToQuery(query, title) {
   return keywords.some(word => t.includes(word));
 }
 
+//////////////////////////////////////////////////////////////
+// CHUNK-3 — GUARDS (THE LAW)
+////////////////////////////////////////////////////////////////
+
 // ------------------------------------------------------------
-// GUARDS — User-Facing Copy
+// User-facing rejection copy (single source of truth)
 // ------------------------------------------------------------
 const GUARD_COPY = {
   BUSINESS: "I don’t want this. I realize I should search for a job or a company.",
@@ -123,7 +203,8 @@ const GUARD_COPY = {
 };
 
 // ------------------------------------------------------------
-// GUARDS — Manual Mode Law
+// Manual Mode Guard — HARD LAW
+// Applied ONLY when manual === true
 // ------------------------------------------------------------
 async function runManualGuard({
   persona,
@@ -131,7 +212,9 @@ async function runManualGuard({
   rawTopic,
   isValidEntityForPersona
 }) {
-  // 🔒 YOUTUBER — artist / group names ONLY
+  // ----------------------------------------------------------
+  // YOUTUBER — ONLY artist / group names
+  // ----------------------------------------------------------
   if (persona === "YOUTUBER") {
     const valid = await isValidEntityForPersona(rawTopic, "YOUTUBER");
 
@@ -145,7 +228,9 @@ async function runManualGuard({
     return { blocked: false };
   }
 
-  // 🔒 OTHER PERSONAS — SERP + intent
+  // ----------------------------------------------------------
+  // ALL OTHER PERSONAS — SERP + intent
+  // ----------------------------------------------------------
   const valid = await isValidEntityForPersona(topic, persona);
 
   if (!valid || !intentMatchesPersona(topic, persona)) {
@@ -159,16 +244,15 @@ async function runManualGuard({
 }
 
 // ------------------------------------------------------------
-// GUARDS — Auto Mode Law
+// Auto Mode Guard — SOFT LAW
+// Auto mode is NEVER blocked
 // ------------------------------------------------------------
 function runAutoGuard() {
-  // Auto mode is NEVER blocked
   return { blocked: false };
 }
 
 //////////////////////////////////////////////////////////////
-// CHUNK 4 — PERSONA ENGINES (4 BOXES)
-// Execution only. No guards. No routing. No normalization.
+// CHUNK-4 — PERSONA ENGINES (4 BOXES)
 //////////////////////////////////////////////////////////////
 
 /* ==========================================================
@@ -341,9 +425,53 @@ async function runMarketsEngine({
 }
 
 //////////////////////////////////////////////////////////////
-// CHUNK 5 — PIPELINE ORCHESTRATOR
-// Decides flow. Calls guards. Dispatches persona engines.
-// No I/O. No Express. No OpenAI prompts here.
+// CHUNK-7 — HELPERS REGISTRY (CRITICAL)
+// Single dependency injection object
+//////////////////////////////////////////////////////////////
+
+const helpers = {
+  // core
+  openai,
+  fetch,
+
+  // utilities
+  buildLinkedInJobUrl,
+  sixMonthDateLabel,
+  presentDateLabel,
+  pickStanfordLens,
+  lensToStanfordYouTubeQuery,
+  isLikelyArtistOrGroupName,
+  intentMatchesPersona,
+  isRelevantToQuery,
+
+  // guards
+  GUARD_COPY,
+
+  // SERP + extraction
+  extractExplicitLocation,
+  rewriteMarketTheme,
+  fetchMarketSignal,
+  extractCompanyNameFromTitle,
+  fetchSingleAmazonProduct,
+  fetchSingleLinkedInJob,
+  isValidEntityForPersona,
+
+  // generators
+  generatePredictionBody,
+  generateBusinessPrediction,
+  normalizeYouTubeSearchIntent,
+
+  // engines
+  runYouTuberEngine,
+  runAmazonEngine,
+  runBusinessEngine,
+  runMarketsEngine
+};
+
+//////////////////////////////////////////////////////////////
+// CHUNK-5 — PIPELINE ORCHESTRATOR
+// Decides flow. Enforces guards. Dispatches persona engines.
+// No I/O. No Express. No prompts.
 //////////////////////////////////////////////////////////////
 
 async function runPipeline({
@@ -354,6 +482,7 @@ async function runPipeline({
   helpers
 }) {
   const {
+    // lenses & helpers
     pickStanfordLens,
     extractExplicitLocation,
 
@@ -363,7 +492,7 @@ async function runPipeline({
     intentMatchesPersona,
     GUARD_COPY,
 
-    // engines
+    // persona engines
     runYouTuberEngine,
     runAmazonEngine,
     runBusinessEngine,
@@ -398,7 +527,7 @@ async function runPipeline({
   -------------------------------------------------------- */
   if (manual) {
 
-    // YOUTUBER: artist / group ONLY
+    // 🔒 YOUTUBER — ARTIST / GROUP ONLY
     if (persona === "YOUTUBER") {
       if (!isValid || !isLikelyArtistOrGroupName(rawTopic)) {
         return {
@@ -408,7 +537,7 @@ async function runPipeline({
       }
     }
 
-    // ALL OTHER PERSONAS
+    // 🔒 ALL OTHER PERSONAS
     else {
       if (!isValid || !intentMatchesPersona(topic, persona)) {
         return {
@@ -460,7 +589,7 @@ async function runPipeline({
 }
 
 //////////////////////////////////////////////////////////////
-// CHUNK 6 — ROUTES (I/O ONLY)
+// CHUNK-6 — ROUTES (I/O ONLY)
 // Express endpoints. No logic.
 // Calls pipeline orchestrator.
 // Handles normalization boundary.
@@ -480,7 +609,7 @@ app.post("/run", async (req, res) => {
     // 🔑 Preserve raw identity (critical for YOUTUBER)
     const rawTopic = topic;
 
-    // ❌ NEVER normalize YouTUBER input
+    // ❌ NEVER normalize YOUTUBER input
     if (persona !== "YOUTUBER") {
       const normalized = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -508,7 +637,7 @@ Output:
       topic = normalized.choices[0].message.content.trim();
     }
 
-    // AUTO MODE clarity gate only
+    // 🔒 AUTO MODE clarity gate only
     if (!manual && !(await isClearTopic(topic))) {
       return res.json({ report: "Invalid topic." });
     }
@@ -557,4 +686,14 @@ app.post("/next", async (req, res) => {
     console.error("NEXT ERROR:", e);
     res.status(500).json({ report: "Auto mode failed." });
   }
+});
+
+//////////////////////////////////////////////////////////////
+// SERVER START (REQUIRED FOR RENDER)
+//////////////////////////////////////////////////////////////
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🌊 Blue Ocean Browser running on port ${PORT}`);
 });
