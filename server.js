@@ -573,6 +573,10 @@ Primary subject (real-world example):
 Analytical framework (academic explanation):
 "${channelQuery}"
 
+START WITH THIS LINE EXACTLY:
+2×-AI Engine — Real-Time AI Foresight
+Reality · ${sixMonthDateLabel()}
+
 Task:
 Write a 6-month cultural analysis of the pop subject above.
 
