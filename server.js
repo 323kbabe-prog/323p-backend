@@ -708,11 +708,10 @@ Output:
 
   topic = normalized.choices[0].message.content.trim();
 
-  // 🔹 Semantic clarity check (unchanged)
-  if (persona !== "BUSINESS" && !(await isClearTopic(topic))) {
-    return res.json({ report: "Invalid topic." });
-  }
-
+  // 🔹 Semantic clarity check — AUTO MODE ONLY
+if (!manual && !(await isClearTopic(topic))) {
+  return res.json({ report: "Invalid topic." });
+}
   // 🔹 Continue pipeline
   res.json(await runPipeline(topic, persona, manual));
 });
