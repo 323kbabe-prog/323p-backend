@@ -523,7 +523,7 @@ const GUARD_COPY = {
 // ------------------------------------------------------------
 // CORE PIPELINE
 // ------------------------------------------------------------
-async function runPipeline(topic, persona, manual, rawTopic) {=
+async function runPipeline(topic, persona, manual) {
   const lens = pickStanfordLens(); // ✅ declare ONCE
 
 // ✅ MANUAL MODE HARD GUARD (intent-level, ALL SECTIONS)
@@ -543,13 +543,14 @@ if (manual) {
   // 🔑 SERP-backed reality gate (MANUAL-FIRST)
 const isValid = await isValidEntityForPersona(topic, persona);
 
-// 🔒 HARD GUARD — MANUAL MODE ONLY
-if (manual && (!isValid || !intentMatchesPersona(rawTopic, persona))) {
-  return {
-    guard: "fallback",
-    message: GUARD_COPY[persona]
-  };
+// 🔒 HARD GUARD — SERP + intent must BOTH pass
+if (!isValid || !intentMatchesPersona(topic, persona)) {
+  return {
+    guard: "fallback",
+    message: GUARD_COPY[persona]
+  };
 }
+
   // ⬇️ everything below stays the same
   
   
@@ -695,7 +696,6 @@ function isRelevantToQuery(query, title) {
 // ------------------------------------------------------------
 app.post("/run", async (req, res) => {
   let { topic = "", persona = "BUSINESS", manual = false } = req.body;
-const rawTopic = topic; // ✅ preserve user input(
 
   // 🔹 AI topic normalization layer (LOCATION-AWARE)
   const normalized = await openai.chat.completions.create({
@@ -728,7 +728,7 @@ if (!manual && !(await isClearTopic(topic))) {
   return res.json({ report: "Invalid topic." });
 }
   // 🔹 Continue pipeline
-  res.json(await runPipeline(topic, persona, manual, rawTopic));
+  res.json(await runPipeline(topic, persona, manual));
 });
 
 // ------------------------------------------------------------
