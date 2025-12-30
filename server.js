@@ -594,7 +594,6 @@ Rules:
 Then write exactly this line:
 If this reading is correct, what works:
 
-Leave ONE completely empty line after that sentence.
 Then write EXACTLY 3 short sentences.
 `
     }],
