@@ -1,5 +1,6 @@
 //////////////////////////////////////////////////////////////
 // STANFORD × AMAZON BEAUTY FORESIGHT ENGINE
+// FINAL DEPLOY-SAFE VERSION
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -8,31 +9,34 @@ const fetch = require("node-fetch");
 const OpenAI = require("openai");
 
 //////////////////////////////////////////////////////////////
-// APP
+// APP BOOTSTRAP (ROOT FIRST — IMPORTANT FOR RENDER)
 //////////////////////////////////////////////////////////////
 const app = express();
+
+// 🔴 MUST BE FIRST: Render health check
+app.get("/", (req, res) => {
+  res.status(200).send("OK");
+});
+
+// Middleware
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.options("*", cors());
 
-app.get("/", (_, res) => {
-  res.status(200).send("Stanford × Amazon Beauty Foresight running.");
-});
-
 //////////////////////////////////////////////////////////////
-// OPENAI
+// OPENAI CLIENT
 //////////////////////////////////////////////////////////////
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
 //////////////////////////////////////////////////////////////
-// SERP
+// SERP API
 //////////////////////////////////////////////////////////////
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 //////////////////////////////////////////////////////////////
-// DATE
+// DATE UTIL
 //////////////////////////////////////////////////////////////
 function sixMonthDateLabel() {
   const d = new Date();
@@ -45,7 +49,7 @@ function sixMonthDateLabel() {
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD MAJORS (NO-REPEAT ROTATION)
+// STANFORD MAJORS — NO REPEAT ROTATION
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
   "Psychology",
@@ -73,7 +77,7 @@ function pickStanfordMajor() {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON PRODUCT MEMORY (NO REPEAT)
+// AMAZON PRODUCT MEMORY — NO REPEAT (LAST N)
 //////////////////////////////////////////////////////////////
 const AMAZON_MEMORY_LIMIT = 5;
 const amazonMemory = [];
@@ -86,7 +90,7 @@ function rememberAmazon(title) {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON BEAUTY SEARCH
+// AMAZON BEAUTY SEARCH (HARD-LOCKED DOMAIN)
 //////////////////////////////////////////////////////////////
 async function fetchAmazonBeautyProduct(query) {
   if (!SERP_KEY || !query) return null;
@@ -109,7 +113,7 @@ async function fetchAmazonBeautyProduct(query) {
 }
 
 //////////////////////////////////////////////////////////////
-// AUTO MODE — BEAUTY EXAMPLE
+// AUTO MODE — BEAUTY EXAMPLE GENERATOR
 //////////////////////////////////////////////////////////////
 async function generateBeautyExample() {
   const out = await openai.chat.completions.create({
@@ -134,7 +138,7 @@ Rules:
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD YOUTUBE VIDEO
+// STANFORD OFFICIAL YOUTUBE VIDEO
 //////////////////////////////////////////////////////////////
 async function fetchStanfordVideo(major) {
   if (!SERP_KEY) return null;
@@ -150,7 +154,7 @@ async function fetchStanfordVideo(major) {
 }
 
 //////////////////////////////////////////////////////////////
-// REPORT GENERATOR
+// REPORT GENERATOR (LAYOUT LOCKED)
 //////////////////////////////////////////////////////////////
 async function generateReport({ major, videoTitle, productTitle }) {
   const out = await openai.chat.completions.create({
@@ -186,15 +190,20 @@ Then EXACTLY 3 short sentences.
 }
 
 //////////////////////////////////////////////////////////////
-// PIPELINE (AUTO = MANUAL)
+// UNIFIED PIPELINE (AUTO = MANUAL)
 //////////////////////////////////////////////////////////////
 async function runPipeline(exampleInput) {
   const major = pickStanfordMajor();
+
   const stanfordVideo = await fetchStanfordVideo(major);
-  if (!stanfordVideo) return { report: "No Stanford video found." };
+  if (!stanfordVideo) {
+    return { report: "No Stanford University video found." };
+  }
 
   const product = await fetchAmazonBeautyProduct(exampleInput);
-  if (!product) return { report: "No Amazon beauty product found." };
+  if (!product) {
+    return { report: "No Amazon cosmetic or beauty product found." };
+  }
 
   rememberAmazon(product.title);
 
@@ -227,7 +236,7 @@ app.post("/run", async (req, res) => {
     const { topic = "" } = req.body;
     res.json(await runPipeline(topic));
   } catch (e) {
-    console.error(e);
+    console.error("RUN ERROR:", e);
     res.status(500).json({ report: "Run failed." });
   }
 });
@@ -237,13 +246,13 @@ app.post("/next", async (_, res) => {
     const example = await generateBeautyExample();
     res.json(await runPipeline(example));
   } catch (e) {
-    console.error(e);
+    console.error("NEXT ERROR:", e);
     res.status(500).json({ report: "Auto failed." });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// SERVER
+// SERVER START (RENDER READY)
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
