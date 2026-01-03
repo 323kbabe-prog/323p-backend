@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AMAZON-ONLY AI FORESIGHT ENGINE
+// STANFORD UNIVERSITY AI FORESIGHT ENGINE
 // Blue Ocean Browser
 //////////////////////////////////////////////////////////////
 
@@ -14,13 +14,10 @@ const OpenAI = require("openai");
 const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
-
-// ✅ IMPORTANT: handle CORS preflight (fixes OPTIONS 502)
 app.options("*", cors());
 
-// ✅ IMPORTANT: root health check (fixes GET / 502)
 app.get("/", (req, res) => {
-  res.status(200).send("Amazon AI Foresight is running.");
+  res.status(200).send("Stanford AI Foresight is running.");
 });
 
 //////////////////////////////////////////////////////////////
@@ -31,12 +28,55 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// EXTERNAL API KEYS
+// SERP API
 //////////////////////////////////////////////////////////////
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 //////////////////////////////////////////////////////////////
-// UTILITIES
+// STANFORD MAJORS (PERSONA POOL)
+//////////////////////////////////////////////////////////////
+const STANFORD_MAJORS = [
+  "Computer Science",
+  "Economics",
+  "Psychology",
+  "Sociology",
+  "Political Science",
+  "Symbolic Systems",
+  "Statistics",
+  "Design",
+  "Communication",
+  "Education",
+  "Philosophy",
+  "Law",
+  "Biomedical Engineering",
+  "Environmental Science"
+];
+
+function pickStanfordMajor() {
+  return STANFORD_MAJORS[
+    Math.floor(Math.random() * STANFORD_MAJORS.length)
+  ];
+}
+
+//////////////////////////////////////////////////////////////
+// FETCH OFFICIAL STANFORD YOUTUBE VIDEO
+//////////////////////////////////////////////////////////////
+async function fetchStanfordYouTubeVideo(major) {
+  if (!SERP_KEY) return null;
+
+  const q = `Stanford University ${major} site:youtube.com/watch`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=10&api_key=${SERP_KEY}`;
+
+  const r = await fetch(url);
+  const j = await r.json();
+
+  return (j.organic_results || []).find(v =>
+    v.link?.includes("youtube.com/watch")
+  );
+}
+
+//////////////////////////////////////////////////////////////
+// DATE
 //////////////////////////////////////////////////////////////
 function sixMonthDateLabel() {
   const d = new Date();
@@ -49,69 +89,46 @@ function sixMonthDateLabel() {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON SERP FETCH
+// REPORT GENERATOR
 //////////////////////////////////////////////////////////////
-async function fetchSingleAmazonProduct(query) {
-  if (!SERP_KEY || !query) return null;
-
-  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
-
-  const r = await fetch(url);
-  const j = await r.json();
-
-  return (j.organic_results || []).find(
-    x => x.link?.includes("/dp/") || x.link?.includes("/gp/product")
-  );
-}
-
-//////////////////////////////////////////////////////////////
-// AUTO MODE — AMAZON PRODUCT SEED (CRITICAL)
-//////////////////////////////////////////////////////////////
-async function generateNextAmazonQuery() {
+async function generateStanfordReport({
+  userInput,
+  major,
+  video
+}) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
-Generate ONE real cosmetic or beauty product
-commonly sold on Amazon.
+You are thinking as a Stanford University professor
+with a background in ${major}.
 
-Rules:
-- Product name only
-- Must be specific (brand + product)
-- No explanation
-- No punctuation
-`
-    }],
-    temperature: 0.7
-  });
+Official Stanford lecture reference:
+"${video.title}"
 
-  return out.choices[0].message.content.trim();
-}
-
-//////////////////////////////////////////////////////////////
-// AMAZON FORESIGHT GENERATOR
-//////////////////////////////////////////////////////////////
-async function generateAmazonPrediction(productTitle) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
-Verified Amazon product:
-"${productTitle}"
+The user searched this as an example:
+"${userInput}"
 
 START WITH THIS LINE EXACTLY:
-2×-AI Engine — Real-Time AI Foresight
+2×-AI Engine — Stanford Academic Foresight
 Reality · ${sixMonthDateLabel()}
 
-Write EXACTLY 5 short paragraphs forecasting
-how demand, positioning, or usage may evolve
-over the next six months.
+Task:
+- Use the Stanford video as authoritative grounding
+- Treat the user input as a real-world example
+- Explain how this example connects to ideas from the lecture
+- Teach the concept clearly
+- Then project how this thinking may matter over the next six months
+
+Rules:
+- Educational tone
+- No hype
+- No platform analysis
+- EXACTLY 5 short paragraphs
 
 Then write:
-If this prediction is correct, what works:
+If this way of thinking is correct, what works:
 
 Then EXACTLY 3 short sentences.
 `
@@ -123,21 +140,26 @@ Then EXACTLY 3 short sentences.
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON ENGINE (SINGLE PATH)
+// PIPELINE
 //////////////////////////////////////////////////////////////
-async function runAmazon(topic) {
-  const product = await fetchSingleAmazonProduct(topic);
+async function runStanfordEngine(input) {
+  const major = pickStanfordMajor();
+  const video = await fetchStanfordYouTubeVideo(major);
 
-  if (!product) {
-    return { report: "No Amazon product found." };
+  if (!video) {
+    return { report: "No Stanford video found." };
   }
 
-  const body = await generateAmazonPrediction(product.title);
+  const body = await generateStanfordReport({
+    userInput: input,
+    major,
+    video
+  });
 
   return {
     report:
-      `• ${product.title} — Amazon\n` +
-      `${product.link}\n\n` +
+      `• ${major} — Stanford University\n` +
+      `${video.link}\n\n` +
       body
   };
 }
@@ -145,35 +167,31 @@ async function runAmazon(topic) {
 //////////////////////////////////////////////////////////////
 // ROUTES
 //////////////////////////////////////////////////////////////
-
-// MANUAL SEARCH
 app.post("/run", async (req, res) => {
   try {
     const { topic = "" } = req.body;
-    const result = await runAmazon(topic);
+    const result = await runStanfordEngine(topic);
     res.json(result);
   } catch (e) {
-    console.error("RUN ERROR:", e);
-    res.status(500).json({ report: "Amazon run failed." });
+    console.error(e);
+    res.status(500).json({ report: "Stanford run failed." });
   }
 });
 
-// AUTO MODE (FIXED)
 app.post("/next", async (req, res) => {
   try {
-    const seed = await generateNextAmazonQuery();
-    const result = await runAmazon(seed);
+    const result = await runStanfordEngine("A real-world example");
     res.json(result);
   } catch (e) {
-    console.error("NEXT ERROR:", e);
-    res.status(500).json({ report: "Amazon auto failed." });
+    console.error(e);
+    res.status(500).json({ report: "Stanford auto failed." });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// SERVER START (RENDER READY)
+// SERVER
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🟦 Amazon AI Foresight running on port ${PORT}`);
+  console.log(`🎓 Stanford AI Foresight running on port ${PORT}`);
 });
