@@ -1,6 +1,5 @@
 //////////////////////////////////////////////////////////////
-// STANFORD ACADEMIC FORESIGHT ENGINE
-// Example domain locked to AMAZON COSMETIC / BEAUTY PRODUCTS
+// STANFORD × AMAZON BEAUTY FORESIGHT ENGINE
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -9,55 +8,28 @@ const fetch = require("node-fetch");
 const OpenAI = require("openai");
 
 //////////////////////////////////////////////////////////////
-// APP BOOTSTRAP
+// APP
 //////////////////////////////////////////////////////////////
 const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.options("*", cors());
 
-// Health check
-app.get("/", (req, res) => {
-  res.status(200).send("Stanford × Amazon Beauty Foresight is running.");
+app.get("/", (_, res) => {
+  res.status(200).send("Stanford × Amazon Beauty Foresight running.");
 });
 
 //////////////////////////////////////////////////////////////
-// OPENAI CLIENT
+// OPENAI
 //////////////////////////////////////////////////////////////
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
 //////////////////////////////////////////////////////////////
-// SERP API
+// SERP
 //////////////////////////////////////////////////////////////
 const SERP_KEY = process.env.SERPAPI_KEY || null;
-
-//////////////////////////////////////////////////////////////
-// STANFORD MAJORS (PERSONA POOL)
-//////////////////////////////////////////////////////////////
-const STANFORD_MAJORS = [
-  "Computer Science",
-  "Psychology",
-  "Economics",
-  "Sociology",
-  "Political Science",
-  "Symbolic Systems",
-  "Statistics",
-  "Design",
-  "Communication",
-  "Education",
-  "Philosophy",
-  "Law",
-  "Biomedical Engineering",
-  "Environmental Science"
-];
-
-function pickStanfordMajor() {
-  return STANFORD_MAJORS[
-    Math.floor(Math.random() * STANFORD_MAJORS.length)
-  ];
-}
 
 //////////////////////////////////////////////////////////////
 // DATE
@@ -73,30 +45,71 @@ function sixMonthDateLabel() {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON BEAUTY EXAMPLE (HARD-LOCKED DOMAIN)
+// STANFORD MAJORS (NO-REPEAT ROTATION)
+//////////////////////////////////////////////////////////////
+const STANFORD_MAJORS = [
+  "Psychology",
+  "Economics",
+  "Design",
+  "Sociology",
+  "Computer Science",
+  "Statistics",
+  "Symbolic Systems",
+  "Communication",
+  "Education",
+  "Philosophy",
+  "Law",
+  "Environmental Science"
+];
+
+let majorPool = [...STANFORD_MAJORS];
+
+function pickStanfordMajor() {
+  if (majorPool.length === 0) {
+    majorPool = [...STANFORD_MAJORS];
+  }
+  const index = Math.floor(Math.random() * majorPool.length);
+  return majorPool.splice(index, 1)[0];
+}
+
+//////////////////////////////////////////////////////////////
+// AMAZON PRODUCT MEMORY (NO REPEAT)
+//////////////////////////////////////////////////////////////
+const AMAZON_MEMORY_LIMIT = 5;
+const amazonMemory = [];
+
+function rememberAmazon(title) {
+  amazonMemory.unshift(title);
+  if (amazonMemory.length > AMAZON_MEMORY_LIMIT) {
+    amazonMemory.pop();
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// AMAZON BEAUTY SEARCH
 //////////////////////////////////////////////////////////////
 async function fetchAmazonBeautyProduct(query) {
   if (!SERP_KEY || !query) return null;
 
-  const beautyQuery = `
+  const q = `
     ${query}
     (cosmetic OR beauty OR skincare OR makeup OR haircare)
     site:amazon.com/dp OR site:amazon.com/gp/product
   `;
 
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(beautyQuery)}&num=8&api_key=${SERP_KEY}`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=10&api_key=${SERP_KEY}`;
   const r = await fetch(url);
   const j = await r.json();
 
   return (j.organic_results || []).find(
     x =>
-      x.link?.includes("/dp/") ||
-      x.link?.includes("/gp/product")
+      (x.link?.includes("/dp/") || x.link?.includes("/gp/product")) &&
+      !amazonMemory.includes(x.title)
   );
 }
 
 //////////////////////////////////////////////////////////////
-// AUTO MODE — BEAUTY PRODUCT EXAMPLE GENERATOR
+// AUTO MODE — BEAUTY EXAMPLE
 //////////////////////////////////////////////////////////////
 async function generateBeautyExample() {
   const out = await openai.chat.completions.create({
@@ -108,11 +121,10 @@ Generate ONE real cosmetic or beauty product
 commonly sold on Amazon.
 
 Rules:
-- Beauty / skincare / makeup / haircare ONLY
-- Product name only
-- Must include brand
-- No explanation
+- Beauty only
+- Brand + product name
 - No punctuation
+- No explanation
 `
     }],
     temperature: 0.7
@@ -122,14 +134,13 @@ Rules:
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD OFFICIAL YOUTUBE VIDEO FETCH
+// STANFORD YOUTUBE VIDEO
 //////////////////////////////////////////////////////////////
-async function fetchStanfordYouTubeVideo(major) {
+async function fetchStanfordVideo(major) {
   if (!SERP_KEY) return null;
 
   const q = `Stanford University ${major} site:youtube.com/watch`;
   const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=10&api_key=${SERP_KEY}`;
-
   const r = await fetch(url);
   const j = await r.json();
 
@@ -139,43 +150,28 @@ async function fetchStanfordYouTubeVideo(major) {
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD REPORT GENERATOR (UNIFIED)
+// REPORT GENERATOR
 //////////////////////////////////////////////////////////////
-async function generateStanfordReport({
-  beautyExample,
-  major,
-  video
-}) {
+async function generateReport({ major, videoTitle, productTitle }) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
       content: `
 You are thinking as a Stanford University professor
-with a background in ${major}.
+specialized in ${major}.
 
-Official Stanford lecture reference:
-"${video.title}"
+Official Stanford lecture:
+"${videoTitle}"
 
-The following is a real Amazon cosmetic / beauty product:
-"${beautyExample}"
+Real-world example (Amazon beauty product):
+"${productTitle}"
 
 START WITH THIS LINE EXACTLY:
 2×-AI Engine — Stanford Academic Foresight
 Reality · ${sixMonthDateLabel()}
 
-Task:
-- Use the Stanford lecture as authoritative grounding
-- Use the beauty product as a real-world example
-- Explain concepts clearly
-- Teach how experts think
-- Project why this way of thinking matters over the next six months
-
-Rules:
-- Academic, teaching-first tone
-- No hype
-- No platform analysis
-- EXACTLY 5 short paragraphs
+Write EXACTLY 5 short teaching paragraphs.
 
 Then write:
 If this way of thinking is correct, what works:
@@ -190,67 +186,66 @@ Then EXACTLY 3 short sentences.
 }
 
 //////////////////////////////////////////////////////////////
-// UNIFIED PIPELINE (AUTO & MANUAL SHARE THIS)
+// PIPELINE (AUTO = MANUAL)
 //////////////////////////////////////////////////////////////
-async function runUnifiedPipeline(exampleInput) {
+async function runPipeline(exampleInput) {
   const major = pickStanfordMajor();
-  const video = await fetchStanfordYouTubeVideo(major);
-
-  if (!video) {
-    return { report: "No Stanford University video found." };
-  }
+  const stanfordVideo = await fetchStanfordVideo(major);
+  if (!stanfordVideo) return { report: "No Stanford video found." };
 
   const product = await fetchAmazonBeautyProduct(exampleInput);
-  if (!product) {
-    return { report: "No Amazon cosmetic or beauty product found." };
-  }
+  if (!product) return { report: "No Amazon beauty product found." };
 
-  const body = await generateStanfordReport({
-    beautyExample: product.title,
+  rememberAmazon(product.title);
+
+  const body = await generateReport({
     major,
-    video
+    videoTitle: stanfordVideo.title,
+    productTitle: product.title
   });
 
   return {
+    major,
+    stanfordLink: stanfordVideo.link,
+    amazonLink: product.link,
     report:
-      `• ${major} — Stanford University\n` +
-      `${video.link}\n\n` +
-      body
+`• ${major} — Stanford University
+${stanfordVideo.link}
+
+Example reference:
+${product.link}
+
+${body}`
   };
 }
 
 //////////////////////////////////////////////////////////////
 // ROUTES
 //////////////////////////////////////////////////////////////
-
-// MANUAL MODE — USER PROVIDES BEAUTY EXAMPLE
 app.post("/run", async (req, res) => {
   try {
     const { topic = "" } = req.body;
-    const result = await runUnifiedPipeline(topic);
-    res.json(result);
+    res.json(await runPipeline(topic));
   } catch (e) {
-    console.error("RUN ERROR:", e);
-    res.status(500).json({ report: "Stanford run failed." });
+    console.error(e);
+    res.status(500).json({ report: "Run failed." });
   }
 });
 
-// AUTO MODE — AI PROVIDES BEAUTY EXAMPLE
-app.post("/next", async (req, res) => {
+app.post("/next", async (_, res) => {
   try {
     const example = await generateBeautyExample();
-    const result = await runUnifiedPipeline(example);
-    res.json(result);
+    res.json(await runPipeline(example));
   } catch (e) {
-    console.error("NEXT ERROR:", e);
-    res.status(500).json({ report: "Stanford auto failed." });
+    console.error(e);
+    res.status(500).json({ report: "Auto failed." });
   }
 });
 
 //////////////////////////////////////////////////////////////
-// SERVER START
+// SERVER
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🎓 Stanford × Amazon Beauty Foresight running on port ${PORT}`);
+  console.log("🎓 Stanford × Amazon Beauty Foresight live");
 });
