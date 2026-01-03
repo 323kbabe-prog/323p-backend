@@ -15,6 +15,14 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+// ✅ IMPORTANT: handle CORS preflight (fixes OPTIONS 502)
+app.options("*", cors());
+
+// ✅ IMPORTANT: root health check (fixes GET / 502)
+app.get("/", (req, res) => {
+  res.status(200).send("Amazon AI Foresight is running.");
+});
+
 //////////////////////////////////////////////////////////////
 // OPENAI CLIENT
 //////////////////////////////////////////////////////////////
@@ -58,7 +66,7 @@ async function fetchSingleAmazonProduct(query) {
 }
 
 //////////////////////////////////////////////////////////////
-// AUTO MODE — AMAZON PRODUCT SEED (CRITICAL FIX)
+// AUTO MODE — AMAZON PRODUCT SEED (CRITICAL)
 //////////////////////////////////////////////////////////////
 async function generateNextAmazonQuery() {
   const out = await openai.chat.completions.create({
