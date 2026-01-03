@@ -1,65 +1,114 @@
 //////////////////////////////////////////////////////////////
-// Blue Ocean Browser — Image Generator Backend (FIXED)
+// AMAZON-ONLY AI FORESIGHT ENGINE
 //////////////////////////////////////////////////////////////
-
-import express from "express";
-import cors from "cors";
-import OpenAI from "openai";
+const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch");
+const OpenAI = require("openai");
 
 const app = express();
-
-// ------------------------------------------------------------
-// Middleware
-// ------------------------------------------------------------
 app.use(cors({ origin: "*" }));
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json());
 
-// ------------------------------------------------------------
-// OpenAI Client
-// ------------------------------------------------------------
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// ------------------------------------------------------------
-// Health Check
-// ------------------------------------------------------------
-app.get("/", (req, res) => {
-  res.send("Image backend is running");
-});
+const SERP_KEY = process.env.SERPAPI_KEY || null;
 
-// ------------------------------------------------------------
-// IMAGE GENERATION ENDPOINT
-// ------------------------------------------------------------
-app.post("/image", async (req, res) => {
+//////////////////////////////////////////////////////////////
+// UTILITIES
+//////////////////////////////////////////////////////////////
+function sixMonthDateLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 6);
+  return d.toLocaleDateString("en-US", {
+    year:"numeric",
+    month:"long",
+    day:"numeric"
+  });
+}
+
+async function fetchSingleAmazonProduct(query) {
+  if (!SERP_KEY || !query) return null;
+  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
+  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=5&api_key=${SERP_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  return (j.organic_results || []).find(
+    x => x.link?.includes("/dp/") || x.link?.includes("/gp/product")
+  );
+}
+
+async function generatePredictionBody(title) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{
+      role:"user",
+      content: `
+Verified Amazon product:
+"${title}"
+START WITH THIS LINE EXACTLY:
+2×-AI Engine — Real-Time AI Foresight
+Reality · ${sixMonthDateLabel()}
+Write EXACTLY 5 short paragraphs forecasting
+how demand, positioning, or usage may evolve
+over the next six months.
+Then write:
+If this prediction is correct, what works:
+Then EXACTLY 3 short sentences.
+`
+    }],
+    temperature:0.3
+  });
+  return out.choices[0].message.content.trim();
+}
+
+//////////////////////////////////////////////////////////////
+// AMAZON ENGINE
+//////////////////////////////////////////////////////////////
+async function runAmazon(topic) {
+  const product = await fetchSingleAmazonProduct(topic);
+  if (!product) {
+    return { report: "No Amazon product found." };
+  }
+  const body = await generatePredictionBody(product.title);
+  return {
+    report:
+      `• ${product.title} — Amazon\n` +
+      `${product.link}\n\n` +
+      body
+  };
+}
+
+//////////////////////////////////////////////////////////////
+// ROUTES
+//////////////////////////////////////////////////////////////
+app.post("/run", async (req, res) => {
   try {
-    const { prompt } = req.body;
-
-    if (!prompt || typeof prompt !== "string") {
-      return res.status(400).json({ error: "Prompt is required" });
-    }
-
-    console.log("🖼️ Generating image for:", prompt);
-
-    const result = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt,
-      size: "1024x1024"
-    });
-
-    // 🔑 IMPORTANT: return OpenAI image response directly
+    const { topic = "" } = req.body;
+    const result = await runAmazon(topic);
     res.json(result);
-
-  } catch (err) {
-    console.error("❌ IMAGE ERROR:", err);
-    res.status(500).json({ error: "Image generation failed" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ report: "Amazon run failed." });
   }
 });
 
-// ------------------------------------------------------------
-// Start Server (Render-compatible)
-// ------------------------------------------------------------
-const PORT = process.env.PORT || 10000;
+app.post("/next", async (req, res) => {
+  try {
+    const result = await runAmazon("");
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ report: "Amazon auto failed." });
+  }
+});
+
+//////////////////////////////////////////////////////////////
+// SERVER
+//////////////////////////////////////////////////////////////
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🟢 Image backend running on port ${PORT}`);
+  console.log(`🟦 Amazon AI Foresight running on port ${PORT}`);
 });
