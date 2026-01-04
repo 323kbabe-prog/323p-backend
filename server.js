@@ -162,20 +162,36 @@ async function generateReport({ major, videoTitle, productTitle }) {
     messages: [{
       role: "user",
       content: `
-You are thinking as a Stanford University professor
-specialized in ${major}.
+You are teaching a Stanford University class
+from the perspective of ${major}.
 
-Official Stanford lecture:
-"${videoTitle}"
-
-Real-world example (Amazon beauty product):
+This is the material we are studying today:
 "${productTitle}"
+
+This product is not an example.
+It is the primary object of study.
+
+We are using the following official Stanford lecture
+as the academic lens for interpretation:
+"${videoTitle}"
 
 START WITH THIS LINE EXACTLY:
 2×-AI Engine — Stanford Academic Foresight
 Reality · ${sixMonthDateLabel()}
 
-Write EXACTLY 5 short teaching paragraphs.
+Task:
+- Treat the Amazon product as the central case material
+- Explain why this product exists, how people use it, and what it signals
+- Apply concepts implied by the Stanford lecture directly to this product
+- Teach how an expert in ${major} would reason through this case
+- Keep the focus on thinking, not judging or selling
+
+Rules:
+- Academic, calm, adult teaching tone
+- No marketing language
+- No product review language
+- No calls to action
+- EXACTLY 5 short paragraphs
 
 Then write:
 If this way of thinking is correct, what works:
