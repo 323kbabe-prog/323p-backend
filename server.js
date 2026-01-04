@@ -229,13 +229,23 @@ Then EXACTLY 3 short sentences.
 // UNIFIED PIPELINE (AUTO = MANUAL)
 //////////////////////////////////////////////////////////////
 async function runPipeline(exampleInput) {
-  const major = pickStanfordMajor();
 
-  // 1. Fetch Stanford video FIRST
-  const stanfordVideo = await fetchStanfordVideo(major);
+  // 🔁 Try multiple Stanford majors until an official video is found
+  let stanfordVideo = null;
+  let major = null;
+  let attempts = 0;
+
+  while (!stanfordVideo && attempts < STANFORD_MAJORS.length) {
+    major = pickStanfordMajor();
+    stanfordVideo = await fetchStanfordVideo(major);
+    attempts++;
+  }
+
   if (!stanfordVideo) {
     return { report: "No Stanford University video found." };
   }
+
+  // --- everything below stays EXACTLY the same ---
 
   // 2. Fetch Amazon product with retry
   let product = null;
