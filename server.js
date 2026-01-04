@@ -255,7 +255,7 @@ async function runPipeline(exampleInput) {
 `• ${major} — Stanford University
 ${stanfordVideo.link}
 
-Today’s Material
+Case Study Material
 ${product.link}
 
 ${body}`
