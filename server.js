@@ -66,6 +66,24 @@ const STANFORD_MAJORS = [
   "Environmental Science"
 ];
 
+//////////////////////////////////////////////////////////////
+// STANFORD OFFICIAL YOUTUBE CHANNELS (LOCK)
+//////////////////////////////////////////////////////////////
+const STANFORD_CHANNEL_WHITELIST = [
+  "Stanford University",
+  "Stanford Online",
+  "Stanford GSB",
+  "Stanford Medicine",
+  "Stanford Engineering"
+];
+
+function isOfficialStanfordChannel(channelName) {
+  if (!channelName) return false;
+  return STANFORD_CHANNEL_WHITELIST.some(name =>
+    channelName.toLowerCase().includes(name.toLowerCase())
+  );
+}
+
 let majorPool = [...STANFORD_MAJORS];
 
 function pickStanfordMajor() {
@@ -147,9 +165,12 @@ async function fetchStanfordVideo(major) {
   const r = await fetch(url);
   const j = await r.json();
 
-  return (j.organic_results || []).find(v =>
-    v.link?.includes("youtube.com/watch")
-  );
+  return (j.organic_results || []).find(v => {
+  if (!v.link?.includes("youtube.com/watch")) return false;
+
+  const channelName = v.source || v.channel || "";
+  return isOfficialStanfordChannel(channelName);
+});
 }
 
 //////////////////////////////////////////////////////////////
