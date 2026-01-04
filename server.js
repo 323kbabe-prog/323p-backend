@@ -210,24 +210,43 @@ Then EXACTLY 3 short sentences.
 async function runPipeline(exampleInput) {
   const major = pickStanfordMajor();
 
+  // 1. Fetch Stanford video FIRST
   const stanfordVideo = await fetchStanfordVideo(major);
   if (!stanfordVideo) {
     return { report: "No Stanford University video found." };
   }
 
-  const product = await fetchAmazonBeautyProduct(exampleInput);
+  // 2. Fetch Amazon product with retry
+  let product = null;
+  let attempt = 0;
+  let query = exampleInput;
+
+  while (!product && attempt < 3) {
+    product = await fetchAmazonBeautyProduct(query);
+
+    // fallback: simplify query after first failure
+    if (!product) {
+      query = query.split(" ").slice(0, 3).join(" ");
+    }
+
+    attempt++;
+  }
+
   if (!product) {
     return { report: "No Amazon cosmetic or beauty product found." };
   }
 
+  // 3. Remember product to avoid repeats
   rememberAmazon(product.title);
 
+  // 4. Generate Stanford report USING the product
   const body = await generateReport({
     major,
     videoTitle: stanfordVideo.title,
     productTitle: product.title
   });
 
+  // 5. Return final response
   return {
     major,
     stanfordLink: stanfordVideo.link,
@@ -236,7 +255,7 @@ async function runPipeline(exampleInput) {
 `• ${major} — Stanford University
 ${stanfordVideo.link}
 
-Example reference:
+Today’s Material
 ${product.link}
 
 ${body}`
