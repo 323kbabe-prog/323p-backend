@@ -112,9 +112,12 @@ function rememberAmazon(title) {
 //////////////////////////////////////////////////////////////
 async function fetchAmazonBeautyProduct(query) {
   if (!SERP_KEY || !query) return null;
+  
+    // Normalize long product names to brand + key terms
+  const normalizedQuery = query.split(" ").slice(0, 4).join(" ");
 
-  const q = `
-    ${query}
+    const q = `
+    ${normalizedQuery}
     (cosmetic OR beauty OR skincare OR makeup OR haircare)
     site:amazon.com/dp OR site:amazon.com/gp/product
   `;
