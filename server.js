@@ -121,14 +121,13 @@ async function generateBeautyExample() {
     messages: [{
       role: "user",
       content: `
-Generate ONE real cosmetic or beauty product
-commonly sold on Amazon.
+Generate ONE real Amazon beauty product.
 
 Rules:
-- Beauty only
-- Brand + product name
-- No punctuation
-- No explanation
+- MUST include a real brand name
+- MUST be a specific product name
+- Beauty / skincare / makeup / haircare only
+- Output product name only
 `
     }],
     temperature: 0.7
