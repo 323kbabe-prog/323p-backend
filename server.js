@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CASE CLASSROOM — BACKEND
+// AI CASE CLASSROOM — BACKEND (FULL FIX)
 // Stanford × Amazon Foresight Engine
 //////////////////////////////////////////////////////////////
 
@@ -24,13 +24,9 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SERP_KEY = process.env.SERPAPI_KEY || null;
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
 
-// 🔒 Hard guard — do NOT allow server to run without secret
-if (!ACCESS_TOKEN_SECRET) {
-  console.error("❌ ACCESS_TOKEN_SECRET is missing");
-  process.exit(1);
-}
+// OPTIONAL — email access enabled only if set
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || null;
 
 //////////////////////////////////////////////////////////////
 // UTIL
@@ -46,7 +42,7 @@ function sixMonthDateLabel() {
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD MAJORS (ROTATING, NO REPEAT)
+// STANFORD MAJORS
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
   "Psychology",
@@ -80,8 +76,8 @@ const STANFORD_CHANNELS = [
 ];
 
 function isOfficialStanford(channel = "") {
-  return STANFORD_CHANNELS.some(name =>
-    channel.toLowerCase().includes(name.toLowerCase())
+  return STANFORD_CHANNELS.some(n =>
+    channel.toLowerCase().includes(n.toLowerCase())
   );
 }
 
@@ -130,10 +126,7 @@ async function generateBeautyProduct() {
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
-      content: `
-Generate ONE real Amazon beauty product.
-Output the product name only.
-`
+      content: "Generate ONE real Amazon beauty product. Output name only."
     }],
     temperature: 0.7
   });
@@ -172,11 +165,8 @@ async function generateClass({ major, videoTitle, productTitle }) {
       content: `
 You are teaching a Stanford University class from the perspective of ${major}.
 
-Case material:
-"${productTitle}"
-
-Academic lens:
-"${videoTitle}"
+Case material: "${productTitle}"
+Academic lens: "${videoTitle}"
 
 START WITH THIS LINE EXACTLY:
 2×-AI Engine — Stanford Academic Foresight
@@ -284,28 +274,30 @@ app.post("/create-checkout-session", async (_, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// EMAIL ACCESS TOKEN (PAID USERS)
+// EMAIL ACCESS (OPTIONAL — SAFE FALLBACK)
 //////////////////////////////////////////////////////////////
 function createAccessToken(email) {
+  if (!ACCESS_TOKEN_SECRET) return null;
+
   const payload = JSON.stringify({
     email,
     scope: "full",
-    exp: Date.now() + 1000 * 60 * 60 * 24 * 30 // 30 days
+    exp: Date.now() + 1000 * 60 * 60 * 24 * 30
   });
 
-  const signature = crypto
+  const sig = crypto
     .createHmac("sha256", ACCESS_TOKEN_SECRET)
     .update(payload)
     .digest("hex");
 
-  // URL-safe token
-  return Buffer.from(payload).toString("base64url") + "." + signature;
+  return Buffer.from(payload).toString("base64url") + "." + sig;
 }
 
-//////////////////////////////////////////////////////////////
-// SEND EMAIL ACCESS LINK (TEMP RETURN)
-//////////////////////////////////////////////////////////////
 app.post("/send-access-link", async (req, res) => {
+  if (!ACCESS_TOKEN_SECRET) {
+    return res.json({ ok: false, error: "Email access disabled" });
+  }
+
   const { email } = req.body;
   if (!email) return res.status(400).json({ ok: false });
 
@@ -313,27 +305,25 @@ app.post("/send-access-link", async (req, res) => {
   const link =
     `https://blueoceanbrowser.com/amazonclassroom.html?access=${token}`;
 
-  // v1: return link (frontend can redirect or mailto)
   res.json({ ok: true, link });
 });
 
-//////////////////////////////////////////////////////////////
-// VERIFY ACCESS TOKEN
-//////////////////////////////////////////////////////////////
 app.post("/verify-access", async (req, res) => {
+  if (!ACCESS_TOKEN_SECRET) return res.json({ ok: false });
+
   const { token } = req.body;
   if (!token) return res.json({ ok: false });
 
-  const [payloadB64, signature] = token.split(".");
-  if (!payloadB64 || !signature) return res.json({ ok: false });
+  const [payloadB64, sig] = token.split(".");
+  if (!payloadB64 || !sig) return res.json({ ok: false });
 
   const payload = Buffer.from(payloadB64, "base64url").toString();
-  const expectedSig = crypto
+  const expected = crypto
     .createHmac("sha256", ACCESS_TOKEN_SECRET)
     .update(payload)
     .digest("hex");
 
-  if (expectedSig !== signature) return res.json({ ok: false });
+  if (expected !== sig) return res.json({ ok: false });
 
   const data = JSON.parse(payload);
   if (Date.now() > data.exp) return res.json({ ok: false });
