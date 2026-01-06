@@ -8,6 +8,7 @@ const cors = require("cors");
 const fetch = require("node-fetch");
 const OpenAI = require("openai");
 const Stripe = require("stripe");
+const crypto = require("crypto");
 
 const app = express();
 
@@ -23,6 +24,13 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SERP_KEY = process.env.SERPAPI_KEY || null;
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
+
+// 🔒 Hard guard — do NOT allow server to run without secret
+if (!ACCESS_TOKEN_SECRET) {
+  console.error("❌ ACCESS_TOKEN_SECRET is missing");
+  process.exit(1);
+}
 
 //////////////////////////////////////////////////////////////
 // UTIL
@@ -38,7 +46,7 @@ function sixMonthDateLabel() {
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD MAJORS
+// STANFORD MAJORS (ROTATING, NO REPEAT)
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
   "Psychology",
@@ -72,8 +80,8 @@ const STANFORD_CHANNELS = [
 ];
 
 function isOfficialStanford(channel = "") {
-  return STANFORD_CHANNELS.some(n =>
-    channel.toLowerCase().includes(n.toLowerCase())
+  return STANFORD_CHANNELS.some(name =>
+    channel.toLowerCase().includes(name.toLowerCase())
   );
 }
 
@@ -100,7 +108,10 @@ async function fetchAmazonProduct(query) {
     site:amazon.com/dp OR site:amazon.com/gp/product
   `;
 
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=10&api_key=${SERP_KEY}`;
+  const url =
+    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
+    `&num=10&api_key=${SERP_KEY}`;
+
   const r = await fetch(url);
   const j = await r.json();
 
@@ -137,7 +148,10 @@ async function fetchStanfordVideo(major) {
   if (!SERP_KEY) return null;
 
   const q = `Stanford University ${major} site:youtube.com/watch`;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&num=10&api_key=${SERP_KEY}`;
+  const url =
+    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
+    `&num=10&api_key=${SERP_KEY}`;
+
   const r = await fetch(url);
   const j = await r.json();
 
@@ -260,11 +274,71 @@ app.post("/create-checkout-session", async (_, res) => {
       },
       quantity: 1
     }],
-    success_url: "https://blueoceanbrowser.com/classroom.html?paid=1",
-    cancel_url: "https://blueoceanbrowser.com/classroom.html"
+    success_url:
+      "https://blueoceanbrowser.com/amazonclassroom.html?paid=1",
+    cancel_url:
+      "https://blueoceanbrowser.com/amazonclassroom.html"
   });
 
   res.json({ url: session.url });
+});
+
+//////////////////////////////////////////////////////////////
+// EMAIL ACCESS TOKEN (PAID USERS)
+//////////////////////////////////////////////////////////////
+function createAccessToken(email) {
+  const payload = JSON.stringify({
+    email,
+    scope: "full",
+    exp: Date.now() + 1000 * 60 * 60 * 24 * 30 // 30 days
+  });
+
+  const signature = crypto
+    .createHmac("sha256", ACCESS_TOKEN_SECRET)
+    .update(payload)
+    .digest("hex");
+
+  // URL-safe token
+  return Buffer.from(payload).toString("base64url") + "." + signature;
+}
+
+//////////////////////////////////////////////////////////////
+// SEND EMAIL ACCESS LINK (TEMP RETURN)
+//////////////////////////////////////////////////////////////
+app.post("/send-access-link", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ ok: false });
+
+  const token = createAccessToken(email);
+  const link =
+    `https://blueoceanbrowser.com/amazonclassroom.html?access=${token}`;
+
+  // v1: return link (frontend can redirect or mailto)
+  res.json({ ok: true, link });
+});
+
+//////////////////////////////////////////////////////////////
+// VERIFY ACCESS TOKEN
+//////////////////////////////////////////////////////////////
+app.post("/verify-access", async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.json({ ok: false });
+
+  const [payloadB64, signature] = token.split(".");
+  if (!payloadB64 || !signature) return res.json({ ok: false });
+
+  const payload = Buffer.from(payloadB64, "base64url").toString();
+  const expectedSig = crypto
+    .createHmac("sha256", ACCESS_TOKEN_SECRET)
+    .update(payload)
+    .digest("hex");
+
+  if (expectedSig !== signature) return res.json({ ok: false });
+
+  const data = JSON.parse(payload);
+  if (Date.now() > data.exp) return res.json({ ok: false });
+
+  res.json({ ok: true, scope: data.scope });
 });
 
 //////////////////////////////////////////////////////////////
