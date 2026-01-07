@@ -171,32 +171,60 @@ async function fetchStanfordVideo(major) {
 //////////////////////////////////////////////////////////////
 async function generateClass({ major, videoTitle, productTitle }) {
   const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: `
+  model: "gpt-4o-mini",
+  messages: [{
+    role: "user",
+    content: `
 You are teaching a Stanford University class from the perspective of ${major}.
 
-Case material: "${productTitle}"
-Academic lens: "${videoTitle}"
+Case material:
+"${productTitle}"
 
-START WITH THIS LINE EXACTLY:
+Academic lens:
+"${videoTitle}"
+
+FIRST, write a section titled exactly:
+
+What to learn
+
+Under this section, generate EXACTLY three learning points.
+
+For EACH learning point:
+- Start with a short bullet
+- Write a concise, discipline-specific learning statement (one sentence)
+- These must describe how to think, not what to conclude
+
+AFTER the "What to learn" section, write the session header in this exact format:
+
+Session ${major} Reasoning
+
+Then write the following lines exactly:
+
+• ${major} — Stanford University
+${videoTitle}
+
+Case Study Material
+${productTitle}
+
+Then write the header exactly:
+
 2×-AI Engine — Stanford Academic Foresight
 Reality · ${sixMonthDateLabel()}
 
+Immediately after that header, write EXACTLY five short academic paragraphs explaining the case using the ${major} lens.
+
 Rules:
 - Academic teaching tone
-- No selling, no judging
-- EXACTLY 5 short paragraphs
-
-Then write:
-If this way of thinking is correct, what works:
-
-Then EXACTLY 3 short sentences.
+- Calm and analytical
+- No selling language
+- No product review language
+- No calls to action
+- No emojis
+- Do not add any extra sections
 `
-    }],
-    temperature: 0.3
-  });
+  }],
+  temperature: 0.3
+});
 
   return out.choices[0].message.content.trim();
 }
