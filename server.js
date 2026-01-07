@@ -9,6 +9,8 @@ const fetch = require("node-fetch");
 const OpenAI = require("openai");
 const Stripe = require("stripe");
 const crypto = require("crypto");
+const PDFDocument = require("pdfkit");
+const nodemailer = require("nodemailer");
 
 const app = express();
 
@@ -27,6 +29,16 @@ const SERP_KEY = process.env.SERPAPI_KEY || null;
 
 // OPTIONAL — email access enabled only if set
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || null;
+
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 //////////////////////////////////////////////////////////////
 // UTIL
@@ -335,6 +347,49 @@ app.post("/verify-access", async (req, res) => {
 // SERVER
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
+
+app.post("/email-curriculum", async (req, res) => {
+  const { email, content } = req.body;
+
+  if (!email || !content) {
+    return res.status(400).json({ ok: false });
+  }
+
+  try {
+    const doc = new PDFDocument({ margin: 40 });
+    let buffers = [];
+
+    doc.on("data", buffers.push.bind(buffers));
+    doc.on("end", async () => {
+      const pdfBuffer = Buffer.concat(buffers);
+
+      await transporter.sendMail({
+        from: `"AI Case Classroom" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "Your AI Case Classroom Curriculum",
+        text: "Attached is your completed AI Case Classroom curriculum.",
+        attachments: [
+          {
+            filename: "AI-Case-Classroom.pdf",
+            content: pdfBuffer
+          }
+        ]
+      });
+
+      res.json({ ok: true });
+    });
+
+    doc.fontSize(18).text("AI Case Classroom", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(12).text(content);
+    doc.end();
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 app.listen(PORT, () => {
   console.log("🎓 AI Case Classroom backend live");
 });
