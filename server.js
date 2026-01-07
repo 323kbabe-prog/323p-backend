@@ -226,7 +226,13 @@ Rules:
   temperature: 0.3
 });
 
-  return out.choices[0].message.content.trim();
+  const content = out?.choices?.[0]?.message?.content;
+
+if (!content) {
+  throw new Error("OpenAI returned empty class content");
+}
+
+return content.trim();
 }
 
 //////////////////////////////////////////////////////////////
