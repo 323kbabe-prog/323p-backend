@@ -170,11 +170,7 @@ async function fetchStanfordVideo(major) {
 // CLASS GENERATOR
 //////////////////////////////////////////////////////////////
 async function generateClass({ major, videoTitle, productTitle }) {
-  const out = await openai.chat.completions.create({
-  model: "gpt-4o-mini",
-  messages: [{
-    role: "user",
-    content: `
+  content: `
 You are teaching a Stanford University class from the perspective of ${major}.
 
 Case material:
@@ -183,18 +179,24 @@ Case material:
 Academic lens:
 "${videoTitle}"
 
-FIRST, write a section titled exactly:
+IMPORTANT FORMATTING RULES:
+- Output MUST be plain text only
+- DO NOT use Markdown
+- DO NOT use ###, **, ---, or any formatting symbols
+- Use only normal text, line breaks, and simple bullet characters (• or -)
 
+FIRST, write this header on its own line exactly:
 What to learn
 
-Under this section, generate EXACTLY three learning points.
+Under this header, write EXACTLY three learning points.
 
 For EACH learning point:
-- Start with a short bullet
-- Write a concise, discipline-specific learning statement (one sentence)
-- These must describe how to think, not what to conclude
+- Start with a single dash followed by a space (example: "- Market positioning")
+- Do NOT bold anything
+- Write ONE short explanatory paragraph (2–3 sentences) immediately after the bullet
+- These paragraphs must explain how this learning point trains thinking, not what conclusion to reach
 
-Then write the header exactly:
+After the learning section, write the following lines exactly:
 
 2×-AI Engine — Stanford Academic Foresight
 Reality · ${sixMonthDateLabel()}
@@ -208,7 +210,8 @@ Rules:
 - No product review language
 - No calls to action
 - No emojis
-- Do not add any extra sections
+- No Markdown
+- No extra sections
 `
   }],
   temperature: 0.3
