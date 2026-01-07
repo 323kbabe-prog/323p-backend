@@ -1,19 +1,9 @@
 {
-  "name": "323drop-base-mode",
+  "name": "ai-case-classroom-backend",
   "version": "1.0.0",
-  "description": "323drop backend — Base Mode Only (DailyDrop + cycle + voice + credits + stripe)",
+  "private": true,
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "openai": "^4.0.0",
-    "socket.io": "^4.7.5",
-    "cors": "^2.8.5",
-    "stripe": "^14.0.0"
   }
 }
