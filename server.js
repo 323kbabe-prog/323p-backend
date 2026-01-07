@@ -194,18 +194,6 @@ For EACH learning point:
 - Write a concise, discipline-specific learning statement (one sentence)
 - These must describe how to think, not what to conclude
 
-AFTER the "What to learn" section, write the session header in this exact format:
-
-Session ${major} Reasoning
-
-Then write the following lines exactly:
-
-• ${major} — Stanford University
-${videoTitle}
-
-Case Study Material
-${productTitle}
-
 Then write the header exactly:
 
 2×-AI Engine — Stanford Academic Foresight
