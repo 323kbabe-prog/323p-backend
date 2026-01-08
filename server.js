@@ -285,19 +285,40 @@ async function runPipeline(input) {
   }
 
   if (!product) return { report: null };
-  
-  const titleLower = product.title.toLowerCase();
+
+const titleLower = product.title.toLowerCase();
+
+// ✅ BEAUTY WHITELIST (already in your code)
 if (!BEAUTY_KEYWORDS.some(k => titleLower.includes(k))) {
   return { report: null };
 }
 
-  rememberAmazon(product.title);
+// 🔴 INSERT THIS BLOCK — EXACTLY HERE
+const BANNED_KEYWORDS = [
+  "printer",
+  "ink",
+  "toner",
+  "cartridge",
+  "device",
+  "machine",
+  "replacement",
+  "compatible",
+  "refill",
+  "hardware"
+];
 
-  const body = await generateClass({
-    major,
-    videoTitle: video.title,
-    productTitle: product.title
-  });
+if (BANNED_KEYWORDS.some(b => titleLower.includes(b))) {
+  return { report: null };
+}
+
+// ✅ KEEP EVERYTHING BELOW THIS
+rememberAmazon(product.title);
+
+const body = await generateClass({
+  major,
+  videoTitle: video.title,
+  productTitle: product.title
+});
 
   return {
     report:
