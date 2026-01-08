@@ -105,6 +105,31 @@ function rememberAmazon(title) {
 }
 
 //////////////////////////////////////////////////////////////
+// BEAUTY / COSMETIC HARD LOCK
+//////////////////////////////////////////////////////////////
+const BEAUTY_KEYWORDS = [
+  "beauty",
+  "cosmetic",
+  "skincare",
+  "skin care",
+  "makeup",
+  "hair",
+  "haircare",
+  "serum",
+  "cleanser",
+  "moisturizer",
+  "cream",
+  "lotion",
+  "toner",
+  "essence",
+  "mask",
+  "foundation",
+  "lipstick",
+  "shampoo",
+  "conditioner"
+];
+
+//////////////////////////////////////////////////////////////
 // AMAZON BEAUTY SEARCH
 //////////////////////////////////////////////////////////////
 async function fetchAmazonProduct(query) {
@@ -123,11 +148,15 @@ async function fetchAmazonProduct(query) {
   const r = await fetch(url);
   const j = await r.json();
 
-  return (j.organic_results || []).find(
-    x =>
+  return (j.organic_results || []).find(x => {
+    const title = (x.title || "").toLowerCase();
+
+    return (
       (x.link?.includes("/dp/") || x.link?.includes("/gp/product")) &&
-      !AMAZON_MEMORY.includes(x.title)
-  );
+      !AMAZON_MEMORY.includes(x.title) &&
+      BEAUTY_KEYWORDS.some(keyword => title.includes(keyword))
+    );
+  });
 }
 
 //////////////////////////////////////////////////////////////
@@ -138,7 +167,7 @@ async function generateBeautyProduct() {
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
-      content: "Generate ONE real Amazon beauty product. Output name only."
+      content: "Generate ONE real Amazon beauty or cosmetic product (skincare, makeup, or haircare only). Do NOT generate devices, supplements, tools, or accessories. Output product name only."
     }],
     temperature: 0.7
   });
@@ -256,6 +285,11 @@ async function runPipeline(input) {
   }
 
   if (!product) return { report: null };
+  
+  const titleLower = product.title.toLowerCase();
+if (!BEAUTY_KEYWORDS.some(k => titleLower.includes(k))) {
+  return { report: null };
+}
 
   rememberAmazon(product.title);
 
