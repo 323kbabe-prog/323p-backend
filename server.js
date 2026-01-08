@@ -14,6 +14,11 @@ const nodemailer = require("nodemailer");
 
 const app = express();
 
+//////////////////////////////////////////////////////////////
+// CURRICULUM SESSION PRODUCT LOCK (12 UNIQUE)
+//////////////////////////////////////////////////////////////
+const SESSION_PRODUCTS = new Set();
+
 // 🔴 Render health check (must be first)
 app.get("/", (_, res) => res.status(200).send("OK"));
 
@@ -98,7 +103,7 @@ function isOfficialStanford(channel = "") {
 // AMAZON MEMORY (NO REPEAT)
 //////////////////////////////////////////////////////////////
 const AMAZON_MEMORY = [];
-const AMAZON_LIMIT = 5;
+const AMAZON_LIMIT = 12;
 
 function rememberAmazon(title) {
   AMAZON_MEMORY.unshift(title);
@@ -299,6 +304,11 @@ async function runPipeline(input) {
   }
 
   if (!product) return { report: null };
+  
+  // 🔒 Session-level uniqueness lock (12 unique products)
+if (SESSION_PRODUCTS.has(product.title)) {
+  return { report: null };
+}
 
 const titleLower = product.title.toLowerCase();
 
@@ -327,6 +337,7 @@ if (BANNED_KEYWORDS.some(b => titleLower.includes(b))) {
 
 // ✅ KEEP EVERYTHING BELOW THIS
 rememberAmazon(product.title);
+SESSION_PRODUCTS.add(product.title);
 
 const body = await generateClass({
   major,
@@ -354,6 +365,12 @@ app.post("/run", async (req, res) => {
 });
 
 app.post("/next", async (_, res) => {
+  
+  // Reset session memory when starting a new curriculum run
+if (SESSION_PRODUCTS.size >= 12) {
+  SESSION_PRODUCTS.clear();
+  AMAZON_MEMORY.length = 0;
+}
   let attempts = 0;
   let result = null;
 
