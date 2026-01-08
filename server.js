@@ -444,7 +444,12 @@ async function runCurriculumJob(jobId) {
     }
 
     CURRICULUM_JOBS[jobId].status = "done";
-    delete CURRICULUM_RETRIES[jobId];
+delete CURRICULUM_RETRIES[jobId];
+
+// 🛑 HARD TERMINATION — kill job after UI has time to read it
+setTimeout(() => {
+  delete CURRICULUM_JOBS[jobId];
+}, 60 * 1000); // 1 minute
 
   } catch (err) {
     CURRICULUM_JOBS[jobId].status = "error";
@@ -494,7 +499,9 @@ app.get("/curriculum-status/:jobId", (req, res) => {
 //////////////////////////////////////////////////////////////
 app.get("/curriculum-result/:jobId", (req, res) => {
   const job = CURRICULUM_JOBS[req.params.jobId];
-  if (!job) return res.status(404).json({ error: "Job not found" });
+ if (!job) {
+  return res.status(410).json({ status: "ended", results: [] });
+}
 
   // ✅ Allow partial results during generation
   res.json({
