@@ -340,8 +340,22 @@ app.post("/run", async (req, res) => {
 });
 
 app.post("/next", async (_, res) => {
-  const example = await generateBeautyProduct();
-  res.json(await runPipeline(example));
+  let attempts = 0;
+  let result = null;
+
+  while (attempts < 10 && (!result || !result.report)) {
+    const example = await generateBeautyProduct();
+    result = await runPipeline(example);
+    attempts++;
+  }
+
+  if (!result || !result.report) {
+    return res.status(500).json({
+      report: "Error: Unable to generate valid beauty case after multiple attempts."
+    });
+  }
+
+  res.json(result);
 });
 
 //////////////////////////////////////////////////////////////
