@@ -130,6 +130,19 @@ const BEAUTY_KEYWORDS = [
   "conditioner"
 ];
 
+const BEAUTY_FALLBACK_PRODUCTS = [
+  "CeraVe Hydrating Facial Cleanser",
+  "La Roche-Posay Toleriane Double Repair Moisturizer",
+  "The Ordinary Niacinamide 10% + Zinc 1%",
+  "Neutrogena Hydro Boost Water Gel",
+  "COSRX Advanced Snail 96 Mucin Power Essence",
+  "Paula's Choice 2% BHA Liquid Exfoliant",
+  "Laneige Water Sleeping Mask",
+  "Olaplex No.3 Hair Perfector",
+  "Cetaphil Gentle Skin Cleanser",
+  "La Roche-Posay Anthelios Melt-in Milk SPF 100"
+];
+
 //////////////////////////////////////////////////////////////
 // AMAZON BEAUTY SEARCH
 //////////////////////////////////////////////////////////////
@@ -350,9 +363,20 @@ app.post("/next", async (_, res) => {
     attempts++;
   }
 
+  // ✅ NEW: fallback guarantee
+  if (!result || !result.report) {
+    const fallback =
+      BEAUTY_FALLBACK_PRODUCTS[
+        Math.floor(Math.random() * BEAUTY_FALLBACK_PRODUCTS.length)
+      ];
+
+    result = await runPipeline(fallback);
+  }
+
+  // Absolute final safety
   if (!result || !result.report) {
     return res.status(500).json({
-      report: "Error: Unable to generate valid beauty case after multiple attempts."
+      report: "Error: Beauty fallback failed. Please retry."
     });
   }
 
