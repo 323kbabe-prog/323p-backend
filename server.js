@@ -187,20 +187,23 @@ Academic lens:
 IMPORTANT FORMATTING RULES:
 - Output MUST be plain text only
 - DO NOT use Markdown
-- DO NOT use ###, **, ---, or any formatting symbols
-- Use only normal text, line breaks, and simple bullet characters (-)
+- DO NOT use ###, **, ---, or decorative symbols
+- Use only normal text, line breaks, and simple dash bullets (-)
 
-FIRST, write this header on its own line exactly:
+FIRST, write this section exactly:
+
 What to learn
 
-Under this header, write EXACTLY three learning points.
+Under this section, generate EXACTLY three learning points.
 
 For EACH learning point:
-- Start with a single dash followed by a space
-- Write ONE short explanatory paragraph (2–3 sentences)
-- Explain how this learning point trains thinking, not what conclusion to reach
+- Start with a short, distinctive title written as a sentence fragment
+- Put the title on its own line
+- On the next line, write ONE short explanatory paragraph (2–3 sentences)
+- The paragraph must explain how this learning point trains thinking, not what conclusion to reach
+- Titles must feel like reusable cognitive tools, not topic labels
 
-After the learning section, write the following lines exactly:
+AFTER the learning section, write the following lines exactly:
 
 2×-AI Engine — Stanford Academic Foresight
 Reality · ${sixMonthDateLabel()}
@@ -214,7 +217,6 @@ Rules:
 - No product review language
 - No calls to action
 - No emojis
-- No Markdown
 - No extra sections
 `
       }
