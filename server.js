@@ -495,9 +495,12 @@ app.get("/curriculum-status/:jobId", (req, res) => {
 app.get("/curriculum-result/:jobId", (req, res) => {
   const job = CURRICULUM_JOBS[req.params.jobId];
   if (!job) return res.status(404).json({ error: "Job not found" });
-  if (job.status !== "done") return res.status(400).json({ error: "Not finished" });
 
-  res.json({ results: job.results });
+  // ✅ Allow partial results during generation
+  res.json({
+    status: job.status,
+    results: job.results || []
+  });
 });
 
 //////////////////////////////////////////////////////////////
