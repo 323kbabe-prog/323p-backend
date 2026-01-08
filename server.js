@@ -26,6 +26,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "SECRET_KEY_HERE";
 
+// Admin secret for one-pass generation
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
 //////////////////////////////////////////////////////////////
 // ONE-TIME SEARCH TOKEN STORE
 //////////////////////////////////////////////////////////////
@@ -53,8 +56,7 @@ function generateSearchToken(topic) {
 function verifyAndConsumeSearchToken(token) {
   if (!token) return null;
 
-  // Prevent reuse
-  if (usedSearchTokens.has(token)) return null;
+  if (usedSearchTokens.has(token)) return null; // Prevent reuse
 
   const [payloadB64, sig] = token.split(".");
   if (!payloadB64 || !sig) return null;
@@ -68,8 +70,7 @@ function verifyAndConsumeSearchToken(token) {
 
   const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString());
 
-  // consume token immediately
-  usedSearchTokens.add(token);
+  usedSearchTokens.add(token); // consume
 
   return payload.topic;
 }
@@ -103,7 +104,7 @@ Examples:
 }
 
 //////////////////////////////////////////////////////////////
-// BEAUTY CATEGORY CLASSIFIER (FOR FREE USERS)
+// BEAUTY CATEGORY CLASSIFIER (FREE USERS)
 //////////////////////////////////////////////////////////////
 async function aiAllowsBeautyCategory(input) {
   const out = await openai.chat.completions.create({
@@ -124,7 +125,7 @@ Output ONLY: ALLOW or DENY.`
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD MAJORS (UNCHANGED)
+// STANFORD MAJORS
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
   "Psychology","Economics","Design","Sociology",
@@ -139,7 +140,7 @@ function pickMajor() {
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD VIDEO SEARCH (UNCHANGED)
+// STANFORD VIDEO SEARCH
 //////////////////////////////////////////////////////////////
 const STANFORD_CHANNELS = [
   "Stanford University","Stanford Online",
@@ -170,7 +171,7 @@ async function fetchStanfordVideo(major) {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON PRODUCT SEARCH (UNCHANGED)
+// AMAZON PRODUCT SEARCH
 //////////////////////////////////////////////////////////////
 async function fetchAmazonProduct(query) {
   if (!SERP_KEY) return null;
@@ -190,7 +191,7 @@ async function fetchAmazonProduct(query) {
 }
 
 //////////////////////////////////////////////////////////////
-// CLASS GENERATOR (UNCHANGED)
+// CLASS GENERATOR
 //////////////////////////////////////////////////////////////
 async function generateClass({ major, videoTitle, productTitle }) {
   const out = await openai.chat.completions.create({
@@ -225,7 +226,7 @@ Follow with 3 points explaining how people in ${major} think about a topic.
 }
 
 //////////////////////////////////////////////////////////////
-// PIPELINE (UNCHANGED)
+// PIPELINE
 //////////////////////////////////////////////////////////////
 async function runPipeline(input) {
   let major, video;
@@ -259,13 +260,13 @@ ${body}`
 }
 
 //////////////////////////////////////////////////////////////
-// RUN ROUTE — SECURE, TOKEN-BASED
+// RUN ROUTE (SECURE PAY-PER-SEARCH)
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
   let topic = req.body.topic || "";
   const token = req.body.searchToken || null;
 
-  // If token exists → verify it (PAID SEARCH)
+  // PAID SEARCH — use token
   if (token) {
     const extractedTopic = verifyAndConsumeSearchToken(token);
     if (!extractedTopic) {
@@ -274,12 +275,11 @@ app.post("/run", async (req, res) => {
       });
     }
 
-    // Replace original topic with the paid one
     topic = await transformToBeautyProductQuery(extractedTopic);
     return res.json(await runPipeline(topic));
   }
 
-  // FREE SEARCH MODE
+  // FREE SEARCH — must be real Beauty category
   const allowed = await aiAllowsBeautyCategory(topic);
   if (!allowed) {
     return res.json({
@@ -287,12 +287,11 @@ app.post("/run", async (req, res) => {
     });
   }
 
-  // Free search is allowed
   return res.json(await runPipeline(topic));
 });
 
 //////////////////////////////////////////////////////////////
-// STRIPE CHECKOUT — $0.50 PER SEARCH
+// STRIPE — $0.50 PER SEARCH
 //////////////////////////////////////////////////////////////
 app.post("/create-search-session", async (req, res) => {
   const topic = req.body.topic || "";
@@ -304,7 +303,7 @@ app.post("/create-search-session", async (req, res) => {
       price_data: {
         currency: "usd",
         product_data: { name: "AI Case Classroom — One Search" },
-        unit_amount: 50  // $0.50
+        unit_amount: 50   // $0.50
       },
       quantity: 1
     }],
@@ -316,6 +315,27 @@ app.post("/create-search-session", async (req, res) => {
   });
 
   res.json({ url: session.url });
+});
+
+//////////////////////////////////////////////////////////////
+// ADMIN ONE-PASS SEARCH TOKEN GENERATOR
+//////////////////////////////////////////////////////////////
+app.get("/create-admin-pass", async (req, res) => {
+  const secret = req.query.secret;
+  const topic  = req.query.topic || "";
+
+  if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  if (!topic.trim()) {
+    return res.json({ error: "Missing topic" });
+  }
+
+  const token = generateSearchToken(topic);
+
+  const url = `https://blueoceanbrowser.com/amazonclassroom.html?search_token=${token}`;
+
+  res.json({ ok: true, url });
 });
 
 //////////////////////////////////////////////////////////////
