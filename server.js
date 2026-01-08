@@ -49,6 +49,8 @@ const transporter = nodemailer.createTransport({
 // BACKGROUND JOB STORE
 //////////////////////////////////////////////////////////////
 const CURRICULUM_JOBS = {};
+// ADD — track retry failures per job
+const CURRICULUM_RETRIES = {};
 
 //////////////////////////////////////////////////////////////
 // UTIL
@@ -400,16 +402,41 @@ ${body}`
 //////////////////////////////////////////////////////////////
 async function runCurriculumJob(jobId) {
   try {
+    CURRICULUM_RETRIES[jobId] = 0;
+
     while (CURRICULUM_JOBS[jobId].results.length < 12) {
-      const example = await generateBeautyProduct();
-      const result = await runPipeline(example);
+      let attempts = 0;
+      let result = null;
+
+      // Try up to 8 times for a valid class
+      while (attempts < 8 && (!result || !result.report)) {
+        const example = await generateBeautyProduct();
+        result = await runPipeline(example);
+        attempts++;
+      }
 
       if (result && result.report) {
         CURRICULUM_JOBS[jobId].results.push(result.report);
+        CURRICULUM_RETRIES[jobId] = 0;
+      } else {
+        CURRICULUM_RETRIES[jobId]++;
+
+        const fallback = await runPipeline("popular skincare product");
+
+        if (fallback && fallback.report) {
+          CURRICULUM_JOBS[jobId].results.push(fallback.report);
+          CURRICULUM_RETRIES[jobId] = 0;
+        }
+
+        if (CURRICULUM_RETRIES[jobId] > 3) {
+          break;
+        }
       }
     }
 
     CURRICULUM_JOBS[jobId].status = "done";
+    delete CURRICULUM_RETRIES[jobId];
+
   } catch (err) {
     CURRICULUM_JOBS[jobId].status = "error";
     CURRICULUM_JOBS[jobId].error = err.message;
