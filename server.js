@@ -27,7 +27,42 @@ const SERP_KEY = process.env.SERPAPI_KEY || null;
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || null;
 
 //////////////////////////////////////////////////////////////
-// AI CATEGORY CLASSIFIER (SOURCE OF TRUTH)
+// NEW: BEAUTY TRANSFORMATION ENGINE
+// Turn ANY input → beauty/cosmetics product query
+//////////////////////////////////////////////////////////////
+async function transformToBeautyProductQuery(input) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [{
+      role: "system",
+      content:
+`You transform ANY user input into a BEAUTY or PERSONAL CARE product query
+usable for Amazon Beauty & Personal Care.
+
+Rules:
+- ALWAYS return a real beauty/cosmetics/haircare/skincare product category.
+- Do not explain.
+- Do not justify.
+- Output ONLY the rewritten product query.
+- Make it a PROBLEM-SOLUTION mapping.
+Examples:
+User: "I'm stressed" → "lavender aromatherapy body oil"
+User: "I want to travel" → "travel-size skincare kit"
+User: "I feel ugly" → "brightening vitamin C serum"
+User: "I have too much work" → "cooling eye mask"
+User: "I can't make decisions" → "starter skincare routine set"`
+    },{
+      role:"user",
+      content:input
+    }]
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+//////////////////////////////////////////////////////////////
+// AI CATEGORY CLASSIFIER (UNCHANGED)
 //////////////////////////////////////////////////////////////
 async function aiAllowsBeautyCategory(input) {
   const out = await openai.chat.completions.create({
@@ -216,10 +251,10 @@ ${body}`
 }
 
 //////////////////////////////////////////////////////////////
-// ROUTE — AI-GATED
+// ROUTE — AI-GATED (UPDATED)
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
-  const topic = req.body.topic || "";
+  let topic = req.body.topic || "";
   const token = req.body.accessToken || null;
 
   const fullAccess = hasFullAccess(token);
@@ -232,6 +267,11 @@ app.post("/run", async (req, res) => {
 "Access limited. Before payment, only Amazon Beauty & Personal Care products are allowed."
       });
     }
+  }
+
+  // ⭐ NEW: Transform ANY input → Beauty product query (full access only)
+  if (fullAccess) {
+    topic = await transformToBeautyProductQuery(topic);
   }
 
   res.json(await runPipeline(topic));
