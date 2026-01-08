@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CASE CLASSROOM — BACKEND (AI-GATED)
+// AI CASE CLASSROOM — BACKEND (PAY-PER-SEARCH, ONE FREE)
 // Academic × Amazon Case Engine
 //////////////////////////////////////////////////////////////
 
@@ -12,7 +12,7 @@ const crypto = require("crypto");
 
 const app = express();
 
-// 🔴 Render health check
+// Health check
 app.get("/", (_, res) => res.status(200).send("OK"));
 
 app.use(cors({ origin: "*" }));
@@ -24,11 +24,58 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SERP_KEY = process.env.SERPAPI_KEY || null;
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || null;
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "SECRET_KEY_HERE";
 
 //////////////////////////////////////////////////////////////
-// NEW: BEAUTY TRANSFORMATION ENGINE
-// Turn ANY input → beauty/cosmetics product query
+// ONE-TIME SEARCH TOKEN STORE
+//////////////////////////////////////////////////////////////
+const usedSearchTokens = new Set();
+
+// Creates a single-use signed token
+function generateSearchToken(topic) {
+  const payload = {
+    topic,
+    nonce: crypto.randomBytes(16).toString("hex"),
+    iat: Date.now()
+  };
+
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+
+  const sig = crypto
+    .createHmac("sha256", ACCESS_TOKEN_SECRET)
+    .update(payloadB64)
+    .digest("hex");
+
+  return `${payloadB64}.${sig}`;
+}
+
+// Verifies + consumes token
+function verifyAndConsumeSearchToken(token) {
+  if (!token) return null;
+
+  // Prevent reuse
+  if (usedSearchTokens.has(token)) return null;
+
+  const [payloadB64, sig] = token.split(".");
+  if (!payloadB64 || !sig) return null;
+
+  const expectedSig = crypto
+    .createHmac("sha256", ACCESS_TOKEN_SECRET)
+    .update(payloadB64)
+    .digest("hex");
+
+  if (expectedSig !== sig) return null;
+
+  const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString());
+
+  // consume token immediately
+  usedSearchTokens.add(token);
+
+  return payload.topic;
+}
+
+//////////////////////////////////////////////////////////////
+// BEAUTY TRANSFORMATION ENGINE
 //////////////////////////////////////////////////////////////
 async function transformToBeautyProductQuery(input) {
   const out = await openai.chat.completions.create({
@@ -37,21 +84,15 @@ async function transformToBeautyProductQuery(input) {
     messages: [{
       role: "system",
       content:
-`You transform ANY user input into a BEAUTY or PERSONAL CARE product query
-usable for Amazon Beauty & Personal Care.
+`Transform ANY user input into a Beauty / Personal Care product query.
+Output ONLY the rewritten product query.
 
-Rules:
-- ALWAYS return a real beauty/cosmetics/haircare/skincare product category.
-- Do not explain.
-- Do not justify.
-- Output ONLY the rewritten product query.
-- Make it a PROBLEM-SOLUTION mapping.
 Examples:
-User: "I'm stressed" → "lavender aromatherapy body oil"
-User: "I want to travel" → "travel-size skincare kit"
-User: "I feel ugly" → "brightening vitamin C serum"
-User: "I have too much work" → "cooling eye mask"
-User: "I can't make decisions" → "starter skincare routine set"`
+"I'm stressed" → "lavender aromatherapy body oil"
+"I want to travel" → "travel-size skincare kit"
+"I feel ugly" → "brightening vitamin C serum"
+"I have too much work" → "cooling eye mask"
+"I can't make decisions" → "starter skincare routine set"`
     },{
       role:"user",
       content:input
@@ -62,7 +103,7 @@ User: "I can't make decisions" → "starter skincare routine set"`
 }
 
 //////////////////////////////////////////////////////////////
-// AI CATEGORY CLASSIFIER (UNCHANGED)
+// BEAUTY CATEGORY CLASSIFIER (FOR FREE USERS)
 //////////////////////////////////////////////////////////////
 async function aiAllowsBeautyCategory(input) {
   const out = await openai.chat.completions.create({
@@ -71,17 +112,8 @@ async function aiAllowsBeautyCategory(input) {
     messages: [{
       role: "system",
       content:
-`You are a strict classifier.
-
-Decide whether the user input refers to a REAL product that belongs to
-Amazon's Beauty & Personal Care category (cosmetics, skincare, makeup, haircare, beauty devices).
-
-Rules:
-- Output ONLY one word
-- If it belongs → ALLOW
-- Otherwise → DENY
-- No explanations
-- No punctuation`
+`Decide if input refers to a REAL product in Amazon Beauty & Personal Care.
+Output ONLY: ALLOW or DENY.`
     }, {
       role: "user",
       content: input
@@ -89,27 +121,6 @@ Rules:
   });
 
   return out.choices[0].message.content.trim() === "ALLOW";
-}
-
-//////////////////////////////////////////////////////////////
-// ACCESS CHECK (UNCHANGED)
-//////////////////////////////////////////////////////////////
-function hasFullAccess(token) {
-  if (!ACCESS_TOKEN_SECRET || !token) return false;
-
-  const [payloadB64, sig] = token.split(".");
-  if (!payloadB64 || !sig) return false;
-
-  const payload = Buffer.from(payloadB64, "base64url").toString();
-  const expected = crypto
-    .createHmac("sha256", ACCESS_TOKEN_SECRET)
-    .update(payload)
-    .digest("hex");
-
-  if (expected !== sig) return false;
-
-  const data = JSON.parse(payload);
-  return Date.now() < data.exp && data.scope === "full";
 }
 
 //////////////////////////////////////////////////////////////
@@ -159,15 +170,12 @@ async function fetchStanfordVideo(major) {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON SEARCH (UNCHANGED)
+// AMAZON PRODUCT SEARCH (UNCHANGED)
 //////////////////////////////////////////////////////////////
 async function fetchAmazonProduct(query) {
   if (!SERP_KEY) return null;
 
-  const q = `
-    ${query}
-    site:amazon.com/dp OR site:amazon.com/gp/product
-  `;
+  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
 
   const url =
     `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
@@ -200,14 +208,15 @@ START WITH THIS LINE EXACTLY:
 2×-AI Engine — Academic Case Analysis
 
 Rules:
-- Academic teaching tone
+- Academic tone
 - No selling, no judging
-- EXACTLY 5 short paragraphs
+- 5 short paragraphs
 
 Then write:
 If this way of thinking is correct, what works:
 
-Then EXACTLY 3 short sentences. Follow with 3 points explaining how people in ${major} think about a topic.
+Then exactly 3 short sentences.
+Follow with 3 points explaining how people in ${major} think about a topic.
 `
     }]
   });
@@ -226,7 +235,6 @@ async function runPipeline(input) {
     video = await fetchStanfordVideo(major);
     if (video) break;
   }
-
   if (!video) return { report: null };
 
   const product = await fetchAmazonProduct(input);
@@ -251,52 +259,58 @@ ${body}`
 }
 
 //////////////////////////////////////////////////////////////
-// ROUTE — AI-GATED (UPDATED)
+// RUN ROUTE — SECURE, TOKEN-BASED
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
   let topic = req.body.topic || "";
-  const token = req.body.accessToken || null;
+  const token = req.body.searchToken || null;
 
-  const fullAccess = hasFullAccess(token);
-
-  if (!fullAccess) {
-    const allowed = await aiAllowsBeautyCategory(topic);
-    if (!allowed) {
+  // If token exists → verify it (PAID SEARCH)
+  if (token) {
+    const extractedTopic = verifyAndConsumeSearchToken(token);
+    if (!extractedTopic) {
       return res.json({
-        report:
-"Access limited. Before payment, only Amazon Beauty & Personal Care products are allowed."
+        report: "Invalid or used token. Please purchase another search."
       });
     }
+
+    // Replace original topic with the paid one
+    topic = await transformToBeautyProductQuery(extractedTopic);
+    return res.json(await runPipeline(topic));
   }
 
-  // ⭐ NEW: Transform ANY input → Beauty product query (full access only)
-  if (fullAccess) {
-    topic = await transformToBeautyProductQuery(topic);
+  // FREE SEARCH MODE
+  const allowed = await aiAllowsBeautyCategory(topic);
+  if (!allowed) {
+    return res.json({
+      report: "Free mode allows only REAL Amazon Beauty & Personal Care products."
+    });
   }
 
-  res.json(await runPipeline(topic));
+  // Free search is allowed
+  return res.json(await runPipeline(topic));
 });
 
 //////////////////////////////////////////////////////////////
-// STRIPE (UNCHANGED)
+// STRIPE CHECKOUT — $0.50 PER SEARCH
 //////////////////////////////////////////////////////////////
-app.post("/create-checkout-session", async (_, res) => {
+app.post("/create-search-session", async (req, res) => {
+  const topic = req.body.topic || "";
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
     line_items: [{
       price_data: {
         currency: "usd",
-        product_data: {
-          name: "AI Case Classroom — Full Access",
-          description: "Unlimited category access"
-        },
-        unit_amount: 2900
+        product_data: { name: "AI Case Classroom — One Search" },
+        unit_amount: 50  // $0.50
       },
       quantity: 1
     }],
     success_url:
-      "https://blueoceanbrowser.com/amazonclassroom.html?paid=1",
+      `https://blueoceanbrowser.com/amazonclassroom.html?search_token=` +
+      generateSearchToken(topic),
     cancel_url:
       "https://blueoceanbrowser.com/amazonclassroom.html"
   });
@@ -309,5 +323,5 @@ app.post("/create-checkout-session", async (_, res) => {
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log("🎓 AI Case Classroom backend live");
+  console.log("🎓 Pay-per-search AI Case Classroom backend live");
 });
