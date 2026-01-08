@@ -149,6 +149,22 @@ const BEAUTY_FALLBACK_PRODUCTS = [
 ];
 
 //////////////////////////////////////////////////////////////
+// POPULAR BEAUTY SEARCH SEEDS (Google popularity bias)
+//////////////////////////////////////////////////////////////
+const POPULAR_BEAUTY_QUERIES = [
+  "best face cream",
+  "trending skincare",
+  "popular moisturizer",
+  "best serum",
+  "viral skincare product",
+  "best sunscreen",
+  "top beauty product",
+  "best anti aging cream",
+  "popular makeup product",
+  "best cleanser"
+];
+
+//////////////////////////////////////////////////////////////
 // AMAZON BEAUTY SEARCH
 //////////////////////////////////////////////////////////////
 async function fetchAmazonProduct(query) {
@@ -176,6 +192,17 @@ async function fetchAmazonProduct(query) {
       BEAUTY_KEYWORDS.some(keyword => title.includes(keyword))
     );
   });
+}
+
+//////////////////////////////////////////////////////////////
+// POPULAR BEAUTY PRODUCT PICKER (Google-ranked)
+//////////////////////////////////////////////////////////////
+async function fetchPopularBeautyProduct() {
+  for (const query of POPULAR_BEAUTY_QUERIES) {
+    const product = await fetchAmazonProduct(query);
+    if (product) return product;
+  }
+  return null;
 }
 
 //////////////////////////////////////////////////////////////
@@ -297,11 +324,17 @@ async function runPipeline(input) {
   let product = null;
   let q = input;
 
+  // 1️⃣ Try popularity-first (Google-ranked)
+product = await fetchPopularBeautyProduct();
+
+// 2️⃣ Fallback to user query
+if (!product) {
   for (let i = 0; i < 3; i++) {
     product = await fetchAmazonProduct(q);
     if (product) break;
     q = q.split(" ").slice(0, 3).join(" ");
   }
+}
 
   if (!product) return { report: null };
   
