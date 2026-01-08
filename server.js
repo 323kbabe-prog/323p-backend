@@ -58,16 +58,17 @@ function sixMonthDateLabel() {
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
   "Psychology",
+  "Sociology",
   "Economics",
   "Design",
-  "Sociology",
-  "Computer Science",
-  "Statistics",
-  "Symbolic Systems",
   "Communication",
+  "Statistics",
+  "Computer Science",
+  "Symbolic Systems",
   "Education",
   "Philosophy",
-  "Law"
+  "Law",
+  "Integrated Reasoning"
 ];
 
 let majorPool = [...STANFORD_MAJORS];
@@ -480,9 +481,33 @@ app.post("/email-curriculum", async (req, res) => {
     });
 
     doc.fontSize(18).text("AI Case Classroom", { align: "center" });
+doc.moveDown(2);
+
+// Split curriculum into classes
+const classes = content.split(/Session \d+ of 12 —/g).filter(Boolean);
+
+// Extract the session headers back
+const headers = content.match(/Session \d+ of 12 —[^\n]+/g) || [];
+
+classes.forEach((classBody, index) => {
+  if (index > 0) {
+    doc.addPage();
+  }
+
+  // Write session title
+  if (headers[index]) {
+    doc.fontSize(16).text(headers[index], { align: "left" });
     doc.moveDown();
-    doc.fontSize(12).text(content);
-    doc.end();
+  }
+
+  // Write class content
+  doc.fontSize(12).text(classBody.trim(), {
+    align: "left",
+    lineGap: 4
+  });
+});
+
+doc.end();
 
   } catch (err) {
     console.error(err);
