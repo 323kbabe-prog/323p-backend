@@ -46,6 +46,11 @@ const transporter = nodemailer.createTransport({
 });
 
 //////////////////////////////////////////////////////////////
+// BACKGROUND JOB STORE
+//////////////////////////////////////////////////////////////
+const CURRICULUM_JOBS = {};
+
+//////////////////////////////////////////////////////////////
 // UTIL
 //////////////////////////////////////////////////////////////
 function sixMonthDateLabel() {
@@ -391,19 +396,83 @@ ${body}`
 }
 
 //////////////////////////////////////////////////////////////
+// BACKGROUND CURRICULUM RUNNER
+//////////////////////////////////////////////////////////////
+async function runCurriculumJob(jobId) {
+  try {
+    while (CURRICULUM_JOBS[jobId].results.length < 12) {
+      const example = await generateBeautyProduct();
+      const result = await runPipeline(example);
+
+      if (result && result.report) {
+        CURRICULUM_JOBS[jobId].results.push(result.report);
+      }
+    }
+
+    CURRICULUM_JOBS[jobId].status = "done";
+  } catch (err) {
+    CURRICULUM_JOBS[jobId].status = "error";
+    CURRICULUM_JOBS[jobId].error = err.message;
+  }
+}
+
+//////////////////////////////////////////////////////////////
 // ROUTES
 //////////////////////////////////////////////////////////////
+
 app.post("/run", async (req, res) => {
   res.json(await runPipeline(req.body.topic || ""));
 });
 
+//////////////////////////////////////////////////////////////
+// START BACKGROUND CURRICULUM
+//////////////////////////////////////////////////////////////
+app.post("/start-curriculum", (req, res) => {
+  const jobId = crypto.randomUUID();
+
+  CURRICULUM_JOBS[jobId] = {
+    status: "running",
+    results: [],
+    startedAt: Date.now()
+  };
+
+  runCurriculumJob(jobId);
+  res.json({ jobId });
+});
+
+//////////////////////////////////////////////////////////////
+// CHECK CURRICULUM STATUS
+//////////////////////////////////////////////////////////////
+app.get("/curriculum-status/:jobId", (req, res) => {
+  const job = CURRICULUM_JOBS[req.params.jobId];
+  if (!job) return res.status(404).json({ error: "Job not found" });
+
+  res.json({
+    status: job.status,
+    completed: job.results.length
+  });
+});
+
+//////////////////////////////////////////////////////////////
+// GET CURRICULUM RESULT
+//////////////////////////////////////////////////////////////
+app.get("/curriculum-result/:jobId", (req, res) => {
+  const job = CURRICULUM_JOBS[req.params.jobId];
+  if (!job) return res.status(404).json({ error: "Job not found" });
+  if (job.status !== "done") return res.status(400).json({ error: "Not finished" });
+
+  res.json({ results: job.results });
+});
+
+//////////////////////////////////////////////////////////////
+// NEXT (SINGLE CLASS)
+//////////////////////////////////////////////////////////////
 app.post("/next", async (_, res) => {
-  
-  // Reset session memory when starting a new curriculum run
-if (SESSION_PRODUCTS.size >= 12) {
-  SESSION_PRODUCTS.clear();
-  AMAZON_MEMORY.length = 0;
-}
+  if (SESSION_PRODUCTS.size >= 12) {
+    SESSION_PRODUCTS.clear();
+    AMAZON_MEMORY.length = 0;
+  }
+
   let attempts = 0;
   let result = null;
 
@@ -413,53 +482,18 @@ if (SESSION_PRODUCTS.size >= 12) {
     attempts++;
   }
 
-  // ✅ NEW: fallback guarantee
   if (!result || !result.report) {
     const fallback =
-      BEAUTY_FALLBACK_PRODUCTS[
-        Math.floor(Math.random() * BEAUTY_FALLBACK_PRODUCTS.length)
-      ];
-
+      BEAUTY_FALLBACK_PRODUCTS[Math.floor(Math.random() * BEAUTY_FALLBACK_PRODUCTS.length)];
     result = await runPipeline(fallback);
   }
 
-  // Absolute final safety
   if (!result || !result.report) {
-    return res.status(500).json({
-      report: "Error: Beauty fallback failed. Please retry."
-    });
+    return res.status(500).json({ report: "Beauty fallback failed" });
   }
 
   res.json(result);
 });
-
-//////////////////////////////////////////////////////////////
-// STRIPE CHECKOUT
-//////////////////////////////////////////////////////////////
-app.post("/create-checkout-session", async (_, res) => {
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    line_items: [{
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: "AI Case Classroom — Full Curriculum",
-          description: "12-class curriculum access"
-        },
-        unit_amount: 2900
-      },
-      quantity: 1
-    }],
-    success_url:
-      "https://blueoceanbrowser.com/amazonclassroom.html?paid=1",
-    cancel_url:
-      "https://blueoceanbrowser.com/amazonclassroom.html"
-  });
-
-  res.json({ url: session.url });
-});
-
 //////////////////////////////////////////////////////////////
 // EMAIL ACCESS (OPTIONAL — SAFE FALLBACK)
 //////////////////////////////////////////////////////////////
