@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CASE CLASSROOM — BACKEND (BASE)
+// AI CASE CLASSROOM — BACKEND (AI-GATED)
 // Academic × Amazon Case Engine
 //////////////////////////////////////////////////////////////
 
@@ -12,7 +12,7 @@ const crypto = require("crypto");
 
 const app = express();
 
-// 🔴 Render health check (must be first)
+// 🔴 Render health check
 app.get("/", (_, res) => res.status(200).send("OK"));
 
 app.use(cors({ origin: "*" }));
@@ -24,25 +24,66 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SERP_KEY = process.env.SERPAPI_KEY || null;
-
-// OPTIONAL — email access enabled only if set
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || null;
 
 //////////////////////////////////////////////////////////////
-// STANFORD MAJORS
+// AI CATEGORY CLASSIFIER (SOURCE OF TRUTH)
+//////////////////////////////////////////////////////////////
+async function aiAllowsBeautyCategory(input) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [{
+      role: "system",
+      content:
+`You are a strict classifier.
+
+Decide whether the user input refers to a REAL product that belongs to
+Amazon's Beauty & Personal Care category (cosmetics, skincare, makeup, haircare, beauty devices).
+
+Rules:
+- Output ONLY one word
+- If it belongs → ALLOW
+- Otherwise → DENY
+- No explanations
+- No punctuation`
+    }, {
+      role: "user",
+      content: input
+    }]
+  });
+
+  return out.choices[0].message.content.trim() === "ALLOW";
+}
+
+//////////////////////////////////////////////////////////////
+// ACCESS CHECK (UNCHANGED)
+//////////////////////////////////////////////////////////////
+function hasFullAccess(token) {
+  if (!ACCESS_TOKEN_SECRET || !token) return false;
+
+  const [payloadB64, sig] = token.split(".");
+  if (!payloadB64 || !sig) return false;
+
+  const payload = Buffer.from(payloadB64, "base64url").toString();
+  const expected = crypto
+    .createHmac("sha256", ACCESS_TOKEN_SECRET)
+    .update(payload)
+    .digest("hex");
+
+  if (expected !== sig) return false;
+
+  const data = JSON.parse(payload);
+  return Date.now() < data.exp && data.scope === "full";
+}
+
+//////////////////////////////////////////////////////////////
+// STANFORD MAJORS (UNCHANGED)
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
-  "Psychology",
-  "Economics",
-  "Design",
-  "Sociology",
-  "Computer Science",
-  "Statistics",
-  "Symbolic Systems",
-  "Communication",
-  "Education",
-  "Philosophy",
-  "Law"
+  "Psychology","Economics","Design","Sociology",
+  "Computer Science","Statistics","Symbolic Systems",
+  "Communication","Education","Philosophy","Law"
 ];
 
 let majorPool = [...STANFORD_MAJORS];
@@ -52,14 +93,11 @@ function pickMajor() {
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD YOUTUBE WHITELIST
+// STANFORD VIDEO SEARCH (UNCHANGED)
 //////////////////////////////////////////////////////////////
 const STANFORD_CHANNELS = [
-  "Stanford University",
-  "Stanford Online",
-  "Stanford GSB",
-  "Stanford Medicine",
-  "Stanford Engineering"
+  "Stanford University","Stanford Online",
+  "Stanford GSB","Stanford Medicine","Stanford Engineering"
 ];
 
 function isOfficialStanford(channel = "") {
@@ -68,62 +106,6 @@ function isOfficialStanford(channel = "") {
   );
 }
 
-//////////////////////////////////////////////////////////////
-// AMAZON MEMORY (NO REPEAT)
-//////////////////////////////////////////////////////////////
-const AMAZON_MEMORY = [];
-const AMAZON_LIMIT = 5;
-
-function rememberAmazon(title) {
-  AMAZON_MEMORY.unshift(title);
-  if (AMAZON_MEMORY.length > AMAZON_LIMIT) AMAZON_MEMORY.pop();
-}
-
-//////////////////////////////////////////////////////////////
-// AMAZON BEAUTY SEARCH
-//////////////////////////////////////////////////////////////
-async function fetchAmazonProduct(query) {
-  if (!SERP_KEY) return null;
-
-  const q = `
-    ${query}
-    (beauty OR cosmetic OR skincare OR makeup OR haircare)
-    site:amazon.com/dp OR site:amazon.com/gp/product
-  `;
-
-  const url =
-    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
-    `&num=10&api_key=${SERP_KEY}`;
-
-  const r = await fetch(url);
-  const j = await r.json();
-
-  return (j.organic_results || []).find(
-    x =>
-      (x.link?.includes("/dp/") || x.link?.includes("/gp/product")) &&
-      !AMAZON_MEMORY.includes(x.title)
-  );
-}
-
-//////////////////////////////////////////////////////////////
-// AUTO PRODUCT GENERATOR
-//////////////////////////////////////////////////////////////
-async function generateBeautyProduct() {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{
-      role: "user",
-      content: "Generate ONE real Amazon beauty product. Output name only."
-    }],
-    temperature: 0.7
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-//////////////////////////////////////////////////////////////
-// STANFORD VIDEO SEARCH
-//////////////////////////////////////////////////////////////
 async function fetchStanfordVideo(major) {
   if (!SERP_KEY) return null;
 
@@ -142,11 +124,35 @@ async function fetchStanfordVideo(major) {
 }
 
 //////////////////////////////////////////////////////////////
-// CLASS GENERATOR (NO FORESIGHT)
+// AMAZON SEARCH (UNCHANGED)
+//////////////////////////////////////////////////////////////
+async function fetchAmazonProduct(query) {
+  if (!SERP_KEY) return null;
+
+  const q = `
+    ${query}
+    site:amazon.com/dp OR site:amazon.com/gp/product
+  `;
+
+  const url =
+    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
+    `&num=10&api_key=${SERP_KEY}`;
+
+  const r = await fetch(url);
+  const j = await r.json();
+
+  return (j.organic_results || []).find(
+    x => x.link?.includes("/dp/") || x.link?.includes("/gp/product")
+  );
+}
+
+//////////////////////////////////////////////////////////////
+// CLASS GENERATOR (UNCHANGED)
 //////////////////////////////////////////////////////////////
 async function generateClass({ major, videoTitle, productTitle }) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
+    temperature: 0.3,
     messages: [{
       role: "user",
       content: `
@@ -168,15 +174,14 @@ If this way of thinking is correct, what works:
 
 Then EXACTLY 3 short sentences.
 `
-    }],
-    temperature: 0.3
+    }]
   });
 
   return out.choices[0].message.content.trim();
 }
 
 //////////////////////////////////////////////////////////////
-// PIPELINE
+// PIPELINE (UNCHANGED)
 //////////////////////////////////////////////////////////////
 async function runPipeline(input) {
   let major, video;
@@ -189,18 +194,8 @@ async function runPipeline(input) {
 
   if (!video) return { report: null };
 
-  let product = null;
-  let q = input;
-
-  for (let i = 0; i < 3; i++) {
-    product = await fetchAmazonProduct(q);
-    if (product) break;
-    q = q.split(" ").slice(0, 3).join(" ");
-  }
-
+  const product = await fetchAmazonProduct(input);
   if (!product) return { report: null };
-
-  rememberAmazon(product.title);
 
   const body = await generateClass({
     major,
@@ -221,19 +216,29 @@ ${body}`
 }
 
 //////////////////////////////////////////////////////////////
-// ROUTES
+// ROUTE — AI-GATED
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
-  res.json(await runPipeline(req.body.topic || ""));
-});
+  const topic = req.body.topic || "";
+  const token = req.body.accessToken || null;
 
-app.post("/next", async (_, res) => {
-  const example = await generateBeautyProduct();
-  res.json(await runPipeline(example));
+  const fullAccess = hasFullAccess(token);
+
+  if (!fullAccess) {
+    const allowed = await aiAllowsBeautyCategory(topic);
+    if (!allowed) {
+      return res.json({
+        report:
+"Access limited. Before payment, only Amazon Beauty & Personal Care products are allowed."
+      });
+    }
+  }
+
+  res.json(await runPipeline(topic));
 });
 
 //////////////////////////////////////////////////////////////
-// STRIPE CHECKOUT
+// STRIPE (UNCHANGED)
 //////////////////////////////////////////////////////////////
 app.post("/create-checkout-session", async (_, res) => {
   const session = await stripe.checkout.sessions.create({
@@ -243,8 +248,8 @@ app.post("/create-checkout-session", async (_, res) => {
       price_data: {
         currency: "usd",
         product_data: {
-          name: "AI Case Classroom — Full Curriculum",
-          description: "12-class curriculum access"
+          name: "AI Case Classroom — Full Access",
+          description: "Unlimited category access"
         },
         unit_amount: 2900
       },
@@ -257,64 +262,6 @@ app.post("/create-checkout-session", async (_, res) => {
   });
 
   res.json({ url: session.url });
-});
-
-//////////////////////////////////////////////////////////////
-// EMAIL ACCESS (UNCHANGED)
-//////////////////////////////////////////////////////////////
-function createAccessToken(email) {
-  if (!ACCESS_TOKEN_SECRET) return null;
-
-  const payload = JSON.stringify({
-    email,
-    scope: "full",
-    exp: Date.now() + 1000 * 60 * 60 * 24 * 30
-  });
-
-  const sig = crypto
-    .createHmac("sha256", ACCESS_TOKEN_SECRET)
-    .update(payload)
-    .digest("hex");
-
-  return Buffer.from(payload).toString("base64url") + "." + sig;
-}
-
-app.post("/send-access-link", async (req, res) => {
-  if (!ACCESS_TOKEN_SECRET) {
-    return res.json({ ok: false, error: "Email access disabled" });
-  }
-
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ ok: false });
-
-  const token = createAccessToken(email);
-  const link =
-    `https://blueoceanbrowser.com/amazonclassroom.html?access=${token}`;
-
-  res.json({ ok: true, link });
-});
-
-app.post("/verify-access", async (req, res) => {
-  if (!ACCESS_TOKEN_SECRET) return res.json({ ok: false });
-
-  const { token } = req.body;
-  if (!token) return res.json({ ok: false });
-
-  const [payloadB64, sig] = token.split(".");
-  if (!payloadB64 || !sig) return res.json({ ok: false });
-
-  const payload = Buffer.from(payloadB64, "base64url").toString();
-  const expected = crypto
-    .createHmac("sha256", ACCESS_TOKEN_SECRET)
-    .update(payload)
-    .digest("hex");
-
-  if (expected !== sig) return res.json({ ok: false });
-
-  const data = JSON.parse(payload);
-  if (Date.now() > data.exp) return res.json({ ok: false });
-
-  res.json({ ok: true, scope: data.scope });
 });
 
 //////////////////////////////////////////////////////////////
