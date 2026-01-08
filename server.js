@@ -630,11 +630,21 @@ app.post("/email-curriculum", async (req, res) => {
     doc.fontSize(18).text("AI Case Classroom", { align: "center" });
 doc.moveDown(2);
 
-// Split curriculum into classes
-const classes = content.split(/Session \d+ of 12 —/g).filter(Boolean);
-
-// Extract the session headers back
+// Split while preserving alignment
+const parts = content.split(/Session \d+ of 12 —/g);
 const headers = content.match(/Session \d+ of 12 —[^\n]+/g) || [];
+
+// First part is the body of Session 1
+const classes = [];
+
+if (parts[0].trim()) {
+  classes.push(parts[0].trim());
+}
+
+// Remaining parts align with headers[1...]
+for (let i = 1; i < parts.length; i++) {
+  classes.push(parts[i].trim());
+}
 
 classes.forEach((classBody, index) => {
   if (index > 0) {
