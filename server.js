@@ -24,6 +24,13 @@ app.get("/", (_, res) => res.status(200).send("OK"));
 
 app.use(cors({ origin: "*" }));
 app.use(express.json());
+// 🛑 HARD NO-CACHE — stop Safari / Render 304 loops
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
 
 //////////////////////////////////////////////////////////////
 // ENV
@@ -315,6 +322,39 @@ Rules:
 }
 
 //////////////////////////////////////////////////////////////
+// STRIPE CHECKOUT SESSION (REQUIRED)
+//////////////////////////////////////////////////////////////
+app.post("/create-checkout-session", async (req, res) => {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "AI Case Classroom — Full 12-Class Curriculum"
+            },
+            unit_amount: 2900 // $29.00
+          },
+          quantity: 1
+        }
+      ],
+      success_url:
+        "https://blueoceanbrowser.com/amazonclassroom.html?paid=1",
+      cancel_url:
+        "https://blueoceanbrowser.com/amazonclassroom.html"
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("Stripe error:", err);
+    res.status(500).json({ error: "Checkout failed" });
+  }
+});
+
+//////////////////////////////////////////////////////////////
 // PIPELINE
 //////////////////////////////////////////////////////////////
 async function runPipeline(input) {
@@ -482,11 +522,15 @@ app.post("/start-curriculum", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// CHECK CURRICULUM STATUS
+// GET CURRICULUM RESULT
 //////////////////////////////////////////////////////////////
 app.get("/curriculum-status/:jobId", (req, res) => {
   const job = CURRICULUM_JOBS[req.params.jobId];
-  if (!job) return res.status(404).json({ error: "Job not found" });
+
+  // 🛑 Job permanently ended
+  if (!job) {
+    return res.status(410).json({ status: "ended" });
+  }
 
   res.json({
     status: job.status,
@@ -495,15 +539,16 @@ app.get("/curriculum-status/:jobId", (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// GET CURRICULUM RESULT
+// GET CURRICULUM RESULT (FINAL)
 //////////////////////////////////////////////////////////////
 app.get("/curriculum-result/:jobId", (req, res) => {
   const job = CURRICULUM_JOBS[req.params.jobId];
- if (!job) {
-  return res.status(410).json({ status: "ended", results: [] });
-}
 
-  // ✅ Allow partial results during generation
+  // 🛑 Job permanently ended
+  if (!job) {
+    return res.status(410).json({ status: "ended", results: [] });
+  }
+
   res.json({
     status: job.status,
     results: job.results || []
