@@ -172,7 +172,7 @@ Rules:
 Then write:
 If this way of thinking is correct, what works:
 
-Then EXACTLY 3 short sentences.
+Then EXACTLY 3 short sentences. Follow with 3 points explaining how people in ${major} think about a topic.
 `
     }]
   });
