@@ -429,8 +429,17 @@ async function runCurriculumJob(jobId) {
         }
 
         if (CURRICULUM_RETRIES[jobId] > 3) {
-          break;
-        }
+  const forced = await runPipeline(
+    BEAUTY_FALLBACK_PRODUCTS[
+      CURRICULUM_JOBS[jobId].results.length % BEAUTY_FALLBACK_PRODUCTS.length
+    ]
+  );
+
+  if (forced && forced.report) {
+    CURRICULUM_JOBS[jobId].results.push(forced.report);
+    CURRICULUM_RETRIES[jobId] = 0;
+  }
+}
       }
     }
 
