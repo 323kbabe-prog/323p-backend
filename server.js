@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////
 // AI CASE CLASSROOM — BACKEND (PAY-PER-SEARCH, ONE FREE)
-// Academic × Amazon Case Engine
+// Academic × Amazon Beauty Case Engine
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -55,8 +55,7 @@ function generateSearchToken(topic) {
 // Verifies + consumes token
 function verifyAndConsumeSearchToken(token) {
   if (!token) return null;
-
-  if (usedSearchTokens.has(token)) return null; // Prevent reuse
+  if (usedSearchTokens.has(token)) return null;
 
   const [payloadB64, sig] = token.split(".");
   if (!payloadB64 || !sig) return null;
@@ -68,43 +67,16 @@ function verifyAndConsumeSearchToken(token) {
 
   if (expectedSig !== sig) return null;
 
-  const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString());
+  const payload = JSON.parse(
+    Buffer.from(payloadB64, "base64url").toString()
+  );
 
   usedSearchTokens.add(token); // consume
-
   return payload.topic;
 }
 
 //////////////////////////////////////////////////////////////
-// BEAUTY TRANSFORMATION ENGINE
-//////////////////////////////////////////////////////////////
-async function transformToBeautyProductQuery(input) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [{
-      role: "system",
-      content:
-`Transform ANY user input into a Beauty / Personal Care product query.
-Output ONLY the rewritten product query.
-
-Examples:
-"I'm stressed" → "lavender aromatherapy body oil"
-"I want to travel" → "travel-size skincare kit"
-"I feel ugly" → "brightening vitamin C serum"
-"I have too much work" → "cooling eye mask"
-"I can't make decisions" → "starter skincare routine set"`
-    },{
-      role:"user",
-      content:input
-    }]
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-//////////////////////////////////////////////////////////////
-// BEAUTY CATEGORY CLASSIFIER (FREE USERS)
+// BEAUTY CATEGORY CLASSIFIER (FREE + PAID)
 //////////////////////////////////////////////////////////////
 async function aiAllowsBeautyCategory(input) {
   const out = await openai.chat.completions.create({
@@ -115,7 +87,7 @@ async function aiAllowsBeautyCategory(input) {
       content:
 `Decide if input refers to a REAL product in Amazon Beauty & Personal Care.
 Output ONLY: ALLOW or DENY.`
-    }, {
+    },{
       role: "user",
       content: input
     }]
@@ -171,7 +143,7 @@ async function fetchStanfordVideo(major) {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON PRODUCT SEARCH
+// AMAZON PRODUCT SEARCH (AMAZON ONLY)
 //////////////////////////////////////////////////////////////
 async function fetchAmazonProduct(query) {
   if (!SERP_KEY) return null;
@@ -260,13 +232,13 @@ ${body}`
 }
 
 //////////////////////////////////////////////////////////////
-// RUN ROUTE (SECURE PAY-PER-SEARCH)
+// RUN ROUTE (FREE + PAID, SAME CATEGORY RULE)
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
   let topic = req.body.topic || "";
   const token = req.body.searchToken || null;
 
-  // PAID SEARCH — use token
+  // PAID SEARCH — validate token, same category rules
   if (token) {
     const extractedTopic = verifyAndConsumeSearchToken(token);
     if (!extractedTopic) {
@@ -275,11 +247,17 @@ app.post("/run", async (req, res) => {
       });
     }
 
-    topic = await transformToBeautyProductQuery(extractedTopic);
-    return res.json(await runPipeline(topic));
+    const allowed = await aiAllowsBeautyCategory(extractedTopic);
+    if (!allowed) {
+      return res.json({
+        report: "Only Amazon Beauty & Personal Care products are supported."
+      });
+    }
+
+    return res.json(await runPipeline(extractedTopic));
   }
 
-  // FREE SEARCH — must be real Beauty category
+  // FREE SEARCH — same rules
   const allowed = await aiAllowsBeautyCategory(topic);
   if (!allowed) {
     return res.json({
@@ -303,7 +281,7 @@ app.post("/create-search-session", async (req, res) => {
       price_data: {
         currency: "usd",
         product_data: { name: "AI Case Classroom — One Search" },
-        unit_amount: 50   // $0.50
+        unit_amount: 50
       },
       quantity: 1
     }],
@@ -332,8 +310,8 @@ app.get("/create-admin-pass", async (req, res) => {
   }
 
   const token = generateSearchToken(topic);
-
-  const url = `https://blueoceanbrowser.com/amazonclassroom.html?search_token=${token}`;
+  const url =
+    `https://blueoceanbrowser.com/amazonclassroom.html?search_token=${token}`;
 
   res.json({ ok: true, url });
 });
