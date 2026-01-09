@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CASE CLASSROOM — BACKEND (PAY-PER-SEARCH, ONE FREE)
+// AI CASE CLASSROOM — BACKEND (PAY PER DELIVERED SEARCH)
 // Academic × Amazon Beauty Case Engine
 //////////////////////////////////////////////////////////////
 
@@ -25,8 +25,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "SECRET_KEY_HERE";
-
-// Admin secret for one-pass generation
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 //////////////////////////////////////////////////////////////
@@ -34,7 +32,7 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET;
 //////////////////////////////////////////////////////////////
 const usedSearchTokens = new Set();
 
-// Creates a single-use signed token
+// Generate single-use token (NOT consumed yet)
 function generateSearchToken(topic) {
   const payload = {
     topic,
@@ -43,7 +41,6 @@ function generateSearchToken(topic) {
   };
 
   const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
-
   const sig = crypto
     .createHmac("sha256", ACCESS_TOKEN_SECRET)
     .update(payloadB64)
@@ -52,8 +49,8 @@ function generateSearchToken(topic) {
   return `${payloadB64}.${sig}`;
 }
 
-// Verifies + consumes token
-function verifyAndConsumeSearchToken(token) {
+// Verify token WITHOUT consuming
+function verifySearchToken(token) {
   if (!token) return null;
   if (usedSearchTokens.has(token)) return null;
 
@@ -67,16 +64,18 @@ function verifyAndConsumeSearchToken(token) {
 
   if (expectedSig !== sig) return null;
 
-  const payload = JSON.parse(
+  return JSON.parse(
     Buffer.from(payloadB64, "base64url").toString()
   );
+}
 
-  usedSearchTokens.add(token); // consume
-  return payload.topic;
+// Consume token ONLY after success
+function consumeSearchToken(token) {
+  usedSearchTokens.add(token);
 }
 
 //////////////////////////////////////////////////////////////
-// BEAUTY CATEGORY CLASSIFIER (FREE + PAID)
+// BEAUTY CATEGORY CLASSIFIER
 //////////////////////////////////////////////////////////////
 async function aiAllowsBeautyCategory(input) {
   const out = await openai.chat.completions.create({
@@ -97,7 +96,7 @@ Output ONLY: ALLOW or DENY.`
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD MAJORS
+// STANFORD MAJORS + VIDEO SEARCH (UNCHANGED)
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
   "Psychology","Economics","Design","Sociology",
@@ -111,9 +110,6 @@ function pickMajor() {
   return majorPool.splice(Math.floor(Math.random() * majorPool.length), 1)[0];
 }
 
-//////////////////////////////////////////////////////////////
-// STANFORD VIDEO SEARCH
-//////////////////////////////////////////////////////////////
 const STANFORD_CHANNELS = [
   "Stanford University","Stanford Online",
   "Stanford GSB","Stanford Medicine","Stanford Engineering"
@@ -143,13 +139,12 @@ async function fetchStanfordVideo(major) {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON PRODUCT SEARCH (AMAZON ONLY)
+// AMAZON PRODUCT SEARCH
 //////////////////////////////////////////////////////////////
 async function fetchAmazonProduct(query) {
   if (!SERP_KEY) return null;
 
   const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
-
   const url =
     `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
     `&num=10&api_key=${SERP_KEY}`;
@@ -189,7 +184,6 @@ Then write:
 If this way of thinking is correct, what works:
 
 Then exactly 3 short sentences.
-Follow with 3 points explaining how people in ${major} think about a topic.
 `
     }]
   });
@@ -198,7 +192,7 @@ Follow with 3 points explaining how people in ${major} think about a topic.
 }
 
 //////////////////////////////////////////////////////////////
-// PIPELINE
+// PIPELINE (returns null if failure)
 //////////////////////////////////////////////////////////////
 async function runPipeline(input) {
   let major, video;
@@ -208,16 +202,18 @@ async function runPipeline(input) {
     video = await fetchStanfordVideo(major);
     if (video) break;
   }
-  if (!video) return { report: null };
+  if (!video) return null;
 
   const product = await fetchAmazonProduct(input);
-  if (!product) return { report: null };
+  if (!product) return null;
 
   const body = await generateClass({
     major,
     videoTitle: video.title,
     productTitle: product.title
   });
+
+  if (!body) return null;
 
   return {
     report:
@@ -232,32 +228,41 @@ ${body}`
 }
 
 //////////////////////////////////////////////////////////////
-// RUN ROUTE (FREE + PAID, SAME CATEGORY RULE)
+// RUN ROUTE — PAY ONLY ON SUCCESS
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
   let topic = req.body.topic || "";
   const token = req.body.searchToken || null;
 
-  // PAID SEARCH — validate token, same category rules
+  // PAID SEARCH
   if (token) {
-    const extractedTopic = verifyAndConsumeSearchToken(token);
-    if (!extractedTopic) {
+    const payload = verifySearchToken(token);
+    if (!payload) {
       return res.json({
         report: "Invalid or used token. Please purchase another search."
       });
     }
 
-    const allowed = await aiAllowsBeautyCategory(extractedTopic);
+    const allowed = await aiAllowsBeautyCategory(payload.topic);
     if (!allowed) {
       return res.json({
         report: "Only Amazon Beauty & Personal Care products are supported."
       });
     }
 
-    return res.json(await runPipeline(extractedTopic));
+    const result = await runPipeline(payload.topic);
+
+    if (!result) {
+      return res.json({
+        report: "No valid case material found. Your token was NOT used. Please try again."
+      });
+    }
+
+    consumeSearchToken(token); // 🔑 consume ONLY here
+    return res.json(result);
   }
 
-  // FREE SEARCH — same rules
+  // FREE SEARCH
   const allowed = await aiAllowsBeautyCategory(topic);
   if (!allowed) {
     return res.json({
@@ -265,7 +270,14 @@ app.post("/run", async (req, res) => {
     });
   }
 
-  return res.json(await runPipeline(topic));
+  const result = await runPipeline(topic);
+  if (!result) {
+    return res.json({
+      report: "No valid case material found."
+    });
+  }
+
+  return res.json(result);
 });
 
 //////////////////////////////////////////////////////////////
@@ -296,30 +308,9 @@ app.post("/create-search-session", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ADMIN ONE-PASS SEARCH TOKEN GENERATOR
-//////////////////////////////////////////////////////////////
-app.get("/create-admin-pass", async (req, res) => {
-  const secret = req.query.secret;
-  const topic  = req.query.topic || "";
-
-  if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  if (!topic.trim()) {
-    return res.json({ error: "Missing topic" });
-  }
-
-  const token = generateSearchToken(topic);
-  const url =
-    `https://blueoceanbrowser.com/amazonclassroom.html?search_token=${token}`;
-
-  res.json({ ok: true, url });
-});
-
-//////////////////////////////////////////////////////////////
 // SERVER
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log("🎓 Pay-per-search AI Case Classroom backend live");
+  console.log("🎓 Pay-per-delivered-search AI Case Classroom backend live");
 });
