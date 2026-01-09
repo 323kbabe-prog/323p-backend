@@ -273,7 +273,7 @@ app.post("/run", async (req, res) => {
   const allowed = await aiAllowsBeautyCategory(topic);
   if (!allowed) {
     return res.json({
-      report: "Free mode allows only REAL Amazon Beauty & Personal Care products."
+      report: "Only Amazon Beauty & Personal Care products are supported."
     });
   }
 
