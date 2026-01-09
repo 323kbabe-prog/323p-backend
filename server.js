@@ -32,7 +32,6 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET || null;
 //////////////////////////////////////////////////////////////
 const usedSearchTokens = new Set();
 
-// Generate token (not consumed yet)
 function generateSearchToken(topic) {
   const payload = {
     topic,
@@ -40,9 +39,7 @@ function generateSearchToken(topic) {
     iat: Date.now()
   };
 
-  const payloadB64 = Buffer
-    .from(JSON.stringify(payload))
-    .toString("base64url");
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
 
   const sig = crypto
     .createHmac("sha256", ACCESS_TOKEN_SECRET)
@@ -52,7 +49,6 @@ function generateSearchToken(topic) {
   return `${payloadB64}.${sig}`;
 }
 
-// Verify token without consuming
 function verifySearchToken(token) {
   if (!token) return null;
   if (usedSearchTokens.has(token)) return null;
@@ -72,30 +68,33 @@ function verifySearchToken(token) {
   );
 }
 
-// Consume token only after success
 function consumeSearchToken(token) {
   usedSearchTokens.add(token);
 }
 
 //////////////////////////////////////////////////////////////
-// BEAUTY CATEGORY CLASSIFIER
+// STEP 1 — PLAUSIBILITY CHECK (AI)
+// (loose, human-like)
 //////////////////////////////////////////////////////////////
-async function aiAllowsBeautyCategory(input) {
+async function aiIsPlausibleBeautyProduct(input) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0,
     messages: [{
       role: "system",
       content:
-`Decide if input refers to a REAL product in Amazon Beauty & Personal Care.
-Output ONLY: ALLOW or DENY.`
+`Decide if the input looks like a plausible beauty or personal care product name.
+This includes skincare, haircare, makeup, or beauty-related items.
+
+Output ONLY:
+YES or NO`
     },{
       role: "user",
       content: input
     }]
   });
 
-  return out.choices[0].message.content.trim() === "ALLOW";
+  return out.choices[0].message.content.trim() === "YES";
 }
 
 //////////////////////////////////////////////////////////////
@@ -147,7 +146,7 @@ async function fetchStanfordVideo(major) {
 }
 
 //////////////////////////////////////////////////////////////
-// AMAZON PRODUCT SEARCH
+// AMAZON PRODUCT SEARCH (GROUND TRUTH)
 //////////////////////////////////////////////////////////////
 async function fetchAmazonProduct(query) {
   if (!SERP_KEY) return null;
@@ -202,7 +201,7 @@ Then exactly 3 short sentences.
 //////////////////////////////////////////////////////////////
 // PIPELINE
 //////////////////////////////////////////////////////////////
-async function runPipeline(input) {
+async function runPipelineWithProduct(productTitle) {
   let major, video;
 
   for (let i = 0; i < STANFORD_MAJORS.length; i++) {
@@ -212,13 +211,10 @@ async function runPipeline(input) {
   }
   if (!video) return null;
 
-  const product = await fetchAmazonProduct(input);
-  if (!product) return null;
-
   const body = await generateClass({
     major,
     videoTitle: video.title,
-    productTitle: product.title
+    productTitle
   });
 
   if (!body) return null;
@@ -229,18 +225,34 @@ async function runPipeline(input) {
 ${video.link}
 
 Case Study Material
-${product.link}
+${productTitle}
 
 ${body}`
   };
 }
 
 //////////////////////////////////////////////////////////////
-// RUN ROUTE — PAY ONLY IF CONTENT DELIVERED
+// RUN ROUTE — FREE & PAID USE SAME ENGINE
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
   let topic = req.body.topic || "";
   const token = req.body.searchToken || null;
+
+  // STEP 1 — AI plausibility
+  const plausible = await aiIsPlausibleBeautyProduct(topic);
+  if (!plausible) {
+    return res.json({
+      report: "Only Amazon Beauty & Personal Care products are supported."
+    });
+  }
+
+  // STEP 2 — Amazon decides
+  const product = await fetchAmazonProduct(topic);
+  if (!product) {
+    return res.json({
+      report: "Only Amazon Beauty & Personal Care products are supported."
+    });
+  }
 
   // PAID SEARCH
   if (token) {
@@ -251,14 +263,7 @@ app.post("/run", async (req, res) => {
       });
     }
 
-    const allowed = await aiAllowsBeautyCategory(payload.topic);
-    if (!allowed) {
-      return res.json({
-        report: "Only Amazon Beauty & Personal Care products are supported."
-      });
-    }
-
-    const result = await runPipeline(payload.topic);
+    const result = await runPipelineWithProduct(product.title);
     if (!result) {
       return res.json({
         report: "No valid case material found. Your token was NOT used."
@@ -270,14 +275,7 @@ app.post("/run", async (req, res) => {
   }
 
   // FREE SEARCH
-  const allowed = await aiAllowsBeautyCategory(topic);
-  if (!allowed) {
-    return res.json({
-      report: "Only Amazon Beauty & Personal Care products are supported."
-    });
-  }
-
-  const result = await runPipeline(topic);
+  const result = await runPipelineWithProduct(product.title);
   if (!result) {
     return res.json({ report: "No valid case material found." });
   }
@@ -313,7 +311,7 @@ app.post("/create-search-session", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// ADMIN SEARCH PASS GENERATOR (FIXED)
+// ADMIN SEARCH PASS GENERATOR
 //////////////////////////////////////////////////////////////
 app.get("/create-admin-pass", async (req, res) => {
   const secret = req.query.secret;
