@@ -25,14 +25,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SERP_KEY = process.env.SERPAPI_KEY || null;
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "SECRET_KEY_HERE";
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
+const ADMIN_SECRET = process.env.ADMIN_SECRET || null;
 
 //////////////////////////////////////////////////////////////
 // ONE-TIME SEARCH TOKEN STORE
 //////////////////////////////////////////////////////////////
 const usedSearchTokens = new Set();
 
-// Generate single-use token (NOT consumed yet)
+// Generate token (not consumed yet)
 function generateSearchToken(topic) {
   const payload = {
     topic,
@@ -40,7 +40,10 @@ function generateSearchToken(topic) {
     iat: Date.now()
   };
 
-  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const payloadB64 = Buffer
+    .from(JSON.stringify(payload))
+    .toString("base64url");
+
   const sig = crypto
     .createHmac("sha256", ACCESS_TOKEN_SECRET)
     .update(payloadB64)
@@ -49,7 +52,7 @@ function generateSearchToken(topic) {
   return `${payloadB64}.${sig}`;
 }
 
-// Verify token WITHOUT consuming
+// Verify token without consuming
 function verifySearchToken(token) {
   if (!token) return null;
   if (usedSearchTokens.has(token)) return null;
@@ -69,7 +72,7 @@ function verifySearchToken(token) {
   );
 }
 
-// Consume token ONLY after success
+// Consume token only after success
 function consumeSearchToken(token) {
   usedSearchTokens.add(token);
 }
@@ -96,7 +99,7 @@ Output ONLY: ALLOW or DENY.`
 }
 
 //////////////////////////////////////////////////////////////
-// STANFORD MAJORS + VIDEO SEARCH (UNCHANGED)
+// STANFORD MAJORS
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
   "Psychology","Economics","Design","Sociology",
@@ -107,9 +110,14 @@ const STANFORD_MAJORS = [
 let majorPool = [...STANFORD_MAJORS];
 function pickMajor() {
   if (!majorPool.length) majorPool = [...STANFORD_MAJORS];
-  return majorPool.splice(Math.floor(Math.random() * majorPool.length), 1)[0];
+  return majorPool.splice(
+    Math.floor(Math.random() * majorPool.length), 1
+  )[0];
 }
 
+//////////////////////////////////////////////////////////////
+// STANFORD VIDEO SEARCH
+//////////////////////////////////////////////////////////////
 const STANFORD_CHANNELS = [
   "Stanford University","Stanford Online",
   "Stanford GSB","Stanford Medicine","Stanford Engineering"
@@ -192,7 +200,7 @@ Then exactly 3 short sentences.
 }
 
 //////////////////////////////////////////////////////////////
-// PIPELINE (returns null if failure)
+// PIPELINE
 //////////////////////////////////////////////////////////////
 async function runPipeline(input) {
   let major, video;
@@ -228,7 +236,7 @@ ${body}`
 }
 
 //////////////////////////////////////////////////////////////
-// RUN ROUTE — PAY ONLY ON SUCCESS
+// RUN ROUTE — PAY ONLY IF CONTENT DELIVERED
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
   let topic = req.body.topic || "";
@@ -251,14 +259,13 @@ app.post("/run", async (req, res) => {
     }
 
     const result = await runPipeline(payload.topic);
-
     if (!result) {
       return res.json({
-        report: "No valid case material found. Your token was NOT used. Please try again."
+        report: "No valid case material found. Your token was NOT used."
       });
     }
 
-    consumeSearchToken(token); // 🔑 consume ONLY here
+    consumeSearchToken(token);
     return res.json(result);
   }
 
@@ -272,9 +279,7 @@ app.post("/run", async (req, res) => {
 
   const result = await runPipeline(topic);
   if (!result) {
-    return res.json({
-      report: "No valid case material found."
-    });
+    return res.json({ report: "No valid case material found." });
   }
 
   return res.json(result);
@@ -305,6 +310,27 @@ app.post("/create-search-session", async (req, res) => {
   });
 
   res.json({ url: session.url });
+});
+
+//////////////////////////////////////////////////////////////
+// ADMIN SEARCH PASS GENERATOR (FIXED)
+//////////////////////////////////////////////////////////////
+app.get("/create-admin-pass", async (req, res) => {
+  const secret = req.query.secret;
+  const topic  = req.query.topic || "";
+
+  if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  if (!topic.trim()) {
+    return res.json({ error: "Missing topic" });
+  }
+
+  const token = generateSearchToken(topic);
+  const url =
+    `https://blueoceanbrowser.com/amazonclassroom.html?search_token=${token}`;
+
+  res.json({ ok: true, url });
 });
 
 //////////////////////////////////////////////////////////////
