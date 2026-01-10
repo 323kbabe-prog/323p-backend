@@ -182,15 +182,57 @@ Academic lens: "${videoTitle}"
 START WITH THIS LINE EXACTLY:
 2×-AI Engine — Academic Case Analysis
 
+Write the analysis using the following academic thesis structure and headings exactly, in this order:
+
+Title
+- Write a clear, descriptive academic-style title that names the phenomenon being examined, not the product itself.
+
+Abstract
+- Write 3–4 sentences.
+- Explain what is being examined, how it is examined, and why this analysis is useful.
+- Do not mention sources, institutions, or authority.
+
+Introduction
+- Describe the context in which the product exists.
+- Explain the routine, situation, or problem it appears to address.
+- Keep the tone descriptive and neutral.
+
+Observation
+- Describe observable signals related to the product.
+- Focus on how it is encountered, used, or normalized in everyday life.
+- Do not interpret yet. Do not give opinions.
+
+Analysis
+- Interpret the observed signals using academic reasoning.
+- Consider perspectives such as behavior, design, economics, or social patterns.
+- Explain why these patterns might exist.
+- Avoid evaluation or recommendation.
+
+Discussion
+- If this way of thinking is correct, describe what appears to function effectively.
+- Focus on mechanisms and structures rather than outcomes.
+- Keep the tone conditional and exploratory.
+
+Notes
+- Write one short paragraph clarifying the limits of this analysis.
+- State that the discussion is interpretive, not evaluative.
+- Make clear that it does not offer recommendations, predictions, or judgments.
+
+Citation (Contextual)
+- Write one sentence explaining that this analysis draws on general concepts commonly discussed in academic literature.
+- Do not name authors, institutions, or specific works.
+
+Questions to Notice
+- End with exactly 3 short questions.
+- These questions should help the reader notice assumptions, overlooked patterns, or similar structures elsewhere.
+- Do not answer the questions.
+
 Rules:
-- Academic tone
-- No selling, no judging
-- 5 short paragraphs
-
-Then write:
-If this way of thinking is correct, what works:
-
-Then exactly 3 short sentences.
+- Maintain an academic tone.
+- Use clear, plain English.
+- No selling, no judging.
+- Do not claim direct access to external sources.
+- Do not make predictions.
 `
     }]
   });
