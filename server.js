@@ -221,12 +221,12 @@ Questions to Notice
 
 Section guidelines:
 
-Title
+Title:
 - Write a clear academic title describing the case and the academic perspective.
 - The title should name a phenomenon or pattern, not the product or system.
 - Do not mention engine names, system names, or branding.
 
-Abstract
+Abstract:
 Write a paragraph of 6–7 sentences.
 The paragraph should summarize what is examined, how it is examined, and why this way of thinking is useful.
 After the paragraph, include 2–3 big dot points that clarify the structure of the inquiry.
@@ -234,7 +234,7 @@ After the paragraph, include 2–3 big dot points that clarify the structure of 
 • What kind of thinking is being applied
 • Why this way of thinking creates clarity
 
-Introduction
+Introduction:
 Write a paragraph of 6–7 sentences that situates the case within a broader context.
 The paragraph should explain the environment in which the case exists and why it is a meaningful object of study.
 After the paragraph, include big dot points that surface framing assumptions.
@@ -242,7 +242,7 @@ After the paragraph, include big dot points that surface framing assumptions.
 • What kinds of user routines or expectations are implied
 • What type of decision-making environment is present
 
-Observation
+Observation:
 Write a paragraph of 6–7 sentences describing what can be observed without interpretation.
 The paragraph should focus on form, use, repetition, and visibility before explaining anything.
 After the paragraph, include big dot points that separate observation from meaning.
@@ -250,7 +250,7 @@ After the paragraph, include big dot points that separate observation from meani
 • What behaviors appear normalized
 • What is present without explaining why
 
-Analysis
+Analysis:
 Write a paragraph of 6–7 sentences interpreting the observations using academic reasoning.
 The paragraph should walk through how structure, constraints, and context shape understanding.
 After the paragraph, include big dot points that make the analytical moves explicit.
@@ -258,7 +258,7 @@ After the paragraph, include big dot points that make the analytical moves expli
 • How constraints influence choices
 • How meaning is produced through structure, not claims
 
-Discussion
+Discussion:
 Write a paragraph of 6–7 sentences exploring what appears to function if this way of thinking is correct.
 The paragraph should focus on why certain arrangements reduce uncertainty or cognitive effort.
 After the paragraph, include big dot points that focus on mechanisms, not outcomes.
@@ -266,7 +266,7 @@ After the paragraph, include big dot points that focus on mechanisms, not outcom
 • What reduces cognitive effort
 • What makes decisions feel easier or safer
 
-Notes
+Notes:
 Write one paragraph of 6–7 sentences clarifying the limits of this analysis.
 The paragraph should explain what this model does and does not claim.
 After the paragraph, include big dot points that protect against over-interpretation.
@@ -275,8 +275,19 @@ After the paragraph, include big dot points that protect against over-interpreta
 • This does not recommend action
 
 Citation (Contextual)
-Write one sentence explaining that this analysis draws on general academic concepts rather than specific sources.
-After the sentence, include 1–2 big dot points indicating domains of thought.
+
+After completing all sections above, generate the Citation (Contextual) section by analyzing the content you have just written.
+
+Rules:
+- The citation must be derived ONLY from the concepts, methods, and reasoning actually used in the analysis.
+- Do NOT mention authors, institutions, journals, years, or external publications.
+- Do NOT invent sources.
+- The citation should name the domains of reasoning demonstrated in the content (e.g., statistical reasoning, behavioral analysis, communication structures).
+- Write ONE concise sentence summarizing the intellectual basis of the analysis.
+- Then include 2–3 bullet points listing the specific domains of thought reflected in the content.
+
+The citation must reflect what was actually done in the analysis, not what could have been done.
+After the sentence, include 2–3 big dot points indicating domains of thought.
 • Design theory
 • Behavioral reasoning
 • Organizational or communication studies
