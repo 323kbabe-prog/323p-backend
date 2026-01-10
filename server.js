@@ -411,7 +411,7 @@ app.post("/create-search-session", async (req, res) => {
     line_items: [{
       price_data: {
         currency: "usd",
-        product_data: { name: "AI Case Classroom — One Search" },
+        product_data: { name: "AI Training Humans Classroom — One Search" },
         unit_amount: 50
       },
       quantity: 1
