@@ -164,7 +164,7 @@ async function fetchAmazonProduct(query) {
 }
 
 //////////////////////////////////////////////////////////////
-// CLASS GENERATOR — THESIS FORMAT (PLAIN SYMBOLS)
+// CLASS GENERATOR — THESIS FORMAT (TITLE FIXED)
 //////////////////////////////////////////////////////////////
 async function generateClass({ major, videoTitle, productTitle }) {
   const out = await openai.chat.completions.create({
@@ -180,6 +180,10 @@ Academic lens: "${videoTitle}"
 
 START WITH THIS LINE EXACTLY:
 2×-AI Engine — Academic Case Analysis
+
+After this line, write the academic thesis.
+The Title section must describe the case and the academic perspective.
+Do NOT use the engine name or system name as the thesis title.
 
 Write the analysis as an academic thesis.
 
