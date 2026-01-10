@@ -28,6 +28,16 @@ const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "SECRET_KEY_HERE"
 const ADMIN_SECRET = process.env.ADMIN_SECRET || null;
 
 //////////////////////////////////////////////////////////////
+// STEP LOGGER
+//////////////////////////////////////////////////////////////
+function stepLog(steps, text) {              // ADDED
+  steps.push({                               // ADDED
+    time: new Date().toISOString(),          // ADDED
+    text                                    // ADDED
+  });                                        // ADDED
+}                                           // ADDED
+
+//////////////////////////////////////////////////////////////
 // ONE-TIME SEARCH TOKEN STORE
 //////////////////////////////////////////////////////////////
 const usedSearchTokens = new Set();
@@ -298,8 +308,10 @@ Rules:
 //////////////////////////////////////////////////////////////
 // PIPELINE
 //////////////////////////////////////////////////////////////
-async function runPipelineWithProduct(product) {
+async function runPipelineWithProduct(product, steps) {   // ADDED (signature only)
   let major, video;
+
+  stepLog(steps, "Selecting academic lens");              // ADDED
 
   for (let i = 0; i < STANFORD_MAJORS.length; i++) {
     major = pickMajor();
@@ -307,6 +319,8 @@ async function runPipelineWithProduct(product) {
     if (video) break;
   }
   if (!video) return null;
+
+  stepLog(steps, "Generating academic analysis");         // ADDED
 
   const body = await generateClass({
     major,
@@ -332,40 +346,46 @@ ${body}`
 // RUN ROUTE — FREE & PAID USE SAME ENGINE
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
+  const steps = [];                                       // ADDED
   const topic = req.body.topic || "";
   const token = req.body.searchToken || null;
 
+  stepLog(steps, "Validating product domain");            // ADDED
+
   const plausible = await aiIsPlausibleBeautyProduct(topic);
   if (!plausible) {
-    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported." });
+    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported.", steps }); // ADDED
   }
+
+  stepLog(steps, "Searching Amazon product");             // ADDED
 
   const product = await fetchAmazonProduct(topic);
   if (!product) {
-    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported." });
+    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported.", steps }); // ADDED
   }
 
   if (token) {
+    stepLog(steps, "Validating access token");            // ADDED
+
     const payload = verifySearchToken(token);
     if (!payload) {
-      return res.json({ report: "Invalid or used token. Please purchase another search." });
+      return res.json({ report: "Invalid or used token. Please purchase another search.", steps }); // ADDED
     }
-
-    const result = await runPipelineWithProduct(product);
-    if (!result) {
-      return res.json({ report: "No valid case material found. Your token was NOT used." });
-    }
-
-    consumeSearchToken(token);
-    return res.json(result);
   }
 
-  const result = await runPipelineWithProduct(product);
+  const result = await runPipelineWithProduct(product, steps); // ADDED
   if (!result) {
-    return res.json({ report: "No valid case material found." });
+    return res.json({ report: "No valid case material found.", steps }); // ADDED
   }
 
-  return res.json(result);
+  if (token) {
+    consumeSearchToken(token);
+    stepLog(steps, "Token consumed");                     // ADDED
+  }
+
+  stepLog(steps, "Delivery complete");                    // ADDED
+
+  return res.json({ ...result, steps });                  // ADDED
 });
 
 //////////////////////////////////////////////////////////////
