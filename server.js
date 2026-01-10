@@ -267,8 +267,12 @@ Do not name authors, institutions, or specific works.
 
 Questions to Notice
 End with exactly 3 short questions.
-These questions should train attention rather than seek answers.
-They should invite the reader to notice structure, assumptions, or repetition elsewhere.
+Each question must begin with a checkbox-style symbol.
+Use one of the following symbols consistently:
+☐ or □
+
+The questions should function as cognitive checkpoints.
+They should help the reader inspect assumptions, structures, or patterns.
 Do not answer the questions.
 
 Rules:
