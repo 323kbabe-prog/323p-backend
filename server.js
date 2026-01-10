@@ -417,10 +417,11 @@ app.post("/create-search-session", async (req, res) => {
       quantity: 1
     }],
     success_url:
-      `https://blueoceanbrowser.com/amazonaicaseclassroom.html?search_token=` +
-      generateSearchToken(topic),
-    cancel_url:
-      "https://blueoceanbrowser.com/amazonaicaseclassroom.html"
+  "https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html?search_token=" +
+  generateSearchToken(topic),
+
+cancel_url:
+  "https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html"
   });
 
   res.json({ url: session.url });
@@ -442,8 +443,7 @@ app.get("/create-admin-pass", async (req, res) => {
 
   const token = generateSearchToken(topic);
   const url =
-    `https://blueoceanbrowser.com/amazonaicaseclassroom.html?search_token=${token}`;
-
+  `https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html?search_token=${token}`;
   res.json({ ok: true, url });
 });
 
