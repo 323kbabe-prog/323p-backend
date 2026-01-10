@@ -74,7 +74,6 @@ function consumeSearchToken(token) {
 
 //////////////////////////////////////////////////////////////
 // STEP 1 — PLAUSIBILITY CHECK (AI)
-// (loose, human-like)
 //////////////////////////////////////////////////////////////
 async function aiIsPlausibleBeautyProduct(input) {
   const out = await openai.chat.completions.create({
@@ -165,7 +164,7 @@ async function fetchAmazonProduct(query) {
 }
 
 //////////////////////////////////////////////////////////////
-// CLASS GENERATOR
+// CLASS GENERATOR — THESIS FORMAT (PLAIN SYMBOLS)
 //////////////////////////////////////////////////////////////
 async function generateClass({ major, videoTitle, productTitle }) {
   const out = await openai.chat.completions.create({
@@ -182,7 +181,15 @@ Academic lens: "${videoTitle}"
 START WITH THIS LINE EXACTLY:
 2×-AI Engine — Academic Case Analysis
 
-Write the analysis using the following academic thesis structure and headings exactly, in this order:
+Write the analysis as an academic thesis.
+
+Formatting rules:
+- Do NOT use Markdown, asterisks (**), or numbered lists.
+- Use plain academic section headers only.
+- Section headers may use: colon (:), long dash (—), period (.), or bullet dot (•).
+- Choose the symbol naturally and stay consistent.
+
+Use the following section titles, in this order:
 
 Title
 Abstract
@@ -198,8 +205,7 @@ Rules:
 - Maintain an academic tone.
 - Use clear, plain English.
 - No selling, no judging.
-- Do not claim direct access to external sources.
-- Do not make predictions.
+- No predictions.
 `
     }]
   });
@@ -210,7 +216,7 @@ Rules:
 //////////////////////////////////////////////////////////////
 // PIPELINE
 //////////////////////////////////////////////////////////////
-async function runPipelineWithProduct(productTitle) {
+async function runPipelineWithProduct(product) {
   let major, video;
 
   for (let i = 0; i < STANFORD_MAJORS.length; i++) {
@@ -223,7 +229,7 @@ async function runPipelineWithProduct(productTitle) {
   const body = await generateClass({
     major,
     videoTitle: video.title,
-    productTitle
+    productTitle: product.title
   });
 
   if (!body) return null;
@@ -234,7 +240,7 @@ async function runPipelineWithProduct(productTitle) {
 ${video.link}
 
 Case Study Material
-${productTitle}
+${product.link}
 
 ${body}`
   };
@@ -244,43 +250,35 @@ ${body}`
 // RUN ROUTE — FREE & PAID USE SAME ENGINE
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
-  let topic = req.body.topic || "";
+  const topic = req.body.topic || "";
   const token = req.body.searchToken || null;
 
   const plausible = await aiIsPlausibleBeautyProduct(topic);
   if (!plausible) {
-    return res.json({
-      report: "Only Amazon Beauty & Personal Care products are supported."
-    });
+    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported." });
   }
 
   const product = await fetchAmazonProduct(topic);
   if (!product) {
-    return res.json({
-      report: "Only Amazon Beauty & Personal Care products are supported."
-    });
+    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported." });
   }
 
   if (token) {
     const payload = verifySearchToken(token);
     if (!payload) {
-      return res.json({
-        report: "Invalid or used token. Please purchase another search."
-      });
+      return res.json({ report: "Invalid or used token. Please purchase another search." });
     }
 
-    const result = await runPipelineWithProduct(product.title);
+    const result = await runPipelineWithProduct(product);
     if (!result) {
-      return res.json({
-        report: "No valid case material found. Your token was NOT used."
-      });
+      return res.json({ report: "No valid case material found. Your token was NOT used." });
     }
 
     consumeSearchToken(token);
     return res.json(result);
   }
 
-  const result = await runPipelineWithProduct(product.title);
+  const result = await runPipelineWithProduct(product);
   if (!result) {
     return res.json({ report: "No valid case material found." });
   }
