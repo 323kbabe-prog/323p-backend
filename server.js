@@ -181,17 +181,21 @@ Academic lens: "${videoTitle}"
 START WITH THIS LINE EXACTLY:
 2×-AI Engine — Academic Case Analysis
 
-After this line, write the academic thesis.
-The Title section must describe the case and the academic perspective.
-Do NOT use the engine name or system name as the thesis title.
+After this line, write an academic thesis.
+The purpose of this thesis is not to deliver content, but to demonstrate a way of thinking.
 
-Write the analysis as an academic thesis.
+Background meaning (do not quote directly, but reflect in structure and tone):
+• Users are not paying for content — they are paying for cognitive structure.
+• People do not pay for results — they pay for certainty.
+• This work does not sell outcomes — it models a thinking habit.
 
 Formatting rules:
 - Do NOT use Markdown, asterisks (**), or numbered lists.
 - Use plain academic section headers only.
 - Section headers may use: colon (:), long dash (—), period (.), or bullet dot (•).
 - Choose the symbol naturally and stay consistent.
+- Use big dot points (•) within sections to reveal reasoning structure.
+- Bullet points should represent mental models, distinctions, or analytical moves — not features or summaries.
 
 Use the following section titles, in this order:
 
@@ -205,10 +209,73 @@ Notes
 Citation (Contextual)
 Questions to Notice
 
+Section guidelines:
+
+Title
+- Write a clear academic thesis title describing the case and the academic perspective.
+- The title should name a phenomenon or pattern, not the product or system.
+- Do not mention engine names, system names, or branding.
+
+Abstract
+Write 3–4 sentences, then include 2–3 big dot points that clarify the structure of the inquiry.
+• What kind of situation is being examined
+• What kind of thinking is being applied
+• Why this way of thinking creates clarity
+
+Introduction
+Describe the broader context in which the case exists.
+Then include big dot points that surface framing assumptions.
+• What problem space this case belongs to
+• What kinds of user routines or expectations are implied
+• What type of decision-making environment is present
+
+Observation
+Describe observable signals without interpretation.
+Then include big dot points that separate observation from meaning.
+• What is visible, repeatable, or standardized
+• What behaviors appear normalized
+• What is present without explaining why
+
+Analysis
+Interpret the observations using academic reasoning.
+Then include big dot points that show analytical moves.
+• How form, behavior, or design shape understanding
+• How constraints influence choices
+• How meaning is produced through structure, not claims
+
+Discussion
+If this way of thinking is correct, describe what appears to function effectively.
+Then include big dot points that focus on mechanisms, not outcomes.
+• What creates certainty for users
+• What reduces cognitive effort
+• What makes decisions feel easier or safer
+
+Notes
+Write one short paragraph clarifying the limits of this analysis.
+Then include big dot points that protect against over-interpretation.
+• This is an interpretive model, not a verdict
+• This does not predict success or failure
+• This does not recommend action
+
+Citation (Contextual)
+Write one sentence explaining that this analysis draws on general academic concepts.
+Then include 1–2 big dot points indicating domains of thought.
+• Design theory
+• Behavioral reasoning
+• Organizational or communication studies
+Do not name authors, institutions, or specific works.
+
+Questions to Notice
+End with exactly 3 short questions.
+These questions should train attention rather than seek answers.
+They should invite the reader to notice structure, assumptions, or repetition elsewhere.
+Do not answer the questions.
+
 Rules:
 - Maintain an academic tone.
 - Use clear, plain English.
 - No selling, no judging.
+- No claims of direct access to external sources.
 - No predictions.
 `
     }]
