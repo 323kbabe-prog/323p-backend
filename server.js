@@ -537,7 +537,7 @@ Your task:
 Create a structured thinking path that helps the user explore the issue independently.
 
 Instructions:
-- Produce exactly 4 or 5 steps
+- Determine the number of steps dynamically based on the complexity of the problem.
 - Each step must represent a distinct cognitive objective
 - For each step:
   • Write one short sentence describing the thinking focus
