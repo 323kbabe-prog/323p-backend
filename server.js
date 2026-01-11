@@ -192,115 +192,130 @@ START WITH THIS LINE EXACTLY:
 2×-AI Engine — Academic Case Analysis
 
 After this line, write an academic analysis.
-The purpose of this analysis is not to deliver content, but to demonstrate a way of thinking.
+The purpose of this analysis is not to deliver content, but to train human reasoning using Constraint-Based Cognitive Reasoning Training.
 
 Background meaning (do not quote directly, but reflect in structure and tone):
 • Users are not paying for content — they are paying for cognitive structure.
 • People do not pay for results — they pay for certainty.
-• This work does not sell outcomes — it models a thinking habit.
+• This work does not sell outcomes — it models a repeatable thinking habit.
 
 Formatting rules:
 - Do NOT use Markdown, asterisks (**), or numbered lists.
 - Use plain academic section headers only.
 - Section headers may use: colon (:), long dash (—), period (.), or bullet dot (•).
-- Choose the symbol naturally and stay consistent.
-- Use big dot points (•) within sections to reveal reasoning structure.
-- Bullet points should represent mental models, distinctions, or analytical moves — not features or summaries.
+- Choose one symbol style and remain consistent.
+- Use big dot points (•) within sections to expose reasoning structure.
+- Bullet points must represent mental models, constraints, or analytical distinctions — never features or summaries.
 
-Use the following section titles, in this order:
+Use the following section titles, in this exact order:
 
-Title
-Abstract
-Introduction
-Observation
-Analysis
-Discussion
-Notes
-Citation (Contextual)
+Title  
+Pedagogical Objective  
+Abstract  
+Introduction  
+Observation  
+Analysis  
+Cognitive Error Modes  
+Discussion  
+Transfer Test  
+Notes  
+Meta-Reflection  
+Citation (Contextual)  
 Questions to Notice
 
 Section guidelines:
 
 Title:
-- Write a clear academic title describing the case and the academic perspective.
-- The title should name a phenomenon or pattern, not the product or system.
-- Do not mention engine names, system names, or branding.
+Write a clear academic title describing the phenomenon or pattern being examined.
+Do not mention the product, system names, or branding.
+
+Pedagogical Objective:
+State explicitly which cognitive capability is being trained.
+Focus on a thinking skill such as constraint reasoning, assumption detection, abstraction, or decision framing.
+Do not describe the product here. Describe the mental capability being exercised.
 
 Abstract:
-Write a paragraph of 6–7 sentences.
-The paragraph should summarize what is examined, how it is examined, and why this way of thinking is useful.
+Write one paragraph of 6–7 sentences.
+Explain what is being examined, how it is examined, and why this mode of reasoning matters.
 After the paragraph, include 2–3 big dot points that clarify the structure of the inquiry.
-• What kind of situation is being examined
-• What kind of thinking is being applied
-• Why this way of thinking creates clarity
+• What type of situation is being examined
+• What form of reasoning is applied
+• Why this reasoning structure reduces uncertainty
 
 Introduction:
-Write a paragraph of 6–7 sentences that situates the case within a broader context.
-The paragraph should explain the environment in which the case exists and why it is a meaningful object of study.
+Write one paragraph of 6–7 sentences situating the case within a broader context.
+Explain the environment, pressures, and constraints that make this case meaningful.
 After the paragraph, include big dot points that surface framing assumptions.
-• What problem space this case belongs to
-• What kinds of user routines or expectations are implied
-• What type of decision-making environment is present
+• What decision space this case occupies
+• What routines or expectations are implicitly present
+• What constraints shape interpretation
 
 Observation:
-Write a paragraph of 6–7 sentences describing what can be observed without interpretation.
-The paragraph should focus on form, use, repetition, and visibility before explaining anything.
-After the paragraph, include big dot points that separate observation from meaning.
-• What is visible, repeatable, or standardized
+Write one paragraph of 6–7 sentences describing observable signals only.
+Focus on form, repetition, usage patterns, and visibility.
+Do not explain causes or meanings yet.
+After the paragraph, include big dot points separating observation from interpretation.
+• What is consistently present
 • What behaviors appear normalized
-• What is present without explaining why
+• What can be seen without inference
 
 Analysis:
-Write a paragraph of 6–7 sentences interpreting the observations using academic reasoning.
-The paragraph should walk through how structure, constraints, and context shape understanding.
-After the paragraph, include big dot points that make the analytical moves explicit.
-• How form, behavior, or design shape understanding
-• How constraints influence choices
-• How meaning is produced through structure, not claims
+Write one paragraph of 6–7 sentences interpreting the observations using academic reasoning.
+Explain how structure, constraints, and context shape understanding.
+After the paragraph, include big dot points that expose analytical moves.
+• How constraints guide interpretation
+• How structure produces meaning
+• How certainty is created without explicit claims
+
+Cognitive Error Modes:
+Write a short paragraph identifying common reasoning errors that could occur when interpreting this case.
+Focus on how humans might misread or oversimplify the situation.
+After the paragraph, include big dot points.
+• Likely oversimplifications
+• False causal assumptions
+• Pattern-matching traps
+• Outcome bias risks
 
 Discussion:
-Write a paragraph of 6–7 sentences exploring what appears to function if this way of thinking is correct.
-The paragraph should focus on why certain arrangements reduce uncertainty or cognitive effort.
-After the paragraph, include big dot points that focus on mechanisms, not outcomes.
-• What creates certainty for users
-• What reduces cognitive effort
-• What makes decisions feel easier or safer
+Write one paragraph of 6–7 sentences describing what appears to function if this reasoning model is correct.
+Focus on mechanisms that reduce uncertainty or cognitive effort.
+Avoid evaluating success or failure.
+After the paragraph, include big dot points focused on mechanisms.
+• What creates cognitive stability
+• What reduces decision friction
+• What supports confident action
+
+Transfer Test:
+Write one paragraph explaining how the same reasoning structure could apply in a different domain.
+Do not name a specific product, industry, or example.
+Focus on structural similarity rather than surface features.
 
 Notes:
 Write one paragraph of 6–7 sentences clarifying the limits of this analysis.
-The paragraph should explain what this model does and does not claim.
-After the paragraph, include big dot points that protect against over-interpretation.
+Explain what this reasoning model does and does not claim.
+After the paragraph, include big dot points.
 • This is an interpretive model, not a verdict
-• This does not predict success or failure
-• This does not recommend action
+• This does not predict outcomes
+• This does not recommend actions
 
-Citation (Contextual)
+Meta-Reflection:
+Write 3–4 sentences describing what the reader should notice about their own thinking while reading this analysis.
+Focus on shifts in attention, certainty, or interpretation.
 
-After completing all sections above, generate the Citation (Contextual) section by analyzing the content you have just written.
-
-Rules:
-- The citation must be derived ONLY from the concepts, methods, and reasoning actually used in the analysis.
-- Do NOT mention authors, institutions, journals, years, or external publications.
-- Do NOT invent sources.
-- The citation should name the domains of reasoning demonstrated in the content (e.g., statistical reasoning, behavioral analysis, communication structures).
-- Write ONE concise sentence summarizing the intellectual basis of the analysis.
-- Then include 2–3 bullet points listing the specific domains of thought reflected in the content.
-
-The citation must reflect what was actually done in the analysis, not what could have been done.
-After the sentence, include 2–3 big dot points indicating domains of thought.
+Citation (Contextual):
+After completing all sections above, generate this section by analyzing the reasoning actually used.
+Write one concise sentence summarizing the intellectual basis of the analysis.
+Then include 2–3 big dot points listing domains of thought demonstrated.
 • Design theory
 • Behavioral reasoning
-• Organizational or communication studies
-Do not name authors, institutions, or specific works.
+• Organizational or communication structures
+Do not mention authors, institutions, years, or external works.
 
-Questions to Notice
+Questions to Notice:
 End with exactly 3 short questions.
 Each question must begin with a checkbox-style symbol.
-Use one of the following symbols consistently:
-☐ or □
-
-The questions should function as cognitive checkpoints.
-They should help the reader inspect assumptions, structures, or patterns.
+Use either ☐ or □ consistently.
+Each question must refer to the reader’s thinking process, not the case itself.
 Do not answer the questions.
 
 Rules:
