@@ -467,6 +467,168 @@ app.get("/create-admin-pass", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
+// W D N A B — B
+// THINKING PATH ENGINE — PROBLEM / WISH → GOOGLE THINKING MAP
+// Independent Chunk (No Amazon, No Stanford, No SERP Fetch)
+//////////////////////////////////////////////////////////////
+
+// ==========================================================
+// AI GATE — ACCEPT ONLY PROBLEM OR WISH (WDNAB—B)
+// ==========================================================
+async function wdnabAcceptProblemOrWish(input) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
+You are a strict input validation system.
+
+Decide whether the user input expresses:
+- A problem (difficulty, uncertainty, friction, conflict)
+OR
+- A wish (desire, intent, aspiration)
+
+Reject anything else, including:
+- Statements of fact
+- Opinions without intent
+- Requests for answers
+- Commands
+- Explanations
+
+Output ONLY one word:
+ACCEPT or REJECT
+`
+      },
+      {
+        role: "user",
+        content: input
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim() === "ACCEPT";
+}
+
+// ==========================================================
+// THINKING PATH GENERATOR — NO ANSWERS, NO ADVICE (WDNAB—B)
+// ==========================================================
+async function wdnabGenerateThinkingPath(problemOrWish) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "user",
+        content: `
+You are a logic-only thinking system.
+
+Input:
+"${problemOrWish}"
+
+Task constraints:
+- Do NOT solve the problem
+- Do NOT give advice
+- Do NOT draw conclusions
+- Do NOT persuade or recommend
+
+Your task:
+Create a structured thinking path that helps the user explore the issue independently.
+
+Instructions:
+- Produce exactly 4 or 5 steps
+- Each step must represent a distinct cognitive objective
+- For each step:
+  • Write one short sentence describing the thinking focus
+  • Generate ONE precise Google search query
+  • Encode the query using URL-safe format (spaces replaced with +)
+  • Output the query as a clickable Google search link
+
+Rules:
+- No emotional language
+- No ideology
+- No judgments
+- No summaries of search results
+
+Formatting (must match exactly):
+
+Thinking Path
+
+Step 1 — [Thinking focus]
+Search:
+https://www.google.com/search?q=...
+
+Step 2 — [Thinking focus]
+Search:
+https://www.google.com/search?q=...
+
+(continue sequentially)
+
+End with EXACTLY this line:
+This system provides a thinking path, not answers.
+`
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+// ==========================================================
+// ROUTE — W D N A B — B THINKING PATH
+// ==========================================================
+app.post("/thinking-path", async (req, res) => {
+  const steps = [];
+  const input = (req.body.input || "").trim();
+  const token = req.body.searchToken || null;
+
+  stepLog(steps, "Engine: WDNAB—B Thinking Path");
+  stepLog(steps, "Validating input presence");
+
+  if (!input) {
+    return res.json({
+      report: "Input is required. Please express a problem or a wish.",
+      steps
+    });
+  }
+
+  stepLog(steps, "Validating input type (problem or wish)");
+
+  const accepted = await wdnabAcceptProblemOrWish(input);
+  if (!accepted) {
+    return res.json({
+      report: "Input rejected. Please express a problem or a wish.",
+      steps
+    });
+  }
+
+  if (token) {
+    stepLog(steps, "Validating access token");
+    const payload = verifySearchToken(token);
+    if (!payload) {
+      return res.json({
+        report: "Invalid or used token.",
+        steps
+      });
+    }
+  }
+
+  stepLog(steps, "Generating thinking path");
+
+  const report = await wdnabGenerateThinkingPath(input);
+
+  if (token) {
+    consumeSearchToken(token);
+    stepLog(steps, "Token consumed");
+  }
+
+  stepLog(steps, "Thinking path delivery complete");
+
+  res.json({ report, steps });
+});
+
+//////////////////////////////////////////////////////////////
 // SERVER
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
