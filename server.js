@@ -540,7 +540,7 @@ Instructions:
 - Determine the number of steps dynamically based on the complexity of the problem.
 - Each step must represent a distinct cognitive objective
 - For each step:
-  • Write one short sentence describing the thinking focus, phrased in a natural, calm, human way
+  • Write one short sentence describing the thinking focus, phrased the way a clear-headed man would think it through to himself — direct, practical, and matter-of-fact.
   • Generate ONE precise Google search query
   • Encode the query using URL-safe format (spaces replaced with +)
   • Output the query as a clickable Google search link
