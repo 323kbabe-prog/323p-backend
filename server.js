@@ -188,6 +188,10 @@ You are teaching an academic class from the perspective of ${major}.
 Case material: "${productTitle}"
 Academic lens: "${videoTitle}"
 
+The ${productTitle} must be treated as the primary case material.
+All observations, analyses, and reasoning must be grounded in this product as the concrete object of study.
+Do not generalize away from the product; abstract only after the product has been fully examined.
+
 START WITH THIS LINE EXACTLY:
 2×-AI Engine — Academic Case Analysis
 
