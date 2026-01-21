@@ -527,8 +527,9 @@ Rewrite the user input as either:
 - a clear wish.
 
 Rules:
-- Preserve the original meaning and intent, not just the wording.
-- If the input implies an underlying desire, concern, or need, rewrite it to reflect that intent clearly.
+- Preserve the original meaning and underlying intent, not the original wording.
+- If the input implies a deeper need, desire, or concern, rewrite it using clearer language that expresses that intent.
+- You may replace concrete phrasing with a semantically equivalent expression if it improves clarity.
 - Do not add new information.
 - Do not give advice.
 - Do not solve anything.
