@@ -527,12 +527,13 @@ Rewrite the user input as either:
 - a clear wish.
 
 Rules:
-- Preserve the original meaning.
-- Do not add information.
+- Preserve the original meaning and intent, not just the wording.
+- If the input implies an underlying desire, concern, or need, rewrite it to reflect that intent clearly.
+- Do not add new information.
 - Do not give advice.
 - Do not solve anything.
 - Output exactly one sentence.
-- If the input expresses liking, preference, or affection toward something, treat it as a wish.
+- If the input expresses liking, preference, or affection, treat it as a wish.
 
 If the input cannot be rewritten as a problem or a wish, output exactly:
 Unable to rewrite as a problem or a wish.
