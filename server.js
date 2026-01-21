@@ -595,7 +595,7 @@ Rules:
 
 Formatting (must match exactly):
 
-Thinking Path
+Thinking Path:
 
 Step 1 — [Thinking focus]
 Search:
