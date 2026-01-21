@@ -475,7 +475,7 @@ app.get("/create-admin-pass", async (req, res) => {
 // ==========================================================
 // AI GATE — ACCEPT ONLY PROBLEM OR WISH (WDNAB—B)
 // ==========================================================
-async function wdnabAcceptProblemOrWish(input) {
+async function wdnabProcessInput(input) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0,
@@ -483,22 +483,52 @@ async function wdnabAcceptProblemOrWish(input) {
       {
         role: "system",
         content: `
-You are a strict input validation system.
+You are WDNAB-B, a logic-only thinking system.
 
-Decide whether the user input expresses:
-- A problem (difficulty, uncertainty, friction, conflict)
-OR
-- A wish (desire, intent, aspiration)
+Your job is to:
+1. Determine whether the input expresses a problem or a wish.
+2. If it does NOT, rewrite it into a clear problem or wish while preserving the underlying intent.
+3. Generate a thinking path from the final problem or wish.
 
-Reject anything else, including:
-- Statements of fact
-- Opinions without intent
-- Requests for answers
-- Commands
-- Explanations
+Rules:
+- Never solve the problem.
+- Never give advice.
+- Never draw conclusions.
+- Never persuade.
+- No emotional language.
+- No ideology.
+- No judgments.
 
-Output ONLY one word:
-ACCEPT or REJECT
+Rewrite rules:
+- Preserve underlying intent even if implicit.
+- You may replace surface phrasing with commonly understood human meaning
+  (e.g., "listen to me" → "be heard and understood").
+- Do not add new information.
+- Output exactly ONE sentence for the rewrite.
+
+Thinking path rules:
+- Determine number of steps dynamically.
+- Each step has:
+  • One short, direct thinking focus sentence.
+  • One Google search link (URL encoded).
+
+Output format MUST be valid JSON exactly like this:
+
+{
+  "accepted": true | false,
+  "final_input": "string",
+  "rewrite": "string | null",
+  "thinking_path": "full formatted thinking path text"
+}
+
+If the input cannot reasonably be rewritten, return:
+
+{
+  "accepted": false,
+  "final_input": null,
+  "rewrite": null,
+  "thinking_path": null
+}
 `
       },
       {
@@ -508,113 +538,18 @@ ACCEPT or REJECT
     ]
   });
 
-  return out.choices[0].message.content.trim() === "ACCEPT";
+ let parsed;
+try {
+  parsed = JSON.parse(out.choices[0].message.content.trim());
+} catch {
+  return {
+    accepted: false,
+    final_input: null,
+    rewrite: null,
+    thinking_path: null
+  };
 }
-
-//////////////////////////////////////////////////////////////
-// INPUT REWRITE — PROBLEM / WISH NORMALIZATION
-//////////////////////////////////////////////////////////////
-async function wdnabRewriteToProblemOrWish(input) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
-Rewrite the user input as either:
-- a clear problem, or
-- a clear wish.
-
-Rules:
-- Preserve the underlying intent, even if it requires expressing meaning that is implicit rather than explicitly stated.
-- If the input implies a deeper emotional, psychological, or relational need, rewrite it using clearer language that directly expresses that intent.
-- You may replace surface-level or behavioral phrasing with a commonly understood human meaning of that action (for example, listening → being heard and understood), if that meaning is the likely reason the action is desired.
-- You may explicitly name the implied emotional or psychological outcome of an action when that outcome is widely understood as the purpose of the action.
-- Do not introduce facts, goals, or details that are not reasonably implied by the original input.
-- Do not give advice.
-- Do not solve the problem.
-- Do not suggest actions or outcomes.
-- Output exactly one sentence.
-- If the input expresses liking, preference, affection, or desire, treat it as a wish.
-- If the input expresses difficulty, lack, frustration, or unmet need, treat it as a problem.
-
-If the input cannot be reasonably rewritten as a problem or a wish, output exactly:
-Unable to rewrite as a problem or a wish.
-`
-      },
-      {
-        role: "user",
-        content: input
-      }
-    ]
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-// ==========================================================
-// THINKING PATH GENERATOR — NO ANSWERS, NO ADVICE (WDNAB—B)
-// ==========================================================
-async function wdnabGenerateThinkingPath(problemOrWish) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "user",
-        content: `
-You are a logic-only thinking system.
-
-Input:
-"${problemOrWish}"
-
-Task constraints:
-- Do NOT solve the problem
-- Do NOT give advice
-- Do NOT draw conclusions
-- Do NOT persuade or recommend
-
-Your task:
-Create a structured thinking path that helps the user explore the issue independently.
-
-Instructions:
-- Determine the number of steps dynamically based on the complexity of the problem.
-- Each step must represent a distinct cognitive objective
-- For each step:
-  • Write one short sentence describing the thinking focus, phrased the way a clear-headed man would think it through to himself — direct, practical, and matter-of-fact.
-  • Generate ONE precise Google search query
-  • Encode the query using URL-safe format (spaces replaced with +)
-  • Output the query as a clickable Google search link
-
-Rules:
-- No emotional language
-- No ideology
-- No judgments
-- No summaries of search results
-
-Formatting (must match exactly):
-
-Thinking Path
-
-Step 1 — [Thinking focus]
-Search:
-https://www.google.com/search?q=...
-
-Step 2 — [Thinking focus]
-Search:
-https://www.google.com/search?q=...
-
-(continue sequentially)
-
-End with EXACTLY this line:
-This system provides a thinking path, not answers.
-`
-      }
-    ]
-  });
-
-  return out.choices[0].message.content.trim();
+return parsed;
 }
 
 // ==========================================================
@@ -623,10 +558,9 @@ This system provides a thinking path, not answers.
 app.post("/thinking-path", async (req, res) => {
   const steps = [];
   const input = (req.body.input || "").trim();
-  const token = req.body.searchToken || null;
 
-  stepLog(steps, "Engine: WDNAB—B Thinking Path");
-  stepLog(steps, "Validating input presence");
+  stepLog(steps, "Engine: WDNAB—B");
+  stepLog(steps, "Processing input");
 
   if (!input) {
     return res.json({
@@ -635,45 +569,22 @@ app.post("/thinking-path", async (req, res) => {
     });
   }
 
-  stepLog(steps, "Validating input type (problem or wish)");
+  const result = await wdnabProcessInput(input);
 
-const accepted = await wdnabAcceptProblemOrWish(input);
-if (!accepted) {
+  if (!result.thinking_path) {
+    return res.json({
+      report: "Input rejected. Please express a problem or a wish.",
+      steps
+    });
+  }
 
-  stepLog(steps, "Input rejected, attempting rewrite");
-
-  const rewritten = await wdnabRewriteToProblemOrWish(input);
+  stepLog(steps, "Thinking path generated");
 
   return res.json({
-    report: "Input rejected. Here is a rewritten version framed as a problem or a wish:",
-    rewrite: rewritten,
+    report: result.thinking_path,
+    rewrite: result.rewrite,   // may be null
     steps
   });
-}
-
-  if (token) {
-    stepLog(steps, "Validating access token");
-    const payload = verifySearchToken(token);
-    if (!payload) {
-      return res.json({
-        report: "Invalid or used token.",
-        steps
-      });
-    }
-  }
-
-  stepLog(steps, "Generating thinking path");
-
-  const report = await wdnabGenerateThinkingPath(input);
-
-  if (token) {
-    consumeSearchToken(token);
-    stepLog(steps, "Token consumed");
-  }
-
-  stepLog(steps, "Thinking path delivery complete");
-
-  res.json({ report, steps });
 });
 
 //////////////////////////////////////////////////////////////
