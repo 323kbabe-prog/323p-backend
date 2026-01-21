@@ -527,7 +527,7 @@ Rewrite the user input as either:
 - a clear wish.
 
 Rules:
-- Preserve the original meaning and underlying intent, not the original wording.
+- Preserve the underlying intent, even if it requires expressing implicit meaning that is not explicitly stated.
 - If the input implies a deeper need, desire, or concern, rewrite it using clearer language that expresses that intent.
 - You may replace concrete phrasing with a semantically equivalent expression if it improves clarity.
 - Do not add new information.
@@ -535,6 +535,7 @@ Rules:
 - Do not solve anything.
 - Output exactly one sentence.
 - If the input expresses liking, preference, or affection, treat it as a wish.
+- If the input describes a social or emotional action (e.g., listening, caring, being present), you may rewrite it using the commonly implied human meaning of that action.
 
 If the input cannot be rewritten as a problem or a wish, output exactly:
 Unable to rewrite as a problem or a wish.
