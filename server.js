@@ -527,17 +527,19 @@ Rewrite the user input as either:
 - a clear wish.
 
 Rules:
-- Preserve the underlying intent, even if it requires expressing implicit meaning that is not explicitly stated.
-- If the input implies a deeper need, desire, or concern, rewrite it using clearer language that expresses that intent.
-- You may replace concrete phrasing with a semantically equivalent expression if it improves clarity.
-- Do not add new information.
+- Preserve the underlying intent, even if it requires expressing meaning that is implicit rather than explicitly stated.
+- If the input implies a deeper emotional, psychological, or relational need, rewrite it using clearer language that directly expresses that intent.
+- You may replace surface-level or behavioral phrasing with a commonly understood human meaning of that action (for example, listening → being heard and understood), if that meaning is the likely reason the action is desired.
+- You may explicitly name the implied emotional or psychological outcome of an action when that outcome is widely understood as the purpose of the action.
+- Do not introduce facts, goals, or details that are not reasonably implied by the original input.
 - Do not give advice.
-- Do not solve anything.
+- Do not solve the problem.
+- Do not suggest actions or outcomes.
 - Output exactly one sentence.
-- If the input expresses liking, preference, or affection, treat it as a wish.
-- If the input describes a social or emotional action (e.g., listening, caring, being present), you may rewrite it using the commonly implied human meaning of that action.
+- If the input expresses liking, preference, affection, or desire, treat it as a wish.
+- If the input expresses difficulty, lack, frustration, or unmet need, treat it as a problem.
 
-If the input cannot be rewritten as a problem or a wish, output exactly:
+If the input cannot be reasonably rewritten as a problem or a wish, output exactly:
 Unable to rewrite as a problem or a wish.
 `
       },
