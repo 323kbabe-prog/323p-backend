@@ -30,12 +30,12 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET || null;
 //////////////////////////////////////////////////////////////
 // STEP LOGGER
 //////////////////////////////////////////////////////////////
-function stepLog(steps, text) {              // ADDED
-  steps.push({                               // ADDED
-    time: new Date().toISOString(),          // ADDED
-    text                                    // ADDED
-  });                                        // ADDED
-}                                           // ADDED
+function stepLog(steps, text) {              // ADDED
+  steps.push({                               // ADDED
+    time: new Date().toISOString(),          // ADDED
+    text                                    // ADDED
+  });                                        // ADDED
+}                                           // ADDED
 
 //////////////////////////////////////////////////////////////
 // ONE-TIME SEARCH TOKEN STORE
@@ -43,146 +43,146 @@ function stepLog(steps, text) {              // ADDED
 const usedSearchTokens = new Set();
 
 function generateSearchToken(topic) {
-  const payload = {
-    topic,
-    nonce: crypto.randomBytes(16).toString("hex"),
-    iat: Date.now()
-  };
+  const payload = {
+    topic,
+    nonce: crypto.randomBytes(16).toString("hex"),
+    iat: Date.now()
+  };
 
-  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
 
-  const sig = crypto
-    .createHmac("sha256", ACCESS_TOKEN_SECRET)
-    .update(payloadB64)
-    .digest("hex");
+  const sig = crypto
+    .createHmac("sha256", ACCESS_TOKEN_SECRET)
+    .update(payloadB64)
+    .digest("hex");
 
-  return `${payloadB64}.${sig}`;
+  return `${payloadB64}.${sig}`;
 }
 
 function verifySearchToken(token) {
-  if (!token) return null;
-  if (usedSearchTokens.has(token)) return null;
+  if (!token) return null;
+  if (usedSearchTokens.has(token)) return null;
 
-  const [payloadB64, sig] = token.split(".");
-  if (!payloadB64 || !sig) return null;
+  const [payloadB64, sig] = token.split(".");
+  if (!payloadB64 || !sig) return null;
 
-  const expectedSig = crypto
-    .createHmac("sha256", ACCESS_TOKEN_SECRET)
-    .update(payloadB64)
-    .digest("hex");
+  const expectedSig = crypto
+    .createHmac("sha256", ACCESS_TOKEN_SECRET)
+    .update(payloadB64)
+    .digest("hex");
 
-  if (expectedSig !== sig) return null;
+  if (expectedSig !== sig) return null;
 
-  return JSON.parse(
-    Buffer.from(payloadB64, "base64url").toString()
-  );
+  return JSON.parse(
+    Buffer.from(payloadB64, "base64url").toString()
+  );
 }
 
 function consumeSearchToken(token) {
-  usedSearchTokens.add(token);
+  usedSearchTokens.add(token);
 }
 
 //////////////////////////////////////////////////////////////
 // STEP 1 — PLAUSIBILITY CHECK (AI)
 //////////////////////////////////////////////////////////////
 async function aiIsPlausibleBeautyProduct(input) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [{
-      role: "system",
-      content:
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [{
+      role: "system",
+      content:
 `Decide if the input looks like a plausible beauty or personal care product name.
 This includes skincare, haircare, makeup, or beauty-related items.
 
 Output ONLY:
 YES or NO`
-    },{
-      role: "user",
-      content: input
-    }]
-  });
+    },{
+      role: "user",
+      content: input
+    }]
+  });
 
-  return out.choices[0].message.content.trim() === "YES";
+  return out.choices[0].message.content.trim() === "YES";
 }
 
 //////////////////////////////////////////////////////////////
 // STANFORD MAJORS
 //////////////////////////////////////////////////////////////
 const STANFORD_MAJORS = [
-  "Psychology","Economics","Design","Sociology",
-  "Computer Science","Statistics","Symbolic Systems",
-  "Communication","Education","Philosophy","Law"
+  "Psychology","Economics","Design","Sociology",
+  "Computer Science","Statistics","Symbolic Systems",
+  "Communication","Education","Philosophy","Law"
 ];
 
 let majorPool = [...STANFORD_MAJORS];
 function pickMajor() {
-  if (!majorPool.length) majorPool = [...STANFORD_MAJORS];
-  return majorPool.splice(
-    Math.floor(Math.random() * majorPool.length), 1
-  )[0];
+  if (!majorPool.length) majorPool = [...STANFORD_MAJORS];
+  return majorPool.splice(
+    Math.floor(Math.random() * majorPool.length), 1
+  )[0];
 }
 
 //////////////////////////////////////////////////////////////
 // STANFORD VIDEO SEARCH
 //////////////////////////////////////////////////////////////
 const STANFORD_CHANNELS = [
-  "Stanford University","Stanford Online",
-  "Stanford GSB","Stanford Medicine","Stanford Engineering"
+  "Stanford University","Stanford Online",
+  "Stanford GSB","Stanford Medicine","Stanford Engineering"
 ];
 
 function isOfficialStanford(channel = "") {
-  return STANFORD_CHANNELS.some(n =>
-    channel.toLowerCase().includes(n.toLowerCase())
-  );
+  return STANFORD_CHANNELS.some(n =>
+    channel.toLowerCase().includes(n.toLowerCase())
+  );
 }
 
 async function fetchStanfordVideo(major) {
-  if (!SERP_KEY) return null;
+  if (!SERP_KEY) return null;
 
-  const q = `Stanford University ${major} site:youtube.com/watch`;
-  const url =
-    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
-    `&num=10&api_key=${SERP_KEY}`;
+  const q = `Stanford University ${major} site:youtube.com/watch`;
+  const url =
+    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
+    `&num=10&api_key=${SERP_KEY}`;
 
-  const r = await fetch(url);
-  const j = await r.json();
+  const r = await fetch(url);
+  const j = await r.json();
 
-  return (j.organic_results || []).find(v =>
-    v.link?.includes("youtube.com/watch") &&
-    isOfficialStanford(v.source || v.channel || "")
-  );
+  return (j.organic_results || []).find(v =>
+    v.link?.includes("youtube.com/watch") &&
+    isOfficialStanford(v.source || v.channel || "")
+  );
 }
 
 //////////////////////////////////////////////////////////////
 // AMAZON PRODUCT SEARCH (GROUND TRUTH)
 //////////////////////////////////////////////////////////////
 async function fetchAmazonProduct(query) {
-  if (!SERP_KEY) return null;
+  if (!SERP_KEY) return null;
 
-  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
-  const url =
-    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
-    `&num=10&api_key=${SERP_KEY}`;
+  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
+  const url =
+    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
+    `&num=10&api_key=${SERP_KEY}`;
 
-  const r = await fetch(url);
-  const j = await r.json();
+  const r = await fetch(url);
+  const j = await r.json();
 
-  return (j.organic_results || []).find(
-    x => x.link?.includes("/dp/") || x.link?.includes("/gp/product")
-  );
+  return (j.organic_results || []).find(
+    x => x.link?.includes("/dp/") || x.link?.includes("/gp/product")
+  );
 }
 
 //////////////////////////////////////////////////////////////
 // CLASS GENERATOR — THESIS FORMAT (TITLE FIXED)
 //////////////////////////////////////////////////////////////
 async function generateClass({ major, videoTitle, productTitle }) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.3,
-    messages: [{
-      role: "user",
-      content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.3,
+    messages: [{
+      role: "user",
+      content: `
 You are teaching an academic class from the perspective of ${major}.
 
 Case material: "${productTitle}"
@@ -213,18 +213,18 @@ Formatting rules:
 
 Use the following section titles, in this exact order:
 
-Title  
-Pedagogical Objective  
-Abstract  
-Introduction  
-Observation  
-Analysis  
-Cognitive Error Modes  
-Discussion  
-Transfer Test  
-Notes  
-Meta-Reflection  
-Citation (Contextual)  
+Title  
+Pedagogical Objective  
+Abstract  
+Introduction  
+Observation  
+Analysis  
+Cognitive Error Modes  
+Discussion  
+Transfer Test  
+Notes  
+Meta-Reflection  
+Citation (Contextual)  
 Questions to Notice
 
 Section guidelines:
@@ -329,39 +329,39 @@ Rules:
 - No claims of direct access to external sources.
 - No predictions.
 `
-    }]
-  });
+    }]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 //////////////////////////////////////////////////////////////
 // PIPELINE
 //////////////////////////////////////////////////////////////
-async function runPipelineWithProduct(product, steps) {   // ADDED (signature only)
-  let major, video;
+async function runPipelineWithProduct(product, steps) {   // ADDED (signature only)
+  let major, video;
 
-  stepLog(steps, "Selecting academic lens");              // ADDED
+  stepLog(steps, "Selecting academic lens");              // ADDED
 
-  for (let i = 0; i < STANFORD_MAJORS.length; i++) {
-    major = pickMajor();
-    video = await fetchStanfordVideo(major);
-    if (video) break;
-  }
-  if (!video) return null;
+  for (let i = 0; i < STANFORD_MAJORS.length; i++) {
+    major = pickMajor();
+    video = await fetchStanfordVideo(major);
+    if (video) break;
+  }
+  if (!video) return null;
 
-  stepLog(steps, "Generating academic analysis");         // ADDED
+  stepLog(steps, "Generating academic analysis");         // ADDED
 
-  const body = await generateClass({
-    major,
-    videoTitle: video.title,
-    productTitle: product.title
-  });
+  const body = await generateClass({
+    major,
+    videoTitle: video.title,
+    productTitle: product.title
+  });
 
-  if (!body) return null;
+  if (!body) return null;
 
-  return {
-    report:
+  return {
+    report:
 `• ${major} — Academic Perspective
 ${video.link}
 
@@ -369,101 +369,101 @@ Case Study Material
 ${product.link}
 
 ${body}`
-  };
+  };
 }
 
 //////////////////////////////////////////////////////////////
 // RUN ROUTE — FREE & PAID USE SAME ENGINE
 //////////////////////////////////////////////////////////////
 app.post("/run", async (req, res) => {
-  const steps = [];                                       // ADDED
-  const topic = req.body.topic || "";
-  const token = req.body.searchToken || null;
+  const steps = [];                                       // ADDED
+  const topic = req.body.topic || "";
+  const token = req.body.searchToken || null;
 
-  stepLog(steps, "Validating product domain");            // ADDED
+  stepLog(steps, "Validating product domain");            // ADDED
 
-  const plausible = await aiIsPlausibleBeautyProduct(topic);
-  if (!plausible) {
-    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported.", steps }); // ADDED
-  }
+  const plausible = await aiIsPlausibleBeautyProduct(topic);
+  if (!plausible) {
+    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported.", steps }); // ADDED
+  }
 
-  stepLog(steps, "Searching Amazon product");             // ADDED
+  stepLog(steps, "Searching Amazon product");             // ADDED
 
-  const product = await fetchAmazonProduct(topic);
-  if (!product) {
-    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported.", steps }); // ADDED
-  }
+  const product = await fetchAmazonProduct(topic);
+  if (!product) {
+    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported.", steps }); // ADDED
+  }
 
-  if (token) {
-    stepLog(steps, "Validating access token");            // ADDED
+  if (token) {
+    stepLog(steps, "Validating access token");            // ADDED
 
-    const payload = verifySearchToken(token);
-    if (!payload) {
-      return res.json({ report: "Invalid or used token. Please purchase another search.", steps }); // ADDED
-    }
-  }
+    const payload = verifySearchToken(token);
+    if (!payload) {
+      return res.json({ report: "Invalid or used token. Please purchase another search.", steps }); // ADDED
+    }
+  }
 
-  const result = await runPipelineWithProduct(product, steps); // ADDED
-  if (!result) {
-    return res.json({ report: "No valid case material found.", steps }); // ADDED
-  }
+  const result = await runPipelineWithProduct(product, steps); // ADDED
+  if (!result) {
+    return res.json({ report: "No valid case material found.", steps }); // ADDED
+  }
 
-  if (token) {
-    consumeSearchToken(token);
-    stepLog(steps, "Token consumed");                     // ADDED
-  }
+  if (token) {
+    consumeSearchToken(token);
+    stepLog(steps, "Token consumed");                     // ADDED
+  }
 
-  stepLog(steps, "Delivery complete");                    // ADDED
+  stepLog(steps, "Delivery complete");                    // ADDED
 
-  return res.json({ ...result, steps });                  // ADDED
+  return res.json({ ...result, steps });                  // ADDED
 });
 
 //////////////////////////////////////////////////////////////
 // STRIPE — $0.50 PER SEARCH
 //////////////////////////////////////////////////////////////
 app.post("/create-search-session", async (req, res) => {
-  const topic = req.body.topic || "";
+  const topic = req.body.topic || "";
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    line_items: [{
-      price_data: {
-        currency: "usd",
-        product_data: { name: "AI Training Humans Class — One Search" },
-        unit_amount: 50
-      },
-      quantity: 1
-    }],
-    success_url:
-  "https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html?search_token=" +
-  generateSearchToken(topic),
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    line_items: [{
+      price_data: {
+        currency: "usd",
+        product_data: { name: "AI Training Humans Class — One Search" },
+        unit_amount: 50
+      },
+      quantity: 1
+    }],
+    success_url:
+  "https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html?search_token=" +
+  generateSearchToken(topic),
 
 cancel_url:
-  "https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html"
-  });
+  "https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html"
+  });
 
-  res.json({ url: session.url });
+  res.json({ url: session.url });
 });
 
 //////////////////////////////////////////////////////////////
 // ADMIN SEARCH PASS GENERATOR
 //////////////////////////////////////////////////////////////
 app.get("/create-admin-pass", async (req, res) => {
-  const secret = req.query.secret;
-  const topic  = req.query.topic || "";
+  const secret = req.query.secret;
+  const topic  = req.query.topic || "";
 
-  if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  if (!topic.trim()) {
-    return res.json({ error: "Missing topic" });
-  }
+  if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  if (!topic.trim()) {
+    return res.json({ error: "Missing topic" });
+  }
 
-  const token = generateSearchToken(topic);
-  const url =
-  `https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html?search_token=${token}`;
-  res.json({ ok: true, url });
+  const token = generateSearchToken(topic);
+  const url =
+  `https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html?search_token=${token}`;
+  res.json({ ok: true, url });
 });
 
 //////////////////////////////////////////////////////////////
@@ -475,116 +475,205 @@ app.get("/create-admin-pass", async (req, res) => {
 // ==========================================================
 // AI GATE — ACCEPT ONLY PROBLEM OR WISH (WDNAB—B)
 // ==========================================================
-async function wdnabProcessInput(input) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
-You are WDNAB-B, a logic-only thinking system.
+async function wdnabAcceptProblemOrWish(input) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
+You are a strict input validation system.
 
-Your job is to:
-1. Determine whether the input expresses a problem or a wish.
-2. If it does NOT, rewrite it into a clear problem or wish while preserving the underlying intent.
-3. Generate a thinking path from the final problem or wish.
+Decide whether the user input expresses:
+- A problem (difficulty, uncertainty, friction, conflict)
+OR
+- A wish (desire, intent, aspiration)
+
+Reject anything else, including:
+- Statements of fact
+- Opinions without intent
+- Requests for answers
+- Commands
+- Explanations
+
+Output ONLY one word:
+ACCEPT or REJECT
+`
+      },
+      {
+        role: "user",
+        content: input
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim() === "ACCEPT";
+}
+
+//////////////////////////////////////////////////////////////
+// INPUT REWRITE — PROBLEM / WISH NORMALIZATION
+//////////////////////////////////////////////////////////////
+async function wdnabRewriteToProblemOrWish(input) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
+Rewrite the user input as either:
+- a clear problem, or
+- a clear wish.
 
 Rules:
-- Never solve the problem.
-- Never give advice.
-- Never draw conclusions.
-- Never persuade.
-- No emotional language.
-- No ideology.
-- No judgments.
+- Preserve the underlying intent, even if it requires expressing meaning that is implicit rather than explicitly stated.
+- If the input implies a deeper emotional, psychological, or relational need, rewrite it using clearer language that directly expresses that intent.
+- You may replace surface-level or behavioral phrasing with a commonly understood human meaning of that action (for example, listening → being heard and understood), if that meaning is the likely reason the action is desired.
+- You may explicitly name the implied emotional or psychological outcome of an action when that outcome is widely understood as the purpose of the action.
+- Do not introduce facts, goals, or details that are not reasonably implied by the original input.
+- Do not give advice.
+- Do not solve the problem.
+- Do not suggest actions or outcomes.
+- Output exactly one sentence.
+- If the input expresses liking, preference, affection, or desire, treat it as a wish.
+- If the input expresses difficulty, lack, frustration, or unmet need, treat it as a problem.
 
-Rewrite rules:
-- Preserve underlying intent even if implicit.
-- You may replace surface phrasing with commonly understood human meaning
-  (e.g., "listen to me" → "be heard and understood").
-- Do not add new information.
-- Output exactly ONE sentence for the rewrite.
-
-Thinking path rules:
-- Determine number of steps dynamically.
-- Each step has:
-  • One short, direct thinking focus sentence.
-  • One Google search link (URL encoded).
-
-Output format MUST be valid JSON exactly like this:
-
-{
-  "accepted": true | false,
-  "final_input": "string",
-  "rewrite": "string | null",
-  "thinking_path": "full formatted thinking path text"
-}
-
-If the input cannot reasonably be rewritten, return:
-
-{
-  "accepted": false,
-  "final_input": null,
-  "rewrite": null,
-  "thinking_path": null
-}
+If the input cannot be reasonably rewritten as a problem or a wish, output exactly:
+Unable to rewrite as a problem or a wish.
 `
-      },
-      {
-        role: "user",
-        content: input
-      }
-    ]
-  });
+      },
+      {
+        role: "user",
+        content: input
+      }
+    ]
+  });
 
- let parsed;
-try {
-  parsed = JSON.parse(out.choices[0].message.content.trim());
-} catch {
-  return {
-    accepted: false,
-    final_input: null,
-    rewrite: null,
-    thinking_path: null
-  };
+  return out.choices[0].message.content.trim();
 }
-return parsed;
+
+// ==========================================================
+// THINKING PATH GENERATOR — NO ANSWERS, NO ADVICE (WDNAB—B)
+// ==========================================================
+async function wdnabGenerateThinkingPath(problemOrWish) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "user",
+        content: `
+You are a logic-only thinking system.
+
+Input:
+"${problemOrWish}"
+
+Task constraints:
+- Do NOT solve the problem
+- Do NOT give advice
+- Do NOT draw conclusions
+- Do NOT persuade or recommend
+
+Your task:
+Create a structured thinking path that helps the user explore the issue independently.
+
+Instructions:
+- Determine the number of steps dynamically based on the complexity of the problem.
+- Each step must represent a distinct cognitive objective
+- For each step:
+  • Write one short sentence describing the thinking focus, phrased the way a clear-headed man would think it through to himself — direct, practical, and matter-of-fact.
+  • Generate ONE precise Google search query
+  • Encode the query using URL-safe format (spaces replaced with +)
+  • Output the query as a clickable Google search link
+
+Rules:
+- No emotional language
+- No ideology
+- No judgments
+- No summaries of search results
+
+Formatting (must match exactly):
+
+Thinking Path
+
+Step 1 — [Thinking focus]
+Search:
+https://www.google.com/search?q=...
+
+Step 2 — [Thinking focus]
+Search:
+https://www.google.com/search?q=...
+
+(continue sequentially)
+
+End with EXACTLY this line:
+This system provides a thinking path, not answers.
+`
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim();
 }
 
 // ==========================================================
 // ROUTE — W D N A B — B THINKING PATH
 // ==========================================================
 app.post("/thinking-path", async (req, res) => {
-  const steps = [];
-  const input = (req.body.input || "").trim();
+  const steps = [];
+  const input = (req.body.input || "").trim();
+  const token = req.body.searchToken || null;
 
-  stepLog(steps, "Engine: WDNAB—B");
-  stepLog(steps, "Processing input");
+  stepLog(steps, "Engine: WDNAB—B Thinking Path");
+  stepLog(steps, "Validating input presence");
 
-  if (!input) {
-    return res.json({
-      report: "Input is required. Please express a problem or a wish.",
-      steps
-    });
-  }
+  if (!input) {
+    return res.json({
+      report: "Input is required. Please express a problem or a wish.",
+      steps
+    });
+  }
 
-  const result = await wdnabProcessInput(input);
+  stepLog(steps, "Validating input type (problem or wish)");
 
-  if (!result.thinking_path) {
-    return res.json({
-      report: "Input rejected. Please express a problem or a wish.",
-      steps
-    });
-  }
+const accepted = await wdnabAcceptProblemOrWish(input);
+if (!accepted) {
 
-  stepLog(steps, "Thinking path generated");
+  stepLog(steps, "Input rejected, attempting rewrite");
 
-  return res.json({
-    report: result.thinking_path,
-    rewrite: result.rewrite,   // may be null
-    steps
-  });
+  const rewritten = await wdnabRewriteToProblemOrWish(input);
+
+  return res.json({
+    report: "Input rejected. Here is a rewritten version framed as a problem or a wish:",
+    rewrite: rewritten,
+    steps
+  });
+}
+
+  if (token) {
+    stepLog(steps, "Validating access token");
+    const payload = verifySearchToken(token);
+    if (!payload) {
+      return res.json({
+        report: "Invalid or used token.",
+        steps
+      });
+    }
+  }
+
+  stepLog(steps, "Generating thinking path");
+
+  const report = await wdnabGenerateThinkingPath(input);
+
+  if (token) {
+    consumeSearchToken(token);
+    stepLog(steps, "Token consumed");
+  }
+
+  stepLog(steps, "Thinking path delivery complete");
+
+  res.json({ report, steps });
 });
 
 //////////////////////////////////////////////////////////////
@@ -592,5 +681,5 @@ app.post("/thinking-path", async (req, res) => {
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log("🎓 Pay-per-delivered-search AI Case Classroom backend live");
+  console.log("🎓 Pay-per-delivered-search AI Case Classroom backend live");
 });
