@@ -511,6 +511,42 @@ ACCEPT or REJECT
   return out.choices[0].message.content.trim() === "ACCEPT";
 }
 
+//////////////////////////////////////////////////////////////
+// INPUT REWRITE — PROBLEM / WISH NORMALIZATION
+//////////////////////////////////////////////////////////////
+async function wdnabRewriteToProblemOrWish(input) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
+Rewrite the user input as either:
+- a clear problem, or
+- a clear wish.
+
+Rules:
+- Preserve the original meaning.
+- Do not add information.
+- Do not give advice.
+- Do not solve anything.
+- Output exactly one sentence.
+
+If the input cannot be rewritten as a problem or a wish, output exactly:
+Unable to rewrite as a problem or a wish.
+`
+      },
+      {
+        role: "user",
+        content: input
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
 // ==========================================================
 // THINKING PATH GENERATOR — NO ANSWERS, NO ADVICE (WDNAB—B)
 // ==========================================================
@@ -595,13 +631,19 @@ app.post("/thinking-path", async (req, res) => {
 
   stepLog(steps, "Validating input type (problem or wish)");
 
-  const accepted = await wdnabAcceptProblemOrWish(input);
-  if (!accepted) {
-    return res.json({
-      report: "Input rejected. Please express a problem or a wish.",
-      steps
-    });
-  }
+const accepted = await wdnabAcceptProblemOrWish(input);
+if (!accepted) {
+
+  stepLog(steps, "Input rejected, attempting rewrite");
+
+  const rewritten = await wdnabRewriteToProblemOrWish(input);
+
+  return res.json({
+    report: "Input rejected. Here is a rewritten version framed as a problem or a wish:",
+    rewrite: rewritten,
+    steps
+  });
+}
 
   if (token) {
     stepLog(steps, "Validating access token");
