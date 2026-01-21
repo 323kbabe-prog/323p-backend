@@ -532,6 +532,7 @@ Rules:
 - Do not give advice.
 - Do not solve anything.
 - Output exactly one sentence.
+- If the input expresses liking, preference, or affection toward something, treat it as a wish.
 
 If the input cannot be rewritten as a problem or a wish, output exactly:
 Unable to rewrite as a problem or a wish.
