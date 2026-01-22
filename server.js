@@ -336,7 +336,7 @@ Rules:
 }
 
 //////////////////////////////////////////////////////////////
-// THINKING PATH GENERATOR — CLASS LESSON VERSION
+// THINKING PATH GENERATOR — CLASS LESSON (AI TECHNIQUE MODE)
 //////////////////////////////////////////////////////////////
 async function generateThinkingPathWithLesson(problemOrWish) {
   const out = await openai.chat.completions.create({
@@ -346,7 +346,7 @@ async function generateThinkingPathWithLesson(problemOrWish) {
       {
         role: "user",
         content: `
-You are a thinking instructor running a structured lesson.
+You are an AI instructor teaching how AI systems learn from multiple sources.
 
 Input:
 "${problemOrWish}"
@@ -355,14 +355,31 @@ Do NOT solve the problem.
 Do NOT give advice.
 Do NOT provide conclusions.
 
-Output format MUST be:
+Your task has TWO parts:
+
+PART 1 — Lesson Instruction
+Write a short lesson explaining how an AI model would read and synthesize the sources linked below.
+The lesson must teach an AI technique such as:
+- identifying recurring concepts
+- abstracting patterns across sources
+- separating signal from noise
+- forming a compressed mental representation
+
+Rules for the lesson:
+- 3–4 sentences
+- No bullet points
+- No titles
+- No solutions or tools
+- Focus on how to read and integrate the sources, not what to decide
+
+PART 2 — Thinking Path
+After the lesson, generate a structured Thinking Path.
+
+Formatting MUST be exactly:
 
 Thinking Path:
 
-How to use this lesson
-Read each step before clicking the search link.
-Do not look for answers.
-Notice how the question changes what you pay attention to.
+[AI lesson instruction text]
 
 Step 1 — [Thinking focus]
 Search:
@@ -383,6 +400,7 @@ This system provides a thinking path, not answers.
 
   return out.choices[0].message.content.trim();
 }
+
 //////////////////////////////////////////////////////////////
 // PIPELINE
 //////////////////////////////////////////////////////////////
