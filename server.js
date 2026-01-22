@@ -419,54 +419,118 @@ app.post("/run", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// JACK CHANG — CLASS ROUTER
+// JACK CHANG — CLASS ROUTER (CONTINUOUS LESSON MODE)
 //////////////////////////////////////////////////////////////
 
 app.post("/class", async (req, res) => {
   const steps = [];
-  const input = (req.body.input || "").trim();
+  const rawInput = (req.body.input || "").trim();
+  const token = req.body.searchToken || null;
 
   stepLog(steps, "Jack Chang class entry");
 
-  if (!input) {
+  if (!rawInput) {
     return res.json({
+      class: null,
       report: "Input required.",
       steps
     });
   }
 
-  // Decide class type by structure
-  const isLikelyProduct = await aiIsPlausibleBeautyProduct(input);
+  // Normalize input for token comparison
+  const normalize = s => s.trim().toLowerCase();
+
+  // Optional token validation (for paid classes)
+  if (token) {
+    const payload = verifySearchToken(token);
+    if (!payload || normalize(payload.topic) !== normalize(rawInput)) {
+      return res.json({
+        class: null,
+        report: "Invalid or mismatched access token.",
+        steps
+      });
+    }
+  }
+
+  //////////////////////////////////////////////////////////////
+  // 1. PRODUCT-BASED OBJECT → ACADEMIC CASE CLASS
+  //////////////////////////////////////////////////////////////
+
+  const isLikelyProduct = await aiIsPlausibleBeautyProduct(rawInput);
 
   if (isLikelyProduct) {
     stepLog(steps, "Routing to Academic Case Class");
 
-    const product = await fetchAmazonProduct(input);
+    const product = await fetchAmazonProduct(rawInput);
+
     if (!product) {
       return res.json({
+        class: "academic-case",
         report: "No grounded case material found.",
         steps
       });
     }
 
     const result = await runPipelineWithProduct(product, steps);
-    return res.json({ ...result, steps });
-  }
 
-  stepLog(steps, "Routing to Thinking Path Class");
+    if (token) {
+      consumeSearchToken(token);
+      stepLog(steps, "Access token consumed");
+    }
 
-  const accepted = await wdnabAcceptProblemOrWish(input);
-
-  if (!accepted) {
-    const rewritten = await wdnabRewriteToProblemOrWish(input);
     return res.json({
-      report: rewritten,
+      class: "academic-case",
+      ...result,
       steps
     });
   }
 
-  const report = await wdnabGenerateThinkingPath(input);
-  return res.json({ report, steps });
+  //////////////////////////////////////////////////////////////
+  // 2. REASONING / LEARNING INPUT → THINKING PATH CLASS
+  //////////////////////////////////////////////////////////////
+
+  stepLog(steps, "Evaluating reasoning structure");
+
+  let lessonInput = rawInput;
+
+  const accepted = await wdnabAcceptProblemOrWish(rawInput);
+
+  if (!accepted) {
+    stepLog(steps, "Input not structured — reframing internally");
+
+    const rewritten = await wdnabRewriteToProblemOrWish(rawInput);
+
+    // If rewrite fails, stop safely
+    if (
+      !rewritten ||
+      rewritten === "Unable to rewrite as a problem or a wish."
+    ) {
+      return res.json({
+        class: "thinking-path",
+        report:
+          "This input cannot be structured into a reasoning problem or learning intent.",
+        steps
+      });
+    }
+
+    lessonInput = rewritten;
+
+    stepLog(steps, "Lesson continues using reframed input");
+  }
+
+  //////////////////////////////////////////////////////////////
+  // CONTINUE LESSON WITH STRUCTURED INPUT
+  //////////////////////////////////////////////////////////////
+
+  stepLog(steps, "Generating Thinking Path lesson");
+
+  const report = await wdnabGenerateThinkingPath(lessonInput);
+
+  return res.json({
+    class: "thinking-path",
+    report,
+    steps
+  });
 });
 
 //////////////////////////////////////////////////////////////
