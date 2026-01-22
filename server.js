@@ -336,6 +336,54 @@ Rules:
 }
 
 //////////////////////////////////////////////////////////////
+// THINKING PATH GENERATOR — CLASS LESSON VERSION
+//////////////////////////////////////////////////////////////
+async function generateThinkingPathWithLesson(problemOrWish) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "user",
+        content: `
+You are a thinking instructor running a structured lesson.
+
+Input:
+"${problemOrWish}"
+
+Do NOT solve the problem.
+Do NOT give advice.
+Do NOT provide conclusions.
+
+Output format MUST be:
+
+Thinking Path:
+
+How to use this lesson
+Read each step before clicking the search link.
+Do not look for answers.
+Notice how the question changes what you pay attention to.
+
+Step 1 — [Thinking focus]
+Search:
+https://www.google.com/search?q=...
+
+Step 2 — [Thinking focus]
+Search:
+https://www.google.com/search?q=...
+
+(continue sequentially)
+
+End with EXACTLY this line:
+This system provides a thinking path, not answers.
+`
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim();
+}
+//////////////////////////////////////////////////////////////
 // PIPELINE
 //////////////////////////////////////////////////////////////
 async function runPipelineWithProduct(product, steps) {   // ADDED (signature only)
@@ -524,15 +572,14 @@ app.post("/class", async (req, res) => {
 
   stepLog(steps, "Generating Thinking Path lesson");
 
-  const report = await wdnabGenerateThinkingPath(lessonInput);
+const report = await generateThinkingPathWithLesson(lessonInput);
 
-  return res.json({
-    class: "thinking-path",
-    report,
-    steps
-  });
+return res.json({
+  class: "thinking-path",
+  report: report,
+  steps
 });
-
+});
 //////////////////////////////////////////////////////////////
 // STRIPE — $0.50 PER SEARCH
 //////////////////////////////////////////////////////////////
