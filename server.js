@@ -419,6 +419,57 @@ app.post("/run", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
+// JACK CHANG — CLASS ROUTER
+//////////////////////////////////////////////////////////////
+
+app.post("/class", async (req, res) => {
+  const steps = [];
+  const input = (req.body.input || "").trim();
+
+  stepLog(steps, "Jack Chang class entry");
+
+  if (!input) {
+    return res.json({
+      report: "Input required.",
+      steps
+    });
+  }
+
+  // Decide class type by structure
+  const isLikelyProduct = await aiIsPlausibleBeautyProduct(input);
+
+  if (isLikelyProduct) {
+    stepLog(steps, "Routing to Academic Case Class");
+
+    const product = await fetchAmazonProduct(input);
+    if (!product) {
+      return res.json({
+        report: "No grounded case material found.",
+        steps
+      });
+    }
+
+    const result = await runPipelineWithProduct(product, steps);
+    return res.json({ ...result, steps });
+  }
+
+  stepLog(steps, "Routing to Thinking Path Class");
+
+  const accepted = await wdnabAcceptProblemOrWish(input);
+
+  if (!accepted) {
+    const rewritten = await wdnabRewriteToProblemOrWish(input);
+    return res.json({
+      report: rewritten,
+      steps
+    });
+  }
+
+  const report = await wdnabGenerateThinkingPath(input);
+  return res.json({ report, steps });
+});
+
+//////////////////////////////////////////////////////////////
 // STRIPE — $0.50 PER SEARCH
 //////////////////////////////////////////////////////////////
 app.post("/create-search-session", async (req, res) => {
