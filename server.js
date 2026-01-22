@@ -355,25 +355,15 @@ Do NOT solve the problem.
 Do NOT give advice.
 Do NOT provide conclusions.
 
-Your task has TWO parts:
+Your task:
+Generate a Thinking Path where the first block teaches an AI technique for synthesizing the sources linked below.
 
-PART 1 — Lesson Instruction
-Write a short lesson explaining how an AI model would read and synthesize the sources linked below.
-The lesson must teach an AI technique such as:
-- identifying recurring concepts
-- abstracting patterns across sources
-- separating signal from noise
-- forming a compressed mental representation
-
-Rules for the lesson:
+Rules for the lesson block:
 - 3–4 sentences
 - No bullet points
 - No titles
 - No solutions or tools
-- Focus on how to read and integrate the sources, not what to decide
-
-PART 2 — Thinking Path
-After the lesson, generate a structured Thinking Path.
+- Explain how an AI would read, compare, and compress information across sources
 
 Formatting MUST be exactly:
 
