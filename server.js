@@ -356,14 +356,19 @@ Do NOT give advice.
 Do NOT provide conclusions.
 
 Your task:
-Generate a Thinking Path where the first block teaches an AI technique for synthesizing the sources linked below.
+Generate a Thinking Path where the first block teaches an AI technique
+for synthesizing the specific sources linked below, based on the user’s input
+and the kinds of thinking steps that follow.
 
 Rules for the lesson block:
 - 3–4 sentences
 - No bullet points
 - No titles
 - No solutions or tools
-- Explain how an AI would read, compare, and compress information across sources
+Explain how an AI would read and synthesize the specific sources linked below,
+given the user’s input and the type of steps that follow.
+The explanation should reference the kinds of comparisons, distinctions,
+and abstractions an AI would make when reading these sources.
 
 Formatting MUST be exactly:
 
