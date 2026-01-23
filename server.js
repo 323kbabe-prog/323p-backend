@@ -91,7 +91,9 @@ async function aiIsPlausibleBeautyProduct(input) {
     temperature: 0,
     messages: [{
       role: "system",
-      content:
+    content: `
+${persona}
+
 `Decide if the input looks like a plausible beauty or personal care product name.
 This includes skincare, haircare, makeup, or beauty-related items.
 
@@ -344,8 +346,10 @@ async function generateThinkingPathWithLesson(problemOrWish) {
     temperature: 0,
     messages: [
       {
-        role: "user",
-        content: `
+        role: "system",
+    content: `
+${persona}
+
 You are an AI instructor teaching how AI systems learn from multiple sources.
 
 Input:
@@ -554,12 +558,13 @@ app.post("/class", async (req, res) => {
 
   let lessonInput = rawInput;
 
-  const accepted = await wdnabAcceptProblemOrWish(rawInput);
+  const accepted = await wdnabAcceptProblemOrWish(input, persona);
+
 
   if (!accepted) {
     stepLog(steps, "Input not structured — reframing internally");
 
-    const rewritten = await wdnabRewriteToProblemOrWish(rawInput);
+    const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
 
     // If rewrite fails, stop safely
     if (
@@ -650,14 +655,16 @@ app.get("/create-admin-pass", async (req, res) => {
 // ==========================================================
 // AI GATE — ACCEPT ONLY PROBLEM OR WISH (WDNAB—B)
 // ==========================================================
-async function wdnabAcceptProblemOrWish(input) {
+async function wdnabAcceptProblemOrWish(input, persona = "") {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0,
     messages: [
-      {
-        role: "system",
-        content: `
+  {
+    role: "system",
+    content: `
+${persona || ""}
+
 You are a strict input validation system.
 
 Decide whether the user input expresses:
@@ -671,16 +678,10 @@ Reject anything else, including:
 - Requests for answers
 - Commands
 - Explanations
-
-Output ONLY one word:
-ACCEPT or REJECT
 `
-      },
-      {
-        role: "user",
-        content: input
-      }
-    ]
+  },
+  { role: "user", content: input }
+]
   });
 
   return out.choices[0].message.content.trim() === "ACCEPT";
@@ -689,14 +690,15 @@ ACCEPT or REJECT
 //////////////////////////////////////////////////////////////
 // INPUT REWRITE — PROBLEM / WISH NORMALIZATION (STRICT)
 //////////////////////////////////////////////////////////////
-async function wdnabRewriteToProblemOrWish(input) {
+async function wdnabRewriteToProblemOrWish(input, persona = "") {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0,
     messages: [
       {
         role: "system",
-        content: `
+  content: `
+${persona || ""}
 You are a cognitive normalization system.
 
 Your task is to rewrite the user input into ONE clear sentence that expresses
@@ -751,8 +753,10 @@ async function wdnabGenerateThinkingPath(problemOrWish) {
     temperature: 0,
     messages: [
       {
-        role: "user",
-        content: `
+      role: "system",
+    content: `
+${persona}
+
 You are a logic-only thinking system.
 
 Input:
@@ -810,59 +814,56 @@ This system provides a thinking path, not answers.
 // ROUTE — W D N A B — B THINKING PATH
 // ==========================================================
 app.post("/thinking-path", async (req, res) => {
-  const steps = [];
-  const input = (req.body.input || "").trim();
-  const token = req.body.searchToken || null;
+  const steps = [];
+  const input = (req.body.input || "").trim();
+  const persona = (req.body.persona || "").trim();
+  const token = req.body.searchToken || null;
 
-  stepLog(steps, "Engine: WDNAB—B Thinking Path");
-  stepLog(steps, "Validating input presence");
+  stepLog(steps, "Engine: WDNAB—B Thinking Path");
 
-  if (!input) {
-    return res.json({
-      report: "Input is required. Please express a problem or a wish.",
-      steps
-    });
-  }
+  if (!input) {
+    return res.json({
+      report: "Input is required. Please express a problem or a wish.",
+      steps
+    });
+  }
 
-  stepLog(steps, "Validating input type (problem or wish)");
+  stepLog(steps, "Validating input type");
 
-const accepted = await wdnabAcceptProblemOrWish(input);
-if (!accepted) {
+  const accepted = await wdnabAcceptProblemOrWish(input, persona);
 
-  stepLog(steps, "Input rejected, attempting rewrite");
+  if (!accepted) {
+    stepLog(steps, "Input rejected, attempting rewrite");
 
-  const rewritten = await wdnabRewriteToProblemOrWish(input);
+    const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
 
-  return res.json({
-    report: "Input rejected. Here is a rewritten version framed as a problem or a wish:",
-    rewrite: rewritten,
-    steps
-  });
-}
+    return res.json({
+      report: "Input rejected. Here is a rewritten version framed as a problem or a wish:",
+      rewrite: rewritten,
+      steps
+    });
+  }
 
-  if (token) {
-    stepLog(steps, "Validating access token");
-    const payload = verifySearchToken(token);
-    if (!payload) {
-      return res.json({
-        report: "Invalid or used token.",
-        steps
-      });
-    }
-  }
+  if (token) {
+    stepLog(steps, "Validating access token");
+    const payload = verifySearchToken(token);
+    if (!payload) {
+      return res.json({ report: "Invalid or used token.", steps });
+    }
+  }
 
-  stepLog(steps, "Generating thinking path");
+  stepLog(steps, "Generating thinking path");
 
-  const report = await wdnabGenerateThinkingPath(input);
+  const report = await wdnabGenerateThinkingPath(input, persona);
 
-  if (token) {
-    consumeSearchToken(token);
-    stepLog(steps, "Token consumed");
-  }
+  if (token) {
+    consumeSearchToken(token);
+    stepLog(steps, "Token consumed");
+  }
 
-  stepLog(steps, "Thinking path delivery complete");
+  stepLog(steps, "Thinking path delivery complete");
 
-  res.json({ report, steps });
+  res.json({ report, steps });
 });
 
 //////////////////////////////////////////////////////////////
