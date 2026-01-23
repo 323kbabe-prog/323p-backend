@@ -726,6 +726,11 @@ If the input is a short phrase or title-like structure
 (e.g. “How I connect with AI”, “Learning AI”, “Understanding AI”),
 interpret it as an implicit wish to understand or learn,
 and rewrite it explicitly as a problem or wish about understanding.
+
+If the input is phrased as “How can I…”, “How do I…”, or “How to…”,
+do NOT treat it as a request for instructions.
+Instead, interpret it as an implicit problem about lack of knowledge or clarity,
+and rewrite it explicitly as a problem about understanding or capability.
 `
       },
       {
