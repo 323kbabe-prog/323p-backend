@@ -94,7 +94,7 @@ async function aiIsPlausibleBeautyProduct(input) {
     content: `
 ${persona}
 
-`Decide if the input looks like a plausible beauty or personal care product name.
+Decide if the input looks like a plausible beauty or personal care product name.
 This includes skincare, haircare, makeup, or beauty-related items.
 
 Output ONLY:
