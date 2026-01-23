@@ -714,8 +714,13 @@ Rules:
 - If the input expresses liking, preference, affection, or desire, treat it as a wish.
 - If the input expresses difficulty, lack, frustration, or unmet need, treat it as a problem.
 
-If the input cannot be reasonably rewritten as a problem or a wish, output exactly:
+If the input cannot be reasonably rewritten as a  or a wish, output exactly:
 Unable to rewrite as a problem or a wish.
+
+If the input expresses confusion, uncertainty, or lack of understanding
+(e.g. “I don’t understand…”, “I’m not sure…”, “I don’t know how…”),
+treat it as a problem about understanding or clarity and rewrite it explicitly
+as such.
 `
       },
       {
