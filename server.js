@@ -132,6 +132,10 @@ Constraints:
 Your task:
 Generate a structured thinking path.
 
+Rules:
+- Always generate at least 7 steps.
+- Generate more steps if the problem involves emotion, responsibility, time, or uncertainty.
+
 Format EXACTLY:
 
 Thinking Path:
