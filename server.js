@@ -721,6 +721,11 @@ If the input expresses confusion, uncertainty, or lack of understanding
 (e.g. “I don’t understand…”, “I’m not sure…”, “I don’t know how…”),
 treat it as a problem about understanding or clarity and rewrite it explicitly
 as such.
+
+If the input is a short phrase or title-like structure
+(e.g. “How I connect with AI”, “Learning AI”, “Understanding AI”),
+interpret it as an implicit wish to understand or learn,
+and rewrite it explicitly as a problem or wish about understanding.
 `
       },
       {
