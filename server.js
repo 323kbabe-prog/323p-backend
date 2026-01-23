@@ -687,60 +687,59 @@ ACCEPT or REJECT
 }
 
 //////////////////////////////////////////////////////////////
-// INPUT REWRITE — PROBLEM / WISH NORMALIZATION
+// INPUT REWRITE — PROBLEM / WISH NORMALIZATION (STRICT)
 //////////////////////////////////////////////////////////////
 async function wdnabRewriteToProblemOrWish(input) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
-Rewrite the user input as either:
-- a clear problem, or
-- a clear wish.
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
+You are a cognitive normalization system.
 
-Rules:
-- Preserve the underlying intent, even if it requires expressing meaning that is implicit rather than explicitly stated.
-- If the input implies a deeper emotional, psychological, or relational need, rewrite it using clearer language that directly expresses that intent.
-- You may replace surface-level or behavioral phrasing with a commonly understood human meaning of that action (for example, listening → being heard and understood), if that meaning is the likely reason the action is desired.
-- You may explicitly name the implied emotional or psychological outcome of an action when that outcome is widely understood as the purpose of the action.
-- Do not introduce facts, goals, or details that are not reasonably implied by the original input.
-- Do not give advice.
-- Do not solve the problem.
-- Do not suggest actions or outcomes.
-- Output exactly one sentence.
-- If the input expresses liking, preference, affection, or desire, treat it as a wish.
-- If the input expresses difficulty, lack, frustration, or unmet need, treat it as a problem.
+Your task is to rewrite the user input into ONE clear sentence that expresses
+either:
+- a problem, or
+- a wish.
 
-If the input cannot be reasonably rewritten as a  or a wish, output exactly:
-Unable to rewrite as a problem or a wish.
+Core rule:
+- If the input contains ANY interpretable human intent, you MUST rewrite it.
+- Do NOT refuse unless the input is empty, random characters, or non-language.
 
-If the input expresses confusion, uncertainty, or lack of understanding
-(e.g. “I don’t understand…”, “I’m not sure…”, “I don’t know how…”),
-treat it as a problem about understanding or clarity and rewrite it explicitly
-as such.
+Rewrite rules:
+- Preserve the underlying intent, even if implicit or poorly phrased.
+- If the input expresses confusion, uncertainty, or lack of understanding,
+  rewrite it explicitly as a problem about understanding or clarity.
+- If the input is phrased as “How can I…”, “How do I…”, or “How to…”,
+  rewrite it as a problem about lack of knowledge or capability,
+  NOT as a request for instructions.
+- If the input is a short phrase or title-like structure
+  (e.g. “Learning AI”, “Understanding AI”, “AI for my project”),
+  rewrite it as a wish or problem about understanding or learning.
+- You may replace surface phrasing with commonly understood human meaning
+  (e.g. “use AI” → “understand how AI can help me”).
+- Do NOT give advice.
+- Do NOT solve the problem.
+- Do NOT suggest actions.
+- Do NOT introduce new facts or goals.
+- Output EXACTLY one sentence.
 
-If the input is a short phrase or title-like structure
-(e.g. “How I connect with AI”, “Learning AI”, “Understanding AI”),
-interpret it as an implicit wish to understand or learn,
-and rewrite it explicitly as a problem or wish about understanding.
-
-If the input is phrased as “How can I…”, “How do I…”, or “How to…”,
-do NOT treat it as a request for instructions.
-Instead, interpret it as an implicit problem about lack of knowledge or clarity,
-and rewrite it explicitly as a problem about understanding or capability.
+Failure condition (use ONLY if absolutely necessary):
+- If the input is completely meaningless (e.g. random letters, emojis only),
+  output exactly:
+  Unable to rewrite as a problem or a wish.
 `
-      },
-      {
-        role: "user",
-        content: input
-      }
-    ]
-  });
+      },
+      {
+        role: "user",
+        content: input
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 // ==========================================================
