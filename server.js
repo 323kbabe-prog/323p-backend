@@ -1,695 +1,73 @@
 //////////////////////////////////////////////////////////////
-// AI CASE CLASSROOM — BACKEND (PAY PER DELIVERED SEARCH)
-// Academic × Amazon Beauty Case Engine
+// JACK CHANG — THINKING PATH BACKEND (FINAL)
+// Process over outcome · No advice · No conclusions
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
 const OpenAI = require("openai");
-const Stripe = require("stripe");
-const crypto = require("crypto");
 
 const app = express();
 
-// Health check
+// -------------------- BASIC SETUP --------------------
 app.get("/", (_, res) => res.status(200).send("OK"));
-
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-//////////////////////////////////////////////////////////////
-// ENV
-//////////////////////////////////////////////////////////////
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const SERP_KEY = process.env.SERPAPI_KEY || null;
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "SECRET_KEY_HERE";
-const ADMIN_SECRET = process.env.ADMIN_SECRET || null;
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
-//////////////////////////////////////////////////////////////
-// STEP LOGGER
-//////////////////////////////////////////////////////////////
-function stepLog(steps, text) {              // ADDED
-  steps.push({                               // ADDED
-    time: new Date().toISOString(),          // ADDED
-    text                                    // ADDED
-  });                                        // ADDED
-}                                           // ADDED
-
-//////////////////////////////////////////////////////////////
-// ONE-TIME SEARCH TOKEN STORE
-//////////////////////////////////////////////////////////////
-const usedSearchTokens = new Set();
-
-function generateSearchToken(topic) {
-  const payload = {
-    topic,
-    nonce: crypto.randomBytes(16).toString("hex"),
-    iat: Date.now()
-  };
-
-  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
-
-  const sig = crypto
-    .createHmac("sha256", ACCESS_TOKEN_SECRET)
-    .update(payloadB64)
-    .digest("hex");
-
-  return `${payloadB64}.${sig}`;
+// -------------------- STEP LOGGER --------------------
+function stepLog(steps, text) {
+  steps.push({
+    time: new Date().toISOString(),
+    text
+  });
 }
 
-function verifySearchToken(token) {
-  if (!token) return null;
-  if (usedSearchTokens.has(token)) return null;
-
-  const [payloadB64, sig] = token.split(".");
-  if (!payloadB64 || !sig) return null;
-
-  const expectedSig = crypto
-    .createHmac("sha256", ACCESS_TOKEN_SECRET)
-    .update(payloadB64)
-    .digest("hex");
-
-  if (expectedSig !== sig) return null;
-
-  return JSON.parse(
-    Buffer.from(payloadB64, "base64url").toString()
-  );
-}
-
-function consumeSearchToken(token) {
-  usedSearchTokens.add(token);
-}
-
-//////////////////////////////////////////////////////////////
-// STEP 1 — PLAUSIBILITY CHECK (AI)
-//////////////////////////////////////////////////////////////
-async function aiIsPlausibleBeautyProduct(input) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [{
-      role: "system",
-    content: `
-${persona}
-
-Decide if the input looks like a plausible beauty or personal care product name.
-This includes skincare, haircare, makeup, or beauty-related items.
-
-Output ONLY:
-YES or NO`
-    },{
-      role: "user",
-      content: input
-    }]
-  });
-
-  return out.choices[0].message.content.trim() === "YES";
-}
-
-//////////////////////////////////////////////////////////////
-// STANFORD MAJORS
-//////////////////////////////////////////////////////////////
-const STANFORD_MAJORS = [
-  "Psychology","Economics","Design","Sociology",
-  "Computer Science","Statistics","Symbolic Systems",
-  "Communication","Education","Philosophy","Law"
-];
-
-let majorPool = [...STANFORD_MAJORS];
-function pickMajor() {
-  if (!majorPool.length) majorPool = [...STANFORD_MAJORS];
-  return majorPool.splice(
-    Math.floor(Math.random() * majorPool.length), 1
-  )[0];
-}
-
-//////////////////////////////////////////////////////////////
-// STANFORD VIDEO SEARCH
-//////////////////////////////////////////////////////////////
-const STANFORD_CHANNELS = [
-  "Stanford University","Stanford Online",
-  "Stanford GSB","Stanford Medicine","Stanford Engineering"
-];
-
-function isOfficialStanford(channel = "") {
-  return STANFORD_CHANNELS.some(n =>
-    channel.toLowerCase().includes(n.toLowerCase())
-  );
-}
-
-async function fetchStanfordVideo(major) {
-  if (!SERP_KEY) return null;
-
-  const q = `Stanford University ${major} site:youtube.com/watch`;
-  const url =
-    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
-    `&num=10&api_key=${SERP_KEY}`;
-
-  const r = await fetch(url);
-  const j = await r.json();
-
-  return (j.organic_results || []).find(v =>
-    v.link?.includes("youtube.com/watch") &&
-    isOfficialStanford(v.source || v.channel || "")
-  );
-}
-
-//////////////////////////////////////////////////////////////
-// AMAZON PRODUCT SEARCH (GROUND TRUTH)
-//////////////////////////////////////////////////////////////
-async function fetchAmazonProduct(query) {
-  if (!SERP_KEY) return null;
-
-  const q = `${query} site:amazon.com/dp OR site:amazon.com/gp/product`;
-  const url =
-    `https://serpapi.com/search.json?q=${encodeURIComponent(q)}` +
-    `&num=10&api_key=${SERP_KEY}`;
-
-  const r = await fetch(url);
-  const j = await r.json();
-
-  return (j.organic_results || []).find(
-    x => x.link?.includes("/dp/") || x.link?.includes("/gp/product")
-  );
-}
-
-//////////////////////////////////////////////////////////////
-// CLASS GENERATOR — THESIS FORMAT (TITLE FIXED)
-//////////////////////////////////////////////////////////////
-async function generateClass({ major, videoTitle, productTitle }) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.3,
-    messages: [{
-      role: "user",
-      content: `
-You are teaching an academic class from the perspective of ${major}.
-
-Case material: "${productTitle}"
-Academic lens: "${videoTitle}"
-
-The ${productTitle} must be treated as the primary case material.
-All observations, analyses, and reasoning must be grounded in this product as the concrete object of study.
-Do not generalize away from the product; abstract only after the product has been fully examined.
-
-START WITH THIS LINE EXACTLY:
-2×-AI Engine — Academic Case Analysis
-
-After this line, write an academic analysis.
-The purpose of this analysis is not to deliver content, but to train human reasoning using Constraint-Based Cognitive Reasoning Training.
-
-Background meaning (do not quote directly, but reflect in structure and tone):
-• Users are not paying for content — they are paying for cognitive structure.
-• People do not pay for results — they pay for certainty.
-• This work does not sell outcomes — it models a repeatable thinking habit.
-
-Formatting rules:
-- Do NOT use Markdown, asterisks (**), or numbered lists.
-- Use plain academic section headers only.
-- Section headers may use: colon (:), long dash (—), period (.), or bullet dot (•).
-- Choose one symbol style and remain consistent.
-- Use big dot points (•) within sections to expose reasoning structure.
-- Bullet points must represent mental models, constraints, or analytical distinctions — never features or summaries.
-
-Use the following section titles, in this exact order:
-
-Title  
-Pedagogical Objective  
-Abstract  
-Introduction  
-Observation  
-Analysis  
-Cognitive Error Modes  
-Discussion  
-Transfer Test  
-Notes  
-Meta-Reflection  
-Citation (Contextual)  
-Questions to Notice
-
-Section guidelines:
-
-Title:
-Write a clear academic title describing the phenomenon or pattern being examined.
-Do not mention the product, system names, or branding.
-
-Pedagogical Objective:
-State explicitly which cognitive capability is being trained.
-Focus on a thinking skill such as constraint reasoning, assumption detection, abstraction, or decision framing.
-Do not describe the product here. Describe the mental capability being exercised.
-
-Abstract:
-Write one paragraph of 6–7 sentences.
-Explain what is being examined, how it is examined, and why this mode of reasoning matters.
-After the paragraph, include 2–3 big dot points that clarify the structure of the inquiry.
-• What type of situation is being examined
-• What form of reasoning is applied
-• Why this reasoning structure reduces uncertainty
-
-Introduction:
-Write one paragraph of 6–7 sentences situating the case within a broader context.
-Explain the environment, pressures, and constraints that make this case meaningful.
-After the paragraph, include big dot points that surface framing assumptions.
-• What decision space this case occupies
-• What routines or expectations are implicitly present
-• What constraints shape interpretation
-
-Observation:
-Write one paragraph of 6–7 sentences describing observable signals only.
-Focus on form, repetition, usage patterns, and visibility.
-Do not explain causes or meanings yet.
-After the paragraph, include big dot points separating observation from interpretation.
-• What is consistently present
-• What behaviors appear normalized
-• What can be seen without inference
-
-Analysis:
-Write one paragraph of 6–7 sentences interpreting the observations using academic reasoning.
-Explain how structure, constraints, and context shape understanding.
-After the paragraph, include big dot points that expose analytical moves.
-• How constraints guide interpretation
-• How structure produces meaning
-• How certainty is created without explicit claims
-
-Cognitive Error Modes:
-Write a short paragraph identifying common reasoning errors that could occur when interpreting this case.
-Focus on how humans might misread or oversimplify the situation.
-After the paragraph, include big dot points.
-• Likely oversimplifications
-• False causal assumptions
-• Pattern-matching traps
-• Outcome bias risks
-
-Discussion:
-Write one paragraph of 6–7 sentences describing what appears to function if this reasoning model is correct.
-Focus on mechanisms that reduce uncertainty or cognitive effort.
-Avoid evaluating success or failure.
-After the paragraph, include big dot points focused on mechanisms.
-• What creates cognitive stability
-• What reduces decision friction
-• What supports confident action
-
-Transfer Test:
-Write one paragraph explaining how the same reasoning structure could apply in a different domain.
-Do not name a specific product, industry, or example.
-Focus on structural similarity rather than surface features.
-
-Notes:
-Write one paragraph of 6–7 sentences clarifying the limits of this analysis.
-Explain what this reasoning model does and does not claim.
-After the paragraph, include big dot points.
-• This is an interpretive model, not a verdict
-• This does not predict outcomes
-• This does not recommend actions
-
-Meta-Reflection:
-Write 3–4 sentences describing what the reader should notice about their own thinking while reading this analysis.
-Focus on shifts in attention, certainty, or interpretation.
-
-Citation (Contextual):
-After completing all sections above, generate this section by analyzing the reasoning actually used.
-Write one concise sentence summarizing the intellectual basis of the analysis.
-Then include 2–3 big dot points listing domains of thought demonstrated.
-• Design theory
-• Behavioral reasoning
-• Organizational or communication structures
-Do not mention authors, institutions, years, or external works.
-
-Questions to Notice:
-End with exactly 3 short questions.
-Each question must begin with a checkbox-style symbol.
-Use either ☐ or □ consistently.
-Each question must refer to the reader’s thinking process, not the case itself.
-Do not answer the questions.
-
-Rules:
-- Maintain an academic tone.
-- Use clear, plain English.
-- No selling, no judging.
-- No claims of direct access to external sources.
-- No predictions.
-`
-    }]
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
-//////////////////////////////////////////////////////////////
-// THINKING PATH GENERATOR — CLASS LESSON (AI TECHNIQUE MODE)
-//////////////////////////////////////////////////////////////
-async function generateThinkingPathWithLesson(problemOrWish) {
+// =====================================================
+// AI GATE — ACCEPT PROBLEM OR WISH (LENIENT)
+// =====================================================
+async function wdnabAcceptProblemOrWish(input, persona = "") {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0,
     messages: [
       {
         role: "system",
-    content: `
+        content: `
 ${persona}
 
-You are an AI instructor teaching how AI systems learn from multiple sources.
+You are an input classification system.
 
-Input:
-"${problemOrWish}"
+Decide whether the user input plausibly expresses:
+- a problem (difficulty, concern, uncertainty), or
+- a wish (desire, intent, aspiration).
 
-Do NOT solve the problem.
-Do NOT give advice.
-Do NOT provide conclusions.
+Rules:
+- Accept short, informal, or imperfect grammar.
+- Accept vague human statements if intent is recognizable.
+- Treat statements like "I have a problem with X" as a problem.
 
-Your task:
-Generate a Thinking Path where the first block teaches an AI technique
-for synthesizing the specific sources linked below, based on the user’s input
-and the kinds of thinking steps that follow.
+Reject ONLY if:
+- The input is random characters
+- The input has no interpretable human intent
 
-Rules for the lesson block:
-- 3–4 sentences
-- No bullet points
-- No titles
-- No solutions or tools
-Explain how an AI would read and synthesize the specific sources linked below,
-given the user’s input and the type of steps that follow.
-The explanation should reference the kinds of comparisons, distinctions,
-and abstractions an AI would make when reading these sources.
-
-Formatting MUST be exactly:
-
-Thinking Path:
-
-[AI lesson instruction text]
-
-Step 1 — [Thinking focus]
-Search:
-https://www.google.com/search?q=...
-
-Step 2 — [Thinking focus]
-Search:
-https://www.google.com/search?q=...
-
-(continue sequentially)
-
-End with EXACTLY this line:
-This system provides a thinking path, not answers.
+Output ONLY:
+ACCEPT or REJECT
 `
-      }
+      },
+      { role: "user", content: input }
     ]
   });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim() === "ACCEPT";
 }
 
-//////////////////////////////////////////////////////////////
-// PIPELINE
-//////////////////////////////////////////////////////////////
-async function runPipelineWithProduct(product, steps) {   // ADDED (signature only)
-  let major, video;
-
-  stepLog(steps, "Selecting academic lens");              // ADDED
-
-  for (let i = 0; i < STANFORD_MAJORS.length; i++) {
-    major = pickMajor();
-    video = await fetchStanfordVideo(major);
-    if (video) break;
-  }
-  if (!video) return null;
-
-  stepLog(steps, "Generating academic analysis");         // ADDED
-
-  const body = await generateClass({
-    major,
-    videoTitle: video.title,
-    productTitle: product.title
-  });
-
-  if (!body) return null;
-
-  return {
-    report:
-`• ${major} — Academic Perspective
-${video.link}
-
-Case Study Material
-${product.link}
-
-${body}`
-  };
-}
-
-//////////////////////////////////////////////////////////////
-// RUN ROUTE — FREE & PAID USE SAME ENGINE
-//////////////////////////////////////////////////////////////
-app.post("/run", async (req, res) => {
-  const steps = [];                                       // ADDED
-  const topic = req.body.topic || "";
-  const token = req.body.searchToken || null;
-
-  stepLog(steps, "Validating product domain");            // ADDED
-
-  const plausible = await aiIsPlausibleBeautyProduct(topic);
-  if (!plausible) {
-    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported.", steps }); // ADDED
-  }
-
-  stepLog(steps, "Searching Amazon product");             // ADDED
-
-  const product = await fetchAmazonProduct(topic);
-  if (!product) {
-    return res.json({ report: "Only Amazon Beauty & Personal Care products are supported.", steps }); // ADDED
-  }
-
-  if (token) {
-    stepLog(steps, "Validating access token");            // ADDED
-
-    const payload = verifySearchToken(token);
-    if (!payload) {
-      return res.json({ report: "Invalid or used token. Please purchase another search.", steps }); // ADDED
-    }
-  }
-
-  const result = await runPipelineWithProduct(product, steps); // ADDED
-  if (!result) {
-    return res.json({ report: "No valid case material found.", steps }); // ADDED
-  }
-
-  if (token) {
-    consumeSearchToken(token);
-    stepLog(steps, "Token consumed");                     // ADDED
-  }
-
-  stepLog(steps, "Delivery complete");                    // ADDED
-
-  return res.json({ ...result, steps });                  // ADDED
-});
-
-//////////////////////////////////////////////////////////////
-// JACK CHANG — CLASS ROUTER (CONTINUOUS LESSON MODE)
-//////////////////////////////////////////////////////////////
-
-app.post("/class", async (req, res) => {
-  const steps = [];
-  const rawInput = (req.body.input || "").trim();
-  const token = req.body.searchToken || null;
-
-  stepLog(steps, "Jack Chang class entry");
-
-  if (!rawInput) {
-    return res.json({
-      class: null,
-      report: "Input required.",
-      steps
-    });
-  }
-
-  // Normalize input for token comparison
-  const normalize = s => s.trim().toLowerCase();
-
-  // Optional token validation (for paid classes)
-  if (token) {
-    const payload = verifySearchToken(token);
-    if (!payload || normalize(payload.topic) !== normalize(rawInput)) {
-      return res.json({
-        class: null,
-        report: "Invalid or mismatched access token.",
-        steps
-      });
-    }
-  }
-
-  //////////////////////////////////////////////////////////////
-  // 1. PRODUCT-BASED OBJECT → ACADEMIC CASE CLASS
-  //////////////////////////////////////////////////////////////
-
-  const isLikelyProduct = await aiIsPlausibleBeautyProduct(rawInput);
-
-  if (isLikelyProduct) {
-    stepLog(steps, "Routing to Academic Case Class");
-
-    const product = await fetchAmazonProduct(rawInput);
-
-    if (!product) {
-      return res.json({
-        class: "academic-case",
-        report: "No grounded case material found.",
-        steps
-      });
-    }
-
-    const result = await runPipelineWithProduct(product, steps);
-
-    if (token) {
-      consumeSearchToken(token);
-      stepLog(steps, "Access token consumed");
-    }
-
-    return res.json({
-      class: "academic-case",
-      ...result,
-      steps
-    });
-  }
-
-  //////////////////////////////////////////////////////////////
-  // 2. REASONING / LEARNING INPUT → THINKING PATH CLASS
-  //////////////////////////////////////////////////////////////
-
-  stepLog(steps, "Evaluating reasoning structure");
-
-  let lessonInput = rawInput;
-
-  const accepted = await wdnabAcceptProblemOrWish(input, persona);
-
-
-  if (!accepted) {
-    stepLog(steps, "Input not structured — reframing internally");
-
-    const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
-
-    // If rewrite fails, stop safely
-    if (
-      !rewritten ||
-      rewritten === "Unable to rewrite as a problem or a wish."
-    ) {
-      return res.json({
-        class: "thinking-path",
-        report:
-          "This input cannot be structured into a reasoning problem or learning intent.",
-        steps
-      });
-    }
-
-    lessonInput = rewritten;
-
-    stepLog(steps, "Lesson continues using reframed input");
-  }
-
-  //////////////////////////////////////////////////////////////
-  // CONTINUE LESSON WITH STRUCTURED INPUT
-  //////////////////////////////////////////////////////////////
-
-  stepLog(steps, "Generating Thinking Path lesson");
-
-const report = await generateThinkingPathWithLesson(lessonInput);
-
-return res.json({
-  class: "thinking-path",
-  report: report,
-  steps
-});
-});
-//////////////////////////////////////////////////////////////
-// STRIPE — $0.50 PER SEARCH
-//////////////////////////////////////////////////////////////
-app.post("/create-search-session", async (req, res) => {
-  const topic = req.body.topic || "";
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    line_items: [{
-      price_data: {
-        currency: "usd",
-        product_data: { name: "AI Training Humans Class — One Search" },
-        unit_amount: 50
-      },
-      quantity: 1
-    }],
-    success_url:
-  "https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html?search_token=" +
-  generateSearchToken(topic),
-
-cancel_url:
-  "https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html"
-  });
-
-  res.json({ url: session.url });
-});
-
-//////////////////////////////////////////////////////////////
-// ADMIN SEARCH PASS GENERATOR
-//////////////////////////////////////////////////////////////
-app.get("/create-admin-pass", async (req, res) => {
-  const secret = req.query.secret;
-  const topic  = req.query.topic || "";
-
-  if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  if (!topic.trim()) {
-    return res.json({ error: "Missing topic" });
-  }
-
-  const token = generateSearchToken(topic);
-  const url =
-  `https://blueoceanbrowser.com/aitraininghumansengineamazonstanford.html?search_token=${token}`;
-  res.json({ ok: true, url });
-});
-
-//////////////////////////////////////////////////////////////
-// W D N A B — B
-// THINKING PATH ENGINE — PROBLEM / WISH → GOOGLE THINKING MAP
-// Independent Chunk (No Amazon, No Stanford, No SERP Fetch)
-//////////////////////////////////////////////////////////////
-
-// ==========================================================
-// AI GATE — ACCEPT ONLY PROBLEM OR WISH (WDNAB—B)
-// ==========================================================
-async function wdnabAcceptProblemOrWish(input, persona = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-  {
-    role: "system",
-    content: `
-${persona || ""}
-
-You are a strict input validation system.
-
-Decide whether the user input expresses:
-- A problem (difficulty, uncertainty, friction, conflict)
-OR
-- A wish (desire, intent, aspiration)
-
-Reject anything else, including:
-- Statements of fact
-- Opinions without intent
-- Requests for answers
-- Commands
-- Explanations
-`
-  },
-  { role: "user", content: input }
-]
-  });
-
-  return out.choices[0].message.content.trim() === "ACCEPT";
-}
-
-//////////////////////////////////////////////////////////////
-// INPUT REWRITE — PROBLEM / WISH NORMALIZATION (STRICT)
-//////////////////////////////////////////////////////////////
+// =====================================================
+// INPUT REWRITE — NORMALIZE TO PROBLEM OR WISH
+// =====================================================
 async function wdnabRewriteToProblemOrWish(input, persona = "") {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -697,64 +75,47 @@ async function wdnabRewriteToProblemOrWish(input, persona = "") {
     messages: [
       {
         role: "system",
-  content: `
-${persona || ""}
+        content: `
+${persona}
+
 You are a cognitive normalization system.
 
-Your task is to rewrite the user input into ONE clear sentence that expresses
-either:
+Rewrite the user input into ONE clear sentence that expresses:
 - a problem, or
 - a wish.
 
-Core rule:
-- If the input contains ANY interpretable human intent, you MUST rewrite it.
-- Do NOT refuse unless the input is empty, random characters, or non-language.
-
-Rewrite rules:
-- Preserve the underlying intent, even if implicit or poorly phrased.
-- If the input expresses confusion, uncertainty, or lack of understanding,
-  rewrite it explicitly as a problem about understanding or clarity.
-- If the input is phrased as “How can I…”, “How do I…”, or “How to…”,
-  rewrite it as a problem about lack of knowledge or capability,
-  NOT as a request for instructions.
-- If the input is a short phrase or title-like structure
-  (e.g. “Learning AI”, “Understanding AI”, “AI for my project”),
-  rewrite it as a wish or problem about understanding or learning.
-- You may replace surface phrasing with commonly understood human meaning
-  (e.g. “use AI” → “understand how AI can help me”).
+Rules:
+- Preserve the underlying human intent.
+- If the input is vague, clarify intent.
+- If the input is a phrase (e.g. "Learning AI"),
+  rewrite it as a desire to understand or learn.
 - Do NOT give advice.
 - Do NOT solve the problem.
-- Do NOT suggest actions.
-- Do NOT introduce new facts or goals.
 - Output EXACTLY one sentence.
 
-Failure condition (use ONLY if absolutely necessary):
-- If the input is completely meaningless (e.g. random letters, emojis only),
-  output exactly:
-  Unable to rewrite as a problem or a wish.
+Only output:
+Unable to rewrite as a problem or a wish.
+if the input is meaningless.
 `
       },
-      {
-        role: "user",
-        content: input
-      }
+      { role: "user", content: input }
     ]
   });
 
   return out.choices[0].message.content.trim();
 }
 
-// ==========================================================
-// THINKING PATH GENERATOR — NO ANSWERS, NO ADVICE (WDNAB—B)
-// ==========================================================
-async function wdnabGenerateThinkingPath(problemOrWish) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-      role: "system",
-    content: `
+// =====================================================
+// THINKING PATH GENERATOR (CORE ENGINE)
+// =====================================================
+async function wdnabGenerateThinkingPath(problemOrWish, persona = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
 ${persona}
 
 You are a logic-only thinking system.
@@ -762,31 +123,16 @@ You are a logic-only thinking system.
 Input:
 "${problemOrWish}"
 
-Task constraints:
+Constraints:
 - Do NOT solve the problem
 - Do NOT give advice
-- Do NOT draw conclusions
-- Do NOT persuade or recommend
+- Do NOT conclude
+- Do NOT persuade
 
 Your task:
-Create a structured thinking path that helps the user explore the issue independently.
+Generate a structured thinking path.
 
-Instructions:
-- Determine the number of steps dynamically based on the complexity of the problem.
-- Each step must represent a distinct cognitive objective
-- For each step:
-  • Write one short sentence describing the thinking focus, phrased the way a clear-headed man would think it through to himself — direct, practical, and matter-of-fact.
-  • Generate ONE precise Google search query
-  • Encode the query using URL-safe format (spaces replaced with +)
-  • Output the query as a clickable Google search link
-
-Rules:
-- No emotional language
-- No ideology
-- No judgments
-- No summaries of search results
-
-Formatting (must match exactly):
+Format EXACTLY:
 
 Thinking Path:
 
@@ -798,78 +144,69 @@ Step 2 — [Thinking focus]
 Search:
 https://www.google.com/search?q=...
 
-(continue sequentially)
-
-End with EXACTLY this line:
+End with EXACTLY:
 This system provides a thinking path, not answers.
 `
-      }
-    ]
-  });
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
-// ==========================================================
-// ROUTE — W D N A B — B THINKING PATH
-// ==========================================================
+// =====================================================
+// ROUTE — THINKING PATH (ONLY ROUTE)
+// =====================================================
 app.post("/thinking-path", async (req, res) => {
   const steps = [];
   const input = (req.body.input || "").trim();
   const persona = (req.body.persona || "").trim();
-  const token = req.body.searchToken || null;
 
-  stepLog(steps, "Engine: WDNAB—B Thinking Path");
+  stepLog(steps, "Thinking path request received");
 
   if (!input) {
     return res.json({
-      report: "Input is required. Please express a problem or a wish.",
+      report: "Input is required.",
       steps
     });
   }
 
-  stepLog(steps, "Validating input type");
+  let finalInput = input;
+
+  stepLog(steps, "Evaluating input intent");
 
   const accepted = await wdnabAcceptProblemOrWish(input, persona);
 
   if (!accepted) {
-    stepLog(steps, "Input rejected, attempting rewrite");
+    stepLog(steps, "Input rejected — rewriting");
 
     const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
 
-    return res.json({
-      report: "Input rejected. Here is a rewritten version framed as a problem or a wish:",
-      rewrite: rewritten,
-      steps
-    });
-  }
-
-  if (token) {
-    stepLog(steps, "Validating access token");
-    const payload = verifySearchToken(token);
-    if (!payload) {
-      return res.json({ report: "Invalid or used token.", steps });
+    if (
+      !rewritten ||
+      rewritten === "Unable to rewrite as a problem or a wish."
+    ) {
+      return res.json({
+        report: "Input cannot be interpreted.",
+        steps
+      });
     }
+
+    finalInput = rewritten;
+    stepLog(steps, "Rewrite successful");
   }
 
   stepLog(steps, "Generating thinking path");
 
-  const report = await wdnabGenerateThinkingPath(input, persona);
+  const report = await wdnabGenerateThinkingPath(finalInput, persona);
 
-  if (token) {
-    consumeSearchToken(token);
-    stepLog(steps, "Token consumed");
-  }
-
-  stepLog(steps, "Thinking path delivery complete");
+  stepLog(steps, "Thinking path delivered");
 
   res.json({ report, steps });
 });
 
-//////////////////////////////////////////////////////////////
-// SERVER
-//////////////////////////////////////////////////////////////
+// -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log("🎓 Pay-per-delivered-search AI Case Classroom backend live");
+  console.log("🧠 Jack Chang Thinking Path backend live");
 });
