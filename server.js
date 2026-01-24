@@ -27,6 +27,87 @@ function stepLog(steps, text) {
 }
 
 // =====================================================
+// PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
+// =====================================================
+async function generatePersonaFromRisk(riskText) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.7,
+    messages: [
+      {
+        role: "system",
+        content: `
+You generate a persona description.
+
+Rules:
+- Output plain text only.
+- Do NOT include <script> tags.
+- Do NOT include explanations.
+- Persona must be shaped by the user's meta-question.
+- Use first-person internal reasoning.
+- Keep it concise and human.
+
+FORMAT EXACTLY:
+
+Thinking voice:
+- ...
+
+Search behavior:
+- ...
+
+Primary risk sensitivity:
+...
+`
+      },
+      {
+        role: "user",
+        content: riskText
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+// =====================================================
+// ROUTE — GENERATE PERSONA (FROM USER INPUT)
+// =====================================================
+app.post("/generate-persona", async (req, res) => {
+  try {
+    const riskText = (req.body.riskText || "").trim();
+
+    if (!riskText) {
+      return res.json({
+        persona: `Thinking voice:
+- Neutral internal reasoning.
+
+Search behavior:
+- Neutral exploratory queries.
+
+Primary risk sensitivity:
+Unspecified.`
+      });
+    }
+
+    const persona = await generatePersonaFromRisk(riskText);
+    res.json({ persona });
+
+  } catch (err) {
+    console.error("❌ Persona generation failed:", err);
+    res.json({
+      persona: `Thinking voice:
+- Fallback neutral reasoning.
+
+Search behavior:
+- Fallback exploratory queries.
+
+Primary risk sensitivity:
+Unavailable.`
+    });
+  }
+});
+
+// =====================================================
 // AI GATE — ACCEPT PROBLEM OR WISH (LENIENT)
 // =====================================================
 async function wdnabAcceptProblemOrWish(input, persona = "") {
