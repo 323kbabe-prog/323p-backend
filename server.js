@@ -32,31 +32,44 @@ function stepLog(steps, text) {
 async function generatePersonaFromRisk(riskText) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0.7,
+    temperature: 0.4,
     messages: [
       {
         role: "system",
         content: `
 You generate a persona description.
 
-Rules:
+CRITICAL FORMAT RULES (MUST FOLLOW):
 - Output plain text only.
 - Do NOT include <script> tags.
 - Do NOT include explanations.
-- Persona must be shaped by the user's meta-question.
-- Use first-person internal reasoning.
-- Keep it concise and human.
+- Do NOT repeat sections.
+- Do NOT add extra sections.
+- Follow the format EXACTLY.
 
-FORMAT EXACTLY:
+FORMAT (MUST MATCH EXACTLY):
 
 Thinking voice:
-- ...
+- One short bullet.
+- One short bullet.
+- One short bullet.
 
 Search behavior:
-- ...
+- One short bullet.
+- One short bullet.
+- One short bullet.
 
 Primary risk sensitivity:
-...
+One single sentence only.
+
+STYLE CONSTRAINTS:
+- Each bullet must be a short phrase (max 12 words).
+- No paragraphs.
+- No commas inside bullets if possible.
+- No colons inside bullets.
+- Risk sensitivity must be exactly ONE sentence.
+- Content must be shaped by the user's meta-question.
+- Use first-person internal reasoning where appropriate.
 `
       },
       {
