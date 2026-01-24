@@ -217,32 +217,45 @@ async function generateCardFromPersona(personaText) {
       {
         role: "system",
         content: `
-You generate ONE HTML card.
+You are emitting RAW SOURCE CODE.
 
-ABSOLUTE RULES (NO EXCEPTIONS):
-- Output HTML ONLY.
-- Preserve line breaks and indentation EXACTLY.
+ABSOLUTE MODE:
+- You are a code generator, not a formatter.
+- Output MUST be treated as literal text.
+- Whitespace, indentation, and newlines are DATA.
 - DO NOT minify.
-- DO NOT collapse whitespace.
-- DO NOT put everything on one line.
-- Each HTML tag MUST appear on its own line.
-- Blank lines MUST be preserved where shown.
+- DO NOT collapse lines.
+- DO NOT optimize HTML.
 
-IDENTITY LOCK (HARD):
-- Use ONLY the name that appears after "Persona name:".
-- Do NOT invent names, filenames, or personas.
+CRITICAL:
+- Output MUST be wrapped inside a triple backtick block.
+- Inside the block, preserve formatting EXACTLY.
+- The user will read this as source code, not render it.
+
+IDENTITY LOCK:
+- Use ONLY the name found after "Persona name:".
+- Do NOT invent names.
+- Do NOT invent filenames.
 - If Persona name is missing, output NOTHING.
 
-STRUCTURE MUST MATCH EXACTLY:
+OUTPUT FORMAT (EXACT):
 
+\`\`\`html
 <!-- CARD 3 : [FULL NAME] -->
 <a class="card" href="[lowercasefirstname][lowercaselastname].html">
 
   <!-- INTERNAL PERSONA MARKER (HIDDEN FROM USER) -->
   <script type="text/plain" data-persona="[lowercasefirstname]-[lowercaselastname]-v1">
 Persona: [FULL NAME]
-Risk tier: [MEDIUM-HIGH | HIGH]
+Risk tier: MEDIUM-HIGH
 Thinking style: [short identity phrase]
+
+STRICT IDENTITY RULES:
+- "Thinking style" must describe identity, not a sentence.
+- Do NOT quote the meta-question.
+- Do NOT repeat risk text.
+- Use adjectives and domain language only.
+
   </script>
 
   <div class="card-header">
@@ -265,12 +278,12 @@ Thinking style: [short identity phrase]
   </div>
 
 </a>
+\`\`\`
 
-STRICT RULES:
-- Use UTF-8 punctuation only.
-- Use the arrow character → exactly.
-- DO NOT compress output.
-- DO NOT wrap in any other tags.
+STRICT:
+- Do not add text outside the code block.
+- Do not remove blank lines.
+- Do not compress.
 `
       },
       {
