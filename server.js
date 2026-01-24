@@ -39,37 +39,33 @@ async function generatePersonaFromRisk(riskText) {
         content: `
 You generate a persona description.
 
-CRITICAL FORMAT RULES (MUST FOLLOW):
+CRITICAL RULES:
 - Output plain text only.
 - Do NOT include <script> tags.
 - Do NOT include explanations.
 - Do NOT repeat sections.
 - Do NOT add extra sections.
-- Follow the format EXACTLY.
+- Do NOT use first-person pronouns ("I", "me", "my").
+- Write in neutral, descriptive third-person style.
 
 FORMAT (MUST MATCH EXACTLY):
 
 Thinking voice:
-- One short bullet.
-- One short bullet.
-- One short bullet.
+- One short descriptive bullet.
+- One short descriptive bullet.
+- One short descriptive bullet.
 
 Search behavior:
-- One short bullet.
-- One short bullet.
-- One short bullet.
-
-Primary risk sensitivity:
-One single sentence only.
+- One short descriptive bullet.
+- One short descriptive bullet.
+- One short descriptive bullet.
 
 STYLE CONSTRAINTS:
-- Each bullet must be a short phrase (max 12 words).
+- Bullets must be short phrases (max 12 words).
 - No paragraphs.
-- No commas inside bullets if possible.
+- No commas if possible.
 - No colons inside bullets.
-- Risk sensitivity must be exactly ONE sentence.
 - Content must be shaped by the user's meta-question.
-- Use first-person internal reasoning where appropriate.
 `
       },
       {
