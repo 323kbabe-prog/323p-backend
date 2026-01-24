@@ -196,16 +196,16 @@ if the input is meaningless.
 }
 
 // =====================================================
-// THINKING PATH GENERATOR (CORE ENGINE)
+// THINKING PATH GENERATOR (CORE ENGINE — STRONG DOMAIN MODE)
 // =====================================================
 async function wdnabGenerateThinkingPath(problemOrWish, persona = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
 ${persona}
 
 You are a logic-only thinking system.
@@ -238,6 +238,36 @@ as described in the persona above.
 If two personas are different, their thinking steps MUST differ.
 Do NOT reuse generic reasoning patterns across personas.
 
+DOMAIN IDENTITY LOCK (CRITICAL — NO EXCEPTIONS):
+The persona above represents a dominant life domain, obsession, or identity.
+
+Infer this domain dynamically from the persona description and the user’s meta-question.
+Do NOT choose from a predefined list.
+
+ALL thinking focus sentences AND ALL search queries MUST be expressed
+STRICTLY within that inferred domain.
+
+ABSOLUTE RULES:
+- Do NOT generalize language.
+- Do NOT abstract concepts.
+- Do NOT replace domain-specific terms with neutral wording.
+- Do NOT produce generic life advice phrasing.
+- Do NOT escape the domain even if the input is vague.
+
+Every step must sound like it comes from someone who LIVES inside this domain.
+
+DOMAIN VOCABULARY REQUIREMENT:
+Each thinking focus sentence MUST include at least ONE concept, term, or concern
+that is native to the persona’s domain.
+
+Each search query MUST include at least ONE domain-specific keyword.
+
+FAILURE CONDITIONS (INCORRECT OUTPUT):
+- Generic words like “performance”, “improvement”, “mistakes”, “success”
+  WITHOUT domain-specific grounding.
+- Neutral phrasing that could apply to any person.
+- Searches that could be reused for a different persona.
+
 Depth logic:
 - Decide the number of steps dynamically.
 - Use only as many steps as are cognitively necessary.
@@ -246,10 +276,9 @@ Depth logic:
 
 Emotional depth rule:
 - If the input carries personal, identity, future, or self-worth uncertainty,
-  increase reasoning depth.
+  increase reasoning depth.
 - Emotional load means higher cognitive risk.
 - Higher risk requires checking more dimensions before stopping.
-- Emotional inputs require exploring social, economic, and personal risk layers.
 - Maintain the same neutral, factual tone.
 - Depth increases; emotional language does NOT.
 
@@ -268,8 +297,11 @@ For each step:
 
 2) Generate ONE precise Google search query.
    - The query MUST sound like what THIS PERSON would actually type.
+   - The query MUST include at least ONE domain-specific keyword.
    - Different personas MUST NOT produce identical queries for the same input.
+
 3) Encode the query using URL-safe format (spaces replaced with +).
+
 4) Output the query as a clickable Google search link.
 
 Formatting MUST match exactly:
@@ -289,11 +321,11 @@ https://www.google.com/search?q=...
 End with EXACTLY this line:
 This system provides a thinking path, not answers.
 `
-      }
-    ]
-  });
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 // =====================================================
