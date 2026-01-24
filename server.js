@@ -170,6 +170,9 @@ Step rules:
 
 For each step:
 1) Write ONE short sentence describing the thinking focus.
+   - The sentence MUST start with the exact word "I".
+   - Do NOT start with questions like "What", "How", or "Why".
+   - Use first-person internal reasoning only.
    - Must reflect THIS PERSON’s priorities, fears, and decision style.
    - Generic phrasing is not allowed.
 
