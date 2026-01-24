@@ -221,18 +221,17 @@ You generate ONE HTML card.
 
 ABSOLUTE RULES (NO EXCEPTIONS):
 - Output HTML ONLY.
-- Do NOT explain.
-- Do NOT summarize.
-- Do NOT invent names.
-- Do NOT invent filenames.
-- Do NOT invent personas.
-- Use ONLY the name that appears in the persona text.
-- If the persona name is missing, FAIL silently.
+- Preserve line breaks and indentation EXACTLY.
+- DO NOT minify.
+- DO NOT collapse whitespace.
+- DO NOT put everything on one line.
+- Each HTML tag MUST appear on its own line.
+- Blank lines MUST be preserved where shown.
 
-IDENTITY LOCK:
-- The Persona name is authoritative.
-- The card MUST reflect that exact identity.
-- No substitutions. No creativity.
+IDENTITY LOCK (HARD):
+- Use ONLY the name that appears after "Persona name:".
+- Do NOT invent names, filenames, or personas.
+- If Persona name is missing, output NOTHING.
 
 STRUCTURE MUST MATCH EXACTLY:
 
@@ -242,7 +241,7 @@ STRUCTURE MUST MATCH EXACTLY:
   <!-- INTERNAL PERSONA MARKER (HIDDEN FROM USER) -->
   <script type="text/plain" data-persona="[lowercasefirstname]-[lowercaselastname]-v1">
 Persona: [FULL NAME]
-Risk tier: [LOW | MEDIUM | MEDIUM-HIGH | HIGH]
+Risk tier: [MEDIUM-HIGH | HIGH]
 Thinking style: [short identity phrase]
   </script>
 
@@ -258,7 +257,7 @@ Thinking style: [short identity phrase]
   </div>
 
   <div class="card-desc">
-    [ONE sentence describing how this persona searches, derived from persona text]
+    [ONE sentence describing how this persona searches]
   </div>
 
   <div class="card-action">
@@ -268,11 +267,10 @@ Thinking style: [short identity phrase]
 </a>
 
 STRICT RULES:
-- The name MUST be extracted from "Persona name:" in the persona text.
-- The description MUST reflect the persona’s thinking + search behavior.
-- UTF-8 punctuation only.
-- No extra wrappers.
-- No markdown.
+- Use UTF-8 punctuation only.
+- Use the arrow character → exactly.
+- DO NOT compress output.
+- DO NOT wrap in any other tags.
 `
       },
       {
