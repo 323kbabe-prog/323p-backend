@@ -198,7 +198,7 @@ if the input is meaningless.
 // =====================================================
 // CARD GENERATOR — AI-GENERATED CARD
 // =====================================================
-async function generateCardFromPersona(name, riskText) {
+async function generateCardFromPersona(personaText) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0.6,
@@ -206,16 +206,23 @@ async function generateCardFromPersona(name, riskText) {
       {
         role: "system",
         content: `
-Generate a UI card.
+You generate ONE UI card derived from a persona.
 
-Rules:
-- Short, product-style wording.
-- No explanations.
-- No emojis.
-- No first-person pronouns.
-- Output JSON ONLY.
+CRITICAL RULES:
+- The card MUST be based on the persona below.
+- Do NOT repeat persona wording.
+- Do NOT summarize.
+- Do NOT generalize.
+- The card must feel like a new entry point for search.
 
-FORMAT:
+STYLE:
+- Calm, specific, identity-aware.
+- No marketing language.
+- No promises.
+- No second person ("you").
+
+OUTPUT JSON ONLY:
+
 {
   "title": "...",
   "description": "..."
@@ -224,7 +231,7 @@ FORMAT:
       },
       {
         role: "user",
-        content: `${name}. Core risk: ${riskText}`
+        content: personaText
       }
     ]
   });
@@ -233,14 +240,24 @@ FORMAT:
 }
 
 // =====================================================
-// ROUTE — GENERATE CARD
+// ROUTE — GENERATE CARD (FROM PERSONA)
 // =====================================================
 app.post("/generate-card", async (req, res) => {
   try {
-    const { name, risk } = req.body;
-    const card = await generateCardFromPersona(name, risk);
+    const { persona } = req.body;
+
+    if (!persona) {
+      return res.json({
+        title: "Search with intent",
+        description: "Explore decisions shaped by personal risk and identity."
+      });
+    }
+
+    const card = await generateCardFromPersona(persona);
     res.json(card);
-  } catch {
+
+  } catch (err) {
+    console.error("❌ Card generation failed:", err);
     res.json({
       title: "Search with intent",
       description: "Explore decisions shaped by personal risk and identity."
