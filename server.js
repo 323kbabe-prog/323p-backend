@@ -212,52 +212,53 @@ if the input is meaningless.
 async function generateCardFromPersona(personaText) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0.6,
+    temperature: 0,
     messages: [
       {
         role: "system",
         content: `
 You generate ONE HTML card.
 
-CRITICAL RULES:
+ABSOLUTE RULES (NO EXCEPTIONS):
 - Output HTML ONLY.
-- No explanations.
-- No JSON.
-- No markdown.
-- UTF-8 punctuation only.
-- Structure MUST match exactly.
-- Content MUST be derived from the persona text.
+- Do NOT explain.
+- Do NOT summarize.
+- Do NOT invent names.
+- Do NOT invent filenames.
+- Do NOT invent personas.
+- Use ONLY the name that appears in the persona text.
+- If the persona name is missing, FAIL silently.
 
-You MUST:
-- Infer name from persona text.
-- Infer domain and risk style.
-- Write a new description sentence.
-- Generate a matching href and image filename using lowercase first name.
+IDENTITY LOCK:
+- The Persona name is authoritative.
+- The card MUST reflect that exact identity.
+- No substitutions. No creativity.
 
-FORMAT (EXACT — DO NOT DEVIATE):
+STRUCTURE MUST MATCH EXACTLY:
 
-<!-- CARD -->
-<a class="card" href="[firstname].html">
+<!-- CARD 3 : [FULL NAME] -->
+<a class="card" href="[lowercasefirstname][lowercaselastname].html">
 
-  <script type="text/plain" data-persona="[firstname]-v1">
-Persona: [Full Name]
-Risk tier: [LOW | MEDIUM | HIGH]
+  <!-- INTERNAL PERSONA MARKER (HIDDEN FROM USER) -->
+  <script type="text/plain" data-persona="[lowercasefirstname]-[lowercaselastname]-v1">
+Persona: [FULL NAME]
+Risk tier: [LOW | MEDIUM | MEDIUM-HIGH | HIGH]
 Thinking style: [short identity phrase]
   </script>
 
   <div class="card-header">
     <img
-      src="[firstname].jpeg"
-      alt="[Full Name]"
+      src="[lowercasefirstname][lowercaselastname].jpeg"
+      alt="[FULL NAME]"
       class="card-avatar"
     />
     <div class="card-title">
-      [Full Name]
+      [FULL NAME]
     </div>
   </div>
 
   <div class="card-desc">
-    [ONE sentence describing how this persona searches inside their domain]
+    [ONE sentence describing how this persona searches, derived from persona text]
   </div>
 
   <div class="card-action">
@@ -266,7 +267,12 @@ Thinking style: [short identity phrase]
 
 </a>
 
-DO NOT wrap in anything else.
+STRICT RULES:
+- The name MUST be extracted from "Persona name:" in the persona text.
+- The description MUST reflect the persona’s thinking + search behavior.
+- UTF-8 punctuation only.
+- No extra wrappers.
+- No markdown.
 `
       },
       {
