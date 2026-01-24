@@ -141,6 +141,13 @@ Input:
 Your task:
 Create a structured Thinking Path that helps the user think clearly on their own.
 
+Persona binding (MANDATORY):
+Each thinking focus sentence MUST be written from the perspective of THIS PERSON
+as described in the persona above.
+
+If two personas are different, their thinking steps MUST differ.
+Do NOT reuse generic reasoning patterns across personas.
+
 Depth logic:
 - Decide the number of steps dynamically.
 - Use only as many steps as are cognitively necessary.
@@ -163,9 +170,12 @@ Step rules:
 
 For each step:
 1) Write ONE short sentence describing the thinking focus.
-   - Direct, practical, matter-of-fact.
-   - Internal reasoning style, not instruction.
+   - Must reflect THIS PERSON’s priorities, fears, and decision style.
+   - Generic phrasing is not allowed.
+
 2) Generate ONE precise Google search query.
+   - The query MUST sound like what THIS PERSON would actually type.
+   - Different personas MUST NOT produce identical queries for the same input.
 3) Encode the query using URL-safe format (spaces replaced with +).
 4) Output the query as a clickable Google search link.
 
@@ -197,51 +207,61 @@ This system provides a thinking path, not answers.
 // ROUTE — THINKING PATH (ONLY ROUTE)
 // =====================================================
 app.post("/thinking-path", async (req, res) => {
-  const steps = [];
-  const input = (req.body.input || "").trim();
-  const persona = (req.body.persona || "").trim();
+  try {
+    const steps = [];
+    const input = (req.body.input || "").trim();
+    const persona = (req.body.persona || "").trim();
 
-  stepLog(steps, "Thinking path request received");
+    stepLog(steps, "Thinking path request received");
 
-  if (!input) {
-    return res.json({
-      report: "Input is required.",
-      steps
-    });
-  }
+    if (!input) {
+      return res.json({
+        report: "Input is required.",
+        steps
+      });
+    }
 
-  let finalInput = input;
+    let finalInput = input;
 
-  stepLog(steps, "Evaluating input intent");
+    stepLog(steps, "Evaluating input intent");
 
-  const accepted = await wdnabAcceptProblemOrWish(input, persona);
+    const accepted = await wdnabAcceptProblemOrWish(input, persona);
 
-  if (!accepted) {
-    stepLog(steps, "Input rejected — rewriting");
+    if (!accepted) {
+      stepLog(steps, "Input rejected — rewriting");
 
-    const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
+      const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
 
-    if (
-      !rewritten ||
-      rewritten === "Unable to rewrite as a problem or a wish."
-    ) {
-      return res.json({
-        report: "Input cannot be interpreted.",
-        steps
-      });
-    }
+      if (
+        !rewritten ||
+        rewritten === "Unable to rewrite as a problem or a wish."
+      ) {
+        return res.json({
+          report: "Input cannot be interpreted.",
+          steps
+        });
+      }
 
-    finalInput = rewritten;
-    stepLog(steps, "Rewrite successful");
-  }
+      finalInput = rewritten;
+      stepLog(steps, "Rewrite successful");
+    }
 
-  stepLog(steps, "Generating thinking path");
+    stepLog(steps, "Generating thinking path");
 
-  const report = await wdnabGenerateThinkingPath(finalInput, persona);
+    const report = await wdnabGenerateThinkingPath(finalInput, persona);
 
-  stepLog(steps, "Thinking path delivered");
+    stepLog(steps, "Thinking path delivered");
 
-  res.json({ report, steps });
+    res.json({ report, steps });
+
+  } catch (err) {
+    console.error("❌ Thinking path failed:", err);
+
+    res.status(200).json({
+      report: "Thinking path generation failed.",
+      steps: []
+    });
+  }
 });
 
 // -------------------- SERVER --------------------
