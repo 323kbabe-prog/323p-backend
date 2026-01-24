@@ -46,7 +46,18 @@ CRITICAL RULES:
 - Do NOT repeat sections.
 - Do NOT add extra sections.
 - Do NOT use first-person pronouns ("I", "me", "my").
-- Write in neutral, descriptive third-person style.
+DOMAIN IDENTITY LOCK (CRITICAL):
+
+Infer a dominant life domain from the meta-question
+(e.g. gaming, coding, finance, health, environment).
+
+ALL bullets MUST stay inside that domain.
+
+Each bullet MUST include at least ONE domain-specific term.
+
+DO NOT generalize.
+DO NOT use abstract language.
+DO NOT use neutral life wording.
 
 FORMAT (MUST MATCH EXACTLY):
 
