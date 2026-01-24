@@ -196,6 +196,59 @@ if the input is meaningless.
 }
 
 // =====================================================
+// CARD GENERATOR — AI-GENERATED CARD
+// =====================================================
+async function generateCardFromPersona(name, riskText) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.6,
+    messages: [
+      {
+        role: "system",
+        content: `
+Generate a UI card.
+
+Rules:
+- Short, product-style wording.
+- No explanations.
+- No emojis.
+- No first-person pronouns.
+- Output JSON ONLY.
+
+FORMAT:
+{
+  "title": "...",
+  "description": "..."
+}
+`
+      },
+      {
+        role: "user",
+        content: `${name}. Core risk: ${riskText}`
+      }
+    ]
+  });
+
+  return JSON.parse(out.choices[0].message.content);
+}
+
+// =====================================================
+// ROUTE — GENERATE CARD
+// =====================================================
+app.post("/generate-card", async (req, res) => {
+  try {
+    const { name, risk } = req.body;
+    const card = await generateCardFromPersona(name, risk);
+    res.json(card);
+  } catch {
+    res.json({
+      title: "Search with intent",
+      description: "Explore decisions shaped by personal risk and identity."
+    });
+  }
+});
+
+// =====================================================
 // THINKING PATH GENERATOR (CORE ENGINE — STRONG DOMAIN MODE)
 // =====================================================
 async function wdnabGenerateThinkingPath(problemOrWish, persona = "") {
