@@ -106,43 +106,6 @@ if the input is meaningless.
 }
 
 // =====================================================
-// ROUTE — GENERATE PERSONA
-// =====================================================
-app.post("/generate-persona", async (req, res) => {
-  try {
-    const riskText = (req.body.riskText || "").trim();
-
-    if (!riskText) {
-      return res.json({
-        persona: `
-Thinking voice:
-- Neutral internal reasoning.
-
-Search behavior:
-- Neutral exploratory queries.
-`
-      });
-    }
-
-    const persona = await generatePersonaDescriptor(riskText);
-    res.json({ persona });
-
-  } catch (err) {
-    console.error("❌ Persona generation failed:", err);
-
-    res.status(200).json({
-      persona: `
-Thinking voice:
-- Fallback neutral reasoning.
-
-Search behavior:
-- Fallback exploratory queries.
-`
-    });
-  }
-});
-
-// =====================================================
 // THINKING PATH GENERATOR (CORE ENGINE)
 // =====================================================
 async function wdnabGenerateThinkingPath(problemOrWish, persona = "") {
@@ -231,105 +194,54 @@ This system provides a thinking path, not answers.
 }
 
 // =====================================================
-// PERSONA GENERATOR — AI OWNS VOICE & SEARCH STYLE
+// ROUTE — THINKING PATH (ONLY ROUTE)
 // =====================================================
-async function generatePersonaDescriptor(riskText) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.7,
-    messages: [
-      {
-        role: "system",
-        content: `
-You are generating a persona specification.
-
-Rules:
-- Output ONLY the structure below.
-- Do NOT explain.
-- Do NOT include user words.
-- Decide perspective, sentence pressure, and search behavior yourself.
-- Persona may vary per request.
-
-FORMAT (exact):
-
-Thinking voice:
-- <bullet>
-- <bullet>
-- <bullet>
-- <bullet>
-
-Search behavior:
-- <bullet>
-- <bullet>
-- <bullet>
-`
-      },
-      {
-        role: "user",
-        content: `Risk context (do not reuse words): ${riskText}`
-      }
-    ]
-  });
-
-  return out.choices[0].message.content.trim();
-}
-
 app.post("/thinking-path", async (req, res) => {
-  try {
-    const steps = [];
-    const input = (req.body.input || "").trim();
-    const persona = (req.body.persona || "").trim();
+  const steps = [];
+  const input = (req.body.input || "").trim();
+  const persona = (req.body.persona || "").trim();
 
-    stepLog(steps, "Thinking path request received");
+  stepLog(steps, "Thinking path request received");
 
-    if (!input) {
-      return res.json({
-        report: "Input is required.",
-        steps
-      });
-    }
+  if (!input) {
+    return res.json({
+      report: "Input is required.",
+      steps
+    });
+  }
 
-    let finalInput = input;
+  let finalInput = input;
 
-    stepLog(steps, "Evaluating input intent");
+  stepLog(steps, "Evaluating input intent");
 
-    const accepted = await wdnabAcceptProblemOrWish(input, persona);
+  const accepted = await wdnabAcceptProblemOrWish(input, persona);
 
-    if (!accepted) {
-      stepLog(steps, "Input rejected — rewriting");
+  if (!accepted) {
+    stepLog(steps, "Input rejected — rewriting");
 
-      const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
+    const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
 
-      if (
-        !rewritten ||
-        rewritten === "Unable to rewrite as a problem or a wish."
-      ) {
-        return res.json({
-          report: "Input cannot be interpreted.",
-          steps
-        });
-      }
+    if (
+      !rewritten ||
+      rewritten === "Unable to rewrite as a problem or a wish."
+    ) {
+      return res.json({
+        report: "Input cannot be interpreted.",
+        steps
+      });
+    }
 
-      finalInput = rewritten;
-      stepLog(steps, "Rewrite successful");
-    }
+    finalInput = rewritten;
+    stepLog(steps, "Rewrite successful");
+  }
 
-    stepLog(steps, "Generating thinking path");
+  stepLog(steps, "Generating thinking path");
 
-    const report = await wdnabGenerateThinkingPath(finalInput, persona);
+  const report = await wdnabGenerateThinkingPath(finalInput, persona);
 
-    stepLog(steps, "Thinking path delivered");
+  stepLog(steps, "Thinking path delivered");
 
-    res.json({ report, steps });
-
-  } catch (err) {
-    console.error("❌ Thinking path failed:", err);
-
-    res.status(200).json({
-      report: "Thinking path generation failed.",
-      steps: []
-    });
-  }
+  res.json({ report, steps });
 });
 
 // -------------------- SERVER --------------------
