@@ -211,6 +211,72 @@ This system provides a thinking path, not answers.
 }
 
 // =====================================================
+// PERSONA GENERATOR — AI OWNS VOICE & SEARCH STYLE
+// =====================================================
+async function generatePersonaDescriptor(riskText) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.7,
+    messages: [
+      {
+        role: "system",
+        content: `
+You are generating a persona specification.
+
+Rules:
+- Output ONLY the structure below.
+- Do NOT explain.
+- Do NOT include user words.
+- Decide perspective, sentence pressure, and search behavior yourself.
+- Persona may vary per request.
+
+FORMAT (exact):
+
+Thinking voice:
+- <bullet>
+- <bullet>
+- <bullet>
+- <bullet>
+
+Search behavior:
+- <bullet>
+- <bullet>
+- <bullet>
+`
+      },
+      {
+        role: "user",
+        content: `Risk context (do not reuse words): ${riskText}`
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+// =====================================================
+// ROUTE — GENERATE PERSONA
+// =====================================================
+app.post("/generate-persona", async (req, res) => {
+  const riskText = (req.body.riskText || "").trim();
+
+  if (!riskText) {
+    return res.json({
+      persona: `
+Thinking voice:
+- Neutral internal reasoning.
+
+Search behavior:
+- Neutral exploratory queries.
+`
+    });
+  }
+
+  const persona = await generatePersonaDescriptor(riskText);
+  res.json({ persona });
+});
+
+// =====================================================
 // ROUTE — THINKING PATH (ONLY ROUTE)
 // =====================================================
 app.post("/thinking-path", async (req, res) => {
