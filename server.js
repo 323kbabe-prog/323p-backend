@@ -217,27 +217,56 @@ async function generateCardFromPersona(personaText) {
       {
         role: "system",
         content: `
-You generate ONE UI card derived from a persona.
+You generate ONE HTML card.
 
 CRITICAL RULES:
-- The card MUST be based on the persona below.
-- Do NOT repeat persona wording.
-- Do NOT summarize.
-- Do NOT generalize.
-- The card must feel like a new entry point for search.
+- Output HTML ONLY.
+- No explanations.
+- No JSON.
+- No markdown.
+- UTF-8 punctuation only.
+- Structure MUST match exactly.
+- Content MUST be derived from the persona text.
 
-STYLE:
-- Calm, specific, identity-aware.
-- No marketing language.
-- No promises.
-- No second person ("you").
+You MUST:
+- Infer name from persona text.
+- Infer domain and risk style.
+- Write a new description sentence.
+- Generate a matching href and image filename using lowercase first name.
 
-OUTPUT JSON ONLY:
+FORMAT (EXACT — DO NOT DEVIATE):
 
-{
-  "title": "...",
-  "description": "..."
-}
+<!-- CARD -->
+<a class="card" href="[firstname].html">
+
+  <script type="text/plain" data-persona="[firstname]-v1">
+Persona: [Full Name]
+Risk tier: [LOW | MEDIUM | HIGH]
+Thinking style: [short identity phrase]
+  </script>
+
+  <div class="card-header">
+    <img
+      src="[firstname].jpeg"
+      alt="[Full Name]"
+      class="card-avatar"
+    />
+    <div class="card-title">
+      [Full Name]
+    </div>
+  </div>
+
+  <div class="card-desc">
+    [ONE sentence describing how this persona searches inside their domain]
+  </div>
+
+  <div class="card-action">
+    Enter the search →
+  </div>
+
+</a>
+
+DO NOT wrap in anything else.
 `
       },
       {
@@ -247,7 +276,7 @@ OUTPUT JSON ONLY:
     ]
   });
 
-  return JSON.parse(out.choices[0].message.content);
+  return out.choices[0].message.content.trim();
 }
 
 // =====================================================
@@ -258,21 +287,15 @@ app.post("/generate-card", async (req, res) => {
     const { persona } = req.body;
 
     if (!persona) {
-      return res.json({
-        title: "Search with intent",
-        description: "Explore decisions shaped by personal risk and identity."
-      });
+      return res.send("");
     }
 
     const card = await generateCardFromPersona(persona);
-    res.json(card);
+    res.send(card);
 
   } catch (err) {
     console.error("❌ Card generation failed:", err);
-    res.json({
-      title: "Search with intent",
-      description: "Explore decisions shaped by personal risk and identity."
-    });
+    res.send("");
   }
 });
 
