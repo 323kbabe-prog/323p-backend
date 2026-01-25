@@ -109,6 +109,14 @@ Unspecified.`
       });
     }
 
+const accepted = await wdnabAcceptProblemOrWish(riskText);
+
+if (!accepted) {
+  return res.json({
+    persona: "Input does not express a clear human concern."
+  });
+}
+
     const persona = await generatePersonaFromRisk(riskText);
     res.json({ persona });
 
