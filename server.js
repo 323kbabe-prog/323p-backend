@@ -215,7 +215,7 @@ if the input is meaningless.
 }
 
 // =====================================================
-// CARD GENERATOR — AI-GENERATED CARD
+// CARD GENERATOR — AI-GENERATED CARD (LOCKED FORMAT)
 // =====================================================
 async function generateCardFromPersona(personaText) {
   const out = await openai.chat.completions.create({
@@ -246,7 +246,16 @@ IDENTITY LOCK:
 - Do NOT invent filenames.
 - If Persona name is missing, output NOTHING.
 
-OUTPUT FORMAT (EXACT):
+SUBTITLE RULES (CRITICAL):
+- Generate a subtitle of EXACTLY 3–4 words.
+- Subtitle must describe the persona’s role, system, or mode of thinking.
+- Subtitle must NOT repeat the full name.
+- Subtitle must NOT be a sentence.
+- Subtitle must NOT include verbs like “helps”, “builds”, “explores”.
+- Subtitle must feel like a product or system label.
+- Use Title Case (Each Word Capitalized).
+
+OUTPUT FORMAT (EXACT — DO NOT DEVIATE):
 
 \`\`\`html
 <!-- CARD 3 : [FULL NAME] -->
@@ -257,13 +266,6 @@ OUTPUT FORMAT (EXACT):
 Persona: [FULL NAME]
 Risk tier: MEDIUM-HIGH
 Thinking style: [short identity phrase]
-
-STRICT IDENTITY RULES:
-- "Thinking style" must describe identity, not a sentence.
-- Do NOT quote the meta-question.
-- Do NOT repeat risk text.
-- Use adjectives and domain language only.
-
   </script>
 
   <div class="card-header">
@@ -273,12 +275,13 @@ STRICT IDENTITY RULES:
       class="card-avatar"
     />
     <div class="card-title">
-      [FULL NAME]
+      [FULL NAME]<br>
+      [SUBTITLE — 3 to 4 words]
     </div>
   </div>
 
   <div class="card-desc">
-    [ONE sentence describing how this persona searches]
+    [ONE sentence describing how this persona searches, derived from persona text]
   </div>
 
   <div class="card-action">
