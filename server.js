@@ -246,13 +246,17 @@ IDENTITY LOCK:
 - Do NOT invent filenames.
 - If Persona name is missing, output NOTHING.
 
-SUBTITLE RULES (CRITICAL):
+SUBTITLE RULES (CRITICAL — NO EXCEPTIONS):
 - Generate a subtitle of EXACTLY 3–4 words.
-- Subtitle must describe the persona’s role, system, or mode of thinking.
-- Subtitle must NOT repeat the full name.
-- Subtitle must NOT be a sentence.
-- Subtitle must NOT include verbs like “helps”, “builds”, “explores”.
-- Subtitle must feel like a product or system label.
+- Subtitle MUST be a product or system label.
+- Subtitle MUST describe the persona’s role, system, or mode of thinking.
+- Subtitle MUST feel like a tool name, interface label, or system identity.
+- Subtitle MUST NOT repeat the full name.
+- Subtitle MUST NOT be a sentence.
+- Subtitle MUST NOT include verbs such as:
+  "helps", "builds", "creates", "explores", "guides", "supports", "provides".
+- Subtitle MUST NOT include pronouns.
+- Subtitle MUST NOT include marketing language.
 - Use Title Case (Each Word Capitalized).
 
 OUTPUT FORMAT (EXACT — DO NOT DEVIATE):
