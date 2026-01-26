@@ -3,6 +3,19 @@
 // Process over outcome · No advice · No conclusions
 //////////////////////////////////////////////////////////////
 
+const crypto = require("crypto");
+
+// TEMP in-memory store (fine for MVP)
+// Later you can replace with DB
+const submittedApplications = new Set();
+
+function makeApplicationKey(name, question) {
+  return crypto
+    .createHash("sha256")
+    .update(`${name}|${question}`)
+    .digest("hex");
+}
+
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
@@ -348,17 +361,31 @@ app.post("/submit-application", async (req, res) => {
     const { name, question, persona, card } = req.body;
 
     if (!name || !question) {
-      return res.status(400).json({ ok: false });
+      return res.status(400).json({ ok: false, reason: "missing_fields" });
     }
+
+    const key = makeApplicationKey(name, question);
+
+    // 🔒 HARD BLOCK
+    if (submittedApplications.has(key)) {
+      return res.status(409).json({
+        ok: false,
+        reason: "already_submitted"
+      });
+    }
+
+    // Mark as submitted
+    submittedApplications.add(key);
 
     await sendApplicationEmail({
       name,
       question,
       persona,
-      card,
+      card
     });
 
     res.json({ ok: true });
+
   } catch (err) {
     console.error("Email error:", err);
     res.status(500).json({ ok: false });
