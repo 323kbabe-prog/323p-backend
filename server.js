@@ -9,23 +9,55 @@ const OpenAI = require("openai");
 
 const app = express();
 
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+async function sendApplicationEmail({ name, question, persona, card }) {
+  await transporter.sendMail({
+    from: `"AI JACK CHANG ME" <${process.env.EMAIL_USER}>`,
+    to: "jackchang067@gmail.com",
+    subject: "New Social Search Application",
+    text: `
+NAME:
+${name}
+
+META QUESTION:
+${question}
+
+PERSONA:
+${persona}
+
+CARD:
+${card}
+    `,
+  });
+}
+
 // -------------------- BASIC SETUP --------------------
 app.get("/", (_, res) => res.status(200).send("OK"));
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
-  steps.push({
-    time: new Date().toISOString(),
-    text
-  });
+  steps.push({
+    time: new Date().toISOString(),
+    text
+  });
 }
-
 // =====================================================
 // PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
 // =====================================================
@@ -139,8 +171,8 @@ Unavailable.`
 // AI GATE — ACCEPT PROBLEM OR WISH (LENIENT)
 // =====================================================
 async function wdnabAcceptProblemOrWish(input, persona = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     temperature: 0,
     messages: [
       {
@@ -310,6 +342,28 @@ STRICT:
 
   return out.choices[0].message.content.trim();
 }
+
+app.post("/submit-application", async (req, res) => {
+  try {
+    const { name, question, persona, card } = req.body;
+
+    if (!name || !question) {
+      return res.status(400).json({ ok: false });
+    }
+
+    await sendApplicationEmail({
+      name,
+      question,
+      persona,
+      card,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Email error:", err);
+    res.status(500).json({ ok: false });
+  }
+});
 
 // =====================================================
 // ROUTE — GENERATE CARD (FROM PERSONA)
