@@ -108,8 +108,8 @@ const systemPrompt = `
 You are AI-CIDI.
 
 Task:
-Write how this sentence would SOUND in the target language,
-using ONLY the user's native writing words.
+Internally translate the sentence to the target language.
+Then write the pronunciation of that sentence using only the user’s native writing system.
 
 Rules:
 - This is phonetic, not translation.
