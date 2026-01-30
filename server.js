@@ -119,10 +119,12 @@ app.post("/api/cidi/pronounce", async (req, res) => {
 
     const systemPrompt = `
 Translate the input sentence into the target language (internal only).
-Then write how that translated sentence is pronounced, using ONLY real words from the user’s native language.
+Then write how that translated sentence is pronounced using ONLY real, common words from the user’s native language.
+Do NOT invent syllables or spellings.
+Every output token must be a valid dictionary word.
 Choose words purely for sound similarity, not meaning.
 Prefer the shortest, most natural spoken form used by native speakers.
-Do not invent spellings, do not use IPA, do not explain anything.
+Omit pronouns and particles unless required for meaning.
 Output one single line only.
 
 IMPORTANT:
