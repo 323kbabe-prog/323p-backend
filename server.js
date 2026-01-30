@@ -57,6 +57,8 @@ ${card}
 
 // -------------------- BASIC SETUP --------------------
 app.get("/", (_, res) => res.status(200).send("OK"));
+// Render health check hard guard
+app.get("/health", (_, res) => res.status(200).send("OK"));
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
