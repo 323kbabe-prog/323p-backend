@@ -65,9 +65,9 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// AI-CIDI — PHONETIC PRONUNCIATION (PRODUCTION, STABLE)
+// AI-CIDI — PHONETIC PRONUNCIATION (PRODUCTION)
 // Native-script phonetic mirror
-// Meaning hidden · Real AI · All languages
+// Meaning hidden · Real AI · Syllable-correct
 //////////////////////////////////////////////////////////////
 
 // ---------- SCRIPT DETECTORS ----------
@@ -80,7 +80,7 @@ function violatesNativeScript(userLang, text) {
   if (userLang.startsWith("zh")) return !hasChinese(text);
   if (userLang.startsWith("ko")) return !hasHangul(text);
   if (userLang.startsWith("ja")) return !hasKana(text);
-  return !hasLatin(text); // Latin-based
+  return !hasLatin(text); // Latin-based languages
 }
 
 // ---------- OPENAI CALL ----------
@@ -108,18 +108,23 @@ You are AI-CIDI.
 
 This is a PHONETIC CONVERSION TASK, not translation.
 
-INTERNAL MANDATORY STEPS (DO NOT SKIP):
+INTERNAL STEPS (ALLOWED, HIDDEN):
 1) Infer the TARGET SPOKEN LANGUAGE sentence internally.
-2) Split it into SPOKEN WORDS.
-3) Convert EACH word’s SOUND into the USER’S NATIVE WRITING SYSTEM.
-4) Output ONLY the phonetic result.
+2) Break it into SPOKEN SYLLABLES (not words).
+3) Convert EACH syllable into the USER’S NATIVE WRITING SYSTEM.
+4) Output the phonetic result.
+
+IMPORTANT:
+- One spoken word MAY produce MULTIPLE phonetic units.
+- This is EXPECTED for syllabic or logographic scripts.
+- Accuracy of sound is more important than visual simplicity.
 
 ABSOLUTE RULES:
 - Never output translation.
 - Never output target-language text.
 - Never explain.
 - Never mix scripts.
-- ONE line only.
+- Output ONE single line only.
 
 SCRIPT RULES:
 - zh → Chinese characters ONLY
@@ -127,37 +132,32 @@ SCRIPT RULES:
 - ko → Hangul ONLY
 - Latin-based → Latin letters ONLY
 
+PHONETIC RULES:
+- Map SOUND → SYMBOL, not meaning.
+- Preserve spoken order.
+- Use spaces only for speaking rhythm.
+- Do NOT compress syllables unnaturally.
+
 User native language: ${user_language}
 Target spoken language: ${target_language}
 
 Output ONLY the phonetic pronunciation line.
 `;
 
-    // 1️⃣ First attempt
+    // 1️⃣ Primary generation
     let pronunciation = await runCidi(openai, systemPrompt, source_text);
 
-    // 2️⃣ Retry if script violated
+    // 2️⃣ Retry once if script violated
     if (violatesNativeScript(user_language, pronunciation)) {
       const retryPrompt = systemPrompt + `
 FINAL WARNING:
 Use ONLY the user's native writing system.
+Do NOT attempt to simplify or compress syllables.
 `;
       pronunciation = await runCidi(openai, retryPrompt, source_text);
     }
 
-    // 3️⃣ Recovery pass (still real AI)
-    if (violatesNativeScript(user_language, pronunciation) || !pronunciation) {
-      const recoveryPrompt = systemPrompt + `
-RECOVERY MODE:
-Decompose sounds word by word.
-Use SIMPLE native phonetic symbols.
-No foreign scripts.
-One line only.
-`;
-      pronunciation = await runCidi(openai, recoveryPrompt, source_text);
-    }
-
-    // 4️⃣ Final enforcement
+    // 3️⃣ Final validation (no fake fallback)
     if (violatesNativeScript(user_language, pronunciation) || !pronunciation) {
       return res.status(500).json({
         error: "AI-CIDI failed to generate valid phonetic output"
