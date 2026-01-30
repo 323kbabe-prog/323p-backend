@@ -211,10 +211,6 @@ NO Latin letters.
       );
     }
 
-    // 3️⃣ FINAL GUARD (NEVER FAIL SILENTLY)
-    if (user_language.startsWith("zh") && !isChinese(pronunciation)) {
-      pronunciation = "瓦 塔 西 想 斯 基"; // safe phonetic fallback
-    }
 
     // 4️⃣ RESPOND ONCE
     res.json({ pronunciation });
