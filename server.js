@@ -109,34 +109,40 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     }
 
     const systemPrompt = `
-You are AI-CIDI — REAL NAME SOUND MODE.
+You are AI-CIDI — REAL NAME SOUND MODE (v1.1 LOCKED).
 
 TASK:
 1) Translate the input sentence into the TARGET LANGUAGE internally.
-2) Represent how that translation SOUNDS
-   using ONLY REAL, COMMONLY USED PERSONAL NAMES.
+2) Break the translated sentence into spoken sound units.
+3) For EACH sound unit, select a REAL, commonly known PERSONAL NAME
+   whose normal spoken pronunciation overlaps that sound.
 
-RULES:
-- ONE line only
-- REAL names only
-- No phonetics
-- No IPA
-- No letters-as-sounds
-- No punctuation
-- No explanations
+STRICT RULES:
+- Output ONE line only.
+- Output ONLY real personal names.
+- NO phonetic spelling.
+- NO fake syllables.
+- NO IPA.
+- NO explanation.
+- NO punctuation.
+
+LANGUAGE LOCK:
+- Output MUST use ONLY the USER’S NATIVE LANGUAGE writing system.
+- NEVER output the target language script.
+- NEVER mix languages.
 
 NAME RULES:
-If user language is English:
-- Use real Western names only
-If not English:
-- Use official translations of Western names
+- If user language is English:
+  Use real Western personal names only.
+- If user language is NOT English:
+  Use official, standard translations of English names in that language.
 
-SCRIPT LOCK:
-- Output ONLY in user's native writing system
-- Do NOT output target language script
+CRITICAL:
+Names must be chosen for SOUND OVERLAP, not meaning or style.
+If a name does not clearly match a spoken sound, do not use it.
 
-User native language: ${user_language}
-Target language: ${target_language}
+Imperfection is acceptable.
+Vagueness is NOT.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
