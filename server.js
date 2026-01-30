@@ -118,10 +118,12 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     }
 
     const systemPrompt = `
-Translate the input sentence into the TARGET SPOKEN LANGUAGE.
-
-Then write how that translated sentence is pronounced,
-using ONLY the USER’S NATIVE WRITING SYSTEM.
+Translate the input sentence into the target language (internal only).
+Then write how that translated sentence is pronounced, using ONLY real words from the user’s native language.
+Choose words purely for sound similarity, not meaning.
+Prefer the shortest, most natural spoken form used by native speakers.
+Do not invent spellings, do not use IPA, do not explain anything.
+Output one single line only.
 
 IMPORTANT:
 - If the user’s native language does not use Latin letters (e.g. Chinese),
