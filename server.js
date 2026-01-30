@@ -64,6 +64,84 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+//////////////////////////////////////////////////////////////
+// AI-CIDI — PHONETIC PRONUNCIATION (SERVER OP)
+// - Native-script pronunciation only
+// - No translation
+// - No explanation
+// - No audio
+//////////////////////////////////////////////////////////////
+
+app.post("/api/cidi/pronounce", async (req, res) => {
+  try {
+    const {
+      source_text,
+      user_language,     // e.g. zh-TW, zh-CN, ko, en
+      target_language    // e.g. en, ja, ko, fr
+    } = req.body || {};
+
+    if (!source_text || !user_language || !target_language) {
+      return res.status(400).json({
+        error: "Missing required fields"
+      });
+    }
+
+    const systemPrompt = `
+You are AI-CIDI, a phonetic interface.
+
+GOAL:
+Help the user SPEAK a foreign language.
+
+STRICT RULES:
+- DO NOT translate meaning.
+- DO NOT show the real sentence.
+- DO NOT explain anything.
+- DO NOT provide definitions.
+- DO NOT use IPA.
+- DO NOT include notes or commentary.
+- DO NOT output multiple options.
+
+OUTPUT:
+- Output ONLY pronunciation text.
+- Use the USER'S NATIVE WRITING SYSTEM.
+- Approximate TARGET LANGUAGE sounds.
+- Space syllables naturally.
+- Use English letters ONLY if user's language is English.
+
+User native language: ${user_language}
+Target spoken language: ${target_language}
+
+Output ONLY the pronunciation text.
+`;
+
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: source_text }
+      ]
+    });
+
+    // Safe extraction (covers all Responses API shapes)
+    let pronunciation = response.output_text?.trim()
+      || response.output?.[0]?.content?.[0]?.text?.trim();
+
+    if (!pronunciation) {
+      return res.status(500).json({
+        error: "Empty pronunciation output"
+      });
+    }
+
+    res.json({ pronunciation });
+
+  } catch (err) {
+    console.error("AI-CIDI pronunciation error:", err);
+    res.status(500).json({
+      error: "AI-CIDI pronunciation failed"
+    });
+  }
+});
+
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
   steps.push({
