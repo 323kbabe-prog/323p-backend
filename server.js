@@ -66,7 +66,34 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// -------------------- Cidi --------------------
+//////////////////////////////////////////////////////////////
+// AI-CIDI — PHONETIC PRONUNCIATION BACKEND (FINAL)
+//////////////////////////////////////////////////////////////
+
+// --- helper: filter output to USER's native writing system ---
+function cidiFilterToNativeScript(lang, text) {
+  if (!text) return "";
+
+  if (lang.startsWith("zh")) {
+    // Chinese characters
+    return text.replace(/[^\u4e00-\u9fff\s]/g, "");
+  }
+
+  if (lang.startsWith("ja")) {
+    // Kana + Kanji
+    return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
+  }
+
+  if (lang.startsWith("ko")) {
+    // Hangul
+    return text.replace(/[^\uac00-\ud7af\s]/g, "");
+  }
+
+  // Latin-based languages
+  return text.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
+}
+
+// --- OpenAI call ---
 async function runCidi(systemPrompt, userText) {
   const r = await openai.responses.create({
     model: "gpt-4.1-mini",
@@ -79,24 +106,9 @@ async function runCidi(systemPrompt, userText) {
   return r.output_text?.trim() || "";
 }
 
-
-
-function cidiFilterToNativeScript(lang, text) {
-  if (!text) return "";
-
-  if (lang.startsWith("zh")) {
-    return text.replace(/[^\u4e00-\u9fff\s]/g, "");
-  }
-  if (lang.startsWith("ja")) {
-    return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
-  }
-  if (lang.startsWith("ko")) {
-    return text.replace(/[^\uac00-\ud7af\s]/g, "");
-  }
-  return text.replace(/[^A-Za-z\s]/g, "");
-}
-
-// -------------------- Cidi --------------------
+// ------------------------------------------------------------
+// ROUTE: /api/cidi/pronounce
+// ------------------------------------------------------------
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
     const { source_text, user_language, target_language } = req.body || {};
@@ -104,43 +116,53 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     if (!source_text || !user_language || !target_language) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-const systemPrompt = `
-You are AI-CIDI.
 
-Task:
-Translate the input sentence into the target language.
-Then write how that translated sentence is pronounced, using only the user’s native writing system.
-Do not imitate the source language’s accent.
-Prefer the shortest, most natural spoken form used by native speakers.
-Omit pronouns and particles unless they are required for meaning.
+    const systemPrompt = `
+Translate the input sentence into the TARGET SPOKEN LANGUAGE.
+
+Then write how that translated sentence is pronounced,
+using ONLY the USER'S NATIVE WRITING SYSTEM.
 
 Rules:
-- This is phonetic, not translation.
-- Use native characters to imitate foreign sounds.
-- One line only. No explanation.
+- Do NOT output the translation itself.
+- Do NOT explain anything.
+- Output ONE single line.
+- Prefer the shortest, most natural spoken form.
+- Omit pronouns and particles unless required for meaning.
+- Do NOT imitate the source language accent.
 
 User native language: ${user_language}
 Target spoken language: ${target_language}
+
+Output ONLY the pronunciation line.
 `;
 
+    // --- AI call ---
     const raw = await runCidi(systemPrompt, source_text);
 
+    // --- Filter to user's native script ---
     let pronunciation = cidiFilterToNativeScript(user_language, raw);
 
-    // soft fallback — NEVER crashes
-    if (!pronunciation.trim()) {
+    // --- Soft rescue (never crash) ---
+    if (!pronunciation.trim() && raw) {
       pronunciation = cidiFilterToNativeScript(
         user_language,
         raw.split("").join(" ")
       );
     }
 
-    if (!pronunciation.trim()) {
-      pronunciation = "[phonetic unavailable]";
+    // --- Final guarantee ---
+    if (pronunciation.trim()) {
+      return res.json({
+        pronunciation,
+        engine: "AI-CIDI",
+        mode: "phonetic"
+      });
     }
 
+    // Only fail if model truly gave nothing usable
     return res.json({
-      pronunciation,
+      pronunciation: "[phonetic unavailable]",
       engine: "AI-CIDI",
       mode: "phonetic"
     });
