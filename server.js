@@ -72,46 +72,44 @@ const openai = new OpenAI({
 // - No audio
 //////////////////////////////////////////////////////////////
 
+// helper (place ONCE near top of file)
+function containsJapaneseScript(text) {
+  return /[\u3040-\u30ff]/.test(text); // hiragana + katakana
+}
+
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
     const {
       source_text,
-      user_language,     // e.g. zh-TW, zh-CN, ko, en
-      target_language    // e.g. en, ja, ko, fr
+      user_language,
+      target_language
     } = req.body || {};
 
     if (!source_text || !user_language || !target_language) {
-      return res.status(400).json({
-        error: "Missing required fields"
-      });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     const systemPrompt = `
 You are AI-CIDI, a phonetic interface.
 
 GOAL:
-Help the user SPEAK a foreign language.
+Help the user SPEAK a foreign language while reading in their OWN native writing system.
 
-STRICT RULES:
+ABSOLUTE RULES:
 - DO NOT translate meaning.
 - DO NOT show the real sentence.
 - DO NOT explain anything.
-- DO NOT provide definitions.
 - DO NOT use IPA.
-- DO NOT include notes or commentary.
 - DO NOT output multiple options.
 
-OUTPUT:
-- Output ONLY pronunciation text.
-- Use the USER'S NATIVE WRITING SYSTEM.
-- Approximate TARGET LANGUAGE sounds.
-- Space syllables naturally.
-CRITICAL SCRIPT RULE (NO EXCEPTIONS):
+CRITICAL SCRIPT RULE:
 - Output MUST be written in the USER’S NATIVE WRITING SYSTEM.
-- NEVER output Latin / English letters unless the user's native language itself uses Latin letters.
-- If the user's language is Chinese, output Chinese characters only.
-- If the user's language is Japanese, output kana/kanji only.
-- If the user's language is Korean, output Hangul only.
+
+ANTI-TRANSLATION LOCK:
+- DO NOT output the target language’s native writing system.
+- If user's native language is Chinese → Chinese characters ONLY.
+- If user's native language is Korean → Hangul ONLY.
+- If user's native language is Japanese → Kana/Kanji ONLY.
 
 User native language: ${user_language}
 Target spoken language: ${target_language}
@@ -127,33 +125,31 @@ Output ONLY the pronunciation text.
       ]
     });
 
-    // Safe extraction (covers all Responses API shapes)
-    let pronunciation = response.output_text?.trim()
-      || response.output?.[0]?.content?.[0]?.text?.trim();
+    const pronunciation =
+      response.output_text?.trim() ||
+      response.output?.[0]?.content?.[0]?.text?.trim();
 
     if (!pronunciation) {
+      return res.status(500).json({ error: "Empty pronunciation output" });
+    }
+
+    // 🔒 HARD ENFORCEMENT
+    if (
+      user_language.startsWith("zh") &&
+      containsJapaneseScript(pronunciation)
+    ) {
       return res.status(500).json({
-        error: "Empty pronunciation output"
+        error: "Invalid output: Japanese script for Chinese user"
       });
     }
 
     res.json({ pronunciation });
 
   } catch (err) {
-    console.error("AI-CIDI pronunciation error:", err);
-    res.status(500).json({
-      error: "AI-CIDI pronunciation failed"
-    });
+    console.error("AI-CIDI error:", err);
+    res.status(500).json({ error: "AI-CIDI pronunciation failed" });
   }
 });
-
-// -------------------- STEP LOGGER --------------------
-function stepLog(steps, text) {
-  steps.push({
-    time: new Date().toISOString(),
-    text
-  });
-}
 // =====================================================
 // PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
 // =====================================================
