@@ -113,7 +113,7 @@ This is a PHONETIC CONVERSION task.
 INTERNAL STEPS (do NOT output):
 1) Translate the input into the TARGET SPOKEN LANGUAGE.
 
-2) Map the phonetic sound of each translated word to the phonological system of the user’s native language.
+2) Convert the phonetic sound of each translated word into the user’s native-language pronunciation system.
 
 EXAMPLES:
 "I want to eat" → 艾 旺 特 圖 伊 特
