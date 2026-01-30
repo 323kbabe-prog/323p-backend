@@ -131,6 +131,29 @@ SCRIPT RULES:
 User native language: ${user_language}
 Target spoken language: ${target_language}
 
+CRITICAL PHONETIC MODE (NO SEMANTIC COMPRESSION):
+
+You MUST map EACH spoken word in the target language
+into a SEPARATE phonetic approximation
+using the user's native writing system.
+
+Rules:
+- Do NOT merge words.
+- Do NOT summarize meaning.
+- Do NOT replace phrases with culturally similar expressions.
+- Do NOT use known foreign words (e.g. ワタシ, スキー, OK, etc).
+- Each target-language word must produce its own phonetic chunk.
+
+Example (Chinese user, English target):
+
+"I want to go ski"
+→ 艾 萬 特 圖 勾 史 基
+
+NOT allowed:
+→ 我想滑雪
+→ 瓦塔西想斯基
+→ 史基
+
 Output ONLY phonetic pronunciation.
 `;
 
