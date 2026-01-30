@@ -10,10 +10,10 @@ const crypto = require("crypto");
 const submittedApplications = new Set();
 
 function makeApplicationKey(name, question) {
-  return crypto
-    .createHash("sha256")
-    .update(`${name}|${question}`)
-    .digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(`${name}|${question}`)
+    .digest("hex");
 }
 
 const express = require("express");
@@ -25,21 +25,21 @@ const app = express();
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
 });
 
 async function sendApplicationEmail({ name, question, persona, card }) {
-  await transporter.sendMail({
-    from: `"AI JACK CHANG ME" <${process.env.EMAIL_USER}>`,
-    to: "jackchang067@gmail.com",
-    subject: "New Social Search Application",
-    text: `
+  await transporter.sendMail({
+    from: `"AI JACK CHANG ME" <${process.env.EMAIL_USER}>`,
+    to: "jackchang067@gmail.com",
+    subject: "New Social Search Application",
+    text: `
 NAME:
 ${name}
 
@@ -51,8 +51,8 @@ ${persona}
 
 CARD:
 ${card}
-    `,
-  });
+    `,
+  });
 }
 
 // -------------------- BASIC SETUP --------------------
@@ -61,170 +61,27 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-//////////////////////////////////////////////////////////////
-// AI-CIDI — PHONETIC PRONUNCIATION (PRODUCTION STABLE)
-// Real AI · Meaning hidden · All languages · No 500 storms
-//////////////////////////////////////////////////////////////
-
-const express = require("express");
-const cors = require("cors");
-const OpenAI = require("openai");
-
-const app = express();
-app.use(cors({ origin: "*" }));
-app.use(express.json());
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-// ==========================================================
-// SCRIPT DETECTION & NORMALIZATION (SOFT, NEVER BLOCKING)
-// ==========================================================
-
-function normalizePronunciation(userLang, text) {
-  if (!text) return "";
-
-  if (userLang.startsWith("zh")) {
-    // Chinese only (keep spacing)
-    return text.replace(/[^\u4e00-\u9fff\s]/g, "");
-  }
-
-  if (userLang.startsWith("ja")) {
-    // Kana + Kanji
-    return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
-  }
-
-  if (userLang.startsWith("ko")) {
-    // Hangul only
-    return text.replace(/[^\uac00-\ud7af\s]/g, "");
-  }
-
-  // Latin-based languages
-  return text.replace(/[^A-Za-z\s]/g, "");
+// -------------------- STEP LOGGER --------------------
+function stepLog(steps, text) {
+  steps.push({
+    time: new Date().toISOString(),
+    text
+  });
 }
-
-// ==========================================================
-// OPENAI CALL (SINGLE RESPONSIBILITY)
-// ==========================================================
-
-async function runCidi(openai, systemPrompt, userText) {
-  const response = await openai.responses.create({
-    model: "gpt-4.1-mini",
-    input: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userText }
-    ]
-  });
-
-  return response.output_text?.trim() || "";
-}
-
-// ==========================================================
-// MAIN ROUTE — AI-CIDI PRONUNCIATION
-// ==========================================================
-
-app.post("/api/cidi/pronounce", async (req, res) => {
-  try {
-    const { source_text, user_language, target_language } = req.body || {};
-
-    if (!source_text || !user_language || !target_language) {
-      return res.status(400).json({
-        error: "Missing required fields"
-      });
-    }
-
-    const systemPrompt = `
-You are AI-CIDI.
-
-This is a PHONETIC CONVERSION TASK, not translation.
-
-INTERNAL STEPS (DO NOT OUTPUT):
-1) Infer the TARGET SPOKEN LANGUAGE sentence.
-2) Split it into SPOKEN WORDS in correct order.
-3) Convert EACH word’s SOUND into the USER’S NATIVE WRITING SYSTEM.
-
-OUTPUT RULES:
-- Output ONLY the phonetic pronunciation.
-- ONE line only.
-- No explanation.
-- No translation.
-- No target language text.
-- Do NOT mix scripts.
-
-SCRIPT RULES:
-- zh → Chinese characters ONLY
-- ja → Kana / Kanji ONLY
-- ko → Hangul ONLY
-- Latin-based → Latin letters ONLY
-
-PHONETIC RULES:
-- Each spoken word → one phonetic chunk.
-- Preserve spoken order.
-- Approximate SOUND, not meaning.
-- Use spaces for rhythm.
-
-User native language: ${user_language}
-Target spoken language: ${target_language}
-
-Output ONLY the phonetic pronunciation line.
-`;
-
-    // ---- REAL AI CALL (NO LOOPING) ----
-    let rawOutput = await runCidi(openai, systemPrompt, source_text);
-
-    // ---- SOFT NORMALIZATION (NEVER FAILS) ----
-    let pronunciation = normalizePronunciation(user_language, rawOutput);
-
-    // ---- GUARANTEE RESPONSE ----
-    if (!pronunciation.trim()) {
-      pronunciation = normalizePronunciation(
-        user_language,
-        rawOutput.split("").join(" ")
-      );
-    }
-
-    if (!pronunciation.trim()) {
-      pronunciation = "[Try speaking slowly]";
-    }
-
-    return res.json({
-      pronunciation,
-      mode: "phonetic",
-      confidence: "best-effort"
-    });
-
-  } catch (err) {
-    console.error("AI-CIDI fatal error:", err);
-    return res.status(500).json({
-      error: "AI-CIDI pronunciation failed"
-    });
-  }
-});
-
-// ==========================================================
-// SERVER
-// ==========================================================
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("🧠 AI-CIDI phonetic backend live");
-});
-
 // =====================================================
 // PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
 // =====================================================
 async function generatePersonaFromRisk(riskText) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.4,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.4,
+    messages: [
+      {
+        role: "system",
+        content: `
 You generate a persona description.
 
 CRITICAL RULES:
@@ -266,27 +123,27 @@ STYLE CONSTRAINTS:
 - No colons inside bullets.
 - Content must be shaped by the user's meta-question.
 `
-      },
-      {
-        role: "user",
-        content: riskText
-      }
-    ]
-  });
+      },
+      {
+        role: "user",
+        content: riskText
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 // =====================================================
 // ROUTE — GENERATE PERSONA (FROM USER INPUT)
 // =====================================================
 app.post("/generate-persona", async (req, res) => {
-  try {
-    const riskText = (req.body.riskText || "").trim();
+  try {
+    const riskText = (req.body.riskText || "").trim();
 
-    if (!riskText) {
-      return res.json({
-        persona: `Thinking voice:
+    if (!riskText) {
+      return res.json({
+        persona: `Thinking voice:
 - Neutral internal reasoning.
 
 Search behavior:
@@ -294,24 +151,24 @@ Search behavior:
 
 Primary risk sensitivity:
 Unspecified.`
-      });
-    }
+      });
+    }
 
 const accepted = await wdnabAcceptProblemOrWish(riskText);
 
 if (!accepted) {
-  return res.json({
-    persona: "Input does not express a clear human concern."
-  });
+  return res.json({
+    persona: "Input does not express a clear human concern."
+  });
 }
 
-    const persona = await generatePersonaFromRisk(riskText);
-    res.json({ persona });
+    const persona = await generatePersonaFromRisk(riskText);
+    res.json({ persona });
 
-  } catch (err) {
-    console.error("❌ Persona generation failed:", err);
-    res.json({
-      persona: `Thinking voice:
+  } catch (err) {
+    console.error("❌ Persona generation failed:", err);
+    res.json({
+      persona: `Thinking voice:
 - Fallback neutral reasoning.
 
 Search behavior:
@@ -319,16 +176,16 @@ Search behavior:
 
 Primary risk sensitivity:
 Unavailable.`
-    });
-  }
+    });
+  }
 });
 
 // =====================================================
 // AI GATE — ACCEPT PROBLEM OR WISH (LENIENT)
 // =====================================================
 async function wdnabAcceptProblemOrWish(input, persona = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     temperature: 0,
     messages: [
       {
@@ -406,13 +263,13 @@ if the input is meaningless.
 // CARD GENERATOR — AI-GENERATED CARD (LOCKED FORMAT)
 // =====================================================
 async function generateCardFromPersona(personaText) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
 You are emitting RAW SOURCE CODE.
 
 ABSOLUTE MODE:
@@ -442,7 +299,7 @@ SUBTITLE RULES (CRITICAL — NO EXCEPTIONS):
 - Subtitle MUST NOT repeat the full name.
 - Subtitle MUST NOT be a sentence.
 - Subtitle MUST NOT include verbs such as:
-  "helps", "builds", "creates", "explores", "guides", "supports", "provides".
+  "helps", "builds", "creates", "explores", "guides", "supports", "provides".
 - Subtitle MUST NOT include pronouns.
 - Subtitle MUST NOT include marketing language.
 - Use Title Case (Each Word Capitalized).
@@ -453,32 +310,32 @@ OUTPUT FORMAT (EXACT — DO NOT DEVIATE):
 <!-- CARD 3 : [FULL NAME] -->
 <a class="card" href="[lowercasefirstname][lowercaselastname].html">
 
-  <!-- INTERNAL PERSONA MARKER (HIDDEN FROM USER) -->
-  <script type="text/plain" data-persona="[lowercasefirstname]-[lowercaselastname]-v1">
+  <!-- INTERNAL PERSONA MARKER (HIDDEN FROM USER) -->
+  <script type="text/plain" data-persona="[lowercasefirstname]-[lowercaselastname]-v1">
 Persona: [FULL NAME]
 Risk tier: MEDIUM-HIGH
 Thinking style: [short identity phrase]
-  </script>
+  </script>
 
-  <div class="card-header">
-    <img
-      src="[lowercasefirstname][lowercaselastname].jpeg"
-      alt="[FULL NAME]"
-      class="card-avatar"
-    />
-    <div class="card-title">
-      [FULL NAME]<br>
-      [SUBTITLE — 3 to 4 words]
-    </div>
-  </div>
+  <div class="card-header">
+    <img
+      src="[lowercasefirstname][lowercaselastname].jpeg"
+      alt="[FULL NAME]"
+      class="card-avatar"
+    />
+    <div class="card-title">
+      [FULL NAME]<br>
+      [SUBTITLE — 3 to 4 words]
+    </div>
+  </div>
 
-  <div class="card-desc">
-    [ONE sentence describing how this persona searches, derived from persona text]
-  </div>
+  <div class="card-desc">
+    [ONE sentence describing how this persona searches, derived from persona text]
+  </div>
 
-  <div class="card-action">
-    Enter the search →
-  </div>
+  <div class="card-action">
+    Enter the search →
+  </div>
 
 </a>
 \`\`\`
@@ -488,84 +345,84 @@ STRICT:
 - Do not remove blank lines.
 - Do not compress.
 `
-      },
-      {
-        role: "user",
-        content: personaText
-      }
-    ]
-  });
+      },
+      {
+        role: "user",
+        content: personaText
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 app.post("/submit-application", async (req, res) => {
-  try {
-    const { name, question, persona, card } = req.body;
+  try {
+    const { name, question, persona, card } = req.body;
 
-    if (!name || !question) {
-      return res.status(400).json({ ok: false, reason: "missing_fields" });
-    }
+    if (!name || !question) {
+      return res.status(400).json({ ok: false, reason: "missing_fields" });
+    }
 
-    const key = makeApplicationKey(name, question);
+    const key = makeApplicationKey(name, question);
 
-    // 🔒 HARD BLOCK
-    if (submittedApplications.has(key)) {
-      return res.status(409).json({
-        ok: false,
-        reason: "already_submitted"
-      });
-    }
+    // 🔒 HARD BLOCK
+    if (submittedApplications.has(key)) {
+      return res.status(409).json({
+        ok: false,
+        reason: "already_submitted"
+      });
+    }
 
-    // Mark as submitted
-    submittedApplications.add(key);
+    // Mark as submitted
+    submittedApplications.add(key);
 
-    await sendApplicationEmail({
-      name,
-      question,
-      persona,
-      card
-    });
+    await sendApplicationEmail({
+      name,
+      question,
+      persona,
+      card
+    });
 
-    res.json({ ok: true });
+    res.json({ ok: true });
 
-  } catch (err) {
-    console.error("Email error:", err);
-    res.status(500).json({ ok: false });
-  }
+  } catch (err) {
+    console.error("Email error:", err);
+    res.status(500).json({ ok: false });
+  }
 });
 
 // =====================================================
 // ROUTE — GENERATE CARD (FROM PERSONA)
 // =====================================================
 app.post("/generate-card", async (req, res) => {
-  try {
-    const { persona } = req.body;
+  try {
+    const { persona } = req.body;
 
-    if (!persona) {
-      return res.send("");
-    }
+    if (!persona) {
+      return res.send("");
+    }
 
-    const card = await generateCardFromPersona(persona);
-    res.send(card);
+    const card = await generateCardFromPersona(persona);
+    res.send(card);
 
-  } catch (err) {
-    console.error("❌ Card generation failed:", err);
-    res.send("");
-  }
+  } catch (err) {
+    console.error("❌ Card generation failed:", err);
+    res.send("");
+  }
 });
 
 // =====================================================
 // THINKING PATH GENERATOR (CORE ENGINE — STRONG DOMAIN MODE)
 // =====================================================
 async function wdnabGenerateThinkingPath(problemOrWish, persona = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
 ${persona}
 
 You are a logic-only thinking system.
@@ -624,7 +481,7 @@ Each search query MUST include at least ONE domain-specific keyword.
 
 FAILURE CONDITIONS (INCORRECT OUTPUT):
 - Generic words like “performance”, “improvement”, “mistakes”, “success”
-  WITHOUT domain-specific grounding.
+  WITHOUT domain-specific grounding.
 - Neutral phrasing that could apply to any person.
 - Searches that could be reused for a different persona.
 
@@ -636,7 +493,7 @@ Depth logic:
 
 Emotional depth rule:
 - If the input carries personal, identity, future, or self-worth uncertainty,
-  increase reasoning depth.
+  increase reasoning depth.
 - Emotional load means higher cognitive risk.
 - Higher risk requires checking more dimensions before stopping.
 - Maintain the same neutral, factual tone.
@@ -649,16 +506,16 @@ Step rules:
 
 For each step:
 1) Write ONE short sentence describing the thinking focus.
-   - The sentence MUST start with the exact word "I".
-   - Do NOT start with questions like "What", "How", or "Why".
-   - Use first-person internal reasoning only.
-   - Must reflect THIS PERSON’s priorities, fears, and decision style.
-   - Generic phrasing is not allowed.
+   - The sentence MUST start with the exact word "I".
+   - Do NOT start with questions like "What", "How", or "Why".
+   - Use first-person internal reasoning only.
+   - Must reflect THIS PERSON’s priorities, fears, and decision style.
+   - Generic phrasing is not allowed.
 
 2) Generate ONE precise Google search query.
-   - The query MUST sound like what THIS PERSON would actually type.
-   - The query MUST include at least ONE domain-specific keyword.
-   - Different personas MUST NOT produce identical queries for the same input.
+   - The query MUST sound like what THIS PERSON would actually type.
+   - The query MUST include at least ONE domain-specific keyword.
+   - Different personas MUST NOT produce identical queries for the same input.
 
 3) Encode the query using URL-safe format (spaces replaced with +).
 
@@ -681,72 +538,72 @@ https://www.google.com/search?q=...
 End with EXACTLY this line:
 This system provides a thinking path, not answers.
 `
-      }
-    ]
-  });
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 // =====================================================
 // ROUTE — THINKING PATH (ONLY ROUTE)
 // =====================================================
 app.post("/thinking-path", async (req, res) => {
-  try {
-    const steps = [];
-    const input = (req.body.input || "").trim();
-    const persona = (req.body.persona || "").trim();
+  try {
+    const steps = [];
+    const input = (req.body.input || "").trim();
+    const persona = (req.body.persona || "").trim();
 
-    stepLog(steps, "Thinking path request received");
+    stepLog(steps, "Thinking path request received");
 
-    if (!input) {
-      return res.json({
-        report: "Input is required.",
-        steps
-      });
-    }
+    if (!input) {
+      return res.json({
+        report: "Input is required.",
+        steps
+      });
+    }
 
-    let finalInput = input;
+    let finalInput = input;
 
-    stepLog(steps, "Evaluating input intent");
+    stepLog(steps, "Evaluating input intent");
 
-    const accepted = await wdnabAcceptProblemOrWish(input, persona);
+    const accepted = await wdnabAcceptProblemOrWish(input, persona);
 
-    if (!accepted) {
-      stepLog(steps, "Input rejected — rewriting");
+    if (!accepted) {
+      stepLog(steps, "Input rejected — rewriting");
 
-      const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
+      const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
 
-      if (
-        !rewritten ||
-        rewritten === "Unable to rewrite as a problem or a wish."
-      ) {
-        return res.json({
-          report: "Input cannot be interpreted.",
-          steps
-        });
-      }
+      if (
+        !rewritten ||
+        rewritten === "Unable to rewrite as a problem or a wish."
+      ) {
+        return res.json({
+          report: "Input cannot be interpreted.",
+          steps
+        });
+      }
 
-      finalInput = rewritten;
-      stepLog(steps, "Rewrite successful");
-    }
+      finalInput = rewritten;
+      stepLog(steps, "Rewrite successful");
+    }
 
-    stepLog(steps, "Generating thinking path");
+    stepLog(steps, "Generating thinking path");
 
-    const report = await wdnabGenerateThinkingPath(finalInput, persona);
+    const report = await wdnabGenerateThinkingPath(finalInput, persona);
 
-    stepLog(steps, "Thinking path delivered");
+    stepLog(steps, "Thinking path delivered");
 
-    res.json({ report, steps });
+    res.json({ report, steps });
 
-  } catch (err) {
-    console.error("❌ Thinking path failed:", err);
+  } catch (err) {
+    console.error("❌ Thinking path failed:", err);
 
-    res.status(200).json({
-      report: "Thinking path generation failed.",
-      steps: []
-    });
-  }
+    res.status(200).json({
+      report: "Thinking path generation failed.",
+      steps: []
+    });
+  }
 });
 
 // -------------------- SERVER --------------------
@@ -754,3 +611,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
