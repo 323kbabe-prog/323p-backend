@@ -109,46 +109,36 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     }
 
     const systemPrompt = `
-You are AI-CIDI — REAL NAME SOUND MODE (v1.1 LOCKED).
+You are AI-CIDI — REAL NAME SOUND MODE.
 
 TASK:
 1) Translate the input sentence into the TARGET LANGUAGE internally.
-2) Break the translated sentence into spoken sound units.
+2) Split the translated sentence into natural spoken sound units.
 3) For EACH sound unit, select a REAL, commonly known PERSONAL NAME
    whose normal spoken pronunciation overlaps that sound.
 
 STRICT RULES:
-- Output ONE line only.
-- Output ONLY real personal names.
+- Use ONLY real human names (first names, surnames, or famous people).
 - NO phonetic spelling.
-- NO fake syllables.
 - NO IPA.
-- NO explanation.
+- NO invented syllables.
+- NO explanations.
 - NO punctuation.
+- Output ONE line only.
 
 LANGUAGE LOCK:
-- Output MUST use ONLY the USER’S NATIVE LANGUAGE writing system.
-- NEVER output the target language script.
-- NEVER mix languages.
+- Output MUST be written ONLY in the USER’S NATIVE WRITING SYSTEM.
+- Do NOT output the target language text.
+- Do NOT mix languages.
 
-NAME RULES:
-CRITICAL SELECTION RULE:
-Each name must map to exactly ONE sound unit
-of the translated target sentence.
-Do not use names that span multiple sounds.
-Do not use names chosen only for fluency.
-Sound overlap is mandatory.
-- If user language is English:
-  Use real Western personal names only.
-- If user language is NOT English:
-  Use official, standard translations of English names in that language.
+NAME SELECTION:
+- Prefer globally known or culturally common names.
+- Approximate sound similarity is enough.
+- Natural spoken flow is more important than accuracy.
 
-CRITICAL:
-Names must be chosen for SOUND OVERLAP, not meaning or style.
-If a name does not clearly match a spoken sound, do not use it.
-
-Imperfection is acceptable.
-Vagueness is NOT.
+OUTPUT:
+A single line of real human names whose spoken sounds approximate
+the translated sentence.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
