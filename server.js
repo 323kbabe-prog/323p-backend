@@ -66,51 +66,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-//////////////////////////////////////////////////////////////
-// AI-CIDI — REAL NAME SOUND MODE (v1.0 LOCKED)
-// One server · One app · One OpenAI · One route
-//////////////////////////////////////////////////////////////
-
-const express = require("express");
-const cors = require("cors");
-const OpenAI = require("openai");
-
-const app = express();
-app.use(cors({ origin: "*" }));
-app.use(express.json());
-
-app.get("/", (_, res) => res.status(200).send("AI-CIDI OK"));
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-// ==========================================================
-// SCRIPT LOCK — OUTPUT MUST MATCH USER NATIVE LANGUAGE
-// ==========================================================
-function filterToNativeScript(lang, text) {
-  if (!text) return "";
-
-  if (lang.startsWith("zh")) {
-    // Chinese characters only
-    return text.replace(/[^\u4e00-\u9fff\s]/g, "");
-  }
-  if (lang.startsWith("ja")) {
-    // Kana + Kanji only
-    return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
-  }
-  if (lang.startsWith("ko")) {
-    // Hangul only
-    return text.replace(/[^\uac00-\ud7af\s]/g, "");
-  }
-
-  // English / Latin-based
-  return text.replace(/[^A-Za-z\s]/g, "");
-}
-
-// ==========================================================
-// OPENAI CALL (SINGLE RESPONSIBILITY)
-// ==========================================================
+// -------------------- Cidi --------------------
 async function runCidi(systemPrompt, userText) {
   const r = await openai.responses.create({
     model: "gpt-4.1-mini",
@@ -119,12 +75,28 @@ async function runCidi(systemPrompt, userText) {
       { role: "user", content: userText }
     ]
   });
+
   return r.output_text?.trim() || "";
 }
 
-// ==========================================================
-// CIDI ROUTE — REAL NAME SOUND MODE
-// ==========================================================
+
+
+function cidiFilterToNativeScript(lang, text) {
+  if (!text) return "";
+
+  if (lang.startsWith("zh")) {
+    return text.replace(/[^\u4e00-\u9fff\s]/g, "");
+  }
+  if (lang.startsWith("ja")) {
+    return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
+  }
+  if (lang.startsWith("ko")) {
+    return text.replace(/[^\uac00-\ud7af\s]/g, "");
+  }
+  return text.replace(/[^A-Za-z\s]/g, "");
+}
+
+// -------------------- Cidi --------------------
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
     const { source_text, user_language, target_language } = req.body || {};
@@ -132,67 +104,45 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     if (!source_text || !user_language || !target_language) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+const systemPrompt = `
+You are AI-CIDI.
 
-    const systemPrompt = `
-You are AI-CIDI — REAL NAME SOUND MODE.
+Task:
+Translate the input sentence into the target language.
+Then write how that translated sentence is pronounced, using only the user’s native writing system.
+Do not imitate the source language’s accent.
+Prefer the shortest, most natural spoken form used by native speakers.
+Omit pronouns and particles unless they are required for meaning.
 
-TASK:
-1) Translate the input sentence into the TARGET LANGUAGE internally.
-2) Represent how that translation SOUNDS
-   using ONLY REAL, COMMONLY USED PERSONAL NAMES.
-
-ABSOLUTE RULES:
-- Output ONE line only
-- NO phonetic spelling
-- NO IPA
-- NO fake syllables
-- NO letters-as-sounds
-- NO explanations
-- NO punctuation
-
-NAME RULES:
-
-IF user native language is English:
-- Use ONLY real Western personal names
-- Examples: Michael, Anna, John, Emily, David
-
-IF user native language is NOT English:
-- Use ONLY OFFICIAL, STANDARD translations
-  of Western personal names into that language
-- Examples:
-  Michael → 迈克尔 / マイケル / 마이클
-  John → 约翰 / ジョン / 존
-
-STYLE:
-- Sound close enough to the translated sentence
-- Imperfect is OK
-- Feel like humans casually saying names
-- Use as many names as needed, no more
-
-SCRIPT LOCK:
-- Output MUST use ONLY the USER’S NATIVE WRITING SYSTEM
-- Do NOT output target-language script
-- Do NOT mix languages
+Rules:
+- This is phonetic, not translation.
+- Use native characters to imitate foreign sounds.
+- One line only. No explanation.
 
 User native language: ${user_language}
-Target language: ${target_language}
-
-OUTPUT:
-A single line of REAL HUMAN NAMES only.
+Target spoken language: ${target_language}
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
 
-    let output = filterToNativeScript(user_language, raw);
+    let pronunciation = cidiFilterToNativeScript(user_language, raw);
 
-    if (!output.trim()) {
-      output = "[unavailable]";
+    // soft fallback — NEVER crashes
+    if (!pronunciation.trim()) {
+      pronunciation = cidiFilterToNativeScript(
+        user_language,
+        raw.split("").join(" ")
+      );
+    }
+
+    if (!pronunciation.trim()) {
+      pronunciation = "[phonetic unavailable]";
     }
 
     return res.json({
-      pronunciation: output,
+      pronunciation,
       engine: "AI-CIDI",
-      mode: "real-name-sound"
+      mode: "phonetic"
     });
 
   } catch (err) {
@@ -200,22 +150,6 @@ A single line of REAL HUMAN NAMES only.
     return res.status(500).json({ error: "AI-CIDI failed" });
   }
 });
-
-// ==========================================================
-// SERVER
-// ==========================================================
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("🧠 AI-CIDI — Real Name Sound Mode live");
-});
-
-// ==========================================================
-// SERVER
-// ==========================================================
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("🧠 AI-CIDI — Real Name Sound Mode live");
-});    
 
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
