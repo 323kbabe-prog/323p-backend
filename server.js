@@ -171,21 +171,15 @@ DO NOT:
 - Use known foreign words already borrowed into the user’s language.
 - Output a grammatically correct sentence in the target language.
 
-────────────────────────
-EXAMPLE
-────────────────────────
-User native language: Chinese
-Target spoken language: English
-Target sentence (spoken intent): “I want to buy hot pot”
+You may internally infer the target spoken sentence
+ONLY for the purpose of phonetic mapping.
 
-GOOD OUTPUT:
-艾 萬 特 圖 買 哈 特 波 特
+You MUST NOT output:
+- the translated sentence
+- the target language text
+- any explanation
 
-BAD OUTPUT (NOT ALLOWED):
-我想買火鍋
-I want to buy hot pot
-ワタシ ハ スキ
-瓦塔西想斯基
+The translated sentence exists ONLY as an internal step.
 
 ────────────────────────
 FINAL INSTRUCTION
