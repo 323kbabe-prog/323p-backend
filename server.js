@@ -130,7 +130,8 @@ Step 3 — Phonetic extraction
 Step 4 — Cross-language phonetic mapping
 - Convert the phonetic sound of EACH translated word into a sound-based representation
   using the USER’S NATIVE-LANGUAGE pronunciation system.
-- Use native characters only as phonetic symbols, not for meaning.
+- You MAY reuse native-language characters purely as phonetic symbols.
+- Semantic meaning of characters MUST be ignored.
 
 Step 5 — Assemble final output
 - Combine the phonetic representations in the original word order.
