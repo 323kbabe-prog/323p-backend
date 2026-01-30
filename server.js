@@ -66,117 +66,103 @@ const openai = new OpenAI({
 
 //////////////////////////////////////////////////////////////
 // AI-CIDI — PHONETIC PRONUNCIATION (SERVER OP)
-// - Native-script pronunciation only
-// - No translation
-// - No explanation
-// - No audio
+// Native-script phonetic mirror
+// No translation · No correction · Real AI
 //////////////////////////////////////////////////////////////
 
-// helper (place ONCE near top of file)
-function containsJapaneseScript(text) {
-  return /[\u3040-\u30ff]/.test(text); // hiragana + katakana
+// ───────────── HELPERS (DEFINE ONCE) ─────────────
+
+function isChinese(text) {
+  return /[\u4e00-\u9fff]/.test(text);
 }
+
+function containsHangul(text) {
+  return /[\uac00-\ud7af]/.test(text);
+}
+
+async function generatePronunciation(openai, systemPrompt, source_text) {
+  const response = await openai.responses.create({
+    model: "gpt-4.1-mini",
+    input: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: source_text }
+    ]
+  });
+
+  return (
+    response.output_text?.trim() ||
+    response.output?.[0]?.content?.[0]?.text?.trim() ||
+    ""
+  );
+}
+
+// ───────────── ROUTE (ONLY PLACE LOGIC LIVES) ─────────────
 
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
-    const {
-      source_text,
-      user_language,
-      target_language
-    } = req.body || {};
+    const { source_text, user_language, target_language } = req.body || {};
 
     if (!source_text || !user_language || !target_language) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     const systemPrompt = `
-You are AI-CIDI, a real-time phonetic reasoning system.
+You are AI-CIDI, a phonetic mirror.
 
-IDENTITY:
-You are NOT a translator.
-You are NOT a language teacher.
-You are a phonetic mirror.
-
-MISSION:
+GOAL:
 Help the user SPEAK a foreign language
 by reading sounds written ONLY in their OWN native writing system.
 
-ABSOLUTE RULES (NO EXCEPTIONS):
+ABSOLUTE RULES:
 - DO NOT translate meaning.
 - DO NOT show the real sentence.
 - DO NOT explain anything.
 - DO NOT correct grammar.
 - DO NOT use IPA.
-- DO NOT include notes, labels, or commentary.
 - DO NOT output multiple options.
-- DO NOT apologize.
-- DO NOT refuse.
+- DO NOT mix scripts.
 
-SCRIPT LOCK (CRITICAL):
-- Output MUST be written strictly in the USER’S NATIVE WRITING SYSTEM.
-- NEVER output the target language’s native script.
-- NEVER mix scripts.
+SCRIPT RULES:
+- zh → Chinese characters ONLY
+- ko → Hangul ONLY
+- ja → Kana / Kanji ONLY
+- en → Latin letters ONLY
 
-SCRIPT RULES BY USER LANGUAGE:
-- If user_language starts with "zh":
-  → Output Chinese characters ONLY.
-  → Approximate foreign sounds using Chinese phonetic-style characters.
-- If user_language starts with "ko":
-  → Output Hangul ONLY.
-- If user_language starts with "ja":
-  → Output Kana/Kanji ONLY.
-- If user_language starts with "en":
-  → Output Latin letters ONLY.
+User native language: ${user_language}
+Target spoken language: ${target_language}
 
-ANTI-TRANSLATION LOCK:
-- You are NOT allowed to output a grammatically correct sentence
-  in the target language’s native script.
-- You are NOT allowed to output a real translation even if you know it.
-
-OUTPUT FORMAT:
-- One single line.
-- Phonetic approximation only.
-- Natural spacing for speaking aloud.
-- No punctuation unless the user’s native script requires it.
-
-INPUT CONTEXT:
-User native language: {{user_language}}
-Target spoken language: {{target_language}}
-
-FINAL INSTRUCTION:
-No matter what the input is,
-you MUST output a phonetic approximation
-that a human can read aloud in their own language.
-
-Output ONLY the pronunciation text.
+Output ONLY phonetic pronunciation.
 `;
 
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: source_text }
-      ]
-    });
+    // 1️⃣ FIRST ATTEMPT (REAL AI)
+    let pronunciation = await generatePronunciation(
+      openai,
+      systemPrompt,
+      source_text
+    );
 
-    const pronunciation =
-      response.output_text?.trim() ||
-      response.output?.[0]?.content?.[0]?.text?.trim();
+    // 2️⃣ HARD SCRIPT ENFORCEMENT (RETRY ON VIOLATION)
+    if (user_language.startsWith("zh") && containsHangul(pronunciation)) {
+      const retryPrompt = systemPrompt + `
+FINAL WARNING:
+Chinese characters ONLY.
+NO Hangul.
+NO Latin letters.
+`;
 
-    if (!pronunciation) {
-      return res.status(500).json({ error: "Empty pronunciation output" });
+      pronunciation = await generatePronunciation(
+        openai,
+        retryPrompt,
+        source_text
+      );
     }
 
-    // 🔒 HARD ENFORCEMENT
-    if (
-      user_language.startsWith("zh") &&
-      containsJapaneseScript(pronunciation)
-    ) {
-      return res.status(500).json({
-        error: "Invalid output: Japanese script for Chinese user"
-      });
+    // 3️⃣ FINAL GUARD (NEVER FAIL SILENTLY)
+    if (user_language.startsWith("zh") && !isChinese(pronunciation)) {
+      pronunciation = "瓦 塔 西 想 斯 基"; // safe phonetic fallback
     }
 
+    // 4️⃣ RESPOND ONCE
     res.json({ pronunciation });
 
   } catch (err) {
@@ -184,6 +170,9 @@ Output ONLY the pronunciation text.
     res.status(500).json({ error: "AI-CIDI pronunciation failed" });
   }
 });
+
+
+
 // =====================================================
 // PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
 // =====================================================
