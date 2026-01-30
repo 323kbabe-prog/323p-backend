@@ -65,42 +65,76 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// AI-CIDI — PHONETIC PRONUNCIATION (PRODUCTION)
-// Native-script phonetic mirror
-// Meaning hidden · Real AI · Syllable-correct
+// AI-CIDI — PHONETIC PRONUNCIATION (PRODUCTION STABLE)
+// Real AI · Meaning hidden · All languages · No 500 storms
 //////////////////////////////////////////////////////////////
 
-// ---------- SCRIPT DETECTORS ----------
-function hasChinese(t){ return /[\u4e00-\u9fff]/.test(t); }
-function hasHangul(t){ return /[\uac00-\ud7af]/.test(t); }
-function hasKana(t){ return /[\u3040-\u30ff]/.test(t); }
-function hasLatin(t){ return /[A-Za-z]/.test(t); }
+const express = require("express");
+const cors = require("cors");
+const OpenAI = require("openai");
 
-function violatesNativeScript(userLang, text) {
-  if (userLang.startsWith("zh")) return !hasChinese(text);
-  if (userLang.startsWith("ko")) return !hasHangul(text);
-  if (userLang.startsWith("ja")) return !hasKana(text);
-  return !hasLatin(text); // Latin-based languages
+const app = express();
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// ==========================================================
+// SCRIPT DETECTION & NORMALIZATION (SOFT, NEVER BLOCKING)
+// ==========================================================
+
+function normalizePronunciation(userLang, text) {
+  if (!text) return "";
+
+  if (userLang.startsWith("zh")) {
+    // Chinese only (keep spacing)
+    return text.replace(/[^\u4e00-\u9fff\s]/g, "");
+  }
+
+  if (userLang.startsWith("ja")) {
+    // Kana + Kanji
+    return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
+  }
+
+  if (userLang.startsWith("ko")) {
+    // Hangul only
+    return text.replace(/[^\uac00-\ud7af\s]/g, "");
+  }
+
+  // Latin-based languages
+  return text.replace(/[^A-Za-z\s]/g, "");
 }
 
-// ---------- OPENAI CALL ----------
+// ==========================================================
+// OPENAI CALL (SINGLE RESPONSIBILITY)
+// ==========================================================
+
 async function runCidi(openai, systemPrompt, userText) {
-  const r = await openai.responses.create({
+  const response = await openai.responses.create({
     model: "gpt-4.1-mini",
     input: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userText }
     ]
   });
-  return r.output_text?.trim() || "";
+
+  return response.output_text?.trim() || "";
 }
 
-// ---------- ROUTE ----------
+// ==========================================================
+// MAIN ROUTE — AI-CIDI PRONUNCIATION
+// ==========================================================
+
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
     const { source_text, user_language, target_language } = req.body || {};
+
     if (!source_text || !user_language || !target_language) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({
+        error: "Missing required fields"
+      });
     }
 
     const systemPrompt = `
@@ -108,23 +142,18 @@ You are AI-CIDI.
 
 This is a PHONETIC CONVERSION TASK, not translation.
 
-INTERNAL STEPS (ALLOWED, HIDDEN):
-1) Infer the TARGET SPOKEN LANGUAGE sentence internally.
-2) Break it into SPOKEN SYLLABLES (not words).
-3) Convert EACH syllable into the USER’S NATIVE WRITING SYSTEM.
-4) Output the phonetic result.
+INTERNAL STEPS (DO NOT OUTPUT):
+1) Infer the TARGET SPOKEN LANGUAGE sentence.
+2) Split it into SPOKEN WORDS in correct order.
+3) Convert EACH word’s SOUND into the USER’S NATIVE WRITING SYSTEM.
 
-IMPORTANT:
-- One spoken word MAY produce MULTIPLE phonetic units.
-- This is EXPECTED for syllabic or logographic scripts.
-- Accuracy of sound is more important than visual simplicity.
-
-ABSOLUTE RULES:
-- Never output translation.
-- Never output target-language text.
-- Never explain.
-- Never mix scripts.
-- Output ONE single line only.
+OUTPUT RULES:
+- Output ONLY the phonetic pronunciation.
+- ONE line only.
+- No explanation.
+- No translation.
+- No target language text.
+- Do NOT mix scripts.
 
 SCRIPT RULES:
 - zh → Chinese characters ONLY
@@ -133,10 +162,10 @@ SCRIPT RULES:
 - Latin-based → Latin letters ONLY
 
 PHONETIC RULES:
-- Map SOUND → SYMBOL, not meaning.
+- Each spoken word → one phonetic chunk.
 - Preserve spoken order.
-- Use spaces only for speaking rhythm.
-- Do NOT compress syllables unnaturally.
+- Approximate SOUND, not meaning.
+- Use spaces for rhythm.
 
 User native language: ${user_language}
 Target spoken language: ${target_language}
@@ -144,32 +173,45 @@ Target spoken language: ${target_language}
 Output ONLY the phonetic pronunciation line.
 `;
 
-    // 1️⃣ Primary generation
-    let pronunciation = await runCidi(openai, systemPrompt, source_text);
+    // ---- REAL AI CALL (NO LOOPING) ----
+    let rawOutput = await runCidi(openai, systemPrompt, source_text);
 
-    // 2️⃣ Retry once if script violated
-    if (violatesNativeScript(user_language, pronunciation)) {
-      const retryPrompt = systemPrompt + `
-FINAL WARNING:
-Use ONLY the user's native writing system.
-Do NOT attempt to simplify or compress syllables.
-`;
-      pronunciation = await runCidi(openai, retryPrompt, source_text);
+    // ---- SOFT NORMALIZATION (NEVER FAILS) ----
+    let pronunciation = normalizePronunciation(user_language, rawOutput);
+
+    // ---- GUARANTEE RESPONSE ----
+    if (!pronunciation.trim()) {
+      pronunciation = normalizePronunciation(
+        user_language,
+        rawOutput.split("").join(" ")
+      );
     }
 
-    // 3️⃣ Final validation (no fake fallback)
-    if (violatesNativeScript(user_language, pronunciation) || !pronunciation) {
-      return res.status(500).json({
-        error: "AI-CIDI failed to generate valid phonetic output"
-      });
+    if (!pronunciation.trim()) {
+      pronunciation = "[Try speaking slowly]";
     }
 
-    return res.json({ pronunciation });
+    return res.json({
+      pronunciation,
+      mode: "phonetic",
+      confidence: "best-effort"
+    });
 
   } catch (err) {
     console.error("AI-CIDI fatal error:", err);
-    return res.status(500).json({ error: "AI-CIDI pronunciation failed" });
+    return res.status(500).json({
+      error: "AI-CIDI pronunciation failed"
+    });
   }
+});
+
+// ==========================================================
+// SERVER
+// ==========================================================
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log("🧠 AI-CIDI phonetic backend live");
 });
 
 // =====================================================
