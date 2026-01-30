@@ -121,11 +121,16 @@ app.post("/api/cidi/pronounce", async (req, res) => {
 Translate the input sentence into the TARGET SPOKEN LANGUAGE.
 
 Then write how that translated sentence is pronounced,
-using ONLY the USER'S NATIVE WRITING SYSTEM.
+using ONLY the USER’S NATIVE WRITING SYSTEM.
+
+IMPORTANT:
+- If the user’s native language does not use Latin letters (e.g. Chinese),
+  you MUST approximate the foreign pronunciation using native phonetic characters
+  commonly used for loanwords and names.
 
 Rules:
-- Do NOT output the translation itself.
-- Do NOT explain anything.
+- Do NOT output the translation text itself.
+- Do NOT explain.
 - Output ONE single line.
 - Prefer the shortest, most natural spoken form.
 - Omit pronouns and particles unless required for meaning.
