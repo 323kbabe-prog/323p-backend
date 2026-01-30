@@ -124,19 +124,6 @@ using ONLY real, existing words from the user's native language
 that approximate the sound.
 Do not use transliteration, spelling, or letter names.
 
-IMPORTANT:
-- If the user’s native language does not use Latin letters (e.g. Chinese),
-  you MUST approximate the foreign pronunciation using native phonetic characters
-  commonly used for loanwords and names.
-
-Rules:
-- Do NOT output the translation text itself.
-- Do NOT explain.
-- Output ONE single line.
-- Prefer the shortest, most natural spoken form.
-- Omit pronouns and particles unless required for meaning.
-- Do NOT imitate the source language accent.
-
 User native language: ${user_language}
 Target spoken language: ${target_language}
 
