@@ -57,8 +57,6 @@ ${card}
 
 // -------------------- BASIC SETUP --------------------
 app.get("/", (_, res) => res.status(200).send("OK"));
-// Render health check hard guard
-app.get("/health", (_, res) => res.status(200).send("OK"));
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
@@ -66,104 +64,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-//////////////////////////////////////////////////////////////
-// AI-CIDI — PHONETIC PRONUNCIATION (INLINE SERVER VERSION)
-// Purpose:
-// - Native-script pronunciation only
-// - No translation
-// - No explanation
-// - No audio
-//////////////////////////////////////////////////////////////
-
-app.post("/api/cidi/pronounce", async (req, res) => {
-  try {
-    const {
-      source_text,
-      user_language,     // e.g. zh-TW, zh-CN, ko, th, en
-      target_language    // e.g. en, ja, ko, fr
-    } = req.body || {};
-
-    if (!source_text || !user_language || !target_language) {
-      return res.status(400).json({
-        error: "Missing required fields"
-      });
-    }
-
-    const systemPrompt = `
-You are AI-CIDI, a phonetic interface.
-
-GOAL:
-Help the user SPEAK a foreign language.
-
-STRICT RULES (NO EXCEPTIONS):
-- DO NOT translate meaning.
-- DO NOT show the real sentence.
-- DO NOT explain anything.
-- DO NOT provide definitions.
-- DO NOT use IPA.
-- DO NOT include notes or commentary.
-- DO NOT output multiple options.
-
-OUTPUT REQUIREMENTS:
-- Output ONLY pronunciation guidance text.
-- Write the pronunciation using the USER’S NATIVE WRITING SYSTEM.
-- Approximate the TARGET LANGUAGE sounds so the user can read aloud naturally.
-- Space syllables naturally for speaking.
-- Use English letters ONLY if the user’s language is English.
-
-INPUT CONTEXT:
-User native language: ${user_language}
-Target spoken language: ${target_language}
-
-Output ONLY the pronunciation text.
-`;
-
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: source_text }
-      ]
-    });
-
-    // ✅ SAFE EXTRACTION (FIX)
-    let pronunciation = "";
-
-    if (response.output_text) {
-      pronunciation = response.output_text.trim();
-    } else if (
-      response.output &&
-      response.output[0] &&
-      response.output[0].content &&
-      response.output[0].content[0] &&
-      response.output[0].content[0].text
-    ) {
-      pronunciation = response.output[0].content[0].text.trim();
-    }
-
-    if (!pronunciation) {
-      return res.status(500).json({
-        error: "Empty pronunciation output"
-      });
-    }
-
-    res.json({ pronunciation });
-
-  } catch (err) {
-    console.error("AI-CIDI phonetic error:", err);
-    res.status(500).json({
-      error: "AI-CIDI pronunciation generation failed"
-    });
-  }
-});
-
-// -------------------- STEP LOGGER --------------------
-function stepLog(steps, text) {
-  steps.push({
-    time: new Date().toISOString(),
-    text
-  });
-}
 // =====================================================
 // PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
 // =====================================================
