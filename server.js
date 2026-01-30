@@ -106,7 +106,12 @@ OUTPUT:
 - Use the USER'S NATIVE WRITING SYSTEM.
 - Approximate TARGET LANGUAGE sounds.
 - Space syllables naturally.
-- Use English letters ONLY if user's language is English.
+CRITICAL SCRIPT RULE (NO EXCEPTIONS):
+- Output MUST be written in the USER’S NATIVE WRITING SYSTEM.
+- NEVER output Latin / English letters unless the user's native language itself uses Latin letters.
+- If the user's language is Chinese, output Chinese characters only.
+- If the user's language is Japanese, output kana/kanji only.
+- If the user's language is Korean, output Hangul only.
 
 User native language: ${user_language}
 Target spoken language: ${target_language}
