@@ -65,181 +65,106 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// AI-CIDI — PHONETIC PRONUNCIATION (PRODUCTION)
+// AI-CIDI — PHONETIC PRONUNCIATION (PRODUCTION, STABLE)
 // Native-script phonetic mirror
-// No translation · No correction · Real AI
+// Meaning hidden · Real AI · All languages
 //////////////////////////////////////////////////////////////
 
-// ───────────── SCRIPT DETECTORS (UNIVERSAL) ─────────────
+// ---------- SCRIPT DETECTORS ----------
+function hasChinese(t){ return /[\u4e00-\u9fff]/.test(t); }
+function hasHangul(t){ return /[\uac00-\ud7af]/.test(t); }
+function hasKana(t){ return /[\u3040-\u30ff]/.test(t); }
+function hasLatin(t){ return /[A-Za-z]/.test(t); }
 
-function hasChinese(text) {
-  return /[\u4e00-\u9fff]/.test(text);
+function violatesNativeScript(userLang, text) {
+  if (userLang.startsWith("zh")) return !hasChinese(text);
+  if (userLang.startsWith("ko")) return !hasHangul(text);
+  if (userLang.startsWith("ja")) return !hasKana(text);
+  return !hasLatin(text); // Latin-based
 }
 
-function hasHangul(text) {
-  return /[\uac00-\ud7af]/.test(text);
-}
-
-function hasKana(text) {
-  return /[\u3040-\u30ff]/.test(text); // hiragana + katakana
-}
-
-function hasLatin(text) {
-  return /[A-Za-z]/.test(text);
-}
-
-// ───────────── SCRIPT VALIDATION (CORE LAW) ─────────────
-
-function violatesNativeScript(user_language, text) {
-  if (user_language.startsWith("zh")) {
-    return !hasChinese(text);
-  }
-
-  if (user_language.startsWith("ko")) {
-    return !hasHangul(text);
-  }
-
-  if (user_language.startsWith("ja")) {
-    return !hasKana(text);
-  }
-
-  // Latin-based languages: en, fr, es, de, etc.
-  return !hasLatin(text);
-}
-
-// ───────────── OPENAI CALL (SINGLE RESPONSIBILITY) ─────────────
-
-async function generatePronunciation(openai, systemPrompt, source_text) {
-  const response = await openai.responses.create({
+// ---------- OPENAI CALL ----------
+async function runCidi(openai, systemPrompt, userText) {
+  const r = await openai.responses.create({
     model: "gpt-4.1-mini",
     input: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: source_text }
+      { role: "user", content: userText }
     ]
   });
-
-  return (
-    response.output_text?.trim() ||
-    response.output?.[0]?.content?.[0]?.text?.trim() ||
-    ""
-  );
+  return r.output_text?.trim() || "";
 }
 
-// ───────────── ROUTE (ONLY PLACE LOGIC LIVES) ─────────────
-
+// ---------- ROUTE ----------
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
     const { source_text, user_language, target_language } = req.body || {};
-
     if (!source_text || !user_language || !target_language) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     const systemPrompt = `
-You are AI-CIDI, a phonetic mirror system.
+You are AI-CIDI.
 
-TASK
-The user provides:
-1) An input sentence written in their NATIVE LANGUAGE.
-2) A TARGET SPOKEN LANGUAGE they want to speak.
+INTERNAL STEP (ALLOWED, HIDDEN):
+1) Translate the user's input into the TARGET SPOKEN LANGUAGE
+   ONLY so you know the exact sentence being spoken.
+2) DO NOT output that translation.
 
-Your job is to output a PRONUNCIATION GUIDE for the TARGET SPOKEN LANGUAGE,
-but written ONLY using the USER’S NATIVE WRITING SYSTEM.
+OUTPUT TASK:
+Convert the TARGET SPOKEN LANGUAGE sentence
+into a PHONETIC PRONUNCIATION
+written ONLY using the USER’S NATIVE WRITING SYSTEM.
 
-You are NOT translating meaning.
-You are NOT teaching grammar.
-You are NOT correcting the sentence.
+ABSOLUTE RULES:
+- Never output the translation.
+- Never output the target language text.
+- Never explain anything.
+- Never mix scripts.
+- One single line only.
 
-You are converting SOUNDS → SYMBOLS
-using the user’s native script as a phonetic alphabet.
-
-────────────────────────
-ABSOLUTE RULES (NO EXCEPTIONS)
-────────────────────────
-- DO NOT translate meaning.
-- DO NOT output the real target-language sentence.
-- DO NOT explain anything.
-- DO NOT include notes, labels, or commentary.
-- DO NOT use IPA.
-- DO NOT output multiple options.
-- DO NOT mix writing systems.
-- Output ONE single line only.
-
-────────────────────────
-SCRIPT LOCK (CRITICAL)
-────────────────────────
-Your output MUST be written STRICTLY in the USER’S NATIVE WRITING SYSTEM.
-
-NEVER output the target language’s native script.
-NEVER output Latin letters unless the user’s native language is Latin-based.
-
-SCRIPT RULES BY USER LANGUAGE:
+SCRIPT RULES:
 - zh → Chinese characters ONLY
 - ko → Hangul ONLY
 - ja → Kana / Kanji ONLY
 - Latin-based → Latin letters ONLY
 
-────────────────────────
-PHONETIC MAPPING RULES
-────────────────────────
-- Map EACH spoken word of the TARGET LANGUAGE
-  to a SEPARATE phonetic chunk.
-- Preserve word order of the TARGET SPOKEN LANGUAGE.
-- Approximate sounds as closely as possible
-  using symbols familiar to a native reader.
-- Space phonetic chunks naturally for speaking aloud.
+PHONETIC RULES:
+- Map EACH spoken word separately.
+- Preserve spoken word order.
+- Approximate sound, not meaning.
+- Use spaces for rhythm.
 
-DO NOT:
-- Merge words.
-- Summarize meaning.
-- Replace phrases with culturally equivalent expressions.
-- Use borrowed foreign words.
-- Output a grammatically correct sentence in the target language.
+User native language: ${user_language}
+Target spoken language: ${target_language}
 
-You may internally infer the target spoken sentence
-ONLY for the purpose of phonetic mapping.
-
-────────────────────────
-FINAL INSTRUCTION
-────────────────────────
 Output ONLY the phonetic pronunciation line.
-Nothing else.
 `;
 
-    // 1️⃣ FIRST GENERATION (REAL AI)
-    let pronunciation = await generatePronunciation(
-      openai,
-      systemPrompt,
-      source_text
-    );
+    // First attempt
+    let pronunciation = await runCidi(openai, systemPrompt, source_text);
 
-    // 2️⃣ HARD RETRY IF SCRIPT VIOLATED
+    // Retry if script violated
     if (violatesNativeScript(user_language, pronunciation)) {
       const retryPrompt = systemPrompt + `
 FINAL WARNING:
-You MUST use ONLY the user's native writing system.
-Any other script is forbidden.
+You violated script rules.
+Use ONLY the user's native writing system.
 `;
-
-      pronunciation = await generatePronunciation(
-        openai,
-        retryPrompt,
-        source_text
-      );
+      pronunciation = await runCidi(openai, retryPrompt, source_text);
     }
 
-    // 3️⃣ FINAL ENFORCEMENT (NO SILENT FAILURE)
-    if (violatesNativeScript(user_language, pronunciation)) {
+    // Final guard
+    if (violatesNativeScript(user_language, pronunciation) || !pronunciation) {
       return res.status(500).json({
-        error: "AI-CIDI script violation: output not in native writing system"
+        error: "AI-CIDI failed to generate valid phonetic output"
       });
     }
 
-    // 4️⃣ SUCCESS
     res.json({ pronunciation });
 
   } catch (err) {
-    console.error("AI-CIDI error:", err);
+    console.error("AI-CIDI fatal error:", err);
     res.status(500).json({ error: "AI-CIDI pronunciation failed" });
   }
 });
