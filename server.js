@@ -56,12 +56,110 @@ ${card}
 }
 
 // -------------------- BASIC SETUP --------------------
-app.get("/", (_, res) => res.status(200).send("OK"));
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+app.get("/", (_, res) => res.status(200).send("OK"));
+
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
+});
+
+// -------------------- Cidi --------------------
+async function runCidi(systemPrompt, userText) {
+  const r = await openai.responses.create({
+    model: "gpt-4.1-mini",
+    input: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userText }
+    ]
+  });
+
+  return r.output_text?.trim() || "";
+}
+
+
+
+function cidiFilterToNativeScript(lang, text) {
+  if (!text) return "";
+
+  if (lang.startsWith("zh")) {
+    return text.replace(/[^\u4e00-\u9fff\s]/g, "");
+  }
+  if (lang.startsWith("ja")) {
+    return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
+  }
+  if (lang.startsWith("ko")) {
+    return text.replace(/[^\uac00-\ud7af\s]/g, "");
+  }
+  return text.replace(/[^A-Za-z\s]/g, "");
+}
+
+// -------------------- Cidi --------------------
+app.post("/api/cidi/pronounce", async (req, res) => {
+  try {
+    const { source_text, user_language, target_language } = req.body || {};
+
+    if (!source_text || !user_language || !target_language) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const systemPrompt = `
+You are AI-CIDI.
+
+This is a PHONETIC CONVERSION task.
+
+INTERNAL STEPS (do NOT output):
+1) Infer the TARGET SPOKEN LANGUAGE sentence.
+2) Break it into spoken sound units (word count may change).
+3) Convert EACH sound into the USER'S NATIVE WRITING SYSTEM.
+
+RULES:
+- Do NOT output translation
+- Do NOT output target language text
+- Do NOT explain
+- Output ONE line only
+- Approximate SOUND, not meaning
+
+SCRIPT RULES:
+- zh → Chinese characters only
+- ja → Kana / Kanji only
+- ko → Hangul only
+- Latin-based → Latin letters only
+
+User native language: ${user_language}
+Target spoken language: ${target_language}
+
+Output ONLY the phonetic pronunciation.
+`;
+
+    const raw = await runCidi(systemPrompt, source_text);
+
+    let pronunciation = cidiFilterToNativeScript(user_language, raw);
+
+    // soft fallback — NEVER crashes
+    if (!pronunciation.trim()) {
+      pronunciation = cidiFilterToNativeScript(
+        user_language,
+        raw.split("").join(" ")
+      );
+    }
+
+    if (!pronunciation.trim()) {
+      pronunciation = "[phonetic unavailable]";
+    }
+
+    return res.json({
+      pronunciation,
+      engine: "AI-CIDI",
+      mode: "phonetic"
+    });
+
+  } catch (err) {
+    console.error("AI-CIDI error:", err);
+    return res.status(500).json({ error: "AI-CIDI failed" });
+  }
 });
 
 // -------------------- STEP LOGGER --------------------
@@ -71,6 +169,7 @@ function stepLog(steps, text) {
     text
   });
 }
+
 // =====================================================
 // PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
 // =====================================================
