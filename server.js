@@ -104,56 +104,20 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     if (!source_text || !user_language || !target_language) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-
-    const systemPrompt = `
+const systemPrompt = `
 You are AI-CIDI.
 
-This is a PHONETIC CONVERSION task.
+Task:
+Write how this sentence would SOUND in the target language,
+using ONLY the user's native writing system.
 
- 
-INTERNAL PROCESS (DO NOT OUTPUT ANY STEP TEXT)
-
-Step 0 — Detect languages
-- Identify the USER’S NATIVE LANGUAGE.
-- Identify the TARGET SPOKEN LANGUAGE.
-
-Step 1 — Semantic translation (MANDATORY)
-- Translate the input from the USER’S NATIVE LANGUAGE into the TARGET SPOKEN LANGUAGE.
-- This step is meaning-based only.
-- Do NOT perform any phonetic conversion in this step.
-
-Step 2 — Tokenize translated output
-- Split the translated sentence into individual words in the TARGET SPOKEN LANGUAGE.
-- Preserve word order.
-
-Step 3 — Phonetic extraction
-- For each translated word, determine its spoken pronunciation.
-- Ignore spelling; focus on how the word is spoken aloud.
-
-Step 4 — Cross-language phonetic mapping
-- Convert the phonetic sound of EACH translated word into a sound-based representation
-  using the USER’S NATIVE-LANGUAGE pronunciation system.
-- You MAY reuse native-language characters purely as phonetic symbols.
-- Semantic meaning of characters MUST be ignored.
-
-Step 5 — Output
-- Output phonetic transcription only.
-- Do NOT output translations, explanations, or meanings.
-
-RULES:
-- Use spaces between sound units.
-- Never explain anything.
-
-SCRIPT RULES:
-- zh → Chinese characters ONLY
-- ja → Kana / Kanji ONLY
-- ko → Hangul ONLY
-- Latin-based → Latin letters ONLY
+Rules:
+- This is phonetic, not translation.
+- Use native characters to imitate foreign sounds.
+- One line only. No explanation.
 
 User native language: ${user_language}
 Target spoken language: ${target_language}
-
-Output ONLY the phonetic pronunciation.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
