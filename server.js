@@ -65,20 +65,49 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// AI-CIDI — PHONETIC PRONUNCIATION (SERVER OP)
+// AI-CIDI — PHONETIC PRONUNCIATION (PRODUCTION)
 // Native-script phonetic mirror
 // No translation · No correction · Real AI
 //////////////////////////////////////////////////////////////
 
-// ───────────── HELPERS (DEFINE ONCE) ─────────────
+// ───────────── SCRIPT DETECTORS (UNIVERSAL) ─────────────
 
-function isChinese(text) {
+function hasChinese(text) {
   return /[\u4e00-\u9fff]/.test(text);
 }
 
-function containsHangul(text) {
+function hasHangul(text) {
   return /[\uac00-\ud7af]/.test(text);
 }
+
+function hasKana(text) {
+  return /[\u3040-\u30ff]/.test(text); // hiragana + katakana
+}
+
+function hasLatin(text) {
+  return /[A-Za-z]/.test(text);
+}
+
+// ───────────── SCRIPT VALIDATION (CORE LAW) ─────────────
+
+function violatesNativeScript(user_language, text) {
+  if (user_language.startsWith("zh")) {
+    return !hasChinese(text);
+  }
+
+  if (user_language.startsWith("ko")) {
+    return !hasHangul(text);
+  }
+
+  if (user_language.startsWith("ja")) {
+    return !hasKana(text);
+  }
+
+  // Latin-based languages: en, fr, es, de, etc.
+  return !hasLatin(text);
+}
+
+// ───────────── OPENAI CALL (SINGLE RESPONSIBILITY) ─────────────
 
 async function generatePronunciation(openai, systemPrompt, source_text) {
   const response = await openai.responses.create({
@@ -97,14 +126,6 @@ async function generatePronunciation(openai, systemPrompt, source_text) {
 }
 
 // ───────────── ROUTE (ONLY PLACE LOGIC LIVES) ─────────────
-
-function containsKana(text) {
-  return /[\u3040-\u30ff]/.test(text); // hiragana + katakana
-}
-
-function containsLatin(text) {
-  return /[A-Za-z]/.test(text);
-}
 
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
@@ -153,14 +174,10 @@ NEVER output the target language’s native script.
 NEVER output Latin letters unless the user’s native language is Latin-based.
 
 SCRIPT RULES BY USER LANGUAGE:
-- If native language is Chinese (zh):
-  → Use Chinese characters ONLY as phonetic symbols.
-- If native language is Korean (ko):
-  → Use Hangul ONLY.
-- If native language is Japanese (ja):
-  → Use Kana / Kanji ONLY.
-- If native language is English or other Latin-based language:
-  → Use Latin letters ONLY.
+- zh → Chinese characters ONLY
+- ko → Hangul ONLY
+- ja → Kana / Kanji ONLY
+- Latin-based → Latin letters ONLY
 
 ────────────────────────
 PHONETIC MAPPING RULES
@@ -176,18 +193,11 @@ DO NOT:
 - Merge words.
 - Summarize meaning.
 - Replace phrases with culturally equivalent expressions.
-- Use known foreign words already borrowed into the user’s language.
+- Use borrowed foreign words.
 - Output a grammatically correct sentence in the target language.
 
 You may internally infer the target spoken sentence
 ONLY for the purpose of phonetic mapping.
-
-You MUST NOT output:
-- the translated sentence
-- the target language text
-- any explanation
-
-The translated sentence exists ONLY as an internal step.
 
 ────────────────────────
 FINAL INSTRUCTION
@@ -196,20 +206,19 @@ Output ONLY the phonetic pronunciation line.
 Nothing else.
 `;
 
-    // 1️⃣ FIRST ATTEMPT (REAL AI)
+    // 1️⃣ FIRST GENERATION (REAL AI)
     let pronunciation = await generatePronunciation(
       openai,
       systemPrompt,
       source_text
     );
 
-    // 2️⃣ HARD SCRIPT ENFORCEMENT (RETRY ON VIOLATION)
-    if (user_language.startsWith("zh") && containsHangul(pronunciation)) {
+    // 2️⃣ HARD RETRY IF SCRIPT VIOLATED
+    if (violatesNativeScript(user_language, pronunciation)) {
       const retryPrompt = systemPrompt + `
 FINAL WARNING:
-Chinese characters ONLY.
-NO Hangul.
-NO Latin letters.
+You MUST use ONLY the user's native writing system.
+Any other script is forbidden.
 `;
 
       pronunciation = await generatePronunciation(
@@ -219,8 +228,14 @@ NO Latin letters.
       );
     }
 
+    // 3️⃣ FINAL ENFORCEMENT (NO SILENT FAILURE)
+    if (violatesNativeScript(user_language, pronunciation)) {
+      return res.status(500).json({
+        error: "AI-CIDI script violation: output not in native writing system"
+      });
+    }
 
-    // 4️⃣ RESPOND ONCE
+    // 4️⃣ SUCCESS
     res.json({ pronunciation });
 
   } catch (err) {
