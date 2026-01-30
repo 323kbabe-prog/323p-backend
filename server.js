@@ -112,22 +112,14 @@ This is a PHONETIC CONVERSION task.
 
 INTERNAL STEPS (do NOT output):
 1) Translate the input into the TARGET SPOKEN LANGUAGE.
-2) Pronounce that sentence slowly, word by word.
-3) Convert EACH word's SOUND into the USER'S NATIVE WRITING SYSTEM,
-   using APPROXIMATE PHONETIC CHARACTERS commonly used to mimic foreign sounds.
 
-IMPORTANT:
-- You are NOT translating meaning.
-- You are NOT using pinyin, romaji, or IPA.
-- You are NOT outputting Latin letters for Chinese.
-- You ARE choosing Chinese characters purely for SOUND.
+2) Convert EACH Translate word's SOUND into the USER'S NATIVE language SYSTEM,
 
 EXAMPLES:
 "I want to eat" → 艾 旺 特 圖 伊 特
 "coffee" → 咖 啡 (sound-based is allowed)
 
 RULES:
-- Output ONE line only.
 - Use spaces between sound units.
 - Never explain anything.
 
