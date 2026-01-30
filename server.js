@@ -68,6 +68,7 @@ const openai = new OpenAI({
 
 //////////////////////////////////////////////////////////////
 // AI-CIDI — REAL NAME SOUND MODE (v1.0 LOCKED)
+// One server · One app · One OpenAI · One route
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -77,6 +78,8 @@ const OpenAI = require("openai");
 const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
+
+app.get("/", (_, res) => res.status(200).send("AI-CIDI OK"));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -101,7 +104,7 @@ function filterToNativeScript(lang, text) {
     return text.replace(/[^\uac00-\ud7af\s]/g, "");
   }
 
-  // English / Latin-based → letters only
+  // English / Latin-based
   return text.replace(/[^A-Za-z\s]/g, "");
 }
 
@@ -116,7 +119,6 @@ async function runCidi(systemPrompt, userText) {
       { role: "user", content: userText }
     ]
   });
-
   return r.output_text?.trim() || "";
 }
 
@@ -136,29 +138,27 @@ You are AI-CIDI — REAL NAME SOUND MODE.
 
 TASK:
 1) Translate the input sentence into the TARGET LANGUAGE internally.
-2) Represent how that translated sentence SOUNDS
+2) Represent how that translation SOUNDS
    using ONLY REAL, COMMONLY USED PERSONAL NAMES.
 
-LOCKED RULES (NO EXCEPTIONS):
+ABSOLUTE RULES:
+- Output ONE line only
+- NO phonetic spelling
+- NO IPA
+- NO fake syllables
+- NO letters-as-sounds
+- NO explanations
+- NO punctuation
 
-- Output ONE line only.
-- NO phonetic spelling.
-- NO fake syllables.
-- NO IPA.
-- NO letters-as-sounds (no "eye / eh / tee").
-- NO explanations.
-- NO punctuation.
-
-NAME RULES (CRITICAL):
+NAME RULES:
 
 IF user native language is English:
-- Output ONLY real Western personal names
+- Use ONLY real Western personal names
 - Examples: Michael, Anna, John, Emily, David
 
 IF user native language is NOT English:
-- Output ONLY OFFICIAL, STANDARD translations
-  of English personal names into that language
-- Use how those names are commonly written
+- Use ONLY OFFICIAL, STANDARD translations
+  of Western personal names into that language
 - Examples:
   Michael → 迈克尔 / マイケル / 마이클
   John → 约翰 / ジョン / 존
@@ -166,12 +166,12 @@ IF user native language is NOT English:
 STYLE:
 - Sound close enough to the translated sentence
 - Imperfect is OK
-- Must feel like humans speaking names aloud
+- Feel like humans casually saying names
 - Use as many names as needed, no more
 
 SCRIPT LOCK:
 - Output MUST use ONLY the USER’S NATIVE WRITING SYSTEM
-- Do NOT output the target language script
+- Do NOT output target-language script
 - Do NOT mix languages
 
 User native language: ${user_language}
@@ -184,14 +184,6 @@ A single line of REAL HUMAN NAMES only.
     const raw = await runCidi(systemPrompt, source_text);
 
     let output = filterToNativeScript(user_language, raw);
-
-    // Soft safety fallback (never crash)
-    if (!output.trim()) {
-      output = filterToNativeScript(
-        user_language,
-        raw.split("").join(" ")
-      );
-    }
 
     if (!output.trim()) {
       output = "[unavailable]";
@@ -207,6 +199,14 @@ A single line of REAL HUMAN NAMES only.
     console.error("AI-CIDI error:", err);
     return res.status(500).json({ error: "AI-CIDI failed" });
   }
+});
+
+// ==========================================================
+// SERVER
+// ==========================================================
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log("🧠 AI-CIDI — Real Name Sound Mode live");
 });
 
 // ==========================================================
