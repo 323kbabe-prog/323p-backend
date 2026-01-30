@@ -109,71 +109,66 @@ You are AI-CIDI.
 This is a PHONETIC CONVERSION TASK, not translation.
 
 INTERNAL MANDATORY STEPS (DO NOT SKIP):
-1) Infer the exact TARGET SPOKEN LANGUAGE sentence the user intends.
-2) Write that sentence internally as a list of SPOKEN WORDS, in order.
-3) For EACH spoken word, map its SOUND into the USER’S NATIVE WRITING SYSTEM.
-4) Output the phonetic result.
-
-YOU MUST COMPLETE ALL STEPS INTERNALLY.
-ONLY STEP 4 IS OUTPUT.
+1) Infer the TARGET SPOKEN LANGUAGE sentence internally.
+2) Split it into SPOKEN WORDS.
+3) Convert EACH word’s SOUND into the USER’S NATIVE WRITING SYSTEM.
+4) Output ONLY the phonetic result.
 
 ABSOLUTE RULES:
-- NEVER output the translated sentence.
-- NEVER output the target language text.
-- NEVER explain anything.
-- NEVER mix scripts.
-- Output ONE single line only.
+- Never output translation.
+- Never output target-language text.
+- Never explain.
+- Never mix scripts.
+- ONE line only.
 
-SCRIPT RULES (STRICT):
+SCRIPT RULES:
 - zh → Chinese characters ONLY
 - ja → Kana / Kanji ONLY
 - ko → Hangul ONLY
 - Latin-based → Latin letters ONLY
 
-PHONETIC RULES:
-- EACH spoken word becomes ONE phonetic chunk.
-- Preserve spoken word order.
-- Approximate SOUND, not meaning.
-- Use spaces between chunks.
-
-FORBIDDEN:
-- Using known foreign loanwords (e.g. ワタシ, OK, 커피).
-- Collapsing multiple words into one.
-- Replacing meaning with cultural equivalents.
-- Outputting another language’s phonetic system.
-
-FINAL CHECK (YOU MUST PASS THIS):
-If any character is outside the user’s native script,
-the output is INVALID.
+User native language: ${user_language}
+Target spoken language: ${target_language}
 
 Output ONLY the phonetic pronunciation line.
 `;
 
-    // First attempt
+    // 1️⃣ First attempt
     let pronunciation = await runCidi(openai, systemPrompt, source_text);
 
-    // Retry if script violated
+    // 2️⃣ Retry if script violated
     if (violatesNativeScript(user_language, pronunciation)) {
       const retryPrompt = systemPrompt + `
 FINAL WARNING:
-You violated script rules.
 Use ONLY the user's native writing system.
 `;
       pronunciation = await runCidi(openai, retryPrompt, source_text);
     }
 
-    // Final guard
+    // 3️⃣ Recovery pass (still real AI)
+    if (violatesNativeScript(user_language, pronunciation) || !pronunciation) {
+      const recoveryPrompt = systemPrompt + `
+RECOVERY MODE:
+Decompose sounds word by word.
+Use SIMPLE native phonetic symbols.
+No foreign scripts.
+One line only.
+`;
+      pronunciation = await runCidi(openai, recoveryPrompt, source_text);
+    }
+
+    // 4️⃣ Final enforcement
     if (violatesNativeScript(user_language, pronunciation) || !pronunciation) {
       return res.status(500).json({
         error: "AI-CIDI failed to generate valid phonetic output"
       });
     }
 
-    res.json({ pronunciation });
+    return res.json({ pronunciation });
 
   } catch (err) {
     console.error("AI-CIDI fatal error:", err);
-    res.status(500).json({ error: "AI-CIDI pronunciation failed" });
+    return res.status(500).json({ error: "AI-CIDI pronunciation failed" });
   }
 });
 
