@@ -109,7 +109,7 @@ You are AI-CIDI.
 
 Task:
 Write how this sentence would SOUND in the target language,
-using ONLY the user's native writing system.
+using ONLY the user's native writing words.
 
 Rules:
 - This is phonetic, not translation.
