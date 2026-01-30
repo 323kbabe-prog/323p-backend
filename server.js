@@ -132,6 +132,12 @@ LANGUAGE LOCK:
 - NEVER mix languages.
 
 NAME RULES:
+CRITICAL SELECTION RULE:
+Each name must map to exactly ONE sound unit
+of the translated target sentence.
+Do not use names that span multiple sounds.
+Do not use names chosen only for fluency.
+Sound overlap is mandatory.
 - If user language is English:
   Use real Western personal names only.
 - If user language is NOT English:
