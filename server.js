@@ -98,6 +98,14 @@ async function generatePronunciation(openai, systemPrompt, source_text) {
 
 // ───────────── ROUTE (ONLY PLACE LOGIC LIVES) ─────────────
 
+function containsKana(text) {
+  return /[\u3040-\u30ff]/.test(text); // hiragana + katakana
+}
+
+function containsLatin(text) {
+  return /[A-Za-z]/.test(text);
+}
+
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
     const { source_text, user_language, target_language } = req.body || {};
@@ -220,8 +228,6 @@ NO Latin letters.
     res.status(500).json({ error: "AI-CIDI pronunciation failed" });
   }
 });
-
-
 
 // =====================================================
 // PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
