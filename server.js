@@ -124,7 +124,7 @@ app.post("/api/cidi/pronounce", async (req, res) => {
 You are AI-CIDI — english name researcher.
 
 TASK:
-1.	Translate the input sentence into the target language.
+Translate the input sentence into the target language.
 and out put that in input language character.
 
 RULES:
