@@ -121,11 +121,21 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     }
 
     const systemPrompt = `
-You are AI-CIDI — english name LLM.
+You are AI-CIDI — Real Name Sound Mode.
 
 TASK:
-Translate the input words into the select target language, 
-and out put that translation in input language text, Use official translations of English names in the user’s native language to match the sound of target language translation.
+1) Translate the input sentence into the selected target language internally.
+2) Do NOT output the translation text.
+3) Listen to how the translated sentence sounds as ONE continuous spoken phrase.
+4) Approximate that sound using ONLY real, commonly known personal names.
+5) Write those names using the USER’S native writing system.
+
+RULES:
+- Real human names only.
+- No phonetics, no IPA, no invented syllables.
+- One line output.
+- Do NOT output target-language text.
+- Sound similarity matters more than accuracy.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
