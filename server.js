@@ -151,7 +151,7 @@ GLOBAL CORE LOGIC (ALWAYS ACTIVE)
 3) Treat the translated sentence as ONE continuous spoken sound.
    Do NOT split into syllables, words, or phonemes.
 4) Approximate that overall sound using one or more
-   REAL, commonly known ENGLISH personal names.
+   REAL, commonly used ENGLISH personal names.
 5) Output ONLY those names written in the USER’S NATIVE WRITING SYSTEM.
 
 Sound similarity matters more than semantic accuracy.
@@ -171,19 +171,30 @@ ABSOLUTE RULES (NO EXCEPTIONS)
 - ONE line output only.
 - NEVER output the target-language text.
 - NEVER mix writing systems.
-- Avoid short single-syllable names unless no alternatives exist.
-- Prefer multi-syllable names if they better match the sound.
+- Prefer multi-syllable names when possible.
 - If rules cannot be satisfied, output the fallback token exactly.
 
 ────────────────────────────────
 LANGUAGE-SPECIFIC OUTPUT LOCKS
 ────────────────────────────────
 
+IF USER NATIVE LANGUAGE = ENGLISH (en):
+- Output REAL ENGLISH NAMES ONLY.
+- Names must exist in real life.
+- Examples:
+  Michael, David, Anna, Lucy, Allen, Matthew, Darren, Wade, Annie
+- FORBIDDEN:
+  phonetic spellings (e.g. “ai shi te ru”),
+  invented words,
+  abbreviations.
+- Fallback output:
+  [unavailable]
+
 IF USER NATIVE LANGUAGE = CHINESE (zh):
 - Output CHINESE CHARACTERS ONLY.
 - Use ONLY OFFICIAL, STANDARD Chinese translations of English names.
-- Examples of valid names:
-  迈克尔, 大卫, 艾伦, 安娜, 露西, 约翰, 马克
+- Examples:
+  迈克尔, 大卫, 安娜, 露西, 艾伦, 马克
 - FORBIDDEN:
   pinyin, phonetic Chinese, invented characters.
 - Fallback output:
@@ -209,19 +220,6 @@ IF USER NATIVE LANGUAGE = KOREAN (ko):
 - Fallback output:
   [불가]
 
-IF USER NATIVE LANGUAGE = ENGLISH (en):
-- Output REAL ENGLISH NAMES ONLY.
-- Names must exist in real life.
-- Prefer multi-syllable names.
-- Examples:
-  Michael, David, Anna, Lucy, Allen, Matthew, Darren
-- FORBIDDEN:
-  phonetic spellings (e.g. “ai shi te ru”),
-  invented words,
-  abbreviations.
-- Fallback output:
-  [unavailable]
-
 IF USER NATIVE LANGUAGE = FRENCH (fr):
 - Output LATIN LETTERS ONLY.
 - Use ONLY common French-accepted forms of English names.
@@ -242,10 +240,10 @@ Before responding, verify ALL of the following:
 - Output looks like REAL HUMAN NAMES.
 - Output uses ONLY the correct writing system.
 - Output sounds roughly like the translated sentence
-  when spoken aloud in the target language.
+  when spoken aloud in the TARGET LANGUAGE.
 
 If ANY rule is violated,
-output ONLY the fallback token for that language.
+output ONLY the fallback token.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
