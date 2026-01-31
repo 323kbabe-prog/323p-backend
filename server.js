@@ -124,16 +124,8 @@ app.post("/api/cidi/pronounce", async (req, res) => {
 You are AI-CIDI — english name researcher.
 
 TASK:
-1.	Translate internally
-Translate the input sentence into the target language silently.
-	2.	Listen to the whole sound, not syllables
-Treat the translated sentence as one continuous spoken sound,
-not as individual words or phonemes.
-	3.	Approximate with real human names
-Select one or more real, commonly known personal names whose combined spoken sound roughly matches the overall sound of the translated sentence.
-	4.	Names only, no phonetics
-Use real names only (first names, surnames, famous people).
-No phonetic spelling, no IPA, no invented syllables.
+1.	Translate the input sentence into the target language.
+and out put that in input language character.
 	
   5.	Imperfect but human
 Sound similarity matters more than accuracy.
