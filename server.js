@@ -66,99 +66,207 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-You are AI-CIDI — Real Name Sound Mode (English → Chinese).
+//////////////////////////////////////////////////////////////
+// AI-CIDI — REAL NAME SOUND MODE (EN → ZH, FINAL LOCK)
+//////////////////////////////////////////////////////////////
 
-This system converts ENGLISH sentences into
-REAL ENGLISH PERSONAL NAMES that approximate
-the SPOKEN SOUND of the CHINESE translation.
+const CIDI_SUPPORTED_LANGS = ["en", "zh"];
+
+function normalizeLang(lang) {
+  if (!lang) return "en";
+  if (lang.startsWith("zh")) return "zh";
+  return "en";
+}
+
+function filterNamesByUserLang(userLang, text) {
+  if (!text) return "";
+
+  // English → English names only
+  if (userLang === "en") {
+    return text.replace(/[^A-Za-z\s]/g, "").trim();
+  }
+
+  // Chinese → Chinese characters only
+  if (userLang === "zh") {
+    return text.replace(/[^\u4e00-\u9fff\s]/g, "").trim();
+  }
+
+  return "";
+}
+
+function cidiFallback(userLang) {
+  return {
+    translation: userLang === "zh" ? "[不可用]" : "[unavailable]",
+    names: userLang === "zh" ? "[不可用]" : "[unavailable]",
+    engine: "AI-CIDI",
+    mode: "real-name-sound"
+  };
+}
+
+async function runCidi(systemPrompt, userText) {
+  const r = await openai.responses.create({
+    model: "gpt-4.1-mini",
+    input: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userText }
+    ]
+  });
+
+  return r.output_text?.trim() || "";
+}
+
+app.post("/api/cidi/pronounce", async (req, res) => {
+  try {
+    let { source_text, user_language, target_language } = req.body || {};
+
+    user_language = normalizeLang(user_language);
+    target_language = normalizeLang(target_language);
+
+    if (!source_text) {
+      return res.status(400).json({ error: "Missing source_text" });
+    }
+
+    if (
+      !CIDI_SUPPORTED_LANGS.includes(user_language) ||
+      !CIDI_SUPPORTED_LANGS.includes(target_language)
+    ) {
+      return res.status(400).json({ error: "Unsupported language pair" });
+    }
+
+    const systemPrompt = `
+You are AI-CIDI — Real Name Sound Mode.
+
+This system converts meaning across languages
+by approximating TARGET-LANGUAGE sound
+using REAL PERSONAL NAMES only.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MANDATORY TRANSLATION-FIRST LOGIC
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-This order is ABSOLUTE and cannot be skipped.
+1) You MUST internally translate the INPUT sentence
+   into the TARGET LANGUAGE.
 
-1) You MUST internally translate the INPUT sentence into CHINESE.
-2) You MUST internally determine the CHINESE spoken sound.
-3) You MUST COMPLETELY IGNORE the ENGLISH pronunciation.
-4) You MUST choose names based ONLY on how closely
-   they match the CHINESE sound.
+2) You MUST internally determine the
+   TARGET-LANGUAGE spoken sound.
 
-If the CHINESE sound cannot be confidently identified,
-you MUST output the fallback token.
+3) You MUST IGNORE the INPUT-language sound completely.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CRITICAL REJECTION RULE (HARD LOCK)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-You are NOT allowed to choose names
-based on the ENGLISH sound of the input.
-
-If the chosen names resemble the ENGLISH sentence
-more than the CHINESE pronunciation,
-the output is INVALID and MUST be rejected.
+4) You MUST choose names ONLY based on how closely
+   they match the TARGET-LANGUAGE sound.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NAME SELECTION RULES (NO EXCEPTIONS)
+OUTPUT FORMAT (STRICT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- REAL ENGLISH human names ONLY
-  (first names, surnames, or famous people)
+You MUST output EXACTLY this JSON and nothing else:
 
-- Names MUST be:
-  • commonly used
-  • naturally spoken
-  • recognizably real
+{
+  "translation": "<TARGET LANGUAGE TRANSLATION>",
+  "names": "<REAL NAME OUTPUT>"
+}
 
-- NO phonetic spelling
-- NO IPA
-- NO invented syllables
-- NO abbreviations
-- NO explanations
-- NO punctuation
-- ONE line output ONLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NAME RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+- REAL human names only
+- Common, natural, spoken names
 - Prefer multi-syllable names
-  if they better match the CHINESE sound.
+- NO phonetics
+- NO IPA
+- NO invented words
+- ONE line only
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT FORMAT (ENGLISH ONLY)
+LANGUAGE LOCKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- Output REAL ENGLISH NAMES ONLY
-- Latin letters and spaces only
-- Each word must look like a real name
-- Avoid single-letter or single-syllable names
+USER LANGUAGE = ENGLISH:
+- names must be REAL ENGLISH NAMES
+- Examples: Wade Annie, Michael David, Anna Lucy
+- Fallback: [unavailable]
 
-Fallback output:
-[unavailable]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-QUALITY CHECK (FINAL GATE)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Before responding, verify ALL of the following:
-
-- The names sound closer to the
-  CHINESE pronunciation
-  than to the ENGLISH sentence.
-
-- The output looks like REAL HUMAN NAMES,
-  not pronunciation.
-
-If ANY rule is violated,
-output ONLY:
-
-[unavailable]
+USER LANGUAGE = CHINESE:
+- names must be OFFICIAL Chinese translations
+  of English names
+- Examples: 迈克尔 大卫 安娜 露西
+- Fallback: [不可用]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REFERENCE EXAMPLE (DO NOT OUTPUT)
+REFERENCE (DO NOT OUTPUT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Input: I love you
-Internal Chinese: 我爱你
-Internal sound: wo ai ni
-Correct output: Wade Annie
+Target: Chinese
+Translation: 我爱你
+Sound: wo ai ni
+Correct names: Wade Annie
+`;
+
+    const raw = await runCidi(systemPrompt, source_text);
+
+    // ---- Sanitize model output (markdown safe) ----
+    const cleaned = raw
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      return res.json(cidiFallback(user_language));
+    }
+
+    // ---- Validate Chinese translation ----
+    if (
+      target_language === "zh" &&
+      !/^[\u4e00-\u9fff]+$/.test(parsed.translation)
+    ) {
+      return res.json(cidiFallback(user_language));
+    }
+
+    // ---- Filter names by user language ----
+    const filteredNames = filterNamesByUserLang(
+      user_language,
+      parsed.names
+    );
+
+    // ---- English name validation (REAL NAMES ONLY) ----
+    if (
+      user_language === "en" &&
+      (
+        !/^[A-Za-z\s]+$/.test(filteredNames) ||
+        !filteredNames.includes(" ") ||
+        filteredNames
+          .split(/\s+/)
+          .filter(Boolean)
+          .some(w => w.length < 3)
+      )
+    ) {
+      return res.json({
+        translation: parsed.translation,
+        names: "[unavailable]",
+        engine: "AI-CIDI",
+        mode: "real-name-sound"
+      });
+    }
+
+    // ---- FINAL SUCCESS ----
+    return res.json({
+      translation: parsed.translation,
+      names: filteredNames,
+      engine: "AI-CIDI",
+      mode: "real-name-sound"
+    });
+
+  } catch (err) {
+    console.error("AI-CIDI error:", err);
+    return res.status(500).json({ error: "AI-CIDI failed" });
+  }
+});
+
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
   steps.push({
