@@ -184,10 +184,7 @@ Correct names: Wade Annie
     }
 
     // 2. Filter names by user language
-    const filteredNames = filterNamesByUserLang(
-      user_language,
-      parsed.names
-    );
+    const filteredNames = filterNamesByUserLang(target_language, parsed.names);
 
     // 3. ✅ FIXED VALIDATION (THIS IS THE ONLY CHANGE)
     if (
