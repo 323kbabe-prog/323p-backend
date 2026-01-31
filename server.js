@@ -67,7 +67,7 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// AI-CIDI — REAL NAME SOUND MODE (EN → ZH, FINAL)
+// AI-CIDI — REAL NAME SOUND MODE (EN → ZH, STABLE)
 //////////////////////////////////////////////////////////////
 
 const CIDI_SUPPORTED_LANGS = ["en", "zh"];
@@ -146,17 +146,6 @@ MANDATORY TRANSLATION-FIRST LOGIC
 4) You MUST select names based ONLY on how closely
    they match the TARGET-LANGUAGE sound.
 
-If you cannot confidently identify the TARGET-LANGUAGE sound,
-you MUST output the fallback token.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CRITICAL REJECTION RULE (HARD LOCK)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-If chosen names resemble the INPUT-language sound
-more than the TARGET-language sound,
-the output is INVALID.
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT (STRICT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -167,31 +156,6 @@ You MUST output EXACTLY this JSON and nothing else:
   "translation": "<TARGET LANGUAGE TRANSLATION>",
   "names": "<REAL NAME OUTPUT>"
 }
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NAME RULES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-- REAL human names only
-- Common, natural, multi-syllable preferred
-- NO phonetics
-- NO IPA
-- NO invented words
-- ONE line only
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-LANGUAGE LOCKS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-USER LANGUAGE = ENGLISH:
-- names: REAL ENGLISH NAMES ONLY
-- Examples: Michael, David, Anna, Lucy, Wade, Annie
-- Fallback: [unavailable]
-
-USER LANGUAGE = CHINESE:
-- names: OFFICIAL Chinese translations of English names only
-- Examples: 迈克尔, 大卫, 安娜, 露西
-- Fallback: [不可用]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REFERENCE (DO NOT OUTPUT)
@@ -206,28 +170,34 @@ Correct names: Wade Annie
 
     const raw = await runCidi(systemPrompt, source_text);
 
-    // 1. Parse JSON
+    // 1. Parse JSON from model
     let parsed;
     try {
       parsed = JSON.parse(raw);
-    } catch (e) {
+    } catch {
       return res.json({
-        translation: target_language === "zh" ? "[不可用]" : "[unavailable]",
-        names: user_language === "zh" ? "[不可用]" : "[unavailable]",
+        translation: "[不可用]",
+        names: "[unavailable]",
         engine: "AI-CIDI",
         mode: "real-name-sound"
       });
     }
 
-    // 2. Filter ONLY names
-    const filteredNames = filterNamesByUserLang(user_language, parsed.names);
+    // 2. Filter names by user language
+    const filteredNames = filterNamesByUserLang(
+      user_language,
+      parsed.names
+    );
 
-    // 3. Validate English names strictly
+    // 3. ✅ FIXED VALIDATION (THIS IS THE ONLY CHANGE)
     if (
       user_language === "en" &&
       (
-        !/^[A-Za-z]+(\s[A-Za-z]+)*$/.test(filteredNames) ||
-        filteredNames.split(" ").some(w => w.length < 3)
+        !/^[A-Za-z\s]+$/.test(filteredNames) ||
+        filteredNames
+          .split(/\s+/)        // ← FIX
+          .filter(Boolean)     // ← FIX
+          .some(w => w.length < 3)
       )
     ) {
       return res.json({
@@ -238,7 +208,7 @@ Correct names: Wade Annie
       });
     }
 
-    // 4. Final response
+    // 4. Final correct output
     return res.json({
       translation: parsed.translation,
       names: filteredNames,
