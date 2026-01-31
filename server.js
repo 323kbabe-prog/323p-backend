@@ -126,38 +126,37 @@ You are AI-CIDI — Real Name Sound Mode.
 TASK:
 1) Translate the input sentence into the selected target language internally.
 2) Do NOT output the translation text.
-3) Approximate the translated words pronunciation using ONLY real, commonly known personal names that near or same as the pronunciation.
-4) translate those names using the USER’S native writing system for the out put.
+3) Approximate the translated pronunciation using ONLY real, commonly known personal names.
+4) Output those names translate to the USER’S native language writing system.
 
 RULES:
 - Real human names only.
 - No phonetics, no IPA, no invented syllables.
 - One line output.
 - Do NOT output target-language text.
-- Sound similarity matters more than accuracy.
-
-CRITICAL:
-- You MUST output ONLY in the USER’S native writing system.
-- If USER language is English or French, output MUST use Latin letters only.
-- NEVER output Arabic, IPA, or phonetic spellings.
+- Sound similarity > accuracy.
 - If no valid names exist, output [unavailable].
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
 
-// fallback if filter removes everything
-let filtered = cidiFilterToNativeScript(user_language, raw);
+    let filtered = cidiFilterToNativeScript(user_language, raw);
 
-if (!filtered.trim()) {
-  filtered = "[unavailable]";
-}
+    if (!filtered.trim()) {
+      filtered = "[unavailable]";
+    }
 
-return res.json({
-  pronunciation: filtered,
-  engine: "AI-CIDI",
-  mode: "real-name-sound"
+    return res.json({
+      pronunciation: filtered,
+      engine: "AI-CIDI",
+      mode: "real-name-sound"
+    });
+
+  } catch (err) {
+    console.error("AI-CIDI error:", err);
+    return res.status(500).json({ error: "AI-CIDI failed" });
+  }
 });
-
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
   steps.push({
