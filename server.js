@@ -178,6 +178,37 @@ NAME RULES
 - NO invented words
 - ONE line only
 
+SYLLABLE ALIGNMENT RULE (HARD):
+
+You MUST approximate EACH MAJOR SYLLABLE
+of the TARGET-LANGUAGE spoken sound.
+
+You are NOT allowed to:
+- merge multiple syllables into one name
+- skip a syllable
+- add extra names that do not map to a syllable
+- pad output with filler names
+
+Each output name MUST clearly correspond
+to a specific part of the TARGET-LANGUAGE sound.
+
+SEMANTIC LEAK FORBIDDEN:
+
+You MUST NOT choose names
+that are semantically related to the sentence meaning.
+
+This includes:
+- place names (e.g. York, Paris, London)
+- object names
+- concept-related names
+- proper nouns appearing in the input
+
+Names are chosen ONLY for SOUND,
+NEVER for MEANING.
+
+If a name matches meaning more than sound,
+the output is INVALID and MUST be rejected.
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 LANGUAGE LOCKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
