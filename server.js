@@ -135,18 +135,19 @@ RULES:
 - One line output.
 - Do NOT output target-language text.
 - Sound similarity matters more than accuracy.
+
+CRITICAL:
+- You MUST output ONLY in the USER’S native writing system.
+- If USER language is English or French, output MUST use Latin letters only.
+- NEVER output Arabic, IPA, or phonetic spellings.
+- If no valid names exist, output [unavailable].
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
 
+// fallback if filter removes everything
 let filtered = cidiFilterToNativeScript(user_language, raw);
 
-// fallback if filter removes everything
-if (!filtered.trim()) {
-  filtered = raw.trim();
-}
-
-// final fallback
 if (!filtered.trim()) {
   filtered = "[unavailable]";
 }
@@ -155,12 +156,6 @@ return res.json({
   pronunciation: filtered,
   engine: "AI-CIDI",
   mode: "real-name-sound"
-});
-
-  } catch (err) {
-    console.error("AI-CIDI error:", err);
-    return res.status(500).json({ error: "AI-CIDI failed" });
-  }
 });
 
 // -------------------- STEP LOGGER --------------------
