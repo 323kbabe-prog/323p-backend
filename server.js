@@ -67,44 +67,31 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// AI-CIDI — REAL NAME SOUND MODE (OPTION A, LOCKED)
+// AI-CIDI — REAL NAME SOUND MODE (EN → ZH, FINAL)
 //////////////////////////////////////////////////////////////
 
-const CIDI_SUPPORTED_LANGS = ["en", "ja", "ko", "zh", "fr"];
+const CIDI_SUPPORTED_LANGS = ["en", "zh"];
 
 function normalizeLang(lang) {
   if (!lang) return "en";
   if (lang.startsWith("zh")) return "zh";
-  if (lang.startsWith("ja")) return "ja";
-  if (lang.startsWith("ko")) return "ko";
-  if (lang.startsWith("fr")) return "fr";
   return "en";
 }
 
-function cidiFinalOutputFilter(userLang, text) {
+function filterNamesByUserLang(userLang, text) {
   if (!text) return "";
 
-  switch (userLang) {
-    case "en":
-    case "fr":
-      // English/French: allow Latin letters + spaces ONLY
-      return text.replace(/[^A-Za-z\s]/g, "").trim();
-
-    case "zh":
-      // Chinese characters ONLY
-      return text.replace(/[^\u4e00-\u9fff\s]/g, "").trim();
-
-    case "ja":
-      // Katakana ONLY (English names in Japanese)
-      return text.replace(/[^\u30A0-\u30FF\s]/g, "").trim();
-
-    case "ko":
-      // Hangul ONLY
-      return text.replace(/[^\uAC00-\uD7AF\s]/g, "").trim();
-
-    default:
-      return "";
+  // English user → English names only
+  if (userLang === "en") {
+    return text.replace(/[^A-Za-z\s]/g, "").trim();
   }
+
+  // Chinese user → Chinese characters only
+  if (userLang === "zh") {
+    return text.replace(/[^\u4e00-\u9fff\s]/g, "").trim();
+  }
+
+  return "";
 }
 
 async function runCidi(systemPrompt, userText) {
@@ -115,6 +102,7 @@ async function runCidi(systemPrompt, userText) {
       { role: "user", content: userText }
     ]
   });
+
   return r.output_text?.trim() || "";
 }
 
@@ -133,7 +121,7 @@ app.post("/api/cidi/pronounce", async (req, res) => {
       !CIDI_SUPPORTED_LANGS.includes(user_language) ||
       !CIDI_SUPPORTED_LANGS.includes(target_language)
     ) {
-      return res.status(400).json({ error: "Unsupported language" });
+      return res.status(400).json({ error: "Unsupported language pair" });
     }
 
     const systemPrompt = `
@@ -147,198 +135,113 @@ using REAL PERSONAL NAMES only.
 MANDATORY TRANSLATION-FIRST LOGIC
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-This order is ABSOLUTE and CANNOT be skipped.
-
 1) You MUST internally translate the INPUT sentence
    into the TARGET LANGUAGE.
 
 2) You MUST internally determine the
-   TARGET-LANGUAGE spoken sound
-   (how a native speaker would say it aloud).
+   TARGET-LANGUAGE spoken sound.
 
-3) You MUST COMPLETELY IGNORE the
-   INPUT-LANGUAGE pronunciation and rhythm.
+3) You MUST IGNORE the INPUT-language sound completely.
 
-4) You MUST choose names based ONLY on how closely
-   they resemble the TARGET-LANGUAGE sound.
+4) You MUST select names based ONLY on how closely
+   they match the TARGET-LANGUAGE sound.
 
-If you cannot confidently identify the
-TARGET-LANGUAGE spoken sound,
+If you cannot confidently identify the TARGET-LANGUAGE sound,
 you MUST output the fallback token.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CRITICAL REJECTION RULE (HARD LOCK)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You are NOT allowed to choose names
-based on the INPUT-LANGUAGE sound.
-
-If the chosen names resemble the INPUT language
-more than the TARGET language,
-the output is INVALID and MUST be rejected.
-
-In that case, output ONLY the fallback token.
+If chosen names resemble the INPUT-language sound
+more than the TARGET-language sound,
+the output is INVALID.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NAME SELECTION RULES (NO EXCEPTIONS)
+OUTPUT FORMAT (STRICT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- REAL human names ONLY.
-  (first names, surnames, or famous people)
+You MUST output EXACTLY this JSON and nothing else:
 
-- Names MUST be:
-  • commonly used
-  • naturally spoken
-  • recognizably real
+{
+  "translation": "<TARGET LANGUAGE TRANSLATION>",
+  "names": "<REAL NAME OUTPUT>"
+}
 
-- NO phonetic spelling
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NAME RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- REAL human names only
+- Common, natural, multi-syllable preferred
+- NO phonetics
 - NO IPA
-- NO invented syllables
-- NO abbreviations
-- NO explanations
-- NO punctuation
-- ONE line output ONLY
-
-- Prefer multi-syllable names
-  when they better match the TARGET sound.
+- NO invented words
+- ONE line only
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-LANGUAGE-SPECIFIC OUTPUT LOCKS
+LANGUAGE LOCKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-IF USER NATIVE LANGUAGE = ENGLISH (en):
-- Output REAL ENGLISH NAMES ONLY.
-- Latin letters only.
-- Examples of valid names:
-  Michael, David, Anna, Lucy, Allen, Matthew, Darren
-- FORBIDDEN:
-  phonetic spellings (e.g. "ai shi te ru")
-  invented words
-- Fallback:
-  [unavailable]
+USER LANGUAGE = ENGLISH:
+- names: REAL ENGLISH NAMES ONLY
+- Examples: Michael, David, Anna, Lucy, Wade, Annie
+- Fallback: [unavailable]
 
-IF USER NATIVE LANGUAGE = CHINESE (zh):
-- Output CHINESE CHARACTERS ONLY.
-- Use ONLY OFFICIAL, STANDARD Chinese translations
-  of English names.
-- Examples:
-  迈克尔, 大卫, 艾伦, 安娜, 露西, 约翰, 马克
-- FORBIDDEN:
-  pinyin
-  phonetic Chinese
-  invented characters
-- Fallback:
-  [不可用]
-
-IF USER NATIVE LANGUAGE = JAPANESE (ja):
-- Output KATAKANA ONLY.
-- Use ONLY standard Japanese renderings
-  of English names.
-- Examples:
-  マイケル, デイビッド, アンナ, ルーシー, アレン
-- FORBIDDEN:
-  romaji
-  hiragana
-  phonetic spelling
-- Fallback:
-  [不可用]
-
-IF USER NATIVE LANGUAGE = KOREAN (ko):
-- Output HANGUL ONLY.
-- Use ONLY standard Korean renderings
-  of English names.
-- Examples:
-  마이클, 데이비드, 안나, 루시, 앨런
-- FORBIDDEN:
-  romanization
-  phonetic spelling
-- Fallback:
-  [불가]
-
-IF USER NATIVE LANGUAGE = FRENCH (fr):
-- Output LATIN LETTERS ONLY.
-- Use ONLY common French-accepted
-  forms of English names.
-- Examples:
-  Michael, David, Anna, Lucy, Matthew
-- FORBIDDEN:
-  phonetic spellings
-  invented names
-- Fallback:
-  [indisponible]
+USER LANGUAGE = CHINESE:
+- names: OFFICIAL Chinese translations of English names only
+- Examples: 迈克尔, 大卫, 安娜, 露西
+- Fallback: [不可用]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-QUALITY CHECK (FINAL GATE)
+REFERENCE (DO NOT OUTPUT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Before responding, you MUST verify ALL of the following:
-
-- The chosen names resemble the
-  TARGET-LANGUAGE pronunciation
-  more than the INPUT-LANGUAGE pronunciation.
-
-- The output looks like REAL HUMAN NAMES,
-  not pronunciation.
-
-- The output uses ONLY the correct writing system.
-
-If ANY condition fails,
-output ONLY the fallback token.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REFERENCE EXAMPLE (DO NOT OUTPUT)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Input language: English  
-Target language: Chinese  
-Input sentence:  
-I love you  
-
-Internal translation (hidden):  
-我爱你  
-
-Internal spoken sound (hidden):  
-wo ai ni  
-
-Correct output:  
-Wade Annie
+Input: I love you
+Target: Chinese
+Translation: 我爱你
+Sound: wo ai ni
+Correct names: Wade Annie
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
 
-    let filtered = cidiFinalOutputFilter(user_language, raw);
+    // 1. Parse JSON
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      return res.json({
+        translation: target_language === "zh" ? "[不可用]" : "[unavailable]",
+        names: user_language === "zh" ? "[不可用]" : "[unavailable]",
+        engine: "AI-CIDI",
+        mode: "real-name-sound"
+      });
+    }
 
-if (!filtered || !filtered.trim()) {
-  switch (user_language) {
-    case "zh":
-      filtered = "[不可用]";
-      break;
-    case "ja":
-      filtered = "[不可用]";
-      break;
-    case "ko":
-      filtered = "[불가]";
-      break;
-    case "fr":
-      filtered = "[indisponible]";
-      break;
-    default:
-      filtered = "[unavailable]";
-  }
-}
+    // 2. Filter ONLY names
+    const filteredNames = filterNamesByUserLang(user_language, parsed.names);
 
-if (
-  user_language === "en" &&
-  (
-    !/^[A-Za-z]+(\s[A-Za-z]+)*$/.test(filtered) ||
-    filtered.split(" ").some(w => w.length < 3)
-  )
-) {
-  filtered = "[unavailable]";
-}
+    // 3. Validate English names strictly
+    if (
+      user_language === "en" &&
+      (
+        !/^[A-Za-z]+(\s[A-Za-z]+)*$/.test(filteredNames) ||
+        filteredNames.split(" ").some(w => w.length < 3)
+      )
+    ) {
+      return res.json({
+        translation: parsed.translation,
+        names: "[unavailable]",
+        engine: "AI-CIDI",
+        mode: "real-name-sound"
+      });
+    }
 
+    // 4. Final response
     return res.json({
-      pronunciation: filtered,
+      translation: parsed.translation,
+      names: filteredNames,
       engine: "AI-CIDI",
       mode: "real-name-sound"
     });
