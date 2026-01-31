@@ -68,22 +68,26 @@ const openai = new OpenAI({
 
 //////////////////////////////////////////////////////////////
 // AI-CIDI — PINYIN-ALIGNED ENGLISH (NAME-FIRST MODE)
-// STABLE · NO JSON · TEXT PARSING
+// Purpose: Generate pinyin-aligned English sentence
+// Priority: SOUND > meaning
 //////////////////////////////////////////////////////////////
 
-app.post("/api/cidi/pinyin", async (req, res) => {
-  try {
-    const { source_text } = req.body || {};
+const express = require("express");
+const OpenAI = require("openai");
 
-    if (!source_text) {
-      return res.status(400).json({ error: "Missing source_text" });
-    }
+const app = express();
+app.use(express.json());
 
-    const systemPrompt = `
-You are AI-CIDI — PINYIN-ALIGNED ENGLISH (NAME-FIRST MODE).
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+async function runCidiPinyinAligned(inputText) {
+  const systemPrompt = `
+You are AI-CIDI — PINYIN-ALIGNED ENGLISH (NAME-FIRST).
 
 Your task:
-Generate an English sentence that follows the Chinese PINYIN SOUND ORDER
+Generate an English sentence that follows Chinese PINYIN SOUND ORDER
 and still makes sense in natural English.
 
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -91,31 +95,31 @@ MANDATORY INTERNAL STEPS
 ━━━━━━━━━━━━━━━━━━━━━━
 
 1) Translate the INPUT sentence into Chinese.
-2) Convert Chinese into STANDARD pinyin
+2) Convert the Chinese into STANDARD pinyin
    (space-separated, tone marks removed).
 3) For EACH pinyin unit:
-   - Choose ONE real English word
+   - Choose ONE real English word.
    - Spoken sound must be CLOSE to that pinyin.
-4) FIRST English word MUST be:
+4) The FIRST English word MUST be:
    - A real, common American first name.
 5) Remaining words:
-   - Real English dictionary words (NOT names).
+   - Real English dictionary words (not names).
 6) Preserve EXACT pinyin order.
-7) ONE readable English sentence.
+7) Assemble ONE readable English sentence.
 
 ━━━━━━━━━━━━━━━━━━━━━━
-HARD RULES
+HARD RULES (NO EXCEPTIONS)
 ━━━━━━━━━━━━━━━━━━━━━━
 
 - English words ONLY
 - Real dictionary words ONLY
-- NO IPA
 - NO phonetic spelling
+- NO IPA
 - NO invented words
 - NO punctuation
 - ONE word per pinyin unit
 - ONE sentence only
-- Output MUST be understandable English
+- Sound similarity > literal meaning
 
 ━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT (EXACT)
@@ -147,46 +151,42 @@ Result:
 Will wanna you eat a big coffee
 `;
 
-    const r = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: source_text }
-      ]
-    });
+  const response = await openai.responses.create({
+    model: "gpt-4.1-mini",
+    input: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: inputText }
+    ]
+  });
 
-    const text = r.output_text || "";
+  return response.output_text?.trim() || "";
+}
 
-    // -------- TEXT PARSING (SAFE) --------
-    const chineseMatch = text.match(/Chinese:\s*([\s\S]*?)\n\s*Pinyin:/);
-    const pinyinMatch  = text.match(/Pinyin:\s*([\s\S]*?)\n\s*Result:/);
-    const resultMatch  = text.match(/Result:\s*([\s\S]*)$/);
+//////////////////////////////////////////////////////////////
+// API ROUTE
+//////////////////////////////////////////////////////////////
 
-    if (!chineseMatch || !pinyinMatch || !resultMatch) {
+app.post("/api/cidi/pinyin", async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    if (!text) {
+      return res.status(400).json({ error: "Missing text" });
+    }
+
+    const raw = await runCidiPinyinAligned(text);
+
+    // Extract structured blocks
+    const chinese = raw.match(/Chinese:\s*(.+)/)?.[1]?.trim();
+    const pinyin  = raw.match(/Pinyin:\s*(.+)/)?.[1]?.trim();
+    const result  = raw.match(/Result:\s*(.+)/)?.[1]?.trim();
+
+    if (!chinese || !pinyin || !result) {
       return res.json({
-        chinese: "[不可用]",
+        chinese: "[unavailable]",
         pinyin: "",
         result: "[unavailable]",
         engine: "AI-CIDI",
-        mode: "pinyin-aligned"
-      });
-    }
-
-    const chinese = chineseMatch[1].trim();
-    const pinyin  = pinyinMatch[1].trim();
-    const result  = resultMatch[1].trim();
-
-    // -------- BASIC VALIDATION --------
-    if (
-      !/^[A-Za-z]+(\s[A-Za-z]+)*$/.test(result) ||
-      result.split(/\s+/).length < 2
-    ) {
-      return res.json({
-        chinese,
-        pinyin,
-        result: "[unavailable]",
-        engine: "AI-CIDI",
-        mode: "pinyin-aligned"
+        mode: "pinyin-aligned-english"
       });
     }
 
@@ -195,11 +195,11 @@ Will wanna you eat a big coffee
       pinyin,
       result,
       engine: "AI-CIDI",
-      mode: "pinyin-aligned"
+      mode: "pinyin-aligned-english"
     });
 
   } catch (err) {
-    console.error("AI-CIDI PINYIN error:", err);
+    console.error("AI-CIDI error:", err);
     return res.status(500).json({ error: "AI-CIDI failed" });
   }
 });
