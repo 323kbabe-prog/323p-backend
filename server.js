@@ -67,7 +67,7 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// AI-CIDI — REAL NAME SOUND MODE (EN → ZH, FINAL LOCK)
+// AI-CIDI — PINYIN-ALIGNED ENGLISH (NAME-FIRST MODE, STABLE)
 //////////////////////////////////////////////////////////////
 
 const CIDI_SUPPORTED_LANGS = ["en", "zh"];
@@ -78,32 +78,86 @@ function normalizeLang(lang) {
   return "en";
 }
 
-function filterNamesByUserLang(userLang, text) {
-  if (!text) return "";
-
-  // English → English names only
-  if (userLang === "en") {
-    return text.replace(/[^A-Za-z\s]/g, "").trim();
-  }
-
-  // Chinese → Chinese characters only
-  if (userLang === "zh") {
-    return text.replace(/[^\u4e00-\u9fff\s]/g, "").trim();
-  }
-
-  return "";
+function filterEnglishWords(text) {
+  return text.replace(/[^A-Za-z\s]/g, "").trim();
 }
 
-function cidiFallback(userLang) {
+function cidiFallback() {
   return {
-    translation: userLang === "zh" ? "[不可用]" : "[unavailable]",
-    names: userLang === "zh" ? "[不可用]" : "[unavailable]",
+    translation: "[不可用]",
+    names: "[unavailable]",
     engine: "AI-CIDI",
-    mode: "real-name-sound"
+    mode: "pinyin-aligned-english"
   };
 }
 
-async function runCidi(systemPrompt, userText) {
+async function runCidi(openai, userText) {
+  const systemPrompt = `
+You are AI-CIDI — PINYIN-ALIGNED ENGLISH (NAME-FIRST MODE).
+
+Your task:
+Produce an English sentence that follows CHINESE PINYIN SOUND ORDER
+and still makes sense in natural English.
+
+━━━━━━━━━━━━━━━━━━━━━━
+MANDATORY INTERNAL STEPS
+━━━━━━━━━━━━━━━━━━━━━━
+
+1) Translate the INPUT sentence into Chinese.
+2) Convert the Chinese into STANDARD pinyin
+   (space-separated, tone marks ignored).
+3) For EACH pinyin unit:
+   - Choose ONE real English word
+   - Spoken sound must be CLOSE to that pinyin.
+4) FIRST English word MUST be:
+   - A real, common American first name.
+5) Remaining words:
+   - Real English dictionary words (not names).
+6) Preserve EXACT pinyin order.
+7) Assemble ONE readable English sentence.
+
+━━━━━━━━━━━━━━━━━━━━━━
+HARD RULES (NO EXCEPTIONS)
+━━━━━━━━━━━━━━━━━━━━━━
+
+- English words ONLY
+- Real dictionary words ONLY
+- NO phonetic spelling
+- NO IPA
+- NO invented words
+- NO punctuation
+- ONE word per pinyin unit
+- ONE sentence only
+- Sentence must be understandable English
+
+━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT FORMAT (JSON ONLY)
+━━━━━━━━━━━━━━━━━━━━━━
+
+You MUST output VALID JSON and NOTHING ELSE.
+
+{
+  "translation": "<Chinese translation>",
+  "names": "<English sentence>"
+}
+
+━━━━━━━━━━━━━━━━━━━━━━
+REFERENCE (DO NOT OUTPUT)
+━━━━━━━━━━━━━━━━━━━━━━
+
+Input:
+I want a cup of coffee
+
+Chinese:
+我想要一杯咖啡
+
+Pinyin:
+wo xiang yao yi bei ka fei
+
+Result:
+Will wanna you eat a big coffee
+`;
+
   const r = await openai.responses.create({
     model: "gpt-4.1-mini",
     input: [
@@ -115,129 +169,20 @@ async function runCidi(systemPrompt, userText) {
   return r.output_text?.trim() || "";
 }
 
-app.post("/api/cidi/pronounce", async (req, res) => {
+//////////////////////////////////////////////////////////////
+// ROUTE: /api/cidi/pinyin
+//////////////////////////////////////////////////////////////
+
+app.post("/api/cidi/pinyin", async (req, res) => {
   try {
-    let { source_text, user_language, target_language } = req.body || {};
-
-    user_language = normalizeLang(user_language);
-    target_language = normalizeLang(target_language);
-
+    const { source_text } = req.body || {};
     if (!source_text) {
       return res.status(400).json({ error: "Missing source_text" });
     }
 
-    if (
-      !CIDI_SUPPORTED_LANGS.includes(user_language) ||
-      !CIDI_SUPPORTED_LANGS.includes(target_language)
-    ) {
-      return res.status(400).json({ error: "Unsupported language pair" });
-    }
+    const raw = await runCidi(openai, source_text);
 
-    const systemPrompt = `
-You are AI-CIDI — Real Name Sound Mode.
-
-This system converts meaning across languages
-by approximating TARGET-LANGUAGE sound
-using REAL PERSONAL NAMES only.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MANDATORY TRANSLATION-FIRST LOGIC
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1) You MUST internally translate the INPUT sentence
-   into the TARGET LANGUAGE.
-
-2) You MUST internally determine the
-   TARGET-LANGUAGE spoken sound.
-
-3) You MUST IGNORE the INPUT-language sound completely.
-
-4) You MUST choose names ONLY based on how closely
-   they match the TARGET-LANGUAGE sound.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT FORMAT (STRICT)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-You MUST output EXACTLY this JSON and nothing else:
-
-{
-  "translation": "<TARGET LANGUAGE TRANSLATION>",
-  "names": "<REAL NAME OUTPUT>"
-}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NAME RULES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-- REAL human names only
-- Common, natural, spoken names
-- Prefer multi-syllable names
-- NO phonetics
-- NO IPA
-- NO invented words
-- ONE line only
-
-SYLLABLE ALIGNMENT RULE (HARD):
-
-You MUST approximate EACH MAJOR SYLLABLE
-of the TARGET-LANGUAGE spoken sound.
-
-You are NOT allowed to:
-- merge multiple syllables into one name
-- skip a syllable
-- add extra names that do not map to a syllable
-- pad output with filler names
-
-Each output name MUST clearly correspond
-to a specific part of the TARGET-LANGUAGE sound.
-
-SEMANTIC LEAK FORBIDDEN:
-
-You MUST NOT choose names
-that are semantically related to the sentence meaning.
-
-This includes:
-- place names (e.g. York, Paris, London)
-- object names
-- concept-related names
-- proper nouns appearing in the input
-
-Names are chosen ONLY for SOUND,
-NEVER for MEANING.
-
-If a name matches meaning more than sound,
-the output is INVALID and MUST be rejected.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-LANGUAGE LOCKS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-USER LANGUAGE = ENGLISH:
-- names must be REAL ENGLISH NAMES
-- Examples: Wade Annie, Michael David, Anna Lucy
-- Fallback: [unavailable]
-
-USER LANGUAGE = CHINESE:
-- names must be OFFICIAL Chinese translations
-  of English names
-- Examples: 迈克尔 大卫 安娜 露西
-- Fallback: [不可用]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REFERENCE (DO NOT OUTPUT)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Input: I love you
-Target: Chinese
-Translation: 我爱你
-Sound: wo ai ni
-Correct names: Wade Annie
-`;
-
-    const raw = await runCidi(systemPrompt, source_text);
-
-    // ---- Sanitize model output (markdown safe) ----
+    // Remove markdown safety
     const cleaned = raw
       .replace(/```json/g, "")
       .replace(/```/g, "")
@@ -247,49 +192,34 @@ Correct names: Wade Annie
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      return res.json(cidiFallback(user_language));
+      return res.json(cidiFallback());
     }
 
-    // ---- Validate Chinese translation ----
+    const translation = parsed.translation || "";
+    const namesRaw = parsed.names || "";
+
+    // Validate Chinese translation
+    if (!/^[\u4e00-\u9fff]+$/.test(translation)) {
+      return res.json(cidiFallback());
+    }
+
+    // Clean & validate English output
+    const names = filterEnglishWords(namesRaw);
+    const words = names.split(/\s+/).filter(Boolean);
+
     if (
-      target_language === "zh" &&
-      !/^[\u4e00-\u9fff]+$/.test(parsed.translation)
+      words.length < 2 ||                 // must have name + words
+      words[0].length < 3 ||              // name must be real-ish
+      words.some(w => w.length < 2)       // avoid junk tokens
     ) {
-      return res.json(cidiFallback(user_language));
+      return res.json(cidiFallback());
     }
 
-    // ---- Filter names by user language ----
-    const filteredNames = filterNamesByUserLang(
-      user_language,
-      parsed.names
-    );
-
-    // ---- English name validation (REAL NAMES ONLY) ----
-    if (
-      user_language === "en" &&
-      (
-        !/^[A-Za-z\s]+$/.test(filteredNames) ||
-        !filteredNames.includes(" ") ||
-        filteredNames
-          .split(/\s+/)
-          .filter(Boolean)
-          .some(w => w.length < 3)
-      )
-    ) {
-      return res.json({
-        translation: parsed.translation,
-        names: "[unavailable]",
-        engine: "AI-CIDI",
-        mode: "real-name-sound"
-      });
-    }
-
-    // ---- FINAL SUCCESS ----
     return res.json({
-      translation: parsed.translation,
-      names: filteredNames,
+      translation,
+      names,
       engine: "AI-CIDI",
-      mode: "real-name-sound"
+      mode: "pinyin-aligned-english"
     });
 
   } catch (err) {
