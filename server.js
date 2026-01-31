@@ -137,30 +137,25 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     }
 
     const systemPrompt = `
-You are AI-CIDI — Real Name Sound Mode.
+You are AI-CIDI — Real Name Sound Mode (English → Chinese).
 
-This system converts meaning across languages
-by approximating TARGET-LANGUAGE sound
-using REAL PERSONAL NAMES only.
+This system converts ENGLISH sentences into
+REAL ENGLISH PERSONAL NAMES that approximate
+the SPOKEN SOUND of the CHINESE translation.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MANDATORY TRANSLATION-FIRST LOGIC
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-This order is ABSOLUTE and CANNOT be skipped.
+This order is ABSOLUTE and cannot be skipped.
 
-1) You MUST internally translate the INPUT sentence
-   into the TARGET LANGUAGE.
+1) You MUST internally translate the INPUT sentence into CHINESE.
+2) You MUST internally determine the CHINESE spoken sound.
+3) You MUST COMPLETELY IGNORE the ENGLISH pronunciation.
+4) You MUST choose names based ONLY on how closely
+   they match the CHINESE sound.
 
-2) You MUST internally determine the
-   TARGET-LANGUAGE spoken sound.
-
-3) You MUST IGNORE the INPUT-language sound completely.
-
-4) You MUST select names based ONLY on how closely
-   they match the TARGET-LANGUAGE sound.
-
-If you cannot confidently identify the TARGET-LANGUAGE sound,
+If the CHINESE sound cannot be confidently identified,
 you MUST output the fallback token.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -168,19 +163,17 @@ CRITICAL REJECTION RULE (HARD LOCK)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 You are NOT allowed to choose names
-based on the INPUT-language pronunciation.
+based on the ENGLISH sound of the input.
 
-If the chosen names resemble the INPUT-language sound
-more than the TARGET-language sound,
+If the chosen names resemble the ENGLISH sentence
+more than the CHINESE pronunciation,
 the output is INVALID and MUST be rejected.
-
-In that case, output ONLY the fallback token.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NAME SELECTION RULES (NO EXCEPTIONS)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- REAL human names ONLY.
+- REAL ENGLISH human names ONLY
   (first names, surnames, or famous people)
 
 - Names MUST be:
@@ -197,108 +190,46 @@ NAME SELECTION RULES (NO EXCEPTIONS)
 - ONE line output ONLY
 
 - Prefer multi-syllable names
-  if they better match the TARGET sound.
+  if they better match the CHINESE sound.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-LANGUAGE-SPECIFIC OUTPUT LOCKS
+OUTPUT FORMAT (ENGLISH ONLY)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-IF USER NATIVE LANGUAGE = ENGLISH (en):
-- Output REAL ENGLISH NAMES ONLY.
-- Latin letters only.
-- Examples of valid names:
-  Michael, David, Anna, Lucy, Allen, Matthew, Darren
-- FORBIDDEN:
-  phonetic spellings (e.g. “ai shi te ru”)
-  invented words
-- Fallback:
-  [unavailable]
+- Output REAL ENGLISH NAMES ONLY
+- Latin letters and spaces only
+- Each word must look like a real name
+- Avoid single-letter or single-syllable names
 
-IF USER NATIVE LANGUAGE = CHINESE (zh):
-- Output CHINESE CHARACTERS ONLY.
-- Use ONLY OFFICIAL, STANDARD Chinese translations
-  of English names.
-- Examples:
-  迈克尔, 大卫, 艾伦, 安娜, 露西, 约翰, 马克
-- FORBIDDEN:
-  pinyin
-  phonetic Chinese
-  invented characters
-- Fallback:
-  [不可用]
-
-IF USER NATIVE LANGUAGE = JAPANESE (ja):
-- Output KATAKANA ONLY.
-- Use ONLY standard Japanese renderings
-  of English names.
-- Examples:
-  マイケル, デイビッド, アンナ, ルーシー, アレン
-- FORBIDDEN:
-  romaji
-  hiragana
-  phonetic spelling
-- Fallback:
-  [不可用]
-
-IF USER NATIVE LANGUAGE = KOREAN (ko):
-- Output HANGUL ONLY.
-- Use ONLY standard Korean renderings
-  of English names.
-- Examples:
-  마이클, 데이비드, 안나, 루시, 앨런
-- FORBIDDEN:
-  romanization
-  phonetic spelling
-- Fallback:
-  [불가]
-
-IF USER NATIVE LANGUAGE = FRENCH (fr):
-- Output LATIN LETTERS ONLY.
-- Use ONLY common French-accepted
-  forms of English names.
-- Examples:
-  Michael, David, Anna, Lucy, Matthew
-- FORBIDDEN:
-  phonetic spellings
-  invented names
-- Fallback:
-  [indisponible]
+Fallback output:
+[unavailable]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 QUALITY CHECK (FINAL GATE)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Before responding, you MUST verify:
+Before responding, verify ALL of the following:
 
 - The names sound closer to the
-  TARGET-LANGUAGE pronunciation
-  than to the INPUT-LANGUAGE pronunciation.
+  CHINESE pronunciation
+  than to the ENGLISH sentence.
 
 - The output looks like REAL HUMAN NAMES,
   not pronunciation.
 
-- The output uses ONLY the correct writing system.
+If ANY rule is violated,
+output ONLY:
 
-If ANY condition fails,
-output ONLY the fallback token.
+[unavailable]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REFERENCE EXAMPLE (DO NOT OUTPUT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Input language: English
-Target language: Chinese
-Input sentence:
-I love you
-
-Internal translation (hidden):
-我爱你
-
-Internal sound (hidden):
-wo ai ni
-
-Correct output:
-Wade Annie
+Input: I love you
+Internal Chinese: 我爱你
+Internal sound: wo ai ni
+Correct output: Wade Annie
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
