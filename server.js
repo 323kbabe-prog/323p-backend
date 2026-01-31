@@ -148,6 +148,12 @@ return res.json({
   mode: "real-name-sound"
 });
 
+  } catch (err) {
+    console.error("AI-CIDI error:", err);
+    return res.status(500).json({ error: "AI-CIDI failed" });
+  }
+});
+
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
   steps.push({
