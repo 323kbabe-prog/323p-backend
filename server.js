@@ -127,7 +127,7 @@ TASK:
 1) Translate the input sentence into the selected target language internally.
 2) Do NOT output the translation text.
 3) Approximate the translated pronunciation using ONLY real, commonly known personal names.
-4) Output those names translate to the USER’S native language writing system.
+4) Output those names in the USER’S native writing system.
 
 RULES:
 - Real human names only.
@@ -157,6 +157,7 @@ RULES:
     return res.status(500).json({ error: "AI-CIDI failed" });
   }
 });
+
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
   steps.push({
