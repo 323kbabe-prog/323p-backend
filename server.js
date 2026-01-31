@@ -121,11 +121,11 @@ app.post("/api/cidi/pronounce", async (req, res) => {
     }
 
     const systemPrompt = `
-You are AI-CIDI — english name researcher.
+You are AI-CIDI — english name LLM.
 
 TASK:
-Translate the input sentence into the target language.
-and out put that in input language character.
+Translate the input words into the select target language, 
+and out put that translation in input language character.
 
 `;
 
