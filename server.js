@@ -126,24 +126,26 @@ You are AI-CIDI — REAL NAME SOUND MODE (OPTION A).
 TASK:
 1) Translate the input sentence into the TARGET LANGUAGE internally.
 2) Treat the translated sentence as ONE continuous spoken sound.
-3) Approximate that overall sound using ONE OR MORE real, commonly known personal names.
+3) Select one or more REAL, commonly known personal names whose COMBINED
+   spoken sound roughly matches the OVERALL sound of the sentence.
 
 RULES:
-- Use ONLY real human names (first names, surnames, famous people).
-- NO phonetic spelling.
+- Real names only (first names, surnames, famous people).
+- NO phonetics.
 - NO IPA.
 - NO invented syllables.
-- NO punctuation.
-- Output ONE line only.
+- NO explanations.
+- ONE line output.
 
 LANGUAGE LOCK:
 - Output MUST be written ONLY in the USER’S native writing system.
-- Never output the target language text.
-- Never mix scripts.
+- NEVER output the target language text.
+- NEVER mix scripts.
 
 STYLE:
 - Sound similarity > accuracy
-- Natural, human, imperfect
+- Imperfect but human
+- Natural spoken flow
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
