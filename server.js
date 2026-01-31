@@ -127,21 +127,6 @@ TASK:
 Translate the input sentence into the target language.
 and out put that in input language character.
 
-RULES:
-- Real english names only.
-- NO phonetics.
-- NO IPA.
-- NO invented syllables.
-- NO explanations.
-- ONE line output.
-
-LANGUAGE LOCK:
-- Output MUST be written ONLY in the USER’S native writing system.
-
-STYLE:
-- Sound similarity > accuracy
-- Imperfect but human
-- Natural spoken flow
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
