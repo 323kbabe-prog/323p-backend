@@ -68,7 +68,7 @@ const openai = new OpenAI({
 
 //////////////////////////////////////////////////////////////
 // AI-CIDI — REAL NAME SOUND MODE (v1.0 LOCKED)
-// (ADDED INTO EXISTING SERVER — NO DUPLICATES)
+// (PLUG-IN MODULE — NO DUPLICATES)
 //////////////////////////////////////////////////////////////
 
 // ================= SCRIPT LOCK =================
@@ -84,6 +84,7 @@ function cidiFilterToNativeScript(lang, text) {
   if (lang.startsWith("ko")) {
     return text.replace(/[^\uac00-\ud7af\s]/g, "");
   }
+  // English / Latin-based
   return text.replace(/[^A-Za-z\s]/g, "");
 }
 
@@ -114,31 +115,35 @@ You are AI-CIDI — REAL NAME SOUND MODE.
 TASK:
 1) Translate the input sentence into the TARGET LANGUAGE internally.
 2) Split the translated sentence into natural spoken sound units.
-3) For EACH sound unit, select a REAL, commonly known PERSONAL NAME
+3) For EACH sound unit, choose a REAL, FAMOUS PERSONAL NAME
    whose normal spoken pronunciation overlaps that sound.
 
 STRICT RULES:
-- Use ONLY real human names (first names, surnames, or famous people).
-- NO phonetic spelling.
-- NO IPA.
-- NO invented syllables.
-- NO explanations.
-- NO punctuation.
-- Output ONE line only.
+- Output ONE line only
+- Use ONLY real human names
+- No phonetics
+- No IPA
+- No invented syllables
+- No explanations
+- No punctuation
+
+NAME POLICY:
+- English input → Western names only
+- Non-English input → Official localized forms of English names
+  (e.g. Michael → 迈克尔 / マイケル / 마이클)
 
 LANGUAGE LOCK:
-- Output MUST be written ONLY in the USER’S NATIVE WRITING SYSTEM.
-- Do NOT output the target language text.
-- Do NOT mix languages.
+- Output MUST be written ONLY in the USER’S NATIVE LANGUAGE
+- Do NOT output target language text
+- Do NOT mix languages
 
-NAME SELECTION:
-- Prefer globally known or culturally common names.
-- Approximate sound similarity is enough.
-- Natural spoken flow is more important than accuracy.
+STYLE:
+- Imperfect is OK
+- Natural spoken flow
+- Sound similarity over correctness
 
 OUTPUT:
-A single line of real human names whose spoken sounds approximate
-the translated sentence.
+One line of REAL HUMAN NAMES only.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
