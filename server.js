@@ -66,158 +66,99 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-//////////////////////////////////////////////////////////////
-// AI-CIDI — REAL NAME SOUND MODE (EN → ZH, STABLE)
-//////////////////////////////////////////////////////////////
+You are AI-CIDI — Real Name Sound Mode (English → Chinese).
 
-const CIDI_SUPPORTED_LANGS = ["en", "zh"];
-
-function normalizeLang(lang) {
-  if (!lang) return "en";
-  if (lang.startsWith("zh")) return "zh";
-  return "en";
-}
-
-function filterNamesByUserLang(userLang, text) {
-  if (!text) return "";
-
-  // English user → English names only
-  if (userLang === "en") {
-    return text.replace(/[^A-Za-z\s]/g, "").trim();
-  }
-
-  // Chinese user → Chinese characters only
-  if (userLang === "zh") {
-    return text.replace(/[^\u4e00-\u9fff\s]/g, "").trim();
-  }
-
-  return "";
-}
-
-async function runCidi(systemPrompt, userText) {
-  const r = await openai.responses.create({
-    model: "gpt-4.1-mini",
-    input: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userText }
-    ]
-  });
-
-  return r.output_text?.trim() || "";
-}
-
-app.post("/api/cidi/pronounce", async (req, res) => {
-  try {
-    let { source_text, user_language, target_language } = req.body || {};
-
-    user_language = normalizeLang(user_language);
-    target_language = normalizeLang(target_language);
-
-    if (!source_text) {
-      return res.status(400).json({ error: "Missing source_text" });
-    }
-
-    if (
-      !CIDI_SUPPORTED_LANGS.includes(user_language) ||
-      !CIDI_SUPPORTED_LANGS.includes(target_language)
-    ) {
-      return res.status(400).json({ error: "Unsupported language pair" });
-    }
-
-    const systemPrompt = `
-You are AI-CIDI — Real Name Sound Mode.
-
-This system converts meaning across languages
-by approximating TARGET-LANGUAGE sound
-using REAL PERSONAL NAMES only.
+This system converts ENGLISH sentences into
+REAL ENGLISH PERSONAL NAMES that approximate
+the SPOKEN SOUND of the CHINESE translation.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MANDATORY TRANSLATION-FIRST LOGIC
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1) You MUST internally translate the INPUT sentence
-   into the TARGET LANGUAGE.
+This order is ABSOLUTE and cannot be skipped.
 
-2) You MUST internally determine the
-   TARGET-LANGUAGE spoken sound.
+1) You MUST internally translate the INPUT sentence into CHINESE.
+2) You MUST internally determine the CHINESE spoken sound.
+3) You MUST COMPLETELY IGNORE the ENGLISH pronunciation.
+4) You MUST choose names based ONLY on how closely
+   they match the CHINESE sound.
 
-3) You MUST IGNORE the INPUT-language sound completely.
-
-4) You MUST select names based ONLY on how closely
-   they match the TARGET-LANGUAGE sound.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT FORMAT (STRICT)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-You MUST output EXACTLY this JSON and nothing else:
-
-{
-  "translation": "<TARGET LANGUAGE TRANSLATION>",
-  "names": "<REAL NAME OUTPUT>"
-}
+If the CHINESE sound cannot be confidently identified,
+you MUST output the fallback token.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REFERENCE (DO NOT OUTPUT)
+CRITICAL REJECTION RULE (HARD LOCK)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You are NOT allowed to choose names
+based on the ENGLISH sound of the input.
+
+If the chosen names resemble the ENGLISH sentence
+more than the CHINESE pronunciation,
+the output is INVALID and MUST be rejected.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NAME SELECTION RULES (NO EXCEPTIONS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- REAL ENGLISH human names ONLY
+  (first names, surnames, or famous people)
+
+- Names MUST be:
+  • commonly used
+  • naturally spoken
+  • recognizably real
+
+- NO phonetic spelling
+- NO IPA
+- NO invented syllables
+- NO abbreviations
+- NO explanations
+- NO punctuation
+- ONE line output ONLY
+
+- Prefer multi-syllable names
+  if they better match the CHINESE sound.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT FORMAT (ENGLISH ONLY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Output REAL ENGLISH NAMES ONLY
+- Latin letters and spaces only
+- Each word must look like a real name
+- Avoid single-letter or single-syllable names
+
+Fallback output:
+[unavailable]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUALITY CHECK (FINAL GATE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before responding, verify ALL of the following:
+
+- The names sound closer to the
+  CHINESE pronunciation
+  than to the ENGLISH sentence.
+
+- The output looks like REAL HUMAN NAMES,
+  not pronunciation.
+
+If ANY rule is violated,
+output ONLY:
+
+[unavailable]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REFERENCE EXAMPLE (DO NOT OUTPUT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Input: I love you
-Target: Chinese
-Translation: 我爱你
-Sound: wo ai ni
-Correct names: Wade Annie
-`;
-
-    const raw = await runCidi(systemPrompt, source_text);
-
-    // 1. Parse JSON from model
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return res.json({
-        translation: "[不可用]",
-        names: "[unavailable]",
-        engine: "AI-CIDI",
-        mode: "real-name-sound"
-      });
-    }
-
-    // 2. Filter names by user language
-    const filteredNames = filterNamesByUserLang(target_language, parsed.names);
-
-    // 3. ✅ FIXED VALIDATION (THIS IS THE ONLY CHANGE)
-    if (
-      user_language === "en" &&
-      (
-        !/^[A-Za-z\s]+$/.test(filteredNames) ||
-        filteredNames
-          .split(/\s+/)        // ← FIX
-          .filter(Boolean)     // ← FIX
-          .some(w => w.length < 3)
-      )
-    ) {
-      return res.json({
-        translation: parsed.translation,
-        names: "[unavailable]",
-        engine: "AI-CIDI",
-        mode: "real-name-sound"
-      });
-    }
-
-    // 4. Final correct output
-    return res.json({
-      translation: parsed.translation,
-      names: filteredNames,
-      engine: "AI-CIDI",
-      mode: "real-name-sound"
-    });
-
-  } catch (err) {
-    console.error("AI-CIDI error:", err);
-    return res.status(500).json({ error: "AI-CIDI failed" });
-  }
-});
+Internal Chinese: 我爱你
+Internal sound: wo ai ni
+Correct output: Wade Annie
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
   steps.push({
