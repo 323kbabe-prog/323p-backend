@@ -67,28 +67,33 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// AI-CIDI — REAL NAME SOUND MODE (v1.0 LOCKED)
-// (PLUG-IN MODULE — NO DUPLICATES)
+// AI-CIDI — REAL NAME SOUND MODE (OPTION A, LOCKED)
 //////////////////////////////////////////////////////////////
 
-// ================= SCRIPT LOCK =================
+// ---------- SUPPORTED LANGUAGES ----------
+const CIDI_SUPPORTED_LANGS = ["en", "ja", "ko", "zh", "fr"];
+
+// ---------- SCRIPT FILTER ----------
 function cidiFilterToNativeScript(lang, text) {
   if (!text) return "";
 
   if (lang.startsWith("zh")) {
+    // Chinese characters only
     return text.replace(/[^\u4e00-\u9fff\s]/g, "");
   }
   if (lang.startsWith("ja")) {
+    // Kana + Kanji only
     return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
   }
   if (lang.startsWith("ko")) {
+    // Hangul only
     return text.replace(/[^\uac00-\ud7af\s]/g, "");
   }
-  // English / Latin-based
+  // English / French → Latin letters only
   return text.replace(/[^A-Za-z\s]/g, "");
 }
 
-// ================= OPENAI CALL =================
+// ---------- OPENAI CALL ----------
 async function runCidi(systemPrompt, userText) {
   const r = await openai.responses.create({
     model: "gpt-4.1-mini",
@@ -100,7 +105,7 @@ async function runCidi(systemPrompt, userText) {
   return r.output_text?.trim() || "";
 }
 
-// ================= ROUTE =================
+// ---------- ROUTE ----------
 app.post("/api/cidi/pronounce", async (req, res) => {
   try {
     const { source_text, user_language, target_language } = req.body || {};
@@ -109,47 +114,63 @@ app.post("/api/cidi/pronounce", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    if (
+      !CIDI_SUPPORTED_LANGS.includes(user_language) ||
+      !CIDI_SUPPORTED_LANGS.includes(target_language)
+    ) {
+      return res.status(400).json({
+        error: "Unsupported language"
+      });
+    }
+
     const systemPrompt = `
-You are AI-CIDI — REAL NAME SOUND MODE.
+You are AI-CIDI — REAL NAME SOUND MODE (OPTION A).
 
 TASK:
 1) Translate the input sentence into the TARGET LANGUAGE internally.
 2) Split the translated sentence into natural spoken sound units.
-3) For EACH sound unit, choose a REAL, FAMOUS PERSONAL NAME
-   whose normal spoken pronunciation overlaps that sound.
+3) For EACH sound unit, select a REAL, commonly known PERSONAL NAME
+   whose spoken pronunciation overlaps that sound.
 
 STRICT RULES:
-- Output ONE line only
-- Use ONLY real human names
-- No phonetics
-- No IPA
-- No invented syllables
-- No explanations
-- No punctuation
-
-NAME POLICY:
-- English input → Western names only
-- Non-English input → Official localized forms of English names
-  (e.g. Michael → 迈克尔 / マイケル / 마이클)
+- Use ONLY real human names (first names, surnames, or famous people).
+- NO phonetic spelling.
+- NO IPA.
+- NO invented syllables.
+- NO explanations.
+- NO punctuation.
+- Output ONE line only.
 
 LANGUAGE LOCK:
-- Output MUST be written ONLY in the USER’S NATIVE LANGUAGE
-- Do NOT output target language text
-- Do NOT mix languages
+- Output MUST be written ONLY in the USER’S NATIVE WRITING SYSTEM.
+- Do NOT output target-language text.
+- Do NOT mix languages.
+
+NAME GUIDELINES:
+- English → Western personal names only.
+- Japanese → Standard Japanese renderings of foreign names.
+- Korean → Standard Hangul name renderings.
+- Chinese → Official Chinese transliterations of foreign names.
+- French → Common French personal names.
 
 STYLE:
-- Imperfect is OK
-- Natural spoken flow
-- Sound similarity over correctness
+- Sound similarity > correctness
+- Human, casual, imperfect
+- Natural flow
+
+User native language: ${user_language}
+Target language: ${target_language}
 
 OUTPUT:
-One line of REAL HUMAN NAMES only.
+A single line of real human names.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
     let output = cidiFilterToNativeScript(user_language, raw);
 
-    if (!output.trim()) output = "[unavailable]";
+    if (!output.trim()) {
+      output = "[unavailable]";
+    }
 
     return res.json({
       pronunciation: output,
