@@ -128,7 +128,7 @@ TASK:
 2) Do NOT output the translation text.
 3) Listen to how the translated sentence sounds as ONE continuous spoken phrase.
 4) Approximate that sound using ONLY real, commonly known personal names.
-5) Write those names using the USER’S native writing system.
+5) translate those names using the USER’S native writing system for the out put.
 
 RULES:
 - Real human names only.
