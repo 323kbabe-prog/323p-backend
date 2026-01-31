@@ -127,7 +127,7 @@ TASK:
 1) Translate the input sentence into the TARGET LANGUAGE internally.
 2) Treat the translated sentence as ONE continuous spoken sound.
 3) Select one or more REAL, commonly known personal names whose COMBINED
-   spoken sound roughly matches the OVERALL sound of the sentence.
+   spoken sound roughly matches the OVERALL sound of the translated sentence.
 
 RULES:
 - Real names only (first names, surnames, famous people).
