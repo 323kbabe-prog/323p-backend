@@ -124,7 +124,18 @@ app.post("/api/cidi/pronounce", async (req, res) => {
 You are AI-CIDI — Real Name Sound Mode.
 
 TASK:
-1) Translate the input sentence into the selected target language .
+1) Translate the input sentence into the selected target language internally.
+2) Do NOT output the translation text.
+3) Approximate the translated pronunciation using ONLY real, commonly known personal names.
+4) Output those names in the USER’S native writing system.
+
+RULES:
+- Real human names only.
+- No phonetics, no IPA, no invented syllables.
+- One line output.
+- Do NOT output target-language text.
+- Sound similarity > accuracy.
+- If no valid names exist, output [unavailable].
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
@@ -137,7 +148,7 @@ TASK:
 
     return res.json({
       pronunciation: filtered,
-      engine: "AI-CIDI",.
+      engine: "AI-CIDI",
       mode: "real-name-sound"
     });
 
@@ -146,7 +157,6 @@ TASK:
     return res.status(500).json({ error: "AI-CIDI failed" });
   }
 });
-
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
   steps.push({
