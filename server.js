@@ -81,14 +81,30 @@ function normalizeLang(lang) {
   return "en";
 }
 
-function cidiFilterToNativeScript(lang, text) {
+function cidiFinalOutputFilter(userLang, text) {
   if (!text) return "";
 
-  if (lang === "zh") return text.replace(/[^\u4e00-\u9fff\s]/g, "");
-  if (lang === "ja") return text.replace(/[^\u3040-\u30ff\u4e00-\u9fff\s]/g, "");
-  if (lang === "ko") return text.replace(/[^\uac00-\ud7af\s]/g, "");
+  switch (userLang) {
+    case "en":
+    case "fr":
+      // English/French: allow Latin letters + spaces ONLY
+      return text.replace(/[^A-Za-z\s]/g, "").trim();
 
-  return text.replace(/[^A-Za-z\s]/g, "");
+    case "zh":
+      // Chinese characters ONLY
+      return text.replace(/[^\u4e00-\u9fff\s]/g, "").trim();
+
+    case "ja":
+      // Katakana ONLY (English names in Japanese)
+      return text.replace(/[^\u30A0-\u30FF\s]/g, "").trim();
+
+    case "ko":
+      // Hangul ONLY
+      return text.replace(/[^\uAC00-\uD7AF\s]/g, "").trim();
+
+    default:
+      return "";
+  }
 }
 
 async function runCidi(systemPrompt, userText) {
@@ -132,20 +148,21 @@ GLOBAL CORE LOGIC (ALWAYS ACTIVE)
 
 1) Translate the input sentence into the TARGET LANGUAGE internally.
 2) NEVER output the translated sentence.
-3) Treat the translated sentence as ONE continuous spoken sound
-   (do NOT split into syllables or phonemes).
-4) Approximate that sound using one or more REAL, commonly known
-   ENGLISH personal names.
-5) Output those names written ONLY in the USER’S NATIVE WRITING SYSTEM.
+3) Treat the translated sentence as ONE continuous spoken sound.
+   Do NOT split into syllables, words, or phonemes.
+4) Approximate that overall sound using one or more
+   REAL, commonly known ENGLISH personal names.
+5) Output ONLY those names written in the USER’S NATIVE WRITING SYSTEM.
 
-Sound similarity matters more than accuracy.
+Sound similarity matters more than semantic accuracy.
 Imperfect but human approximation wins.
 
 ────────────────────────────────
 ABSOLUTE RULES (NO EXCEPTIONS)
 ────────────────────────────────
 
-- REAL human names only (first names, surnames, famous people).
+- REAL human names only.
+  (first names, surnames, or famous people)
 - NO phonetic spelling.
 - NO IPA.
 - NO invented syllables.
@@ -154,33 +171,35 @@ ABSOLUTE RULES (NO EXCEPTIONS)
 - ONE line output only.
 - NEVER output the target-language text.
 - NEVER mix writing systems.
-- If no valid names exist, output the language-specific fallback exactly.
+- Avoid short single-syllable names unless no alternatives exist.
+- Prefer multi-syllable names if they better match the sound.
+- If rules cannot be satisfied, output the fallback token exactly.
 
 ────────────────────────────────
 LANGUAGE-SPECIFIC OUTPUT LOCKS
 ────────────────────────────────
 
-🔹 IF USER NATIVE LANGUAGE = CHINESE (zh):
+IF USER NATIVE LANGUAGE = CHINESE (zh):
 - Output CHINESE CHARACTERS ONLY.
 - Use ONLY OFFICIAL, STANDARD Chinese translations of English names.
-- Examples of allowed names:
+- Examples of valid names:
   迈克尔, 大卫, 艾伦, 安娜, 露西, 约翰, 马克
 - FORBIDDEN:
   pinyin, phonetic Chinese, invented characters.
 - Fallback output:
   [不可用]
 
-🔹 IF USER NATIVE LANGUAGE = JAPANESE (ja):
+IF USER NATIVE LANGUAGE = JAPANESE (ja):
 - Output KATAKANA ONLY.
 - Use ONLY standard Japanese renderings of English names.
 - Examples:
   マイケル, デイビッド, アンナ, ルーシー, アレン
 - FORBIDDEN:
-  romaji, phonetic spelling, hiragana.
+  romaji, hiragana, phonetic spelling.
 - Fallback output:
   [不可用]
 
-🔹 IF USER NATIVE LANGUAGE = KOREAN (ko):
+IF USER NATIVE LANGUAGE = KOREAN (ko):
 - Output HANGUL ONLY.
 - Use ONLY standard Korean renderings of English names.
 - Examples:
@@ -190,25 +209,27 @@ LANGUAGE-SPECIFIC OUTPUT LOCKS
 - Fallback output:
   [불가]
 
-🔹 IF USER NATIVE LANGUAGE = ENGLISH (en):
+IF USER NATIVE LANGUAGE = ENGLISH (en):
 - Output REAL ENGLISH NAMES ONLY.
 - Names must exist in real life.
+- Prefer multi-syllable names.
 - Examples:
-  Michael, David, Anna, Lucy, Allen, Mark
+  Michael, David, Anna, Lucy, Allen, Matthew, Darren
 - FORBIDDEN:
-  phonetic spellings like “ai shi te ru”
-  invented words
+  phonetic spellings (e.g. “ai shi te ru”),
+  invented words,
+  abbreviations.
 - Fallback output:
   [unavailable]
 
-🔹 IF USER NATIVE LANGUAGE = FRENCH (fr):
+IF USER NATIVE LANGUAGE = FRENCH (fr):
 - Output LATIN LETTERS ONLY.
 - Use ONLY common French-accepted forms of English names.
 - Examples:
-  Michael, David, Anna, Lucy
+  Michael, David, Anna, Lucy, Matthew
 - FORBIDDEN:
-  phonetic spellings
-  invented names
+  phonetic spellings,
+  invented names.
 - Fallback output:
   [indisponible]
 
@@ -216,21 +237,49 @@ LANGUAGE-SPECIFIC OUTPUT LOCKS
 QUALITY CHECK (MANDATORY)
 ────────────────────────────────
 
-Before responding, verify:
-- Output looks like REAL HUMAN NAMES.
-- Output uses ONLY the correct script.
-- Output sounds roughly like the translated sentence when spoken aloud.
+Before responding, verify ALL of the following:
 
-If any rule is violated, output ONLY the fallback token.
+- Output looks like REAL HUMAN NAMES.
+- Output uses ONLY the correct writing system.
+- Output sounds roughly like the translated sentence
+  when spoken aloud in the target language.
+
+If ANY rule is violated,
+output ONLY the fallback token for that language.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
 
-    let filtered = cidiFilterToNativeScript(user_language, raw);
+    let filtered = cidiFinalOutputFilter(user_language, raw);
 
-    if (!filtered.trim()) {
+if (!filtered || !filtered.trim()) {
+  switch (user_language) {
+    case "zh":
+      filtered = "[不可用]";
+      break;
+    case "ja":
+      filtered = "[不可用]";
+      break;
+    case "ko":
+      filtered = "[불가]";
+      break;
+    case "fr":
+      filtered = "[indisponible]";
+      break;
+    default:
       filtered = "[unavailable]";
-    }
+  }
+}
+
+if (
+  user_language === "en" &&
+  (
+    !/^[A-Za-z]+(\s[A-Za-z]+)*$/.test(filtered) ||
+    filtered.split(" ").some(w => w.length < 3)
+  )
+) {
+  filtered = "[unavailable]";
+}
 
     return res.json({
       pronunciation: filtered,
