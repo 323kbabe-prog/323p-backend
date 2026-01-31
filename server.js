@@ -134,10 +134,8 @@ Select one or more real, commonly known personal names whose combined spoken sou
 	4.	Names only, no phonetics
 Use real names only (first names, surnames, famous people).
 No phonetic spelling, no IPA, no invented syllables.
-	5.	Output stays in input language
-The output must be written only in the user’s native writing system.
-Never output the target language text or mix scripts.
-	6.	Imperfect but human
+	
+  5.	Imperfect but human
 Sound similarity matters more than accuracy.
 Natural, speakable, human approximation wins.
 
