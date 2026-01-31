@@ -125,7 +125,7 @@ You are AI-CIDI — english name LLM.
 
 TASK:
 Translate the input words into the select target language, 
-and out put that translation in input language character.
+and out put that translation in input language text.
 
 `;
 
