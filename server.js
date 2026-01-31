@@ -125,23 +125,27 @@ You are AI-CIDI — english name LLM.
 
 TASK:
 Translate the input words into the select target language, 
-and out put that translation in input language text.
-
+and out put that translation in input language text, Use official translations of English names in the user’s native language to match the sound of target language translation.
 `;
 
     const raw = await runCidi(systemPrompt, source_text);
-    const output = cidiFilterToNativeScript(user_language, raw) || "[unavailable]";
 
-    res.json({
-      pronunciation: output,
-      engine: "AI-CIDI",
-      mode: "real-name-sound"
-    });
+let filtered = cidiFilterToNativeScript(user_language, raw);
 
-  } catch (err) {
-    console.error("AI-CIDI error:", err);
-    res.status(500).json({ error: "AI-CIDI failed" });
-  }
+// fallback if filter removes everything
+if (!filtered.trim()) {
+  filtered = raw.trim();
+}
+
+// final fallback
+if (!filtered.trim()) {
+  filtered = "[unavailable]";
+}
+
+return res.json({
+  pronunciation: filtered,
+  engine: "AI-CIDI",
+  mode: "real-name-sound"
 });
 
 // -------------------- STEP LOGGER --------------------
