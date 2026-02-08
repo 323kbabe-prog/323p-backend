@@ -466,7 +466,7 @@ SUBTITLE RULES (CRITICAL — NO EXCEPTIONS):
 OUTPUT FORMAT (EXACT — DO NOT DEVIATE):
 
 \`\`\`html
-<!-- CARD 3 : [FULL NAME] -->
+<!-- CARD 0 : [FULL NAME] -->
 <a class="card" href="[lowercasefirstname][lowercaselastname].html">
 
   <!-- INTERNAL PERSONA MARKER (HIDDEN FROM USER) -->
