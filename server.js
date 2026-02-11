@@ -516,39 +516,36 @@ STRICT:
 }
 
 app.post("/submit-application", async (req, res) => {
-  try {
-    const { name, question, persona, card } = req.body;
+  try {
+    const { email, name, question, persona, card } = req.body;
 
-    if (!name || !question) {
-      return res.status(400).json({ ok: false, reason: "missing_fields" });
-    }
+    if (!email) {
+      return res.status(400).json({ ok: false, reason: "missing_email" });
+    }
 
-    const key = makeApplicationKey(name, question);
+    // 🔒 ONE TIME PER EMAIL
+    if (submittedApplications.has(email)) {
+      return res.status(409).json({
+        ok: false,
+        reason: "already_used"
+      });
+    }
 
-    // 🔒 HARD BLOCK
-    if (submittedApplications.has(key)) {
-      return res.status(409).json({
-        ok: false,
-        reason: "already_submitted"
-      });
-    }
+    submittedApplications.add(email);
 
-    // Mark as submitted
-    submittedApplications.add(key);
+    await sendApplicationEmail({
+      name,
+      question,
+      persona,
+      card
+    });
 
-    await sendApplicationEmail({
-      name,
-      question,
-      persona,
-      card
-    });
+    res.json({ ok: true });
 
-    res.json({ ok: true });
-
-  } catch (err) {
-    console.error("Email error:", err);
-    res.status(500).json({ ok: false });
-  }
+  } catch (err) {
+    console.error("Email error:", err);
+    res.status(500).json({ ok: false });
+  }
 });
 
 // =====================================================
