@@ -712,29 +712,61 @@ app.post("/thinking-path", async (req, res) => {
   }
 });
 
-// =====================================================
-// ROUTE — SUBMIT APPLICATION (SEND EMAIL)
-// =====================================================
+//////////////////////////////////////////////////////////////
+// ROUTE — SUBMIT APPLICATION (EMAIL LOCK PERSISTENT)
+//////////////////////////////////////////////////////////////
+
+const fs = require("fs");
+const path = require("path");
+
+const LOCK_FILE = path.join(__dirname, "email-locks.json");
+
+let submittedEmails = new Set();
+
+// Load saved emails if file exists
+if (fs.existsSync(LOCK_FILE)) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(LOCK_FILE));
+    submittedEmails = new Set(saved);
+  } catch (err) {
+    console.error("Failed to load lock file:", err);
+  }
+}
+
+function saveEmailLocks() {
+  fs.writeFileSync(
+    LOCK_FILE,
+    JSON.stringify([...submittedEmails], null, 2)
+  );
+}
+
 app.post("/submit-application", async (req, res) => {
   try {
-    const { name, question, persona, card } = req.body;
+    const { email, name, question, persona, card } = req.body;
 
-    if (!name || !question) {
-      return res.status(400).json({ ok: false, reason: "missing_fields" });
+    if (!email || !name || !question) {
+      return res.status(400).json({
+        ok: false,
+        reason: "missing_fields"
+      });
     }
 
-    const key = makeApplicationKey(name, question);
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (submittedApplications.has(key)) {
+    // 🔒 ONE SUBMISSION PER EMAIL
+    if (submittedEmails.has(normalizedEmail)) {
       return res.status(409).json({
         ok: false,
         reason: "already_used"
       });
     }
 
-    submittedApplications.add(key);
+    // Mark as used
+    submittedEmails.add(normalizedEmail);
+    saveEmailLocks();
 
     await sendApplicationEmail({
+      email: normalizedEmail,
       name,
       question,
       persona,
@@ -744,8 +776,11 @@ app.post("/submit-application", async (req, res) => {
     return res.json({ ok: true });
 
   } catch (err) {
-    console.error("Email error:", err);
-    return res.status(500).json({ ok: false, reason: "email_failed" });
+    console.error("Submit application error:", err);
+    return res.status(500).json({
+      ok: false,
+      reason: "email_failed"
+    });
   }
 });
 
