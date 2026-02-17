@@ -296,47 +296,30 @@ STYLE CONSTRAINTS:
 // =====================================================
 // ROUTE — GENERATE PERSONA (FROM USER INPUT)
 // =====================================================
+// ROUTE — GENERATE PERSONA (FROM USER INPUT)
 app.post("/generate-persona", async (req, res) => {
-  try {
-    const riskText = (req.body.riskText || "").trim();
+  try {
+    const riskText = (req.body.riskText || "").trim();
 
-    if (!riskText) {
-      return res.json({
-        persona: `Thinking voice:
-- Neutral internal reasoning.
+    if (!riskText) {
+      return res.json({ persona: "Input is required." });
+    }
 
-Search behavior:
-- Neutral exploratory queries.
+    const accepted = await wdnabAcceptProblemOrWish(riskText);
 
-Primary risk sensitivity:
-Unspecified.`
-      });
-    }
+    if (!accepted) {
+      return res.json({
+        persona: "Input does not express a clear human concern."
+      });
+    }
 
-const accepted = await wdnabAcceptProblemOrWish(riskText);
+    const persona = await generatePersonaFromRisk(riskText);
+    return res.json({ persona });
 
-if (!accepted) {
-  return res.json({
-    persona: "Input does not express a clear human concern."
-  });
-}
-
-    const persona = await generatePersonaFromRisk(riskText);
-    res.json({ persona });
-
-  } catch (err) {
-    console.error("❌ Persona generation failed:", err);
-    res.json({
-      persona: `Thinking voice:
-- Fallback neutral reasoning.
-
-Search behavior:
-- Fallback exploratory queries.
-
-Primary risk sensitivity:
-Unavailable.`
-    });
-  }
+  } catch (err) {
+    console.error("❌ Persona generation failed:", err);
+    return res.status(500).json({ error: "persona_failed" });
+  }
 });
 
 // =====================================================
@@ -514,39 +497,6 @@ STRICT:
 
   return out.choices[0].message.content.trim();
 }
-
-app.post("/submit-application", async (req, res) => {
-  try {
-    const { email, name, question, persona, card } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ ok: false, reason: "missing_email" });
-    }
-
-    // 🔒 ONE TIME PER EMAIL
-    if (submittedApplications.has(email)) {
-      return res.status(409).json({
-        ok: false,
-        reason: "already_used"
-      });
-    }
-
-    submittedApplications.add(email);
-
-    await sendApplicationEmail({
-      name,
-      question,
-      persona,
-      card
-    });
-
-    res.json({ ok: true });
-
-  } catch (err) {
-    console.error("Email error:", err);
-    res.status(500).json({ ok: false });
-  }
-});
 
 // =====================================================
 // ROUTE — GENERATE CARD (FROM PERSONA)
@@ -760,6 +710,43 @@ app.post("/thinking-path", async (req, res) => {
       steps: []
     });
   }
+});
+
+// =====================================================
+// ROUTE — SUBMIT APPLICATION (SEND EMAIL)
+// =====================================================
+app.post("/submit-application", async (req, res) => {
+  try {
+    const { name, question, persona, card } = req.body;
+
+    if (!name || !question) {
+      return res.status(400).json({ ok: false, reason: "missing_fields" });
+    }
+
+    const key = makeApplicationKey(name, question);
+
+    if (submittedApplications.has(key)) {
+      return res.status(409).json({
+        ok: false,
+        reason: "already_used"
+      });
+    }
+
+    submittedApplications.add(key);
+
+    await sendApplicationEmail({
+      name,
+      question,
+      persona,
+      card
+    });
+
+    return res.json({ ok: true });
+
+  } catch (err) {
+    console.error("Email error:", err);
+    return res.status(500).json({ ok: false, reason: "email_failed" });
+  }
 });
 
 // -------------------- SERVER --------------------
