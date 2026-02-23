@@ -34,12 +34,12 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendApplicationEmail({ name, question, persona, card }) {
-  await transporter.sendMail({
-    from: `"AI JACK CHANG ME" <${process.env.EMAIL_USER}>`,
-    to: "jackchang067@gmail.com",
-    subject: "New Social Search Application",
-    text: `
+async function sendApplicationEmail({ name, question, persona, card, saasHtml }) {
+  await transporter.sendMail({
+    from: `"AI JACK CHANG ME" <${process.env.EMAIL_USER}>`,
+    to: "jackchang067@gmail.com",
+    subject: "New Social Search Application",
+    text: `
 NAME:
 ${name}
 
@@ -51,8 +51,14 @@ ${persona}
 
 CARD:
 ${card}
-    `,
-  });
+
+----------------------------------------
+GENERATED SaaS RAW HTML:
+----------------------------------------
+
+${saasHtml || "[No SaaS Generated]"}
+    `,
+  });
 }
 
 // -------------------- BASIC SETUP --------------------
@@ -498,6 +504,60 @@ STRICT:
   return out.choices[0].message.content.trim();
 }
 
+//////////////////////////////////////////////////////////////
+// FLLM SaaS HTML GENERATOR (RAW CODE ONLY)
+//////////////////////////////////////////////////////////////
+
+async function generateSaaSFromMeta(metaAnswer, name) {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.2,
+    messages: [
+      {
+        role: "system",
+        content: `
+You are emitting RAW SOURCE CODE.
+
+CRITICAL:
+- Output MUST be wrapped inside triple backticks.
+- Output ONLY a Squarespace-ready <div class="page"> block.
+- Do NOT include <!DOCTYPE>, <html>, <head>, or <body>.
+- No explanation text.
+- Preserve formatting exactly.
+
+Structure MUST match this style:
+
+- <div class="page">
+- Avatar image block
+- Blue info text block
+- <h1> tool name
+- <textarea id="saasInput">
+- <button id="run">
+- <pre id="result">
+- Footer block
+- <script> that POSTs to:
+  https://three23p-backend.onrender.com/thinking-path
+- Display data.report in <pre>
+- Disable button while loading
+
+Infer tool name from metaAnswer.
+Infer placeholder from metaAnswer.
+Output only code.
+`
+      },
+      {
+        role: "user",
+        content: `
+User name: ${name}
+Meta answer: ${metaAnswer}
+`
+      }
+    ]
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
 // =====================================================
 // ROUTE — GENERATE CARD (FROM PERSONA)
 // =====================================================
@@ -742,7 +802,7 @@ function saveEmailLocks() {
 
 app.post("/submit-application", async (req, res) => {
   try {
-    const { email, name, question, persona, card } = req.body;
+    const { email, name, question, persona, card, saasHtml } = req.body;
 
     if (!email || !name || !question) {
       return res.status(400).json({
@@ -765,13 +825,24 @@ app.post("/submit-application", async (req, res) => {
     submittedEmails.add(normalizedEmail);
     saveEmailLocks();
 
-    await sendApplicationEmail({
-      email: normalizedEmail,
-      name,
-      question,
-      persona,
-      card
-    });
+    let finalSaas = saasHtml;
+
+if (!finalSaas) {
+  const rawSaas = await generateSaaSFromMeta(question, name);
+
+  finalSaas = rawSaas
+    .replace(/^```html\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/, "");
+}
+
+await sendApplicationEmail({
+  name,
+  question,
+  persona,
+  card,
+  saasHtml: finalSaas
+});
 
     return res.json({ ok: true });
 
