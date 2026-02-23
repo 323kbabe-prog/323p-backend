@@ -505,7 +505,7 @@ STRICT:
 }
 
 //////////////////////////////////////////////////////////////
-// FLLM SaaS HTML GENERATOR (STRICT PERSONA EXECUTION MODE)
+// FLLM SaaS HTML GENERATOR (LOCKED PERSONA MODE + UI SETTINGS)
 //////////////////////////////////////////////////////////////
 
 async function generateSaaSFromMeta(metaAnswer, name, persona) {
@@ -520,47 +520,65 @@ async function generateSaaSFromMeta(metaAnswer, name, persona) {
         content: `
 You are emitting RAW SOURCE CODE.
 
-ABSOLUTE RULES:
+ABSOLUTE RULES
+1) Output MUST be wrapped inside triple backticks.
+2) Output ONLY a Squarespace-ready <div class="page"> block.
+3) Do NOT include <!DOCTYPE>, <html>, <head>, or <body>.
+4) No explanation text.
+5) Preserve formatting exactly.
 
-1. Output MUST be wrapped inside triple backticks.
-2. Output ONLY a Squarespace-ready <div class="page"> block.
-3. Do NOT include <!DOCTYPE>, <html>, <head>, or <body>.
-4. No explanation text.
-5. Preserve formatting exactly.
-6. You MUST embed the FULL persona text inside the script.
-7. Do NOT summarize persona.
-8. Do NOT modify persona.
-9. Do NOT omit persona.
-10. Persona must be passed to backend exactly as received.
+LOCKED PERSONA RULES (CRITICAL)
+6) The page MUST hard-lock a constant personaText variable.
+7) personaText MUST be the exact Persona JSON string provided.
+8) personaText MUST NOT be summarized, modified, or omitted.
+9) No matter what the user types, the request MUST always send the SAME personaText.
+10) Do NOT allow persona switching.
 
-STRUCTURE REQUIREMENTS:
+UI SETTINGS (MANDATORY)
+- Add an inline <style> block inside <div class="page"> with:
+  - max-width: 760px; margin: 60px auto;
+  - system font
+  - textarea: border #e5e7eb, border-radius 6px, padding 12px, font-size 15px
+  - button: background #111, white text, border-radius 6px, disabled opacity
+  - pre: background #f9fafb, padding 16px, border-radius 6px, white-space: pre-wrap
+- Include:
+  <div id="inputMessage" style="display:none;"></div>
+  <div id="logBar" style="display:none;"></div>
 
+STRUCTURE REQUIREMENTS
 - <div class="page">
+- <style>...</style>
 - Avatar image block
-- Blue info text block
+- Blue info text block (mention Persona Mode)
 - <h1> tool name
 - <textarea id="saasInput">
-- <button id="run">
-- <pre id="result">
+- <button id="run">Run</button>
+- <pre id="result"></pre>
+- <div id="inputMessage"></div>
+- <div id="logBar"></div>
 - Footer block
-- <script> that POSTs to:
+
+REQUEST REQUIREMENTS (CRITICAL)
+- The script MUST POST to EXACTLY:
   https://three23p-backend.onrender.com/persona-execution
-- Send JSON:
+- The script MUST NOT mention or call /thinking-path anywhere.
+- The fetch body MUST be EXACTLY:
   { input: value, persona: personaText }
 - Display data.answer in <pre>
 - Disable button while loading
+- If input empty: show "Please enter your input."
+- If backend returns an error message, show it in inputMessage
 
-PERSONA EMBEDDING (MANDATORY):
-
-Inside the <script> block, you MUST include:
+PERSONA EMBEDDING (MANDATORY)
+Inside the <script> block you MUST include EXACTLY:
 
 const personaText = PERSONA_JSON;
 
-Where PERSONA_JSON is the exact persona string provided.
+Where PERSONA_JSON is the exact persona JSON string provided.
 
-Infer tool name from metaAnswer.
-Infer placeholder from metaAnswer.
-Output only code.
+IMPORTANT
+- Do NOT call /thinking-path.
+- Output only the code.
 `
       },
       {
@@ -568,7 +586,7 @@ Output only code.
         content: `
 User name: ${name}
 Meta answer: ${metaAnswer}
-Persona JSON:
+PERSONA_JSON:
 ${safePersona}
 `
       }
