@@ -505,10 +505,10 @@ STRICT:
 }
 
 //////////////////////////////////////////////////////////////
-// FLLM SaaS HTML GENERATOR (RAW CODE ONLY)
+// FLLM SaaS HTML GENERATOR (PERSONA EXECUTION MODE)
 //////////////////////////////////////////////////////////////
 
-async function generateSaaSFromMeta(metaAnswer, name) {
+async function generateSaaSFromMeta(metaAnswer, name, persona) {
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0.2,
@@ -536,9 +536,15 @@ Structure MUST match this style:
 - <pre id="result">
 - Footer block
 - <script> that POSTs to:
-  https://three23p-backend.onrender.com/thinking-path
-- Display data.report in <pre>
+  https://three23p-backend.onrender.com/persona-execution
+- Send JSON:
+  { input: value, persona: PERSONA_TEXT }
+- Display data.answer in <pre>
 - Disable button while loading
+
+Embed the persona inside the script as:
+
+const personaText = \`PERSONA_TEXT\`;
 
 Infer tool name from metaAnswer.
 Infer placeholder from metaAnswer.
@@ -550,6 +556,8 @@ Output only code.
         content: `
 User name: ${name}
 Meta answer: ${metaAnswer}
+Persona:
+${persona}
 `
       }
     ]
@@ -587,6 +595,7 @@ app.post("/generate-saas-html", async (req, res) => {
   try {
     const metaAnswer = (req.body.metaAnswer || "").trim();
     const name = (req.body.name || "").trim() || "User";
+    const persona = (req.body.persona || "").trim() || "";
 
     if (!metaAnswer) {
       return res.status(400).send("");
@@ -599,9 +608,12 @@ app.post("/generate-saas-html", async (req, res) => {
 
     const rewritten = await wdnabRewriteToProblemOrWish(metaAnswer);
 
-    const rawSaas = await generateSaaSFromMeta(rewritten, name);
+    const rawSaas = await generateSaaSFromMeta(
+      rewritten,
+      name,
+      persona
+    );
 
-    // Return raw as-is (triple backticks included)
     return res.status(200).send(rawSaas);
 
   } catch (err) {
@@ -743,6 +755,58 @@ This system provides a thinking path, not answers.
   return out.choices[0].message.content.trim();
 }
 
+//////////////////////////////////////////////////////////////
+// PERSONA EXECUTION ENGINE
+//////////////////////////////////////////////////////////////
+
+async function wdnabPersonaExecutionEngine(input, persona = "") {
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.4,
+    messages: [
+      {
+        role: "system",
+        content: `
+${persona}
+
+You are a persona-aligned execution engine.
+
+Provide immediate actionable output.
+No links.
+No thinking path.
+No disclaimers.
+Short and executable.
+`
+      },
+      { role: "user", content: input }
+    ]
+  });
+
+  return out.choices[0].message.content.trim();
+}
+
+//////////////////////////////////////////////////////////////
+// ROUTE — PERSONA EXECUTION
+//////////////////////////////////////////////////////////////
+
+app.post("/persona-execution", async (req, res) => {
+  try {
+    const { input, persona } = req.body;
+
+    if (!input || !persona) {
+      return res.json({ answer: "Input required." });
+    }
+
+    const answer = await wdnabPersonaExecutionEngine(input, persona);
+
+    return res.json({ answer });
+
+  } catch (err) {
+    console.error("❌ persona-execution failed:", err);
+    return res.status(500).json({ answer: "System unavailable." });
+  }
+});
+
 // =====================================================
 // ROUTE — THINKING PATH (ONLY ROUTE)
 // =====================================================
@@ -861,7 +925,12 @@ app.post("/submit-application", async (req, res) => {
 
 if (!finalSaas) {
   const rewritten = await wdnabRewriteToProblemOrWish(question);
-const rawSaas = await generateSaaSFromMeta(rewritten, name);
+
+  const rawSaas = await generateSaaSFromMeta(
+    rewritten,
+    name,
+    persona
+  );
 
   finalSaas = rawSaas
     .replace(/^```html\s*/i, "")
