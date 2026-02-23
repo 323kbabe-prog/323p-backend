@@ -578,6 +578,38 @@ app.post("/generate-card", async (req, res) => {
   }
 });
 
+//////////////////////////////////////////////////////////////
+// ROUTE — GENERATE SaaS HTML (RAW CODE)
+// POST /generate-saas-html
+//////////////////////////////////////////////////////////////
+
+app.post("/generate-saas-html", async (req, res) => {
+  try {
+    const metaAnswer = (req.body.metaAnswer || "").trim();
+    const name = (req.body.name || "").trim() || "User";
+
+    if (!metaAnswer) {
+      return res.status(400).send("");
+    }
+
+    const accepted = await wdnabAcceptProblemOrWish(metaAnswer);
+    if (!accepted) {
+      return res.status(200).send("");
+    }
+
+    const rewritten = await wdnabRewriteToProblemOrWish(metaAnswer);
+
+    const rawSaas = await generateSaaSFromMeta(rewritten, name);
+
+    // Return raw as-is (triple backticks included)
+    return res.status(200).send(rawSaas);
+
+  } catch (err) {
+    console.error("❌ /generate-saas-html failed:", err);
+    return res.status(500).send("");
+  }
+});
+
 // =====================================================
 // THINKING PATH GENERATOR (CORE ENGINE — STRONG DOMAIN MODE)
 // =====================================================
@@ -828,7 +860,8 @@ app.post("/submit-application", async (req, res) => {
     let finalSaas = saasHtml;
 
 if (!finalSaas) {
-  const rawSaas = await generateSaaSFromMeta(question, name);
+  const rewritten = await wdnabRewriteToProblemOrWish(question);
+const rawSaas = await generateSaaSFromMeta(rewritten, name);
 
   finalSaas = rawSaas
     .replace(/^```html\s*/i, "")
