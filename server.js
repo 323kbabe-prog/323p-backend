@@ -509,6 +509,8 @@ STRICT:
 //////////////////////////////////////////////////////////////
 
 async function generateSaaSFromMeta(metaAnswer, name, persona) {
+  const safePersona = JSON.stringify(persona);
+
   const out = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0.2,
@@ -552,11 +554,9 @@ PERSONA EMBEDDING (MANDATORY):
 
 Inside the <script> block, you MUST include:
 
-const personaText = \`${persona}\`;
+const personaText = PERSONA_JSON;
 
-Do NOT replace with placeholder.
-Do NOT shorten.
-Use the exact persona content provided.
+Where PERSONA_JSON is the exact persona string provided.
 
 Infer tool name from metaAnswer.
 Infer placeholder from metaAnswer.
@@ -568,8 +568,8 @@ Output only code.
         content: `
 User name: ${name}
 Meta answer: ${metaAnswer}
-Persona:
-${persona}
+Persona JSON:
+${safePersona}
 `
       }
     ]
