@@ -951,30 +951,41 @@ app.post("/submit-application", async (req, res) => {
     submittedEmails.add(normalizedEmail);
     saveEmailLocks();
 
+    // ✅ Start with whatever frontend sent (if any)
     let finalSaas = saasHtml;
 
-if (!finalSaas) {
-  const rewritten = await wdnabRewriteToProblemOrWish(question);
+    // ✅ If frontend did not send SaaS HTML, generate it here
+    if (!finalSaas) {
+      const rewritten = await wdnabRewriteToProblemOrWish(question);
 
-  const rawSaas = await generateSaaSFromMeta(
-    rewritten,
-    name,
-    persona
-  );
+      const rawSaasGenerated = await generateSaaSFromMeta(
+        rewritten,
+        name,
+        persona
+      );
 
-  finalSaas = rawSaas
-    .replace(/^```html\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/, "");
-}
+      finalSaas = rawSaasGenerated
+        .replace(/^```html\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/, "");
 
-await sendApplicationEmail({
-  name,
-  question,
-  persona,
-  card,
-  saasHtml: finalSaas
-});
+      // 🔒 HARD INJECT PERSONA SAFETY (guarantee personaText exists)
+      if (!finalSaas.includes("const personaText")) {
+        finalSaas = finalSaas.replace(
+          "<script>",
+          `<script>\nconst personaText = ${JSON.stringify(persona)};\n`
+        );
+      }
+    }
+
+    // ✅ Email always gets SaaS HTML
+    await sendApplicationEmail({
+      name,
+      question,
+      persona,
+      card,
+      saasHtml: finalSaas
+    });
 
     return res.json({ ok: true });
 
