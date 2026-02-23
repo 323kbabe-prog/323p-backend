@@ -505,7 +505,7 @@ STRICT:
 }
 
 //////////////////////////////////////////////////////////////
-// FLLM SaaS HTML GENERATOR (PERSONA EXECUTION MODE)
+// FLLM SaaS HTML GENERATOR (STRICT PERSONA EXECUTION MODE)
 //////////////////////////////////////////////////////////////
 
 async function generateSaaSFromMeta(metaAnswer, name, persona) {
@@ -518,14 +518,20 @@ async function generateSaaSFromMeta(metaAnswer, name, persona) {
         content: `
 You are emitting RAW SOURCE CODE.
 
-CRITICAL:
-- Output MUST be wrapped inside triple backticks.
-- Output ONLY a Squarespace-ready <div class="page"> block.
-- Do NOT include <!DOCTYPE>, <html>, <head>, or <body>.
-- No explanation text.
-- Preserve formatting exactly.
+ABSOLUTE RULES:
 
-Structure MUST match this style:
+1. Output MUST be wrapped inside triple backticks.
+2. Output ONLY a Squarespace-ready <div class="page"> block.
+3. Do NOT include <!DOCTYPE>, <html>, <head>, or <body>.
+4. No explanation text.
+5. Preserve formatting exactly.
+6. You MUST embed the FULL persona text inside the script.
+7. Do NOT summarize persona.
+8. Do NOT modify persona.
+9. Do NOT omit persona.
+10. Persona must be passed to backend exactly as received.
+
+STRUCTURE REQUIREMENTS:
 
 - <div class="page">
 - Avatar image block
@@ -538,13 +544,19 @@ Structure MUST match this style:
 - <script> that POSTs to:
   https://three23p-backend.onrender.com/persona-execution
 - Send JSON:
-  { input: value, persona: PERSONA_TEXT }
+  { input: value, persona: personaText }
 - Display data.answer in <pre>
 - Disable button while loading
 
-Embed the persona inside the script as:
+PERSONA EMBEDDING (MANDATORY):
 
-const personaText = \`PERSONA_TEXT\`;
+Inside the <script> block, you MUST include:
+
+const personaText = \`${persona}\`;
+
+Do NOT replace with placeholder.
+Do NOT shorten.
+Use the exact persona content provided.
 
 Infer tool name from metaAnswer.
 Infer placeholder from metaAnswer.
