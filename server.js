@@ -311,16 +311,9 @@ app.post("/generate-persona", async (req, res) => {
       return res.json({ persona: "Input is required." });
     }
 
-    const accepted = await wdnabAcceptProblemOrWish(riskText);
-
-    if (!accepted) {
-      return res.json({
-        persona: "Input does not express a clear human concern."
-      });
-    }
-
     const persona = await generatePersonaFromRisk(riskText);
-return res.json({ persona });
+
+    return res.json({ persona });
 
   } catch (err) {
     console.error("❌ Persona generation failed:", err);
