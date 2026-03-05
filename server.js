@@ -631,12 +631,7 @@ app.post("/generate-saas-html", async (req, res) => {
       return res.status(400).send("");
     }
 
-    const accepted = await wdnabAcceptProblemOrWish(metaAnswer);
-    if (!accepted) {
-      return res.status(200).send("");
-    }
-
-    const rewritten = await wdnabRewriteToProblemOrWish(metaAnswer);
+   const rewritten = metaAnswer;
 
     const rawSaas = await generateSaaSFromMeta(
       rewritten,
