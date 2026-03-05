@@ -258,8 +258,8 @@ CRITICAL RULES:
 - Do NOT use first-person pronouns ("I", "me", "my").
 DOMAIN IDENTITY LOCK (CRITICAL):
 
-Infer a dominant life domain from the meta-question
-(e.g. gaming, coding, finance, health, environment).
+Infer the dominant domain of the AI business described in the meta-answer
+(e.g. gaming, coding, finance, health, language learning).
 
 ALL bullets MUST stay inside that domain.
 
@@ -320,7 +320,7 @@ app.post("/generate-persona", async (req, res) => {
     }
 
     const persona = await generatePersonaFromRisk(riskText);
-    return res.json({ persona });
+return res.json({ persona });
 
   } catch (err) {
     console.error("❌ Persona generation failed:", err);
@@ -960,7 +960,7 @@ app.post("/submit-application", async (req, res) => {
 
     // ✅ If frontend did not send SaaS HTML, generate it here
     if (!finalSaas) {
-      const rewritten = await wdnabRewriteToProblemOrWish(question);
+      const rewritten = question;
 
       const rawSaasGenerated = await generateSaaSFromMeta(
         rewritten,
