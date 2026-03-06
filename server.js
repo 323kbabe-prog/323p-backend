@@ -1150,13 +1150,12 @@ const searchMatch = block.match(/Search:\s*(.*)/);
 const why = whyMatch ? whyMatch[1].trim() : "";
 const query = searchMatch ? searchMatch[1].trim() : "";
 
-const encoded=query.replace(/\s+/g,"+");
+const encoded = query.trim().replace(/\s+/g,"+");
 
 return {
-why,
-link:`https://www.google.com/search?hl=en&q=${encoded}&source=hp`
+  why,
+  link:`https://www.google.com/search?q=${encoded}`
 };
-
 });
 
 return res.json({
