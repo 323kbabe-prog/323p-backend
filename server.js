@@ -1297,16 +1297,18 @@ ${personas.join("\n")}
 Debate rules:
 
 • Exactly 10 messages total
-• Each message must come from one persona
-• Personas must respond to earlier speakers
-• Participants may agree, disagree, or extend ideas
-• Every message MUST reference at least one previous persona.
+• Each message must respond to a previous speaker
+• Every message MUST mention another persona by name
+• At least 40% of messages must disagree with a previous point
+• Some messages should challenge assumptions
+• Some should defend earlier arguments
+• The debate should include conflict, rebuttal, and counterpoints
 
 Example:
 
-Economics chat replying to Psychology chat  
-Law chat disagreeing with Economics chat  
-Design chat building on Urban planning chat
+Economics chat disagreeing with Psychology chat
+Law chat challenging Economics chat
+Design chat defending Psychology chat
 
 Example style:
 
@@ -1336,7 +1338,7 @@ Format:
 const response = await openai.chat.completions.create({
 
 model:"gpt-4o-mini",
-temperature:0.7,
+temperature:0.9,
 
 messages:[
 {role:"system",content:systemPrompt},
