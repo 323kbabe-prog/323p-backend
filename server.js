@@ -1181,6 +1181,142 @@ thinking_path:[]
 
 });
 
+//////////////////////////////////////////////////////////////
+// LIVE DEBATE ENGINE
+//////////////////////////////////////////////////////////////
+
+const DEBATE_PERSONAS = [
+"Economics perspective",
+"Psychology perspective",
+"Computer science perspective",
+"Political science perspective",
+"Biology research perspective",
+"Environmental science perspective",
+"Urban planning perspective",
+"Philosophy perspective",
+"Mathematics perspective",
+"Design perspective",
+"Sociology perspective",
+"Anthropology research perspective",
+"History perspective",
+"Journalism perspective",
+"Law perspective",
+"Business strategy perspective",
+"Marketing perspective",
+"Finance perspective",
+"Data science perspective",
+"Artificial intelligence research perspective",
+"Public policy perspective",
+"International relations perspective",
+"Education perspective",
+"Health sciences perspective",
+"Nutrition science perspective",
+"Architecture perspective",
+"Mechanical engineering perspective",
+"Civil engineering perspective",
+"Media studies perspective",
+"Linguistics perspective",
+"Film studies perspective",
+"Music industry perspective",
+"Entertainment media perspective",
+"Game design perspective",
+"Pop culture studies perspective"
+];
+
+function shuffleArray(arr){
+for (let i = arr.length - 1; i > 0; i--) {
+const j = Math.floor(Math.random() * (i + 1));
+[arr[i], arr[j]] = [arr[j], arr[i]];
+}
+return arr;
+}
+
+function validDebateQuestion(text){
+if(!text) return false;
+const t=text.trim();
+if(t.length < 6) return false;
+if(t.length > 200) return false;
+if(!/[a-zA-Z]/.test(t)) return false;
+return true;
+}
+
+app.post("/major-debate", async (req,res)=>{
+
+try{
+
+const question=(req.body.question || "").trim();
+
+if(!validDebateQuestion(question)){
+return res.json({messages:[]});
+}
+
+const personas = shuffleArray([...DEBATE_PERSONAS]).slice(0,10);
+
+const systemPrompt = `
+You are simulating a live panel debate.
+
+User question:
+"${question}"
+
+Participants:
+${personas.join("\n")}
+
+Rules:
+
+• Exactly 30 messages total
+• Each message must come from one persona
+• Personas should react to previous ideas
+• Messages must be 1–2 sentences
+• Debate should include agreement, disagreement, and new angles
+• Participants should occasionally address other perspectives
+
+Output JSON ONLY.
+
+Format:
+
+{
+ "messages":[
+  {"persona":"Economics perspective","text":"message"},
+  {"persona":"Psychology perspective","text":"message"}
+ ]
+}
+`;
+
+const response = await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0.7,
+messages:[
+{role:"system",content:systemPrompt},
+{role:"user",content:"Start the debate."}
+]
+});
+
+let raw = response.choices?.[0]?.message?.content || "";
+
+raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
+
+let parsed;
+
+try{
+parsed = JSON.parse(raw);
+}catch{
+return res.json({messages:[]});
+}
+
+const messages = (parsed.messages || []).slice(0,30);
+
+return res.json({messages});
+
+}catch(err){
+
+console.error("major-debate error:",err);
+
+return res.status(500).json({messages:[]});
+
+}
+
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
