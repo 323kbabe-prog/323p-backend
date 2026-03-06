@@ -1300,7 +1300,13 @@ Debate rules:
 • Each message must come from one persona
 • Personas must respond to earlier speakers
 • Participants may agree, disagree, or extend ideas
-• Sometimes reference another persona
+• Every message MUST reference at least one previous persona.
+
+Example:
+
+Economics chat replying to Psychology chat  
+Law chat disagreeing with Economics chat  
+Design chat building on Urban planning chat
 
 Example style:
 
