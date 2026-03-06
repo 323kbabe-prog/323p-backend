@@ -996,41 +996,41 @@ app.post("/submit-application", async (req, res) => {
 
 const ACADEMIC_PERSONAS = [
 
-"Economics major perspective",
-"Psychology student perspective",
-"Computer science student perspective",
-"Political science analyst perspective",
-"Biology researcher perspective",
+"Economics perspective",
+"Psychology perspective",
+"Computer science perspective",
+"Political science perspective",
+"Biology research perspective",
 
 "Environmental science perspective",
-"Urban planning student perspective",
-"Philosophy student perspective",
-"Mathematics student perspective",
-"Design student perspective",
+"Urban planning perspective",
+"Philosophy perspective",
+"Mathematics perspective",
+"Design perspective",
 
-"Sociology student perspective",
-"Anthropology researcher perspective",
-"History student perspective",
+"Sociology perspective",
+"Anthropology research perspective",
+"History perspective",
 "Journalism perspective",
-"Law student perspective",
+"Law perspective",
 
 "Business strategy perspective",
-"Marketing student perspective",
-"Finance student perspective",
+"Marketing perspective",
+"Finance perspective",
 "Data science perspective",
-"Artificial intelligence researcher perspective",
+"Artificial intelligence research perspective",
 
 "Public policy perspective",
 "International relations perspective",
-"Education student perspective",
+"Education perspective",
 "Health sciences perspective",
 "Nutrition science perspective",
 
-"Architecture student perspective",
+"Architecture perspective",
 "Mechanical engineering perspective",
 "Civil engineering perspective",
 "Media studies perspective",
-"Linguistics student perspective",
+"Linguistics perspective",
 
 "Film studies perspective",
 "Music industry perspective",
@@ -1055,6 +1055,7 @@ if(!text) return false;
 const t=text.trim();
 
 if(t.length < 6) return false;
+if(t.length > 200) return false;
 
 if(!/[a-zA-Z]/.test(t)) return false;
 
@@ -1084,38 +1085,38 @@ thinking_path:[]
 
 const persona=randomPersona();
 
-const response=await openai.chat.completions.create({
+const response = await openai.chat.completions.create({
 model:"gpt-4o-mini",
 temperature:0.4,
 messages:[
 {
 role:"system",
 content:`
-You answer from this academic perspective:
+You answer from this perspective:
 
 ${persona}
 
-Provide:
+Respond using JSON ONLY.
 
-1. A short explanation responding to the question.
-2. A thinking path with 3 reasoning steps.
-3. Each step must include a natural Google search query.
+Format:
 
-Output format:
-
-Answer:
-(text)
-
-Thinking Path:
-
-Step 1 —
-Search: query words
-
-Step 2 —
-Search: query words
-
-Step 3 —
-Search: query words
+{
+ "answer":"short explanation",
+ "steps":[
+   {
+    "why":"reason why this step matters",
+    "search":"google search query"
+   },
+   {
+    "why":"reason why this step matters",
+    "search":"google search query"
+   },
+   {
+    "why":"reason why this step matters",
+    "search":"google search query"
+   }
+ ]
+}
 `
 },
 {
@@ -1125,24 +1126,35 @@ content:question
 ]
 });
 
-const text=response.choices[0].message.content.trim();
+const raw = response.choices[0].message.content;
 
-const searches=text.match(/Search:\s*(.*)/g) || [];
+let parsed;
 
-const links=searches.map(line=>{
+try{
+parsed = JSON.parse(raw);
+}catch{
+return res.json({
+persona,
+answer:"Could not generate response.",
+thinking_path:[]
+});
+}
 
-const query=line.replace("Search:","").trim();
+const thinking_path = (parsed.steps || []).map(step =>{
 
-const encoded=query.replace(/\s+/g,"+");
+const encoded = step.search.replace(/\s+/g,"+");
 
-return `https://www.google.com/search?q=${encoded}`;
+return{
+why: step.why,
+link:`https://www.google.com/search?q=${encoded}`
+};
 
 });
 
 return res.json({
 persona,
-answer:text,
-thinking_path:links
+answer: parsed.answer,
+thinking_path
 });
 
 }catch(err){
