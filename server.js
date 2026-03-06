@@ -1085,7 +1085,7 @@ thinking_path:[]
 
 const persona=randomPersona();
 
-const response = await openai.chat.completions.create({
+const response=await openai.chat.completions.create({
 model:"gpt-4o-mini",
 temperature:0.4,
 messages:[
@@ -1096,27 +1096,35 @@ You answer from this perspective:
 
 ${persona}
 
-Respond using JSON ONLY.
+Provide:
 
-Format:
+1. A short paragraph answer (3–5 sentences) responding to the question.
+The paragraph should clearly explain the idea from this perspective.
 
-{
- "answer":"short explanation",
- "steps":[
-   {
-    "why":"reason why this step matters",
-    "search":"google search query"
-   },
-   {
-    "why":"reason why this step matters",
-    "search":"google search query"
-   },
-   {
-    "why":"reason why this step matters",
-    "search":"google search query"
-   }
- ]
-}
+2. A Thinking Path with 3 steps.
+
+Each step must include:
+- WHY this step matters
+- a Google search query.
+
+Format exactly:
+
+Answer:
+(paragraph)
+
+Thinking Path:
+
+Step 1 —
+Why: explanation
+Search: query words
+
+Step 2 —
+Why: explanation
+Search: query words
+
+Step 3 —
+Why: explanation
+Search: query words
 `
 },
 {
@@ -1126,26 +1134,26 @@ content:question
 ]
 });
 
-const raw = response.choices[0].message.content;
+const raw=response.choices[0].message.content.trim();
 
-let parsed;
+const answer=raw.split("Thinking Path")[0]
+.replace("Answer:","")
+.trim();
 
-try{
-parsed = JSON.parse(raw);
-}catch{
-return res.json({
-persona,
-answer:"Could not generate response.",
-thinking_path:[]
-});
-}
+const stepBlocks = raw.match(/Step\s\d[\s\S]*?Search:\s*(.*)/g) || [];
 
-const thinking_path = (parsed.steps || []).map(step =>{
+const thinking_path = stepBlocks.map(block => {
 
-const encoded = step.search.replace(/\s+/g,"+");
+const whyMatch = block.match(/Why:\s*(.*)/);
+const searchMatch = block.match(/Search:\s*(.*)/);
 
-return{
-why: step.why,
+const why = whyMatch ? whyMatch[1].trim() : "";
+const query = searchMatch ? searchMatch[1].trim() : "";
+
+const encoded=query.replace(/\s+/g,"+");
+
+return {
+why,
 link:`https://www.google.com/search?q=${encoded}`
 };
 
@@ -1153,7 +1161,7 @@ link:`https://www.google.com/search?q=${encoded}`
 
 return res.json({
 persona,
-answer: parsed.answer,
+answer,
 thinking_path
 });
 
