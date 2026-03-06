@@ -1296,7 +1296,7 @@ ${personas.join("\n")}
 
 Debate rules:
 
-• Exactly 30 messages total
+• Exactly 10 messages total
 • Each message must come from one persona
 • Personas must respond to earlier speakers
 • Participants may agree, disagree, or extend ideas
@@ -1388,7 +1388,7 @@ text: m.text
 
 }
 
-if(messages.length >= 30) break;
+if(messages.length >= 10) break;
 
 }
 
