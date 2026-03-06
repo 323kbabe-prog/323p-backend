@@ -1154,7 +1154,7 @@ const encoded=query.replace(/\s+/g,"+");
 
 return {
 why,
-link:`https://www.google.com/search?q=${encoded}`
+link:`https://www.google.com/search?hl=en&q=${encoded}&source=hp`
 };
 
 });
