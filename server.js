@@ -990,6 +990,175 @@ app.post("/submit-application", async (req, res) => {
   }
 });
 
+//////////////////////////////////////////////////////////////
+// RANDOM ACADEMIC PERSONA + THINKING PATH SEARCH ENGINE
+//////////////////////////////////////////////////////////////
+
+const ACADEMIC_PERSONAS = [
+
+"Economics major perspective",
+"Psychology student perspective",
+"Computer science student perspective",
+"Political science analyst perspective",
+"Biology researcher perspective",
+
+"Environmental science perspective",
+"Urban planning student perspective",
+"Philosophy student perspective",
+"Mathematics student perspective",
+"Design student perspective",
+
+"Sociology student perspective",
+"Anthropology researcher perspective",
+"History student perspective",
+"Journalism perspective",
+"Law student perspective",
+
+"Business strategy perspective",
+"Marketing student perspective",
+"Finance student perspective",
+"Data science perspective",
+"Artificial intelligence researcher perspective",
+
+"Public policy perspective",
+"International relations perspective",
+"Education student perspective",
+"Health sciences perspective",
+"Nutrition science perspective",
+
+"Architecture student perspective",
+"Mechanical engineering perspective",
+"Civil engineering perspective",
+"Media studies perspective",
+"Linguistics student perspective",
+
+"Film studies perspective",
+"Music industry perspective",
+"Entertainment media perspective",
+"Game design perspective",
+"Pop culture studies perspective"
+
+];
+
+function randomPersona(){
+
+return ACADEMIC_PERSONAS[
+Math.floor(Math.random()*ACADEMIC_PERSONAS.length)
+];
+
+}
+
+function validQuestion(text){
+
+if(!text) return false;
+
+const t=text.trim();
+
+if(t.length < 6) return false;
+
+if(!/[a-zA-Z]/.test(t)) return false;
+
+return true;
+
+}
+
+//////////////////////////////////////////////////////////////
+// ROUTE — MAJOR SEARCH ENGINE
+//////////////////////////////////////////////////////////////
+
+app.post("/major-search", async (req,res)=>{
+
+try{
+
+const question=(req.body.question || "").trim();
+
+if(!validQuestion(question)){
+
+return res.json({
+persona:"",
+answer:"Please enter a real question.",
+thinking_path:[]
+});
+
+}
+
+const persona=randomPersona();
+
+const response=await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0.4,
+messages:[
+{
+role:"system",
+content:`
+You answer from this academic perspective:
+
+${persona}
+
+Provide:
+
+1. A short explanation responding to the question.
+2. A thinking path with 3 reasoning steps.
+3. Each step must include a natural Google search query.
+
+Output format:
+
+Answer:
+(text)
+
+Thinking Path:
+
+Step 1 —
+Search: query words
+
+Step 2 —
+Search: query words
+
+Step 3 —
+Search: query words
+`
+},
+{
+role:"user",
+content:question
+}
+]
+});
+
+const text=response.choices[0].message.content.trim();
+
+const searches=text.match(/Search:\s*(.*)/g) || [];
+
+const links=searches.map(line=>{
+
+const query=line.replace("Search:","").trim();
+
+const encoded=query.replace(/\s+/g,"+");
+
+return `https://www.google.com/search?q=${encoded}`;
+
+});
+
+return res.json({
+persona,
+answer:text,
+thinking_path:links
+});
+
+}catch(err){
+
+console.error("major-search error:",err);
+
+res.status(500).json({
+persona:"",
+answer:"System unavailable.",
+thinking_path:[]
+});
+
+}
+
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
