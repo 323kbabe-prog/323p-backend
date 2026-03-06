@@ -1150,7 +1150,10 @@ const searchMatch = block.match(/Search:\s*(.*)/);
 const why = whyMatch ? whyMatch[1].trim() : "";
 const query = searchMatch ? searchMatch[1].trim() : "";
 
-const encoded = query.trim().replace(/\s+/g,"+");
+const encoded = query
+.trim()
+.replace(/[^\w\s-]/g,"")
+.replace(/\s+/g,"+");
 
 return {
   why,
