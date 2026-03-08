@@ -1393,10 +1393,17 @@ content:question
 const verdict = nonsenseCheck.choices[0].message.content.trim();
 
 if(verdict !== "YES"){
+
+const errorText = await translateFromEnglish(
+"Enter a thought, idea, or question to start the AI debate.",
+userLang
+);
+
 return res.json({
 messages:[],
-error:"Enter a thought, idea, or question to start the AI debate."
+error:errorText
 });
+
 }
 
 const personas = shuffleArray([...DEBATE_PERSONAS]).slice(0,10);
@@ -1452,15 +1459,13 @@ Format:
 `;
 
 const response = await openai.chat.completions.create({
-
 model:"gpt-4o-mini",
 temperature:0.9,
-
+response_format:{type:"json_object"},
 messages:[
 {role:"system",content:systemPrompt},
 {role:"user",content:"Start the debate."}
 ]
-
 });
 
 let raw = response.choices?.[0]?.message?.content || "";
@@ -1518,7 +1523,13 @@ if(messages.length >= 10) break;
 
 // translate debate back to user language
 for (let i = 0; i < messages.length; i++) {
-  messages[i].text = await translateFromEnglish(messages[i].text, userLang);
+
+  messages[i].text =
+  await translateFromEnglish(messages[i].text, userLang);
+
+  messages[i].persona =
+  await translateFromEnglish(messages[i].persona, userLang);
+
 }
 
 return res.json({messages});
