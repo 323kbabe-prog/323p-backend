@@ -1283,6 +1283,39 @@ if(!validDebateQuestion(question)){
 return res.json({messages:[]});
 }
 
+// AI nonsense detection
+const nonsenseCheck = await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0,
+messages:[
+{
+role:"system",
+content:`
+Decide if the user input is a meaningful question or discussion topic.
+
+If the input is random text, meaningless characters, or nonsense reply NO.
+
+If the input expresses a real topic, idea, or question reply YES.
+
+Reply ONLY YES or NO.
+`
+},
+{
+role:"user",
+content:question
+}
+]
+});
+
+const verdict = nonsenseCheck.choices[0].message.content.trim();
+
+if(verdict !== "YES"){
+return res.json({
+messages:[],
+error:"Please enter a meaningful question."
+});
+}
+
 const personas = shuffleArray([...DEBATE_PERSONAS]).slice(0,10);
 
 const systemPrompt = `
