@@ -1259,11 +1259,9 @@ if(!text) return false;
 
 const t = text.trim();
 
-if(t.length < 6) return false;
+if(t.length < 4) return false;
 
 if(t.length > 200) return false;
-
-if(!/[a-zA-Z]/.test(t)) return false;
 
 return true;
 
@@ -1487,7 +1485,11 @@ return res.json({messages:[]});
 
 }
 
-const rawMessages = parsed.messages || [];
+const rawMessages =
+parsed.messages ||
+parsed.debate ||
+parsed.output ||
+[];
 
 /*
 SMART DUPLICATE FILTER
@@ -1532,7 +1534,7 @@ for(let i=0;i<messages.length;i++){
 messages[i].text = lines[i] || messages[i].text;
 }
 
-if(messages.length < 3){
+if(messages.length === 0){
 return res.json({messages:[]});
 }
 
