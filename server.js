@@ -559,7 +559,7 @@ REQUEST REQUIREMENTS (CRITICAL)
   { input: value, persona: personaText }
 - Display data.answer in <pre>
 - Disable button while loading
-- If input empty: show "Please enter your input."
+- If input empty: show "Enter a thought, idea, or question to start the AI debate."
 - If backend returns an error message, show it in inputMessage
 
 PERSONA EMBEDDING (MANDATORY)
@@ -1077,7 +1077,7 @@ if(!validQuestion(question)){
 
 return res.json({
 persona:"",
-answer:"Please enter a real question.",
+answer:"Enter a thought, idea, or question to start the AI debate.",
 thinking_path:[]
 });
 
@@ -1312,7 +1312,7 @@ const verdict = nonsenseCheck.choices[0].message.content.trim();
 if(verdict !== "YES"){
 return res.json({
 messages:[],
-error:"Please enter a meaningful question."
+error:"Enter a thought, idea, or question to start the AI debate."
 });
 }
 
