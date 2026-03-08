@@ -1270,6 +1270,83 @@ return true;
 }
 
 //////////////////////////////////////////////////////////////
+// LANGUAGE DETECTION
+//////////////////////////////////////////////////////////////
+
+async function detectLanguage(text){
+
+const r = await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0,
+messages:[
+{
+role:"system",
+content:"Detect the language of the text. Reply ONLY with ISO code like en, zh, es, fr, de."
+},
+{
+role:"user",
+content:text
+}
+]
+});
+
+return r.choices[0].message.content.trim().toLowerCase();
+
+}
+
+//////////////////////////////////////////////////////////////
+// TRANSLATE TO ENGLISH
+//////////////////////////////////////////////////////////////
+
+async function translateToEnglish(text){
+
+const r = await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0,
+messages:[
+{
+role:"system",
+content:"Translate the text into natural English."
+},
+{
+role:"user",
+content:text
+}
+]
+});
+
+return r.choices[0].message.content.trim();
+
+}
+
+//////////////////////////////////////////////////////////////
+// TRANSLATE FROM ENGLISH
+//////////////////////////////////////////////////////////////
+
+async function translateFromEnglish(text, lang){
+
+if(lang === "en") return text;
+
+const r = await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0,
+messages:[
+{
+role:"system",
+content:`Translate the following English text to ${lang}.`
+},
+{
+role:"user",
+content:text
+}
+]
+});
+
+return r.choices[0].message.content.trim();
+
+}
+
+//////////////////////////////////////////////////////////////
 // LIVE DEBATE ENGINE (STABLE VERSION)
 //////////////////////////////////////////////////////////////
 
@@ -1277,11 +1354,17 @@ app.post("/major-debate", async (req,res)=>{
 
 try{
 
-const question=(req.body.question || "").trim();
+const userInput = (req.body.question || "").trim();
 
-if(!validDebateQuestion(question)){
+if(!validDebateQuestion(userInput)){
 return res.json({messages:[]});
 }
+
+// detect user language
+const userLang = await detectLanguage(userInput);
+
+// translate to English for AI processing
+const question = await translateToEnglish(userInput);
 
 // AI nonsense detection
 const nonsenseCheck = await openai.chat.completions.create({
@@ -1431,6 +1514,11 @@ text: m.text
 
 if(messages.length >= 10) break;
 
+}
+
+// translate debate back to user language
+for (let i = 0; i < messages.length; i++) {
+  messages[i].text = await translateFromEnglish(messages[i].text, userLang);
 }
 
 return res.json({messages});
