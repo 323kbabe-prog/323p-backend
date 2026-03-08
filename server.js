@@ -1522,14 +1522,18 @@ if(messages.length >= 10) break;
 }
 
 // translate debate back to user language
-for (let i = 0; i < messages.length; i++) {
+const joinedText = messages.map(m => m.text).join("\n");
 
-  messages[i].text =
-  await translateFromEnglish(messages[i].text, userLang);
+const translated = await translateFromEnglish(joinedText, userLang);
 
-  messages[i].persona =
-  await translateFromEnglish(messages[i].persona, userLang);
+const lines = translated.split("\n");
 
+for(let i=0;i<messages.length;i++){
+messages[i].text = lines[i] || messages[i].text;
+}
+
+if(messages.length < 3){
+return res.json({messages:[]});
 }
 
 return res.json({messages});
