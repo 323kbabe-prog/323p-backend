@@ -1524,14 +1524,18 @@ if(messages.length >= 10) break;
 }
 
 // translate debate back to user language
-const joinedText = messages.map(m => m.text).join("\n");
+const joinedText = messages
+.map((m,i)=>`[${i}] ${m.text}`)
+.join("\n");
 
 const translated = await translateFromEnglish(joinedText, userLang);
 
 const lines = translated.split("\n");
 
 for(let i=0;i<messages.length;i++){
-messages[i].text = lines[i] || messages[i].text;
+messages[i].text =
+(lines[i] || "")
+.replace(/^\[\d+\]\s*/,"") || messages[i].text;
 }
 
 if(messages.length === 0){
