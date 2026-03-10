@@ -10,10 +10,10 @@ const crypto = require("crypto");
 const submittedApplications = new Set();
 
 function makeApplicationKey(name, question) {
-  return crypto
-    .createHash("sha256")
-    .update(`${name}|${question}`)
-    .digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(`${name}|${question}`)
+    .digest("hex");
 }
 
 const express = require("express");
@@ -25,13 +25,13 @@ const app = express();
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
 });
 
 async function sendApplicationEmail({ name, question, persona, card, saasHtml }) {
@@ -69,7 +69,7 @@ app.get("/", (_, res) => res.status(200).send("OK"));
 
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 //////////////////////////////////////////////////////////////
@@ -230,23 +230,23 @@ app.post("/api/cidi/pinyin", async (req, res) => {
 
 // -------------------- STEP LOGGER --------------------
 function stepLog(steps, text) {
-  steps.push({
-    time: new Date().toISOString(),
-    text
-  });
+  steps.push({
+    time: new Date().toISOString(),
+    text
+  });
 }
 
 // =====================================================
 // PERSONA GENERATOR — AI-GENERATED FROM USER META-QUESTION
 // =====================================================
 async function generatePersonaFromRisk(riskText) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.4,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.4,
+    messages: [
+      {
+        role: "system",
+        content: `
 You generate a persona description.
 
 CRITICAL RULES:
@@ -288,15 +288,15 @@ STYLE CONSTRAINTS:
 - No colons inside bullets.
 - Content must be shaped by the user's meta-question.
 `
-      },
-      {
-        role: "user",
-        content: riskText
-      }
-    ]
-  });
+      },
+      {
+        role: "user",
+        content: riskText
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 // =====================================================
@@ -325,13 +325,13 @@ app.post("/generate-persona", async (req, res) => {
 // AI GATE — ACCEPT PROBLEM OR WISH (LENIENT)
 // =====================================================
 async function wdnabAcceptProblemOrWish(input, persona = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
 ${persona}
 
 You are an input classification system.
@@ -352,25 +352,25 @@ Reject ONLY if:
 Output ONLY:
 ACCEPT or REJECT
 `
-      },
-      { role: "user", content: input }
-    ]
-  });
+      },
+      { role: "user", content: input }
+    ]
+  });
 
-  return out.choices[0].message.content.trim() === "ACCEPT";
+  return out.choices[0].message.content.trim() === "ACCEPT";
 }
 
 // =====================================================
 // INPUT REWRITE — NORMALIZE TO PROBLEM OR WISH
 // =====================================================
 async function wdnabRewriteToProblemOrWish(input, persona = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
 ${persona}
 
 You are a cognitive normalization system.
@@ -383,7 +383,7 @@ Rules:
 - Preserve the underlying human intent.
 - If the input is vague, clarify intent.
 - If the input is a phrase (e.g. "Learning AI"),
-  rewrite it as a desire to understand or learn.
+  rewrite it as a desire to understand or learn.
 - Do NOT give advice.
 - Do NOT solve the problem.
 - Output EXACTLY one sentence.
@@ -392,25 +392,25 @@ Only output:
 Unable to rewrite as a problem or a wish.
 if the input is meaningless.
 `
-      },
-      { role: "user", content: input }
-    ]
-  });
+      },
+      { role: "user", content: input }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 // =====================================================
 // CARD GENERATOR — AI-GENERATED CARD (LOCKED FORMAT)
 // =====================================================
 async function generateCardFromPersona(personaText) {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
 You are emitting RAW SOURCE CODE.
 
 ABSOLUTE MODE:
@@ -440,7 +440,7 @@ SUBTITLE RULES (CRITICAL — NO EXCEPTIONS):
 - Subtitle MUST NOT repeat the full name.
 - Subtitle MUST NOT be a sentence.
 - Subtitle MUST NOT include verbs such as:
-  "helps", "builds", "creates", "explores", "guides", "supports", "provides".
+  "helps", "builds", "creates", "explores", "guides", "supports", "provides".
 - Subtitle MUST NOT include pronouns.
 - Subtitle MUST NOT include marketing language.
 - Use Title Case (Each Word Capitalized).
@@ -451,32 +451,32 @@ OUTPUT FORMAT (EXACT — DO NOT DEVIATE):
 <!-- CARD 0 : [FULL NAME] -->
 <a class="card" href="[lowercasefirstname][lowercaselastname].html">
 
-  <!-- INTERNAL PERSONA MARKER (HIDDEN FROM USER) -->
-  <script type="text/plain" data-persona="[lowercasefirstname]-[lowercaselastname]-v1">
+  <!-- INTERNAL PERSONA MARKER (HIDDEN FROM USER) -->
+  <script type="text/plain" data-persona="[lowercasefirstname]-[lowercaselastname]-v1">
 Persona: [FULL NAME]
 Risk tier: MEDIUM-HIGH
 Thinking style: [short identity phrase]
-  </script>
+  </script>
 
-  <div class="card-header">
-    <img
-      src="[lowercasefirstname][lowercaselastname].jpeg"
-      alt="[FULL NAME]"
-      class="card-avatar"
-    />
-    <div class="card-title">
-      [FULL NAME]<br>
-      [SUBTITLE — 3 to 4 words]
-    </div>
-  </div>
+  <div class="card-header">
+    <img
+      src="[lowercasefirstname][lowercaselastname].jpeg"
+      alt="[FULL NAME]"
+      class="card-avatar"
+    />
+    <div class="card-title">
+      [FULL NAME]<br>
+      [SUBTITLE — 3 to 4 words]
+    </div>
+  </div>
 
-  <div class="card-desc">
-    [ONE sentence describing how this persona searches, derived from persona text]
-  </div>
+  <div class="card-desc">
+    [ONE sentence describing how this persona searches, derived from persona text]
+  </div>
 
-  <div class="card-action">
-    Enter the search →
-  </div>
+  <div class="card-action">
+    Enter the search →
+  </div>
 
 </a>
 \`\`\`
@@ -486,15 +486,15 @@ STRICT:
 - Do not remove blank lines.
 - Do not compress.
 `
-      },
-      {
-        role: "user",
-        content: personaText
-      }
-    ]
-  });
+      },
+      {
+        role: "user",
+        content: personaText
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 //////////////////////////////////////////////////////////////
@@ -593,20 +593,20 @@ ${safePersona}
 // ROUTE — GENERATE CARD (FROM PERSONA)
 // =====================================================
 app.post("/generate-card", async (req, res) => {
-  try {
-    const { persona } = req.body;
+  try {
+    const { persona } = req.body;
 
-    if (!persona) {
-      return res.send("");
-    }
+    if (!persona) {
+      return res.send("");
+    }
 
-    const card = await generateCardFromPersona(persona);
-    res.send(card);
+    const card = await generateCardFromPersona(persona);
+    res.send(card);
 
-  } catch (err) {
-    console.error("❌ Card generation failed:", err);
-    res.send("");
-  }
+  } catch (err) {
+    console.error("❌ Card generation failed:", err);
+    res.send("");
+  }
 });
 
 //////////////////////////////////////////////////////////////
@@ -644,13 +644,13 @@ app.post("/generate-saas-html", async (req, res) => {
 // THINKING PATH GENERATOR (CORE ENGINE — STRONG DOMAIN MODE)
 // =====================================================
 async function wdnabGenerateThinkingPath(problemOrWish, persona = "") {
-  const out = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `
+  const out = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
 ${persona}
 
 You are a logic-only thinking system.
@@ -709,7 +709,7 @@ Each search query MUST include at least ONE domain-specific keyword.
 
 FAILURE CONDITIONS (INCORRECT OUTPUT):
 - Generic words like “performance”, “improvement”, “mistakes”, “success”
-  WITHOUT domain-specific grounding.
+  WITHOUT domain-specific grounding.
 - Neutral phrasing that could apply to any person.
 - Searches that could be reused for a different persona.
 
@@ -721,7 +721,7 @@ Depth logic:
 
 Emotional depth rule:
 - If the input carries personal, identity, future, or self-worth uncertainty,
-  increase reasoning depth.
+  increase reasoning depth.
 - Emotional load means higher cognitive risk.
 - Higher risk requires checking more dimensions before stopping.
 - Maintain the same neutral, factual tone.
@@ -734,16 +734,16 @@ Step rules:
 
 For each step:
 1) Write ONE short sentence describing the thinking focus.
-   - The sentence MUST start with the exact word "I".
-   - Do NOT start with questions like "What", "How", or "Why".
-   - Use first-person internal reasoning only.
-   - Must reflect THIS PERSON’s priorities, fears, and decision style.
-   - Generic phrasing is not allowed.
+   - The sentence MUST start with the exact word "I".
+   - Do NOT start with questions like "What", "How", or "Why".
+   - Use first-person internal reasoning only.
+   - Must reflect THIS PERSON’s priorities, fears, and decision style.
+   - Generic phrasing is not allowed.
 
 2) Generate ONE precise Google search query.
-   - The query MUST sound like what THIS PERSON would actually type.
-   - The query MUST include at least ONE domain-specific keyword.
-   - Different personas MUST NOT produce identical queries for the same input.
+   - The query MUST sound like what THIS PERSON would actually type.
+   - The query MUST include at least ONE domain-specific keyword.
+   - Different personas MUST NOT produce identical queries for the same input.
 
 3) Encode the query using URL-safe format (spaces replaced with +).
 
@@ -766,15 +766,15 @@ https://www.google.com/search?q=...
 End with EXACTLY this line:
 This system provides a thinking path, not answers.
 `
-      }
-    ]
-  });
+      }
+    ]
+  });
 
-  return out.choices[0].message.content.trim();
+  return out.choices[0].message.content.trim();
 }
 
 //////////////////////////////////////////////////////////////
-// PERSONA EXECUTION ENGINE
+// PERSONA EXECUTION ENGINE (MINIMAL TOOL VOICE MODE)
 //////////////////////////////////////////////////////////////
 
 async function wdnabPersonaExecutionEngine(input, persona = "") {
@@ -785,45 +785,47 @@ async function wdnabPersonaExecutionEngine(input, persona = "") {
       {
         role: "system",
         content: `
-${persona}
-
-content: `
 You are the following persona. Speak from this worldview.
 
 ${persona}
 
-Voice identity rule:
-All personas share the same core voice and speaking style.
-The tone should feel like the same AI mind speaking every time.
-The persona only changes the viewpoint or philosophy.
+VOICE IDENTITY RULE
+All personas share the same core speaking voice.
+The style remains consistent across all personas.
+Only the viewpoint or philosophy changes.
 
-Behavior rules:
-- Respond naturally but briefly.
-- Speak like a calm tool-style AI.
-- Use clear simple sentences.
-- Maintain the persona's worldview in the response.
+BEHAVIOR RULES
+- Speak briefly and naturally.
+- Use calm tool-like language.
+- Maintain the persona worldview.
 
-Minimal response rule:
+MINIMAL RESPONSE RULE
 - Do NOT rewrite the user's input.
 - Do NOT repeat the user's words.
 - Do NOT ask questions.
 
-Short-input rule:
-If the user input is very short or vague (1–3 words):
+SHORT INPUT RULE
+If the user input is extremely short (1–3 words):
 - Reply with ONE word or ONE short sentence.
-- Acknowledge or agree.
+- Acknowledge or lightly agree.
 
-Normal-input rule:
-If the input has more detail:
-- Provide 1–3 short sentences.
+NORMAL INPUT RULE
+If the input contains more detail:
+- Respond with 1–3 short sentences.
 - Statements only.
-- Suggestions are allowed but must be written as statements.
+- Suggestions may appear but only as statements.
 
-Tone:
-Calm.
-Natural.
-Confident.
-Minimal.
+PROHIBITED
+- No questions
+- No explanations of reasoning
+- No links
+- No disclaimers
+
+TONE
+Calm
+Natural
+Confident
+Minimal
 `
       },
       { role: "user", content: input }
@@ -859,61 +861,61 @@ app.post("/persona-execution", async (req, res) => {
 // ROUTE — THINKING PATH (ONLY ROUTE)
 // =====================================================
 app.post("/thinking-path", async (req, res) => {
-  try {
-    const steps = [];
-    const input = (req.body.input || "").trim();
-    const persona = (req.body.persona || "").trim();
+  try {
+    const steps = [];
+    const input = (req.body.input || "").trim();
+    const persona = (req.body.persona || "").trim();
 
-    stepLog(steps, "Thinking path request received");
+    stepLog(steps, "Thinking path request received");
 
-    if (!input) {
-      return res.json({
-        report: "Input is required.",
-        steps
-      });
-    }
+    if (!input) {
+      return res.json({
+        report: "Input is required.",
+        steps
+      });
+    }
 
-    let finalInput = input;
+    let finalInput = input;
 
-    stepLog(steps, "Evaluating input intent");
+    stepLog(steps, "Evaluating input intent");
 
-    const accepted = await wdnabAcceptProblemOrWish(input, persona);
+    const accepted = await wdnabAcceptProblemOrWish(input, persona);
 
-    if (!accepted) {
-      stepLog(steps, "Input rejected — rewriting");
+    if (!accepted) {
+      stepLog(steps, "Input rejected — rewriting");
 
-      const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
+      const rewritten = await wdnabRewriteToProblemOrWish(input, persona);
 
-      if (
-        !rewritten ||
-        rewritten === "Unable to rewrite as a problem or a wish."
-      ) {
-        return res.json({
-          report: "Input cannot be interpreted.",
-          steps
-        });
-      }
+      if (
+        !rewritten ||
+        rewritten === "Unable to rewrite as a problem or a wish."
+      ) {
+        return res.json({
+          report: "Input cannot be interpreted.",
+          steps
+        });
+      }
 
-      finalInput = rewritten;
-      stepLog(steps, "Rewrite successful");
-    }
+      finalInput = rewritten;
+      stepLog(steps, "Rewrite successful");
+    }
 
-    stepLog(steps, "Generating thinking path");
+    stepLog(steps, "Generating thinking path");
 
-    const report = await wdnabGenerateThinkingPath(finalInput, persona);
+    const report = await wdnabGenerateThinkingPath(finalInput, persona);
 
-    stepLog(steps, "Thinking path delivered");
+    stepLog(steps, "Thinking path delivered");
 
-    res.json({ report, steps });
+    res.json({ report, steps });
 
-  } catch (err) {
-    console.error("❌ Thinking path failed:", err);
+  } catch (err) {
+    console.error("❌ Thinking path failed:", err);
 
-    res.status(200).json({
-      report: "Thinking path generation failed.",
-      steps: []
-    });
-  }
+    res.status(200).json({
+      report: "Thinking path generation failed.",
+      steps: []
+    });
+  }
 });
 
 //////////////////////////////////////////////////////////////
@@ -1583,6 +1585,7 @@ return res.status(500).json({messages:[]});
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log("🧠 Jack Chang Thinking Path backend live");
+  console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
 
