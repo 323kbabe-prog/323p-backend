@@ -1019,44 +1019,44 @@ app.post("/submit-application", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// SERP AI TREND FETCHER
+// SERP AI TREND FETCHER (NO DEPENDENCIES)
 //////////////////////////////////////////////////////////////
-
-const axios = require("axios");
 
 async function getTodayAITopic(){
 
 try{
 
-const url = "https://serpapi.com/search.json";
+const url =
+`https://serpapi.com/search.json?engine=google_news&q=Artificial+Intelligence+OR+AI&api_key=${process.env.SERP_API_KEY}`;
 
-const res = await axios.get(url,{
-params:{
-engine:"google_news",
-q:"Artificial Intelligence",
-api_key:process.env.SERP_API_KEY
+const res = await fetch(url);
+
+if(!res.ok){
+throw new Error("SERP request failed");
 }
-});
 
-const news = res.data.news_results || [];
+const data = await res.json();
+
+const news = data.news_results || [];
 
 if(news.length === 0){
+
 return "What are the most important developments in artificial intelligence today?";
+
 }
 
-const top = news[0];
-
 const topic =
-top.title ||
+news[0].title ||
 "What are the most important developments in artificial intelligence today?";
 
 return topic;
 
 }catch(err){
 
-console.error("SERP AI fetch failed:",err);
+console.error("SERP AI fetch failed:", err);
 
 return "What are the most important developments in artificial intelligence today?";
+
 }
 
 }
