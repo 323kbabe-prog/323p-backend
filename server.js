@@ -1019,7 +1019,7 @@ app.post("/submit-application", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// SERP AI TREND FETCHER (NO DEPENDENCIES)
+// SERP AI TREND FETCHER + QUESTION GENERATOR
 //////////////////////////////////////////////////////////////
 
 async function getTodayAITopic(){
@@ -1027,33 +1027,62 @@ async function getTodayAITopic(){
 try{
 
 const url =
-`https://serpapi.com/search.json?engine=google_news&q=Artificial+Intelligence+OR+AI&api_key=${process.env.SERP_API_KEY}`;
+`https://serpapi.com/search.json?engine=google_news&q=Artificial+Intelligence+AI+OpenAI+LLM&api_key=${process.env.SERP_API_KEY}`;
 
 const res = await fetch(url);
-
-if(!res.ok){
-throw new Error("SERP request failed");
-}
-
 const data = await res.json();
+
+if(data.error){
+console.error("SERP ERROR:", data.error);
+return "What are the most important developments in artificial intelligence today?";
+}
 
 const news = data.news_results || [];
 
 if(news.length === 0){
-
 return "What are the most important developments in artificial intelligence today?";
-
 }
 
-const topic =
-news[0].title ||
-"What are the most important developments in artificial intelligence today?";
+const headline = news[0].title;
 
-return topic;
+console.log("SERP headline:", headline);
+
+/*
+Convert headline into debate question
+*/
+
+const ai = await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0.6,
+messages:[
+{
+role:"system",
+content:`
+Convert a news headline into a debate question.
+
+Rules:
+• Output ONE question only
+• Make it suitable for an expert debate
+• Focus on implications or future impact
+• Keep it under 20 words
+`
+},
+{
+role:"user",
+content:headline
+}
+]
+});
+
+const question = ai.choices[0].message.content.trim();
+
+console.log("Generated debate question:", question);
+
+return question;
 
 }catch(err){
 
-console.error("SERP AI fetch failed:", err);
+console.error("SERP fetch error:", err);
 
 return "What are the most important developments in artificial intelligence today?";
 
