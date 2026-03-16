@@ -1019,6 +1019,75 @@ app.post("/submit-application", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
+// SERP AI TREND FETCHER
+//////////////////////////////////////////////////////////////
+
+const axios = require("axios");
+
+async function getTodayAITopic(){
+
+try{
+
+const url = "https://serpapi.com/search.json";
+
+const res = await axios.get(url,{
+params:{
+engine:"google_news",
+q:"Artificial Intelligence",
+api_key:process.env.SERP_API_KEY
+}
+});
+
+const news = res.data.news_results || [];
+
+if(news.length === 0){
+return "What are the most important developments in artificial intelligence today?";
+}
+
+const top = news[0];
+
+const topic =
+top.title ||
+"What are the most important developments in artificial intelligence today?";
+
+return topic;
+
+}catch(err){
+
+console.error("SERP AI fetch failed:",err);
+
+return "What are the most important developments in artificial intelligence today?";
+}
+
+}
+
+//////////////////////////////////////////////////////////////
+// ROUTE — TODAY AI DEBATE
+//////////////////////////////////////////////////////////////
+
+app.get("/today-ai-debate", async (req,res)=>{
+
+try{
+
+const topic = await getTodayAITopic();
+
+return res.json({
+topic
+});
+
+}catch(err){
+
+console.error("today-ai-debate error:",err);
+
+return res.json({
+topic:"What are the most important developments in artificial intelligence today?"
+});
+
+}
+
+});
+
+//////////////////////////////////////////////////////////////
 // RANDOM ACADEMIC PERSONA + THINKING PATH SEARCH ENGINE
 //////////////////////////////////////////////////////////////
 
