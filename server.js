@@ -38,7 +38,7 @@ async function sendApplicationEmail({ name, question, persona, card, saasHtml })
   await transporter.sendMail({
     from: `"AI JACK CHANG ME" <${process.env.EMAIL_USER}>`,
     to: "jackchang067@gmail.com",
-    subject: "New Social Search Application",
+    subject: `AI Bubble Identity Created — ${name}`
     text: `
 NAME:
 ${name}
