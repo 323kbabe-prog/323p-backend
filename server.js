@@ -460,7 +460,7 @@ Thinking style: [short identity phrase]
 
   <div class="card-header">
     <img
-      src="[lowercasefirstname][lowercaselastname].jpeg"
+      src="https://images.squarespace-cdn.com/content/6784e2cf16887b12d499fa90/db5fa948-c490-479a-90be-0c4aebc00431/CCC+User+Icon.png?content-type=image%2Fpng"
       alt="[FULL NAME]"
       class="card-avatar"
     />
