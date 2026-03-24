@@ -1026,8 +1026,7 @@ async function getTodayAITopic(){
 
 try{
 
-const url =
-`https://serpapi.com/search.json?engine=google&q=AI+site:twitter.com+OR+site:x.com&api_key=${process.env.SERPAPI_KEY}`;
+const url = `https://serpapi.com/search.json?engine=google&q=latest+AI+news+OpenAI+Google+Nvidia+Anthropic&api_key=${process.env.SERPAPI_KEY}`;
 
 const res = await fetch(url);
 const data = await res.json();
