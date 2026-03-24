@@ -1019,32 +1019,39 @@ app.post("/submit-application", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
-// SERP AI TREND FETCHER + QUESTION GENERATOR
+// SERP AI TREND FETCHER + QUESTION GENERATOR (X / TWITTER MODE)
 //////////////////////////////////////////////////////////////
 
 async function getTodayAITopic(){
 
 try{
 
-const url = `https://serpapi.com/search.json?engine=google&q=latest+AI+news+OpenAI+Google+Nvidia+Anthropic&api_key=${process.env.SERPAPI_KEY}`;
+// 🔥 Google → X posts (real-time signal)
+const url = `https://serpapi.com/search.json?engine=google&q=AI+site:x.com+OpenAI+Google+Nvidia+Anthropic+-jobs+-hiring&api_key=${process.env.SERPAPI_KEY}`;
 
 const res = await fetch(url);
 const data = await res.json();
 
+// ---- ERROR CHECK ----
 if(data.error){
 console.error("SERP ERROR:", data.error);
 return "What are the most important developments in artificial intelligence today?";
 }
 
-const news = data.news_results || [];
+// ---- USE ORGANIC RESULTS (NOT NEWS) ----
+const results = data.organic_results || [];
 
-if(news.length === 0){
+if(results.length === 0){
 return "What are the most important developments in artificial intelligence today?";
 }
 
-const headline = news[0].title;
+// ---- PICK TOP RESULT (MOST RELEVANT / VIRAL APPROXIMATION) ----
+const headline =
+results[0]?.title ||
+results[0]?.snippet ||
+"What are the most important developments in artificial intelligence today?";
 
-console.log("SERP headline:", headline);
+console.log("SERP X headline:", headline);
 
 /*
 Convert headline into debate question
@@ -1057,13 +1064,13 @@ messages:[
 {
 role:"system",
 content:`
-Convert a news headline into a debate question.
+Convert a real-world AI headline or social post into a debate question.
 
 Rules:
 • Output ONE question only
-• Make it suitable for an expert debate
-• Focus on implications or future impact
 • Keep it under 20 words
+• Focus on impact, risk, or future implications
+• Keep real names if present (OpenAI, Google, Elon Musk, etc.)
 `
 },
 {
