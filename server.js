@@ -16,6 +16,9 @@ function makeApplicationKey(name, question) {
     .digest("hex");
 }
 
+const fs = require("fs");
+const path = require("path");
+
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
@@ -922,8 +925,7 @@ app.post("/thinking-path", async (req, res) => {
 // ROUTE — SUBMIT APPLICATION (EMAIL LOCK PERSISTENT)
 //////////////////////////////////////////////////////////////
 
-const fs = require("fs");
-const path = require("path");
+
 
 const LOCK_FILE = path.join(__dirname, "email-locks.json");
 
@@ -1019,6 +1021,24 @@ app.post("/submit-application", async (req, res) => {
 });
 
 //////////////////////////////////////////////////////////////
+// LOAD EMAIL LIST
+//////////////////////////////////////////////////////////////
+
+const EMAIL_LIST_FILE = path.join(__dirname, "email-list.json");
+
+let emailList = new Set();
+
+if (fs.existsSync(EMAIL_LIST_FILE)) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(EMAIL_LIST_FILE));
+    emailList = new Set(saved);
+    console.log("Loaded emails:", [...emailList]);
+  } catch (err) {
+    console.error("Email list load failed:", err);
+  }
+}
+
+//////////////////////////////////////////////////////////////
 // SERP AI TREND FETCHER + QUESTION GENERATOR (X / TWITTER MODE)
 //////////////////////////////////////////////////////////////
 
@@ -1094,6 +1114,55 @@ return "What are the most important developments in artificial intelligence toda
 
 }
 
+}
+
+//////////////////////////////////////////////////////////////
+// SEND EMAIL TO LIST
+//////////////////////////////////////////////////////////////
+
+async function sendDebateToEmailList(question, messages) {
+
+  if (!emailList || emailList.size === 0) return;
+
+  const subject = "10 AIs are arguing right now";
+
+  const debateText = messages
+    .map(m => `${m.persona}: ${m.text}`)
+    .join("\n\n");
+
+  const text = `
+They don’t agree on this:
+
+${question}
+
+--------------------------------
+
+${debateText}
+
+--------------------------------
+
+Watch:
+https://aijackchang.com/multiaidebate
+`;
+
+  for (const email of emailList) {
+
+    if (!email.includes("@")) continue;
+
+    try {
+      await transporter.sendMail({
+        from: `"AI JACK CHANG" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject,
+        text
+      });
+
+      console.log("Sent:", email);
+
+    } catch (err) {
+      console.error("Failed:", email);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////
@@ -1673,6 +1742,8 @@ messages[i].text =
 if(messages.length === 0){
 return res.json({messages:[]});
 }
+
+sendDebateToEmailList(userInput, messages);
 
 return res.json({messages});
 
