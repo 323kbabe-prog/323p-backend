@@ -1117,29 +1117,19 @@ return "What are the most important developments in artificial intelligence toda
 }
 
 //////////////////////////////////////////////////////////////
-// SEND EMAIL TO LIST
+// SEND EMAIL TO LIST (TOPIC ONLY)
 //////////////////////////////////////////////////////////////
 
 async function sendDebateToEmailList(question, messages) {
 
   if (!emailList || emailList.size === 0) return;
 
-  const subject = "10 AIs are arguing right now";
-
-  const debateText = messages
-    .map(m => `${m.persona}: ${m.text}`)
-    .join("\n\n");
+  const subject = "Multi-AI Debate — User live search";
 
   const text = `
-They don’t agree on this:
+Multi-AI Debate — User live search:
 
 ${question}
-
---------------------------------
-
-${debateText}
-
---------------------------------
 
 Watch:
 https://aijackchang.com/multiaidebate
