@@ -1131,7 +1131,8 @@ Multi-AI Debate — User live search:
 
 ${question}
 
-Watch:
+Daily global perspective data for your business decisions.
+(c) AI-JACKCHANG-ENGINE
 https://aijackchang.com/multiaidebate
 `;
 
