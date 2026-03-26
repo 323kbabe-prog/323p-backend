@@ -1256,6 +1256,45 @@ return true;
 }
 
 //////////////////////////////////////////////////////////////
+// SIMPLE EMAIL CAPTURE (FOR CHAT PAGE ONLY)
+//////////////////////////////////////////////////////////////
+
+app.post("/quick-save", async (req, res) => {
+  try {
+
+    const { email, input } = req.body;
+
+    if (!email || !input) {
+      return res.json({ ok: false });
+    }
+
+    const date = new Date().toISOString();
+
+    await transporter.sendMail({
+      from: `"AI-CIDI CHAT" <${process.env.EMAIL_USER}>`,
+      to: "jackchang067@gmail.com", // 🔥 you receive it
+      subject: "New AI-CIDI Chat Input",
+      text: `
+Email:
+${email}
+
+Date:
+${date}
+
+User Input:
+${input}
+      `
+    });
+
+    return res.json({ ok: true });
+
+  } catch (err) {
+    console.error("quick-save error:", err);
+    return res.json({ ok: false });
+  }
+});
+
+//////////////////////////////////////////////////////////////
 // ROUTE — MAJOR SEARCH ENGINE
 //////////////////////////////////////////////////////////////
 
