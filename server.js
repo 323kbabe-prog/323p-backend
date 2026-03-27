@@ -1787,6 +1787,52 @@ return res.status(500).json({messages:[]});
 
 });
 
+//////////////////////////////////////////////////////////////
+// ROUTE — FETCH YOUR YOUTUBE SHORTS
+//////////////////////////////////////////////////////////////
+
+app.get("/youtube-shorts", async (req, res) => {
+
+  try {
+
+    const query = (req.query.q || "").toLowerCase();
+
+   const API_KEY = process.env.YOUTUBE_API_KEY;
+const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID;
+
+const url = `https://www.googleapis.com/youtube/v3/search?key=${API_KEY}&channelId=${CHANNEL_ID}&part=snippet&order=date&maxResults=10&type=video&videoDuration=short`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!data.items) {
+      return res.json({ videos: [] });
+    }
+
+    // 🔥 FILTER BY TITLE MATCH
+    const filtered = data.items.filter(v =>
+      v.snippet.title.toLowerCase().includes(query)
+    );
+
+    const finalVideos = filtered.length > 0
+      ? filtered
+      : data.items.slice(0, 5);
+
+    const result = finalVideos.map(v => ({
+      id: v.id.videoId,
+      title: v.snippet.title,
+      thumbnail: v.snippet.thumbnails.high.url
+    }));
+
+    res.json({ videos: result });
+
+  } catch (err) {
+    console.error("YouTube Shorts fetch error:", err);
+    res.json({ videos: [] });
+  }
+
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
