@@ -1157,28 +1157,92 @@ https://aijackchang.com/multiaidebate
 }
 
 //////////////////////////////////////////////////////////////
-// ROUTE — TODAY AI DEBATE
+// TODAY AI DEBATE — OPTION C (AI TENSION ENGINE)
 //////////////////////////////////////////////////////////////
 
-app.get("/today-ai-debate", async (req,res)=>{
+let topicMemory = [];
 
-try{
+app.get("/today-ai-debate", async (req, res) => {
 
-const topic = await getTodayAITopic();
+  try {
 
-return res.json({
-topic
-});
+    const modes = [
+      "fear",
+      "business",
+      "society",
+      "identity",
+      "future"
+    ];
 
-}catch(err){
+    const mode = modes[Math.floor(Math.random() * modes.length)];
 
-console.error("today-ai-debate error:",err);
+    let topic = "";
 
-return res.json({
-topic:"What are the most important developments in artificial intelligence today?"
-});
+    // 🔁 try up to 5 times to avoid duplicates
+    for (let i = 0; i < 5; i++) {
 
-}
+      const r = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 1,
+        messages: [
+          {
+            role: "system",
+            content: `
+You simulate today's most debated AI topic.
+
+Think like:
+- Twitter arguments
+- startup founders tension
+- fear vs opportunity
+- real human anxiety about AI
+
+Focus category: ${mode}
+
+Rules:
+- Output ONE debate question only
+- Max 15 words
+- Must feel urgent
+- Must create conflict
+- Avoid generic topics like "AI will replace jobs"
+- Be specific and sharp
+`
+          }
+        ]
+      });
+
+      const candidate = r.choices[0].message.content.trim();
+
+      // ✅ avoid duplicates
+      if (!topicMemory.includes(candidate)) {
+        topic = candidate;
+        break;
+      }
+    }
+
+    // fallback (in case all duplicates)
+    if (!topic) {
+      topic = "Is AI quietly reshaping power without public awareness?";
+    }
+
+    // 🧠 save memory
+    topicMemory.push(topic);
+
+    // keep memory small
+    if (topicMemory.length > 20) {
+      topicMemory.shift();
+    }
+
+    return res.json({ topic });
+
+  } catch (err) {
+
+    console.error("today-ai-debate error:", err);
+
+    return res.json({
+      topic: "Is AI quietly replacing human judgment in critical decisions?"
+    });
+
+  }
 
 });
 
@@ -1773,7 +1837,11 @@ if(messages.length === 0){
 return res.json({messages:[]});
 }
 
-sendDebateToEmailList(userInput, messages);
+const source = req.body.source || "";
+
+if(source !== "today"){
+  sendDebateToEmailList(userInput, messages);
+}
 
 return res.json({messages});
 
