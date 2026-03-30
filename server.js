@@ -38,6 +38,8 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendApplicationEmail({ name, question, persona, card, saasHtml }) {
+
+  /*
   await transporter.sendMail({
     from: `"AI JACK CHANG ME" <${process.env.EMAIL_USER}>`,
     to: "jackchang067@gmail.com",
@@ -54,6 +56,11 @@ ${persona}
 
 CARD:
 ${card}
+    `
+  });
+  */
+
+}
 
 ----------------------------------------
 GENERATED SaaS RAW HTML:
