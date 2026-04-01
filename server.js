@@ -1757,9 +1757,10 @@ if(!seen.has(clean)){
 seen.add(clean);
 
 messages.push({
-persona: (m.persona || "Unknown")
-.replace(/perspective/i,"chat"),
-text: m.text
+  persona: (m.persona || "Unknown")
+    .replace(/perspective/i,"chat"),
+  text: m.text,
+  search: m.search || ""
 });
 
 }
