@@ -1684,6 +1684,19 @@ NEW REQUIRED OUTPUT FIELD:
 • Do NOT repeat search phrases across messages
 • Each search should help the user explore that specific viewpoint
 
+STRICT OUTPUT REQUIREMENT:
+
+Each message MUST include ALL of the following fields:
+
+- persona
+- text
+- search
+
+The "search" field is REQUIRED.
+
+If any message is missing "search", the entire output is invalid.
+
+Do NOT omit "search" under any condition.
 
 Output JSON ONLY.
 
@@ -1735,6 +1748,20 @@ parsed.messages ||
 parsed.debate ||
 parsed.output ||
 [];
+
+for (const m of rawMessages) {
+  if (!m.search || m.search.trim() === "") {
+
+    // 🔥 fallback: generate search from text
+    const words = (m.text || "")
+      .toLowerCase()
+      .replace(/[^\w\s]/g, "")
+      .split(" ")
+      .filter(w => w.length > 2);
+
+    m.search = words.slice(0, 8).join(" ");
+  }
+}
 
 /*
 SMART DUPLICATE FILTER
