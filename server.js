@@ -38,7 +38,6 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendApplicationEmail({ name, question, persona, card, saasHtml }) {
-
   await transporter.sendMail({
     from: `"AI JACK CHANG ME" <${process.env.EMAIL_USER}>`,
     to: "jackchang067@gmail.com",
@@ -61,9 +60,8 @@ GENERATED SaaS RAW HTML:
 ----------------------------------------
 
 ${saasHtml || "[No SaaS Generated]"}
-    `
+    `,
   });
-
 }
 
 // -------------------- BASIC SETUP --------------------
@@ -1159,92 +1157,28 @@ https://aijackchang.com/multiaidebate
 }
 
 //////////////////////////////////////////////////////////////
-// TODAY AI DEBATE — OPTION C (AI TENSION ENGINE)
+// ROUTE — TODAY AI DEBATE
 //////////////////////////////////////////////////////////////
 
-let topicMemory = [];
+app.get("/today-ai-debate", async (req,res)=>{
 
-app.get("/today-ai-debate", async (req, res) => {
+try{
 
-  try {
+const topic = await getTodayAITopic();
 
-    const modes = [
-      "fear",
-      "business",
-      "society",
-      "identity",
-      "future"
-    ];
+return res.json({
+topic
+});
 
-    const mode = modes[Math.floor(Math.random() * modes.length)];
+}catch(err){
 
-    let topic = "";
+console.error("today-ai-debate error:",err);
 
-    // 🔁 try up to 5 times to avoid duplicates
-    for (let i = 0; i < 5; i++) {
+return res.json({
+topic:"What are the most important developments in artificial intelligence today?"
+});
 
-      const r = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 1,
-        messages: [
-          {
-            role: "system",
-            content: `
-You simulate today's most debated AI topic.
-
-Think like:
-- Twitter arguments
-- startup founders tension
-- fear vs opportunity
-- real human anxiety about AI
-
-Focus category: ${mode}
-
-Rules:
-- Output ONE debate question only
-- Max 15 words
-- Must feel urgent
-- Must create conflict
-- Avoid generic topics like "AI will replace jobs"
-- Be specific and sharp
-`
-          }
-        ]
-      });
-
-      const candidate = r.choices[0].message.content.trim();
-
-      // ✅ avoid duplicates
-      if (!topicMemory.includes(candidate)) {
-        topic = candidate;
-        break;
-      }
-    }
-
-    // fallback (in case all duplicates)
-    if (!topic) {
-      topic = "Is AI quietly reshaping power without public awareness?";
-    }
-
-    // 🧠 save memory
-    topicMemory.push(topic);
-
-    // keep memory small
-    if (topicMemory.length > 20) {
-      topicMemory.shift();
-    }
-
-    return res.json({ topic });
-
-  } catch (err) {
-
-    console.error("today-ai-debate error:", err);
-
-    return res.json({
-      topic: "Is AI quietly replacing human judgment in critical decisions?"
-    });
-
-  }
+}
 
 });
 
@@ -1741,16 +1675,30 @@ Constraints:
 • No repeated sentences
 • No paraphrasing earlier text
 
+NEW REQUIRED OUTPUT FIELD:
+
+• Each message MUST also include a "search" field
+• "search" must be a short Google search phrase (5–10 words)
+• The search must directly reflect the idea in that message
+• Use natural human search wording (no symbols, no punctuation)
+• Do NOT repeat search phrases across messages
+• Each search should help the user explore that specific viewpoint
+
+
 Output JSON ONLY.
 
 Format:
 
 {
  "messages":[
-  {"persona":"Economics perspective","text":"message"},
-  {"persona":"Psychology perspective","text":"message"}
+  {
+   "persona":"Economics perspective",
+   "text":"message",
+   "search":"search phrase"
+  }
  ]
 }
+
 `;
 
 const response = await openai.chat.completions.create({
@@ -1839,11 +1787,7 @@ if(messages.length === 0){
 return res.json({messages:[]});
 }
 
-const source = req.body.source || "";
-
-if(source !== "today"){
-  // sendDebateToEmailList(userInput, messages);
-}
+sendDebateToEmailList(userInput, messages);
 
 return res.json({messages});
 
@@ -1908,5 +1852,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
 
