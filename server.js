@@ -1815,7 +1815,7 @@ if(messages.length === 0){
 return res.json({messages:[]});
 }
 
-sendDebateToEmailList(userInput, messages);
+// sendDebateToEmailList(userInput, messages);
 
 return res.json({messages});
 
