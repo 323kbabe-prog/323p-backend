@@ -1888,7 +1888,7 @@ app.post("/debate-continue", async (req, res) => {
       return res.json({ reply: "Say something to continue the debate." });
     }
 
-    // 🔥 STEP 1 — PICK BEST PERSONA
+    // STEP 1 — pick persona
     const pick = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0,
@@ -1896,17 +1896,12 @@ app.post("/debate-continue", async (req, res) => {
         {
           role: "system",
           content: `
-You are selecting the BEST debate persona.
+Choose the BEST persona for this input.
 
-Choose ONE persona that is MOST relevant to the user's message.
-
-Only choose from this list:
+Only choose ONE from list:
 ${DEBATE_PERSONAS.join("\n")}
 
-Rules:
-- Pick ONLY ONE
-- No explanation
-- Output ONLY the persona name
+Output ONLY the persona name.
 `
         },
         {
@@ -1918,28 +1913,20 @@ Rules:
 
     const persona = pick.choices[0].message.content.trim();
 
-    // 🔥 STEP 2 — GENERATE REPLY
+    // STEP 2 — reply
     const replyRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.7,
+      temperature: 0.9,
       messages: [
         {
           role: "system",
           content: `
-You are ${persona} in a live debate.
+You are ${persona} in a debate.
 
 Rules:
-- Respond directly to the user
-- 1–2 sentences only
-- Be sharp, confident, and opinionated
-- You may disagree or challenge
-- Do NOT explain yourself
-- Do NOT ask questions
-
-Tone:
-Direct
-Clear
-Debate style
+- 1–2 sentences
+- strong opinion
+- no questions
 `
         },
         {
@@ -1949,20 +1936,33 @@ Debate style
       ]
     });
 
-    const reply = replyRes.choices[0].message.content.trim();
+const reply = replyRes.choices[0].message.content.trim();
 
-    return res.json({
-      persona: persona.replace(/perspective/i, "chat"),
-      reply
-    });
+// STEP 3 — GENERATE SEARCH
+const searchWords = reply
+  .toLowerCase()
+  .replace(/[^\w\s]/g, "")
+  .split(" ")
+  .filter(w => w.length > 2)
+  .slice(0, 8)
+  .join(" ");
 
-  } catch (err) {
-    console.error("debate-continue error:", err);
-    return res.json({
-      persona: "AI",
-      reply: "System unavailable."
-    });
-  }
+// RETURN RESPONSE
+return res.json({
+  persona: persona.replace(/perspective/i, "chat"),
+  reply,
+  search: searchWords
+});
+
+} catch (err) {
+  console.error("debate-continue error:", err);
+
+  return res.json({
+    persona: "AI",
+    reply: "System unavailable.",
+    search: ""
+  });
+}
 });
 
 // -------------------- SERVER --------------------
