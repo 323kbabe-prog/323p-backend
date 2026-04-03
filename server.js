@@ -1959,13 +1959,33 @@ FORMAT:
 const reply = replyRes.choices[0].message.content.trim();
 
 // STEP 3 — GENERATE SEARCH
-const searchWords = reply
-  .toLowerCase()
-  .replace(/[^\w\s]/g, "")
-  .split(" ")
-  .filter(w => w.length > 2)
-  .slice(0, 8)
-  .join(" ");
+const searchRes = await openai.chat.completions.create({
+  model: "gpt-4o-mini",
+  temperature: 0.3,
+  messages: [
+    {
+      role: "system",
+      content: `
+Convert this idea into a natural Google search query.
+
+Rules:
+- 5–10 words
+- lowercase
+- no punctuation
+- must sound like a real human search
+- do NOT copy phrases like "this is incorrect"
+
+Output ONLY the search query.
+`
+    },
+    {
+      role: "user",
+      content: reply
+    }
+  ]
+});
+
+const searchWords = searchRes.choices[0].message.content.trim();
 
 // RETURN RESPONSE
 return res.json({
