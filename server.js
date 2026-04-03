@@ -1875,6 +1875,96 @@ const url = `https://www.googleapis.com/youtube/v3/search?key=${API_KEY}&channel
 
 });
 
+//////////////////////////////////////////////////////////////
+// CONTINUE DEBATE — USER VS BEST AI
+//////////////////////////////////////////////////////////////
+
+app.post("/debate-continue", async (req, res) => {
+  try {
+
+    const userInput = (req.body.input || "").trim();
+
+    if (!userInput) {
+      return res.json({ reply: "Say something to continue the debate." });
+    }
+
+    // 🔥 STEP 1 — PICK BEST PERSONA
+    const pick = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `
+You are selecting the BEST debate persona.
+
+Choose ONE persona that is MOST relevant to the user's message.
+
+Only choose from this list:
+${DEBATE_PERSONAS.join("\n")}
+
+Rules:
+- Pick ONLY ONE
+- No explanation
+- Output ONLY the persona name
+`
+        },
+        {
+          role: "user",
+          content: userInput
+        }
+      ]
+    });
+
+    const persona = pick.choices[0].message.content.trim();
+
+    // 🔥 STEP 2 — GENERATE REPLY
+    const replyRes = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      messages: [
+        {
+          role: "system",
+          content: `
+You are ${persona} in a live debate.
+
+Rules:
+- Respond directly to the user
+- 1–2 sentences only
+- Be sharp, confident, and opinionated
+- You may disagree or challenge
+- Do NOT explain yourself
+- Do NOT ask questions
+
+Tone:
+Direct
+Clear
+Debate style
+`
+        },
+        {
+          role: "user",
+          content: userInput
+        }
+      ]
+    });
+
+    const reply = replyRes.choices[0].message.content.trim();
+
+    return res.json({
+      persona: persona.replace(/perspective/i, "chat"),
+      reply
+    });
+
+  } catch (err) {
+    console.error("debate-continue error:", err);
+    return res.json({
+      persona: "AI",
+      reply: "System unavailable."
+    });
+  }
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
