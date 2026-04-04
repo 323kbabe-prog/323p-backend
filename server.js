@@ -1596,43 +1596,48 @@ const userLang = await detectLanguage(userInput);
 const question = await translateToEnglish(userInput);
 
 // AI nonsense detection
-const nonsenseCheck = await openai.chat.completions.create({
-model:"gpt-4o-mini",
-temperature:0,
-messages:[
-{
-role:"system",
-content:`
-Decide if the user input is a meaningful question or discussion topic.
+const classification = await openai.chat.completions.create({
+  model:"gpt-4o-mini",
+  temperature:0,
+  messages:[
+    {
+      role:"system",
+      content:`
+Classify input quality:
 
-If the input is random text, meaningless characters, or nonsense reply NO.
+INVALID:
+- random text
+- meaningless characters
 
-If the input expresses a real topic, idea, or question reply YES.
+WEAK:
+- vague human input (e.g. "life", "money", "lonely")
 
-Reply ONLY YES or NO.
+STRONG:
+- clear idea or question
+
+Reply ONLY:
+INVALID or WEAK or STRONG
 `
-},
-{
-role:"user",
-content:question
-}
-]
+    },
+    { role:"user", content: question }
+  ]
 });
 
-const verdict = nonsenseCheck.choices[0].message.content.trim();
+const status = classification.choices[0].message.content.trim();
 
-if(verdict !== "YES"){
+if(status === "INVALID"){
 
-const errorText = await translateFromEnglish(
-"Enter a thought, idea, or question to start the AI debate.",
-userLang
-);
+  const errorText = await translateFromEnglish(
+    "Enter a thought, idea, or question to start the AI debate.",
+    userLang
+  );
 
-return res.json({
-messages:[],
-error:errorText
-});
-
+  return res.json({
+    status: "invalid",
+    language: userLang,
+    messages: [],
+    error: errorText
+  });
 }
 
 const personas = shuffleArray([...DEBATE_PERSONAS]).slice(0,10);
@@ -1806,6 +1811,12 @@ const translated = await translateFromEnglish(joinedText, userLang);
 const lines = translated.split("\n");
 
 for(let i=0;i<messages.length;i++){
+
+messages[i].search = await translateFromEnglish(
+  messages[i].search,
+  userLang
+);
+  
 messages[i].text =
 (lines[i] || "")
 .replace(/^\[\d+\]\s*/,"") || messages[i].text;
@@ -1817,7 +1828,11 @@ return res.json({messages:[]});
 
 // sendDebateToEmailList(userInput, messages);
 
-return res.json({messages});
+return res.json({
+  status: status.toLowerCase(), // "weak" or "strong"
+  language: userLang,
+  messages
+});
 
 }catch(err){
 
