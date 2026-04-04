@@ -1523,25 +1523,6 @@ return r.choices[0].message.content.trim().toLowerCase();
 
 }
 
-function detectChineseScript(text){
-
-  const traditional = ["這","會","學","國","體","為","來","說","時"];
-  const simplified  = ["这","会","学","国","体","为","来","说","时"];
-
-  let t = 0;
-  let s = 0;
-
-  for(const ch of text){
-    if(traditional.includes(ch)) t++;
-    if(simplified.includes(ch)) s++;
-  }
-
-  if(t > s) return "traditional";
-  if(s > t) return "simplified";
-
-  return "unknown";
-}
-
 //////////////////////////////////////////////////////////////
 // TRANSLATE TO ENGLISH
 //////////////////////////////////////////////////////////////
@@ -1568,35 +1549,30 @@ return r.choices[0].message.content.trim();
 }
 
 //////////////////////////////////////////////////////////////
-// TRANSLATE FROM ENGLISH (WITH CHINESE CONTROL)
+// TRANSLATE FROM ENGLISH
 //////////////////////////////////////////////////////////////
 
-async function translateFromEnglish(text, lang, chineseType){
+async function translateFromEnglish(text, lang){
 
-  if(lang === "en") return text;
+if(lang === "en") return text;
 
-  let rule = "";
+const r = await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0,
+messages:[
+{
+role:"system",
+content:`Translate the following English text to ${lang}.`
+},
+{
+role:"user",
+content:text
+}
+]
+});
 
-  if(lang === "zh"){
-    if(chineseType === "traditional"){
-      rule = "Translate into Traditional Chinese (繁體中文).";
-    } else {
-      rule = "Translate into Simplified Chinese (简体中文).";
-    }
-  } else {
-    rule = `Translate to ${lang}.`;
-  }
+return r.choices[0].message.content.trim();
 
-  const r = await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    temperature:0,
-    messages:[
-      { role:"system", content: rule },
-      { role:"user", content:text }
-    ]
-  });
-
-  return r.choices[0].message.content.trim();
 }
 
 //////////////////////////////////////////////////////////////
@@ -1616,77 +1592,52 @@ return res.json({messages:[]});
 // detect user language
 const userLang = await detectLanguage(userInput);
 
-  let chineseType = null;
-
-if(userLang === "zh"){
-  chineseType = detectChineseScript(userInput);
-}
-
 // translate to English for AI processing
 const question = await translateToEnglish(userInput);
 
 // AI nonsense detection
-const classification = await openai.chat.completions.create({
-  model:"gpt-4o-mini",
-  temperature:0,
-  messages:[
-    {
-      role:"system",
-      content:`
-Classify input quality:
+const nonsenseCheck = await openai.chat.completions.create({
+model:"gpt-4o-mini",
+temperature:0,
+messages:[
+{
+role:"system",
+content:`
+Decide if the user input is a meaningful question or discussion topic.
 
-INVALID:
-- random text
-- meaningless characters
+If the input is random text, meaningless characters, or nonsense reply NO.
 
-WEAK:
-- vague human input (e.g. "life", "money", "lonely")
+If the input expresses a real topic, idea, or question reply YES.
 
-STRONG:
-- clear idea or question
-
-Reply ONLY:
-INVALID or WEAK or STRONG
+Reply ONLY YES or NO.
 `
-    },
-    { role:"user", content: question }
-  ]
+},
+{
+role:"user",
+content:question
+}
+]
 });
 
-// 🔥 ADD THIS LINE HERE
-const status = classification.choices[0].message.content.trim();
+const verdict = nonsenseCheck.choices[0].message.content.trim();
 
-if(status === "INVALID"){
+if(verdict !== "YES"){
 
-  const errorText = await translateFromEnglish(
-  "Enter a thought, idea, or question to start the AI debate.",
-  userLang,
-  chineseType
+const errorText = await translateFromEnglish(
+"Enter a thought, idea, or question to start the AI debate.",
+userLang
 );
 
-  return res.json({
-    status: "invalid",
-    language: userLang,
-    messages: [],
-    error: errorText
-  });
+return res.json({
+messages:[],
+error:errorText
+});
+
 }
 
 const personas = shuffleArray([...DEBATE_PERSONAS]).slice(0,10);
 
-let languageRule = "";
-
-if(userLang === "zh"){
-  if(chineseType === "traditional"){
-    languageRule = "Respond in Traditional Chinese (繁體中文).";
-  } else {
-    languageRule = "Respond in Simplified Chinese (简体中文).";
-  }
-}
-
 const systemPrompt = `
-${languageRule}
-
 You are simulating a live expert debate.
 
 User question:
@@ -1850,22 +1801,11 @@ const joinedText = messages
 .map((m,i)=>`[${i}] ${m.text}`)
 .join("\n");
 
-const translated = await translateFromEnglish(
-  joinedText,
-  userLang,
-  chineseType
-);
+const translated = await translateFromEnglish(joinedText, userLang);
 
 const lines = translated.split("\n");
 
 for(let i=0;i<messages.length;i++){
-
-messages[i].search = await translateFromEnglish(
-  messages[i].search,
-  userLang,
-  chineseType
-);
-  
 messages[i].text =
 (lines[i] || "")
 .replace(/^\[\d+\]\s*/,"") || messages[i].text;
@@ -1877,11 +1817,7 @@ return res.json({messages:[]});
 
 // sendDebateToEmailList(userInput, messages);
 
-return res.json({
-  status: status.toLowerCase(), // "weak" or "strong"
-  language: userLang,
-  messages
-});
+return res.json({messages});
 
 }catch(err){
 
@@ -1947,12 +1883,6 @@ app.post("/debate-continue", async (req, res) => {
   try {
 
     const userInput = (req.body.input || "").trim();
-    const userLang = await detectLanguage(userInput);
-
-let chineseType = null;
-if(userLang === "zh"){
-  chineseType = detectChineseScript(userInput);
-}
 
     if (!userInput) {
       return res.json({ reply: "Say something to continue the debate." });
@@ -1984,27 +1914,13 @@ Output ONLY the persona name.
     const persona = pick.choices[0].message.content.trim();
 
     // STEP 2 — reply
-// STEP 2 — reply
-
-let languageRule = "";
-
-if(userLang === "zh"){
-  if(chineseType === "traditional"){
-    languageRule = "Respond in Traditional Chinese (繁體中文).";
-  } else {
-    languageRule = "Respond in Simplified Chinese (简体中文).";
-  }
-}
-
-const replyRes = await openai.chat.completions.create({
+    const replyRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
       messages: [
         {
           role: "system",
- content: `
-${languageRule}
-
+          content: `
 You are ${persona} in a live debate.
 
 STRICT RULES:
@@ -2040,7 +1956,6 @@ FORMAT:
       ]
     });
 
-    // 🔥 ADD THIS LINE
 const reply = replyRes.choices[0].message.content.trim();
 
 // STEP 3 — GENERATE SEARCH
@@ -2070,16 +1985,7 @@ Output ONLY the search query.
   ]
 });
 
-let searchWords = searchRes.choices[0].message.content.trim();
-
-// 🔥 language match
-if(userLang !== "en"){
-  searchWords = await translateFromEnglish(
-    searchWords,
-    userLang,
-    chineseType
-  );
-}
+const searchWords = searchRes.choices[0].message.content.trim();
 
 // RETURN RESPONSE
 return res.json({
@@ -2104,4 +2010,3 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
