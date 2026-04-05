@@ -2005,6 +2005,52 @@ return res.json({
 }
 });
 
+///rewrite-english
+app.post("/rewrite-english", async (req, res) => {
+
+  try{
+
+    const text = (req.body.text || "").trim();
+
+    if(!text){
+      return res.json({ result:"" });
+    }
+
+    const r = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0,
+      messages:[
+        {
+          role:"system",
+          content:`
+Fix grammar only.
+
+Rules:
+- Keep the same meaning
+- Do NOT expand
+- Do NOT explain
+- Output ONE sentence only
+`
+        },
+        {
+          role:"user",
+          content:text
+        }
+      ]
+    });
+
+    return res.json({
+      result: r.choices[0].message.content.trim()
+    });
+
+  }catch(err){
+
+    return res.json({ result:"" });
+
+  }
+
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
