@@ -1124,37 +1124,44 @@ async function sendDebateToEmailList(question, messages) {
 
   if (!emailList || emailList.size === 0) return;
 
-  const subject = "Multi-AI Debate — User live search";
+  const subject = "10 AIs just debated this";
+
+  // 🔥 build debate content
+  const debateText = messages
+    .map(m => `${m.persona}: ${m.text}`)
+    .join("\n\n");
 
   const text = `
-Multi-AI Debate — User live search:
+10 AIs just debated this:
 
-${question}
+"${question}"
 
-Daily global perspective data for your business decisions.
-(c) AI-JACKCHANG-ENGINE
+${debateText}
+
+Explore more:
 https://aijackchang.com/multiaidebate
+
+AI Social Search Engine
+So you don’t search on Google alone.
 `;
 
+  // 🔥 non-blocking send
   for (const email of emailList) {
 
-    if (!email.includes("@")) continue;
+    if (!email || !email.includes("@")) continue;
 
-    try {
-      await transporter.sendMail({
-        from: `"AI JACK CHANG" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject,
-        text
-      });
+    transporter.sendMail({
+      from: `"AI Social Search Engine" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject,
+      text
+    })
+    .then(() => console.log("Sent:", email))
+    .catch(err => console.error("Failed:", email, err));
 
-      console.log("Sent:", email);
-
-    } catch (err) {
-      console.error("Failed:", email);
-    }
   }
 }
+
 
 //////////////////////////////////////////////////////////////
 // ROUTE — TODAY AI DEBATE
@@ -1815,7 +1822,7 @@ if(messages.length === 0){
 return res.json({messages:[]});
 }
 
-// sendDebateToEmailList(userInput, messages);
+await sendDebateToEmailList(userInput, messages);
 
 return res.json({messages});
 
@@ -2003,52 +2010,6 @@ return res.json({
     search: ""
   });
 }
-});
-
-///rewrite-english
-app.post("/rewrite-english", async (req, res) => {
-
-  try{
-
-    const text = (req.body.text || "").trim();
-
-    if(!text){
-      return res.json({ result:"" });
-    }
-
-    const r = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0,
-      messages:[
-        {
-          role:"system",
-          content:`
-Fix grammar only.
-
-Rules:
-- Keep the same meaning
-- Do NOT expand
-- Do NOT explain
-- Output ONE sentence only
-`
-        },
-        {
-          role:"user",
-          content:text
-        }
-      ]
-    });
-
-    return res.json({
-      result: r.choices[0].message.content.trim()
-    });
-
-  }catch(err){
-
-    return res.json({ result:"" });
-
-  }
-
 });
 
 // -------------------- SERVER --------------------
