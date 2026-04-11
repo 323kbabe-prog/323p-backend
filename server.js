@@ -2020,6 +2020,51 @@ return res.json({
 }
 });
 
+//////////////////////////////////////////////////////////////
+// ROUTE — REWRITE ENGLISH (FIX GRAMMAR ONLY)
+//////////////////////////////////////////////////////////////
+
+app.post("/rewrite-english", async (req, res) => {
+  try {
+    const { text } = req.body || {};
+
+    if (!text) {
+      return res.status(400).json({ result: "" });
+    }
+
+    const r = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `
+Fix grammar only.
+
+Rules:
+- Keep original meaning
+- Do NOT expand
+- Do NOT explain
+- Return ONE corrected sentence only
+`
+        },
+        {
+          role: "user",
+          content: text
+        }
+      ]
+    });
+
+    const result = r.choices[0].message.content.trim();
+
+    return res.json({ result });
+
+  } catch (err) {
+    console.error("rewrite-english error:", err);
+    return res.status(500).json({ result: "" });
+  }
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
