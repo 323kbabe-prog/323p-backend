@@ -1127,9 +1127,17 @@ async function sendDebateToEmailList(question, messages) {
   const subject = "10 AIs just debated this";
 
   // 🔥 build debate content
-  const debateText = messages
-    .map(m => `${m.persona}: ${m.text}`)
-    .join("\n\n");
+const debateText = messages
+  .map(m => {
+    const searchLink = `https://www.google.com/search?q=${(m.search || "")
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "+")}`;
+
+    return `${m.persona}: ${m.text}\n→ Search: ${searchLink}`;
+  })
+  .join("\n\n");
+
 
   const text = `
 10 AIs just debated this:
@@ -2017,3 +2025,5 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
+
