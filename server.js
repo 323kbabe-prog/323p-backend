@@ -2077,11 +2077,48 @@ let userInput = (req.body.question || "").trim();
 // =====================================================
 // 🔥 AUTO GENERATE TOPIC IF EMPTY
 // =====================================================
-
 if(!userInput){
 
-  const topicGen
+  const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella+famous+youtuber&type=video&part=snippet&maxResults=20`;
 
+  const ytRes = await fetch(ytUrl);
+  const ytData = await ytRes.json();
+
+  const videos = ytData.items || [];
+
+  if(videos.length > 0){
+
+    const topVideo = videos[0];
+
+    userInput = topVideo.snippet.title;
+
+  } else {
+
+    userInput = "What is happening at Coachella right now?";
+  }
+
+}
+
+const refine = await openai.chat.completions.create({
+  model:"gpt-4o-mini",
+  temperature:0.7,
+  messages:[
+    {
+      role:"system",
+      content:`
+Rewrite this as a casual discussion people would say online.
+Keep names and real event.
+End as a question.
+`
+    },
+    {
+      role:"user",
+      content: userInput
+    }
+  ]
+});
+
+userInput = refine.choices[0].message.content.trim();
 // =====================================================
 // 🔥 LANGUAGE + TRANSLATION
 // =====================================================
@@ -2398,4 +2435,6 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
+
 
