@@ -2102,12 +2102,26 @@ const extract = await openai.chat.completions.create({
     {
       role:"system",
       content:`
-Extract the main performer or event from this text.
+Extract the MAIN performer, artist, or celebrity from this text.
 
-Rules:
-• return 1 short phrase
-• include artist name if possible
-• no extra words
+CRITICAL:
+• You MUST prioritize a REAL PERSON (artist, singer, DJ, celebrity)
+• DO NOT return generic phrases like "Coachella livestream"
+• DO NOT return "performance" or "festival"
+• ONLY return a REAL NAME if present
+
+If a real artist is found:
+→ return "Artist Name performance"
+
+If NO artist is found:
+→ return a SPECIFIC moment like:
+  "main stage performance"
+  "headline act"
+  "live set crowd reaction"
+
+Output:
+• 1 short phrase only
+• no explanation
 `
     },
     {
