@@ -1285,11 +1285,13 @@ app.post("/quick-save", async (req, res) => {
 
     const date = new Date().toISOString();
 
-    await transporter.sendMail({
-      from: `"AI-CIDI CHAT" <${process.env.EMAIL_USER}>`,
-      to: "jackchang067@gmail.com", // 🔥 you receive it
-      subject: "New AI-CIDI Chat Input",
-      text: `
+    // 🔒 EMAIL DISABLED
+/*
+await transporter.sendMail({
+  from: `"AI-CIDI CHAT" <${process.env.EMAIL_USER}>`,
+  to: "jackchang067@gmail.com", // 🔥 you receive it
+  subject: "New AI-CIDI Chat Input",
+  text: `
 Email:
 ${email}
 
@@ -1298,15 +1300,16 @@ ${date}
 
 User Input:
 ${input}
-      `
-    });
+  `
+});
+*/
 
-    return res.json({ ok: true });
+return res.json({ ok: true });
 
-  } catch (err) {
-    console.error("quick-save error:", err);
-    return res.json({ ok: false });
-  }
+} catch (err) {
+  console.error("quick-save error:", err);
+  return res.json({ ok: false });
+}
 });
 
 //////////////////////////////////////////////////////////////
