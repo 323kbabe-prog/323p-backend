@@ -2080,28 +2080,7 @@ let userInput = (req.body.question || "").trim();
 
 if(!userInput){
 
-  const topicGen = await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    temperature:0.9,
-    messages:[
-      {
-        role:"system",
-        content:`
-Generate a short AI-CIDI style Coachella signal.
-
-Rules:
-• 3–5 short lines
-• Focus on identity, FOMO, visibility
-• No explanation
-• End with a sharp question
-`
-      },
-      { role:"user", content:"Generate new signal" }
-    ]
-  });
-
-  userInput = topicGen.choices[0].message.content.trim();
-}
+  const topicGen
 
 // =====================================================
 // 🔥 LANGUAGE + TRANSLATION
