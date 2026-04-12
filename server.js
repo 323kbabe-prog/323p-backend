@@ -2374,9 +2374,9 @@ const messages = rawMessages.slice(0,10).map(m=>{
 });
 
 // =====================================================
-// 🔥 STEP 7 — SEND EMAIL
+// 🔥 STEP 7 — SEND EMAIL (DISABLED)
 // =====================================================
-await sendDebateToEmailList(userInput, messages);
+// await sendDebateToEmailList(userInput, messages);
 
 
 // =====================================================
