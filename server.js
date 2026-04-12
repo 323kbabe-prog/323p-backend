@@ -2131,9 +2131,17 @@ ${mainEvent}
 
   } else {
 
-    userInput = "What is happening at Coachella right now?";
-  }
+  userInput = "What is happening at Coachella right now?";
 
+  eventContext = `
+Event:
+Coachella live festival
+
+Focus:
+crowd reactions performances and viral moments
+`;
+
+}
 }
 
 const refine = await openai.chat.completions.create({
@@ -2243,7 +2251,7 @@ ${personas.join("\n")}
 RULES:
 
 • EVERY message must reference the event above
-• Mention the performer or performance
+• MUST mention the artist or event name from the context in every message
 • Speak like reacting to a video
 
 • EXACTLY 10 messages
