@@ -1858,10 +1858,10 @@ app.get("/youtube-shorts", async (req, res) => {
    const API_KEY = process.env.YOUTUBE_API_KEY;
 const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID;
 
-const url = `https://www.googleapis.com/youtube/v3/search?key=${API_KEY}&channelId=${CHANNEL_ID}&part=snippet&order=date&maxResults=10&type=video&videoDuration=short`;
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella+vlog&type=video&part=snippet&maxResults=20`;
 
-    const response = await fetch(url);
-    const data = await response.json();
+const ytRes = await fetch(ytUrl);
+const ytData = await ytRes.json();
 
     if (!data.items) {
       return res.json({ videos: [] });
@@ -2162,7 +2162,7 @@ function extractYouTubePersonas(results){
 
 
 
-let personas = extractYouTubePersonas(serpData.video_results || []);
+let personas = extractYouTubePersonas(ytData.items || []);
 
 // 🔥 FALLBACK (CRITICAL)
 if(personas.length < 5){
