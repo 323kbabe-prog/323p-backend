@@ -2115,10 +2115,10 @@ const question = await translateToEnglish(userInput);
 // 🔥 SERP → CLEAN YOUTUBER PERSONAS
 // =====================================================
 
-const url = `https://serpapi.com/search.json?engine=youtube&q=coachella&api_key=${process.env.SERPAPI_KEY}`;
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella+vlog&type=video&part=snippet&maxResults=20`;
 
-const serpRes = await fetch(url);
-const serpData = await serpRes.json();
+const ytRes = await fetch(ytUrl);
+const ytData = await ytRes.json();
 
 function extractYouTubePersonas(results){
 
@@ -2127,18 +2127,11 @@ function extractYouTubePersonas(results){
 
   for(const r of results){
 
-    const name = (
-      r.channel?.name ||
-      r.author ||
-      r.title?.split("|")[0] ||
-      ""
-    ).trim();
+    const name = (r.snippet?.channelTitle || "").trim();
 
     const badWords = [
-      "official","video","live","performance",
-      "hd","full","clip","trailer","2024","2025",
-      "coachella","festival"
-    ];
+  "official","video","hd","full","clip","trailer"
+];
 
     const lower = name.toLowerCase();
     const isBad = badWords.some(w => lower.includes(w));
