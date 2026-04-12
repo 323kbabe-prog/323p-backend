@@ -1047,10 +1047,11 @@ async function getTodayAITopic(){
 try{
 
 // 🔥 Google → X posts (real-time signal)
-const url = `https://serpapi.com/search.json?engine=google&q=AI+site:x.com+OpenAI+Google+Nvidia+Anthropic+-jobs+-hiring&api_key=${process.env.SERPAPI_KEY}`;
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
 
-const res = await fetch(url);
-const data = await res.json();
+const ytRes = await fetch(ytUrl);
+const ytData = await ytRes.json();
+
 
 // ---- ERROR CHECK ----
 if(data.error){
@@ -2126,22 +2127,29 @@ function extractYouTubePersonas(results){
 
   for(const r of results){
 
-    // 🔥 get real channel name
     const name = (
-  r.channel?.name ||
-  r.author ||
-  r.title?.split("|")[0] ||
-  ""
-).trim();
+      r.channel?.name ||
+      r.author ||
+      r.title?.split("|")[0] ||
+      ""
+    ).trim();
+
+    const badWords = [
+      "official","video","live","performance",
+      "hd","full","clip","trailer","2024","2025",
+      "coachella","festival"
+    ];
+
+    const lower = name.toLowerCase();
+    const isBad = badWords.some(w => lower.includes(w));
 
     if(
       name &&
       name.length > 2 &&
-      !seen.has(name.toLowerCase())
+      !isBad &&
+      !seen.has(lower)
     ){
-      seen.add(name.toLowerCase());
-
-      // 🔥 format as virtual persona
+      seen.add(lower);
       personas.push("virtual @" + name);
     }
 
@@ -2150,6 +2158,9 @@ function extractYouTubePersonas(results){
 
   return personas;
 }
+
+
+
 
 let personas = extractYouTubePersonas(serpData.video_results || []);
 
@@ -2416,3 +2427,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
