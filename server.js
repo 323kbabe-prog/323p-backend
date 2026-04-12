@@ -2080,7 +2080,7 @@ let eventContext = "";
 // =====================================================
 if(!userInput){
 
-  const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
+  const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=20&order=date`;
 
   const ytRes = await fetch(ytUrl);
   const ytData = await ytRes.json();
@@ -2346,21 +2346,27 @@ const rawMessages = parsed.messages || [];
 // =====================================================
 // 🔥 STEP 6 — CLEAN OUTPUT
 // =====================================================
-const messages = rawMessages.slice(0,10).map(m=>({
+const messages = rawMessages.slice(0,10).map(m=>{
 
-  persona: m.persona || "virtual @user",
+  // 🔥 find matching persona object
+  const match = personas.find(p => p.name === m.persona);
 
-  text: m.text || "",
+  return {
+    persona: m.persona || "virtual @user",
 
-  search: (m.search || "")
-    .toLowerCase()
-    .replace(/[^\w\s]/g,"")
-    .split(" ")
-    .slice(0,8)
-    .join(" ")
+    // ✅ ADD THIS
+    title: match?.title || "",
 
-}));
+    text: m.text || "",
 
+    search: (m.search || "")
+      .toLowerCase()
+      .replace(/[^\w\s]/g,"")
+      .split(" ")
+      .slice(0,8)
+      .join(" ")
+  };
+});
 
 // =====================================================
 // 🔥 STEP 7 — SEND EMAIL
