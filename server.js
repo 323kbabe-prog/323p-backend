@@ -2076,7 +2076,7 @@ let userInput = (req.body.question || "").trim();
 let eventContext = "";
 
 // =====================================================
-// 🔥 AUTO GENERATE TOPIC IF EMPTY
+// 🔥 STEP 1 — AUTO GENERATE TOPIC
 // =====================================================
 if(!userInput){
 
@@ -2143,7 +2143,7 @@ main stage performance
 }
 
 // =====================================================
-// 🔥 CLEAN TOPIC → HUMAN QUESTION
+// 🔥 STEP 2 — MAKE HUMAN QUESTION
 // =====================================================
 const refine = await openai.chat.completions.create({
   model:"gpt-4o-mini",
@@ -2166,8 +2166,9 @@ Rules:
 
 userInput = refine.choices[0].message.content.trim();
 
+
 // =====================================================
-// 🔥 PERSONAS (YOUTUBE STYLE)
+// 🔥 STEP 3 — GET REAL YOUTUBE PERSONAS + TITLES
 // =====================================================
 function extractYouTubePersonas(results){
 
@@ -2177,10 +2178,15 @@ function extractYouTubePersonas(results){
   for(const r of results){
 
     const name = (r.snippet?.channelTitle || "").trim();
+    const title = (r.snippet?.title || "").trim();
 
     if(name && !seen.has(name.toLowerCase())){
       seen.add(name.toLowerCase());
-      personas.push("virtual @" + name);
+
+      personas.push({
+        name: "virtual @" + name,
+        title: title
+      });
     }
 
     if(personas.length >= 10) break;
@@ -2196,23 +2202,26 @@ const ytData = await ytRes.json();
 
 let personas = extractYouTubePersonas(ytData.items || []);
 
+// ✅ FIXED FALLBACK (IMPORTANT)
 if(personas.length < 5){
   personas = [
-    "virtual @festivalvibes",
-    "virtual @streetweartok",
-    "virtual @musicreacts",
-    "virtual @vlogkid",
-    "virtual @aestheticshots",
-    "virtual @crowdenergy",
-    "virtual @fitcheckdaily",
-    "virtual @viralclips",
-    "virtual @soundcritic",
-    "virtual @nightvibes"
+    { name:"virtual @festivalvibes", title:"coachella crowd energy vlog" },
+    { name:"virtual @streetweartok", title:"coachella outfit breakdown" },
+    { name:"virtual @musicreacts", title:"live set reaction coachella" },
+    { name:"virtual @vlogkid", title:"coachella day vlog chaos" },
+    { name:"virtual @aestheticshots", title:"coachella cinematic visuals" }
   ];
 }
 
+// 👉 BUILD PROMPT BLOCK
+const personaTextBlock = personas.map(p => `
+${p.name}
+Video Title: ${p.title}
+`).join("\n");
+
+
 // =====================================================
-// 🔥 SYSTEM PROMPT (FINAL)
+// 🔥 STEP 4 — SYSTEM PROMPT (IDENTITY LOCKED)
 // =====================================================
 const systemPrompt = `
 You are simulating a REAL YouTube comment section reacting to Coachella.
@@ -2220,44 +2229,53 @@ You are simulating a REAL YouTube comment section reacting to Coachella.
 ${eventContext}
 
 Participants:
-${personas.join("\n")}
+${personaTextBlock}
 
 ━━━━━━━━━━━━━━━━━━
 STYLE
 ━━━━━━━━━━━━━━━━━━
 
 • casual lowercase typing
-• like real comments
-• expressive
-• short reactions
+• short, punchy
+• real youtube comments
+• natural slang allowed
 
 ━━━━━━━━━━━━━━━━━━
-CORE BEHAVIOR
+PERSONA IDENTITY (CRITICAL)
 ━━━━━━━━━━━━━━━━━━
 
-Each persona acts like their OWN channel:
+Each persona is a REAL creator.
 
-• different personalities
-• some hype
-• some critical
-• some focus visuals
-• some focus crowd
-• some focus outfits
+They MUST speak BASED ON THEIR VIDEO TITLE.
 
-DO NOT sound the same.
+• their opinion = comes from their video
+• their tone = matches their content
+
+Examples:
+
+Video: "that drop was insane"
+→ hype energy
+
+Video: "outfit breakdown"
+→ fashion detail focus
+
+Video: "crowd vlog"
+→ audience energy focus
+
+DO NOT speak generically.
 
 ━━━━━━━━━━━━━━━━━━
-REACTION RULE (CRITICAL)
+REACTION FLOW (CRITICAL)
 ━━━━━━━━━━━━━━━━━━
 
 • EACH message MUST reply to previous message
-• MUST mention previous persona
+• MUST mention previous persona using EXACT @name
 
 Example:
-"@emma nah you're wrong the crowd went crazy"
+"@musicreacts nah you're wrong the crowd went insane"
 
 ━━━━━━━━━━━━━━━━━━
-DETAIL RULE (CRITICAL)
+DETAIL OBSESSION (CRITICAL)
 ━━━━━━━━━━━━━━━━━━
 
 Each message MUST include SPECIFIC detail:
@@ -2269,12 +2287,12 @@ Each message MUST include SPECIFIC detail:
 • timing
 
 ━━━━━━━━━━━━━━━━━━
-ENERGY RULE
+ENERGY
 ━━━━━━━━━━━━━━━━━━
 
-• high energy
+• expressive
 • reactive
-• emotional
+• slightly positive bias
 
 ━━━━━━━━━━━━━━━━━━
 STRUCTURE
@@ -2282,13 +2300,14 @@ STRUCTURE
 
 • EXACTLY 10 messages
 • 1–2 sentences each
-• MUST mention:
-  - previous persona
-  - event or artist
+• MUST include:
+  - previous persona (@name)
+  - event or artist reference
 
 ━━━━━━━━━━━━━━━━━━
 OUTPUT JSON ONLY
 ━━━━━━━━━━━━━━━━━━
+
 {
  "messages":[
   {
@@ -2300,8 +2319,9 @@ OUTPUT JSON ONLY
 }
 `;
 
+
 // =====================================================
-// 🔥 GENERATE
+// 🔥 STEP 5 — GENERATE
 // =====================================================
 const response = await openai.chat.completions.create({
   model:"gpt-4o-mini",
@@ -2322,8 +2342,9 @@ catch{ return res.json({messages:[]}); }
 
 const rawMessages = parsed.messages || [];
 
+
 // =====================================================
-// 🔥 CLEAN + FINAL FORMAT
+// 🔥 STEP 6 — CLEAN OUTPUT
 // =====================================================
 const messages = rawMessages.slice(0,10).map(m=>({
 
@@ -2340,10 +2361,12 @@ const messages = rawMessages.slice(0,10).map(m=>({
 
 }));
 
+
 // =====================================================
-// 🔥 SEND EMAIL
+// 🔥 STEP 7 — SEND EMAIL
 // =====================================================
 await sendDebateToEmailList(userInput, messages);
+
 
 // =====================================================
 // 🔥 FINAL OUTPUT
