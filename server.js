@@ -2271,6 +2271,14 @@ EXAMPLES:
 - That assumption fails, the crowd reaction says otherwise
 - This ignores how the visuals carried the set
 
+IMPORTANT:
+
+You MUST return a valid JSON object.
+
+Do NOT return text.
+Do NOT explain.
+Do NOT include anything outside JSON.
+
 FORMAT:
 
 {
