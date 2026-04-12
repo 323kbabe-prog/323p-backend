@@ -2074,12 +2074,13 @@ try{
 
 let userInput = (req.body.question || "").trim();
 let eventContext = "";
+
 // =====================================================
 // 🔥 AUTO GENERATE TOPIC IF EMPTY
 // =====================================================
 if(!userInput){
 
-  const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella+famous+youtuber&type=video&part=snippet&maxResults=20`;
+  const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
 
   const ytRes = await fetch(ytUrl);
   const ytData = await ytRes.json();
@@ -2091,47 +2092,30 @@ if(!userInput){
     const topVideo = videos[0];
 
     const eventTitle = topVideo.snippet.title;
-const eventDesc = topVideo.snippet.description || "";
+    const eventDesc = topVideo.snippet.description || "";
 
-const context = eventTitle + " " + eventDesc;
+    const context = eventTitle + " " + eventDesc;
 
-const extract = await openai.chat.completions.create({
-  model:"gpt-4o-mini",
-  temperature:0,
-  messages:[
-    {
-      role:"system",
-      content:`
-Extract the MAIN performer, artist, or celebrity from this text.
+    const extract = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0,
+      messages:[
+        {
+          role:"system",
+          content:`
+Extract the MAIN performer or artist.
 
-CRITICAL:
-• You MUST prioritize a REAL PERSON (artist, singer, DJ, celebrity)
-• DO NOT return generic phrases like "Coachella livestream"
-• DO NOT return "performance" or "festival"
-• ONLY return a REAL NAME if present
-
-If a real artist is found:
-→ return "Artist Name performance"
-
-If NO artist is found:
-→ return a SPECIFIC moment like:
-  "main stage performance"
-  "headline act"
-  "live set crowd reaction"
-
-Output:
-• 1 short phrase only
-• no explanation
+Rules:
+• MUST return REAL artist if exists
+• format: "Artist Name performance"
+• if no artist → return "main stage performance"
 `
-    },
-    {
-      role:"user",
-      content: context
-    }
-  ]
-});
+        },
+        { role:"user", content: context }
+      ]
+    });
 
-const mainEvent = extract.choices[0].message.content.trim();
+    const mainEvent = extract.choices[0].message.content.trim();
 
     eventContext = `
 Event:
@@ -2145,19 +2129,22 @@ ${mainEvent}
 
   } else {
 
-  userInput = "What is happening at Coachella right now?";
+    userInput = "Coachella main stage performance";
 
-  eventContext = `
+    eventContext = `
 Event:
 Coachella live festival
 
 Focus:
-crowd reactions performances and viral moments
+main stage performance
 `;
 
-}
+  }
 }
 
+// =====================================================
+// 🔥 CLEAN TOPIC → HUMAN QUESTION
+// =====================================================
 const refine = await openai.chat.completions.create({
   model:"gpt-4o-mini",
   temperature:0.7,
@@ -2165,36 +2152,23 @@ const refine = await openai.chat.completions.create({
     {
       role:"system",
       content:`
-Rewrite this as a real discussion topic.
+Rewrite as viral discussion.
 
-CRITICAL:
-• MUST keep artist name
-• MUST keep Coachella or show context
-• MUST sound like people talking
-• end as a question
+Rules:
+• MUST keep artist or event
+• casual tone
+• end as question
 `
     },
-    {
-      role:"user",
-      content: userInput
-    }
+    { role:"user", content:userInput }
   ]
 });
 
 userInput = refine.choices[0].message.content.trim();
-// =====================================================
-// 🔥 LANGUAGE + TRANSLATION
-// =====================================================
-
-const userLang = await detectLanguage(userInput);
-const question = await translateToEnglish(userInput);
 
 // =====================================================
-// 🔥 SERP → CLEAN YOUTUBER PERSONAS
+// 🔥 PERSONAS (YOUTUBE STYLE)
 // =====================================================
-
-
-
 function extractYouTubePersonas(results){
 
   const personas = [];
@@ -2204,20 +2178,8 @@ function extractYouTubePersonas(results){
 
     const name = (r.snippet?.channelTitle || "").trim();
 
-    const badWords = [
-  "official","video","hd","full","clip","trailer"
-];
-
-    const lower = name.toLowerCase();
-    const isBad = badWords.some(w => lower.includes(w));
-
-    if(
-      name &&
-      name.length > 2 &&
-      !isBad &&
-      !seen.has(lower)
-    ){
-      seen.add(lower);
+    if(name && !seen.has(name.toLowerCase())){
+      seen.add(name.toLowerCase());
       personas.push("virtual @" + name);
     }
 
@@ -2227,82 +2189,106 @@ function extractYouTubePersonas(results){
   return personas;
 }
 
-const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella+famous+youtuber&type=video&part=snippet&maxResults=20`;
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
 
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
 
-
 let personas = extractYouTubePersonas(ytData.items || []);
 
-// 🔥 FALLBACK (CRITICAL)
 if(personas.length < 5){
-
   personas = [
-
-  "virtual @Coachella Creator",
-  "virtual @Festival Influencer",
-  "virtual @Gen Z Vlogger",
-  "virtual @Luxury Lifestyle Creator",
-  "virtual @Streetwear Creator",
-  "virtual @Algorithm Analyst",
-  "virtual @Celebrity Blogger",
-  "virtual @Identity Coach",
-  "virtual @Experience Reviewer",
-  "virtual @AI Trend Analyst"
-
+    "virtual @festivalvibes",
+    "virtual @streetweartok",
+    "virtual @musicreacts",
+    "virtual @vlogkid",
+    "virtual @aestheticshots",
+    "virtual @crowdenergy",
+    "virtual @fitcheckdaily",
+    "virtual @viralclips",
+    "virtual @soundcritic",
+    "virtual @nightvibes"
   ];
 }
 
 // =====================================================
-// 🔥 SYSTEM PROMPT (100% DISAGREEMENT)
+// 🔥 SYSTEM PROMPT (FINAL)
 // =====================================================
-
 const systemPrompt = `
-You MUST respond in JSON format.
-
-Return ONLY JSON.
-
-You are simulating a live comment section reacting to a REAL Coachella event.
+You are simulating a REAL YouTube comment section reacting to Coachella.
 
 ${eventContext}
 
 Participants:
 ${personas.join("\n")}
 
-RULES:
+━━━━━━━━━━━━━━━━━━
+STYLE
+━━━━━━━━━━━━━━━━━━
 
-• EVERY message must reference the event above
-• MUST mention the artist or event name from the context in every message
-• Speak like reacting to a video
+• casual lowercase typing
+• like real comments
+• expressive
+• short reactions
+
+━━━━━━━━━━━━━━━━━━
+CORE BEHAVIOR
+━━━━━━━━━━━━━━━━━━
+
+Each persona acts like their OWN channel:
+
+• different personalities
+• some hype
+• some critical
+• some focus visuals
+• some focus crowd
+• some focus outfits
+
+DO NOT sound the same.
+
+━━━━━━━━━━━━━━━━━━
+REACTION RULE (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+• EACH message MUST reply to previous message
+• MUST mention previous persona
+
+Example:
+"@emma nah you're wrong the crowd went crazy"
+
+━━━━━━━━━━━━━━━━━━
+DETAIL RULE (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+Each message MUST include SPECIFIC detail:
+
+• lighting
+• beat drop
+• outfit
+• crowd reaction
+• timing
+
+━━━━━━━━━━━━━━━━━━
+ENERGY RULE
+━━━━━━━━━━━━━━━━━━
+
+• high energy
+• reactive
+• emotional
+
+━━━━━━━━━━━━━━━━━━
+STRUCTURE
+━━━━━━━━━━━━━━━━━━
 
 • EXACTLY 10 messages
-• EVERY message MUST disagree
-• NO neutral tone
+• 1–2 sentences each
+• MUST mention:
+  - previous persona
+  - event or artist
 
-STYLE:
-
-• like YouTube comments
-• short
-• opinionated
-• reactive
-
-EXAMPLES:
-
-- This is incorrect because that performance was clearly staged
-- That assumption fails, the crowd reaction says otherwise
-- This ignores how the visuals carried the set
-
-IMPORTANT:
-
-You MUST return a valid JSON object.
-
-Do NOT return text.
-Do NOT explain.
-Do NOT include anything outside JSON.
-
-FORMAT:
-
+━━━━━━━━━━━━━━━━━━
+OUTPUT JSON ONLY
+━━━━━━━━━━━━━━━━━━
 {
  "messages":[
   {
@@ -2315,161 +2301,66 @@ FORMAT:
 `;
 
 // =====================================================
-// 🔥 GENERATE DEBATE
+// 🔥 GENERATE
 // =====================================================
-
 const response = await openai.chat.completions.create({
   model:"gpt-4o-mini",
   temperature:1.0,
   response_format:{type:"json_object"},
   messages:[
     {role:"system",content:systemPrompt},
-    {role:"user",content:"Start the debate."}
+    {role:"user",content:"Start"}
   ]
 });
 
 let raw = response.choices?.[0]?.message?.content || "";
-
 raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
 
 let parsed;
+try{ parsed = JSON.parse(raw); }
+catch{ return res.json({messages:[]}); }
 
-try{
-  parsed = JSON.parse(raw);
-}catch{
-  return res.json({messages:[]});
-}
-
-const rawMessages =
-parsed.messages ||
-parsed.debate ||
-parsed.output ||
-[];
+const rawMessages = parsed.messages || [];
 
 // =====================================================
-// 🔥 ENSURE SEARCH EXISTS
+// 🔥 CLEAN + FINAL FORMAT
 // =====================================================
+const messages = rawMessages.slice(0,10).map(m=>({
 
-for (const m of rawMessages) {
-  if (!m.search || m.search.trim() === "") {
+  persona: m.persona || "virtual @user",
 
-    const words = (m.text || "")
-      .toLowerCase()
-      .replace(/[^\w\s]/g, "")
-      .split(" ")
-      .filter(w => w.length > 2);
+  text: m.text || "",
 
-    m.search = words.slice(0, 8).join(" ");
-  }
-}
-
-// =====================================================
-// 🔥 HARD ENFORCE DISAGREEMENT
-// =====================================================
-
-const forceLines = [
-  "This is incorrect because",
-  "That assumption fails because",
-  "This ignores the fact that",
-  "I disagree because"
-];
-
-for(let i = 0; i < rawMessages.length; i++){
-
-  const m = rawMessages[i];
-  if(!m || !m.text) continue;
-
-  const text = m.text.toLowerCase();
-
-  const hasDisagree =
-    text.includes("incorrect") ||
-    text.includes("fails") ||
-    text.includes("ignores") ||
-    text.includes("disagree");
-
-  if(!hasDisagree){
-    const pick = forceLines[Math.floor(Math.random()*forceLines.length)];
-    m.text = pick + " " + m.text;
-  }
-
-  if(i > 0 && rawMessages[i-1]?.persona){
-    if(!m.text.includes(rawMessages[i-1].persona)){
-      m.text += " This ignores " + rawMessages[i-1].persona + ".";
-    }
-  }
-
-}
-
-// =====================================================
-// 🔥 DUPLICATE FILTER
-// =====================================================
-
-const seen = new Set();
-const messages = [];
-
-for(const m of rawMessages){
-
-  const clean = (m.text || "")
-    .trim()
+  search: (m.search || "")
     .toLowerCase()
     .replace(/[^\w\s]/g,"")
-    .slice(0,80);
+    .split(" ")
+    .slice(0,8)
+    .join(" ")
 
-  if(!seen.has(clean)){
-    seen.add(clean);
-
-    messages.push({
-      persona: (m.persona || "Unknown"),
-      text: m.text,
-      search: m.search || ""
-    });
-  }
-
-  if(messages.length >= 10) break;
-}
-
-// =====================================================
-// 🔥 TRANSLATE BACK
-// =====================================================
-
-const joinedText = messages.map((m,i)=>`[${i}] ${m.text}`).join("\n");
-
-const translated = await translateFromEnglish(joinedText, userLang);
-
-const lines = translated.split("\n");
-
-for(let i=0;i<messages.length;i++){
-  messages[i].text =
-  (lines[i] || "").replace(/^\[\d+\]\s*/,"") || messages[i].text;
-}
-
-if(messages.length === 0){
-  return res.json({messages:[]});
-}
+}));
 
 // =====================================================
 // 🔥 SEND EMAIL
 // =====================================================
-
 await sendDebateToEmailList(userInput, messages);
 
 // =====================================================
 // 🔥 FINAL OUTPUT
 // =====================================================
-
-return res.json({messages});
+return res.json({
+  topic:userInput,
+  messages
+});
 
 }catch(err){
 
-console.error("aicidicoachellafomo error:",err);
-
+console.error("coachella route error:",err);
 return res.status(500).json({messages:[]});
 
 }
 
 });
-
-
 
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
