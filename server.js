@@ -2349,7 +2349,9 @@ const rawMessages = parsed.messages || [];
 const messages = rawMessages.slice(0,10).map(m=>{
 
   // 🔥 find matching persona object
-  const match = personas.find(p => p.name === m.persona);
+  const match = personas.find(p =>
+  p.name.toLowerCase().trim() === (m.persona || "").toLowerCase().trim()
+);
 
   return {
     persona: m.persona || "virtual @user",
