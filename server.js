@@ -2241,6 +2241,10 @@ if(personas.length < 5){
 // =====================================================
 
 const systemPrompt = `
+You MUST respond in JSON format.
+
+Return ONLY JSON.
+
 You are simulating a live comment section reacting to a REAL Coachella event.
 
 ${eventContext}
