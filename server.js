@@ -2141,7 +2141,7 @@ Focus:
 ${mainEvent}
 `;
 
-    userInput = topVideo.snippet.title;
+    userInput = mainEvent;
 
   } else {
 
@@ -2165,9 +2165,13 @@ const refine = await openai.chat.completions.create({
     {
       role:"system",
       content:`
-Rewrite this as a casual discussion people would say online.
-Keep names and real event.
-End as a question.
+Rewrite this as a real discussion topic.
+
+CRITICAL:
+• MUST keep artist name
+• MUST keep Coachella or show context
+• MUST sound like people talking
+• end as a question
 `
     },
     {
