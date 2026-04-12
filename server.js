@@ -2115,10 +2115,7 @@ const question = await translateToEnglish(userInput);
 // 🔥 SERP → CLEAN YOUTUBER PERSONAS
 // =====================================================
 
-const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella+vlog&type=video&part=snippet&maxResults=20`;
 
-const ytRes = await fetch(ytUrl);
-const ytData = await ytRes.json();
 
 function extractYouTubePersonas(results){
 
@@ -2152,7 +2149,10 @@ function extractYouTubePersonas(results){
   return personas;
 }
 
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella+famous+youtuber&type=video&part=snippet&maxResults=20`;
 
+const ytRes = await fetch(ytUrl);
+const ytData = await ytRes.json();
 
 
 let personas = extractYouTubePersonas(ytData.items || []);
