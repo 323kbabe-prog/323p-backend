@@ -2073,7 +2073,7 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
 try{
 
 let userInput = (req.body.question || "").trim();
-
+let eventContext = "";
 // =====================================================
 // 🔥 AUTO GENERATE TOPIC IF EMPTY
 // =====================================================
@@ -2089,6 +2089,43 @@ if(!userInput){
   if(videos.length > 0){
 
     const topVideo = videos[0];
+
+    const eventTitle = topVideo.snippet.title;
+const eventDesc = topVideo.snippet.description || "";
+
+const context = eventTitle + " " + eventDesc;
+
+const extract = await openai.chat.completions.create({
+  model:"gpt-4o-mini",
+  temperature:0,
+  messages:[
+    {
+      role:"system",
+      content:`
+Extract the main performer or event from this text.
+
+Rules:
+• return 1 short phrase
+• include artist name if possible
+• no extra words
+`
+    },
+    {
+      role:"user",
+      content: context
+    }
+  ]
+});
+
+const mainEvent = extract.choices[0].message.content.trim();
+
+    eventContext = `
+Event:
+${eventTitle}
+
+Focus:
+${mainEvent}
+`;
 
     userInput = topVideo.snippet.title;
 
@@ -2196,69 +2233,35 @@ if(personas.length < 5){
 // =====================================================
 
 const systemPrompt = `
-You are simulating a high-conflict cultural debate about Coachella.
+You are simulating a live comment section reacting to a REAL Coachella event.
 
-User signal:
-"${question}"
+${eventContext}
 
 Participants:
 ${personas.join("\n")}
 
-IMPORTANT:
+RULES:
 
-Each persona represents a virtual YouTube creator.
-
-CORE RULES:
+• EVERY message must reference the event above
+• Mention the performer or performance
+• Speak like reacting to a video
 
 • EXACTLY 10 messages
-• EVERY message MUST disagree with a previous persona
-• NO agreement allowed
-• NO neutral statements allowed
-
-Each message MUST explicitly attack or reject a previous idea.
-
-REQUIRED LANGUAGE:
-
-Each message MUST include:
-- "This is incorrect because"
-- OR "That assumption fails"
-- OR "This ignores"
-- OR "I disagree with"
-
-ATTENTION RULE:
-
-Each message must compete for attention and dominance.
+• EVERY message MUST disagree
+• NO neutral tone
 
 STYLE:
 
-• sharp
-• confident
-• aggressive
-• social-media tone
+• like YouTube comments
+• short
+• opinionated
+• reactive
 
-CONTENT:
+EXAMPLES:
 
-• Focus on behavior at Coachella
-• Focus on visibility competition
-• Focus on identity performance
-• NO advice
-
-FORMAT:
-
-• 1–2 sentences only
-• No repetition
-
-SEARCH RULE:
-
-Each message MUST include:
-- "search": 5–10 word query
-- lowercase
-- no punctuation
-
-CRITICAL:
-
-• Keep persona EXACTLY as given (virtual @name)
-• Output JSON ONLY
+- This is incorrect because that performance was clearly staged
+- That assumption fails, the crowd reaction says otherwise
+- This ignores how the visuals carried the set
 
 FORMAT:
 
