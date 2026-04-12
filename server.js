@@ -2065,10 +2065,354 @@ Rules:
   }
 });
 
+//////////////////////////////////////////////////////////////
+// ROUTE — /aicidicoachellafomo
+//////////////////////////////////////////////////////////////
+app.post("/aicidicoachellafomo", async (req,res)=>{
+
+try{
+
+let userInput = (req.body.question || "").trim();
+
+// =====================================================
+// 🔥 AUTO GENERATE TOPIC IF EMPTY
+// =====================================================
+
+if(!userInput){
+
+  const topicGen = await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    temperature:0.9,
+    messages:[
+      {
+        role:"system",
+        content:`
+Generate a short AI-CIDI style Coachella signal.
+
+Rules:
+• 3–5 short lines
+• Focus on identity, FOMO, visibility
+• No explanation
+• End with a sharp question
+`
+      },
+      { role:"user", content:"Generate new signal" }
+    ]
+  });
+
+  userInput = topicGen.choices[0].message.content.trim();
+}
+
+// =====================================================
+// 🔥 LANGUAGE + TRANSLATION
+// =====================================================
+
+const userLang = await detectLanguage(userInput);
+const question = await translateToEnglish(userInput);
+
+// =====================================================
+// 🔥 SERP → CLEAN YOUTUBER PERSONAS
+// =====================================================
+
+const url = `https://serpapi.com/search.json?engine=google&q=coachella+vlog+youtube&api_key=${process.env.SERPAPI_KEY}`;
+
+const serpRes = await fetch(url);
+const serpData = await serpRes.json();
+
+function extractYouTubePersonas(results){
+
+  const personas = [];
+  const seen = new Set();
+
+  for(const r of results){
+
+    const source = r.source || "";
+    const title = r.title || "";
+
+    let name = source || title.split("-")[0];
+
+    name = name
+      .replace(/official|video|live|performance|hd|2024/gi,"")
+      .replace(/[^a-zA-Z0-9\s]/g,"")
+      .trim()
+      .slice(0,25);
+
+    if(
+      name.length > 2 &&
+      !seen.has(name.toLowerCase())
+    ){
+      seen.add(name.toLowerCase());
+      personas.push("virtual @" + name);
+    }
+
+    if(personas.length >= 10) break;
+  }
+
+  return personas;
+}
+
+let personas = extractYouTubePersonas(serpData.organic_results || []);
+
+// 🔥 FALLBACK (CRITICAL)
+if(personas.length < 5){
+
+  personas = [
+
+  "virtual @Coachella Creator",
+  "virtual @Festival Influencer",
+  "virtual @Gen Z Vlogger",
+  "virtual @Luxury Lifestyle Creator",
+  "virtual @Streetwear Creator",
+  "virtual @Algorithm Analyst",
+  "virtual @Celebrity Blogger",
+  "virtual @Identity Coach",
+  "virtual @Experience Reviewer",
+  "virtual @AI Trend Analyst"
+
+  ];
+}
+
+// =====================================================
+// 🔥 SYSTEM PROMPT (100% DISAGREEMENT)
+// =====================================================
+
+const systemPrompt = `
+You are simulating a high-conflict cultural debate about Coachella.
+
+User signal:
+"${question}"
+
+Participants:
+${personas.join("\n")}
+
+IMPORTANT:
+
+Each persona represents a virtual YouTube creator.
+
+CORE RULES:
+
+• EXACTLY 10 messages
+• EVERY message MUST disagree with a previous persona
+• NO agreement allowed
+• NO neutral statements allowed
+
+Each message MUST explicitly attack or reject a previous idea.
+
+REQUIRED LANGUAGE:
+
+Each message MUST include:
+- "This is incorrect because"
+- OR "That assumption fails"
+- OR "This ignores"
+- OR "I disagree with"
+
+ATTENTION RULE:
+
+Each message must compete for attention and dominance.
+
+STYLE:
+
+• sharp
+• confident
+• aggressive
+• social-media tone
+
+CONTENT:
+
+• Focus on behavior at Coachella
+• Focus on visibility competition
+• Focus on identity performance
+• NO advice
+
+FORMAT:
+
+• 1–2 sentences only
+• No repetition
+
+SEARCH RULE:
+
+Each message MUST include:
+- "search": 5–10 word query
+- lowercase
+- no punctuation
+
+CRITICAL:
+
+• Keep persona EXACTLY as given (virtual @name)
+• Output JSON ONLY
+
+FORMAT:
+
+{
+ "messages":[
+  {
+   "persona":"virtual @name",
+   "text":"message",
+   "search":"search phrase"
+  }
+ ]
+}
+`;
+
+// =====================================================
+// 🔥 GENERATE DEBATE
+// =====================================================
+
+const response = await openai.chat.completions.create({
+  model:"gpt-4o-mini",
+  temperature:1.0,
+  response_format:{type:"json_object"},
+  messages:[
+    {role:"system",content:systemPrompt},
+    {role:"user",content:"Start the debate."}
+  ]
+});
+
+let raw = response.choices?.[0]?.message?.content || "";
+
+raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
+
+let parsed;
+
+try{
+  parsed = JSON.parse(raw);
+}catch{
+  return res.json({messages:[]});
+}
+
+const rawMessages =
+parsed.messages ||
+parsed.debate ||
+parsed.output ||
+[];
+
+// =====================================================
+// 🔥 ENSURE SEARCH EXISTS
+// =====================================================
+
+for (const m of rawMessages) {
+  if (!m.search || m.search.trim() === "") {
+
+    const words = (m.text || "")
+      .toLowerCase()
+      .replace(/[^\w\s]/g, "")
+      .split(" ")
+      .filter(w => w.length > 2);
+
+    m.search = words.slice(0, 8).join(" ");
+  }
+}
+
+// =====================================================
+// 🔥 HARD ENFORCE DISAGREEMENT
+// =====================================================
+
+const forceLines = [
+  "This is incorrect because",
+  "That assumption fails because",
+  "This ignores the fact that",
+  "I disagree because"
+];
+
+for(let i = 0; i < rawMessages.length; i++){
+
+  const m = rawMessages[i];
+  if(!m || !m.text) continue;
+
+  const text = m.text.toLowerCase();
+
+  const hasDisagree =
+    text.includes("incorrect") ||
+    text.includes("fails") ||
+    text.includes("ignores") ||
+    text.includes("disagree");
+
+  if(!hasDisagree){
+    const pick = forceLines[Math.floor(Math.random()*forceLines.length)];
+    m.text = pick + " " + m.text;
+  }
+
+  if(i > 0 && rawMessages[i-1]?.persona){
+    if(!m.text.includes(rawMessages[i-1].persona)){
+      m.text += " This ignores " + rawMessages[i-1].persona + ".";
+    }
+  }
+
+}
+
+// =====================================================
+// 🔥 DUPLICATE FILTER
+// =====================================================
+
+const seen = new Set();
+const messages = [];
+
+for(const m of rawMessages){
+
+  const clean = (m.text || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s]/g,"")
+    .slice(0,80);
+
+  if(!seen.has(clean)){
+    seen.add(clean);
+
+    messages.push({
+      persona: (m.persona || "Unknown"),
+      text: m.text,
+      search: m.search || ""
+    });
+  }
+
+  if(messages.length >= 10) break;
+}
+
+// =====================================================
+// 🔥 TRANSLATE BACK
+// =====================================================
+
+const joinedText = messages.map((m,i)=>`[${i}] ${m.text}`).join("\n");
+
+const translated = await translateFromEnglish(joinedText, userLang);
+
+const lines = translated.split("\n");
+
+for(let i=0;i<messages.length;i++){
+  messages[i].text =
+  (lines[i] || "").replace(/^\[\d+\]\s*/,"") || messages[i].text;
+}
+
+if(messages.length === 0){
+  return res.json({messages:[]});
+}
+
+// =====================================================
+// 🔥 SEND EMAIL
+// =====================================================
+
+await sendDebateToEmailList(userInput, messages);
+
+// =====================================================
+// 🔥 FINAL OUTPUT
+// =====================================================
+
+return res.json({messages});
+
+}catch(err){
+
+console.error("aicidicoachellafomo error:",err);
+
+return res.status(500).json({messages:[]});
+
+}
+
+});
+
+
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
-
