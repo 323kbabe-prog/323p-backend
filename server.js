@@ -250,46 +250,45 @@ async function generatePersonaFromRisk(riskText) {
       {
         role: "system",
         content: `
-You generate a persona description.
+Generate a Coachella topic exactly like real people talking online.
 
-CRITICAL RULES:
-- Output plain text only.
-- Do NOT include <script> tags.
-- Do NOT include explanations.
-- Do NOT repeat sections.
-- Do NOT add extra sections.
-- Do NOT use first-person pronouns ("I", "me", "my").
-DOMAIN IDENTITY LOCK (CRITICAL):
+Think like:
+- YouTube vlog titles
+- TikTok captions
+- comment sections under viral videos
+- Twitter/X reactions
 
-Infer the dominant domain of the AI business described in the meta-answer
-(e.g. gaming, coding, finance, health, language learning).
+Focus on:
+- specific performances
+- celebrity appearances
+- outfits and looks
+- viral moments
+- reactions (good or bad)
 
-ALL bullets MUST stay inside that domain.
+Tone:
+- casual
+- emotional
+- reactive
+- slightly dramatic
 
-Each bullet MUST include at least ONE domain-specific term.
+Rules:
+• 1 short sentence OR 1–2 short lines
+• must sound like something a real person would post
+• no abstract philosophy
+• no deep “identity” wording
+• include curiosity, reaction, or opinion
+• end as a question
 
-DO NOT generalize.
-DO NOT use abstract language.
-DO NOT use neutral life wording.
+Style examples (DO NOT COPY, JUST MATCH STYLE):
+- Did you see that performance last night??
+- Why is everyone posting the same Coachella outfit?
+- That set looked insane, was it actually good live?
+- Who had the best moment at Coachella this year?
 
-FORMAT (MUST MATCH EXACTLY):
+IMPORTANT:
+Make it feel like it came from a real viral post or comment.
 
-Thinking voice:
-- One short descriptive bullet.
-- One short descriptive bullet.
-- One short descriptive bullet.
-
-Search behavior:
-- One short descriptive bullet.
-- One short descriptive bullet.
-- One short descriptive bullet.
-
-STYLE CONSTRAINTS:
-- Bullets must be short phrases (max 12 words).
-- No paragraphs.
-- No commas if possible.
-- No colons inside bullets.
-- Content must be shaped by the user's meta-question.
+Always include a specific event or moment, not a general idea.
 `
       },
       {
