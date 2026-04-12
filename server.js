@@ -2114,7 +2114,7 @@ const question = await translateToEnglish(userInput);
 // 🔥 SERP → CLEAN YOUTUBER PERSONAS
 // =====================================================
 
-const url = `https://serpapi.com/search.json?engine=google&q=coachella+vlog+youtube&api_key=${process.env.SERPAPI_KEY}`;
+const url = `https://serpapi.com/search.json?engine=youtube&q=coachella&api_key=${process.env.SERPAPI_KEY}`;
 
 const serpRes = await fetch(url);
 const serpData = await serpRes.json();
@@ -2126,22 +2126,22 @@ function extractYouTubePersonas(results){
 
   for(const r of results){
 
-    const source = r.source || "";
-    const title = r.title || "";
-
-    let name = source || title.split("-")[0];
-
-    name = name
-      .replace(/official|video|live|performance|hd|2024/gi,"")
-      .replace(/[^a-zA-Z0-9\s]/g,"")
-      .trim()
-      .slice(0,25);
+    // 🔥 get real channel name
+    const name = (
+  r.channel?.name ||
+  r.author ||
+  r.title?.split("|")[0] ||
+  ""
+).trim();
 
     if(
+      name &&
       name.length > 2 &&
       !seen.has(name.toLowerCase())
     ){
       seen.add(name.toLowerCase());
+
+      // 🔥 format as virtual persona
       personas.push("virtual @" + name);
     }
 
@@ -2151,7 +2151,7 @@ function extractYouTubePersonas(results){
   return personas;
 }
 
-let personas = extractYouTubePersonas(serpData.organic_results || []);
+let personas = extractYouTubePersonas(serpData.video_results || []);
 
 // 🔥 FALLBACK (CRITICAL)
 if(personas.length < 5){
