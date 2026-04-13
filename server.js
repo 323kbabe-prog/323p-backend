@@ -2537,7 +2537,10 @@ Line 2:
 RULES
 ━━━━━━━━━━━━━━━━━━
 
-• Use the user's idea
+• Transform the user input into a NEW content idea
+• Do NOT repeat or rephrase the input directly
+• Rewrite it into something a creator would actually post
+• Turn intention into action (what to film or post)
 • Make it feel like a real post
 • Keep it short and natural
 • DO NOT repeat title in content
