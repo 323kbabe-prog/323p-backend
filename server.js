@@ -2445,6 +2445,46 @@ return res.status(500).json({messages:[]});
 
 });
 
+app.post("/aicidi-topic", async (req,res)=>{
+
+  try{
+
+    let userInput = (req.body.question || "").trim();
+
+    if(!userInput){
+
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=10&order=date`;
+
+      const ytRes = await fetch(ytUrl);
+      const ytData = await ytRes.json();
+
+      const topVideo = ytData.items?.[0];
+
+      const context = topVideo?.snippet?.title || "Coachella performance";
+
+      const refine = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.7,
+        messages:[
+          {
+            role:"system",
+            content:`Rewrite as viral discussion. Must end as question.`
+          },
+          { role:"user", content: context }
+        ]
+      });
+
+      userInput = refine.choices[0].message.content.trim();
+    }
+
+    return res.json({ topic:userInput });
+
+  }catch(err){
+    return res.json({ topic:"What is happening at Coachella right now?" });
+  }
+
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
