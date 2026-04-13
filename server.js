@@ -2499,6 +2499,122 @@ app.post("/aicidi-topic", async (req,res)=>{
 
 });
 
+// =====================================================
+// ROUTE /aicidi-join
+// =====================================================
+app.post("/aicidi-join", async (req,res)=>{
+
+  try{
+
+    const userInput = (req.body.input || "").trim();
+
+    if(!userInput){
+      return res.json({
+        persona:"Social media chat",
+        reply:"Say something meaningful\n@Cidi share a real idea",
+        search:"how to start a conversation"
+      });
+    }
+
+    const systemPrompt = `
+You are Cidi — a Coachella content creator.
+
+Turn the user input into a post idea.
+
+━━━━━━━━━━━━━━━━━━
+FORMAT (STRICT)
+━━━━━━━━━━━━━━━━━━
+
+• EXACTLY 2 lines
+
+Line 1:
+Short title (5–10 words)
+
+Line 2:
+@Cidi + content idea
+
+━━━━━━━━━━━━━━━━━━
+RULES
+━━━━━━━━━━━━━━━━━━
+
+• Use the user's idea
+• Make it feel like a real post
+• Keep it short and natural
+• DO NOT repeat title in content
+• DO NOT explain or argue
+• NO academic tone
+
+━━━━━━━━━━━━━━━━━━
+EXAMPLE
+━━━━━━━━━━━━━━━━━━
+
+Input:
+i want post my friend in coachella
+
+Output:
+Post your friend dancing at Coachella
+@Cidi capture a real moment of your friend enjoying the vibe
+
+━━━━━━━━━━━━━━━━━━
+OUTPUT JSON ONLY
+━━━━━━━━━━━━━━━━━━
+
+{
+ "persona":"Social media chat",
+ "reply":"title\\n@Cidi content",
+ "search":"search phrase"
+}
+`;
+
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.8,
+      response_format:{type:"json_object"},
+      messages:[
+        {role:"system",content:systemPrompt},
+        {role:"user",content:userInput}
+      ]
+    });
+
+    let raw = response.choices?.[0]?.message?.content || "";
+    raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
+
+    let parsed;
+    try{
+      parsed = JSON.parse(raw);
+    }catch{
+      return res.json({
+        persona:"Social media chat",
+        reply:"Capture a fun Coachella moment\n@Cidi film something real",
+        search:"coachella content ideas"
+      });
+    }
+
+    return res.json({
+      persona: parsed.persona || "Social media chat",
+      reply: parsed.reply || "",
+      search: (parsed.search || "")
+        .toLowerCase()
+        .replace(/[^\w\s]/g,"")
+        .split(" ")
+        .slice(0,8)
+        .join(" ")
+    });
+
+  }catch(err){
+
+    console.error("join error:",err);
+
+    return res.json({
+      persona:"Social media chat",
+      reply:"Capture a Coachella moment\n@Cidi film something real",
+      search:"coachella ideas"
+    });
+
+  }
+
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
