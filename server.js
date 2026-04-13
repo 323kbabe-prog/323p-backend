@@ -2072,6 +2072,16 @@ Rules:
 // ROUTE — /aicidicoachellafomo
 //////////////////////////////////////////////////////////////
 app.get("/aicidicoachellafomo", async (req,res)=>{
+  res.setHeader("Content-Type", "text/event-stream");
+res.setHeader("Cache-Control", "no-cache");
+res.setHeader("Connection", "keep-alive");
+res.setHeader("Access-Control-Allow-Origin", "*"); // 🔥 ADD THIS
+res.flushHeaders(); // 🔥 VERY IMPORTANT
+
+res.write(`data: ${JSON.stringify({
+  type: "status",
+  text: "Scanning Coachella signals..."
+})}\n\n`);
 
 try{
 
@@ -2432,9 +2442,8 @@ const messages = rawMessages.slice(0,10).map(m=>{
 // 🔥 FINAL OUTPUT
 // =====================================================
 // 🔥 START STREAM
-res.setHeader("Content-Type", "text/event-stream");
-res.setHeader("Cache-Control", "no-cache");
-res.setHeader("Connection", "keep-alive");
+
+
 
 // ✅ SEND TOPIC FIRST
 res.write(`data: ${JSON.stringify({
@@ -2466,11 +2475,11 @@ return res.status(500).json({messages:[]});
 
 });
 
-app.post("/aicidi-topic", async (req,res)=>{
+app.get("/aicidi-topic", async (req,res)=>{
 
   try{
 
-    let userInput = (req.body.question || "").trim();
+    let userInput = (req.query.question || "").trim();
 
     if(!userInput){
 
