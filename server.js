@@ -2187,7 +2187,7 @@ function extractYouTubePersonas(results){
       seen.add(name.toLowerCase());
 
       personas.push({
-        name: "virtual @" + name,
+        name: "Cidi → @" + name,
         title: title
       });
     }
