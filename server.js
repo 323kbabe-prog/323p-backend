@@ -1046,7 +1046,7 @@ async function getTodayAITopic(){
 try{
 
 // 🔥 Google → X posts (real-time signal)
-const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella shorts&type=video&part=snippet&maxResults=10&order=viewCount`;
 
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
