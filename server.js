@@ -2263,7 +2263,7 @@ CONTENT REQUIREMENTS (MANDATORY)
 ━━━━━━━━━━━━━━━━━━
 
 Each message MUST include ALL of these:
-
+• MUST start with a short viral title (5–10 words)
 • WHAT is being filmed (specific scene)
 • WHEN it is filmed (before / during / after moment)
 • ONE emotional or viral hook
@@ -2351,10 +2351,21 @@ STRUCTURE
 ━━━━━━━━━━━━━━━━━━
 
 • EXACTLY 10 messages
-• 1–2 sentences each
-• MUST include:
-  - its OWN persona (@name at the START)
-  - influencer-style post idea
+• 2–3 lines each
+
+Each message MUST follow this format:
+
+Line 1:
+A short viral title (5–10 words)
+
+Line 2:
+@persona + influencer-style post idea
+
+Rules:
+• Title must feel like a TikTok / YouTube Shorts hook
+• Title must be separate from the content (NOT inline)
+• Persona MUST start the second line
+• Do NOT merge title and content into one sentence
 
 ━━━━━━━━━━━━━━━━━━
 OUTPUT JSON ONLY
