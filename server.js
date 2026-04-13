@@ -2536,7 +2536,7 @@ Line 2:
 ━━━━━━━━━━━━━━━━━━
 RULES (CRITICAL)
 ━━━━━━━━━━━━━━━━━━
-• MUST NOT reuse key words directly from input as the full title
+
 • Transform the user input into a NEW content idea
 • DO NOT repeat or copy the user’s wording
 • DO NOT start with phrases like:
@@ -2630,6 +2630,14 @@ OUTPUT JSON ONLY
         search:"coachella content ideas"
       });
     }
+
+    if(!parsed.reply){
+  return res.json({
+    persona:"Social media chat",
+    reply:`Posting at Coachella\n@Cidi capture a real moment`,
+    search:"coachella post idea"
+  });
+}
 
     return res.json({
       persona: parsed.persona || "Social media chat",
