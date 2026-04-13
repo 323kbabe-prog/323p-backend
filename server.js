@@ -2509,12 +2509,8 @@ app.post("/aicidi-join", async (req,res)=>{
     const userInput = (req.body.input || "").trim();
 
     if(!userInput){
-      return res.json({
-        persona:"Social media chat",
-        reply:"Say something meaningful\n@Cidi share a real idea",
-        search:"how to start a conversation"
-      });
-    }
+  userInput = "coachella moment";   // 🔥 default input
+}
 
     const systemPrompt = `
 You are Cidi — a Coachella content creator.
