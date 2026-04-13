@@ -2071,11 +2071,11 @@ Rules:
 //////////////////////////////////////////////////////////////
 // ROUTE — /aicidicoachellafomo
 //////////////////////////////////////////////////////////////
-app.post("/aicidicoachellafomo", async (req,res)=>{
+app.get("/aicidicoachellafomo", async (req,res)=>{
 
 try{
 
-let userInput = (req.body.question || "").trim();
+let userInput = (req.query.question || "").trim();
 let eventContext = "";
 
 // =====================================================
