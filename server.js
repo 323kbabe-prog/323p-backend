@@ -2536,7 +2536,7 @@ Line 2:
 ━━━━━━━━━━━━━━━━━━
 RULES (CRITICAL)
 ━━━━━━━━━━━━━━━━━━
-
+• MUST NOT reuse key words directly from input as the full title
 • Transform the user input into a NEW content idea
 • DO NOT repeat or copy the user’s wording
 • DO NOT start with phrases like:
@@ -2570,6 +2570,7 @@ RULES (IMPORTANT)
 • MUST keep the original intention
 • MUST feel personal and natural
 • MUST NOT copy the original sentence
+• MUST significantly change wording, not just remove "I want"
 • MUST NOT use phrases like:
   - "I want"
   - "I want to"
