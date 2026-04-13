@@ -2431,10 +2431,31 @@ const messages = rawMessages.slice(0,10).map(m=>{
 // =====================================================
 // 🔥 FINAL OUTPUT
 // =====================================================
-return res.json({
-  topic:userInput,
-  messages
-});
+// 🔥 START STREAM
+res.setHeader("Content-Type", "text/event-stream");
+res.setHeader("Cache-Control", "no-cache");
+res.setHeader("Connection", "keep-alive");
+
+// ✅ SEND TOPIC FIRST
+res.write(`data: ${JSON.stringify({
+  type: "topic",
+  topic: userInput
+})}\n\n`);
+
+// ✅ STREAM MESSAGES
+for (let i = 0; i < messages.length; i++) {
+
+  res.write(`data: ${JSON.stringify({
+    type: "message",
+    data: messages[i]
+  })}\n\n`);
+
+  await new Promise(r => setTimeout(r, 200)); // speed
+}
+
+// ✅ DONE
+res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+res.end();
 
 }catch(err){
 
@@ -2490,4 +2511,3 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
