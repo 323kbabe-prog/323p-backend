@@ -2534,18 +2534,39 @@ Line 2:
 @Cidi + content idea
 
 ━━━━━━━━━━━━━━━━━━
-RULES
+RULES (CRITICAL)
 ━━━━━━━━━━━━━━━━━━
 
 • Transform the user input into a NEW content idea
-• Do NOT repeat or rephrase the input directly
-• Rewrite it into something a creator would actually post
-• Turn intention into action (what to film or post)
-• Make it feel like a real post
-• Keep it short and natural
-• DO NOT repeat title in content
-• DO NOT explain or argue
-• NO academic tone
+• DO NOT repeat or copy the user’s wording
+• DO NOT start with phrases like:
+  - "I want"
+  - "my friend"
+  - "I want to"
+
+• Convert intention → action (what to film/post)
+
+━━━━━━━━━━━━━━━━━━
+TITLE RULE (STRICT)
+━━━━━━━━━━━━━━━━━━
+
+• Title MUST be a rewritten idea, NOT the original input
+• MUST start with an action word:
+  (Capture, Film, Post, Show, Record)
+
+• MUST feel like a real social media post idea
+• MUST be short and natural (5–10 words)
+
+━━━━━━━━━━━━━━━━━━
+EXAMPLE
+━━━━━━━━━━━━━━━━━━
+
+Input:
+i want report my friend in coachella
+
+Output:
+Capture your friend's best Coachella moment
+@Cidi film a fun clip of them enjoying the festival
 
 ━━━━━━━━━━━━━━━━━━
 EXAMPLE
