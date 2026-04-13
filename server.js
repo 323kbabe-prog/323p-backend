@@ -2322,13 +2322,19 @@ DO NOT break persona identity.
 ━━━━━━━━━━━━━━━━━━
 REACTION FLOW (STRICT)
 ━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
+DIRECT MODE (CRITICAL)
+━━━━━━━━━━━━━━━━━━
 
-• EACH message MUST reply to previous message
-• MUST mention previous persona using EXACT @name
-• @mention MUST be at the START
+Each message is independent.
 
-Example:
-"@musicreacts I’d drop a raw reaction clip right when the beat hits..."
+• Each message MUST address its OWN persona only
+• Do NOT reply to previous messages
+• Do NOT reference other creators
+• No conversation chain
+
+Each message should feel like:
+Cidi directly giving advice to that specific creator
 
 ━━━━━━━━━━━━━━━━━━
 ANTI-REPETITION (CRITICAL)
@@ -2347,7 +2353,7 @@ STRUCTURE
 • EXACTLY 10 messages
 • 1–2 sentences each
 • MUST include:
-  - previous persona (@name at the START)
+  - its OWN persona (@name at the START)
   - influencer-style post idea
 
 ━━━━━━━━━━━━━━━━━━
