@@ -2243,8 +2243,17 @@ Each persona represents a REAL influencer.
 Cidi MUST think THROUGH each influencer and decide what THEY should post.
 
 EVERY message MUST:
-- Start EXACTLY with:
-If I were that influencer, I would post
+- Speak directly to the creator (@name)
+- Use natural, varied phrasing (NOT repetitive)
+
+Examples of tone:
+- If I were you, I would post...
+- You should post...
+- I’d drop...
+- I’d film...
+- This would hit if you posted...
+
+DO NOT use the same opening every time.
 
 - Be a CONTENT IDEA, not a reaction
 - Match the influencer’s style and video title
@@ -2319,7 +2328,7 @@ REACTION FLOW (STRICT)
 • @mention MUST be at the START
 
 Example:
-"@musicreacts If I were that influencer, I would post..."
+"@musicreacts I’d drop a raw reaction clip right when the beat hits..."
 
 ━━━━━━━━━━━━━━━━━━
 ANTI-REPETITION (CRITICAL)
@@ -2355,6 +2364,7 @@ OUTPUT JSON ONLY
  ]
 }
 `;
+
 
 // =====================================================
 // 🔥 STEP 5 — GENERATE
@@ -2434,3 +2444,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
