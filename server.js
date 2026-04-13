@@ -1053,13 +1053,13 @@ const ytData = await ytRes.json();
 
 
 // ---- ERROR CHECK ----
-if(ytData.error){
-console.error("SERP ERROR:", ytData.error);
+if(data.error){
+console.error("SERP ERROR:", data.error);
 return "What are the most important developments in artificial intelligence today?";
 }
 
 // ---- USE ORGANIC RESULTS (NOT NEWS) ----
-const results = ytData.items || [];
+const results = data.organic_results || [];
 
 if(results.length === 0){
 return "What are the most important developments in artificial intelligence today?";
@@ -1865,18 +1865,18 @@ const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YO
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
 
-    if (!ytData.items) {
+    if (!data.items) {
       return res.json({ videos: [] });
     }
 
     // 🔥 FILTER BY TITLE MATCH
-    const filtered = ytData.items.filter(v =>
+    const filtered = data.items.filter(v =>
       v.snippet.title.toLowerCase().includes(query)
     );
 
     const finalVideos = filtered.length > 0
-  ? filtered
-  : ytData.items.slice(0, 5);
+      ? filtered
+      : data.items.slice(0, 5);
 
     const result = finalVideos.map(v => ({
       id: v.id.videoId,
@@ -2071,21 +2071,11 @@ Rules:
 //////////////////////////////////////////////////////////////
 // ROUTE — /aicidicoachellafomo
 //////////////////////////////////////////////////////////////
-app.get("/aicidicoachellafomo", async (req,res)=>{
-  res.setHeader("Content-Type", "text/event-stream");
-res.setHeader("Cache-Control", "no-cache");
-res.setHeader("Connection", "keep-alive");
-res.setHeader("Access-Control-Allow-Origin", "*"); // 🔥 ADD THIS
-res.flushHeaders(); // 🔥 VERY IMPORTANT
-
-res.write(`data: ${JSON.stringify({
-  type: "status",
-  text: "Scanning Coachella signals..."
-})}\n\n`);
+app.post("/aicidicoachellafomo", async (req,res)=>{
 
 try{
 
-let userInput = (req.query.question || "").trim();
+let userInput = (req.body.question || "").trim();
 let eventContext = "";
 
 // =====================================================
@@ -2441,30 +2431,10 @@ const messages = rawMessages.slice(0,10).map(m=>{
 // =====================================================
 // 🔥 FINAL OUTPUT
 // =====================================================
-// 🔥 START STREAM
-
-
-
-// ✅ SEND TOPIC FIRST
-res.write(`data: ${JSON.stringify({
-  type: "topic",
-  topic: userInput
-})}\n\n`);
-
-// ✅ STREAM MESSAGES
-for (let i = 0; i < messages.length; i++) {
-
-  res.write(`data: ${JSON.stringify({
-    type: "message",
-    data: messages[i]
-  })}\n\n`);
-
-  await new Promise(r => setTimeout(r, 200)); // speed
-}
-
-// ✅ DONE
-res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
-res.end();
+return res.json({
+  topic:userInput,
+  messages
+});
 
 }catch(err){
 
@@ -2475,11 +2445,11 @@ return res.status(500).json({messages:[]});
 
 });
 
-app.get("/aicidi-topic", async (req,res)=>{
+app.post("/aicidi-topic", async (req,res)=>{
 
   try{
 
-    let userInput = (req.query.question || "").trim();
+    let userInput = (req.body.question || "").trim();
 
     if(!userInput){
 
