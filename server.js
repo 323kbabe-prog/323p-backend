@@ -2547,26 +2547,42 @@ RULES (CRITICAL)
 • Convert intention → action (what to film/post)
 
 ━━━━━━━━━━━━━━━━━━
-TITLE RULE (STRICT)
+TITLE RULE (YOUTUBE CREATOR STYLE)
 ━━━━━━━━━━━━━━━━━━
 
-• Title MUST be a rewritten idea, NOT the original input
-• MUST start with an action word:
-  (Capture, Film, Post, Show, Record)
+• Title MUST sound like a real YouTube video title
+• NOT a command (no "Capture", "Film", "Post")
+• NOT instructional tone
 
-• MUST feel like a real social media post idea
-• MUST be short and natural (5–10 words)
+• Write like a creator describing their content
+
+Use styles like:
+- Filming my friend at Coachella
+- My friend’s first Coachella experience
+- Taking my friend to Coachella for the first time
+- Coachella moments with my best friend
 
 ━━━━━━━━━━━━━━━━━━
-EXAMPLE
+RULES (IMPORTANT)
 ━━━━━━━━━━━━━━━━━━
 
-Input:
-i want report my friend in coachella
+• MUST creatively rewrite the input
+• MUST keep the original intention
+• MUST feel personal and natural
+• MUST NOT copy the original sentence
+• MUST NOT use phrases like:
+  - "I want"
+  - "I want to"
 
-Output:
-Capture your friend's best Coachella moment
-@Cidi film a fun clip of them enjoying the festival
+━━━━━━━━━━━━━━━━━━
+TONE
+━━━━━━━━━━━━━━━━━━
+
+• vlog style
+• personal
+• natural
+• casual
+• like a real YouTube creator
 
 ━━━━━━━━━━━━━━━━━━
 EXAMPLE
@@ -2576,8 +2592,8 @@ Input:
 i want post my friend in coachella
 
 Output:
-Post your friend dancing at Coachella
-@Cidi capture a real moment of your friend enjoying the vibe
+Filming my friend’s first Coachella experience
+@Cidi capture a real moment of them enjoying the festival vibe
 
 ━━━━━━━━━━━━━━━━━━
 OUTPUT JSON ONLY
