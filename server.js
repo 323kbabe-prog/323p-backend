@@ -1053,13 +1053,13 @@ const ytData = await ytRes.json();
 
 
 // ---- ERROR CHECK ----
-if(data.error){
-console.error("SERP ERROR:", data.error);
+if(ytData.error){
+console.error("SERP ERROR:", ytData.error);
 return "What are the most important developments in artificial intelligence today?";
 }
 
 // ---- USE ORGANIC RESULTS (NOT NEWS) ----
-const results = data.organic_results || [];
+const results = ytData.items || [];
 
 if(results.length === 0){
 return "What are the most important developments in artificial intelligence today?";
@@ -1865,18 +1865,18 @@ const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YO
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
 
-    if (!data.items) {
+    if (!ytData.items) {
       return res.json({ videos: [] });
     }
 
     // 🔥 FILTER BY TITLE MATCH
-    const filtered = data.items.filter(v =>
+    const filtered = ytData.items.filter(v =>
       v.snippet.title.toLowerCase().includes(query)
     );
 
     const finalVideos = filtered.length > 0
-      ? filtered
-      : data.items.slice(0, 5);
+  ? filtered
+  : ytData.items.slice(0, 5);
 
     const result = finalVideos.map(v => ({
       id: v.id.videoId,
