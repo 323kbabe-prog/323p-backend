@@ -1962,7 +1962,7 @@ STYLE:
 
 FORMAT:
 
-- 1–2 sentences only
+- 4–6 sentences only
 - No questions
 - No soft language like "it depends", "also", "in addition"
 `
@@ -2557,7 +2557,7 @@ STRICT RULES:
 - Be assertive
 
 FORMAT:
-- 1–2 sentences
+- 3–6 sentences
 - No questions
 `
         },
@@ -2596,7 +2596,36 @@ Output ONLY the title
 
 const rewriteTitle = rewriteRes.choices[0].message.content.trim();
 
-    const reply = replyRes.choices[0].message.content.trim();
+    const contentRes = await openai.chat.completions.create({
+  model: "gpt-4o-mini",
+  temperature: 0.7,
+  messages: [
+    {
+      role: "system",
+      content: `
+Turn the idea into influencer-style content suggestion.
+
+Rules:
+- MUST be a content idea (not opinion)
+- describe WHAT to film
+- include moment, action, vibe
+- 1–2 sentences only
+- sound like YouTube / TikTok creator
+
+Example:
+"Film your friend reacting to the crowd energy, then cut to a moment where they drop the phone and fully enjoy the experience"
+
+Output ONLY the content idea
+`
+    },
+    {
+      role: "user",
+      content: replyRes.choices[0].message.content
+    }
+  ]
+});
+
+const reply = contentRes.choices[0].message.content.trim();
 
     // STEP 3 — search
     const searchRes = await openai.chat.completions.create({
