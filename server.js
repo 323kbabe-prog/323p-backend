@@ -2499,6 +2499,232 @@ app.post("/aicidi-topic", async (req,res)=>{
 
 });
 
+app.post("/aicidi-join", async (req, res) => {
+  try {
+    const userInput = (req.body.input || "").trim();
+
+    if (!userInput) {
+      return res.json({
+        persona: "AI chat",
+        reply: "Say something to join the debate.",
+        search: ""
+      });
+    }
+
+    // STEP 1 — pick persona
+    const pick = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `
+Choose the BEST persona for this input.
+
+Only choose ONE from list:
+${DEBATE_PERSONAS.join("\n")}
+
+Output ONLY the persona name.
+`
+        },
+        {
+          role: "user",
+          content: userInput
+        }
+      ]
+    });
+
+    const persona = pick.choices[0].message.content.trim();
+
+    // STEP 2 — reply
+    const replyRes = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [
+        {
+          role: "system",
+          content: `
+You are ${persona} in a live debate.
+
+STRICT RULES:
+
+- Respond directly to the user's claim
+- Take a position (agree or disagree)
+- Be assertive
+
+FORMAT:
+- 1–2 sentences
+- No questions
+`
+        },
+        {
+          role: "user",
+          content: userInput
+        }
+      ]
+    });
+
+    const reply = replyRes.choices[0].message.content.trim();
+
+    // STEP 3 — search
+    const searchRes = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content: `
+Convert this idea into a Google search query.
+
+Rules:
+- 5–10 words
+- lowercase
+- no punctuation
+
+Output ONLY the query.
+`
+        },
+        {
+          role: "user",
+          content: reply
+        }
+      ]
+    });
+
+    const search = searchRes.choices[0].message.content.trim();
+
+    return res.json({
+      persona: persona.replace(/perspective/i, "chat"),
+      reply,
+      search
+    });
+
+  } catch (err) {
+    console.error("aicidi-join error:", err);
+
+    return res.json({
+      persona: "AI",
+      reply: "System unavailable.",
+      search: ""
+    });
+  }
+});
+
+// =====================================================
+// ROUTE /aicidi-join
+// =====================================================
+
+app.post("/aicidi-join", async (req, res) => {
+  try {
+    const userInput = (req.body.input || "").trim();
+
+    if (!userInput) {
+      return res.json({
+        persona: "AI chat",
+        reply: "Say something to join the debate.",
+        search: ""
+      });
+    }
+
+    // STEP 1 — pick persona
+    const pick = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `
+Choose the BEST persona for this input.
+
+Only choose ONE from list:
+${DEBATE_PERSONAS.join("\n")}
+
+Output ONLY the persona name.
+`
+        },
+        {
+          role: "user",
+          content: userInput
+        }
+      ]
+    });
+
+    const persona = pick.choices[0].message.content.trim();
+
+    // STEP 2 — reply
+    const replyRes = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [
+        {
+          role: "system",
+          content: `
+You are ${persona} in a live debate.
+
+STRICT RULES:
+
+- Respond directly to the user's claim
+- Take a position (agree or disagree)
+- Be assertive
+
+FORMAT:
+- 1–2 sentences
+- No questions
+`
+        },
+        {
+          role: "user",
+          content: userInput
+        }
+      ]
+    });
+
+    const reply = replyRes.choices[0].message.content.trim();
+
+    // STEP 3 — search
+    const searchRes = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content: `
+Convert this idea into a Google search query.
+
+Rules:
+- 5–10 words
+- lowercase
+- no punctuation
+
+Output ONLY the query.
+`
+        },
+        {
+          role: "user",
+          content: reply
+        }
+      ]
+    });
+
+    const search = searchRes.choices[0].message.content.trim();
+
+    return res.json({
+      persona: persona.replace(/perspective/i, "chat"),
+      reply,
+      search
+    });
+
+  } catch (err) {
+    console.error("aicidi-join error:", err);
+
+    return res.json({
+      persona: "AI",
+      reply: "System unavailable.",
+      search: ""
+    });
+  }
+});
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
