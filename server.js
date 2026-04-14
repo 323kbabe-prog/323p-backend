@@ -1046,7 +1046,7 @@ async function getTodayAITopic(){
 try{
 
 // 🔥 Google → X posts (real-time signal)
-const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&channelId=UCy4XH0kJz2t0v6ZpWn8F8bA&q=live performance&type=video&part=snippet&maxResults=10&order=date`;
 
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
@@ -2089,7 +2089,8 @@ if(!userInput){
   const ytData = await ytRes.json();
 
   const videos = ytData.items || [];
-
+  const topVideo = videos[0]; // newest from official channel
+  
   if(videos.length > 0){
 
     const topVideo = videos[0];
