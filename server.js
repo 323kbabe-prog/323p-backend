@@ -2467,10 +2467,10 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      // 🔥 AI decides search query (NEW)
+      // 🔥 AI decides GOOD query (FIXED)
       const aiRes = await openai.chat.completions.create({
         model:"gpt-4o-mini",
-        temperature:0.7,
+        temperature:0.6,
         messages:[
           {
             role:"system",
@@ -2478,9 +2478,24 @@ app.post("/aicidi-topic", async (req,res)=>{
 Generate ONE YouTube search query for Coachella 2026.
 
 Rules:
-- 3–6 words
-- include influencer, performance, or moment
-- no punctuation
+- MUST include at least ONE of:
+  performance, crowd, outfit, reaction, surprise
+- MUST feel like real event coverage
+- 3–6 words only
+- no clickbait phrases
+- no vague words like "best", "missed", "wow"
+
+GOOD examples:
+coachella 2026 live performance
+coachella crowd reaction night set
+coachella surprise guest moment
+
+BAD examples:
+you missed this
+crazy viral moment
+insane video
+
+Output ONLY the query
 `
           }
         ]
@@ -2489,39 +2504,38 @@ Rules:
       const query = aiRes.choices[0].message.content.trim();
 
 
-      // ✅ MOST POPULAR (AI query)
-      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
+      // ✅ MOST POPULAR
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=5&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
 
       const popularRes = await fetch(popularUrl);
       const popularData = await popularRes.json();
 
-      const popularItems = popularData.items || [];
+      const popularItems = (popularData.items || []).slice(0,3);
 
       const popular3 = popularItems.map((v,i)=>{
         return `${i+1}. ${cleanTitle(v.snippet.title)}`;
       }).join("\n");
 
 
-      // ✅ NEWEST (AI query + live feel)
+      // ✅ NEWEST (LIVE FEEL)
       const hoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
 
-      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${hoursAgo.toISOString()}`;
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=8&order=date&publishedAfter=${hoursAgo.toISOString()}`;
 
       const newestRes = await fetch(newestUrl);
       const newestData = await newestRes.json();
 
-      const newestItems = newestData.items || [];
-
-      const newest3 = newestItems
+      const newestItems = (newestData.items || [])
         .sort(()=>0.5 - Math.random()) // 🔥 avoid same creators
-        .slice(0,3)
-        .map((v,i)=>{
-          return `${i+1}. ${cleanTitle(v.snippet.title)}`;
-        }).join("\n");
+        .slice(0,3);
+
+      const newest3 = newestItems.map((v,i)=>{
+        return `${i+1}. ${cleanTitle(v.snippet.title)}`;
+      }).join("\n");
 
 
       // ✅ FINAL OUTPUT
-      const topic = `
+      const topic = `[Cidi Coachella post:]
 
 Most Popular 3 Performers/Moments:
 ${popular3}
@@ -2551,8 +2565,10 @@ function cleanTitle(title){
     .replace(/&#39;/g, "'")
     .replace(/🔥/g, "")
     .replace(/#\S+/g, "")
+    .replace(/\bLIVE\b/gi, "")
     .trim();
 }
+
 
 
 // =====================================================
@@ -2733,4 +2749,5 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
 
