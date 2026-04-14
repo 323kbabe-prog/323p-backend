@@ -2198,12 +2198,35 @@ function extractYouTubePersonas(results){
   return personas;
 }
 
-const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
 
-const ytRes = await fetch(ytUrl);
-const ytData = await ytRes.json();
+// 🔥 1. MOST POPULAR
+const popularRes = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella vlog influencer&type=video&part=snippet&maxResults=3&order=viewCount`);
+const popularData = await popularRes.json();
+const popular = popularData.items || [];
 
-let personas = extractYouTubePersonas(ytData.items || []);
+
+// 🔥 2. NEWEST
+const newestRes = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella vlog influencer&type=video&part=snippet&maxResults=4&order=date`);
+const newestData = await newestRes.json();
+const newest = newestData.items || [];
+
+
+// 🔥 3. RANDOM
+const randomRes = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella vlog influencer&type=video&part=snippet&maxResults=10`);
+const randomData = await randomRes.json();
+
+const random = (randomData.items || [])
+  .sort(()=>0.5 - Math.random())
+  .slice(0,3);
+
+
+// 🔥 COMBINE
+const combined = [...popular, ...newest, ...random];
+
+
+// 🔥 EXTRACT PERSONAS
+let personas = extractYouTubePersonas(combined);
+
 
 // ✅ FIXED FALLBACK (IMPORTANT)
 if(personas.length < 5){
@@ -2216,12 +2239,12 @@ if(personas.length < 5){
   ];
 }
 
+
 // 👉 BUILD PROMPT BLOCK
 const personaTextBlock = personas.map(p => `
 ${p.name}
 Video Title: ${p.title}
 `).join("\n");
-
 
 // =====================================================
 // 🔥 STEP 4 — SYSTEM PROMPT (IDENTITY LOCKED)
@@ -2705,4 +2728,5 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
 
