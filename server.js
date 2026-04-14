@@ -2069,7 +2069,7 @@ Rules:
 });
 
 //////////////////////////////////////////////////////////////
-// ROUTE — /aicidicoachellafomo (FINAL SAFE VERSION)
+// ROUTE — /aicidicoachellafomo (FINAL STABLE VERSION)
 //////////////////////////////////////////////////////////////
 app.post("/aicidicoachellafomo", async (req,res)=>{
   try{
@@ -2082,21 +2082,17 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
       : [];
 
     //////////////////////////////////////////////////////////////
-    // 🔥 STEP 0 — PROCESS SIGNALS (SAFE)
+    // 🔥 STEP 0 — PROCESS SIGNALS (NO CRASH)
     //////////////////////////////////////////////////////////////
     function processSignals(input){
       let signals = [...input];
 
-      // normalize + dedupe
       signals = [...new Set(
         signals.map(s => (s || "").toLowerCase().trim())
-      )];
+      )]
+      .map(s => s.trim())
+      .filter(Boolean);
 
-      signals = signals
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      // fallback
       if(signals.length < 10){
         signals = [
           ...signals,
@@ -2106,9 +2102,9 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
           "friends dancing together",
           "celebrity spotted in crowd",
           "festival night lights vibe",
-          "people reacting at chorus",
+          "people screaming at chorus",
           "walking into coachella gate",
-          "food stand interaction moment",
+          "food stand reaction moment",
           "unexpected stage appearance"
         ];
       }
@@ -2122,8 +2118,26 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
     //////////////////////////////////////////////////////////////
     // 🔥 STEP 1 — AUTO TOPIC
     //////////////////////////////////////////////////////////////
+    let eventContext = "";
+
     if(!userInput){
-      userInput = signals[0] || "Coachella main stage performance";
+      if(signals.length > 0){
+        userInput = signals[0];
+        eventContext = `
+Event:
+${signals[0]}
+Focus:
+live trending moment
+`;
+      } else {
+        userInput = "Coachella main stage performance";
+        eventContext = `
+Event:
+Coachella live festival
+Focus:
+main stage performance
+`;
+      }
     }
 
     //////////////////////////////////////////////////////////////
@@ -2131,11 +2145,11 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
     //////////////////////////////////////////////////////////////
     const refine = await openai.chat.completions.create({
       model:"gpt-4o-mini",
-      temperature:0.5,
+      temperature:0.7,
       messages:[
         {
           role:"system",
-          content:`Rewrite as short viral discussion question. End as question.`
+          content:`Rewrite as viral discussion. End as question.`
         },
         { role:"user", content:userInput }
       ]
@@ -2156,7 +2170,6 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
 
         if(name && !seen.has(name.toLowerCase())){
           seen.add(name.toLowerCase());
-
           personas.push({
             name: "virtual @" + name,
             title
@@ -2190,16 +2203,12 @@ Video Title: ${p.title}
 `).join("\n");
 
     //////////////////////////////////////////////////////////////
-    // 🔥 STEP 4 — SYSTEM PROMPT (MACHINE TONE)
+    // 🔥 STEP 4 — SYSTEM PROMPT
     //////////////////////////////////////////////////////////////
     const systemPrompt = `
 You are Cidi — a real-time AI content director.
 
-Tone:
-- neutral
-- precise
-- non-emotional
-- machine-like
+You operate in a calm, precise, machine-like tone.
 
 LIVE SIGNALS:
 ${liveContext}
@@ -2207,26 +2216,70 @@ ${liveContext}
 CREATORS:
 ${personaTextBlock}
 
-TASK:
-For each creator:
-1. Select relevant signal
-2. Identify pattern
+━━━━━━━━━━━━━━━━━━
+TASK
+━━━━━━━━━━━━━━━━━━
+
+For EACH creator:
+1. Select the most relevant live signal
+2. Identify why it is being captured frequently
 3. Output:
-   - title
-   - instruction
+   - TITLE
+   - TEXT instruction
 
-TEXT RULES:
-- must start with "You should"
-- 1–2 sentences
-- include what, how, and reason
-- no emotional words
+━━━━━━━━━━━━━━━━━━
+TONE (CRITICAL)
+━━━━━━━━━━━━━━━━━━
 
-TITLE RULES:
-- 4–8 words
-- no punctuation
-- neutral tone
+• neutral
+• precise
+• non-emotional
+• non-hype
+• not persuasive
+• not expressive
 
-OUTPUT:
+Do NOT use:
+- excitement words
+- urgency words
+- dramatic phrasing
+
+The output should feel like:
+→ a system instruction
+→ a production directive
+
+━━━━━━━━━━━━━━━━━━
+TEXT RULES
+━━━━━━━━━━━━━━━━━━
+
+• MUST start with: "You should"
+• direct and controlled
+• 4–6 sentences only
+• include:
+  - what to film
+  - how to film
+  - reason (short, factual)
+
+GOOD:
+You should record close-up shots of the audience during the beat drop, focusing on facial reactions as this moment is frequently captured in current videos
+
+BAD:
+This is blowing up right now — get close shots
+
+━━━━━━━━━━━━━━━━━━
+TITLE RULES
+━━━━━━━━━━━━━━━━━━
+
+• 4–8 words
+• no punctuation
+• neutral tone
+
+Example:
+Audience reaction during beat drop
+
+━━━━━━━━━━━━━━━━━━
+OUTPUT FORMAT
+━━━━━━━━━━━━━━━━━━
+
 {
   "messages":[
     {
@@ -2239,12 +2292,13 @@ OUTPUT:
 }
 `;
 
+
     //////////////////////////////////////////////////////////////
     // 🔥 STEP 5 — GENERATE
     //////////////////////////////////////////////////////////////
     const response = await openai.chat.completions.create({
       model:"gpt-4o-mini",
-      temperature:0.7,
+      temperature:0.8,
       response_format:{type:"json_object"},
       messages:[
         {role:"system",content:systemPrompt},
@@ -2259,36 +2313,38 @@ OUTPUT:
     try{
       parsed = JSON.parse(raw);
     }catch{
+      console.error("JSON FAIL:", raw);
       return res.json({ topic:userInput, messages:[] });
     }
 
     //////////////////////////////////////////////////////////////
     // 🔥 STEP 6 — CLEAN OUTPUT
     //////////////////////////////////////////////////////////////
-    const messages = (parsed.messages || []).slice(0,10).map(m => {
+   const messages = (parsed.messages || []).slice(0,10).map(m => {
 
-      const match = personas.find(p =>
-        p.name.toLowerCase().trim() === (m.persona || "").toLowerCase().trim()
-      );
+  // ✅ match persona → get title
+  const match = personas.find(p =>
+    p.name.toLowerCase().trim() === (m.persona || "").toLowerCase().trim()
+  );
 
-      let search = (m.search || "").toLowerCase();
+  let search = (m.search || "").toLowerCase();
 
-      if(!search){
-        search = (m.text || "")
-          .toLowerCase()
-          .replace(/[^\w\s]/g,"")
-          .split(" ")
-          .slice(0,8)
-          .join(" ");
-      }
+  if(!search){
+    search = (m.text || "")
+      .toLowerCase()
+      .replace(/[^\w\s]/g,"")
+      .split(" ")
+      .slice(0,8)
+      .join(" ");
+  }
 
-      return {
-        persona: m.persona || "virtual @user",
-        title: m.title || match?.title || "",
-        text: m.text || "",
-        search
-      };
-    });
+  return {
+    persona: m.persona || "virtual @user",
+    title: match?.title || "",   // 🔥 THIS LINE FIXES IT
+    text: m.text || "",
+    search
+  };
+});
 
     //////////////////////////////////////////////////////////////
     // 🔥 FINAL OUTPUT
@@ -2303,6 +2359,10 @@ OUTPUT:
     return res.status(500).json({messages:[]});
   }
 });
+
+
+
+
 
 // =====================================================
 // ROUTE /aicidi-topic (10 LIVE SIMPLE)
@@ -2560,3 +2620,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
