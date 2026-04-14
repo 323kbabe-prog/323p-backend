@@ -2457,7 +2457,7 @@ return res.status(500).json({messages:[]});
 });
 
 // =====================================================
-// ROUTE /aicidi-topic
+// ROUTE /aicidi-topic — LATEST 3 PERFORMANCES
 // =====================================================
 app.post("/aicidi-topic", async (req,res)=>{
 
@@ -2469,18 +2469,18 @@ app.post("/aicidi-topic", async (req,res)=>{
     // 🔥 STEP 1 — IF USER INPUT EXISTS → USE IT
     // =====================================================
     if(userInput){
-      return res.json({ topic: userInput });
+      return res.json({ topics:[userInput] });
     }
 
     // =====================================================
-    // 🔥 STEP 2 — GET FRESH SIGNAL (NOT BIASED)
+    // 🔥 STEP 2 — FETCH LATEST PERFORMANCE VIDEOS
     // =====================================================
     const ytUrl = `https://www.googleapis.com/youtube/v3/search
 ?key=${process.env.YOUTUBE_API_KEY}
-&q=coachella
+&q=coachella performance 2026 live
 &type=video
 &part=snippet
-&maxResults=20
+&maxResults=10
 &order=date`;
 
     const ytRes = await fetch(ytUrl);
@@ -2490,103 +2490,90 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(items.length === 0){
       return res.json({
-        topic: "What is happening at Coachella right now?"
+        topics:["What is happening at Coachella right now?"]
       });
     }
 
     // =====================================================
-    // 🔥 STEP 3 — EXTRACT TITLES ONLY (LIGHT SIGNAL)
+    // 🔥 STEP 3 — GET NEWEST 3 TITLES
     // =====================================================
-    const titles = items
+    const latest3 = items
+      .slice(0, 6) // small buffer
       .map(v => v.snippet?.title || "")
-      .filter(Boolean)
-      .slice(0,15); // keep it tight
+      .filter(t => t.length > 5)
+      .slice(0, 3);
 
-    // =====================================================
-    // 🔥 STEP 4 — AI DETECTS TREND (CORE LOGIC)
-    // =====================================================
-    const detect = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.5,
-      messages:[
-        {
-          role:"system",
-          content:`
-You are detecting what is trending RIGHT NOW at Coachella.
-
-From these video titles:
-
-1. Identify ONE trending artist, performance, or moment
-2. MUST be based on repetition or strong signal
-3. IGNORE overly famous default names (like Justin Bieber) unless repeated multiple times
-4. Prefer:
-   - new performers
-   - viral moments
-   - unexpected appearances
-
-Output:
-ONE short phrase only
-(no explanation)
-`
-        },
-        {
-          role:"user",
-          content: titles.join("\n")
-        }
-      ]
-    });
-
-    let trend = detect.choices[0].message.content.trim();
-
-    if(!trend || trend.length < 2){
-      trend = "Coachella main stage performance";
+    if(latest3.length === 0){
+      return res.json({
+        topics:["What is happening at Coachella right now?"]
+      });
     }
 
     // =====================================================
-    // 🔥 STEP 5 — TURN INTO VIRAL QUESTION
+    // 🔥 STEP 4 — CLEAN TITLES
     // =====================================================
-    const refine = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.7,
-      messages:[
-        {
-          role:"system",
-          content:`
+    const cleaned = latest3.map(t =>
+      t
+        .replace(/coachella/ig, "")
+        .replace(/live/ig, "")
+        .replace(/\(.*?\)/g, "")
+        .replace(/\[.*?\]/g, "")
+        .replace(/\|.*$/g, "")
+        .trim()
+    );
+
+    // =====================================================
+    // 🔥 STEP 5 — TURN INTO VIRAL QUESTIONS (OPTIONAL)
+    // =====================================================
+    const finalTopics = [];
+
+    for(const t of cleaned){
+
+      const refine = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.7,
+        messages:[
+          {
+            role:"system",
+            content:`
 Rewrite into a viral Coachella discussion.
 
 Rules:
-- casual
+- short
 - emotional
-- feel like TikTok or YouTube comment
-- MUST end as a question
-- keep it short
+- MUST end as question
+- no extra explanation
 `
-        },
-        {
-          role:"user",
-          content: trend
-        }
-      ]
-    });
+          },
+          {
+            role:"user",
+            content:t
+          }
+        ]
+      });
 
-    const topic = refine.choices[0].message.content.trim();
+      finalTopics.push(refine.choices[0].message.content.trim());
+    }
 
     // =====================================================
     // ✅ FINAL OUTPUT
     // =====================================================
-    return res.json({ topic });
+    return res.json({
+      topics: finalTopics
+    });
 
   }catch(err){
 
     console.error("aicidi-topic error:",err);
 
     return res.json({
-      topic:"What is happening at Coachella right now?"
+      topics:["What is happening at Coachella right now?"]
     });
 
   }
 
 });
+
 
 
 // =====================================================
