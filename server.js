@@ -2289,6 +2289,7 @@ OUTPUT JSON ONLY
     //////////////////////////////////////////////////////////////
     // 🔥 FINAL OUTPUT
     //////////////////////////////////////////////////////////////
+ await new Promise(r => setTimeout(r, 4000)); 
     return res.json({
       topic: userInput || "Coachella live trends",
       messages
