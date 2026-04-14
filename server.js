@@ -1046,7 +1046,14 @@ async function getTodayAITopic(){
 try{
 
 // 🔥 Google → X posts (real-time signal)
-const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&channelId=UCy4XH0kJz2t0v6ZpWn8F8bA&q=live performance&type=video&part=snippet&maxResults=10&order=date`;
+const ytUrl = `https://www.googleapis.com/youtube/v3/search
+?key=${process.env.YOUTUBE_API_KEY}
+&channelId=UCmP6w4K0lW8z6s0l4v2x7Hg
+&part=snippet
+&order=date
+&maxResults=5
+&type=video`;
+
 
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
@@ -2089,8 +2096,7 @@ if(!userInput){
   const ytData = await ytRes.json();
 
   const videos = ytData.items || [];
-  const topVideo = videos[0]; // newest from official channel
-  
+
   if(videos.length > 0){
 
     const topVideo = videos[0];
@@ -2460,45 +2466,118 @@ return res.status(500).json({messages:[]});
 // =====================================================
 // ROUTE /aicidi-topic
 // =====================================================
-app.post("/aicidi-topic", async (req,res)=>{
+app.post("/aicidi-topic", async (req, res) => {
 
-  try{
+  try {
 
     let userInput = (req.body.question || "").trim();
 
-    if(!userInput){
+    if (!userInput) {
 
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=10&order=date`;
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search
+?key=${process.env.YOUTUBE_API_KEY}
+&channelId=UCmP6w4K0lW8z6s0l4v2x7Hg
+&part=snippet
+&order=date
+&maxResults=5
+&type=video`;
 
       const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
 
-      const topVideo = ytData.items?.[0];
+      // ✅ ERROR SAFE
+      if (ytData.error) {
+        console.error("YT ERROR:", ytData.error);
+        return res.json({
+          topic: "What is happening at Coachella right now?"
+        });
+      }
 
-      const context = topVideo?.snippet?.title || "Coachella performance";
+      const items = ytData.items || [];
 
-      const refine = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.7,
-        messages:[
+      if (items.length === 0) {
+        return res.json({
+          topic: "What is happening at Coachella right now?"
+        });
+      }
+
+      const topVideo = items[0];
+
+      // ✅ STRONGER CONTEXT (title + description)
+      const context =
+        (topVideo?.snippet?.title || "") + " " +
+        (topVideo?.snippet?.description || "");
+
+      // =====================================================
+      // 🔥 EXTRACT MAIN ARTIST / EVENT
+      // =====================================================
+      const extract = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0,
+        messages: [
           {
-            role:"system",
-            content:`Rewrite as viral discussion. Must end as question.`
+            role: "system",
+            content: `
+Extract the MAIN performer or event.
+
+Rules:
+• MUST return real artist if exists
+• format: "Artist Name performance"
+• if unclear → return "main stage performance"
+`
           },
-          { role:"user", content: context }
+          { role: "user", content: context }
+        ]
+      });
+
+      const mainEvent = extract.choices[0].message.content.trim();
+
+      // =====================================================
+      // 🔥 MAKE VIRAL QUESTION (CIDI STYLE)
+      // =====================================================
+      const refine = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.8,
+        messages: [
+          {
+            role: "system",
+            content: `
+Rewrite as a viral Coachella discussion.
+
+Rules:
+• MUST include artist or performance
+• casual, emotional tone
+• feel like TikTok / YouTube comment
+• 6–14 words
+• MUST end as a question
+
+Examples:
+- Did that set actually hit live??
+- Why is everyone posting this performance?
+- Was that the best Coachella moment or overrated?
+`
+          },
+          { role: "user", content: mainEvent }
         ]
       });
 
       userInput = refine.choices[0].message.content.trim();
     }
 
-    return res.json({ topic:userInput });
+    return res.json({ topic: userInput });
 
-  }catch(err){
-    return res.json({ topic:"What is happening at Coachella right now?" });
+  } catch (err) {
+
+    console.error("aicidi-topic error:", err);
+
+    return res.json({
+      topic: "What is happening at Coachella right now?"
+    });
+
   }
 
 });
+
 
 // =====================================================
 // ROUTE /aicidi-join
@@ -2678,4 +2757,6 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
+
 
