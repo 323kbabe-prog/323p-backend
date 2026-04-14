@@ -2379,173 +2379,108 @@ function cleanTitle(title){
     .trim();
 }
 
-// =====================================================
-// ROUTE /aicidi-join
-// =====================================================
-
+//////////////////////////////////////////////////////////////
+// ROUTE /aicidi-join (CIDI ANALYSIS MODE)
+//////////////////////////////////////////////////////////////
 app.post("/aicidi-join", async (req, res) => {
   try {
     const userInput = (req.body.input || "").trim();
 
     if (!userInput) {
       return res.json({
-        persona: "AI chat",
-        reply: "Say something to join the debate.",
+        reply: "Enter an idea to analyze.",
         search: ""
       });
     }
 
-    // STEP 1 — pick persona
-    const pick = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0,
-      messages: [
+    //////////////////////////////////////////////////////////////
+    // 🔥 STEP 1 — ANALYZE + CRITIQUE
+    //////////////////////////////////////////////////////////////
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.6,
+      messages:[
         {
-          role: "system",
-          content: `
-Choose the BEST persona for this input.
+          role:"system",
+          content:`
+You are Cidi — a content analysis system.
 
-Only choose ONE from list:
-${DEBATE_PERSONAS.join("\n")}
+You do NOT debate.
+You do NOT roleplay personas.
 
-Output ONLY the persona name.
+You analyze the user's idea and provide structured critique.
+
+━━━━━━━━━━━━━━━━━━
+OUTPUT FORMAT
+━━━━━━━━━━━━━━━━━━
+
+Title to use:
+(4–8 words, no punctuation)
+
+Then:
+
+• 4–6 sentences total
+
+Sentence 1–2:
+- describe what the user is trying to do
+- neutral observation
+
+Sentence 3–6:
+- MUST start with "You should"
+- slightly critical
+- improve the idea
+- point out weakness
+
+━━━━━━━━━━━━━━━━━━
+STYLE
+━━━━━━━━━━━━━━━━━━
+
+• no emotion
+• no hype
+• no storytelling
+• analytical, controlled
 `
         },
         {
-          role: "user",
-          content: userInput
+          role:"user",
+          content:userInput
         }
       ]
     });
 
-    const persona = pick.choices[0].message.content.trim();
+    const fullText = response.choices[0].message.content.trim();
 
-    // STEP 2 — reply
-    const replyRes = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.9,
-      messages: [
-        {
-          role: "system",
-          content: `
-You are ${persona} in a live debate.
+    //////////////////////////////////////////////////////////////
+    // 🔥 STEP 2 — EXTRACT TITLE + BODY
+    //////////////////////////////////////////////////////////////
+    const titleMatch = fullText.match(/Title to use:\s*(.*)/i);
+    const rewriteTitle = titleMatch ? titleMatch[1].trim() : "";
 
-STRICT RULES:
+    const reply = fullText.replace(/Title to use:.*\n?/i, "").trim();
 
-- Respond directly to the user's claim
-- Take a position (agree or disagree)
-- Be assertive
+    //////////////////////////////////////////////////////////////
+    // 🔍 STEP 3 — SEARCH
+    //////////////////////////////////////////////////////////////
+    const search = reply
+      .toLowerCase()
+      .replace(/[^\w\s]/g,"")
+      .split(" ")
+      .slice(0,8)
+      .join(" ");
 
-FORMAT:
-- 3–6 sentences
-- No questions
-`
-        },
-        {
-          role: "user",
-          content: userInput
-        }
-      ]
-    });
-
-    const rewriteRes = await openai.chat.completions.create({
-  model: "gpt-4o-mini",
-  temperature: 0.6,
-  messages: [
-    {
-      role: "system",
-      content: `
-Rewrite the user input into a YouTube creator title.
-
-Rules:
-- short (4–8 words)
-- natural English
-- no "I", no "want"
-- no punctuation
-- must feel like a video title
-
-Output ONLY the title
-`
-    },
-    {
-      role: "user",
-      content: userInput
-    }
-  ]
-});
-
-const rewriteTitle = rewriteRes.choices[0].message.content.trim();
-
-    const contentRes = await openai.chat.completions.create({
-  model: "gpt-4o-mini",
-  temperature: 0.7,
-  messages: [
-    {
-      role: "system",
-      content: `
-Turn the idea into influencer-style content suggestion.
-
-Rules:
-- MUST be a content idea (not opinion)
-- describe WHAT to film
-- include moment, action, vibe
-- 1–2 sentences only
-- sound like YouTube / TikTok creator
-
-Example:
-"Film your friend reacting to the crowd energy, then cut to a moment where they drop the phone and fully enjoy the experience"
-
-Output ONLY the content idea
-`
-    },
-    {
-      role: "user",
-      content: replyRes.choices[0].message.content
-    }
-  ]
-});
-
-const reply = contentRes.choices[0].message.content.trim();
-
-    // STEP 3 — search
-    const searchRes = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.3,
-      messages: [
-        {
-          role: "system",
-          content: `
-Convert this idea into a Google search query.
-
-Rules:
-- 5–10 words
-- lowercase
-- no punctuation
-
-Output ONLY the query.
-`
-        },
-        {
-          role: "user",
-          content: reply
-        }
-      ]
-    });
-
-    const search = searchRes.choices[0].message.content.trim();
-
+    //////////////////////////////////////////////////////////////
+    // 🔥 FINAL OUTPUT
+    //////////////////////////////////////////////////////////////
     return res.json({
-  persona: persona.replace(/perspective/i, "chat"),
-  reply,
-  search,
-  rewriteTitle   // 🔥 ADD THIS
-});
+      reply,
+      search,
+      rewriteTitle
+    });
 
   } catch (err) {
     console.error("aicidi-join error:", err);
 
     return res.json({
-      persona: "AI",
       reply: "System unavailable.",
       search: ""
     });
