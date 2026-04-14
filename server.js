@@ -2467,33 +2467,35 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      // ✅ MOST POPULAR (influencer version)
-      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
+      // ✅ MOST POPULAR
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=10&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
 
       const popularRes = await fetch(popularUrl);
       const popularData = await popularRes.json();
 
       const popularItems = popularData.items || [];
 
-      const popular3 = popularItems.map((v,i)=>{
+      // ✅ shuffle + pick 3
+      const popular3 = shuffle(popularItems).slice(0,3).map((v,i)=>{
         return `${i+1}. ${cleanTitle(v.snippet.title)}`;
       }).join("\n");
 
 
-      // ✅ NEWEST (influencer version)
-      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=date&publishedAfter=2026-04-01T00:00:00Z`;
+      // ✅ NEWEST
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=10&order=date&publishedAfter=2026-04-01T00:00:00Z`;
 
       const newestRes = await fetch(newestUrl);
       const newestData = await newestRes.json();
 
       const newestItems = newestData.items || [];
 
-      const newest3 = newestItems.map((v,i)=>{
+      // ✅ shuffle + pick 3
+      const newest3 = shuffle(newestItems).slice(0,3).map((v,i)=>{
         return `${i+1}. ${cleanTitle(v.snippet.title)}`;
       }).join("\n");
 
 
-      // ✅ FINAL OUTPUT (unchanged)
+      // ✅ FINAL OUTPUT
       const topic = `
 
 Most Popular 3 Performers/Moments:
@@ -2517,7 +2519,13 @@ Which moment stands out the most right now?`;
 });
 
 
-// ✅ keep simple clean
+// ✅ shuffle function (simple)
+function shuffle(arr){
+  return arr.sort(()=>0.5 - Math.random());
+}
+
+
+// ✅ clean title
 function cleanTitle(title){
   return title
     .replace(/&amp;/g, "&")
@@ -2526,6 +2534,8 @@ function cleanTitle(title){
     .replace(/#\S+/g, "")
     .trim();
 }
+
+
 
 // =====================================================
 // ROUTE /aicidi-join
