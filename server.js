@@ -2479,7 +2479,7 @@ app.post("/aicidi-topic", async (req,res)=>{
         return `${i+1}. ${v.snippet.title}`;
       }).join(" ");
 
-      // ✅ TOP 3 (MOST POPULAR)
+      // ✅ MOST POPULAR 3
       const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=3&order=viewCount`;
 
       const popularRes = await fetch(popularUrl);
@@ -2487,14 +2487,14 @@ app.post("/aicidi-topic", async (req,res)=>{
 
       const popularItems = popularData.items || [];
 
-      const top3 = popularItems.map((v,i)=>{
+      const popular3 = popularItems.map((v,i)=>{
         return `${i+1}. ${v.snippet.title}`;
       }).join(" ");
 
-      // ✅ FINAL OUTPUT (NEW → POPULAR)
+      // ✅ FINAL OUTPUT
       const topic = `[Cidi Coachella post:]
 Newest 3 Performances: ${newest3}
-Top 3 Performers/Moments (Most Popular): ${top3}
+Most Popular 3 Performers/Moments: ${popular3}
 Viral Discussion Question: Which moment stands out the most right now?`;
 
       userInput = topic;
@@ -2503,10 +2503,11 @@ Viral Discussion Question: Which moment stands out the most right now?`;
     return res.json({ topic:userInput });
 
   }catch(err){
-    return res.json({ topic:"What are the top 3 performances at Coachella right now?" });
+    return res.json({ topic:"What is happening at Coachella right now?" });
   }
 
 });
+
 
 
 
@@ -2688,6 +2689,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
-
 
