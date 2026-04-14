@@ -2198,35 +2198,12 @@ function extractYouTubePersonas(results){
   return personas;
 }
 
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
 
-// 🔥 1. MOST POPULAR
-const popularRes = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella vlog influencer&type=video&part=snippet&maxResults=3&order=viewCount`);
-const popularData = await popularRes.json();
-const popular = popularData.items || [];
+const ytRes = await fetch(ytUrl);
+const ytData = await ytRes.json();
 
-
-// 🔥 2. NEWEST
-const newestRes = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella vlog influencer&type=video&part=snippet&maxResults=4&order=date`);
-const newestData = await newestRes.json();
-const newest = newestData.items || [];
-
-
-// 🔥 3. RANDOM
-const randomRes = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella vlog influencer&type=video&part=snippet&maxResults=10`);
-const randomData = await randomRes.json();
-
-const random = (randomData.items || [])
-  .sort(()=>0.5 - Math.random())
-  .slice(0,3);
-
-
-// 🔥 COMBINE
-const combined = [...popular, ...newest, ...random];
-
-
-// 🔥 EXTRACT PERSONAS
-let personas = extractYouTubePersonas(combined);
-
+let personas = extractYouTubePersonas(ytData.items || []);
 
 // ✅ FIXED FALLBACK (IMPORTANT)
 if(personas.length < 5){
@@ -2239,12 +2216,12 @@ if(personas.length < 5){
   ];
 }
 
-
 // 👉 BUILD PROMPT BLOCK
 const personaTextBlock = personas.map(p => `
 ${p.name}
 Video Title: ${p.title}
 `).join("\n");
+
 
 // =====================================================
 // 🔥 STEP 4 — SYSTEM PROMPT (IDENTITY LOCKED)
@@ -2490,8 +2467,30 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      // ✅ MOST POPULAR (influencer version)
-      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
+      // 🔥 AI decides search query (NEW)
+      const aiRes = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.7,
+        messages:[
+          {
+            role:"system",
+            content:`
+Generate ONE YouTube search query for Coachella 2026.
+
+Rules:
+- 3–6 words
+- include influencer, performance, or moment
+- no punctuation
+`
+          }
+        ]
+      });
+
+      const query = aiRes.choices[0].message.content.trim();
+
+
+      // ✅ MOST POPULAR (AI query)
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
 
       const popularRes = await fetch(popularUrl);
       const popularData = await popularRes.json();
@@ -2503,20 +2502,25 @@ app.post("/aicidi-topic", async (req,res)=>{
       }).join("\n");
 
 
-      // ✅ NEWEST (influencer version)
-      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=date&publishedAfter=2026-04-01T00:00:00Z`;
+      // ✅ NEWEST (AI query + live feel)
+      const hoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${hoursAgo.toISOString()}`;
 
       const newestRes = await fetch(newestUrl);
       const newestData = await newestRes.json();
 
       const newestItems = newestData.items || [];
 
-      const newest3 = newestItems.map((v,i)=>{
-        return `${i+1}. ${cleanTitle(v.snippet.title)}`;
-      }).join("\n");
+      const newest3 = newestItems
+        .sort(()=>0.5 - Math.random()) // 🔥 avoid same creators
+        .slice(0,3)
+        .map((v,i)=>{
+          return `${i+1}. ${cleanTitle(v.snippet.title)}`;
+        }).join("\n");
 
 
-      // ✅ FINAL OUTPUT (unchanged)
+      // ✅ FINAL OUTPUT
       const topic = `
 
 Most Popular 3 Performers/Moments:
@@ -2549,6 +2553,7 @@ function cleanTitle(title){
     .replace(/#\S+/g, "")
     .trim();
 }
+
 
 // =====================================================
 // ROUTE /aicidi-join
@@ -2728,5 +2733,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
 
