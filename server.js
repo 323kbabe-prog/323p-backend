@@ -2069,7 +2069,7 @@ Rules:
 });
 
 //////////////////////////////////////////////////////////////
-// ROUTE — /aicidicoachellafomo (CONNECTED LIVE VERSION)
+// ROUTE — /aicidicoachellafomo
 //////////////////////////////////////////////////////////////
 app.post("/aicidicoachellafomo", async (req,res)=>{
 
@@ -2078,62 +2078,57 @@ try{
 let userInput = (req.body.question || "").trim();
 let eventContext = "";
 
-// ✅ RECEIVE LIVE DATA
-const liveTitles = req.body.liveTitles || [];
-const liveContext = liveTitles.join("\n") || "No strong signal detected";
-
 // =====================================================
-// 🔥 STEP 0 — CLEAN + LOCK LIVE SIGNALS (FINAL FIX)
-// =====================================================
-let signals = [...liveTitles];
-
-// remove duplicates
-signals = [...new Set(
-  signals.map(s => s.toLowerCase().trim())
-)].map(s => s.trim());
-
-// fallback if not enough signals
-if(signals.length < 10){
-  signals = [
-    ...signals,
-    "crowd reaction during performance",
-    "outfit check festival entrance",
-    "bass drop main stage moment",
-    "friends dancing together",
-    "celebrity spotted in crowd",
-    "festival night lights vibe",
-    "people screaming at chorus",
-    "walking into coachella gate",
-    "food stand reaction moment",
-    "unexpected stage appearance"
-  ];
-}
-
-// lock exactly 10
-signals = signals.slice(0,10);
-
-// final context
-const liveContext = signals.join("\n");
-
-
-// =====================================================
-// 🔥 STEP 1 — AUTO TOPIC
+// 🔥 STEP 1 — AUTO GENERATE TOPIC
 // =====================================================
 if(!userInput){
 
-  if(liveTitles.length > 0){
+  const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=20&order=date`;
 
-    const eventTitle = liveTitles[0];
+  const ytRes = await fetch(ytUrl);
+  const ytData = await ytRes.json();
+
+  const videos = ytData.items || [];
+
+  if(videos.length > 0){
+
+    const topVideo = videos[0];
+
+    const eventTitle = topVideo.snippet.title;
+    const eventDesc = topVideo.snippet.description || "";
+
+    const context = eventTitle + " " + eventDesc;
+
+    const extract = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0,
+      messages:[
+        {
+          role:"system",
+          content:`
+Extract the MAIN performer or artist.
+
+Rules:
+• MUST return REAL artist if exists
+• format: "Artist Name performance"
+• if no artist → return "main stage performance"
+`
+        },
+        { role:"user", content: context }
+      ]
+    });
+
+    const mainEvent = extract.choices[0].message.content.trim();
 
     eventContext = `
 Event:
 ${eventTitle}
 
 Focus:
-live trending moment
+${mainEvent}
 `;
 
-    userInput = eventTitle;
+    userInput = mainEvent;
 
   } else {
 
@@ -2146,12 +2141,12 @@ Coachella live festival
 Focus:
 main stage performance
 `;
+
   }
 }
 
-
 // =====================================================
-// 🔥 STEP 2 — HUMAN QUESTION
+// 🔥 STEP 2 — MAKE HUMAN QUESTION
 // =====================================================
 const refine = await openai.chat.completions.create({
   model:"gpt-4o-mini",
@@ -2159,7 +2154,14 @@ const refine = await openai.chat.completions.create({
   messages:[
     {
       role:"system",
-      content:`Rewrite as viral discussion. End as question.`
+      content:`
+Rewrite as viral discussion.
+
+Rules:
+• MUST keep artist or event
+• casual tone
+• end as question
+`
     },
     { role:"user", content:userInput }
   ]
@@ -2169,7 +2171,7 @@ userInput = refine.choices[0].message.content.trim();
 
 
 // =====================================================
-// 🔥 STEP 3 — PERSONAS
+// 🔥 STEP 3 — GET REAL YOUTUBE PERSONAS + TITLES
 // =====================================================
 function extractYouTubePersonas(results){
 
@@ -2196,7 +2198,6 @@ function extractYouTubePersonas(results){
   return personas;
 }
 
-// fetch personas only
 const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
 
 const ytRes = await fetch(ytUrl);
@@ -2204,14 +2205,18 @@ const ytData = await ytRes.json();
 
 let personas = extractYouTubePersonas(ytData.items || []);
 
+// ✅ FIXED FALLBACK (IMPORTANT)
 if(personas.length < 5){
   personas = [
     { name:"virtual @festivalvibes", title:"coachella crowd energy vlog" },
     { name:"virtual @streetweartok", title:"coachella outfit breakdown" },
-    { name:"virtual @musicreacts", title:"live set reaction coachella" }
+    { name:"virtual @musicreacts", title:"live set reaction coachella" },
+    { name:"virtual @vlogkid", title:"coachella day vlog chaos" },
+    { name:"virtual @aestheticshots", title:"coachella cinematic visuals" }
   ];
 }
 
+// 👉 BUILD PROMPT BLOCK
 const personaTextBlock = personas.map(p => `
 ${p.name}
 Video Title: ${p.title}
@@ -2219,79 +2224,162 @@ Video Title: ${p.title}
 
 
 // =====================================================
-// 🔥 STEP 4 — SYSTEM PROMPT (UPGRADED CORE)
+// 🔥 STEP 4 — SYSTEM PROMPT (IDENTITY LOCKED)
 // =====================================================
 const systemPrompt = `
-You are Cidi — a real-time AI director watching LIVE Coachella creators.
+You are Cidi — an AI that thinks like real influencers and predicts what THEY would post during Coachella.
 
-━━━━━━━━━━━━━━━━━━
-LIVE SIGNALS
-━━━━━━━━━━━━━━━━━━
-${liveContext}
+${eventContext}
 
-━━━━━━━━━━━━━━━━━━
-CREATORS
-━━━━━━━━━━━━━━━━━━
+Participants:
 ${personaTextBlock}
 
 ━━━━━━━━━━━━━━━━━━
-CIDI MODE — MATCH + DIRECT
+CORE TASK (STRICT)
 ━━━━━━━━━━━━━━━━━━
 
-You are NOT summarizing.
-You are NOT suggesting.
+Each persona represents a REAL influencer.
 
-You are WATCHING creators and telling them what to film NEXT.
+Cidi MUST think THROUGH each influencer and decide what THEY should post.
 
-For EACH creator:
+EVERY message MUST:
+- Speak directly to the creator (@name)
+- Use natural, varied phrasing (NOT repetitive)
 
-1. Choose the MOST RELEVANT signal for them
-   - outfit creators → outfit signals
-   - vloggers → crowd / reaction
-   - music → drop / stage moment
+Examples of tone:
+- If I were you, I would post...
+- You should post...
+- I’d drop...
+- I’d film...
+- This would hit if you posted...
 
-2. Detect WHY that signal is trending
+DO NOT use the same opening every time.
 
-3. Give ONE DIRECT filming command
+- Be a CONTENT IDEA, not a reaction
+- Match the influencer’s style and video title
 
 ━━━━━━━━━━━━━━━━━━
-STRICT RULES
+CONTENT REQUIREMENTS (MANDATORY)
+━━━━━━━━━━━━━━━━━━
+
+Each message MUST include ALL of these:
+• MUST start with a short viral title (5–10 words)
+• WHAT is being filmed (specific scene)
+• WHEN it is filmed (before / during / after moment)
+• ONE emotional or viral hook
+• ONE specific detail (camera angle, movement, or action)
+
+Optional:
+• caption idea in quotes
+
+BAD (reject):
+- opinions
+- reactions only
+- vague ideas
+
+GOOD:
+- a clear, shootable video idea
+
+━━━━━━━━━━━━━━━━━━
+REALISM CONSTRAINT (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+Each post idea must feel like something that specific creator would realistically post based on their video title and content style.
+
+Cidi MUST infer:
+• what this creator usually films
+• what their audience expects
+• what kind of content fits their channel
+
+The output MUST feel like:
+"This creator would actually post this"
+
+NOT:
+generic influencer ideas
+random viral concepts
+
+━━━━━━━━━━━━━━━━━━
+PERSONA IDENTITY (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+Each persona is a REAL creator from YouTube.
+
+They MUST create content BASED on their video title.
+
+Examples:
+
+"outfit breakdown"
+→ styling shots, transitions, details
+
+"crowd vlog"
+→ energy, chaos, movement
+
+"reaction video"
+→ face, emotion, live reaction
+
+DO NOT break persona identity.
+
+━━━━━━━━━━━━━━━━━━
+REACTION FLOW (STRICT)
+━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
+DIRECT MODE (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+Each message is independent.
+
+• Each message MUST address its OWN persona only
+• Do NOT reply to previous messages
+• Do NOT reference other creators
+• No conversation chain
+
+Each message should feel like:
+Cidi directly giving advice to that specific creator
+
+━━━━━━━━━━━━━━━━━━
+ANTI-REPETITION (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+• Every message MUST be a DIFFERENT content idea
+• DO NOT repeat:
+  - same moment
+  - same angle
+  - same concept
+
+━━━━━━━━━━━━━━━━━━
+STRUCTURE
 ━━━━━━━━━━━━━━━━━━
 
 • EXACTLY 10 messages
-• Each message = ONE creator
-• Start with "virtual @name"
-• MUST feel real-time
-• MUST include:
-  - WHAT to film
-  - HOW to film (angle / movement)
-  - WHY (trend reason)
+• 2–3 lines each
 
-Tone:
-- urgent
-- specific
-- creator-focused
+Each message MUST follow this format:
 
-Examples:
-- This is blowing up right now, film...
-- Everyone is reacting to this, capture...
-- This moment is getting attention, shoot...
+Line 1:
+A short viral title (5–10 words)
+
+Line 2:
+@persona + influencer-style post idea
+
+Rules:
+• Title must feel like a TikTok / YouTube Shorts hook
+• Title must be separate from the content (NOT inline)
+• Persona MUST start the second line
+• Do NOT merge title and content into one sentence
 
 ━━━━━━━━━━━━━━━━━━
-OUTPUT FORMAT
+OUTPUT JSON ONLY
 ━━━━━━━━━━━━━━━━━━
 
 {
-  "messages":[
-    {
-      "persona":"virtual @name",
-      "text":"instruction",
-      "search":"short search phrase"
-    }
-  ]
+ "messages":[
+  {
+   "persona":"virtual @name",
+   "text":"message",
+   "search":"search phrase"
+  }
+ ]
 }
-
-NO extra text.
 `;
 
 
@@ -2300,7 +2388,7 @@ NO extra text.
 // =====================================================
 const response = await openai.chat.completions.create({
   model:"gpt-4o-mini",
-  temperature:0.8,
+  temperature:1.0,
   response_format:{type:"json_object"},
   messages:[
     {role:"system",content:systemPrompt},
@@ -2312,24 +2400,8 @@ let raw = response.choices?.[0]?.message?.content || "";
 raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
 
 let parsed;
-
-try{
-  parsed = JSON.parse(raw);
-}catch{
-
-  console.error("JSON FAIL:", raw);
-
-  return res.json({
-    topic:userInput,
-    messages:[
-      {
-        persona:"virtual @system",
-        text:"Live signal detected but generation failed.",
-        search:"coachella live trends now"
-      }
-    ]
-  });
-}
+try{ parsed = JSON.parse(raw); }
+catch{ return res.json({messages:[]}); }
 
 const rawMessages = parsed.messages || [];
 
@@ -2339,34 +2411,32 @@ const rawMessages = parsed.messages || [];
 // =====================================================
 const messages = rawMessages.slice(0,10).map(m=>{
 
+  // 🔥 find matching persona object
   const match = personas.find(p =>
-    p.name.toLowerCase().trim() === (m.persona || "").toLowerCase().trim()
-  );
+  p.name.toLowerCase().trim() === (m.persona || "").toLowerCase().trim()
+);
 
-  let search = (m.search || "").toLowerCase();
+  return {
+    persona: m.persona || "virtual @user",
 
-  if(!search || search.length < 3){
-    search = (m.text || "")
+    // ✅ ADD THIS
+    title: match?.title || "",
+
+    text: m.text || "",
+
+    search: (m.search || "")
       .toLowerCase()
       .replace(/[^\w\s]/g,"")
       .split(" ")
       .slice(0,8)
-      .join(" ");
-  }
-
-  search = search
-    .replace(/[^\w\s]/g,"")
-    .split(" ")
-    .slice(0,8)
-    .join(" ");
-
-  return {
-    persona: m.persona || "virtual @user",
-    title: match?.title || "",
-    text: m.text || "",
-    search
+      .join(" ")
   };
 });
+
+// =====================================================
+// 🔥 STEP 7 — SEND EMAIL (DISABLED)
+// =====================================================
+// await sendDebateToEmailList(userInput, messages);
 
 
 // =====================================================
@@ -2385,6 +2455,77 @@ return res.status(500).json({messages:[]});
 }
 
 });
+
+// =====================================================
+// ROUTE /aicidi-topic
+// =====================================================
+app.post("/aicidi-topic", async (req,res)=>{
+
+  try{
+
+    let userInput = (req.body.question || "").trim();
+
+    if(!userInput){
+
+      // ✅ MOST POPULAR (influencer version)
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
+
+      const popularRes = await fetch(popularUrl);
+      const popularData = await popularRes.json();
+
+      const popularItems = popularData.items || [];
+
+      const popular3 = popularItems.map((v,i)=>{
+        return `${i+1}. ${cleanTitle(v.snippet.title)}`;
+      }).join("\n");
+
+
+      // ✅ NEWEST (influencer version)
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=date&publishedAfter=2026-04-01T00:00:00Z`;
+
+      const newestRes = await fetch(newestUrl);
+      const newestData = await newestRes.json();
+
+      const newestItems = newestData.items || [];
+
+      const newest3 = newestItems.map((v,i)=>{
+        return `${i+1}. ${cleanTitle(v.snippet.title)}`;
+      }).join("\n");
+
+
+      // ✅ FINAL OUTPUT (unchanged)
+      const topic = `
+
+Most Popular 3 Performers/Moments:
+${popular3}
+
+Newest 3 Performances:
+${newest3}
+
+Viral Discussion Question:
+Which moment stands out the most right now?`;
+
+      userInput = topic;
+    }
+
+    return res.json({ topic:userInput });
+
+  }catch(err){
+    return res.json({ topic:"What is happening at Coachella right now?" });
+  }
+
+});
+
+
+// ✅ keep simple clean
+function cleanTitle(title){
+  return title
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;/g, "'")
+    .replace(/🔥/g, "")
+    .replace(/#\S+/g, "")
+    .trim();
+}
 
 // =====================================================
 // ROUTE /aicidi-join
