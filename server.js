@@ -2467,8 +2467,8 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      // ✅ MOST POPULAR (unchanged, good)
-      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 live performance&type=video&part=snippet&maxResults=3&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
+      // ✅ MOST POPULAR (influencer version)
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
 
       const popularRes = await fetch(popularUrl);
       const popularData = await popularRes.json();
@@ -2480,8 +2480,8 @@ app.post("/aicidi-topic", async (req,res)=>{
       }).join("\n");
 
 
-      // ✅ NEWEST (ONLY FIX = better query)
-      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 live performance full set OR stage OR highlight&type=video&part=snippet&maxResults=3&order=date&publishedAfter=2026-04-01T00:00:00Z&videoDuration=medium`;
+      // ✅ NEWEST (influencer version)
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=date&publishedAfter=2026-04-01T00:00:00Z`;
 
       const newestRes = await fetch(newestUrl);
       const newestData = await newestRes.json();
@@ -2493,7 +2493,7 @@ app.post("/aicidi-topic", async (req,res)=>{
       }).join("\n");
 
 
-      // ✅ FINAL OUTPUT
+      // ✅ FINAL OUTPUT (unchanged)
       const topic = `
 
 Most Popular 3 Performers/Moments:
