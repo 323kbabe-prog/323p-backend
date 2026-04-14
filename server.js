@@ -2457,7 +2457,7 @@ return res.status(500).json({messages:[]});
 });
 
 // =====================================================
-// ROUTE /aicidi-topic — LATEST 3 PERFORMANCES
+// ROUTE /aicidi-topic
 // =====================================================
 app.post("/aicidi-topic", async (req,res)=>{
 
@@ -2465,115 +2465,56 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     let userInput = (req.body.question || "").trim();
 
-    // =====================================================
-    // 🔥 STEP 1 — IF USER INPUT EXISTS → USE IT
-    // =====================================================
-    if(userInput){
-      return res.json({ topics:[userInput] });
-    }
+    if(!userInput){
 
-    // =====================================================
-    // 🔥 STEP 2 — FETCH LATEST PERFORMANCE VIDEOS
-    // =====================================================
-    const ytUrl = `https://www.googleapis.com/youtube/v3/search
-?key=${process.env.YOUTUBE_API_KEY}
-&q=coachella performance 2026 live
-&type=video
-&part=snippet
-&maxResults=10
-&order=date`;
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=10&order=date`;
 
-    const ytRes = await fetch(ytUrl);
-    const ytData = await ytRes.json();
+      const ytRes = await fetch(ytUrl);
+      const ytData = await ytRes.json();
 
-    const items = ytData.items || [];
+      const items = ytData.items || [];
 
-    if(items.length === 0){
-      return res.json({
-        topics:["What is happening at Coachella right now?"]
-      });
-    }
+      // ✅ top 3 titles
+      const titles = items.slice(0,3).map(v => v.snippet.title).join("\n");
 
-    // =====================================================
-    // 🔥 STEP 3 — GET NEWEST 3 TITLES
-    // =====================================================
-    const latest3 = items
-      .slice(0, 6) // small buffer
-      .map(v => v.snippet?.title || "")
-      .filter(t => t.length > 5)
-      .slice(0, 3);
-
-    if(latest3.length === 0){
-      return res.json({
-        topics:["What is happening at Coachella right now?"]
-      });
-    }
-
-    // =====================================================
-    // 🔥 STEP 4 — CLEAN TITLES
-    // =====================================================
-    const cleaned = latest3.map(t =>
-      t
-        .replace(/coachella/ig, "")
-        .replace(/live/ig, "")
-        .replace(/\(.*?\)/g, "")
-        .replace(/\[.*?\]/g, "")
-        .replace(/\|.*$/g, "")
-        .trim()
-    );
-
-    // =====================================================
-    // 🔥 STEP 5 — TURN INTO VIRAL QUESTIONS (OPTIONAL)
-    // =====================================================
-    const finalTopics = [];
-
-    for(const t of cleaned){
-
-      const refine = await openai.chat.completions.create({
+      // ✅ AI generate 50–55 words
+      const detect = await openai.chat.completions.create({
         model:"gpt-4o-mini",
-        temperature:0.7,
+        temperature:0.5,
         messages:[
           {
             role:"system",
             content:`
-Rewrite into a viral Coachella discussion.
-
-Rules:
-- short
-- emotional
-- MUST end as question
-- no extra explanation
+Pick the top 3 performers or moments from these titles.
+Write ONE viral discussion question in 50–55 words.
+No explanation.
 `
           },
           {
             role:"user",
-            content:t
+            content: titles
           }
         ]
       });
 
-      finalTopics.push(refine.choices[0].message.content.trim());
+      let topic = detect.choices[0].message.content.trim();
+
+      // ✅ simple clamp (max 55 words)
+      const words = topic.split(/\s+/);
+      if(words.length > 55){
+        topic = words.slice(0,55).join(" ");
+      }
+
+      userInput = topic || "What are the top 3 performances at Coachella right now?";
     }
 
-    // =====================================================
-    // ✅ FINAL OUTPUT
-    // =====================================================
-    return res.json({
-      topics: finalTopics
-    });
+    return res.json({ topic:userInput });
 
   }catch(err){
-
-    console.error("aicidi-topic error:",err);
-
-    return res.json({
-      topics:["What is happening at Coachella right now?"]
-    });
-
+    return res.json({ topic:"What are the top 3 performances at Coachella right now?" });
   }
 
 });
-
 
 
 // =====================================================
@@ -2754,5 +2695,6 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
 
 
