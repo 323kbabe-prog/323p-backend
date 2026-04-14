@@ -2069,268 +2069,390 @@ Rules:
 });
 
 //////////////////////////////////////////////////////////////
-// ROUTE — /aicidicoachellafomo (FINAL STABLE VERSION)
+// ROUTE — /aicidicoachellafomo
 //////////////////////////////////////////////////////////////
 app.post("/aicidicoachellafomo", async (req,res)=>{
-  try{
 
-    let userInput = (req.body.question || "").trim();
+try{
 
-    // ✅ SAFE INPUT
-    const liveTitles = Array.isArray(req.body.liveTitles)
-      ? req.body.liveTitles
-      : [];
+let userInput = (req.body.question || "").trim();
+let eventContext = "";
 
-    //////////////////////////////////////////////////////////////
-    // 🔥 STEP 0 — PROCESS SIGNALS (NO CRASH)
-    //////////////////////////////////////////////////////////////
-    function processSignals(input){
-      let signals = [...input];
+// =====================================================
+// 🔥 STEP 1 — AUTO GENERATE TOPIC
+// =====================================================
+if(!userInput){
 
-      signals = [...new Set(
-        signals.map(s => (s || "").toLowerCase().trim())
-      )]
-      .map(s => s.trim())
-      .filter(Boolean);
+  const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=20&order=date`;
 
-      if(signals.length < 10){
-        signals = [
-          ...signals,
-          "crowd reaction during performance",
-          "outfit check festival entrance",
-          "bass drop main stage moment",
-          "friends dancing together",
-          "celebrity spotted in crowd",
-          "festival night lights vibe",
-          "people screaming at chorus",
-          "walking into coachella gate",
-          "food stand reaction moment",
-          "unexpected stage appearance"
-        ];
-      }
+  const ytRes = await fetch(ytUrl);
+  const ytData = await ytRes.json();
 
-      return signals.slice(0,10);
-    }
+  const videos = ytData.items || [];
 
-    const signals = processSignals(liveTitles);
-    const liveContext = signals.join("\n");
+  if(videos.length > 0){
 
-    //////////////////////////////////////////////////////////////
-    // 🔥 STEP 1 — AUTO TOPIC
-    //////////////////////////////////////////////////////////////
-    let eventContext = "";
+    const topVideo = videos[0];
 
-    if(!userInput){
-      if(signals.length > 0){
-        userInput = signals[0];
-        eventContext = `
-Event:
-${signals[0]}
-Focus:
-live trending moment
-`;
-      } else {
-        userInput = "Coachella main stage performance";
-        eventContext = `
-Event:
-Coachella live festival
-Focus:
-main stage performance
-`;
-      }
-    }
+    const eventTitle = topVideo.snippet.title;
+    const eventDesc = topVideo.snippet.description || "";
 
-    //////////////////////////////////////////////////////////////
-    // 🔥 STEP 2 — HUMAN QUESTION
-    //////////////////////////////////////////////////////////////
-    const refine = await openai.chat.completions.create({
+    const context = eventTitle + " " + eventDesc;
+
+    const extract = await openai.chat.completions.create({
       model:"gpt-4o-mini",
-      temperature:0.7,
+      temperature:0,
       messages:[
         {
           role:"system",
-          content:`Rewrite as viral discussion. End as question.`
+          content:`
+Extract the MAIN performer or artist.
+
+Rules:
+• MUST return REAL artist if exists
+• format: "Artist Name performance"
+• if no artist → return "main stage performance"
+`
         },
-        { role:"user", content:userInput }
+        { role:"user", content: context }
       ]
     });
 
-    userInput = refine.choices[0].message.content.trim();
+    const mainEvent = extract.choices[0].message.content.trim();
 
-    //////////////////////////////////////////////////////////////
-    // 🔥 STEP 3 — PERSONAS
-    //////////////////////////////////////////////////////////////
-    function extractYouTubePersonas(results){
-      const personas = [];
-      const seen = new Set();
+    eventContext = `
+Event:
+${eventTitle}
 
-      for(const r of results){
-        const name = (r.snippet?.channelTitle || "").trim();
-        const title = (r.snippet?.title || "").trim();
+Focus:
+${mainEvent}
+`;
 
-        if(name && !seen.has(name.toLowerCase())){
-          seen.add(name.toLowerCase());
-          personas.push({
-            name: "virtual @" + name,
-            title
-          });
-        }
+    userInput = mainEvent;
 
-        if(personas.length >= 10) break;
-      }
+  } else {
 
-      return personas;
+    userInput = "Coachella main stage performance";
+
+    eventContext = `
+Event:
+Coachella live festival
+
+Focus:
+main stage performance
+`;
+
+  }
+}
+
+// =====================================================
+// 🔥 STEP 2 — MAKE HUMAN QUESTION
+// =====================================================
+const refine = await openai.chat.completions.create({
+  model:"gpt-4o-mini",
+  temperature:0.7,
+  messages:[
+    {
+      role:"system",
+      content:`
+Rewrite as viral discussion.
+
+Rules:
+• MUST keep artist or event
+• casual tone
+• end as question
+`
+    },
+    { role:"user", content:userInput }
+  ]
+});
+
+userInput = refine.choices[0].message.content.trim();
+
+
+// =====================================================
+// 🔥 STEP 3 — GET REAL YOUTUBE PERSONAS + TITLES
+// =====================================================
+function extractYouTubePersonas(results){
+
+  const personas = [];
+  const seen = new Set();
+
+  for(const r of results){
+
+    const name = (r.snippet?.channelTitle || "").trim();
+    const title = (r.snippet?.title || "").trim();
+
+    if(name && !seen.has(name.toLowerCase())){
+      seen.add(name.toLowerCase());
+
+      personas.push({
+        name: "virtual @" + name,
+        title: title
+      });
     }
 
-    const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
+    if(personas.length >= 10) break;
+  }
 
-    const ytRes = await fetch(ytUrl);
-    const ytData = await ytRes.json();
+  return personas;
+}
 
-    let personas = extractYouTubePersonas(ytData.items || []);
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
 
-    if(personas.length < 5){
-      personas = [
-        { name:"virtual @festivalvibes", title:"coachella crowd energy vlog" },
-        { name:"virtual @streetweartok", title:"coachella outfit breakdown" },
-        { name:"virtual @musicreacts", title:"live set reaction coachella" }
-      ];
-    }
+const ytRes = await fetch(ytUrl);
+const ytData = await ytRes.json();
 
-    const personaTextBlock = personas.map(p => `
+let personas = extractYouTubePersonas(ytData.items || []);
+
+// ✅ FIXED FALLBACK (IMPORTANT)
+if(personas.length < 5){
+  personas = [
+    { name:"virtual @festivalvibes", title:"coachella crowd energy vlog" },
+    { name:"virtual @streetweartok", title:"coachella outfit breakdown" },
+    { name:"virtual @musicreacts", title:"live set reaction coachella" },
+    { name:"virtual @vlogkid", title:"coachella day vlog chaos" },
+    { name:"virtual @aestheticshots", title:"coachella cinematic visuals" }
+  ];
+}
+
+// 👉 BUILD PROMPT BLOCK
+const personaTextBlock = personas.map(p => `
 ${p.name}
 Video Title: ${p.title}
 `).join("\n");
 
-    //////////////////////////////////////////////////////////////
-    // 🔥 STEP 4 — SYSTEM PROMPT
-    //////////////////////////////////////////////////////////////
-    const systemPrompt = `
-You are Cidi — a real-time AI content director.
 
-You operate in a calm, precise, machine-like tone.
+// =====================================================
+// 🔥 STEP 4 — SYSTEM PROMPT (IDENTITY LOCKED)
+// =====================================================
+const systemPrompt = `
+You are Cidi — an AI that thinks like real influencers and predicts what THEY would post during Coachella.
 
-LIVE SIGNALS:
-${liveContext}
+${eventContext}
 
-CREATORS:
+Participants:
 ${personaTextBlock}
 
 ━━━━━━━━━━━━━━━━━━
-TASK
+CORE TASK (STRICT)
 ━━━━━━━━━━━━━━━━━━
 
-For EACH creator:
-1. Select the most relevant live signal
-2. Identify why it is being captured frequently
-3. Output:
-   - TITLE
-   - TEXT instruction
+Each persona represents a REAL influencer.
+
+Cidi MUST think THROUGH each influencer and decide what THEY should post.
+
+EVERY message MUST:
+- Speak directly to the creator (@name)
+- Use natural, varied phrasing (NOT repetitive)
+
+Examples of tone:
+- If I were you, I would post...
+- You should post...
+- I’d drop...
+- I’d film...
+- This would hit if you posted...
+
+DO NOT use the same opening every time.
+
+- Be a CONTENT IDEA, not a reaction
+- Match the influencer’s style and video title
 
 ━━━━━━━━━━━━━━━━━━
-TONE (CRITICAL)
+CONTENT REQUIREMENTS (MANDATORY)
 ━━━━━━━━━━━━━━━━━━
 
-• neutral
-• precise
-• non-emotional
-• non-hype
-• not persuasive
-• not expressive
+Each message MUST include ALL of these:
+• MUST start with a short viral title (5–10 words)
+• WHAT is being filmed (specific scene)
+• WHEN it is filmed (before / during / after moment)
+• ONE emotional or viral hook
+• ONE specific detail (camera angle, movement, or action)
 
-Do NOT use:
-- excitement words
-- urgency words
-- dramatic phrasing
+Optional:
+• caption idea in quotes
 
-The output should feel like:
-→ a system instruction
-→ a production directive
-
-━━━━━━━━━━━━━━━━━━
-TEXT RULES
-━━━━━━━━━━━━━━━━━━
-
-• MUST start with: "You should"
-• direct and controlled
-• 4–6 sentences only
-• include:
-  - what to film
-  - how to film
-  - reason (short, factual)
+BAD (reject):
+- opinions
+- reactions only
+- vague ideas
 
 GOOD:
-You should record close-up shots of the audience during the beat drop, focusing on facial reactions as this moment is frequently captured in current videos
-
-BAD:
-This is blowing up right now — get close shots
+- a clear, shootable video idea
 
 ━━━━━━━━━━━━━━━━━━
-TITLE RULES
+REALISM CONSTRAINT (CRITICAL)
 ━━━━━━━━━━━━━━━━━━
 
-• 4–8 words
-• no punctuation
-• neutral tone
+Each post idea must feel like something that specific creator would realistically post based on their video title and content style.
 
-Example:
-Audience reaction during beat drop
+Cidi MUST infer:
+• what this creator usually films
+• what their audience expects
+• what kind of content fits their channel
+
+The output MUST feel like:
+"This creator would actually post this"
+
+NOT:
+generic influencer ideas
+random viral concepts
 
 ━━━━━━━━━━━━━━━━━━
-OUTPUT FORMAT
+PERSONA IDENTITY (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+Each persona is a REAL creator from YouTube.
+
+They MUST create content BASED on their video title.
+
+Examples:
+
+"outfit breakdown"
+→ styling shots, transitions, details
+
+"crowd vlog"
+→ energy, chaos, movement
+
+"reaction video"
+→ face, emotion, live reaction
+
+DO NOT break persona identity.
+
+━━━━━━━━━━━━━━━━━━
+REACTION FLOW (STRICT)
+━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
+DIRECT MODE (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+Each message is independent.
+
+• Each message MUST address its OWN persona only
+• Do NOT reply to previous messages
+• Do NOT reference other creators
+• No conversation chain
+
+Each message should feel like:
+Cidi directly giving advice to that specific creator
+
+━━━━━━━━━━━━━━━━━━
+ANTI-REPETITION (CRITICAL)
+━━━━━━━━━━━━━━━━━━
+
+• Every message MUST be a DIFFERENT content idea
+• DO NOT repeat:
+  - same moment
+  - same angle
+  - same concept
+
+━━━━━━━━━━━━━━━━━━
+STRUCTURE
+━━━━━━━━━━━━━━━━━━
+
+• EXACTLY 10 messages
+• 2–3 lines each
+
+Each message MUST follow this format:
+
+Line 1:
+A short viral title (5–10 words)
+
+Line 2:
+@persona + influencer-style post idea
+
+Rules:
+• Title must feel like a TikTok / YouTube Shorts hook
+• Title must be separate from the content (NOT inline)
+• Persona MUST start the second line
+• Do NOT merge title and content into one sentence
+
+━━━━━━━━━━━━━━━━━━
+OUTPUT JSON ONLY
 ━━━━━━━━━━━━━━━━━━
 
 {
-  "messages":[
-    {
-      "persona":"virtual @name",
-      "title":"title",
-      "text":"You should ...",
-      "search":"search phrase"
-    }
-  ]
+ "messages":[
+  {
+   "persona":"virtual @name",
+   "text":"message",
+   "search":"search phrase"
+  }
+ ]
 }
 `;
 
 
-    //////////////////////////////////////////////////////////////
-    // 🔥 STEP 5 — GENERATE
-    //////////////////////////////////////////////////////////////
-    const response = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.8,
-      response_format:{type:"json_object"},
-      messages:[
-        {role:"system",content:systemPrompt},
-        {role:"user",content:"Start"}
-      ]
-    });
+// =====================================================
+// 🔥 STEP 5 — GENERATE
+// =====================================================
+const response = await openai.chat.completions.create({
+  model:"gpt-4o-mini",
+  temperature:1.0,
+  response_format:{type:"json_object"},
+  messages:[
+    {role:"system",content:systemPrompt},
+    {role:"user",content:"Start"}
+  ]
+});
 
-    let raw = response.choices?.[0]?.message?.content || "";
-    raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
+let raw = response.choices?.[0]?.message?.content || "";
+raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
 
-    let parsed;
-    try{
-      parsed = JSON.parse(raw);
-    }catch{
-      console.error("JSON FAIL:", raw);
-      return res.json({ topic:userInput, messages:[] });
-    }
+let parsed;
+try{ parsed = JSON.parse(raw); }
+catch{ return res.json({messages:[]}); }
 
-    //////////////////////////////////////////////////////////////
-    // 🔥 STEP 6 — CLEAN OUTPUT
-    //////////////////////////////////////////////////////////////
-   const messages = (parsed.messages || []).slice(0,10).map(m => {
+const rawMessages = parsed.messages || [];
 
-  // ✅ match persona → get title
+
+// =====================================================
+// 🔥 STEP 6 — CLEAN OUTPUT
+// =====================================================
+const messages = (parsed.messages || []).slice(0,10).map(m => {
+
   const match = personas.find(p =>
     p.name.toLowerCase().trim() === (m.persona || "").toLowerCase().trim()
   );
 
+  let text = (m.text || "").trim();
+
+  // --------------------------------------------------
+  // 🔥 CLEAN + STRUCTURE CONTROL
+  // --------------------------------------------------
+
+  // split into sentences
+  let sentences = text
+    .replace(/\n/g, " ")
+    .split(/(?<=[.?!])\s+/)
+    .filter(s => s.length > 5);
+
+  // limit to 6 sentences max
+  sentences = sentences.slice(0,6);
+
+  // ensure at least 4 sentences
+  if(sentences.length < 4){
+    sentences.push("You should refine the framing for stronger clarity.");
+  }
+
+  // enforce "You should" in second half
+  const halfIndex = Math.floor(sentences.length / 2);
+
+  for(let i = halfIndex; i < sentences.length; i++){
+    if(!/^you should/i.test(sentences[i])){
+      sentences[i] = "You should " + sentences[i].replace(/^[^a-zA-Z]+/, "");
+    }
+  }
+
+  text = sentences.join(" ");
+
+  // --------------------------------------------------
+  // 🔍 SEARCH CLEAN
+  // --------------------------------------------------
   let search = (m.search || "").toLowerCase();
 
   if(!search){
-    search = (m.text || "")
+    search = text
       .toLowerCase()
       .replace(/[^\w\s]/g,"")
       .split(" ")
@@ -2340,32 +2462,38 @@ OUTPUT FORMAT
 
   return {
     persona: m.persona || "virtual @user",
-    title: match?.title || "",   // 🔥 THIS LINE FIXES IT
-    text: m.text || "",
+    title: m.title || match?.title || "",
+    text,
     search
   };
 });
 
-    //////////////////////////////////////////////////////////////
-    // 🔥 FINAL OUTPUT
-    //////////////////////////////////////////////////////////////
-    return res.json({
-      topic:userInput,
-      messages
-    });
 
-  }catch(err){
-    console.error("coachella route error:",err);
-    return res.status(500).json({messages:[]});
-  }
-});
-
-
-
+// =====================================================
+// 🔥 STEP 7 — SEND EMAIL (DISABLED)
+// =====================================================
+// await sendDebateToEmailList(userInput, messages);
 
 
 // =====================================================
-// ROUTE /aicidi-topic (10 LIVE SIMPLE)
+// 🔥 FINAL OUTPUT
+// =====================================================
+return res.json({
+  topic:userInput,
+  messages
+});
+
+}catch(err){
+
+console.error("coachella route error:",err);
+return res.status(500).json({messages:[]});
+
+}
+
+});
+
+// =====================================================
+// ROUTE /aicidi-topic
 // =====================================================
 app.post("/aicidi-topic", async (req,res)=>{
 
@@ -2375,48 +2503,43 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      // =====================================================
-      // 🔥 NEWEST — LAST ~10 MINUTES
-      // =====================================================
-      let newestItems = [];
+      // ✅ MOST POPULAR (influencer version)
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
 
-      const past = new Date(Date.now() - 10 * 60 * 1000);
+      const popularRes = await fetch(popularUrl);
+      const popularData = await popularRes.json();
 
-      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=10&order=date&publishedAfter=${past.toISOString()}`;
+      const popularItems = popularData.items || [];
 
-      const newestRes = await fetch(newestUrl);
-      const newestData = await newestRes.json();
-
-      newestItems = newestData.items || [];
-
-      // ✅ SIMPLE fallback (IMPORTANT)
-      if(newestItems.length === 0){
-        const fallbackUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=10&order=date`;
-
-        const fallbackRes = await fetch(fallbackUrl);
-        const fallbackData = await fallbackRes.json();
-
-        newestItems = fallbackData.items || [];
-      }
-
-      // =====================================================
-      // ✅ SHOW 10
-      // =====================================================
-      const newest10 = newestItems.map((v,i)=>{
+      const popular3 = popularItems.map((v,i)=>{
         return `${i+1}. ${cleanTitle(v.snippet.title)}`;
       }).join("\n");
 
 
-      // =====================================================
-      // ✅ FINAL OUTPUT
-      // =====================================================
+      // ✅ NEWEST (influencer version)
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3&order=date&publishedAfter=2026-04-01T00:00:00Z`;
+
+      const newestRes = await fetch(newestUrl);
+      const newestData = await newestRes.json();
+
+      const newestItems = newestData.items || [];
+
+      const newest3 = newestItems.map((v,i)=>{
+        return `${i+1}. ${cleanTitle(v.snippet.title)}`;
+      }).join("\n");
+
+
+      // ✅ FINAL OUTPUT (unchanged)
       const topic = `
 
-Newest 10 Performances:
-${newest10}
+Most Popular 3 Performers/Moments:
+${popular3}
+
+Newest 3 Performances:
+${newest3}
 
 Viral Discussion Question:
-Which moment is happening right now?`;
+Which moment stands out the most right now?`;
 
       userInput = topic;
     }
@@ -2430,9 +2553,7 @@ Which moment is happening right now?`;
 });
 
 
-// =====================================================
-// helpers
-// =====================================================
+// ✅ keep simple clean
 function cleanTitle(title){
   return title
     .replace(/&amp;/g, "&")
