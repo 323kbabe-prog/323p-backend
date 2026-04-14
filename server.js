@@ -2457,7 +2457,7 @@ return res.status(500).json({messages:[]});
 });
 
 // =====================================================
-// ROUTE /aicidi-topic
+// ROUTE /aicidi-topic (10 LIVE SIMPLE)
 // =====================================================
 app.post("/aicidi-topic", async (req,res)=>{
 
@@ -2467,45 +2467,48 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      // ✅ MOST POPULAR
-      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=10&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
+      // =====================================================
+      // 🔥 NEWEST — LAST ~10 MINUTES
+      // =====================================================
+      let newestItems = [];
 
-      const popularRes = await fetch(popularUrl);
-      const popularData = await popularRes.json();
+      const past = new Date(Date.now() - 10 * 60 * 1000);
 
-      const popularItems = popularData.items || [];
-
-      // ✅ shuffle + pick 3
-      const popular3 = shuffle(popularItems).slice(0,3).map((v,i)=>{
-        return `${i+1}. ${cleanTitle(v.snippet.title)}`;
-      }).join("\n");
-
-
-      // ✅ NEWEST
-      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=10&order=date&publishedAfter=2026-04-01T00:00:00Z`;
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=10&order=date&publishedAfter=${past.toISOString()}`;
 
       const newestRes = await fetch(newestUrl);
       const newestData = await newestRes.json();
 
-      const newestItems = newestData.items || [];
+      newestItems = newestData.items || [];
 
-      // ✅ shuffle + pick 3
-      const newest3 = shuffle(newestItems).slice(0,3).map((v,i)=>{
+      // ✅ SIMPLE fallback (IMPORTANT)
+      if(newestItems.length === 0){
+        const fallbackUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=10&order=date`;
+
+        const fallbackRes = await fetch(fallbackUrl);
+        const fallbackData = await fallbackRes.json();
+
+        newestItems = fallbackData.items || [];
+      }
+
+      // =====================================================
+      // ✅ SHOW 10
+      // =====================================================
+      const newest10 = newestItems.map((v,i)=>{
         return `${i+1}. ${cleanTitle(v.snippet.title)}`;
       }).join("\n");
 
 
+      // =====================================================
       // ✅ FINAL OUTPUT
+      // =====================================================
       const topic = `
 
-Most Popular 3 Performers/Moments:
-${popular3}
-
-Newest 3 Performances:
-${newest3}
+Newest 10 Performances:
+${newest10}
 
 Viral Discussion Question:
-Which moment stands out the most right now?`;
+Which moment is happening right now?`;
 
       userInput = topic;
     }
@@ -2519,13 +2522,9 @@ Which moment stands out the most right now?`;
 });
 
 
-// ✅ shuffle function (simple)
-function shuffle(arr){
-  return arr.sort(()=>0.5 - Math.random());
-}
-
-
-// ✅ clean title
+// =====================================================
+// helpers
+// =====================================================
 function cleanTitle(title){
   return title
     .replace(/&amp;/g, "&")
