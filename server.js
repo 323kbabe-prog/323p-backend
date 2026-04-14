@@ -2467,75 +2467,36 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      // 🔥 AI decides GOOD query (FIXED)
-      const aiRes = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.6,
-        messages:[
-          {
-            role:"system",
-            content:`
-Generate ONE YouTube search query for Coachella 2026.
-
-Rules:
-- MUST include at least ONE of:
-  performance, crowd, outfit, reaction, surprise
-- MUST feel like real event coverage
-- 3–6 words only
-- no clickbait phrases
-- no vague words like "best", "missed", "wow"
-
-GOOD examples:
-coachella 2026 live performance
-coachella crowd reaction night set
-coachella surprise guest moment
-
-BAD examples:
-you missed this
-crazy viral moment
-insane video
-
-Output ONLY the query
-`
-          }
-        ]
-      });
-
-      const query = aiRes.choices[0].message.content.trim();
-
-
       // ✅ MOST POPULAR
-      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=5&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=10&order=viewCount&publishedAfter=2026-04-01T00:00:00Z`;
 
       const popularRes = await fetch(popularUrl);
       const popularData = await popularRes.json();
 
-      const popularItems = (popularData.items || []).slice(0,3);
+      const popularItems = popularData.items || [];
 
-      const popular3 = popularItems.map((v,i)=>{
+      // ✅ shuffle + pick 3
+      const popular3 = shuffle(popularItems).slice(0,3).map((v,i)=>{
         return `${i+1}. ${cleanTitle(v.snippet.title)}`;
       }).join("\n");
 
 
-      // ✅ NEWEST (LIVE FEEL)
-      const hoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
-
-      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=8&order=date&publishedAfter=${hoursAgo.toISOString()}`;
+      // ✅ NEWEST
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=10&order=date&publishedAfter=2026-04-01T00:00:00Z`;
 
       const newestRes = await fetch(newestUrl);
       const newestData = await newestRes.json();
 
-      const newestItems = (newestData.items || [])
-        .sort(()=>0.5 - Math.random()) // 🔥 avoid same creators
-        .slice(0,3);
+      const newestItems = newestData.items || [];
 
-      const newest3 = newestItems.map((v,i)=>{
+      // ✅ shuffle + pick 3
+      const newest3 = shuffle(newestItems).slice(0,3).map((v,i)=>{
         return `${i+1}. ${cleanTitle(v.snippet.title)}`;
       }).join("\n");
 
 
       // ✅ FINAL OUTPUT
-      const topic = `[Cidi Coachella post:]
+      const topic = `
 
 Most Popular 3 Performers/Moments:
 ${popular3}
@@ -2558,17 +2519,21 @@ Which moment stands out the most right now?`;
 });
 
 
-// ✅ keep simple clean
+// ✅ shuffle function (simple)
+function shuffle(arr){
+  return arr.sort(()=>0.5 - Math.random());
+}
+
+
+// ✅ clean title
 function cleanTitle(title){
   return title
     .replace(/&amp;/g, "&")
     .replace(/&#39;/g, "'")
     .replace(/🔥/g, "")
     .replace(/#\S+/g, "")
-    .replace(/\bLIVE\b/gi, "")
     .trim();
 }
-
 
 
 // =====================================================
@@ -2749,5 +2714,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
 
