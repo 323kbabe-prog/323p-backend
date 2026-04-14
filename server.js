@@ -2069,7 +2069,7 @@ Rules:
 });
 
 //////////////////////////////////////////////////////////////
-// ROUTE — /aicidicoachellafomo (FINAL CLEAN VERSION)
+// ROUTE — /aicidicoachellafomo (STREAMING VERSION)
 //////////////////////////////////////////////////////////////
 app.post("/aicidicoachellafomo", async (req,res)=>{
   try{
@@ -2077,7 +2077,7 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
     let userInput = (req.body.question || "").trim();
 
     //////////////////////////////////////////////////////////////
-    // 🔥 STEP 0 — LIVE SIGNALS (FIXED)
+    // 🔥 STEP 0 — LIVE SIGNALS
     //////////////////////////////////////////////////////////////
     const liveTitles = Array.isArray(req.body.liveTitles)
       ? req.body.liveTitles
@@ -2091,7 +2091,7 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
     const liveContext = signals.join("\n");
 
     //////////////////////////////////////////////////////////////
-    // 🔥 STEP 1 — PERSONAS
+    // 🔥 STEP 1 — PERSONAS (OPTIONAL CONTEXT)
     //////////////////////////////////////////////////////////////
     function extractYouTubePersonas(results){
       const personas = [];
@@ -2122,21 +2122,8 @@ app.post("/aicidicoachellafomo", async (req,res)=>{
 
     let personas = extractYouTubePersonas(ytData.items || []);
 
-    if(personas.length < 5){
-      personas = [
-        { name:"virtual @festivalvibes", title:"coachella crowd energy vlog" },
-        { name:"virtual @streetweartok", title:"coachella outfit breakdown" },
-        { name:"virtual @musicreacts", title:"live set reaction coachella" }
-      ];
-    }
-
-    const personaTextBlock = personas.map(p => `
-${p.name}
-Video Title: ${p.title}
-`).join("\n");
-
     //////////////////////////////////////////////////////////////
-    // 🔥 STEP 2 — SYSTEM PROMPT (FINAL)
+    // 🔥 STEP 2 — SYSTEM PROMPT
     //////////////////////////////////////////////////////////////
     const systemPrompt = `
 You are Cidi — a real-time AI content director.
@@ -2146,157 +2133,122 @@ You operate in a neutral, analytical, machine-like tone.
 LIVE SIGNALS:
 ${liveContext}
 
-CREATORS:
-${personaTextBlock}
+TASK:
 
-━━━━━━━━━━━━━━━━━━
-TASK
-━━━━━━━━━━━━━━━━━━
+1. Identify repeated patterns
+2. Describe observation (no emotion)
+3. Provide structured critique
 
-For EACH creator:
+TEXT STRUCTURE:
 
-1. Identify what is being repeatedly captured
-2. Describe the pattern without emotion
-3. Provide structured guidance
-
-━━━━━━━━━━━━━━━━━━
-TEXT STRUCTURE (STRICT)
-━━━━━━━━━━━━━━━━━━
-
-• 4–6 sentences total
+• 4–6 sentences
 
 Sentence 1–2:
-- neutral observation
-- describe pattern
+- observation
 
 Sentence 3–6:
 - MUST start with "You should"
 - slightly critical
-- suggest improvement
+- improve idea
 
-━━━━━━━━━━━━━━━━━━
-STYLE
-━━━━━━━━━━━━━━━━━━
-
-• no emotional words
-• no hype
-• no influencer tone
-• analytical only
-
-━━━━━━━━━━━━━━━━━━
-TITLE RULES
-━━━━━━━━━━━━━━━━━━
-
-• 4–8 words
-• neutral tone
-• no punctuation
-
-━━━━━━━━━━━━━━━━━━
-OUTPUT JSON ONLY
-━━━━━━━━━━━━━━━━━━
-
-{
-  "messages":[
-    {
-      "persona":"virtual @name",
-      "title":"title",
-      "text":"paragraph",
-      "search":"search phrase"
-    }
-  ]
-}
+STYLE:
+- no emotion
+- no hype
+- analytical only
 `;
 
     //////////////////////////////////////////////////////////////
-    // 🔥 STEP 3 — GENERATE
+    // 🔥 STREAM HEADERS (IMPORTANT)
     //////////////////////////////////////////////////////////////
-    const response = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.8,
-      response_format:{type:"json_object"},
-      messages:[
-        {role:"system",content:systemPrompt},
-        {role:"user",content:"Start"}
-      ]
-    });
-
-    let raw = response.choices?.[0]?.message?.content || "";
-    raw = raw.replace(/```json/g,"").replace(/```/g,"").trim();
-
-    let parsed;
-    try{
-      parsed = JSON.parse(raw);
-    }catch{
-      return res.json({messages:[]});
-    }
+    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Transfer-Encoding", "chunked");
 
     //////////////////////////////////////////////////////////////
-    // 🔥 STEP 4 — CLEAN OUTPUT (ENFORCE STRUCTURE)
+    // 🔥 STEP 3 — GENERATE ONE BY ONE
     //////////////////////////////////////////////////////////////
-    const messages = (parsed.messages || []).slice(0,10).map(m => {
+    const sentMessages = [];
 
-      const match = personas.find(p =>
-        p.name.toLowerCase().trim() === (m.persona || "").toLowerCase().trim()
-      );
+    for(let i = 0; i < 10; i++){
 
-      let text = (m.text || "").trim();
+      const r = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.8,
+        messages:[
+          {
+            role:"system",
+            content:`
+${systemPrompt}
 
-      // split sentences
+IMPORTANT:
+Generate ONLY ONE message.
+Do not repeat previous ideas.
+
+Previous:
+${sentMessages.map(m => m.text).join("\n")}
+`
+          },
+          { role:"user", content:"Next" }
+        ]
+      });
+
+      let text = r.choices[0].message.content.trim();
+
+      ////////////////////////////////////////////////////////////
+      // 🔧 CLEAN + ENFORCE STRUCTURE
+      ////////////////////////////////////////////////////////////
       let sentences = text
         .replace(/\n/g," ")
         .split(/(?<=[.?!])\s+/)
-        .filter(s => s.length > 5);
+        .filter(s => s.length > 5)
+        .slice(0,6);
 
-      // limit to 6
-      sentences = sentences.slice(0,6);
-
-      // ensure at least 4
       if(sentences.length < 4){
         sentences.push("You should refine the framing for stronger clarity.");
       }
 
-      // enforce "You should"
       const halfIndex = Math.floor(sentences.length / 2);
 
-      for(let i = halfIndex; i < sentences.length; i++){
-        if(!/^you should/i.test(sentences[i])){
-          sentences[i] = "You should " + sentences[i].replace(/^[^a-zA-Z]+/, "");
+      for(let j = halfIndex; j < sentences.length; j++){
+        if(!/^you should/i.test(sentences[j])){
+          sentences[j] = "You should " + sentences[j];
         }
       }
 
       text = sentences.join(" ");
 
-      // search fallback
-      let search = (m.search || "").toLowerCase();
+      ////////////////////////////////////////////////////////////
+      // 🔍 SEARCH
+      ////////////////////////////////////////////////////////////
+      const search = text
+        .toLowerCase()
+        .replace(/[^\w\s]/g,"")
+        .split(" ")
+        .slice(0,8)
+        .join(" ");
 
-      if(!search){
-        search = text
-          .toLowerCase()
-          .replace(/[^\w\s]/g,"")
-          .split(" ")
-          .slice(0,8)
-          .join(" ");
-      }
-
-      return {
-        persona: m.persona || "virtual @user",
-        title: m.title || match?.title || "",
+      const message = {
+        persona: "virtual @cidi",
+        title: "",
         text,
         search
       };
-    });
+
+      sentMessages.push(message);
+
+      ////////////////////////////////////////////////////////////
+      // 🔥 SEND IMMEDIATELY
+      ////////////////////////////////////////////////////////////
+      res.write(JSON.stringify(message) + "\n");
+    }
 
     //////////////////////////////////////////////////////////////
-    // 🔥 FINAL OUTPUT
+    // 🔥 END STREAM
     //////////////////////////////////////////////////////////////
-    return res.json({
-      topic: userInput || "Coachella live trends",
-      messages
-    });
+    res.end();
 
   }catch(err){
     console.error("coachella route error:",err);
-    return res.status(500).json({messages:[]});
+    res.end();
   }
 });
 
