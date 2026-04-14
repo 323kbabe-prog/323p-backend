@@ -2216,29 +2216,10 @@ For each creator:
    - instruction
 
 TEXT RULES:
-
-• 4–6 sentences total
-
-STRUCTURE:
-
-Sentence 1–2:
-- neutral observation of what is happening
-- describe pattern from live signals
-- no emotion
-
-Sentence 3–6:
-- MUST be judgmental suggestion
-- MUST start with "You should"
-- direct, slightly critical tone
-- point out what is missing or weak
-- suggest better filming approach
-
-STYLE:
-
-• controlled, analytical
-• slightly critical, but not emotional
-• no hype language
-• no excitement words
+- must start with "You should"
+- 1–2 sentences
+- include what, how, and reason
+- no emotional words
 
 TITLE RULES:
 - 4–8 words
