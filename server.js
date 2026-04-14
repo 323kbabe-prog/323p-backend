@@ -2467,7 +2467,15 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=10&order=date`;
+      const ytUrl = const ytUrl = `https://www.googleapis.com/youtube/v3/search
+?key=${process.env.YOUTUBE_API_KEY}
+&q=coachella 2026 performance live
+&type=video
+&part=snippet
+&maxResults=10
+&order=date
+&publishedAfter=${new Date(Date.now() - 24*60*60*1000).toISOString()}`;
+
 
       const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
@@ -2677,4 +2685,6 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
+
 
