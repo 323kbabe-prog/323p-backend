@@ -1046,14 +1046,7 @@ async function getTodayAITopic(){
 try{
 
 // 🔥 Google → X posts (real-time signal)
-const ytUrl = `https://www.googleapis.com/youtube/v3/search
-?key=${process.env.YOUTUBE_API_KEY}
-&channelId=UCmP6w4K0lW8z6s0l4v2x7Hg
-&part=snippet
-&order=date
-&maxResults=5
-&type=video`;
-
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&maxResults=20`;
 
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
@@ -2463,73 +2456,48 @@ return res.status(500).json({messages:[]});
 
 });
 
-async function getTodayAITopic(){
+// =====================================================
+// ROUTE /aicidi-topic
+// =====================================================
+app.post("/aicidi-topic", async (req,res)=>{
 
-try{
+  try{
 
-const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&channelId=UCmP6w4K0lW8z6s0l4v2x7Hg&part=snippet&order=date&maxResults=5&type=video`;
+    let userInput = (req.body.question || "").trim();
 
-const ytRes = await fetch(ytUrl);
-const ytData = await ytRes.json();
+    if(!userInput){
 
-// ✅ FIXED
-if(ytData.error){
-  console.error("YT ERROR:", ytData.error);
-  return "What is happening at Coachella right now?";
-}
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=10&order=date`;
 
-const items = ytData.items || [];
+      const ytRes = await fetch(ytUrl);
+      const ytData = await ytRes.json();
 
-if(items.length === 0){
-  return "What is happening at Coachella right now?";
-}
+      const topVideo = ytData.items?.[0];
 
-// 🔥 TOP 3
-const combinedTitles = items
-  .slice(0,3)
-  .map(v => v.snippet.title)
-  .join(" | ");
+      const context = topVideo?.snippet?.title || "Coachella performance";
 
-// 🔥 ONE AI CALL ONLY
-const ai = await openai.chat.completions.create({
-  model:"gpt-4o-mini",
-  temperature:0.9,
-  messages:[
-    {
-      role:"system",
-      content:`
-You are a Coachella influencer.
+      const refine = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.7,
+        messages:[
+          {
+            role:"system",
+            content:`Rewrite as viral discussion. Must end as question.`
+          },
+          { role:"user", content: context }
+        ]
+      });
 
-Write ONE viral post reacting to these performances.
-
-Rules:
-- mention artists if possible
-- emotional / hype tone
-- TikTok / YouTube comment style
-- 6–14 words
-- NOT formal
-
-ONLY output the post.
-`
-    },
-    {
-      role:"user",
-      content: combinedTitles
+      userInput = refine.choices[0].message.content.trim();
     }
-  ]
+
+    return res.json({ topic:userInput });
+
+  }catch(err){
+    return res.json({ topic:"What is happening at Coachella right now?" });
+  }
+
 });
-
-return ai.choices[0].message.content.trim();
-
-}catch(err){
-
-console.error("topic error:", err);
-
-return "What is happening at Coachella right now?";
-}
-
-}
-
 
 // =====================================================
 // ROUTE /aicidi-join
@@ -2709,6 +2677,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
-
 
