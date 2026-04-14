@@ -2289,7 +2289,6 @@ OUTPUT JSON ONLY
     //////////////////////////////////////////////////////////////
     // 🔥 FINAL OUTPUT
     //////////////////////////////////////////////////////////////
- await new Promise(r => setTimeout(r, 4000)); 
     return res.json({
       topic: userInput || "Coachella live trends",
       messages
@@ -2553,9 +2552,269 @@ Output ONLY the query.
   }
 });
 
+//////////////////////////////////////////////////////////////
+// CHATROOM — AUTO MODE + SEARCH + DEBATE (FINAL)
+//////////////////////////////////////////////////////////////
+
+// 🔥 MEMORY STORE (ADD ONCE)
+const chatRooms = {};
+
+//////////////////////////////////////////////////////////////
+// ROUTE — CHATROOM MESSAGE
+//////////////////////////////////////////////////////////////
+
+app.post("/chatroom-message", async (req,res)=>{
+
+  try{
+
+    const roomId = (req.body.roomId || "default").trim();
+    const message = (req.body.message || "").trim();
+    let mode = (req.body.mode || "auto").trim(); // 🔥 auto default
+
+    if(!message){
+      return res.json({ newMessages:[] });
+    }
+
+    if(!chatRooms[roomId]){
+      chatRooms[roomId] = [];
+    }
+
+    //////////////////////////////////////////////////////////
+    // 🔒 PREVENT DUPLICATE USER MESSAGE
+    //////////////////////////////////////////////////////////
+    const last = chatRooms[roomId][chatRooms[roomId].length - 1];
+
+    if(!last || last.role !== "user" || last.text !== message){
+      chatRooms[roomId].push({
+        role:"user",
+        text: message
+      });
+    }
+
+    //////////////////////////////////////////////////////////
+    // 🤖 AUTO MODE (SMART HYBRID)
+    //////////////////////////////////////////////////////////
+    if(mode === "auto"){
+
+      // fast rule first
+      if(message.length < 20){
+        mode = "search";
+      }else{
+
+        const detect = await openai.chat.completions.create({
+          model:"gpt-4o-mini",
+          temperature:0,
+          messages:[
+            {
+              role:"system",
+              content:`
+Decide intent.
+
+If user wants quick info → SEARCH
+If user wants opinions / discussion → DEBATE
+
+Reply ONLY:
+SEARCH or DEBATE
+`
+            },
+            {
+              role:"user",
+              content:message
+            }
+          ]
+        });
+
+        mode = detect.choices[0].message.content
+          .trim()
+          .toLowerCase();
+
+        if(mode !== "search" && mode !== "debate"){
+          mode = "debate";
+        }
+      }
+    }
+
+    //////////////////////////////////////////////////////////
+    // 🔵 MODE: SEARCH
+    //////////////////////////////////////////////////////////
+    if(mode === "search"){
+
+      const searchRes = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.3,
+        messages:[
+          {
+            role:"system",
+            content:`
+Convert into ONE strong Google search query.
+
+Rules:
+- 5–10 words
+- lowercase
+- no punctuation
+- useful and specific
+
+Output ONLY the query
+`
+          },
+          {
+            role:"user",
+            content:message
+          }
+        ]
+      });
+
+      let query = searchRes.choices[0].message.content.trim();
+
+      query = query
+        .toLowerCase()
+        .replace(/[^\w\s]/g,"")
+        .replace(/\s+/g," ")
+        .trim();
+
+      const link = `https://www.google.com/search?q=${query.replace(/\s+/g,"+")}`;
+
+      const aiMessage = {
+        persona:"AI search",
+        text:`This is the fastest way to explore this:\n→ ${link}`
+      };
+
+      chatRooms[roomId].push({
+        role:"ai",
+        persona:"AI search",
+        text: aiMessage.text
+      });
+
+      return res.json({
+        mode,
+        newMessages:[aiMessage],
+        room: chatRooms[roomId]
+      });
+    }
+
+    //////////////////////////////////////////////////////////
+    // 🔴 MODE: DEBATE
+    //////////////////////////////////////////////////////////
+
+    // STEP 1 — PICK PERSONAS
+    const pick = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.5,
+      messages:[
+        {
+          role:"system",
+          content:`
+Choose 2–3 BEST personas for this message.
+
+Only choose from:
+${DEBATE_PERSONAS.join("\n")}
+
+Output JSON:
+{ "personas":["...","..."] }
+`
+        },
+        {
+          role:"user",
+          content:message
+        }
+      ]
+    });
+
+    let personas = [];
+
+    try{
+      personas = JSON.parse(pick.choices[0].message.content).personas || [];
+    }catch{
+      personas = shuffleArray([...DEBATE_PERSONAS]).slice(0,2);
+    }
+
+    //////////////////////////////////////////////////////////
+    // STEP 2 — GENERATE REPLIES
+    //////////////////////////////////////////////////////////
+    const reply = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.9,
+      messages:[
+        {
+          role:"system",
+          content:`
+Multi-persona chat.
+
+Personas:
+${personas.join("\n")}
+
+Rules:
+- each persona speaks once
+- 1–2 sentences
+- natural chat
+- allow disagreement
+
+Output JSON:
+{
+  "messages":[
+    {"persona":"...","text":"..."}
+  ]
+}
+`
+        },
+        {
+          role:"user",
+          content:message
+        }
+      ]
+    });
+
+    let aiMessages = [];
+
+    try{
+      aiMessages = JSON.parse(reply.choices[0].message.content).messages || [];
+    }catch{
+      aiMessages = [
+        { persona:"AI", text:"System unstable." }
+      ];
+    }
+
+    //////////////////////////////////////////////////////////
+    // SAVE AI MESSAGES
+    //////////////////////////////////////////////////////////
+    aiMessages.forEach(m=>{
+      chatRooms[roomId].push({
+        role:"ai",
+        persona:(m.persona || "AI").replace(/perspective/i,"chat"),
+        text:m.text || ""
+      });
+    });
+
+    //////////////////////////////////////////////////////////
+    // RETURN
+    //////////////////////////////////////////////////////////
+    return res.json({
+      mode,
+      newMessages: aiMessages,
+      room: chatRooms[roomId]
+    });
+
+  }catch(err){
+
+    console.error("chatroom error:",err);
+
+    return res.json({
+      mode:"error",
+      newMessages:[
+        { persona:"AI", text:"System unavailable." }
+      ]
+    });
+
+  }
+
+});
+
+
 // -------------------- SERVER --------------------
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
+
 
