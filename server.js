@@ -2463,54 +2463,41 @@ return res.status(500).json({messages:[]});
 
 });
 
-// =====================================================
-// ROUTE /aicidi-topic (FAST + STABLE + TOP 3)
-// =====================================================
-app.post("/aicidi-topic", async (req, res) => {
+async function getTodayAITopic(){
 
-  try {
+try{
 
-    let userInput = (req.body.question || "").trim();
+const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&channelId=UCmP6w4K0lW8z6s0l4v2x7Hg&part=snippet&order=date&maxResults=5&type=video`;
 
-    if (!userInput) {
+const ytRes = await fetch(ytUrl);
+const ytData = await ytRes.json();
 
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&channelId=UCmP6w4K0lW8z6s0l4v2x7Hg&part=snippet&order=date&maxResults=5&type=video`;
+// ✅ FIXED
+if(ytData.error){
+  console.error("YT ERROR:", ytData.error);
+  return "What is happening at Coachella right now?";
+}
 
-      const ytRes = await fetch(ytUrl);
-      const ytData = await ytRes.json();
+const items = ytData.items || [];
 
-      if (ytData.error) {
-        console.error("YT ERROR:", ytData.error);
-        return res.json({
-          topic: "What is happening at Coachella right now?"
-        });
-      }
+if(items.length === 0){
+  return "What is happening at Coachella right now?";
+}
 
-      const items = ytData.items || [];
+// 🔥 TOP 3
+const combinedTitles = items
+  .slice(0,3)
+  .map(v => v.snippet.title)
+  .join(" | ");
 
-      if (items.length === 0) {
-        return res.json({
-          topic: "What is happening at Coachella right now?"
-        });
-      }
-
-      // 🔥 TOP 3
-      const top3 = items.slice(0, 3);
-
-      const combinedTitles = top3
-        .map(v => v.snippet.title)
-        .join(" | ");
-
-      console.log("Top 3:", combinedTitles);
-
-      // 🔥 ONE AI CALL ONLY (FAST)
-      const refine = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.9,
-        messages: [
-          {
-            role: "system",
-            content: `
+// 🔥 ONE AI CALL ONLY
+const ai = await openai.chat.completions.create({
+  model:"gpt-4o-mini",
+  temperature:0.9,
+  messages:[
+    {
+      role:"system",
+      content:`
 You are a Coachella influencer.
 
 Write ONE viral post reacting to these performances.
@@ -2522,36 +2509,26 @@ Rules:
 - 6–14 words
 - NOT formal
 
-Examples:
-"BLACKPINK + Travis Scott both went crazy??"
-"This lineup is actually insane right now"
-
 ONLY output the post.
 `
-          },
-          {
-            role: "user",
-            content: combinedTitles
-          }
-        ]
-      });
-
-      userInput = refine.choices[0].message.content.trim();
+    },
+    {
+      role:"user",
+      content: combinedTitles
     }
-
-    return res.json({ topic: userInput });
-
-  } catch (err) {
-
-    console.error("aicidi-topic error:", err);
-
-    return res.json({
-      topic: "What is happening at Coachella right now?"
-    });
-
-  }
-
+  ]
 });
+
+return ai.choices[0].message.content.trim();
+
+}catch(err){
+
+console.error("topic error:", err);
+
+return "What is happening at Coachella right now?";
+}
+
+}
 
 
 // =====================================================
