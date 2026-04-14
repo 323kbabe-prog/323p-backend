@@ -2465,47 +2465,129 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     let userInput = (req.body.question || "").trim();
 
-    if(!userInput){
-
-      const ytUrl = const ytUrl = `https://www.googleapis.com/youtube/v3/search
-?key=${process.env.YOUTUBE_API_KEY}
-&q=coachella 2026 performance live
-&type=video
-&part=snippet
-&maxResults=10
-&order=date
-&publishedAfter=${new Date(Date.now() - 24*60*60*1000).toISOString()}`;
-
-
-      const ytRes = await fetch(ytUrl);
-      const ytData = await ytRes.json();
-
-      const topVideo = ytData.items?.[0];
-
-      const context = topVideo?.snippet?.title || "Coachella performance";
-
-      const refine = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.7,
-        messages:[
-          {
-            role:"system",
-            content:`Rewrite as viral discussion. Must end as question.`
-          },
-          { role:"user", content: context }
-        ]
-      });
-
-      userInput = refine.choices[0].message.content.trim();
+    // =====================================================
+    // 🔥 STEP 1 — IF USER INPUT EXISTS → USE IT
+    // =====================================================
+    if(userInput){
+      return res.json({ topic: userInput });
     }
 
-    return res.json({ topic:userInput });
+    // =====================================================
+    // 🔥 STEP 2 — GET FRESH SIGNAL (NOT BIASED)
+    // =====================================================
+    const ytUrl = `https://www.googleapis.com/youtube/v3/search
+?key=${process.env.YOUTUBE_API_KEY}
+&q=coachella
+&type=video
+&part=snippet
+&maxResults=20
+&order=date`;
+
+    const ytRes = await fetch(ytUrl);
+    const ytData = await ytRes.json();
+
+    const items = ytData.items || [];
+
+    if(items.length === 0){
+      return res.json({
+        topic: "What is happening at Coachella right now?"
+      });
+    }
+
+    // =====================================================
+    // 🔥 STEP 3 — EXTRACT TITLES ONLY (LIGHT SIGNAL)
+    // =====================================================
+    const titles = items
+      .map(v => v.snippet?.title || "")
+      .filter(Boolean)
+      .slice(0,15); // keep it tight
+
+    // =====================================================
+    // 🔥 STEP 4 — AI DETECTS TREND (CORE LOGIC)
+    // =====================================================
+    const detect = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.5,
+      messages:[
+        {
+          role:"system",
+          content:`
+You are detecting what is trending RIGHT NOW at Coachella.
+
+From these video titles:
+
+1. Identify ONE trending artist, performance, or moment
+2. MUST be based on repetition or strong signal
+3. IGNORE overly famous default names (like Justin Bieber) unless repeated multiple times
+4. Prefer:
+   - new performers
+   - viral moments
+   - unexpected appearances
+
+Output:
+ONE short phrase only
+(no explanation)
+`
+        },
+        {
+          role:"user",
+          content: titles.join("\n")
+        }
+      ]
+    });
+
+    let trend = detect.choices[0].message.content.trim();
+
+    if(!trend || trend.length < 2){
+      trend = "Coachella main stage performance";
+    }
+
+    // =====================================================
+    // 🔥 STEP 5 — TURN INTO VIRAL QUESTION
+    // =====================================================
+    const refine = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.7,
+      messages:[
+        {
+          role:"system",
+          content:`
+Rewrite into a viral Coachella discussion.
+
+Rules:
+- casual
+- emotional
+- feel like TikTok or YouTube comment
+- MUST end as a question
+- keep it short
+`
+        },
+        {
+          role:"user",
+          content: trend
+        }
+      ]
+    });
+
+    const topic = refine.choices[0].message.content.trim();
+
+    // =====================================================
+    // ✅ FINAL OUTPUT
+    // =====================================================
+    return res.json({ topic });
 
   }catch(err){
-    return res.json({ topic:"What is happening at Coachella right now?" });
+
+    console.error("aicidi-topic error:",err);
+
+    return res.json({
+      topic:"What is happening at Coachella right now?"
+    });
+
   }
 
 });
+
 
 // =====================================================
 // ROUTE /aicidi-join
@@ -2685,6 +2767,5 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
-
 
 
