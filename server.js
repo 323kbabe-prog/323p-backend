@@ -2467,34 +2467,66 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      // ✅ NEWEST 3
-      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=3&order=date`;
+      // 🔥 time filter (Coachella 2026 only)
+      const timeFilter = "&publishedAfter=2026-04-01T00:00:00Z";
 
-      const newestRes = await fetch(newestUrl);
-      const newestData = await newestRes.json();
-
-      const newestItems = newestData.items || [];
-
-      const newest3 = newestItems.map((v,i)=>{
-        return `${i+1}. ${v.snippet.title}`;
-      }).join(" ");
-
-      // ✅ MOST POPULAR 3
-      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=3&order=viewCount`;
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 live performance&type=video&part=snippet&maxResults=10&order=viewCount${timeFilter}`;
 
       const popularRes = await fetch(popularUrl);
       const popularData = await popularRes.json();
 
       const popularItems = popularData.items || [];
 
-      const popular3 = popularItems.map((v,i)=>{
-        return `${i+1}. ${v.snippet.title}`;
+      // ✅ remove simple duplicates
+      const seenPopular = new Set();
+      const popularFiltered = [];
+
+      for(const v of popularItems){
+        const title = v.snippet.title;
+        const key = title.split(" ")[0].toLowerCase(); // simple artist guess
+
+        if(!seenPopular.has(key)){
+          seenPopular.add(key);
+          popularFiltered.push(v);
+        }
+
+        if(popularFiltered.length === 3) break;
+      }
+
+      const popular3 = popularFiltered.map((v,i)=>{
+        return `${i+1}. ${cleanTitle(v.snippet.title)}`;
       }).join(" ");
 
-      // ✅ FINAL OUTPUT
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 live performance&type=video&part=snippet&maxResults=10&order=date${timeFilter}`;
+
+      const newestRes = await fetch(newestUrl);
+      const newestData = await newestRes.json();
+
+      const newestItems = newestData.items || [];
+
+      // ✅ remove simple duplicates
+      const seenNewest = new Set();
+      const newestFiltered = [];
+
+      for(const v of newestItems){
+        const title = v.snippet.title;
+        const key = title.split(" ")[0].toLowerCase();
+
+        if(!seenNewest.has(key)){
+          seenNewest.add(key);
+          newestFiltered.push(v);
+        }
+
+        if(newestFiltered.length === 3) break;
+      }
+
+      const newest3 = newestFiltered.map((v,i)=>{
+        return `${i+1}. ${cleanTitle(v.snippet.title)}`;
+      }).join(" ");
+
       const topic = `[Cidi Coachella post:]
-Newest 3 Performances: ${newest3}
 Most Popular 3 Performers/Moments: ${popular3}
+Newest 3 Performances: ${newest3}
 Viral Discussion Question: Which moment stands out the most right now?`;
 
       userInput = topic;
@@ -2508,8 +2540,15 @@ Viral Discussion Question: Which moment stands out the most right now?`;
 
 });
 
-
-
+function cleanTitle(title){
+  return title
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/🔥/g, "")
+    .replace(/#\S+/g, "") // remove hashtags
+    .trim();
+}
 
 // =====================================================
 // ROUTE /aicidi-join
@@ -2689,4 +2728,6 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🧠 Jack Chang Thinking Path backend live");
 });
+
+
 
