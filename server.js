@@ -2069,7 +2069,7 @@ Rules:
 });
 
 //////////////////////////////////////////////////////////////
-// ROUTE — /aicidicoachellafomo (FINAL SAFE VERSION)
+// ROUTE — /aicidicoachellafomo (FINAL PRODUCTION VERSION)
 //////////////////////////////////////////////////////////////
 app.post("/aicidicoachellafomo", async (req,res)=>{
   try{
@@ -2190,7 +2190,7 @@ Video Title: ${p.title}
 `).join("\n");
 
     //////////////////////////////////////////////////////////////
-    // 🔥 STEP 4 — SYSTEM PROMPT (MACHINE TONE)
+    // 🔥 STEP 4 — SYSTEM PROMPT (JSON FIXED)
     //////////////////////////////////////////////////////////////
     const systemPrompt = `
 You are Cidi — a real-time AI content director.
@@ -2226,7 +2226,10 @@ TITLE RULES:
 - no punctuation
 - neutral tone
 
-OUTPUT:
+OUTPUT JSON ONLY.
+
+Return valid JSON object in this exact format:
+
 {
   "messages":[
     {
@@ -2259,6 +2262,7 @@ OUTPUT:
     try{
       parsed = JSON.parse(raw);
     }catch{
+      console.error("JSON FAIL:", raw);
       return res.json({ topic:userInput, messages:[] });
     }
 
