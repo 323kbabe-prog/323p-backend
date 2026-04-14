@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// SOCKET.IO — REAL-TIME CHATROOM (FINAL CLEAN)
+// 🔥 REAL-TIME CHATROOM (MINIMAL VERSION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2564,19 +2564,14 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-//////////////////////////////////////////////////////////////
-// SOCKET CONNECTION
-//////////////////////////////////////////////////////////////
-
 io.on("connection", (socket) => {
 
-  console.log("🟢 user connected:", socket.id);
+  console.log("🟢 connected:", socket.id);
 
   ////////////////////////////////////////////////////////////
   // JOIN ROOM
   ////////////////////////////////////////////////////////////
   socket.on("joinRoom", (roomId) => {
-
     socket.join(roomId);
 
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
@@ -2584,214 +2579,94 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"System",
-      text:`👥 ${count} people in room`
+      text:`👥 ${count} people here`
     });
   });
 
   ////////////////////////////////////////////////////////////
   // SEND MESSAGE
   ////////////////////////////////////////////////////////////
-  socket.on("sendMessage", async (data) => {
+  socket.on("sendMessage", async ({ roomId, message }) => {
 
-    try{
+    if(!message) return;
 
-      const { roomId, message } = data;
+    // 🔥 user message
+    io.to(roomId).emit("message", {
+      role:"user",
+      text: message
+    });
 
-      if(!message) return;
+    ////////////////////////////////////////////////////////
+    // AUTO MODE
+    ////////////////////////////////////////////////////////
+    let isSearch = message.length < 20;
 
-      ////////////////////////////////////////////////////////
-      // 🔥 USER MESSAGE
-      ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////
+    // 🔵 SEARCH
+    ////////////////////////////////////////////////////////
+    if(isSearch){
+
+      const r = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        messages:[
+          {role:"system", content:"google search query only"},
+          {role:"user", content:message}
+        ]
+      });
+
+      const query = r.choices[0].message.content
+        .replace(/[^\w\s]/g,"")
+        .trim()
+        .replace(/\s+/g,"+");
+
+      const link = `https://www.google.com/search?q=${query}`;
+
       io.to(roomId).emit("message", {
-        role:"user",
-        text: message
-      });
-
-      ////////////////////////////////////////////////////////
-      // 🔥 AUTO MODE
-      ////////////////////////////////////////////////////////
-      let mode;
-
-      if(message.length < 20){
-        mode = "search";
-      }else{
-        mode = "debate";
-      }
-
-      ////////////////////////////////////////////////////////
-      // 🔵 SEARCH MODE
-      ////////////////////////////////////////////////////////
-      if(mode === "search"){
-
-        const searchRes = await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          temperature:0.3,
-          messages:[
-            {
-              role:"system",
-              content:`
-Convert into ONE strong Google search query.
-
-Rules:
-- 5–10 words
-- lowercase
-- no punctuation
-`
-            },
-            {
-              role:"user",
-              content:message
-            }
-          ]
-        });
-
-        let query = searchRes.choices[0].message.content
-          .toLowerCase()
-          .replace(/[^\w\s]/g,"")
-          .trim()
-          .replace(/\s+/g,"+");
-
-        const link = `https://www.google.com/search?q=${query}`;
-
-        io.to(roomId).emit("message", {
-          role:"ai",
-          persona:"AI search",
-          text:`→ ${link}`
-        });
-
-        return;
-      }
-
-      ////////////////////////////////////////////////////////
-      // 🔴 DEBATE MODE
-      ////////////////////////////////////////////////////////
-
-      // pick personas
-      const pick = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.5,
-        messages:[
-          {
-            role:"system",
-            content:`
-Pick 2 personas from:
-
-${DEBATE_PERSONAS.join("\n")}
-
-Output JSON:
-{ "personas":["...","..."] }
-`
-          },
-          {
-            role:"user",
-            content:message
-          }
-        ]
-      });
-
-      let personas;
-
-      try{
-        personas = JSON.parse(pick.choices[0].message.content).personas;
-      }catch{
-        personas = shuffleArray([...DEBATE_PERSONAS]).slice(0,2);
-      }
-
-      if(!personas || personas.length === 0){
-        personas = shuffleArray([...DEBATE_PERSONAS]).slice(0,2);
-      }
-
-      ////////////////////////////////////////////////////////
-      // GENERATE REPLIES
-      ////////////////////////////////////////////////////////
-      const reply = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.9,
-        messages:[
-          {
-            role:"system",
-            content:`
-Multi-persona chat.
-
-Personas:
-${personas.join("\n")}
-
-Rules:
-- each persona speaks once
-- 1–2 sentences
-- natural chat
-- disagreement allowed
-
-Output JSON:
-{
-  "messages":[
-    {"persona":"...","text":"..."}
-  ]
-}
-`
-          },
-          {
-            role:"user",
-            content:message
-          }
-        ]
-      });
-
-      let aiMessages;
-
-      try{
-        aiMessages = JSON.parse(reply.choices[0].message.content).messages;
-      }catch{
-        aiMessages = [
-          { persona:"AI", text:"System unstable." }
-        ];
-      }
-
-      ////////////////////////////////////////////////////////
-      // 🔥 STREAM EACH MESSAGE
-      ////////////////////////////////////////////////////////
-      for(const m of aiMessages){
-
-        io.to(roomId).emit("message", {
-          role:"ai",
-          persona:(m.persona || "AI").replace(/perspective/i,"chat"),
-          text:m.text
-        });
-
-        await new Promise(r => setTimeout(r, 500));
-      }
-
-    }catch(err){
-
-      console.error("socket error:", err);
-
-      io.to(data.roomId).emit("message", {
         role:"ai",
-        persona:"AI",
-        text:"System error"
+        persona:"AI search",
+        text:`→ ${link}`
       });
 
+      return;
     }
 
-  });
+    ////////////////////////////////////////////////////////
+    // 🔴 DEBATE (SUPER SIMPLE)
+    ////////////////////////////////////////////////////////
+    const r = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.8,
+      messages:[
+        {
+          role:"system",
+          content:"2 short different opinions"
+        },
+        {
+          role:"user",
+          content:message
+        }
+      ]
+    });
 
-  ////////////////////////////////////////////////////////////
-  // DISCONNECT
-  ////////////////////////////////////////////////////////////
-  socket.on("disconnect", () => {
-    console.log("🔴 user disconnected:", socket.id);
+    io.to(roomId).emit("message", {
+      role:"ai",
+      persona:"AI chat",
+      text:r.choices[0].message.content
+    });
+
   });
 
 });
 
 //////////////////////////////////////////////////////////////
-// START SERVER (ONLY THIS — NO app.listen)
+// START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 Socket server running on port", PORT);
+  console.log("🔥 live chat running");
 });
+
 
 
