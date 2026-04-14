@@ -2467,45 +2467,37 @@ app.post("/aicidi-topic", async (req,res)=>{
 
     if(!userInput){
 
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=10&order=date`;
+      // ✅ NEWEST 3
+      const newestUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=3&order=date`;
 
-      const ytRes = await fetch(ytUrl);
-      const ytData = await ytRes.json();
+      const newestRes = await fetch(newestUrl);
+      const newestData = await newestRes.json();
 
-      const items = ytData.items || [];
+      const newestItems = newestData.items || [];
 
-      // ✅ top 3 titles
-      const titles = items.slice(0,3).map(v => v.snippet.title).join("\n");
+      const newest3 = newestItems.map((v,i)=>{
+        return `${i+1}. ${v.snippet.title}`;
+      }).join(" ");
 
-      // ✅ AI generate 50–55 words
-      const detect = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.5,
-        messages:[
-          {
-            role:"system",
-            content:`
-Pick the top 3 performers or moments from these titles.
-Write ONE viral discussion question in 50–55 words.
-No explanation.
-`
-          },
-          {
-            role:"user",
-            content: titles
-          }
-        ]
-      });
+      // ✅ TOP 3 (MOST POPULAR)
+      const popularUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella live performance&type=video&part=snippet&maxResults=3&order=viewCount`;
 
-      let topic = detect.choices[0].message.content.trim();
+      const popularRes = await fetch(popularUrl);
+      const popularData = await popularRes.json();
 
-      // ✅ simple clamp (max 55 words)
-      const words = topic.split(/\s+/);
-      if(words.length > 55){
-        topic = words.slice(0,55).join(" ");
-      }
+      const popularItems = popularData.items || [];
 
-      userInput = topic || "What are the top 3 performances at Coachella right now?";
+      const top3 = popularItems.map((v,i)=>{
+        return `${i+1}. ${v.snippet.title}`;
+      }).join(" ");
+
+      // ✅ FINAL OUTPUT (NEW → POPULAR)
+      const topic = `[Cidi Coachella post:]
+Newest 3 Performances: ${newest3}
+Top 3 Performers/Moments (Most Popular): ${top3}
+Viral Discussion Question: Which moment stands out the most right now?`;
+
+      userInput = topic;
     }
 
     return res.json({ topic:userInput });
@@ -2515,6 +2507,7 @@ No explanation.
   }
 
 });
+
 
 
 // =====================================================
