@@ -2464,7 +2464,7 @@ return res.status(500).json({messages:[]});
 });
 
 // =====================================================
-// ROUTE /aicidi-topic 
+// ROUTE /aicidi-topic (FAST + STABLE + TOP 3)
 // =====================================================
 app.post("/aicidi-topic", async (req, res) => {
 
@@ -2474,18 +2474,11 @@ app.post("/aicidi-topic", async (req, res) => {
 
     if (!userInput) {
 
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search
-?key=${process.env.YOUTUBE_API_KEY}
-&channelId=UCmP6w4K0lW8z6s0l4v2x7Hg
-&part=snippet
-&order=date
-&maxResults=5
-&type=video`;
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&channelId=UCmP6w4K0lW8z6s0l4v2x7Hg&part=snippet&order=date&maxResults=5&type=video`;
 
       const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
 
-      // ✅ ERROR SAFE
       if (ytData.error) {
         console.error("YT ERROR:", ytData.error);
         return res.json({
@@ -2501,38 +2494,16 @@ app.post("/aicidi-topic", async (req, res) => {
         });
       }
 
-      // 🔥 TAKE TOP 3 (instead of 1)
+      // 🔥 TOP 3
       const top3 = items.slice(0, 3);
 
-      const combinedContext = top3
-        .map(v =>
-          (v?.snippet?.title || "") + " " +
-          (v?.snippet?.description || "")
-        )
+      const combinedTitles = top3
+        .map(v => v.snippet.title)
         .join(" | ");
 
-      const extract = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0,
-        messages: [
-          {
-            role: "system",
-            content: `
-Extract up to 3 MAIN performers or events.
+      console.log("Top 3:", combinedTitles);
 
-Rules:
-• MUST return real artist names if possible
-• separate by commas
-• example: "BLACKPINK, Travis Scott, Doja Cat"
-• if unclear → return "main stage performance"
-`
-          },
-          { role: "user", content: combinedContext }
-        ]
-      });
-
-      const artists = extract.choices[0].message.content.trim();
-      
+      // 🔥 ONE AI CALL ONLY (FAST)
       const refine = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         temperature: 0.9,
@@ -2540,27 +2511,28 @@ Rules:
           {
             role: "system",
             content: `
-You are a Coachella influencer reacting in real time.
+You are a Coachella influencer.
 
-Write ONE viral post.
+Write ONE viral post reacting to these performances.
 
 Rules:
-• MUST include the artists
-• emotional / hype tone
-• feel like TikTok / YouTube comment
-• 6–14 words
-• can be a question OR statement
-• NOT formal
+- mention artists if possible
+- emotional / hype tone
+- TikTok / YouTube comment style
+- 6–14 words
+- NOT formal
 
 Examples:
-- BLACKPINK and Travis Scott both went crazy??
-- Why is every Coachella performance hitting right now 😭
-- This lineup is actually insane today
+"BLACKPINK + Travis Scott both went crazy??"
+"This lineup is actually insane right now"
 
 ONLY output the post.
 `
           },
-          { role: "user", content: artists }
+          {
+            role: "user",
+            content: combinedTitles
+          }
         ]
       });
 
