@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL VERSION)
+// 🔥 REAL-TIME CHATROOM (FINAL CLEAN VERSION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2563,6 +2563,9 @@ const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: { origin: "*" }
 });
+
+// 🔥 MEMORY STORE (per room)
+const rooms = {};
 
 io.on("connection", (socket) => {
 
@@ -2574,6 +2577,10 @@ io.on("connection", (socket) => {
   socket.on("joinRoom", (roomId) => {
 
     socket.join(roomId);
+
+    if(!rooms[roomId]){
+      rooms[roomId] = [];
+    }
 
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
@@ -2592,7 +2599,27 @@ io.on("connection", (socket) => {
     if(!message) return;
 
     ////////////////////////////////////////////////////////
-    // 🔥 USER MESSAGE
+    // INIT ROOM
+    ////////////////////////////////////////////////////////
+    if(!rooms[roomId]){
+      rooms[roomId] = [];
+    }
+
+    ////////////////////////////////////////////////////////
+    // SAVE USER MESSAGE
+    ////////////////////////////////////////////////////////
+    rooms[roomId].push({
+      role:"user",
+      content: message
+    });
+
+    // 🔥 LIMIT MEMORY
+    if(rooms[roomId].length > 20){
+      rooms[roomId] = rooms[roomId].slice(-20);
+    }
+
+    ////////////////////////////////////////////////////////
+    // BROADCAST USER MESSAGE
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"user",
@@ -2600,12 +2627,12 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 AUTO MODE
+    // AUTO MODE
     ////////////////////////////////////////////////////////
     let isSearch = message.length < 20;
 
     ////////////////////////////////////////////////////////
-    // 🔵 SEARCH (FIXED)
+    // 🔵 SEARCH MODE
     ////////////////////////////////////////////////////////
     if(isSearch){
 
@@ -2626,18 +2653,10 @@ Rules:
 - no punctuation
 - must be what a human types in Google
 
-Good examples:
-best google phone 2026
-pixel vs iphone comparison
-which google pixel should i buy
-
 Output ONLY the search query
 `
           },
-          {
-            role:"user",
-            content:message
-          }
+          ...rooms[roomId].slice(-4)
         ]
       });
 
@@ -2652,6 +2671,21 @@ Output ONLY the search query
 
       const link = `https://www.google.com/search?q=${query.replace(/\s+/g,"+")}`;
 
+      ////////////////////////////////////////////////////////
+      // SAVE CLEAN MEMORY (NOT LINK)
+      ////////////////////////////////////////////////////////
+      rooms[roomId].push({
+        role:"assistant",
+        content: "search query: " + query
+      });
+
+      if(rooms[roomId].length > 20){
+        rooms[roomId] = rooms[roomId].slice(-20);
+      }
+
+      ////////////////////////////////////////////////////////
+      // SEND BACK
+      ////////////////////////////////////////////////////////
       io.to(roomId).emit("message", {
         role:"ai",
         persona:"AI search",
@@ -2662,7 +2696,7 @@ Output ONLY the search query
     }
 
     ////////////////////////////////////////////////////////
-    // 🔴 DEBATE (SIMPLE VERSION)
+    // 🔴 DEBATE MODE (WITH MEMORY)
     ////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2671,23 +2705,38 @@ Output ONLY the search query
         {
           role:"system",
           content:`
-Give 2 short different opinions.
+Continue the conversation naturally.
 
-- keep it natural
-- 2–3 sentences each
+- Give 2 short opinions
+- Respond based on previous messages
+- Keep it conversational
 `
         },
-        {
-          role:"user",
-          content:message
-        }
+        ...rooms[roomId].slice(-6)
       ]
     });
 
+    const aiText = r.choices[0].message.content;
+
+    ////////////////////////////////////////////////////////
+    // SAVE AI RESPONSE
+    ////////////////////////////////////////////////////////
+    rooms[roomId].push({
+      role:"assistant",
+      content: aiText
+    });
+
+    if(rooms[roomId].length > 20){
+      rooms[roomId] = rooms[roomId].slice(-20);
+    }
+
+    ////////////////////////////////////////////////////////
+    // SEND AI MESSAGE
+    ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"AI chat",
-      text:r.choices[0].message.content
+      text: aiText
     });
 
   });
@@ -2702,15 +2751,13 @@ Give 2 short different opinions.
 });
 
 //////////////////////////////////////////////////////////////
-// 🚀 START SERVER (ONLY THIS)
+// 🚀 START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running");
+  console.log("🔥 live chat running (final clean)");
 });
-
-
 
 
