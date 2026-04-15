@@ -19,8 +19,6 @@ function makeApplicationKey(name, question) {
 const fs = require("fs");
 const path = require("path");
 
-const fetch = require("node-fetch");
-
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
