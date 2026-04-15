@@ -2555,7 +2555,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (REGULAR AI + REAL SEARCH)
+// 🔥 REAL-TIME CHATROOM (REGULAR AI + REAL SEARCH FIXED)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2565,6 +2565,8 @@ const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: { origin: "*" }
 });
+
+const fetch = require("node-fetch");
 
 const rooms = {};
 
@@ -2644,74 +2646,97 @@ io.on("connection", (socket) => {
     ////////////////////////////////////////////////////////
     // 🔍 REAL SEARCH (BASED ON USER INPUT)
     ////////////////////////////////////////////////////////
-    let liveSignals = [];
+    let searchResults = [];
 
-    // ✅ YouTube search
+    // ✅ YouTube
     try {
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&order=relevance&maxResults=5`;
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`;
 
       const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
 
-      const ytTitles = (ytData.items || [])
-        .map(v => v.snippet?.title)
-        .filter(Boolean);
+      const ytItems = (ytData.items || []).map(v => ({
+        title: v.snippet.title,
+        link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+      }));
 
-      liveSignals.push(...ytTitles);
+      searchResults.push(...ytItems);
 
-    } catch(err) {
+    } catch(err){
       console.error("YouTube error:", err);
     }
 
-    // ✅ SERP search
+    // ✅ SERP (Google)
     try {
       const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`;
 
       const serpRes = await fetch(serpUrl);
       const serpData = await serpRes.json();
 
-      const serpTitles = (serpData.organic_results || [])
-        .slice(0,5)
-        .map(r => r.title)
-        .filter(Boolean);
+      const serpItems = (serpData.organic_results || []).slice(0,3).map(r => ({
+        title: r.title,
+        link: r.link
+      }));
 
-      liveSignals.push(...serpTitles);
+      searchResults.push(...serpItems);
 
-    } catch(err) {
+    } catch(err){
       console.error("SERP error:", err);
     }
 
-    const liveContext = liveSignals.length > 0
-      ? liveSignals.join("\n")
-      : "";
+    ////////////////////////////////////////////////////////
+    // FORMAT SEARCH CONTEXT
+    ////////////////////////////////////////////////////////
+    let searchText = "";
+
+    if(searchResults.length > 0){
+      searchText = searchResults
+        .map(r => `• ${r.title} (${r.link})`)
+        .join("\n");
+    }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI RESPONSE (NORMAL CHATGPT STYLE)
+    // 🤖 AI RESPONSE (FORCED REAL-TIME MODE)
     ////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.7,
       messages:[
+
         {
           role:"system",
           content:`
-You are a helpful, natural AI assistant.
+You are a real-time AI assistant connected to live internet data.
 
-- Answer like ChatGPT
-- Be clear and useful
-- Use real-world knowledge
-- If search results are helpful, use them
-- If not, ignore them
-- Do NOT force trends or specific topics
+Rules:
+- You ALWAYS have access to real-time search results
+- NEVER say you cannot access real-time data
+- NEVER mention training cutoff
+- NEVER mention limitations
+
+Behavior:
+- Use the provided search results if available
+- If search exists → treat it as current truth
+- Answer naturally like ChatGPT
+- Be clear, helpful, and confident
 `
         },
+
         ...rooms[roomId].slice(-6),
+
         {
-          role:"system",
-          content: liveContext
-            ? `Extra search context (optional):\n${liveContext}`
-            : ""
+          role:"user",
+          content:`
+User question:
+${message}
+
+Real-time search data:
+${searchText}
+
+Use the search data if helpful.
+`
         }
+
       ]
     });
 
@@ -2737,6 +2762,21 @@ You are a helpful, natural AI assistant.
       persona:"AI",
       text: aiText
     });
+
+    ////////////////////////////////////////////////////////
+    // 🔥 OPTIONAL: SHOW SEARCH RESULTS TO USER
+    ////////////////////////////////////////////////////////
+    if(searchResults.length > 0){
+      const links = searchResults
+        .map(r => `🔗 ${r.title}\n${r.link}`)
+        .join("\n\n");
+
+      io.to(roomId).emit("message", {
+        role:"ai",
+        persona:"Search",
+        text: links
+      });
+    }
 
   });
 
