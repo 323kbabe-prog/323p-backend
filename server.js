@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (SMART SEARCH FINAL)
+// 🔥 REAL-TIME CHATROOM (CHAT + SEARCH PREVIEW UI)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2579,7 +2579,7 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"System",
-      text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
+      text:`👥 ${count} people here`
     });
   });
 
@@ -2610,109 +2610,31 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 SMART SEARCH DETECTION (FIXED)
+    // 🔴 ALWAYS CHAT FIRST
     ////////////////////////////////////////////////////////
-    const lower = message.toLowerCase();
-
-    const isSearch =
-      lower.startsWith("search ") ||
-      lower.startsWith("find ") ||
-      lower.startsWith("look up ") ||
-      lower.startsWith("google ");
-
-    ////////////////////////////////////////////////////////
-    // 🔵 SEARCH MODE
-    ////////////////////////////////////////////////////////
-    if(isSearch){
-
-      const clean = message
-        .replace(/^(search|find|look up|google)/i,"")
-        .trim();
-
-      const r = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.2,
-        messages:[
-          {
-            role:"system",
-            content:`
-Convert into a clean Google search query.
-
-Rules:
-- 5–8 words
-- no punctuation
-- no full sentences
-- natural human search
-
-Output ONLY query
-`
-          },
-          {
-            role:"user",
-            content: clean
-          }
-        ]
-      });
-
-      let query = r.choices[0].message.content;
-
-      query = query
-        .toLowerCase()
-        .replace(/[^\w\s]/g,"")
-        .replace(/\s+/g," ")
-        .trim();
-
-      const link = `https://www.google.com/search?q=${query.replace(/\s+/g,"+")}`;
-
-      ////////////////////////////////////////////////////////
-      // SAVE CLEAN MEMORY
-      ////////////////////////////////////////////////////////
-      rooms[roomId].push({
-        role:"assistant",
-        content: "search query: " + query
-      });
-
-      if(rooms[roomId].length > 20){
-        rooms[roomId] = rooms[roomId].slice(-20);
-      }
-
-      ////////////////////////////////////////////////////////
-      // SEND BACK
-      ////////////////////////////////////////////////////////
-      io.to(roomId).emit("message", {
-        role:"ai",
-        persona:"AI search",
-        text:`→ ${link}`
-      });
-
-      return;
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🔴 NORMAL CHAT
-    ////////////////////////////////////////////////////////
-    const r = await openai.chat.completions.create({
+    const chatRes = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.8,
       messages:[
         {
           role:"system",
           content:`
-You are a conversational AI.
+You are a helpful AI in a chat + search system.
 
-- respond naturally
-- give opinions
-- continue conversation
+Rules:
+- Always respond naturally
+- If user asks for links → provide them
+- Never say you cannot provide links
+- Keep it short and useful
 
-If useful, suggest search like:
-"You can search this if you want"
+If useful, suggest search results.
 `
         },
         ...rooms[roomId].slice(-6)
       ]
     });
 
-    const aiText = r.choices[0].message.content;
+    const aiText = chatRes.choices[0].message.content;
 
     rooms[roomId].push({
       role:"assistant",
@@ -2729,17 +2651,86 @@ If useful, suggest search like:
       text: aiText
     });
 
+    ////////////////////////////////////////////////////////
+    // 🔵 SMART SEARCH PREVIEW
+    ////////////////////////////////////////////////////////
+    const detect = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0,
+      messages:[
+        {
+          role:"system",
+          content:`
+Does this message benefit from showing a Google search?
+
+Reply ONLY YES or NO
+`
+        },
+        {
+          role:"user",
+          content: message
+        }
+      ]
+    });
+
+    const shouldSearch = detect.choices[0].message.content.trim() === "YES";
+
+    if(shouldSearch){
+
+      //////////////////////////////////////////////////////
+      // 🔍 GENERATE CLEAN QUERY
+      //////////////////////////////////////////////////////
+      const r = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.2,
+        messages:[
+          {
+            role:"system",
+            content:`Convert into a clean Google search query`
+          },
+          {
+            role:"user",
+            content: message
+          }
+        ]
+      });
+
+      let query = r.choices[0].message.content;
+
+      query = query
+        .toLowerCase()
+        .replace(/[^\w\s]/g,"")
+        .replace(/\s+/g," ")
+        .trim();
+
+      const encoded = query.replace(/\s+/g,"+");
+
+      //////////////////////////////////////////////////////
+      // 🔥 PREVIEW CARD (STRUCTURED)
+      //////////////////////////////////////////////////////
+      io.to(roomId).emit("message", {
+        role:"ai",
+        persona:"AI search",
+        preview:{
+          title:"Open best result",
+          url:`https://www.google.com/search?q=${encoded}`,
+          display:query
+        }
+      });
+
+    }
+
   });
 
 });
 
 //////////////////////////////////////////////////////////////
-// 🚀 START SERVER
+// START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (smart search final)");
+  console.log("🔥 live chat running (search preview UI)");
 });
 
