@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (CHAT ONLY — NO SEARCH)
+// 🔥 REAL-TIME CHATROOM (CHAT ONLY + AI INTRO)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2568,19 +2568,55 @@ const rooms = {};
 
 io.on("connection", (socket) => {
 
+  ////////////////////////////////////////////////////////////
+  // JOIN ROOM
+  ////////////////////////////////////////////////////////////
   socket.on("joinRoom", (roomId) => {
 
     socket.join(roomId);
 
-    if(!rooms[roomId]) rooms[roomId] = [];
+    if(!rooms[roomId]){
+      rooms[roomId] = [];
+    }
 
+    ////////////////////////////////////////////////////////
+    // 🔥 AI FIRST MESSAGE (ONLY ONCE PER ROOM)
+    ////////////////////////////////////////////////////////
+    if(rooms[roomId].length === 0){
+
+      const intro = `
+Welcome to XXX.live
+
+This is a live AI chat.
+Share thoughts, explore ideas, and see different perspectives.
+
+Start typing below.
+`;
+
+      rooms[roomId].push({
+        role:"assistant",
+        content:intro
+      });
+
+      io.to(roomId).emit("message", {
+        role:"ai",
+        persona:"AI",
+        text:intro
+      });
+
+    }
+
+    ////////////////////////////////////////////////////////
+    // USER COUNT
+    ////////////////////////////////////////////////////////
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"System",
-      text:`👥 ${count} people here`
+      text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
+
   });
 
   ////////////////////////////////////////////////////////////
@@ -2605,7 +2641,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // BROADCAST USER
+    // SEND USER MESSAGE
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"user",
@@ -2613,7 +2649,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 AI CHAT (DETAILED + HELPFUL)
+    // 🔥 AI CHAT RESPONSE (DETAILED + HELPFUL)
     ////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2625,16 +2661,15 @@ io.on("connection", (socket) => {
 You are a helpful AI assistant.
 
 Rules:
-- Provide clear and useful answers
+- Provide useful, clear answers
 - Give detailed but concise information
-- Be practical and informative
-- No need to mention searching or links
-- Focus on helping the user directly
+- Be practical and easy to understand
+- Keep a natural conversation tone
 
 Style:
-- natural conversation
 - structured when useful
-- easy to read
+- friendly but not overly casual
+- focused on helping
 `
         },
         ...rooms[roomId].slice(-6)
@@ -2644,7 +2679,7 @@ Style:
     const aiText = r.choices[0].message.content;
 
     ////////////////////////////////////////////////////////
-    // SAVE AI
+    // SAVE AI MESSAGE
     ////////////////////////////////////////////////////////
     rooms[roomId].push({
       role:"assistant",
@@ -2656,7 +2691,7 @@ Style:
     }
 
     ////////////////////////////////////////////////////////
-    // SEND AI
+    // SEND AI MESSAGE
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
@@ -2666,15 +2701,22 @@ Style:
 
   });
 
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
+  socket.on("disconnect", () => {
+    console.log("🔴 disconnected:", socket.id);
+  });
+
 });
 
 //////////////////////////////////////////////////////////////
-// START SERVER
+// 🚀 START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (chat only)");
+  console.log("🔥 live chat running (chat only + intro)");
 });
 
