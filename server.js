@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (CHAT + SEARCH PREVIEW UI)
+// 🔥 REAL-TIME CHATROOM (CHAT ONLY — NO SEARCH)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2604,38 +2604,48 @@ io.on("connection", (socket) => {
       rooms[roomId] = rooms[roomId].slice(-20);
     }
 
+    ////////////////////////////////////////////////////////
+    // BROADCAST USER
+    ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"user",
       text: message
     });
 
     ////////////////////////////////////////////////////////
-    // 🔴 ALWAYS CHAT FIRST
+    // 🔥 AI CHAT (DETAILED + HELPFUL)
     ////////////////////////////////////////////////////////
-    const chatRes = await openai.chat.completions.create({
+    const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
-      temperature:0.8,
+      temperature:0.7,
       messages:[
         {
           role:"system",
           content:`
-You are a helpful AI in a chat + search system.
+You are a helpful AI assistant.
 
 Rules:
-- Always respond naturally
-- If user asks for links → provide them
-- Never say you cannot provide links
-- Keep it short and useful
+- Provide clear and useful answers
+- Give detailed but concise information
+- Be practical and informative
+- No need to mention searching or links
+- Focus on helping the user directly
 
-If useful, suggest search results.
+Style:
+- natural conversation
+- structured when useful
+- easy to read
 `
         },
         ...rooms[roomId].slice(-6)
       ]
     });
 
-    const aiText = chatRes.choices[0].message.content;
+    const aiText = r.choices[0].message.content;
 
+    ////////////////////////////////////////////////////////
+    // SAVE AI
+    ////////////////////////////////////////////////////////
     rooms[roomId].push({
       role:"assistant",
       content: aiText
@@ -2645,80 +2655,14 @@ If useful, suggest search results.
       rooms[roomId] = rooms[roomId].slice(-20);
     }
 
+    ////////////////////////////////////////////////////////
+    // SEND AI
+    ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"AI chat",
       text: aiText
     });
-
-    ////////////////////////////////////////////////////////
-    // 🔵 SMART SEARCH PREVIEW
-    ////////////////////////////////////////////////////////
-    const detect = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0,
-      messages:[
-        {
-          role:"system",
-          content:`
-Does this message benefit from showing a Google search?
-
-Reply ONLY YES or NO
-`
-        },
-        {
-          role:"user",
-          content: message
-        }
-      ]
-    });
-
-    const shouldSearch = detect.choices[0].message.content.trim() === "YES";
-
-    if(shouldSearch){
-
-      //////////////////////////////////////////////////////
-      // 🔍 GENERATE CLEAN QUERY
-      //////////////////////////////////////////////////////
-      const r = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.2,
-        messages:[
-          {
-            role:"system",
-            content:`Convert into a clean Google search query`
-          },
-          {
-            role:"user",
-            content: message
-          }
-        ]
-      });
-
-      let query = r.choices[0].message.content;
-
-      query = query
-        .toLowerCase()
-        .replace(/[^\w\s]/g,"")
-        .replace(/\s+/g," ")
-        .trim();
-
-      const encoded = query.replace(/\s+/g,"+");
-
-      //////////////////////////////////////////////////////
-      // 🔥 PREVIEW CARD (STRUCTURED)
-      //////////////////////////////////////////////////////
-      io.to(roomId).emit("message", {
-        role:"ai",
-        persona:"AI search",
-        preview:{
-          title:"Open best result",
-          url:`https://www.google.com/search?q=${encoded}`,
-          display:query
-        }
-      });
-
-    }
 
   });
 
@@ -2731,6 +2675,6 @@ Reply ONLY YES or NO
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (search preview UI)");
+  console.log("🔥 live chat running (chat only)");
 });
 
