@@ -3,6 +3,7 @@
 // Process over outcome · No advice · No conclusions
 //////////////////////////////////////////////////////////////
 
+const fetch = require("node-fetch");
 const crypto = require("crypto");
 
 // TEMP in-memory store (fine for MVP)
@@ -2553,78 +2554,18 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (AI INTRO FIXED)
+// 🔥 REAL-TIME CHATROOM
 //////////////////////////////////////////////////////////////
-
-const http = require("http");
-const server = http.createServer(app);
-
-const { Server } = require("socket.io");
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
-
-const rooms = {};
 
 io.on("connection", (socket) => {
 
-  ////////////////////////////////////////////////////////////
-  // JOIN ROOM
-  ////////////////////////////////////////////////////////////
-  socket.on("joinRoom", (roomId) => {
-
-    socket.join(roomId);
-
-    if(!rooms[roomId]){
-      rooms[roomId] = [];
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🔥 ALWAYS SEND INTRO TO THIS USER (NO FAIL)
-    ////////////////////////////////////////////////////////
-    const intro = `Welcome to XXX.live`;
-
-    socket.emit("message", {
-      role:"ai",
-      persona:"AI",
-      text:intro
-    });
-
-    ////////////////////////////////////////////////////////
-    // SAVE INTRO ONLY ONCE (FOR MEMORY CONTEXT)
-    ////////////////////////////////////////////////////////
-    if(rooms[roomId].length === 0){
-      rooms[roomId].push({
-        role:"assistant",
-        content:intro
-      });
-    }
-
-    ////////////////////////////////////////////////////////
-    // USER COUNT (OPTIONAL)
-    ////////////////////////////////////////////////////////
-    const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-
-    io.to(roomId).emit("message", {
-      role:"ai",
-      persona:"System",
-      text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
-    });
-
-  });
-
-  ////////////////////////////////////////////////////////////
-  // SEND MESSAGE
-  ////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if(!message) return;
 
     if(!rooms[roomId]) rooms[roomId] = [];
 
-    ////////////////////////////////////////////////////////
-    // SAVE USER MESSAGE
-    ////////////////////////////////////////////////////////
+    // SAVE USER
     rooms[roomId].push({
       role:"user",
       content: message
@@ -2634,16 +2575,53 @@ io.on("connection", (socket) => {
       rooms[roomId] = rooms[roomId].slice(-20);
     }
 
-    ////////////////////////////////////////////////////////
-    // SEND USER MESSAGE
-    ////////////////////////////////////////////////////////
+    // SEND USER
     io.to(roomId).emit("message", {
       role:"user",
       text: message
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 AI RESPONSE
+    // 🔥 LIVE SIGNALS
+    ////////////////////////////////////////////////////////
+    let liveSignals = [];
+
+    try {
+      const ytRes = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&part=snippet&order=date&maxResults=8&type=video`);
+      const ytData = await ytRes.json();
+
+      liveSignals.push(
+        ...(ytData.items || []).map(v => v.snippet.title)
+      );
+
+    } catch(e){
+      console.error("YT error", e);
+    }
+
+    try {
+      const serpRes = await fetch(`https://serpapi.com/search.json?q=coachella&api_key=${process.env.SERP_KEY}`);
+      const serpData = await serpRes.json();
+
+      liveSignals.push(
+        ...(serpData.organic_results || []).slice(0,5).map(r => r.title)
+      );
+
+    } catch(e){
+      console.error("SERP error", e);
+    }
+
+    ////////////////////////////////////////////////////////
+    // CLEAN SIGNALS
+    ////////////////////////////////////////////////////////
+    liveSignals = [...new Set(liveSignals)]
+      .map(t => t.toLowerCase().replace(/[^\w\s]/g,""))
+      .filter(t => t.length > 15)
+      .slice(0,10);
+
+    const liveContext = liveSignals.join("\n");
+
+    ////////////////////////////////////////////////////////
+    // AI RESPONSE
     ////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2652,47 +2630,39 @@ io.on("connection", (socket) => {
         {
           role:"system",
           content:`
-You are a helpful AI assistant.
+You are Cidi — a real-time internet signal interpreter.
 
-- Give clear and useful answers
-- Keep responses concise but informative
-- Be natural and conversational
+Speak as if events are happening now.
+Never say you lack real-time access.
+Use signals to identify patterns.
+Be sharp and specific.
 `
         },
-        ...rooms[roomId].slice(-6)
+
+        ...rooms[roomId].slice(-6),
+
+        {
+          role:"user",
+          content:`LIVE SIGNALS:\n${liveContext}`
+        }
       ]
     });
 
     const aiText = r.choices[0].message.content;
 
-    ////////////////////////////////////////////////////////
     // SAVE AI
-    ////////////////////////////////////////////////////////
     rooms[roomId].push({
       role:"assistant",
       content: aiText
     });
 
-    if(rooms[roomId].length > 20){
-      rooms[roomId] = rooms[roomId].slice(-20);
-    }
-
-    ////////////////////////////////////////////////////////
     // SEND AI
-    ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
-      persona:"AI chat",
+      persona:"Cidi",
       text: aiText
     });
 
-  });
-
-  ////////////////////////////////////////////////////////////
-  // DISCONNECT
-  ////////////////////////////////////////////////////////////
-  socket.on("disconnect", () => {
-    console.log("🔴 disconnected:", socket.id);
   });
 
 });
