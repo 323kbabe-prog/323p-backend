@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL CLEAN VERSION)
+// 🔥 REAL-TIME CHATROOM (SMART SEARCH FINAL)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2564,23 +2564,15 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-// 🔥 MEMORY STORE (per room)
 const rooms = {};
 
 io.on("connection", (socket) => {
 
-  console.log("🟢 connected:", socket.id);
-
-  ////////////////////////////////////////////////////////////
-  // JOIN ROOM
-  ////////////////////////////////////////////////////////////
   socket.on("joinRoom", (roomId) => {
 
     socket.join(roomId);
 
-    if(!rooms[roomId]){
-      rooms[roomId] = [];
-    }
+    if(!rooms[roomId]) rooms[roomId] = [];
 
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
@@ -2598,12 +2590,7 @@ io.on("connection", (socket) => {
 
     if(!message) return;
 
-    ////////////////////////////////////////////////////////
-    // INIT ROOM
-    ////////////////////////////////////////////////////////
-    if(!rooms[roomId]){
-      rooms[roomId] = [];
-    }
+    if(!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
     // SAVE USER MESSAGE
@@ -2613,28 +2600,34 @@ io.on("connection", (socket) => {
       content: message
     });
 
-    // 🔥 LIMIT MEMORY
     if(rooms[roomId].length > 20){
       rooms[roomId] = rooms[roomId].slice(-20);
     }
 
-    ////////////////////////////////////////////////////////
-    // BROADCAST USER MESSAGE
-    ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"user",
       text: message
     });
 
     ////////////////////////////////////////////////////////
-    // AUTO MODE
+    // 🔥 SMART SEARCH DETECTION (FIXED)
     ////////////////////////////////////////////////////////
-    let isSearch = message.length < 20;
+    const lower = message.toLowerCase();
+
+    const isSearch =
+      lower.startsWith("search ") ||
+      lower.startsWith("find ") ||
+      lower.startsWith("look up ") ||
+      lower.startsWith("google ");
 
     ////////////////////////////////////////////////////////
     // 🔵 SEARCH MODE
     ////////////////////////////////////////////////////////
     if(isSearch){
+
+      const clean = message
+        .replace(/^(search|find|look up|google)/i,"")
+        .trim();
 
       const r = await openai.chat.completions.create({
         model:"gpt-4o-mini",
@@ -2643,26 +2636,26 @@ io.on("connection", (socket) => {
           {
             role:"system",
             content:`
-Convert the user message into a real Google search query.
+Convert into a clean Google search query.
 
 Rules:
 - 5–8 words
-- no questions
-- no full sentences
-- no "you", "what", "should"
 - no punctuation
-- must be what a human types in Google
+- no full sentences
+- natural human search
 
-Output ONLY the search query
+Output ONLY query
 `
           },
-          ...rooms[roomId].slice(-4)
+          {
+            role:"user",
+            content: clean
+          }
         ]
       });
 
       let query = r.choices[0].message.content;
 
-      // 🔥 CLEAN QUERY
       query = query
         .toLowerCase()
         .replace(/[^\w\s]/g,"")
@@ -2672,7 +2665,7 @@ Output ONLY the search query
       const link = `https://www.google.com/search?q=${query.replace(/\s+/g,"+")}`;
 
       ////////////////////////////////////////////////////////
-      // SAVE CLEAN MEMORY (NOT LINK)
+      // SAVE CLEAN MEMORY
       ////////////////////////////////////////////////////////
       rooms[roomId].push({
         role:"assistant",
@@ -2696,7 +2689,7 @@ Output ONLY the search query
     }
 
     ////////////////////////////////////////////////////////
-    // 🔴 DEBATE MODE (WITH MEMORY)
+    // 🔴 NORMAL CHAT
     ////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2705,11 +2698,14 @@ Output ONLY the search query
         {
           role:"system",
           content:`
-Continue the conversation naturally.
+You are a conversational AI.
 
-- Give 2 short opinions
-- Respond based on previous messages
-- Keep it conversational
+- respond naturally
+- give opinions
+- continue conversation
+
+If useful, suggest search like:
+"You can search this if you want"
 `
         },
         ...rooms[roomId].slice(-6)
@@ -2718,9 +2714,6 @@ Continue the conversation naturally.
 
     const aiText = r.choices[0].message.content;
 
-    ////////////////////////////////////////////////////////
-    // SAVE AI RESPONSE
-    ////////////////////////////////////////////////////////
     rooms[roomId].push({
       role:"assistant",
       content: aiText
@@ -2730,22 +2723,12 @@ Continue the conversation naturally.
       rooms[roomId] = rooms[roomId].slice(-20);
     }
 
-    ////////////////////////////////////////////////////////
-    // SEND AI MESSAGE
-    ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"AI chat",
       text: aiText
     });
 
-  });
-
-  ////////////////////////////////////////////////////////////
-  // DISCONNECT
-  ////////////////////////////////////////////////////////////
-  socket.on("disconnect", () => {
-    console.log("🔴 disconnected:", socket.id);
   });
 
 });
@@ -2757,7 +2740,6 @@ Continue the conversation naturally.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (final clean)");
+  console.log("🔥 live chat running (smart search final)");
 });
-
 
