@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (MINIMAL VERSION)
+// 🔥 REAL-TIME CHATROOM (FINAL VERSION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2572,6 +2572,7 @@ io.on("connection", (socket) => {
   // JOIN ROOM
   ////////////////////////////////////////////////////////////
   socket.on("joinRoom", (roomId) => {
+
     socket.join(roomId);
 
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
@@ -2579,7 +2580,7 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"System",
-      text:`👥 ${count} people here`
+      text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
   });
 
@@ -2590,36 +2591,66 @@ io.on("connection", (socket) => {
 
     if(!message) return;
 
-    // 🔥 user message
+    ////////////////////////////////////////////////////////
+    // 🔥 USER MESSAGE
+    ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"user",
       text: message
     });
 
     ////////////////////////////////////////////////////////
-    // AUTO MODE
+    // 🔥 AUTO MODE
     ////////////////////////////////////////////////////////
     let isSearch = message.length < 20;
 
     ////////////////////////////////////////////////////////
-    // 🔵 SEARCH
+    // 🔵 SEARCH (FIXED)
     ////////////////////////////////////////////////////////
     if(isSearch){
 
       const r = await openai.chat.completions.create({
         model:"gpt-4o-mini",
+        temperature:0.2,
         messages:[
-          {role:"system", content:"google search query only"},
-          {role:"user", content:message}
+          {
+            role:"system",
+            content:`
+Convert the user message into a real Google search query.
+
+Rules:
+- 5–8 words
+- no questions
+- no full sentences
+- no "you", "what", "should"
+- no punctuation
+- must be what a human types in Google
+
+Good examples:
+best google phone 2026
+pixel vs iphone comparison
+which google pixel should i buy
+
+Output ONLY the search query
+`
+          },
+          {
+            role:"user",
+            content:message
+          }
         ]
       });
 
-      const query = r.choices[0].message.content
-        .replace(/[^\w\s]/g,"")
-        .trim()
-        .replace(/\s+/g,"+");
+      let query = r.choices[0].message.content;
 
-      const link = `https://www.google.com/search?q=${query}`;
+      // 🔥 CLEAN QUERY
+      query = query
+        .toLowerCase()
+        .replace(/[^\w\s]/g,"")
+        .replace(/\s+/g," ")
+        .trim();
+
+      const link = `https://www.google.com/search?q=${query.replace(/\s+/g,"+")}`;
 
       io.to(roomId).emit("message", {
         role:"ai",
@@ -2631,7 +2662,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🔴 DEBATE (SUPER SIMPLE)
+    // 🔴 DEBATE (SIMPLE VERSION)
     ////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2639,7 +2670,12 @@ io.on("connection", (socket) => {
       messages:[
         {
           role:"system",
-          content:"2 short different opinions"
+          content:`
+Give 2 short different opinions.
+
+- keep it natural
+- 2–3 sentences each
+`
         },
         {
           role:"user",
@@ -2656,10 +2692,17 @@ io.on("connection", (socket) => {
 
   });
 
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
+  socket.on("disconnect", () => {
+    console.log("🔴 disconnected:", socket.id);
+  });
+
 });
 
 //////////////////////////////////////////////////////////////
-// START SERVER
+// 🚀 START SERVER (ONLY THIS)
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
@@ -2667,6 +2710,7 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("🔥 live chat running");
 });
+
 
 
 
