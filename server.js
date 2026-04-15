@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (CHAT ONLY + AI INTRO)
+// 🔥 REAL-TIME CHATROOM (AI INTRO FIXED)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2580,34 +2580,28 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🔥 AI FIRST MESSAGE (ONLY ONCE PER ROOM)
+    // 🔥 ALWAYS SEND INTRO TO THIS USER (NO FAIL)
+    ////////////////////////////////////////////////////////
+    const intro = `Welcome to XXX.live`;
+
+    socket.emit("message", {
+      role:"ai",
+      persona:"AI",
+      text:intro
+    });
+
+    ////////////////////////////////////////////////////////
+    // SAVE INTRO ONLY ONCE (FOR MEMORY CONTEXT)
     ////////////////////////////////////////////////////////
     if(rooms[roomId].length === 0){
-
-      const intro = `
-Welcome to XXX.live
-
-This is a live AI chat.
-Share thoughts, explore ideas, and see different perspectives.
-
-Start typing below.
-`;
-
       rooms[roomId].push({
         role:"assistant",
         content:intro
       });
-
-      io.to(roomId).emit("message", {
-        role:"ai",
-        persona:"AI",
-        text:intro
-      });
-
     }
 
     ////////////////////////////////////////////////////////
-    // USER COUNT
+    // USER COUNT (OPTIONAL)
     ////////////////////////////////////////////////////////
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
@@ -2649,7 +2643,7 @@ Start typing below.
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 AI CHAT RESPONSE (DETAILED + HELPFUL)
+    // 🔥 AI RESPONSE
     ////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2660,16 +2654,9 @@ Start typing below.
           content:`
 You are a helpful AI assistant.
 
-Rules:
-- Provide useful, clear answers
-- Give detailed but concise information
-- Be practical and easy to understand
-- Keep a natural conversation tone
-
-Style:
-- structured when useful
-- friendly but not overly casual
-- focused on helping
+- Give clear and useful answers
+- Keep responses concise but informative
+- Be natural and conversational
 `
         },
         ...rooms[roomId].slice(-6)
@@ -2679,7 +2666,7 @@ Style:
     const aiText = r.choices[0].message.content;
 
     ////////////////////////////////////////////////////////
-    // SAVE AI MESSAGE
+    // SAVE AI
     ////////////////////////////////////////////////////////
     rooms[roomId].push({
       role:"assistant",
@@ -2691,7 +2678,7 @@ Style:
     }
 
     ////////////////////////////////////////////////////////
-    // SEND AI MESSAGE
+    // SEND AI
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
@@ -2717,6 +2704,6 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (chat only + intro)");
+  console.log("🔥 live chat running (AI intro fixed)");
 });
 
