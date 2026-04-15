@@ -19,6 +19,8 @@ function makeApplicationKey(name, question) {
 const fs = require("fs");
 const path = require("path");
 
+const fetch = require("node-fetch");
+
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
@@ -2616,77 +2618,128 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   // SEND MESSAGE
   ////////////////////////////////////////////////////////////
-  socket.on("sendMessage", async ({ roomId, message }) => {
+ socket.on("sendMessage", async ({ roomId, message }) => {
 
-    if(!message) return;
+  if(!message) return;
 
-    if(!rooms[roomId]) rooms[roomId] = [];
+  if(!rooms[roomId]) rooms[roomId] = [];
 
-    ////////////////////////////////////////////////////////
-    // SAVE USER MESSAGE
-    ////////////////////////////////////////////////////////
-    rooms[roomId].push({
-      role:"user",
-      content: message
-    });
+  ////////////////////////////////////////////////////////
+  // SAVE USER MESSAGE
+  ////////////////////////////////////////////////////////
+  rooms[roomId].push({
+    role:"user",
+    content: message
+  });
 
-    if(rooms[roomId].length > 20){
-      rooms[roomId] = rooms[roomId].slice(-20);
-    }
+  if(rooms[roomId].length > 20){
+    rooms[roomId] = rooms[roomId].slice(-20);
+  }
 
-    ////////////////////////////////////////////////////////
-    // SEND USER MESSAGE
-    ////////////////////////////////////////////////////////
-    io.to(roomId).emit("message", {
-      role:"user",
-      text: message
-    });
+  ////////////////////////////////////////////////////////
+  // SEND USER MESSAGE
+  ////////////////////////////////////////////////////////
+  io.to(roomId).emit("message", {
+    role:"user",
+    text: message
+  });
 
-    ////////////////////////////////////////////////////////
-    // 🔥 AI RESPONSE
-    ////////////////////////////////////////////////////////
-    const r = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.7,
-      messages:[
-        {
-          role:"system",
-          content:`
+  ////////////////////////////////////////////////////////
+  // SIMPLE LIVE DATA
+  ////////////////////////////////////////////////////////
+  let liveSignals = [];
+
+  // YouTube
+  try {
+    const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&order=date&maxResults=5`;
+    const ytRes = await fetch(ytUrl);
+    const ytData = await ytRes.json();
+
+    const ytTitles = (ytData.items || [])
+      .map(v => v.snippet?.title)
+      .filter(Boolean);
+
+    liveSignals.push(...ytTitles);
+
+  } catch(err) {
+    console.error("YouTube fetch error:", err);
+  }
+
+  // SERP
+  try {
+    const serpUrl = `https://serpapi.com/search.json?q=coachella&api_key=${process.env.SERP_KEY}`;
+    const serpRes = await fetch(serpUrl);
+    const serpData = await serpRes.json();
+
+    const serpTitles = (serpData.organic_results || [])
+      .slice(0, 5)
+      .map(r => r.title)
+      .filter(Boolean);
+
+    liveSignals.push(...serpTitles);
+
+  } catch(err) {
+    console.error("SERP fetch error:", err);
+  }
+
+  const liveContext = liveSignals.length > 0
+    ? liveSignals.join("\n")
+    : "No live signals available.";
+
+  ////////////////////////////////////////////////////////
+  // AI RESPONSE WITH LIVE DATA
+  ////////////////////////////////////////////////////////
+  const r = await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    temperature:0.7,
+    messages:[
+      {
+        role:"system",
+        content:`
 You are a helpful AI assistant.
 
-- Give clear and useful answers
-- Keep responses concise but informative
-- Be natural and conversational
+Use the provided live internet signals when relevant.
+Do not say you cannot access real-time information.
+Be natural, clear, and concise.
 `
-        },
-        ...rooms[roomId].slice(-6)
-      ]
-    });
+      },
+      ...rooms[roomId].slice(-6),
+      {
+        role:"user",
+        content:`
+LIVE SIGNALS:
+${liveContext}
 
-    const aiText = r.choices[0].message.content;
-
-    ////////////////////////////////////////////////////////
-    // SAVE AI
-    ////////////////////////////////////////////////////////
-    rooms[roomId].push({
-      role:"assistant",
-      content: aiText
-    });
-
-    if(rooms[roomId].length > 20){
-      rooms[roomId] = rooms[roomId].slice(-20);
-    }
-
-    ////////////////////////////////////////////////////////
-    // SEND AI
-    ////////////////////////////////////////////////////////
-    io.to(roomId).emit("message", {
-      role:"ai",
-      persona:"AI chat",
-      text: aiText
-    });
-
+Use these live signals if they help answer the user's latest message.
+`
+      }
+    ]
   });
+
+  const aiText = r.choices[0].message.content;
+
+  ////////////////////////////////////////////////////////
+  // SAVE AI
+  ////////////////////////////////////////////////////////
+  rooms[roomId].push({
+    role:"assistant",
+    content: aiText
+  });
+
+  if(rooms[roomId].length > 20){
+    rooms[roomId] = rooms[roomId].slice(-20);
+  }
+
+  ////////////////////////////////////////////////////////
+  // SEND AI
+  ////////////////////////////////////////////////////////
+  io.to(roomId).emit("message", {
+    role:"ai",
+    persona:"AI chat",
+    text: aiText
+  });
+
+});
 
   ////////////////////////////////////////////////////////////
   // DISCONNECT
