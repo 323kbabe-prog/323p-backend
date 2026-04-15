@@ -2555,7 +2555,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (AI INTRO FIXED)
+// 🔥 REAL-TIME CHATROOM (REGULAR AI + REAL SEARCH)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2582,7 +2582,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🔥 ALWAYS SEND INTRO TO THIS USER (NO FAIL)
+    // INTRO MESSAGE
     ////////////////////////////////////////////////////////
     const intro = `Welcome to XXX.live`;
 
@@ -2592,9 +2592,6 @@ io.on("connection", (socket) => {
       text:intro
     });
 
-    ////////////////////////////////////////////////////////
-    // SAVE INTRO ONLY ONCE (FOR MEMORY CONTEXT)
-    ////////////////////////////////////////////////////////
     if(rooms[roomId].length === 0){
       rooms[roomId].push({
         role:"assistant",
@@ -2603,7 +2600,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // USER COUNT (OPTIONAL)
+    // USER COUNT
     ////////////////////////////////////////////////////////
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
@@ -2618,128 +2615,130 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   // SEND MESSAGE
   ////////////////////////////////////////////////////////////
- socket.on("sendMessage", async ({ roomId, message }) => {
+  socket.on("sendMessage", async ({ roomId, message }) => {
 
-  if(!message) return;
+    if(!message) return;
 
-  if(!rooms[roomId]) rooms[roomId] = [];
+    if(!rooms[roomId]) rooms[roomId] = [];
 
-  ////////////////////////////////////////////////////////
-  // SAVE USER MESSAGE
-  ////////////////////////////////////////////////////////
-  rooms[roomId].push({
-    role:"user",
-    content: message
-  });
+    ////////////////////////////////////////////////////////
+    // SAVE USER MESSAGE
+    ////////////////////////////////////////////////////////
+    rooms[roomId].push({
+      role:"user",
+      content: message
+    });
 
-  if(rooms[roomId].length > 20){
-    rooms[roomId] = rooms[roomId].slice(-20);
-  }
+    if(rooms[roomId].length > 20){
+      rooms[roomId] = rooms[roomId].slice(-20);
+    }
 
-  ////////////////////////////////////////////////////////
-  // SEND USER MESSAGE
-  ////////////////////////////////////////////////////////
-  io.to(roomId).emit("message", {
-    role:"user",
-    text: message
-  });
+    ////////////////////////////////////////////////////////
+    // SEND USER MESSAGE
+    ////////////////////////////////////////////////////////
+    io.to(roomId).emit("message", {
+      role:"user",
+      text: message
+    });
 
-  ////////////////////////////////////////////////////////
-  // SIMPLE LIVE DATA
-  ////////////////////////////////////////////////////////
-  let liveSignals = [];
+    ////////////////////////////////////////////////////////
+    // 🔍 REAL SEARCH (BASED ON USER INPUT)
+    ////////////////////////////////////////////////////////
+    let liveSignals = [];
 
-  // YouTube
-  try {
-    const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella&type=video&part=snippet&order=date&maxResults=5`;
-    const ytRes = await fetch(ytUrl);
-    const ytData = await ytRes.json();
+    // ✅ YouTube search
+    try {
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&order=relevance&maxResults=5`;
 
-    const ytTitles = (ytData.items || [])
-      .map(v => v.snippet?.title)
-      .filter(Boolean);
+      const ytRes = await fetch(ytUrl);
+      const ytData = await ytRes.json();
 
-    liveSignals.push(...ytTitles);
+      const ytTitles = (ytData.items || [])
+        .map(v => v.snippet?.title)
+        .filter(Boolean);
 
-  } catch(err) {
-    console.error("YouTube fetch error:", err);
-  }
+      liveSignals.push(...ytTitles);
 
-  // SERP
-  try {
-    const serpUrl = `https://serpapi.com/search.json?q=coachella&api_key=${process.env.SERP_KEY}`;
-    const serpRes = await fetch(serpUrl);
-    const serpData = await serpRes.json();
+    } catch(err) {
+      console.error("YouTube error:", err);
+    }
 
-    const serpTitles = (serpData.organic_results || [])
-      .slice(0, 5)
-      .map(r => r.title)
-      .filter(Boolean);
+    // ✅ SERP search
+    try {
+      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`;
 
-    liveSignals.push(...serpTitles);
+      const serpRes = await fetch(serpUrl);
+      const serpData = await serpRes.json();
 
-  } catch(err) {
-    console.error("SERP fetch error:", err);
-  }
+      const serpTitles = (serpData.organic_results || [])
+        .slice(0,5)
+        .map(r => r.title)
+        .filter(Boolean);
 
-  const liveContext = liveSignals.length > 0
-    ? liveSignals.join("\n")
-    : "No live signals available.";
+      liveSignals.push(...serpTitles);
 
-  ////////////////////////////////////////////////////////
-  // AI RESPONSE WITH LIVE DATA
-  ////////////////////////////////////////////////////////
-  const r = await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    temperature:0.7,
-    messages:[
-      {
-        role:"system",
-        content:`
-You are a helpful AI assistant.
+    } catch(err) {
+      console.error("SERP error:", err);
+    }
 
-Use the provided live internet signals when relevant.
-Do not say you cannot access real-time information.
-Be natural, clear, and concise.
+    const liveContext = liveSignals.length > 0
+      ? liveSignals.join("\n")
+      : "";
+
+    ////////////////////////////////////////////////////////
+    // 🤖 AI RESPONSE (NORMAL CHATGPT STYLE)
+    ////////////////////////////////////////////////////////
+    const r = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.7,
+      messages:[
+        {
+          role:"system",
+          content:`
+You are a helpful, natural AI assistant.
+
+- Answer like ChatGPT
+- Be clear and useful
+- Use real-world knowledge
+- If search results are helpful, use them
+- If not, ignore them
+- Do NOT force trends or specific topics
 `
-      },
-      ...rooms[roomId].slice(-6),
-      {
-        role:"user",
-        content:`
-LIVE SIGNALS:
-${liveContext}
+        },
+        ...rooms[roomId].slice(-6),
+        {
+          role:"system",
+          content: liveContext
+            ? `Extra search context (optional):\n${liveContext}`
+            : ""
+        }
+      ]
+    });
 
-Use these live signals if they help answer the user's latest message.
-`
-      }
-    ]
+    const aiText = r.choices[0].message.content;
+
+    ////////////////////////////////////////////////////////
+    // SAVE AI MESSAGE
+    ////////////////////////////////////////////////////////
+    rooms[roomId].push({
+      role:"assistant",
+      content: aiText
+    });
+
+    if(rooms[roomId].length > 20){
+      rooms[roomId] = rooms[roomId].slice(-20);
+    }
+
+    ////////////////////////////////////////////////////////
+    // SEND AI MESSAGE
+    ////////////////////////////////////////////////////////
+    io.to(roomId).emit("message", {
+      role:"ai",
+      persona:"AI",
+      text: aiText
+    });
+
   });
-
-  const aiText = r.choices[0].message.content;
-
-  ////////////////////////////////////////////////////////
-  // SAVE AI
-  ////////////////////////////////////////////////////////
-  rooms[roomId].push({
-    role:"assistant",
-    content: aiText
-  });
-
-  if(rooms[roomId].length > 20){
-    rooms[roomId] = rooms[roomId].slice(-20);
-  }
-
-  ////////////////////////////////////////////////////////
-  // SEND AI
-  ////////////////////////////////////////////////////////
-  io.to(roomId).emit("message", {
-    role:"ai",
-    persona:"AI chat",
-    text: aiText
-  });
-
-});
 
   ////////////////////////////////////////////////////////////
   // DISCONNECT
