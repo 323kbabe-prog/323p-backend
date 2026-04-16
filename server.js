@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (SEARCH + UI FORMAT FIXED)
+// 🔥 REAL-TIME CHATROOM (SEARCH + AUTO FIRST RESULT)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2579,6 +2579,9 @@ io.on("connection", (socket) => {
       rooms[roomId] = [];
     }
 
+    ////////////////////////////////////////////////////////
+    // INTRO
+    ////////////////////////////////////////////////////////
     const intro = `Welcome to XXX.live`;
 
     socket.emit("message", {
@@ -2594,6 +2597,9 @@ io.on("connection", (socket) => {
       });
     }
 
+    ////////////////////////////////////////////////////////
+    // USER COUNT
+    ////////////////////////////////////////////////////////
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
     io.to(roomId).emit("message", {
@@ -2601,6 +2607,92 @@ io.on("connection", (socket) => {
       persona:"System",
       text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
+
+    ////////////////////////////////////////////////////////
+    // 🔥 AUTO FIRST RESULT (ONLY NEW ADD)
+    ////////////////////////////////////////////////////////
+    setTimeout(async () => {
+
+      try {
+
+        //////////////////////////////////////////////////////
+        // 🔍 YOUTUBE (Coachella signal)
+        //////////////////////////////////////////////////////
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3`;
+
+        const ytRes = await fetch(ytUrl);
+        const ytData = await ytRes.json();
+
+        const ytResults = (ytData.items || []).map(v => ({
+          title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
+          link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+        }));
+
+        //////////////////////////////////////////////////////
+        // 🎥 SEND YOUTUBE (same format)
+        //////////////////////////////////////////////////////
+        if(ytResults.length > 0){
+
+          const ytText = ytResults.map(r =>
+            `YT|${r.title}|${r.link}`
+          ).join("\n");
+
+          io.to(roomId).emit("message", {
+            role:"ai",
+            persona:"YouTube",
+            text: ytText
+          });
+        }
+
+        //////////////////////////////////////////////////////
+        // 🤖 AI SUMMARY (signal-based)
+        //////////////////////////////////////////////////////
+        const context = ytResults.map(r => r.title).join("\n");
+
+        const r = await openai.chat.completions.create({
+          model:"gpt-4o-mini",
+          temperature:0.7,
+          messages:[
+            {
+              role:"system",
+              content:`
+You analyze live Coachella influencer content.
+
+Rules:
+- Use ONLY the signals provided
+- Detect what creators are doing right now
+- Keep it short (max 4 lines)
+- Be specific (shot, moment, vibe)
+`
+            },
+            {
+              role:"user",
+              content:`
+Signals:
+${context}
+
+What patterns are happening right now?
+`
+            }
+          ]
+        });
+
+        const aiText = r.choices[0].message.content;
+
+        //////////////////////////////////////////////////////
+        // SEND AI SUMMARY (same UI)
+        //////////////////////////////////////////////////////
+        io.to(roomId).emit("message", {
+          role:"ai",
+          persona:"AI summary",
+          text: aiText
+        });
+
+      } catch(err){
+        console.log("auto init error:", err);
+      }
+
+    }, 500);
 
   });
 
@@ -2626,7 +2718,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // SEND USER MESSAGE
+    // SEND USER
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"user",
@@ -2645,7 +2737,7 @@ io.on("connection", (socket) => {
       const ytData = await ytRes.json();
 
       ytResults = (ytData.items || []).map(v => ({
-        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''), // clean title
+        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
         link: `https://www.youtube.com/watch?v=${v.id.videoId}`
       }));
 
@@ -2654,7 +2746,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🎥 SEND YOUTUBE (🔥 FIXED FORMAT)
+    // 🎥 SEND YOUTUBE
     ////////////////////////////////////////////////////////
     if(ytResults.length > 0){
 
@@ -2670,7 +2762,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 GOOGLE (SERP)
+    // 🔍 SERP
     ////////////////////////////////////////////////////////
     let webResults = [];
 
@@ -2733,7 +2825,7 @@ Give a helpful short answer.
     const aiText = r.choices[0].message.content;
 
     ////////////////////////////////////////////////////////
-    // SEND AI SUMMARY
+    // SEND AI
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
@@ -2742,6 +2834,15 @@ Give a helpful short answer.
     });
 
   });
+
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
+  socket.on("disconnect", () => {
+    console.log("🔴 disconnected:", socket.id);
+  });
+
+});
 
   ////////////////////////////////////////////////////////////
   // DISCONNECT
