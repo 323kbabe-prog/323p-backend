@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — STABLE 3 VIDEO VERSION)
+// 🔥 REAL-TIME CHATROOM (FINAL — TRUE FINAL VERSION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2600,7 +2600,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 AUTO FIRST RESULT
+    // 🔥 AUTO FIRST RESULT (FIXED — USE SAME ENGINE)
     ////////////////////////////////////////////////////////
     setTimeout(async () => {
 
@@ -2630,7 +2630,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 YOUTUBE RESULTS
+    // 🔥 YOUTUBE (SAME ENGINE)
     ////////////////////////////////////////////////////////
     const ytResults = await getYouTubeResults(`coachella ${message} vlog`);
 
@@ -2653,7 +2653,7 @@ io.on("connection", (socket) => {
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 YOUTUBE FETCH (REAL-TIME + FALLBACK + FORCE 3)
+// 🔥 YOUTUBE ENGINE (REAL-TIME + FALLBACK + FORCE 3)
 //////////////////////////////////////////////////////////////
 
 async function getYouTubeResults(query){
@@ -2689,7 +2689,7 @@ async function getYouTubeResults(query){
       link: `https://www.youtube.com/watch?v=${v.id.videoId}`
     }));
 
-    // 4️⃣ 🔥 FORCE 3
+    // 4️⃣ 🔥 FORCE 3 VIDEOS (UI GUARANTEE)
     while (ytResults.length > 0 && ytResults.length < 3){
       ytResults.push(ytResults[ytResults.length - 1]);
     }
@@ -2723,7 +2723,7 @@ function sendYouTube(roomId, ytResults){
 }
 
 //////////////////////////////////////////////////////////////
-// 🤖 AI SUMMARY
+// 🤖 AI SUMMARY (CREATOR SIGNAL MODE)
 //////////////////////////////////////////////////////////////
 
 async function sendAISummary(roomId, ytResults){
@@ -2749,10 +2749,7 @@ Rules:
       },
       {
         role:"user",
-        content:`
-Signals:
-${context}
-`
+        content:`Signals:\n${context}`
       }
     ]
   });
@@ -2771,5 +2768,5 @@ ${context}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running (stable)");
+  console.log("🔥 chatroom running (FINAL)");
 });
