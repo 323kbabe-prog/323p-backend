@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (SEARCH ENGINE MODE FINAL)
+// 🔥 REAL-TIME CHATROOM (SEARCH + UI FORMAT FIXED)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2634,12 +2634,10 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔍 SEARCH (YouTube + Google)
+    // 🔍 YOUTUBE SEARCH
     ////////////////////////////////////////////////////////
     let ytResults = [];
-    let webResults = [];
 
-    // YouTube
     try {
       const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`;
 
@@ -2647,56 +2645,22 @@ io.on("connection", (socket) => {
       const ytData = await ytRes.json();
 
       ytResults = (ytData.items || []).map(v => ({
-        title: v.snippet.title,
+        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''), // clean title
         link: `https://www.youtube.com/watch?v=${v.id.videoId}`
       }));
 
-    } catch(e){
-      console.log("YT error:", e);
-    }
-
-    // Google (SERP)
-    try {
-      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`;
-
-      const serpRes = await fetch(serpUrl);
-      const serpData = await serpRes.json();
-
-      webResults = (serpData.organic_results || []).slice(0,3).map(r => ({
-        title: r.title,
-        link: r.link
-      }));
-
-    } catch(e){
-      console.log("SERP error:", e);
+    } catch(err){
+      console.log("YT error:", err);
     }
 
     ////////////////////////////////////////////////////////
-    // 🟢 SHOW WEB RESULTS (GOOGLE STYLE)
-    ////////////////////////////////////////////////////////
-    if(webResults.length > 0){
-
-      const webText = webResults.map(r =>
-        `<b>${r.title}</b><br>
-         <a href="${r.link}" target="_blank" style="color:#007aff;">${r.link}</a>`
-      ).join("<br><br>");
-
-      io.to(roomId).emit("message", {
-        role:"ai",
-        persona:"Web results",
-        text: webText
-      });
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🔴 SHOW YOUTUBE RESULTS
+    // 🎥 SEND YOUTUBE (🔥 FIXED FORMAT)
     ////////////////////////////////////////////////////////
     if(ytResults.length > 0){
 
       const ytText = ytResults.map(r =>
-        `🎥 <b>${r.title}</b><br>
-         <a href="${r.link}" target="_blank" style="color:#ff0000;">${r.link}</a>`
-      ).join("<br><br>");
+        `YT|${r.title}|${r.link}`
+      ).join("\n");
 
       io.to(roomId).emit("message", {
         role:"ai",
@@ -2706,11 +2670,31 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY (SEARCH ANSWER)
+    // 🔍 GOOGLE (SERP)
     ////////////////////////////////////////////////////////
-    const searchContext = [...webResults, ...ytResults]
-      .map(r => r.title)
-      .join("\n");
+    let webResults = [];
+
+    try {
+      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`;
+
+      const serpRes = await fetch(serpUrl);
+      const serpData = await serpRes.json();
+
+      webResults = (serpData.organic_results || [])
+        .slice(0,3)
+        .map(r => r.title);
+
+    } catch(err){
+      console.log("SERP error:", err);
+    }
+
+    ////////////////////////////////////////////////////////
+    // 🤖 AI SUMMARY
+    ////////////////////////////////////////////////////////
+    const context = [
+      ...ytResults.map(r => r.title),
+      ...webResults
+    ].join("\n");
 
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2725,9 +2709,8 @@ You are a real-time AI search assistant.
 Rules:
 - You ALWAYS have access to live search results
 - NEVER say you can't access real-time data
-- NEVER mention training cutoff
-- Summarize results clearly
-- Be concise and useful
+- Keep answers SHORT (max 5 lines)
+- Be clear and useful
 `
         },
 
@@ -2738,9 +2721,9 @@ Query:
 ${message}
 
 Search results:
-${searchContext}
+${context}
 
-Give a helpful summary.
+Give a helpful short answer.
 `
         }
 
@@ -2750,7 +2733,7 @@ Give a helpful summary.
     const aiText = r.choices[0].message.content;
 
     ////////////////////////////////////////////////////////
-    // SHOW AI SUMMARY
+    // SEND AI SUMMARY
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
