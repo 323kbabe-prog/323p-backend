@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — 3 VIDEO GUARANTEED)
+// 🔥 REAL-TIME CHATROOM (FINAL — STABLE 3 VIDEO VERSION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2599,6 +2599,19 @@ io.on("connection", (socket) => {
       text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
 
+    ////////////////////////////////////////////////////////
+    // 🔥 AUTO FIRST RESULT
+    ////////////////////////////////////////////////////////
+    setTimeout(async () => {
+
+      const ytResults = await getYouTubeResults("coachella vlog influencer");
+
+      sendYouTube(roomId, ytResults);
+
+      await sendAISummary(roomId, ytResults);
+
+    }, 400);
+
   });
 
   ////////////////////////////////////////////////////////////
@@ -2607,8 +2620,6 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if(!message) return;
-
-    if(!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
     // SEND USER
@@ -2619,112 +2630,16 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 YOUTUBE SEARCH (FINAL FIXED)
+    // 🔥 YOUTUBE RESULTS
     ////////////////////////////////////////////////////////
-    let ytResults = [];
+    const ytResults = await getYouTubeResults(`coachella ${message} vlog`);
 
-    try {
-
-      const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-      // 1️⃣ real-time first
-      let ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella ${encodeURIComponent(message)} vlog&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
-
-      let ytRes = await fetch(ytUrl);
-      let ytData = await ytRes.json();
-
-      if(ytData.error){
-        console.log("YT error:", ytData.error);
-      }
-
-      ytResults = ytData.items || [];
-
-      // 2️⃣ fallback if not enough
-      if(ytResults.length < 3){
-
-        const fallbackUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella ${encodeURIComponent(message)} vlog&type=video&part=snippet&maxResults=3&order=date`;
-
-        const fallbackRes = await fetch(fallbackUrl);
-        const fallbackData = await fallbackRes.json();
-
-        ytResults = fallbackData.items || [];
-      }
-
-      // 3️⃣ format
-      ytResults = ytResults.map(v => ({
-        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
-        link: `https://www.youtube.com/watch?v=${v.id.videoId}`
-      }));
-
-      // 4️⃣ 🔥 FORCE 3 VIDEOS
-      while (ytResults.length > 0 && ytResults.length < 3) {
-        ytResults.push(ytResults[ytResults.length - 1]);
-      }
-
-      ytResults = ytResults.slice(0,3);
-
-    } catch(err){
-      console.log("YT error:", err);
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🎥 SEND YOUTUBE (UI FORMAT)
-    ////////////////////////////////////////////////////////
-    if(ytResults.length > 0){
-
-      const ytText = ytResults.map(r =>
-        `YT|${r.title}|${r.link}`
-      ).join("\n");
-
-      io.to(roomId).emit("message", {
-        role:"ai",
-        persona:"YouTube",
-        text: ytText
-      });
-    }
+    sendYouTube(roomId, ytResults);
 
     ////////////////////////////////////////////////////////
     // 🤖 AI SUMMARY
     ////////////////////////////////////////////////////////
-    const context = ytResults.map(r => r.title).join("\n");
-
-    const aiRes = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.7,
-      messages:[
-        {
-          role:"system",
-          content:`
-You are a real-time Coachella influencer signal parser.
-
-Rules:
-- Always interpret in content / creator context
-- Never give general advice
-- Focus on filming and creator behavior
-- Keep it short (max 4 lines)
-`
-        },
-        {
-          role:"user",
-          content:`
-User input:
-${message}
-
-Signals:
-${context}
-`
-        }
-      ]
-    });
-
-    ////////////////////////////////////////////////////////
-    // SEND AI
-    ////////////////////////////////////////////////////////
-    io.to(roomId).emit("message", {
-      role:"ai",
-      persona:"AI summary",
-      text: aiRes.choices[0].message.content
-    });
+    await sendAISummary(roomId, ytResults);
 
   });
 
@@ -2738,11 +2653,123 @@ ${context}
 });
 
 //////////////////////////////////////////////////////////////
+// 🔥 YOUTUBE FETCH (REAL-TIME + FALLBACK + FORCE 3)
+//////////////////////////////////////////////////////////////
+
+async function getYouTubeResults(query){
+
+  let ytResults = [];
+
+  try {
+
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // 1️⃣ REAL-TIME
+    let url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
+
+    let res = await fetch(url);
+    let data = await res.json();
+
+    ytResults = data.items || [];
+
+    // 2️⃣ FALLBACK
+    if(ytResults.length < 3){
+
+      url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=date`;
+
+      res = await fetch(url);
+      data = await res.json();
+
+      ytResults = data.items || [];
+    }
+
+    // 3️⃣ FORMAT
+    ytResults = ytResults.map(v => ({
+      title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
+      link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+    }));
+
+    // 4️⃣ 🔥 FORCE 3
+    while (ytResults.length > 0 && ytResults.length < 3){
+      ytResults.push(ytResults[ytResults.length - 1]);
+    }
+
+    ytResults = ytResults.slice(0,3);
+
+  } catch(err){
+    console.log("YT error:", err);
+  }
+
+  return ytResults;
+}
+
+//////////////////////////////////////////////////////////////
+// 🎥 SEND YOUTUBE (UI FORMAT)
+//////////////////////////////////////////////////////////////
+
+function sendYouTube(roomId, ytResults){
+
+  if(!ytResults.length) return;
+
+  const ytText = ytResults.map(r =>
+    `YT|${r.title}|${r.link}`
+  ).join("\n");
+
+  io.to(roomId).emit("message", {
+    role:"ai",
+    persona:"YouTube",
+    text: ytText
+  });
+}
+
+//////////////////////////////////////////////////////////////
+// 🤖 AI SUMMARY
+//////////////////////////////////////////////////////////////
+
+async function sendAISummary(roomId, ytResults){
+
+  const context = ytResults.map(r => r.title).join("\n");
+
+  const aiRes = await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    temperature:0.7,
+    messages:[
+      {
+        role:"system",
+        content:`
+You are a real-time Coachella influencer signal parser.
+
+Rules:
+- Always interpret in content / creator context
+- Never give general advice
+- Focus on filming and creator behavior
+- Always include at least one filming idea
+- Keep it short (max 4 lines)
+`
+      },
+      {
+        role:"user",
+        content:`
+Signals:
+${context}
+`
+      }
+    ]
+  });
+
+  io.to(roomId).emit("message", {
+    role:"ai",
+    persona:"AI summary",
+    text: aiRes.choices[0].message.content
+  });
+}
+
+//////////////////////////////////////////////////////////////
 // 🚀 START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running (3 video fixed)");
+  console.log("🔥 chatroom running (stable)");
 });
