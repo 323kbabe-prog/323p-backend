@@ -2604,7 +2604,20 @@ io.on("connection", (socket) => {
     ////////////////////////////////////////////////////////
     setTimeout(async () => {
 
-      const ytResults = await getYouTubeResults("coachella vlog influencer");
+const seeds = [
+  "coachella vlog",
+  "coachella outfit",
+  "coachella crowd",
+  "coachella reaction",
+  "coachella performance",
+  "coachella day 1",
+  "coachella night",
+  "coachella fit check"
+];
+
+const randomSeed = seeds[Math.floor(Math.random() * seeds.length)];
+
+const ytResults = await getYouTubeResults(randomSeed);
 
       sendYouTube(roomId, ytResults);
 
