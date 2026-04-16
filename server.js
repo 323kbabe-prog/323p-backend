@@ -2629,19 +2629,6 @@ const ytResults = await getYouTubeResults(randomSeed);
 io.to(roomId).emit("message", {
   role:"ai",
   persona:"Guide",
-  text:"323LA chat: type anything → Coachella video idea"
-});
-
-    }, 400);
-
-  });
-
-  //////////////////////////////////////////////////////
-// 🔥 ZCHAT HINT
-//////////////////////////////////////////////////////
-io.to(roomId).emit("message", {
-  role:"ai",
-  persona:"Guide",
   text:"323LA chat: type anything → Coachella video idea or call me at 067@323la.com"
 });
 
