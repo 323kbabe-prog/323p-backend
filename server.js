@@ -2610,6 +2610,15 @@ io.on("connection", (socket) => {
 
       await sendAISummary(roomId, ytResults);
 
+      //////////////////////////////////////////////////////
+// 🔥 ZCHAT HINT
+//////////////////////////////////////////////////////
+io.to(roomId).emit("message", {
+  role:"ai",
+  persona:"Guide",
+  text:"Zchat: type anything → Coachella video idea"
+});
+
     }, 400);
 
   });
