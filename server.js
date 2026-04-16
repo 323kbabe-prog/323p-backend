@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (SEARCH + AUTO FIRST RESULT)
+// 🔥 REAL-TIME CHATROOM (FINAL — CONTEXT LOCKED)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2582,20 +2582,11 @@ io.on("connection", (socket) => {
     ////////////////////////////////////////////////////////
     // INTRO
     ////////////////////////////////////////////////////////
-    const intro = `Welcome to XXX.live`;
-
     socket.emit("message", {
       role:"ai",
       persona:"AI",
-      text:intro
+      text:"Welcome to XXX.live"
     });
-
-    if(rooms[roomId].length === 0){
-      rooms[roomId].push({
-        role:"assistant",
-        content:intro
-      });
-    }
 
     ////////////////////////////////////////////////////////
     // USER COUNT
@@ -2609,15 +2600,13 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 AUTO FIRST RESULT (ONLY NEW ADD)
+    // 🔥 AUTO FIRST RESULT
     ////////////////////////////////////////////////////////
     setTimeout(async () => {
 
       try {
 
-        //////////////////////////////////////////////////////
-        // 🔍 YOUTUBE (Coachella signal)
-        //////////////////////////////////////////////////////
+        // 🔍 YOUTUBE (always Coachella)
         const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3`;
 
         const ytRes = await fetch(ytUrl);
@@ -2628,11 +2617,8 @@ io.on("connection", (socket) => {
           link: `https://www.youtube.com/watch?v=${v.id.videoId}`
         }));
 
-        //////////////////////////////////////////////////////
-        // 🎥 SEND YOUTUBE (same format)
-        //////////////////////////////////////////////////////
+        // 🎥 SEND YOUTUBE
         if(ytResults.length > 0){
-
           const ytText = ytResults.map(r =>
             `YT|${r.title}|${r.link}`
           ).join("\n");
@@ -2644,12 +2630,10 @@ io.on("connection", (socket) => {
           });
         }
 
-        //////////////////////////////////////////////////////
-        // 🤖 AI SUMMARY (signal-based)
-        //////////////////////////////////////////////////////
+        // 🤖 AI SUMMARY
         const context = ytResults.map(r => r.title).join("\n");
 
-        const r = await openai.chat.completions.create({
+        const aiRes = await openai.chat.completions.create({
           model:"gpt-4o-mini",
           temperature:0.7,
           messages:[
@@ -2677,22 +2661,17 @@ What patterns are happening right now?
           ]
         });
 
-        const aiText = r.choices[0].message.content;
-
-        //////////////////////////////////////////////////////
-        // SEND AI SUMMARY (same UI)
-        //////////////////////////////////////////////////////
         io.to(roomId).emit("message", {
           role:"ai",
           persona:"AI summary",
-          text: aiText
+          text: aiRes.choices[0].message.content
         });
 
       } catch(err){
         console.log("auto init error:", err);
       }
 
-    }, 500);
+    }, 400);
 
   });
 
@@ -2703,20 +2682,6 @@ What patterns are happening right now?
 
     if(!message) return;
 
-    if(!rooms[roomId]) rooms[roomId] = [];
-
-    ////////////////////////////////////////////////////////
-    // SAVE USER
-    ////////////////////////////////////////////////////////
-    rooms[roomId].push({
-      role:"user",
-      content: message
-    });
-
-    if(rooms[roomId].length > 20){
-      rooms[roomId] = rooms[roomId].slice(-20);
-    }
-
     ////////////////////////////////////////////////////////
     // SEND USER
     ////////////////////////////////////////////////////////
@@ -2726,12 +2691,12 @@ What patterns are happening right now?
     });
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE SEARCH
+    // 🔍 YOUTUBE SEARCH (🔥 FIXED — ALWAYS COACHELLA)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
     try {
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`;
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella ${encodeURIComponent(message)} vlog&type=video&part=snippet&maxResults=3`;
 
       const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
@@ -2749,7 +2714,6 @@ What patterns are happening right now?
     // 🎥 SEND YOUTUBE
     ////////////////////////////////////////////////////////
     if(ytResults.length > 0){
-
       const ytText = ytResults.map(r =>
         `YT|${r.title}|${r.link}`
       ).join("\n");
@@ -2762,33 +2726,11 @@ What patterns are happening right now?
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 SERP
+    // 🤖 AI SUMMARY (LOCKED MODE)
     ////////////////////////////////////////////////////////
-    let webResults = [];
+    const context = ytResults.map(r => r.title).join("\n");
 
-    try {
-      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`;
-
-      const serpRes = await fetch(serpUrl);
-      const serpData = await serpRes.json();
-
-      webResults = (serpData.organic_results || [])
-        .slice(0,3)
-        .map(r => r.title);
-
-    } catch(err){
-      console.log("SERP error:", err);
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY
-    ////////////////////////////////////////////////////////
-    const context = [
-      ...ytResults.map(r => r.title),
-      ...webResults
-    ].join("\n");
-
-    const r = await openai.chat.completions.create({
+    const aiRes = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.7,
       messages:[
@@ -2796,33 +2738,38 @@ What patterns are happening right now?
         {
           role:"system",
           content:`
-You are a real-time AI search assistant.
+You are a real-time Coachella 2026 influencer signal parser.
 
 Rules:
-- You ALWAYS have access to live search results
-- NEVER say you can't access real-time data
-- Keep answers SHORT (max 5 lines)
-- Be clear and useful
+- ALWAYS interpret input in a Coachella creator context
+- NEVER give general advice
+- ALWAYS relate to filming or content
+
+Focus:
+- what creators are doing
+- what content is trending
+- what should be filmed
+
+Keep it short (max 4 lines)
+Be specific (shot, moment, vibe)
 `
         },
 
         {
           role:"user",
           content:`
-Query:
+User input:
 ${message}
 
-Search results:
+Signals:
 ${context}
 
-Give a helpful short answer.
+Generate creator insight.
 `
         }
 
       ]
     });
-
-    const aiText = r.choices[0].message.content;
 
     ////////////////////////////////////////////////////////
     // SEND AI
@@ -2830,7 +2777,7 @@ Give a helpful short answer.
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"AI summary",
-      text: aiText
+      text: aiRes.choices[0].message.content
     });
 
   });
@@ -2851,7 +2798,7 @@ Give a helpful short answer.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (AI intro fixed)");
+  console.log("🔥 live chat running");
 });
 
 
