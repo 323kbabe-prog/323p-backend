@@ -2629,7 +2629,7 @@ const ytResults = await getYouTubeResults(randomSeed);
 io.to(roomId).emit("message", {
   role:"ai",
   persona:"Guide",
-  text:"Zchat: type anything → Coachella video idea"
+  text:"323LA chat: type anything → Coachella video idea"
 });
 
     }, 400);
