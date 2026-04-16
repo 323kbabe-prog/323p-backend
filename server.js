@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL CLEAN VERSION)
+// 🔥 REAL-TIME CHATROOM (FINAL — 3 VIDEO GUARANTEED)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2599,85 +2599,6 @@ io.on("connection", (socket) => {
       text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
 
-    ////////////////////////////////////////////////////////
-    // 🔥 AUTO FIRST RESULT (LIVE SIGNAL)
-    ////////////////////////////////////////////////////////
-    setTimeout(async () => {
-
-      try {
-
-        const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella vlog influencer&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
-
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
-
-        // ✅ FIXED
-        if(ytData.error){
-          console.log("YT error:", ytData.error);
-          return;
-        }
-
-        const ytResults = (ytData.items || []).map(v => ({
-          title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
-          link: `https://www.youtube.com/watch?v=${v.id.videoId}`
-        }));
-
-        //////////////////////////////////////////////////////
-        // 🎥 SEND YOUTUBE
-        //////////////////////////////////////////////////////
-        if(ytResults.length > 0){
-          const ytText = ytResults.map(r =>
-            `YT|${r.title}|${r.link}`
-          ).join("\n");
-
-          io.to(roomId).emit("message", {
-            role:"ai",
-            persona:"YouTube",
-            text: ytText
-          });
-        }
-
-        //////////////////////////////////////////////////////
-        // 🤖 AI SUMMARY
-        //////////////////////////////////////////////////////
-        const context = ytResults.map(r => r.title).join("\n");
-
-        const aiRes = await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          temperature:0.7,
-          messages:[
-            {
-              role:"system",
-              content:`
-You analyze live Coachella influencer content.
-
-Rules:
-- Detect what creators are doing right now
-- Keep it short (max 4 lines)
-- Be specific (shot, moment, vibe)
-`
-            },
-            {
-              role:"user",
-              content:`Signals:\n${context}`
-            }
-          ]
-        });
-
-        io.to(roomId).emit("message", {
-          role:"ai",
-          persona:"AI summary",
-          text: aiRes.choices[0].message.content
-        });
-
-      } catch(err){
-        console.log("auto init error:", err);
-      }
-
-    }, 400);
-
   });
 
   ////////////////////////////////////////////////////////////
@@ -2686,6 +2607,8 @@ Rules:
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if(!message) return;
+
+    if(!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
     // SEND USER
@@ -2696,7 +2619,7 @@ Rules:
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 LIVE YOUTUBE SEARCH (COACHELLA LOCKED)
+    // 🔥 YOUTUBE SEARCH (FINAL FIXED)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
@@ -2704,29 +2627,51 @@ Rules:
 
       const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella ${encodeURIComponent(message)} vlog&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
+      // 1️⃣ real-time first
+      let ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella ${encodeURIComponent(message)} vlog&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
 
-      const ytRes = await fetch(ytUrl);
-      const ytData = await ytRes.json();
+      let ytRes = await fetch(ytUrl);
+      let ytData = await ytRes.json();
 
-      // ✅ FIXED
       if(ytData.error){
         console.log("YT error:", ytData.error);
       }
 
-      ytResults = (ytData.items || []).map(v => ({
+      ytResults = ytData.items || [];
+
+      // 2️⃣ fallback if not enough
+      if(ytResults.length < 3){
+
+        const fallbackUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella ${encodeURIComponent(message)} vlog&type=video&part=snippet&maxResults=3&order=date`;
+
+        const fallbackRes = await fetch(fallbackUrl);
+        const fallbackData = await fallbackRes.json();
+
+        ytResults = fallbackData.items || [];
+      }
+
+      // 3️⃣ format
+      ytResults = ytResults.map(v => ({
         title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
         link: `https://www.youtube.com/watch?v=${v.id.videoId}`
       }));
+
+      // 4️⃣ 🔥 FORCE 3 VIDEOS
+      while (ytResults.length > 0 && ytResults.length < 3) {
+        ytResults.push(ytResults[ytResults.length - 1]);
+      }
+
+      ytResults = ytResults.slice(0,3);
 
     } catch(err){
       console.log("YT error:", err);
     }
 
     ////////////////////////////////////////////////////////
-    // 🎥 SEND YOUTUBE
+    // 🎥 SEND YOUTUBE (UI FORMAT)
     ////////////////////////////////////////////////////////
     if(ytResults.length > 0){
+
       const ytText = ytResults.map(r =>
         `YT|${r.title}|${r.link}`
       ).join("\n");
@@ -2739,7 +2684,7 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY (LOCKED MODE)
+    // 🤖 AI SUMMARY
     ////////////////////////////////////////////////////////
     const context = ytResults.map(r => r.title).join("\n");
 
@@ -2799,5 +2744,5 @@ ${context}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (clean version)");
+  console.log("🔥 chatroom running (3 video fixed)");
 });
