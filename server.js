@@ -2585,7 +2585,7 @@ io.on("connection", (socket) => {
     socket.emit("message", {
       role:"ai",
       persona:"AI",
-      text:"Welcome to XXX.live"
+      text:"Welcome to Coachella FOMO 323LAchat"
     });
 
     ////////////////////////////////////////////////////////
