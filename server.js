@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — CONTEXT LOCKED)
+// 🔥 REAL-TIME CHATROOM (FINAL CLEAN VERSION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2600,24 +2600,33 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 AUTO FIRST RESULT
+    // 🔥 AUTO FIRST RESULT (LIVE SIGNAL)
     ////////////////////////////////////////////////////////
     setTimeout(async () => {
 
       try {
 
-        // 🔍 YOUTUBE (always Coachella)
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella 2026 vlog influencer&type=video&part=snippet&maxResults=3`;
+        const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella vlog influencer&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
 
         const ytRes = await fetch(ytUrl);
         const ytData = await ytRes.json();
+
+        // ✅ FIXED
+        if(ytData.error){
+          console.log("YT error:", ytData.error);
+          return;
+        }
 
         const ytResults = (ytData.items || []).map(v => ({
           title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
           link: `https://www.youtube.com/watch?v=${v.id.videoId}`
         }));
 
+        //////////////////////////////////////////////////////
         // 🎥 SEND YOUTUBE
+        //////////////////////////////////////////////////////
         if(ytResults.length > 0){
           const ytText = ytResults.map(r =>
             `YT|${r.title}|${r.link}`
@@ -2630,7 +2639,9 @@ io.on("connection", (socket) => {
           });
         }
 
+        //////////////////////////////////////////////////////
         // 🤖 AI SUMMARY
+        //////////////////////////////////////////////////////
         const context = ytResults.map(r => r.title).join("\n");
 
         const aiRes = await openai.chat.completions.create({
@@ -2643,7 +2654,6 @@ io.on("connection", (socket) => {
 You analyze live Coachella influencer content.
 
 Rules:
-- Use ONLY the signals provided
 - Detect what creators are doing right now
 - Keep it short (max 4 lines)
 - Be specific (shot, moment, vibe)
@@ -2651,12 +2661,7 @@ Rules:
             },
             {
               role:"user",
-              content:`
-Signals:
-${context}
-
-What patterns are happening right now?
-`
+              content:`Signals:\n${context}`
             }
           ]
         });
@@ -2691,15 +2696,23 @@ What patterns are happening right now?
     });
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE SEARCH (🔥 FIXED — ALWAYS COACHELLA)
+    // 🔥 LIVE YOUTUBE SEARCH (COACHELLA LOCKED)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
     try {
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella ${encodeURIComponent(message)} vlog&type=video&part=snippet&maxResults=3`;
+
+      const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=coachella ${encodeURIComponent(message)} vlog&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
 
       const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
+
+      // ✅ FIXED
+      if(ytData.error){
+        console.log("YT error:", ytData.error);
+      }
 
       ytResults = (ytData.items || []).map(v => ({
         title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
@@ -2734,27 +2747,18 @@ What patterns are happening right now?
       model:"gpt-4o-mini",
       temperature:0.7,
       messages:[
-
         {
           role:"system",
           content:`
-You are a real-time Coachella 2026 influencer signal parser.
+You are a real-time Coachella influencer signal parser.
 
 Rules:
-- ALWAYS interpret input in a Coachella creator context
-- NEVER give general advice
-- ALWAYS relate to filming or content
-
-Focus:
-- what creators are doing
-- what content is trending
-- what should be filmed
-
-Keep it short (max 4 lines)
-Be specific (shot, moment, vibe)
+- Always interpret in content / creator context
+- Never give general advice
+- Focus on filming and creator behavior
+- Keep it short (max 4 lines)
 `
         },
-
         {
           role:"user",
           content:`
@@ -2763,11 +2767,8 @@ ${message}
 
 Signals:
 ${context}
-
-Generate creator insight.
 `
         }
-
       ]
     });
 
@@ -2798,7 +2799,5 @@ Generate creator insight.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running");
+  console.log("🔥 live chat running (clean version)");
 });
-
-
