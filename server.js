@@ -2687,13 +2687,16 @@ Context:
 - User location: ${userLocation}
 
 Rules:
-- Detect intent
-- Use location ONLY if needed
-- If unclear → keep GLOBAL
-- Prefer latest trending current year
-- Max 8 words
+- detect intent
+- if input is a noun or broad topic → expand into a youtube shorts query
+- use location ONLY if needed
+- if unclear → keep global
+- prefer latest trending current year
+- optimize for youtube shorts results
+- max 8 words
 - lowercase no punctuation
 - output ONLY query
+
 `
           },
           { role: "user", content: message }
