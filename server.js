@@ -2780,7 +2780,7 @@ try {
       {
         role: "system",
         content: `
-You are a real-time AI search assistant.
+Talk like a normal person.
 
 Context:
 - User location: ${userLocation}
