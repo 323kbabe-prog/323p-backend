@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// 🔥 BASE AI SEARCH CHATROOM (FINAL CLEAN)
+// 🔥 BASE AI SEARCH CHATROOM (FINAL WORKING)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -7,8 +7,8 @@ const cors = require("cors");
 const http = require("http");
 const OpenAI = require("openai");
 
-// If Node <18 → uncomment
-// const fetch = require("node-fetch");
+// ✅ FIX: add fetch
+const fetch = require("node-fetch");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -57,14 +57,9 @@ function safe(str = "") {
 
 io.on("connection", (socket) => {
 
-  ////////////////////////////////////////////////////////////
-  // JOIN ROOM
-  ////////////////////////////////////////////////////////////
   socket.on("joinRoom", ({ roomId }) => {
 
     socket.join(roomId);
-
-    if (!rooms[roomId]) rooms[roomId] = [];
 
     socket.emit("message", {
       role: "ai",
@@ -72,37 +67,13 @@ io.on("connection", (socket) => {
       text: "Welcome to AI Search Chat"
     });
 
-    const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-
-    io.to(roomId).emit({
-      role: "ai",
-      persona: "System",
-      text: `👥 ${count} ${count === 1 ? "person" : "people"} here`
-    });
-
   });
 
-  ////////////////////////////////////////////////////////////
-  // SEND MESSAGE
-  ////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if (!message) return;
 
-    if (!rooms[roomId]) rooms[roomId] = [];
-
-    rooms[roomId].push({
-      role: "user",
-      content: message
-    });
-
-    if (rooms[roomId].length > 20) {
-      rooms[roomId] = rooms[roomId].slice(-20);
-    }
-
-    ////////////////////////////////////////////////////////
-    // SEND USER
-    ////////////////////////////////////////////////////////
+    // show user
     io.to(roomId).emit({
       role: "user",
       text: safe(message)
@@ -185,47 +156,36 @@ io.on("connection", (socket) => {
     // 🤖 AI SUMMARY
     ////////////////////////////////////////////////////////
 
-    const context = [...webResults, ...ytResults]
-      .map(r => r.title)
-      .join("\n");
-
     try {
+
+      const context = [...webResults, ...ytResults]
+        .map(r => r.title)
+        .join("\n");
+
       const aiRes = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.7,
-        messages: [
-          {
-            role: "system",
-            content: "Summarize search results clearly."
-          },
-          {
-            role: "user",
-            content: `${message}\n${context}`
-          }
+        model:"gpt-4o-mini",
+        messages:[
+          { role:"system", content:"Summarize clearly." },
+          { role:"user", content:`${message}\n${context}` }
         ]
       });
 
       io.to(roomId).emit({
-        role: "ai",
-        persona: "AI",
+        role:"ai",
+        persona:"AI",
         text: aiRes.choices[0].message.content
       });
 
     } catch (err) {
+
       io.to(roomId).emit({
-        role: "ai",
-        persona: "AI",
-        text: "AI summary unavailable"
+        role:"ai",
+        persona:"AI",
+        text:"AI summary unavailable"
       });
+
     }
 
-  });
-
-  ////////////////////////////////////////////////////////////
-  // DISCONNECT
-  ////////////////////////////////////////////////////////////
-  socket.on("disconnect", () => {
-    console.log("🔴 disconnected:", socket.id);
   });
 
 });
