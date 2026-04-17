@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — AI → STRANGER REACTION)
+// 🔥 REAL-TIME CHATROOM (FINAL — AI + STRANGER + SERP)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2586,10 +2586,33 @@ const io = new Server(server, {
 
 const rooms = {};
 
+//////////////////////////////////////////////////////////////
+// 🔍 SERP TREND FETCH
+//////////////////////////////////////////////////////////////
+async function getTrendContext(query){
+
+  try{
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const results = (data.organic_results || [])
+      .slice(0, 5)
+      .map(r => r.title);
+
+    return results.join("\n");
+
+  }catch(err){
+    console.log("SERP error:", err);
+    return "";
+  }
+}
+
 io.on("connection", (socket) => {
 
 ////////////////////////////////////////////////////////////
-// 🤖 STRANGER LOOP (ONLY REACTS TO AI)
+// 🤖 STRANGER LOOP (AI → STRANGER → AI)
 ////////////////////////////////////////////////////////////
 function startStrangerLoop(roomId){
 
@@ -2607,7 +2630,6 @@ function startStrangerLoop(roomId){
       const lastMsg = room[room.length - 1];
       const idle = Date.now() - (lastMsg?.time || Date.now());
 
-      // 🔥 ONLY trigger if last speaker is AI
       if(idle > 3000 && lastMsg?.persona === "AI"){
 
         if(chainCount > 3){
@@ -2615,20 +2637,15 @@ function startStrangerLoop(roomId){
           return loop();
         }
 
-        const vibes = [
-          "quiet room",
-          "low energy",
-          "late night scrolling",
-          "nobody talking",
-          "background noise"
-        ];
-
-        const vibe = vibes[Math.floor(Math.random()*vibes.length)];
-
         try{
 
           ////////////////////////////////////////////////////////////
-          // 👻 STRANGER REACTS TO AI
+          // 🔍 GET TREND FOR STRANGER
+          ////////////////////////////////////////////////////////////
+          const trendContext = await getTrendContext(lastMsg.content);
+
+          ////////////////////////////////////////////////////////////
+          // 👻 STRANGER REACTS
           ////////////////////////////////////////////////////////////
           const s = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -2639,40 +2656,34 @@ function startStrangerLoop(roomId){
                 content:`
 You are a random human in a live chatroom.
 
-Your role:
-- react to what the AI just said
-- you are not talking to the user directly
+You react to what the AI said AND current trends.
 
 Rules:
 - 1 short sentence
-- casual, slightly cold
+- casual
+- slightly judgmental or indifferent
 - not helpful
-- no advice
-
-Style:
-- like a passing comment
-- sometimes judgmental
-- sometimes indifferent
+- may reference viral topics naturally
+- do not explain anything
 `
               },
               {
                 role:"user",
                 content:`
-AI just said: ${lastMsg.content}
+AI said: ${lastMsg.content}
 
-Room vibe: ${vibe}
+Trending now:
+${trendContext}
 `
               }
             ]
           });
 
           const strangerText = s.choices[0].message.content.trim();
-
           const strangerDelay = 800 + strangerText.length * 25 + Math.random()*400;
 
           setTimeout(async () => {
 
-            // send Stranger
             rooms[roomId].push({
               role:"assistant",
               persona:"Stranger",
@@ -2687,7 +2698,7 @@ Room vibe: ${vibe}
             });
 
             ////////////////////////////////////////////////////////////
-            // 🤖 AI REPLIES TO STRANGER
+            // 🤖 AI RESPONDS BACK
             ////////////////////////////////////////////////////////////
             const a = await openai.chat.completions.create({
               model:"gpt-4o-mini",
@@ -2700,6 +2711,7 @@ You are another random person in a chatroom.
 
 - short reply
 - casual
+- aware of trends
 - not helpful
 `
                 },
@@ -2737,7 +2749,6 @@ You are another random person in a chatroom.
         }catch(err){
           console.log("loop error:", err);
         }
-
       }
 
       loop();
@@ -2777,9 +2788,7 @@ socket.on("joinRoom", (roomId) => {
     });
   }
 
-  ////////////////////////////////////////////////////////
   // 👥 USER COUNT
-  ////////////////////////////////////////////////////////
   const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
   const fake = Math.floor(Math.random()*2);
   const count = real + fake;
@@ -2793,7 +2802,7 @@ socket.on("joinRoom", (roomId) => {
 });
 
 ////////////////////////////////////////////////////////////
-// SEND MESSAGE (USER → AI ONLY)
+// SEND MESSAGE (USER → AI WITH SERP)
 ////////////////////////////////////////////////////////////
 socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -2801,7 +2810,6 @@ socket.on("sendMessage", async ({ roomId, message }) => {
 
   if (!rooms[roomId]) rooms[roomId] = [];
 
-  // save user
   rooms[roomId].push({
     role:"user",
     persona:"User",
@@ -2815,6 +2823,12 @@ socket.on("sendMessage", async ({ roomId, message }) => {
   });
 
   try{
+
+    ////////////////////////////////////////////////////////////
+    // 🔍 GET TREND CONTEXT
+    ////////////////////////////////////////////////////////////
+    const trendContext = await getTrendContext(message);
+
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.7,
@@ -2826,12 +2840,19 @@ You are a random human in a chatroom.
 
 - 1 short sentence
 - casual
+- aware of trends
 - not helpful
+- may mention viral things naturally
 `
         },
         {
           role:"user",
-          content:message
+          content:`
+User message: ${message}
+
+Trending now:
+${trendContext}
+`
         }
       ]
     });
@@ -2876,6 +2897,6 @@ socket.on("disconnect", () => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running FINAL");
+  console.log("🔥 chatroom running FINAL (SERP)");
 });
 
