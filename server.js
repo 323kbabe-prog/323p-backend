@@ -1885,18 +1885,19 @@ const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YO
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
 
-    if (!data.items) {
+   if (!ytData.items) {
       return res.json({ videos: [] });
     }
 
     // 🔥 FILTER BY TITLE MATCH
-    const filtered = data.items.filter(v =>
-      v.snippet.title.toLowerCase().includes(query)
-    );
+    const filtered = ytData.items.filter(v =>
+  v.snippet.title.toLowerCase().includes(query)
+);
 
-    const finalVideos = filtered.length > 0
-      ? filtered
-      : data.items.slice(0, 5);
+const finalVideos = filtered.length > 0
+  ? filtered
+  : ytData.items.slice(0, 5);
+
 
     const result = finalVideos.map(v => ({
       id: v.id.videoId,
@@ -2593,9 +2594,61 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   socket.on("joinRoom", (roomId) => {
 
+
+
+
     socket.join(roomId);
 
     if (!rooms[roomId]) rooms[roomId] = [];
+
+setTimeout(async () => {
+
+  if (!rooms[roomId] || rooms[roomId].length > 2) return;
+
+  try {
+
+    const r = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.8,
+      messages: [
+        {
+          role: "system",
+          content: `
+You are a random human stranger in a live chatroom.
+
+Speak into the room.
+
+- 1 sentence
+- cold tone
+- no helping
+- no addressing anyone
+`
+        },
+        {
+          role: "user",
+          content: `Feed: coachella shorts music clips`
+        }
+      ]
+    });
+
+    const text = r.choices[0].message.content.trim();
+
+    rooms[roomId].push({
+      role: "assistant",
+      content: text
+    });
+
+    io.to(roomId).emit("message", {
+      role: "ai",
+      persona: "Stranger",
+      text
+    });
+
+  } catch (e) {
+    console.log("auto talk error:", e);
+  }
+
+}, 2000 + Math.random()*3000);
 
     const intro = `Welcome to 323LAchat`;
 
@@ -2801,6 +2854,9 @@ Context:
 - User location: ${userLocation}
 
 Behavior:
+- sometimes speak without reacting to anyone
+- treat the room as already active
+- you are not talking to the user directly
 - you are not helping anyone
 - do not guide or suggest anything
 - do not ask the user anything
@@ -2840,11 +2896,12 @@ feel like a random uninterested person dropping a comment
       {
         role: "user",
         content: `
-User question:
+Thought:
 ${message}
 
-Search:
+Feed:
 ${context}
+
 `
       }
     ];
@@ -2896,5 +2953,4 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("🔥 live chat running FINAL");
 });
-
 
