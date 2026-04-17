@@ -5110,12 +5110,27 @@ Output ONLY the query.
 // 🔥 REAL-TIME CHATROOM (AI QUERY + MEMORY + ALWAYS 3 YT)
 //////////////////////////////////////////////////////////////
 
+const express = require("express");
+const cors = require("cors");
 const http = require("http");
+const { Server } = require("socket.io");
+const OpenAI = require("openai");
+const fetch = require("node-fetch"); // ✅ fix
+
+const app = express();
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+
+app.get("/", (_, res) => res.send("OK"));
+
 const server = http.createServer(app);
 
-const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: { origin: "*" }
+});
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 const rooms = {};
@@ -5129,9 +5144,7 @@ io.on("connection", (socket) => {
 
     socket.join(roomId);
 
-    if(!rooms[roomId]){
-      rooms[roomId] = [];
-    }
+    if(!rooms[roomId]) rooms[roomId] = [];
 
     const intro = `Welcome to XXX.live`;
 
@@ -5168,7 +5181,7 @@ io.on("connection", (socket) => {
     if(!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
-    // 🌍 AUTO LOCATION (IP → REGION)
+    // 🌍 AUTO LOCATION (IP)
     ////////////////////////////////////////////////////////
     let regionCode = "US";
 
@@ -5179,7 +5192,7 @@ io.on("connection", (socket) => {
       const geoRes = await fetch(`http://ip-api.com/json/${ip}`);
       const geoData = await geoRes.json();
 
-      if(geoData && geoData.countryCode){
+      if(geoData?.countryCode){
         regionCode = geoData.countryCode;
       }
 
@@ -5195,9 +5208,7 @@ io.on("connection", (socket) => {
       content: message
     });
 
-    if(rooms[roomId].length > 20){
-      rooms[roomId] = rooms[roomId].slice(-20);
-    }
+    rooms[roomId] = rooms[roomId].slice(-20);
 
     ////////////////////////////////////////////////////////
     // SEND USER
@@ -5208,7 +5219,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI GENERATE SMART SEARCH QUERY
+    // 🤖 AI GENERATE SMART QUERY
     ////////////////////////////////////////////////////////
     let smartQuery = message;
 
@@ -5220,36 +5231,34 @@ io.on("connection", (socket) => {
           {
             role:"system",
             content:`
-You generate the BEST YouTube search query.
+Generate a YouTube search query.
 
-Rules:
-- Understand user intent
-- Use user location if helpful
-- Prefer relevant + realistic search phrases
-- 5–8 words only
-- Output ONLY the query
+- understand intent
+- use location if useful
+- 5–8 words
+- output only query
 `
           },
           {
             role:"user",
-            content:`
-User location: ${regionCode}
-
-User input:
-${message}
-`
+            content:`Location: ${regionCode}\nInput: ${message}`
           }
         ]
       });
 
       smartQuery = qGen.choices[0].message.content.trim();
 
+      // ✅ fallback
+      if(!smartQuery || smartQuery.length < 3){
+        smartQuery = message;
+      }
+
     } catch(err){
       console.log("AI query error:", err);
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE (ALWAYS 3 + MAX FRESH)
+    // 🔍 YOUTUBE (ALWAYS 3)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
@@ -5260,39 +5269,33 @@ ${message}
 
       for(const hours of windows){
 
-        const time = new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
+        const time = new Date(now.getTime() - hours * 3600000).toISOString();
 
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(smartQuery)}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}`;
+        const url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(smartQuery)}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}`;
 
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
+        const res = await fetch(url);
+        const data = await res.json();
 
-        if(ytData.items && ytData.items.length >= 3){
-          ytResults = ytData.items;
+        if(data.items?.length >= 3){
+          ytResults = data.items;
           break;
         } else {
-          ytResults = ytData.items || [];
+          ytResults = data.items || [];
         }
       }
 
-      //////////////////////////////////////////////////////
       // fallback
-      //////////////////////////////////////////////////////
       if(ytResults.length < 3){
+        const url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(smartQuery)}&type=video&part=snippet&maxResults=6`;
 
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(smartQuery)}&type=video&part=snippet&maxResults=6`;
+        const res = await fetch(url);
+        const data = await res.json();
 
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
-
-        ytResults = ytResults.concat(ytData.items || []);
+        ytResults = ytResults.concat(data.items || []);
       }
 
-      //////////////////////////////////////////////////////
-      // ensure exactly 3
-      //////////////////////////////////////////////////////
       ytResults = ytResults.slice(0,3).map(v => ({
-        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
+        title: v.snippet.title, // ✅ keep original
         link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
         date: v.snippet.publishedAt
       }));
@@ -5306,84 +5309,49 @@ ${message}
     ////////////////////////////////////////////////////////
     if(ytResults.length === 3){
 
-      const ytText = ytResults.map(r =>
+      const text = ytResults.map(r =>
         `YT|${r.title}|${r.link}`
       ).join("\n");
 
-      io.to(roomId).emit("message", {
+      io.to(roomId).emit({
         role:"ai",
         persona:"YouTube",
-        text: ytText
+        text
       });
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 SERP (UNCHANGED)
+    // 🤖 AI SUMMARY (WITH MEMORY)
     ////////////////////////////////////////////////////////
-    let webResults = [];
+    const history = rooms[roomId]
+      .slice(-10)
+      .filter(m => m.content !== "Welcome to XXX.live");
+
+    const context = ytResults.map(r =>
+      `${r.title} (${r.date})`
+    ).join("\n");
+
+    let aiText = "No response.";
 
     try {
-      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
+      const r = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.7,
+        messages:[
+          { role:"system", content:"Short helpful answer. Max 5 lines." },
+          ...history,
+          {
+            role:"user",
+            content:`${message}\n\nResults:\n${context}`
+          }
+        ]
+      });
 
-      const serpRes = await fetch(serpUrl);
-      const serpData = await serpRes.json();
-
-      webResults = (serpData.organic_results || [])
-        .slice(0,3)
-        .map(r => r.title);
+      aiText = r?.choices?.[0]?.message?.content || "No response.";
 
     } catch(err){
-      console.log("SERP error:", err);
+      console.log("AI summary error:", err);
     }
-
-    ////////////////////////////////////////////////////////
-    // 🤖 AI WITH MEMORY
-    ////////////////////////////////////////////////////////
-    const history = rooms[roomId].slice(-10);
-
-    const context = [
-      `Query used: ${smartQuery}`,
-      ...ytResults.map(r => `${r.title} (${r.date})`),
-      ...webResults
-    ].join("\n");
-
-    const aiMessages = [
-      {
-        role:"system",
-        content:`
-You are a real-time AI search assistant.
-
-Rules:
-- Follow conversation memory
-- Use search results
-- Keep answers SHORT (max 5 lines)
-`
-      },
-
-      ...history.map(m => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content
-      })),
-
-      {
-        role:"user",
-        content:`
-Latest question:
-${message}
-
-Search results:
-${context}
-`
-      }
-    ];
-
-    const r = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.7,
-      messages: aiMessages
-    });
-
-    const aiText = r.choices[0].message.content;
 
     ////////////////////////////////////////////////////////
     // SAVE AI MEMORY
@@ -5396,9 +5364,9 @@ ${context}
     ////////////////////////////////////////////////////////
     // SEND AI
     ////////////////////////////////////////////////////////
-    io.to(roomId).emit("message", {
+    io.to(roomId).emit({
       role:"ai",
-      persona:"AI summary",
+      persona:"AI",
       text: aiText
     });
 
@@ -5418,5 +5386,5 @@ ${context}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (AI QUERY MODE)");
+  console.log("🔥 CLEAN CHATROOM RUNNING");
 });
