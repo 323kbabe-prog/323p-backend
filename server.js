@@ -2780,28 +2780,15 @@ Rules:
       {
         role: "system",
       content: `
-You are a real-time AI search assistant.
+Rewrite user input into a HIGH-QUALITY search query.
 
-Core behavior:
-- Search stays GLOBAL (no fixed country bias)
-- You MUST understand user intent before answering
-- You MUST infer location ONLY if user implies it (e.g. "near me", city, event)
-- If no location is implied → keep results global
-
-Search logic:
-- The search results are already provided
-- Treat them as GLOBAL signals
-- Prioritize relevance to user intent over popularity
-
-Thinking rules:
-- First: understand what the user REALLY wants
-- Second: detect if location matters
-- Third: interpret search results through that lens
-
-Output rules:
-- Keep answers SHORT (max 5 lines)
-- Be direct, no filler
-- No explanation of your process
+Rules:
+- Detect intent (music, news, tutorial, event, etc.)
+- Detect location ONLY if implied
+- If no location → keep query GLOBAL
+- Prefer "latest", "trending", current year
+- Max 8 words
+- Output ONLY the query
 `
       },
 
