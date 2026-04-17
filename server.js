@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — REAL ENTITY + AI + STRANGER)
+// 🔥 REAL-TIME CHATROOM (FINAL — MULTI-TOPIC SERP SYSTEM)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2587,31 +2587,47 @@ const io = new Server(server, {
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// 🔍 SERP FETCH
+// 🔍 MULTI SERP POOL
 //////////////////////////////////////////////////////////////
-async function getTrendContext(query){
+async function getTrendPool(){
+
+  const queries = [
+    "coachella trending",
+    "tiktok viral now",
+    "music trending 2026",
+    "celebrity news today",
+    "youtube shorts viral"
+  ];
+
+  let allResults = [];
+
   try{
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
+    for(const q of queries){
 
-    const res = await fetch(url);
-    const data = await res.json();
+      const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
 
-    const results = (data.organic_results || [])
-      .slice(0, 5)
-      .map(r => r.title);
+      const res = await fetch(url);
+      const data = await res.json();
 
-    return results.join("\n");
+      const titles = (data.organic_results || [])
+        .slice(0, 3)
+        .map(r => r.title);
+
+      allResults.push(...titles);
+    }
 
   }catch(err){
-    console.log("SERP error:", err);
-    return "";
+    console.log("SERP pool error:", err);
   }
+
+  return allResults.join("\n");
 }
 
 //////////////////////////////////////////////////////////////
 // 🧠 ENTITY EXTRACTION
 //////////////////////////////////////////////////////////////
 async function extractEntities(text){
+
   try{
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2620,18 +2636,13 @@ async function extractEntities(text){
         {
           role:"system",
           content:`
-Extract REAL names, artists, brands, or events.
+Extract real names, artists, brands, or events.
 
 Rules:
 - 3–6 items
-- short (1–3 words each)
+- short
 - no explanation
 - no duplicates
-
-Example:
-Coachella
-Taylor Swift
-TikTok
 `
         },
         { role:"user", content:text }
@@ -2650,7 +2661,7 @@ TikTok
 io.on("connection", (socket) => {
 
 ////////////////////////////////////////////////////////////
-// 🤖 STRANGER LOOP (ONLY REACTS TO AI)
+// 🤖 STRANGER LOOP (AI ONLY → DRIFT ENABLED)
 ////////////////////////////////////////////////////////////
 function startStrangerLoop(roomId){
 
@@ -2678,10 +2689,15 @@ function startStrangerLoop(roomId){
         try{
 
           ////////////////////////////////////////////////////////////
-          // 🔍 GET REAL TREND ENTITIES
+          // 🔍 RANDOM TREND SLICE
           ////////////////////////////////////////////////////////////
-          const rawTrend = await getTrendContext(lastMsg.content);
-          const entities = await extractEntities(rawTrend);
+          const rawPool = await getTrendPool();
+
+          const lines = rawPool.split("\n")
+            .sort(() => 0.5 - Math.random());
+
+          const chunk = lines.slice(0, 6).join("\n");
+          const entities = await extractEntities(chunk);
 
           ////////////////////////////////////////////////////////////
           // 👻 STRANGER
@@ -2696,9 +2712,13 @@ function startStrangerLoop(roomId){
 You are a random human in a chatroom.
 
 - 1 short sentence
-- casual, slightly cold
-- not helpful
-- may reference real names naturally
+- casual
+- slightly cold
+
+Behavior:
+- sometimes react to AI
+- sometimes switch topic
+- sometimes mention trends
 `
               },
               {
@@ -2706,7 +2726,7 @@ You are a random human in a chatroom.
                 content:`
 AI said: ${lastMsg.content}
 
-Trending entities:
+Trending:
 ${entities}
 `
               }
@@ -2732,7 +2752,7 @@ ${entities}
             });
 
             ////////////////////////////////////////////////////////////
-            // 🤖 AI REPLY
+            // 🤖 AI REPLY (DRIFT)
             ////////////////////////////////////////////////////////////
             const a = await openai.chat.completions.create({
               model:"gpt-4o-mini",
@@ -2745,7 +2765,11 @@ You are another random person in a chatroom.
 
 - short reply
 - casual
-- may reference trends naturally
+
+Behavior:
+- sometimes continue topic
+- sometimes shift topic
+- may use trends
 `
                 },
                 {
@@ -2857,10 +2881,12 @@ socket.on("sendMessage", async ({ roomId, message }) => {
   try{
 
     ////////////////////////////////////////////////////////////
-    // 🔍 REAL TREND ENTITIES
+    // 🔍 MULTI TREND SLICE
     ////////////////////////////////////////////////////////////
-    const rawTrend = await getTrendContext(message);
-    const entities = await extractEntities(rawTrend);
+    const rawPool = await getTrendPool();
+    const lines = rawPool.split("\n").sort(() => 0.5 - Math.random());
+    const chunk = lines.slice(0, 6).join("\n");
+    const entities = await extractEntities(chunk);
 
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2873,8 +2899,11 @@ You are a random human in a chatroom.
 
 - 1 short sentence
 - casual
+
+Behavior:
+- sometimes react to user
+- sometimes introduce trend
 - not helpful
-- may reference real names naturally
 `
         },
         {
@@ -2882,7 +2911,7 @@ You are a random human in a chatroom.
           content:`
 User: ${message}
 
-Trending entities:
+Trending:
 ${entities}
 `
         }
@@ -2929,5 +2958,6 @@ socket.on("disconnect", () => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running FINAL (REAL ENTITY)");
+  console.log("🔥 chatroom running MULTI-TOPIC");
 });
+
