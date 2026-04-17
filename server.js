@@ -2875,7 +2875,7 @@ ${context}
 
     io.to(roomId).emit("message", {
       role: "ai",
-      persona: "AI summary",
+      persona: "AI",
       text: aiText
     });
 
