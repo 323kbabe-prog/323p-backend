@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL CLEAN: INTENT + ANSWER)
+// 🔥 REAL-TIME CHATROOM (AI QUERY + LOCATION + MEMORY + 3 YT)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2597,7 +2597,7 @@ io.on("connection", (socket) => {
 
     if (!rooms[roomId]) rooms[roomId] = [];
 
-    const intro = "Welcome to XXX.live";
+    const intro = `Welcome to XXX.live`;
 
     socket.emit("message", {
       role: "ai",
@@ -2631,7 +2631,7 @@ io.on("connection", (socket) => {
     if (!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
-    // 🌍 LOCATION (REAL SAFE)
+    // 🌍 LOCATION
     ////////////////////////////////////////////////////////
     let userLocation = "unknown";
 
@@ -2658,7 +2658,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // SEND USER
+    // SEND USER (keep if you want server echo)
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role: "user",
@@ -2666,7 +2666,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🧠 AI summary1 — INTENT
+    // 🧠 NEW: AI summary1 (INTENT)
     ////////////////////////////////////////////////////////
     let intentText = "";
 
@@ -2683,8 +2683,8 @@ Identify the user's intent in ONE short phrase.
 Rules:
 - max 10 words
 - no explanation
-- no "user is asking"
 - no full sentence
+- just the intent
 
 Examples:
 - finding nearby concerts
@@ -2692,10 +2692,7 @@ Examples:
 - searching youtube videos
 `
           },
-          {
-            role: "user",
-            content: message
-          }
+          { role: "user", content: message }
         ]
       });
 
@@ -2714,7 +2711,7 @@ Examples:
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI QUERY (SMART)
+    // 🤖 AI QUERY
     ////////////////////////////////////////////////////////
     let aiQuery = message;
 
@@ -2736,16 +2733,13 @@ Rules:
 - Detect intent
 - Use location ONLY if needed
 - If unclear → keep GLOBAL
+- Prefer latest trending current year
 - Max 8 words
-- lowercase
-- no punctuation
+- lowercase no punctuation
 - output ONLY query
 `
           },
-          {
-            role: "user",
-            content: message
-          }
+          { role: "user", content: message }
         ]
       });
 
@@ -2756,22 +2750,46 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE (ALWAYS 3)
+    // 🔍 YOUTUBE
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
     try {
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6&order=date`;
 
-      const ytRes = await fetch(ytUrl);
-      const ytData = await ytRes.json();
+      const now = new Date();
+      const windows = [24, 72, 168];
 
-      ytResults = (ytData.items || [])
-        .slice(0, 3)
-        .map(v => ({
-          title: (v.snippet.title || "").replace(/[^\w\s]/gi, ""),
-          link: `https://www.youtube.com/watch?v=${v.id.videoId}`
-        }));
+      for (const hours of windows) {
+
+        const time = new Date(now - hours * 3600000).toISOString();
+
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}`;
+
+        const ytRes = await fetch(ytUrl);
+        const ytData = await ytRes.json();
+
+        if (ytData.items?.length >= 3) {
+          ytResults = ytData.items;
+          break;
+        } else {
+          ytResults = ytData.items || [];
+        }
+      }
+
+      if (ytResults.length < 3) {
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6`;
+
+        const ytRes = await fetch(ytUrl);
+        const ytData = await ytRes.json();
+
+        ytResults = ytResults.concat(ytData.items || []);
+      }
+
+      ytResults = ytResults.slice(0, 3).map(v => ({
+        title: (v.snippet.title || "").replace(/[^\w\s]/gi, ""),
+        link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
+        date: v.snippet.publishedAt
+      }));
 
     } catch (err) {
       console.log("YT error:", err);
@@ -2805,10 +2823,12 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🧠 AI summary2 — FINAL ANSWER
+    // 🤖 AI SUMMARY (FINAL)
     ////////////////////////////////////////////////////////
+    const history = rooms[roomId].slice(-10);
+
     const context = [
-      ...ytResults.map(r => r.title),
+      ...ytResults.map(r => `${r.title} (${r.date})`),
       ...webResults
     ].join("\n");
 
@@ -2827,13 +2847,9 @@ You are a real-time AI search assistant.
 Context:
 - User location: ${userLocation}
 
-Decision logic:
-- If user says "near", "around", "local" → use location
-- Otherwise ignore location
-
-Rules:
+Behavior:
+- Use location ONLY if relevant
 - NEVER mention limitations
-- NEVER say you can't detect location
 
 Response:
 - Max 5 lines
@@ -2864,14 +2880,10 @@ Response:
 
     io.to(roomId).emit("message", {
       role: "ai",
-      persona: "AI summary2",
+      persona: "AI summary",
       text: aiText
     });
 
-  });
-
-  socket.on("disconnect", () => {
-    console.log("🔴 disconnected:", socket.id);
   });
 
 });
@@ -2883,5 +2895,6 @@ Response:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running FINAL CLEAN");
+  console.log("🔥 live chat running FINAL");
 });
+
