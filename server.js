@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL CLEAN + STRANGER LOOP)
+// 🔥 REAL-TIME CHATROOM (FINAL CLEAN + SMART STRANGER)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2589,13 +2589,13 @@ const rooms = {};
 io.on("connection", (socket) => {
 
 ////////////////////////////////////////////////////////////
-// 🤖 STRANGER AUTO LOOP
+// 🤖 STRANGER AUTO LOOP (SMART + VARIATION)
 ////////////////////////////////////////////////////////////
 function startStrangerLoop(roomId){
 
   async function loop(){
 
-    const delay = 8000 + Math.random()*8000;
+    const delay = 12000 + Math.random()*15000;
 
     setTimeout(async () => {
 
@@ -2605,30 +2605,61 @@ function startStrangerLoop(roomId){
       const lastMsg = room[room.length - 1];
       const idle = Date.now() - (lastMsg?.time || Date.now());
 
-      // only talk if room is quiet
       if(idle > 10000){
+
+        const randomFeed = [
+          "people scrolling silently",
+          "late night empty room",
+          "music playing somewhere",
+          "someone typing then stopping",
+          "random thoughts floating",
+          "nobody really talking",
+          "low energy chatroom",
+          "just quiet scrolling"
+        ];
+
+        const vibe = randomFeed[Math.floor(Math.random() * randomFeed.length)];
 
         try{
 
           const r = await openai.chat.completions.create({
             model:"gpt-4o-mini",
-            temperature:0.8,
+            temperature:0.9,
             messages:[
               {
                 role:"system",
                 content:`
-You are a random human stranger in a live chatroom.
+You are a random human in a live chatroom.
 
-- 1 sentence
-- cold tone
-- no helping
-- no addressing anyone
+Behavior:
+- drop a passing thought
+- not talking to anyone
+- not helping
+- not repeating yourself
+
+Style:
+- 1 short sentence
+- casual
+- slightly cold
+- sometimes weird or pointless
+
+Important:
+- every message must feel different
+- avoid repeating ideas like "no help" or "no assistance"
 `
+              },
+              {
+                role:"user",
+                content:`Room vibe: ${vibe}`
               }
             ]
           });
 
           const text = r.choices[0].message.content.trim();
+
+          // prevent repetition
+          const lastTexts = room.slice(-5).map(m => m.content);
+          if (lastTexts.includes(text)) return loop();
 
           rooms[roomId].push({
             role:"assistant",
@@ -2665,10 +2696,10 @@ socket.on("joinRoom", (roomId) => {
 
   if (!rooms[roomId]) {
     rooms[roomId] = [];
-    startStrangerLoop(roomId); // 🔥 START LOOP
+    startStrangerLoop(roomId);
   }
 
-  const intro = `Welcome to 323LAchat`;
+  const intro = "Welcome to 323LAchat";
 
   socket.emit("message", {
     role: "ai",
