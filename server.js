@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (STRICT NEWEST FILTER)
+// 🔥 REAL-TIME CHATROOM (ALWAYS YOUTUBE + MAX FRESH)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2634,21 +2634,55 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE SEARCH (🔥 STRICT NEWEST ONLY)
+    // 🔍 YOUTUBE SEARCH (🔥 ALWAYS RETURN + MAX FRESH)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
     try {
 
       const now = new Date();
-      const last48h = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
 
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message + " trending")}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${last48h}`;
+      const windows = [
+        24,    // last 24h
+        72,    // last 3 days
+        168    // last 7 days
+      ];
 
-      const ytRes = await fetch(ytUrl);
-      const ytData = await ytRes.json();
+      let found = false;
 
-      ytResults = (ytData.items || []).map(v => ({
+      for(const hours of windows){
+
+        const time = new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
+
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message + " trending")}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${time}`;
+
+        const ytRes = await fetch(ytUrl);
+        const ytData = await ytRes.json();
+
+        if(ytData.items && ytData.items.length > 0){
+          ytResults = ytData.items;
+          found = true;
+          break; // ✅ stop at freshest available
+        }
+      }
+
+      //////////////////////////////////////////////////////
+      // 🔥 FINAL FALLBACK (guarantee always show)
+      //////////////////////////////////////////////////////
+      if(!found){
+
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`;
+
+        const ytRes = await fetch(ytUrl);
+        const ytData = await ytRes.json();
+
+        ytResults = ytData.items || [];
+      }
+
+      //////////////////////////////////////////////////////
+      // FORMAT
+      //////////////////////////////////////////////////////
+      ytResults = ytResults.map(v => ({
         title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
         link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
         date: v.snippet.publishedAt
@@ -2694,7 +2728,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY (REAL-TIME AWARE)
+    // 🤖 AI SUMMARY
     ////////////////////////////////////////////////////////
     const context = [
       ...ytResults.map(r => `${r.title} (${r.date})`),
@@ -2712,10 +2746,9 @@ io.on("connection", (socket) => {
 You are a real-time AI search assistant.
 
 Rules:
-- You ONLY use the latest information (last 48 hours)
-- Results are sorted by MOST RECENT
+- Always prioritize the newest information available
+- Results may include fallback if no recent data exists
 - Highlight what is NEW or trending NOW
-- NEVER mention outdated content
 - Keep answers SHORT (max 5 lines)
 `
         },
@@ -2726,10 +2759,10 @@ Rules:
 Query:
 ${message}
 
-Latest results:
+Latest available results:
 ${context}
 
-Give a short real-time answer.
+Give a helpful short answer.
 `
         }
 
@@ -2765,6 +2798,5 @@ Give a short real-time answer.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (STRICT NEWEST MODE)");
+  console.log("🔥 live chat running (ALWAYS YOUTUBE + MAX FRESH)");
 });
-
