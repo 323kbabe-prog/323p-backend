@@ -18,13 +18,11 @@ function makeApplicationKey(name, question) {
 
 const fs = require("fs");
 const path = require("path");
-
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
-
+const fetch = require("node-fetch");
 const app = express();
-
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
@@ -70,10 +68,32 @@ app.use(express.json());
 
 app.get("/", (_, res) => res.status(200).send("OK"));
 
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+//////////////////////////////////////////////////////////////
+// 🌍 IP LOCATION HELPER (ADD HERE)
+//////////////////////////////////////////////////////////////
+async function getLocationFromIP(ip){
+
+  try{
+
+    const res = await fetch(`http://ip-api.com/json/${ip}`);
+    const data = await res.json();
+
+    if(data && data.status === "success"){
+      return `${data.city}, ${data.country}`;
+    }
+
+    return "unknown";
+
+  }catch(err){
+    console.log("IP location error:", err);
+    return "unknown";
+  }
+
+}
 
 //////////////////////////////////////////////////////////////
 // AI-CIDI — PINYIN-ALIGNED ENGLISH (NAME-FIRST MODE)
@@ -2575,31 +2595,29 @@ io.on("connection", (socket) => {
 
     socket.join(roomId);
 
-    if(!rooms[roomId]){
-      rooms[roomId] = [];
-    }
+    if (!rooms[roomId]) rooms[roomId] = [];
 
     const intro = `Welcome to XXX.live`;
 
     socket.emit("message", {
-      role:"ai",
-      persona:"AI",
-      text:intro
+      role: "ai",
+      persona: "AI",
+      text: intro
     });
 
-    if(rooms[roomId].length === 0){
+    if (rooms[roomId].length === 0) {
       rooms[roomId].push({
-        role:"assistant",
-        content:intro
+        role: "assistant",
+        content: intro
       });
     }
 
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
     io.to(roomId).emit("message", {
-      role:"ai",
-      persona:"System",
-      text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
+      role: "ai",
+      persona: "System",
+      text: `👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
 
   });
@@ -2609,24 +2627,35 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
-    if(!message) return;
+    if (!message) return;
 
-    if(!rooms[roomId]) rooms[roomId] = [];
+    if (!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
-    // 🌍 LOCATION HINT (NEW)
+    // 🌍 LOCATION (REAL)
     ////////////////////////////////////////////////////////
-    const userLocation = "unknown"; // later replace with real IP
+    let userLocation = "unknown";
+
+    try {
+      const ip =
+        socket.handshake.headers["x-forwarded-for"]?.split(",")[0] ||
+        socket.handshake.address;
+
+      userLocation = await getLocationFromIP(ip);
+
+    } catch (err) {
+      console.log("location error:", err);
+    }
 
     ////////////////////////////////////////////////////////
     // SAVE USER
     ////////////////////////////////////////////////////////
     rooms[roomId].push({
-      role:"user",
+      role: "user",
       content: message
     });
 
-    if(rooms[roomId].length > 20){
+    if (rooms[roomId].length > 20) {
       rooms[roomId] = rooms[roomId].slice(-20);
     }
 
@@ -2634,68 +2663,51 @@ io.on("connection", (socket) => {
     // SEND USER
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
-      role:"user",
+      role: "user",
       text: message
     });
 
     ////////////////////////////////////////////////////////
-    // 🤖 STEP 1 — AI QUERY (INTENT + LOCATION)
+    // 🤖 AI QUERY (SMART)
     ////////////////////////////////////////////////////////
     let aiQuery = message;
 
-    try{
+    try {
       const qRes = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.3,
-        messages:[
+        model: "gpt-4o-mini",
+        temperature: 0.3,
+        messages: [
           {
-            role:"system",
+            role: "system",
             content: `
 Rewrite user input into a HIGH-QUALITY search query.
 
 Context:
 - User input: ${message}
-- User location hint: ${userLocation}
+- User location: ${userLocation}
 
-Core behavior:
-- Detect user intent (music, news, tutorial, event, etc.)
-- Detect if the user needs LOCAL results
-
-Location rules:
-- ONLY include location if:
-  • user says "near me"
-  • mentions a city/place
-  • event tied to location
+Rules:
+- Detect intent
+- Use location ONLY if needed
 - If unclear → keep GLOBAL
-- NEVER force random countries
-
-Search optimization:
-- Prefer "latest", "trending", current year
-- Make it YouTube-friendly
-- Natural human search wording
-
-Output rules:
+- Prefer latest trending current year
 - Max 8 words
-- lowercase
-- no punctuation
-- output ONLY the query
+- lowercase no punctuation
+- output ONLY query
 `
           },
-          {
-            role:"user",
-            content: message
-          }
+          { role: "user", content: message }
         ]
       });
 
       aiQuery = qRes.choices[0].message.content.trim();
 
-    }catch(err){
+    } catch (err) {
       console.log("AI query error:", err);
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE (USES AI QUERY)
+    // 🔍 YOUTUBE (SMART)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
@@ -2704,16 +2716,16 @@ Output rules:
       const now = new Date();
       const windows = [24, 72, 168];
 
-      for(const hours of windows){
+      for (const hours of windows) {
 
-        const time = new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
+        const time = new Date(now - hours * 3600000).toISOString();
 
         const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}`;
 
         const ytRes = await fetch(ytUrl);
         const ytData = await ytRes.json();
 
-        if(ytData.items && ytData.items.length >= 3){
+        if (ytData.items?.length >= 3) {
           ytResults = ytData.items;
           break;
         } else {
@@ -2721,8 +2733,7 @@ Output rules:
         }
       }
 
-      if(ytResults.length < 3){
-
+      if (ytResults.length < 3) {
         const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6`;
 
         const ytRes = await fetch(ytUrl);
@@ -2731,34 +2742,29 @@ Output rules:
         ytResults = ytResults.concat(ytData.items || []);
       }
 
-      ytResults = ytResults.slice(0,3).map(v => ({
-        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
+      ytResults = ytResults.slice(0, 3).map(v => ({
+        title: (v.snippet.title || "").replace(/[^\w\s]/gi, ""),
         link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
         date: v.snippet.publishedAt
       }));
 
-    } catch(err){
+    } catch (err) {
       console.log("YT error:", err);
     }
 
     ////////////////////////////////////////////////////////
     // SEND YOUTUBE
     ////////////////////////////////////////////////////////
-    if(ytResults.length === 3){
-
-      const ytText = ytResults.map(r =>
-        `YT|${r.title}|${r.link}`
-      ).join("\n");
-
+    if (ytResults.length === 3) {
       io.to(roomId).emit("message", {
-        role:"ai",
-        persona:"YouTube",
-        text: ytText
+        role: "ai",
+        persona: "YouTube",
+        text: ytResults.map(r => `YT|${r.title}|${r.link}`).join("\n")
       });
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 SERP (USES AI QUERY)
+    // 🔍 SERP
     ////////////////////////////////////////////////////////
     let webResults = [];
 
@@ -2769,15 +2775,15 @@ Output rules:
       const serpData = await serpRes.json();
 
       webResults = (serpData.organic_results || [])
-        .slice(0,3)
+        .slice(0, 3)
         .map(r => r.title);
 
-    } catch(err){
+    } catch (err) {
       console.log("SERP error:", err);
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI WITH MEMORY
+    // 🤖 AI SUMMARY (SMART LOCATION)
     ////////////////////////////////////////////////////////
     const history = rooms[roomId].slice(-10);
 
@@ -2788,14 +2794,25 @@ Output rules:
 
     const aiMessages = [
       {
-        role:"system",
-        content:`
+        role: "system",
+        content: `
 You are a real-time AI search assistant.
 
-Rules:
-- Follow conversation memory
-- Use latest results
-- Keep answers SHORT (max 5 lines)
+Context:
+- User location: ${userLocation}
+
+Behavior:
+- Use location ONLY if relevant
+- If not relevant → ignore location
+- NEVER mention limitations
+
+Thinking:
+- Focus on intent
+- Use search results as signals
+
+Response:
+- Max 5 lines
+- Direct and confident
 `
       },
 
@@ -2805,8 +2822,8 @@ Rules:
       })),
 
       {
-        role:"user",
-        content:`
+        role: "user",
+        content: `
 User question:
 ${message}
 
@@ -2816,34 +2833,38 @@ ${context}
       }
     ];
 
-    const r = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.7,
-      messages: aiMessages
-    });
+    let aiText = "";
 
-    const aiText = r.choices[0].message.content;
+    try {
+      const r = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        messages: aiMessages
+      });
+
+      aiText = r.choices[0].message.content;
+
+    } catch (err) {
+      console.log("AI error:", err);
+      aiText = "Something went wrong.";
+    }
 
     ////////////////////////////////////////////////////////
-    // SAVE AI MEMORY
+    // SAVE + SEND
     ////////////////////////////////////////////////////////
     rooms[roomId].push({
-      role:"assistant",
+      role: "assistant",
       content: aiText
     });
 
-    ////////////////////////////////////////////////////////
-    // SEND AI
-    ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
-      role:"ai",
-      persona:"AI summary",
+      role: "ai",
+      persona: "AI summary",
       text: aiText
     });
 
   });
 
-  ////////////////////////////////////////////////////////////
   socket.on("disconnect", () => {
     console.log("🔴 disconnected:", socket.id);
   });
@@ -2857,6 +2878,5 @@ ${context}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (AI QUERY + LOCATION + MEMORY + 3 YT)");
+  console.log("🔥 live chat running FINAL");
 });
-
