@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — AI + STRANGER + SERP)
+// 🔥 REAL-TIME CHATROOM (FINAL — REAL ENTITY + AI + STRANGER)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2587,10 +2587,9 @@ const io = new Server(server, {
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// 🔍 SERP TREND FETCH
+// 🔍 SERP FETCH
 //////////////////////////////////////////////////////////////
 async function getTrendContext(query){
-
   try{
     const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
 
@@ -2609,10 +2608,49 @@ async function getTrendContext(query){
   }
 }
 
+//////////////////////////////////////////////////////////////
+// 🧠 ENTITY EXTRACTION
+//////////////////////////////////////////////////////////////
+async function extractEntities(text){
+  try{
+    const r = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0,
+      messages:[
+        {
+          role:"system",
+          content:`
+Extract REAL names, artists, brands, or events.
+
+Rules:
+- 3–6 items
+- short (1–3 words each)
+- no explanation
+- no duplicates
+
+Example:
+Coachella
+Taylor Swift
+TikTok
+`
+        },
+        { role:"user", content:text }
+      ]
+    });
+
+    return r.choices[0].message.content.trim();
+
+  }catch(err){
+    return "";
+  }
+}
+
+//////////////////////////////////////////////////////////////
+
 io.on("connection", (socket) => {
 
 ////////////////////////////////////////////////////////////
-// 🤖 STRANGER LOOP (AI → STRANGER → AI)
+// 🤖 STRANGER LOOP (ONLY REACTS TO AI)
 ////////////////////////////////////////////////////////////
 function startStrangerLoop(roomId){
 
@@ -2640,12 +2678,13 @@ function startStrangerLoop(roomId){
         try{
 
           ////////////////////////////////////////////////////////////
-          // 🔍 GET TREND FOR STRANGER
+          // 🔍 GET REAL TREND ENTITIES
           ////////////////////////////////////////////////////////////
-          const trendContext = await getTrendContext(lastMsg.content);
+          const rawTrend = await getTrendContext(lastMsg.content);
+          const entities = await extractEntities(rawTrend);
 
           ////////////////////////////////////////////////////////////
-          // 👻 STRANGER REACTS
+          // 👻 STRANGER
           ////////////////////////////////////////////////////////////
           const s = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -2654,17 +2693,12 @@ function startStrangerLoop(roomId){
               {
                 role:"system",
                 content:`
-You are a random human in a live chatroom.
+You are a random human in a chatroom.
 
-You react to what the AI said AND current trends.
-
-Rules:
 - 1 short sentence
-- casual
-- slightly judgmental or indifferent
+- casual, slightly cold
 - not helpful
-- may reference viral topics naturally
-- do not explain anything
+- may reference real names naturally
 `
               },
               {
@@ -2672,8 +2706,8 @@ Rules:
                 content:`
 AI said: ${lastMsg.content}
 
-Trending now:
-${trendContext}
+Trending entities:
+${entities}
 `
               }
             ]
@@ -2698,7 +2732,7 @@ ${trendContext}
             });
 
             ////////////////////////////////////////////////////////////
-            // 🤖 AI RESPONDS BACK
+            // 🤖 AI REPLY
             ////////////////////////////////////////////////////////////
             const a = await openai.chat.completions.create({
               model:"gpt-4o-mini",
@@ -2711,8 +2745,7 @@ You are another random person in a chatroom.
 
 - short reply
 - casual
-- aware of trends
-- not helpful
+- may reference trends naturally
 `
                 },
                 {
@@ -2788,7 +2821,6 @@ socket.on("joinRoom", (roomId) => {
     });
   }
 
-  // 👥 USER COUNT
   const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
   const fake = Math.floor(Math.random()*2);
   const count = real + fake;
@@ -2802,7 +2834,7 @@ socket.on("joinRoom", (roomId) => {
 });
 
 ////////////////////////////////////////////////////////////
-// SEND MESSAGE (USER → AI WITH SERP)
+// SEND MESSAGE
 ////////////////////////////////////////////////////////////
 socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -2825,9 +2857,10 @@ socket.on("sendMessage", async ({ roomId, message }) => {
   try{
 
     ////////////////////////////////////////////////////////////
-    // 🔍 GET TREND CONTEXT
+    // 🔍 REAL TREND ENTITIES
     ////////////////////////////////////////////////////////////
-    const trendContext = await getTrendContext(message);
+    const rawTrend = await getTrendContext(message);
+    const entities = await extractEntities(rawTrend);
 
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -2840,18 +2873,17 @@ You are a random human in a chatroom.
 
 - 1 short sentence
 - casual
-- aware of trends
 - not helpful
-- may mention viral things naturally
+- may reference real names naturally
 `
         },
         {
           role:"user",
           content:`
-User message: ${message}
+User: ${message}
 
-Trending now:
-${trendContext}
+Trending entities:
+${entities}
 `
         }
       ]
@@ -2897,6 +2929,5 @@ socket.on("disconnect", () => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running FINAL (SERP)");
+  console.log("🔥 chatroom running FINAL (REAL ENTITY)");
 });
-
