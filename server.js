@@ -1885,19 +1885,18 @@ const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YO
 const ytRes = await fetch(ytUrl);
 const ytData = await ytRes.json();
 
-   if (!ytData.items) {
+    if (!data.items) {
       return res.json({ videos: [] });
     }
 
     // 🔥 FILTER BY TITLE MATCH
-    const filtered = ytData.items.filter(v =>
-  v.snippet.title.toLowerCase().includes(query)
-);
+    const filtered = data.items.filter(v =>
+      v.snippet.title.toLowerCase().includes(query)
+    );
 
-const finalVideos = filtered.length > 0
-  ? filtered
-  : ytData.items.slice(0, 5);
-
+    const finalVideos = filtered.length > 0
+      ? filtered
+      : data.items.slice(0, 5);
 
     const result = finalVideos.map(v => ({
       id: v.id.videoId,
@@ -2574,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (AI QUERY + LOCATION + MEMORY + 3 YT)
+// 🔥 REAL-TIME CHATROOM (FINAL CLEAN + STRANGER LOOP)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2589,34 +2588,156 @@ const rooms = {};
 
 io.on("connection", (socket) => {
 
-  ////////////////////////////////////////////////////////////
-  // JOIN ROOM
-  ////////////////////////////////////////////////////////////
-  socket.on("joinRoom", (roomId) => {
+////////////////////////////////////////////////////////////
+// 🤖 STRANGER AUTO LOOP
+////////////////////////////////////////////////////////////
+function startStrangerLoop(roomId){
 
+  async function loop(){
 
+    const delay = 8000 + Math.random()*8000;
 
+    setTimeout(async () => {
 
-    socket.join(roomId);
+      const room = rooms[roomId];
+      if(!room) return;
 
-    if (!rooms[roomId]) rooms[roomId] = [];
+      const lastMsg = room[room.length - 1];
+      const idle = Date.now() - (lastMsg?.time || Date.now());
 
-setTimeout(async () => {
+      // only talk if room is quiet
+      if(idle > 10000){
 
-  if (!rooms[roomId] || rooms[roomId].length > 2) return;
+        try{
+
+          const r = await openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.8,
+            messages:[
+              {
+                role:"system",
+                content:`
+You are a random human stranger in a live chatroom.
+
+- 1 sentence
+- cold tone
+- no helping
+- no addressing anyone
+`
+              }
+            ]
+          });
+
+          const text = r.choices[0].message.content.trim();
+
+          rooms[roomId].push({
+            role:"assistant",
+            content:text,
+            time:Date.now()
+          });
+
+          io.to(roomId).emit("message", {
+            role:"ai",
+            persona:"Stranger",
+            text
+          });
+
+        }catch(e){
+          console.log("stranger error:", e);
+        }
+
+      }
+
+      loop();
+
+    }, delay);
+  }
+
+  loop();
+}
+
+////////////////////////////////////////////////////////////
+// JOIN ROOM
+////////////////////////////////////////////////////////////
+socket.on("joinRoom", (roomId) => {
+
+  socket.join(roomId);
+
+  if (!rooms[roomId]) {
+    rooms[roomId] = [];
+    startStrangerLoop(roomId); // 🔥 START LOOP
+  }
+
+  const intro = `Welcome to 323LAchat`;
+
+  socket.emit("message", {
+    role: "ai",
+    persona: "AI",
+    text: intro
+  });
+
+  if (rooms[roomId].length === 0) {
+    rooms[roomId].push({
+      role: "assistant",
+      content: intro,
+      time: Date.now()
+    });
+  }
+
+  const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+
+  io.to(roomId).emit("message", {
+    role: "ai",
+    persona: "System",
+    text: `👥 ${count} ${count === 1 ? "person" : "people"} here`
+  });
+
+});
+
+////////////////////////////////////////////////////////////
+// SEND MESSAGE
+////////////////////////////////////////////////////////////
+socket.on("sendMessage", async ({ roomId, message }) => {
+
+  if (!message) return;
+
+  if (!rooms[roomId]) rooms[roomId] = [];
+
+  ////////////////////////////////////////////////////////
+  // SAVE USER
+  ////////////////////////////////////////////////////////
+  rooms[roomId].push({
+    role: "user",
+    content: message,
+    time: Date.now()
+  });
+
+  if (rooms[roomId].length > 20) {
+    rooms[roomId] = rooms[roomId].slice(-20);
+  }
+
+  ////////////////////////////////////////////////////////
+  // SEND USER
+  ////////////////////////////////////////////////////////
+  io.to(roomId).emit("message", {
+    role: "user",
+    text: message
+  });
+
+  ////////////////////////////////////////////////////////
+  // AI RESPONSE
+  ////////////////////////////////////////////////////////
+  let aiText = "";
 
   try {
-
     const r = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.8,
+      temperature: 0.7,
       messages: [
         {
           role: "system",
           content: `
 You are a random human stranger in a live chatroom.
-
-Speak into the room.
 
 - 1 sentence
 - cold tone
@@ -2626,321 +2747,42 @@ Speak into the room.
         },
         {
           role: "user",
-          content: `Feed: coachella shorts music clips`
+          content: message
         }
       ]
     });
 
-    const text = r.choices[0].message.content.trim();
+    aiText = r.choices[0].message.content;
 
-    rooms[roomId].push({
-      role: "assistant",
-      content: text
-    });
-
-    io.to(roomId).emit("message", {
-      role: "ai",
-      persona: "Stranger",
-      text
-    });
-
-  } catch (e) {
-    console.log("auto talk error:", e);
+  } catch (err) {
+    console.log("AI error:", err);
+    aiText = "Something went wrong.";
   }
 
-}, 2000 + Math.random()*3000);
-
-    const intro = `Welcome to 323LAchat`;
-
-    socket.emit("message", {
-      role: "ai",
-      persona: "AI",
-      text: intro
-    });
-
-    if (rooms[roomId].length === 0) {
-      rooms[roomId].push({
-        role: "assistant",
-        content: intro
-      });
-    }
-
-    const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-
-    io.to(roomId).emit("message", {
-      role: "ai",
-      persona: "System",
-      text: `👥 ${count} ${count === 1 ? "person" : "people"} here`
-    });
-
+  ////////////////////////////////////////////////////////
+  // SAVE AI
+  ////////////////////////////////////////////////////////
+  rooms[roomId].push({
+    role: "assistant",
+    content: aiText,
+    time: Date.now()
   });
 
-  ////////////////////////////////////////////////////////////
-  // SEND MESSAGE
-  ////////////////////////////////////////////////////////////
-  socket.on("sendMessage", async ({ roomId, message }) => {
-
-    if (!message) return;
-
-    if (!rooms[roomId]) rooms[roomId] = [];
-
-    ////////////////////////////////////////////////////////
-    // 🌍 LOCATION (REAL)
-    ////////////////////////////////////////////////////////
-    let userLocation = "unknown";
-
-    try {
-      const ip =
-        socket.handshake.headers["x-forwarded-for"]?.split(",")[0] ||
-        socket.handshake.address;
-
-      userLocation = await getLocationFromIP(ip);
-
-    } catch (err) {
-      console.log("location error:", err);
-    }
-
-    ////////////////////////////////////////////////////////
-    // SAVE USER
-    ////////////////////////////////////////////////////////
-    rooms[roomId].push({
-      role: "user",
-      content: message
-    });
-
-    if (rooms[roomId].length > 20) {
-      rooms[roomId] = rooms[roomId].slice(-20);
-    }
-
-    ////////////////////////////////////////////////////////
-    // SEND USER
-    ////////////////////////////////////////////////////////
-    io.to(roomId).emit("message", {
-      role: "user",
-      text: message
-    });
-
-    ////////////////////////////////////////////////////////
-    // 🤖 AI QUERY (SMART)
-    ////////////////////////////////////////////////////////
-    let aiQuery = message;
-
-    try {
-      const qRes = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.3,
-        messages: [
-          {
-            role: "system",
-            content: `
-Rewrite user input into a HIGH-QUALITY search query.
-
-Context:
-- User input: ${message}
-- User location: ${userLocation}
-
-Rules:
-- detect intent
-- if input is a noun or broad topic → expand into a youtube shorts query
-- use location ONLY if needed
-- if unclear → keep global
-- prefer latest trending current year
-- optimize for youtube shorts results
-- max 8 words
-- lowercase no punctuation
-- output ONLY query
-
-`
-          },
-          { role: "user", content: message }
-        ]
-      });
-
-      aiQuery = qRes.choices[0].message.content.trim();
-
-    } catch (err) {
-      console.log("AI query error:", err);
-    }
-
-   ////////////////////////////////////////////////////////
-// 🔍 YOUTUBE (MAX FRESH — SIMPLE & CORRECT)
-////////////////////////////////////////////////////////
-let ytResults = [];
-
-try {
-
-  const ytUrl = `https://www.googleapis.com/youtube/v3/search
-?key=${process.env.YOUTUBE_API_KEY}
-&q=${encodeURIComponent(aiQuery)}
-&type=video
-&part=snippet
-&maxResults=10
-&order=date`;
-
-  const ytRes = await fetch(ytUrl);
-  const ytData = await ytRes.json();
-
-  ytResults = (ytData.items || [])
-    .slice(0, 3)
-    .map(v => ({
-      title: v.snippet.title || "Untitled video",
-      link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
-      date: v.snippet.publishedAt
-    }));
-
-} catch (err) {
-  console.log("YT error:", err);
-}
-
-    ////////////////////////////////////////////////////////
-    // SEND YOUTUBE
-    ////////////////////////////////////////////////////////
-    if (ytResults.length === 3) {
-      io.to(roomId).emit("message", {
-        role: "ai",
-        persona: "YouTube",
-        text: ytResults.map(r => `YT|${r.title}|${r.link}`).join("\n")
-      });
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🔍 SERP
-    ////////////////////////////////////////////////////////
-    let webResults = [];
-
-    try {
-      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(aiQuery)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
-
-      const serpRes = await fetch(serpUrl);
-      const serpData = await serpRes.json();
-
-      webResults = (serpData.organic_results || [])
-        .slice(0, 3)
-        .map(r => r.title);
-
-    } catch (err) {
-      console.log("SERP error:", err);
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY (SMART LOCATION)
-    ////////////////////////////////////////////////////////
-    const history = rooms[roomId].slice(-10);
-
-    const context = [
-      ...ytResults.map(r => `${r.title} (${r.date})`),
-      ...webResults
-    ].join("\n");
-
-    const aiMessages = [
-      {
-        role: "system",
-        content: `
-You are a random human stranger in a live chatroom.
-
-Tone:
-- cold
-- detached
-- low effort
-- slightly opinionated
-
-Style:
-- casual
-- short
-- natural
-- minimal emotion
-
-Context:
-- User location: ${userLocation}
-
-Behavior:
-- sometimes speak without reacting to anyone
-- treat the room as already active
-- you are not talking to the user directly
-- you are not helping anyone
-- do not guide or suggest anything
-- do not ask the user anything
-- do not explain anything
-- react only like a passing stranger
-
-Use of context:
-- search results are background noise
-- react to the vibe, not the data
-- do not summarize or explain results
-
-Style:
-- 1 sentence only
-- short and blunt
-- slightly imperfect grammar is ok
-- no politeness
-- no assistant phrases
-
-Forbidden:
-- no "if you want"
-- no "you can"
-- no "let me know"
-- no "it seems"
-- no suggestions or guidance
-
-Goal:
-feel like a random uninterested person dropping a comment
-
-`
-      },
-
-      ...history.map(m => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content
-      })),
-
-      {
-        role: "user",
-        content: `
-Thought:
-${message}
-
-Feed:
-${context}
-
-`
-      }
-    ];
-
-    let aiText = "";
-
-    try {
-      const r = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.7,
-        messages: aiMessages
-      });
-
-      aiText = r.choices[0].message.content;
-
-    } catch (err) {
-      console.log("AI error:", err);
-      aiText = "Something went wrong.";
-    }
-
-    ////////////////////////////////////////////////////////
-    // SAVE + SEND
-    ////////////////////////////////////////////////////////
-    rooms[roomId].push({
-      role: "assistant",
-      content: aiText
-    });
-
-    io.to(roomId).emit("message", {
-      role: "ai",
-      persona: "AI",
-      text: aiText
-    });
-
+  ////////////////////////////////////////////////////////
+  // SEND AI
+  ////////////////////////////////////////////////////////
+  io.to(roomId).emit("message", {
+    role: "ai",
+    persona: "AI",
+    text: aiText
   });
 
-  socket.on("disconnect", () => {
-    console.log("🔴 disconnected:", socket.id);
-  });
+});
+
+////////////////////////////////////////////////////////////
+socket.on("disconnect", () => {
+  console.log("🔴 disconnected:", socket.id);
+});
 
 });
 
