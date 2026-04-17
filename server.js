@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 BASE + COACHELLA CHAT
+// 🔥 BASE CHATROOM
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -2561,7 +2561,7 @@ const cors = require("cors");
 const http = require("http");
 const OpenAI = require("openai");
 
-// Node <18 → uncomment
+// If Node <18 → uncomment
 // const fetch = require("node-fetch");
 
 const app = express();
@@ -2577,99 +2577,12 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 YOUTUBE ENGINE
+// 🔥 BASIC ROUTE
 //////////////////////////////////////////////////////////////
 
-async function getYouTubeResults(query){
-
-  let ytResults = [];
-
-  try {
-
-    const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    let url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
-
-    let res = await fetch(url);
-    let data = await res.json();
-
-    ytResults = data.items || [];
-
-    if(ytResults.length < 3){
-      url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=date`;
-
-      res = await fetch(url);
-      data = await res.json();
-
-      ytResults = data.items || [];
-    }
-
-    ytResults = ytResults.map(v => ({
-      title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
-      link: `https://www.youtube.com/watch?v=${v.id.videoId}`
-    }));
-
-    while (ytResults.length > 0 && ytResults.length < 3){
-      ytResults.push(ytResults[ytResults.length - 1]);
-    }
-
-    ytResults = ytResults.slice(0,3);
-
-  } catch(err){
-    console.log("YT error:", err);
-  }
-
-  return ytResults;
-}
-
-//////////////////////////////////////////////////////////////
-// 🔥 SEND YOUTUBE
-//////////////////////////////////////////////////////////////
-
-function sendYouTube(roomId, ytResults, io){
-
-  if(!ytResults.length) return;
-
-  const ytText = ytResults.map(r =>
-    `YT|${r.title}|${r.link}`
-  ).join("\n");
-
-  io.to(roomId).emit("message", {
-    role:"ai",
-    persona:"YouTube",
-    text: ytText
-  });
-}
-
-//////////////////////////////////////////////////////////////
-// 🔥 AI SUMMARY (COACHELLA)
-//////////////////////////////////////////////////////////////
-
-async function sendAISummary(roomId, ytResults, io){
-
-  const context = ytResults.map(r => r.title).join("\n");
-
-  const aiRes = await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    temperature:0.7,
-    messages:[
-      {
-        role:"system",
-        content:`You are a real-time Coachella creator signal parser.`
-      },
-      {
-        role:"user",
-        content:`Signals:\n${context}`
-      }
-    ]
-  });
-
-  io.to(roomId).emit("message", {
-    role:"ai",
-    persona:"AI summary",
-    text: aiRes.choices[0].message.content
-  });
-}
+app.get("/", (_, res) => {
+  res.send("BASE AI CHAT RUNNING");
+});
 
 //////////////////////////////////////////////////////////////
 // 🔥 SERVER + SOCKET
@@ -2689,44 +2602,22 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   // JOIN ROOM
   ////////////////////////////////////////////////////////////
-  socket.on("joinRoom", async ({ roomId, mode }) => {
+  socket.on("joinRoom", ({ roomId }) => {
 
     socket.join(roomId);
 
-    if(!rooms[roomId]) rooms[roomId] = [];
-
-    ////////////////// BASE //////////////////
-    if(mode === "base"){
-
-      const intro = `Welcome to XXX.live`;
-
-      socket.emit("message", {
-        role:"ai",
-        persona:"AI",
-        text:intro
-      });
+    if(!rooms[roomId]){
+      rooms[roomId] = [];
     }
 
-    ////////////////// COACHELLA //////////////////
-    if(mode === "coachella"){
+    const intro = `Welcome to AI Search Chat`;
 
-      socket.emit("message", {
-        role:"ai",
-        persona:"AI",
-        text:"Welcome to Coachella FOMO 323LAchat"
-      });
+    socket.emit("message", {
+      role:"ai",
+      persona:"AI",
+      text:intro
+    });
 
-      setTimeout(async () => {
-
-        const ytResults = await getYouTubeResults("coachella vlog");
-
-        sendYouTube(roomId, ytResults, io);
-        await sendAISummary(roomId, ytResults, io);
-
-      }, 400);
-    }
-
-    ////////////////// USER COUNT //////////////////
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
     io.to(roomId).emit("message", {
@@ -2740,96 +2631,177 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   // SEND MESSAGE
   ////////////////////////////////////////////////////////////
-  socket.on("sendMessage", async ({ roomId, message, mode }) => {
+  socket.on("sendMessage", async ({ roomId, message }) => {
 
     if(!message) return;
 
+    if(!rooms[roomId]) rooms[roomId] = [];
+
+    ////////////////////////////////////////////////////////
+    // SAVE USER MESSAGE
+    ////////////////////////////////////////////////////////
+    rooms[roomId].push({
+      role:"user",
+      content: message
+    });
+
+    if(rooms[roomId].length > 20){
+      rooms[roomId] = rooms[roomId].slice(-20);
+    }
+
+    ////////////////////////////////////////////////////////
+    // SEND USER MESSAGE
+    ////////////////////////////////////////////////////////
     io.to(roomId).emit({
       role:"user",
       text: message
     });
 
-    ////////////////// BASE //////////////////
-    if(mode === "base"){
+    ////////////////////////////////////////////////////////
+    // 🔍 SEARCH (YouTube + Google)
+    ////////////////////////////////////////////////////////
 
-      let ytResults = [];
-      let webResults = [];
+    let ytResults = [];
+    let webResults = [];
 
-      // YT
-      try {
-        const ytRes = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`);
-        const ytData = await ytRes.json();
+    // 🔴 YouTube
+    try {
+      const ytRes = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`
+      );
 
-        ytResults = (ytData.items || []).map(v => ({
-          title: v.snippet.title,
-          link: `https://www.youtube.com/watch?v=${v.id.videoId}`
-        }));
-      } catch {}
+      const ytData = await ytRes.json();
 
-      // SERP
-      try {
-        const serpRes = await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`);
-        const serpData = await serpRes.json();
+      ytResults = (ytData.items || []).map(v => ({
+        title: v.snippet.title,
+        link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+      }));
 
-        webResults = (serpData.organic_results || []).slice(0,3).map(r => ({
-          title: r.title,
-          link: r.link
-        }));
-      } catch {}
+    } catch(e){
+      console.log("YT error:", e);
+    }
 
-      if(webResults.length){
-        io.to(roomId).emit({
-          role:"ai",
-          persona:"Web",
-          text: webResults.map(r => `${r.title}\n${r.link}`).join("\n\n")
-        });
-      }
+    // 🟢 Google (SERP)
+    try {
+      const serpRes = await fetch(
+        `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`
+      );
 
-      if(ytResults.length){
-        io.to(roomId).emit({
-          role:"ai",
-          persona:"YouTube",
-          text: ytResults.map(r => `${r.title}\n${r.link}`).join("\n\n")
-        });
-      }
+      const serpData = await serpRes.json();
 
-      const context = [...webResults, ...ytResults].map(r => r.title).join("\n");
+      webResults = (serpData.organic_results || []).slice(0,3).map(r => ({
+        title: r.title,
+        link: r.link
+      }));
 
-      const r = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        messages:[
-          { role:"system", content:"Summarize clearly." },
-          { role:"user", content:`${message}\n${context}` }
-        ]
-      });
+    } catch(e){
+      console.log("SERP error:", e);
+    }
+
+    ////////////////////////////////////////////////////////
+    // 🟢 SHOW WEB RESULTS
+    ////////////////////////////////////////////////////////
+    if(webResults.length > 0){
+
+      const webText = webResults.map(r =>
+        `<b>${r.title}</b><br>
+         <a href="${r.link}" target="_blank" style="color:#007aff;">${r.link}</a>`
+      ).join("<br><br>");
 
       io.to(roomId).emit({
         role:"ai",
-        persona:"AI",
-        text: r.choices[0].message.content
+        persona:"Web results",
+        text: webText
       });
     }
 
-    ////////////////// COACHELLA //////////////////
-    if(mode === "coachella"){
+    ////////////////////////////////////////////////////////
+    // 🔴 SHOW YOUTUBE RESULTS
+    ////////////////////////////////////////////////////////
+    if(ytResults.length > 0){
 
-      const ytResults = await getYouTubeResults(`coachella ${message}`);
+      const ytText = ytResults.map(r =>
+        `🎥 <b>${r.title}</b><br>
+         <a href="${r.link}" target="_blank" style="color:#ff0000;">${r.link}</a>`
+      ).join("<br><br>");
 
-      sendYouTube(roomId, ytResults, io);
-      await sendAISummary(roomId, ytResults, io);
+      io.to(roomId).emit({
+        role:"ai",
+        persona:"YouTube",
+        text: ytText
+      });
     }
 
+    ////////////////////////////////////////////////////////
+    // 🤖 AI SUMMARY
+    ////////////////////////////////////////////////////////
+
+    const context = [...webResults, ...ytResults]
+      .map(r => r.title)
+      .join("\n");
+
+    try {
+
+      const aiRes = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.7,
+        messages:[
+          {
+            role:"system",
+            content:`
+You are a real-time AI search assistant.
+
+Rules:
+- You ALWAYS have access to live search results
+- Summarize clearly
+- Be concise and useful
+`
+          },
+          {
+            role:"user",
+            content:`
+Query:
+${message}
+
+Search results:
+${context}
+
+Give a helpful summary.
+`
+          }
+        ]
+      });
+
+      const aiText = aiRes.choices[0].message.content;
+
+      io.to(roomId).emit({
+        role:"ai",
+        persona:"AI summary",
+        text: aiText
+      });
+
+    } catch(err){
+      console.log("AI error:", err);
+    }
+
+  });
+
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
+  socket.on("disconnect", () => {
+    console.log("🔴 disconnected:", socket.id);
   });
 
 });
 
 //////////////////////////////////////////////////////////////
-// 🚀 START
+// 🚀 START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 FULL backend running");
+  console.log("🔥 BASE AI CHAT RUNNING");
 });
 
