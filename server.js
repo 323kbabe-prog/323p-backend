@@ -2628,10 +2628,11 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if (!message) return;
+
     if (!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
-    // 🌍 LOCATION
+    // 🌍 LOCATION (REAL)
     ////////////////////////////////////////////////////////
     let userLocation = "unknown";
 
@@ -2641,6 +2642,7 @@ io.on("connection", (socket) => {
         socket.handshake.address;
 
       userLocation = await getLocationFromIP(ip);
+
     } catch (err) {
       console.log("location error:", err);
     }
@@ -2658,7 +2660,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // SEND USER (keep if you want server echo)
+    // SEND USER
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role: "user",
@@ -2666,52 +2668,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🧠 NEW: AI summary1 (INTENT)
-    ////////////////////////////////////////////////////////
-    let intentText = "";
-
-    try {
-      const intentRes = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content: `
-Identify the user's intent in ONE short phrase.
-
-Rules:
-- max 10 words
-- no explanation
-- no full sentence
-- just the intent
-
-Examples:
-- finding nearby concerts
-- exploring trending music
-- searching youtube videos
-`
-          },
-          { role: "user", content: message }
-        ]
-      });
-
-      intentText = intentRes.choices[0].message.content.trim();
-
-    } catch (err) {
-      console.log("intent error:", err);
-    }
-
-    if (intentText) {
-      io.to(roomId).emit("message", {
-        role: "ai",
-        persona: "AI summary1",
-        text: intentText
-      });
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🤖 AI QUERY
+    // 🤖 AI QUERY (SMART)
     ////////////////////////////////////////////////////////
     let aiQuery = message;
 
@@ -2750,7 +2707,7 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE
+    // 🔍 YOUTUBE (SMART)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
@@ -2795,6 +2752,9 @@ Rules:
       console.log("YT error:", err);
     }
 
+    ////////////////////////////////////////////////////////
+    // SEND YOUTUBE
+    ////////////////////////////////////////////////////////
     if (ytResults.length === 3) {
       io.to(roomId).emit("message", {
         role: "ai",
@@ -2823,7 +2783,7 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY (FINAL)
+    // 🤖 AI SUMMARY (SMART LOCATION)
     ////////////////////////////////////////////////////////
     const history = rooms[roomId].slice(-10);
 
@@ -2832,16 +2792,10 @@ Rules:
       ...webResults
     ].join("\n");
 
-    let aiText = "";
-
-    try {
-      const r = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.7,
-        messages: [
-          {
-            role: "system",
-            content: `
+    const aiMessages = [
+      {
+        role: "system",
+        content: `
 You are a real-time AI search assistant.
 
 Context:
@@ -2849,18 +2803,43 @@ Context:
 
 Behavior:
 - Use location ONLY if relevant
+- If not relevant → ignore location
 - NEVER mention limitations
+
+Thinking:
+- Focus on intent
+- Use search results as signals
 
 Response:
 - Max 5 lines
 - Direct and confident
 `
-          },
-          {
-            role: "user",
-            content: `${message}\n${context}`
-          }
-        ]
+      },
+
+      ...history.map(m => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content
+      })),
+
+      {
+        role: "user",
+        content: `
+User question:
+${message}
+
+Search:
+${context}
+`
+      }
+    ];
+
+    let aiText = "";
+
+    try {
+      const r = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        messages: aiMessages
       });
 
       aiText = r.choices[0].message.content;
@@ -2886,6 +2865,10 @@ Response:
 
   });
 
+  socket.on("disconnect", () => {
+    console.log("🔴 disconnected:", socket.id);
+  });
+
 });
 
 //////////////////////////////////////////////////////////////
@@ -2897,4 +2880,5 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("🔥 live chat running FINAL");
 });
+
 
