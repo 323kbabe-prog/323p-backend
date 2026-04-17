@@ -2556,16 +2556,7 @@ Output ONLY the query.
 // 🔥 REAL-TIME CHATROOM (AI QUERY + MEMORY + ALWAYS 3 YT)
 //////////////////////////////////////////////////////////////
 
-const express = require("express");
 const http = require("http");
-const cors = require("cors");
-const fetch = require("node-fetch");
-const OpenAI = require("openai");
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
 const server = http.createServer(app);
 
 const { Server } = require("socket.io");
@@ -2573,15 +2564,7 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
 const rooms = {};
-
-//////////////////////////////////////////////////////////////
-// SOCKET
-//////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
 
@@ -2592,31 +2575,31 @@ io.on("connection", (socket) => {
 
     socket.join(roomId);
 
-    if (!rooms[roomId]) {
+    if(!rooms[roomId]){
       rooms[roomId] = [];
     }
 
     const intro = `Welcome to XXX.live`;
 
     socket.emit("message", {
-      role: "ai",
-      persona: "AI",
-      text: intro
+      role:"ai",
+      persona:"AI",
+      text:intro
     });
 
-    if (rooms[roomId].length === 0) {
+    if(rooms[roomId].length === 0){
       rooms[roomId].push({
-        role: "assistant",
-        content: intro
+        role:"assistant",
+        content:intro
       });
     }
 
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
     io.to(roomId).emit("message", {
-      role: "ai",
-      persona: "System",
-      text: `👥 ${count} ${count === 1 ? "person" : "people"} here`
+      role:"ai",
+      persona:"System",
+      text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
 
   });
@@ -2626,19 +2609,19 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
-    if (!message) return;
+    if(!message) return;
 
-    if (!rooms[roomId]) rooms[roomId] = [];
+    if(!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
     // SAVE USER
     ////////////////////////////////////////////////////////
     rooms[roomId].push({
-      role: "user",
+      role:"user",
       content: message
     });
 
-    if (rooms[roomId].length > 20) {
+    if(rooms[roomId].length > 20){
       rooms[roomId] = rooms[roomId].slice(-20);
     }
 
@@ -2646,140 +2629,23 @@ io.on("connection", (socket) => {
     // SEND USER
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
-      role: "user",
+      role:"user",
       text: message
     });
 
     ////////////////////////////////////////////////////////
-    // 🤖 STEP 1: AI QUERY (INTENT + LOCATION AWARE)
+    // 🤖 STEP 1 — AI QUERY (🔥 NEW)
     ////////////////////////////////////////////////////////
     let aiQuery = message;
 
-    try {
+    try{
       const qRes = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.3,
-        messages: [
+        model:"gpt-4o-mini",
+        temperature:0.3,
+        messages:[
           {
-            role: "system",
-            content: `
-Rewrite user input into a HIGH-QUALITY YouTube search query.
-
-Rules:
-- Detect intent (music, news, tutorial, etc.)
-- Detect location if implied (do NOT force location)
-- Prefer "latest", "trending", "2026"
-- Max 8 words
-- Output ONLY query text
-`
-          },
-          { role: "user", content: message }
-        ]
-      });
-
-      aiQuery = qRes.choices[0].message.content.trim();
-
-    } catch (err) {
-      console.log("AI query error:", err);
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🔍 STEP 2: YOUTUBE (ALWAYS 3, MAX FRESH)
-    ////////////////////////////////////////////////////////
-    let ytResults = [];
-
-    try {
-
-      const now = new Date();
-      const windows = [24, 72, 168];
-
-      for (const hours of windows) {
-
-        const time = new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
-
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}&videoEmbeddable=true`;
-
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
-
-        if (ytData.items && ytData.items.length >= 3) {
-          ytResults = ytData.items;
-          break;
-        } else {
-          ytResults = ytData.items || [];
-        }
-      }
-
-      // fallback
-      if (ytResults.length < 3) {
-
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6`;
-
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
-
-        ytResults = ytResults.concat(ytData.items || []);
-      }
-
-      ytResults = ytResults.slice(0, 3).map(v => ({
-        title: (v.snippet.title || "").replace(/[^\w\s]/gi, ''),
-        link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
-        date: v.snippet.publishedAt
-      }));
-
-    } catch (err) {
-      console.log("YT error:", err);
-    }
-
-    ////////////////////////////////////////////////////////
-    // SEND YOUTUBE
-    ////////////////////////////////////////////////////////
-    if (ytResults.length === 3) {
-
-      const ytText = ytResults.map(r =>
-        `YT|${r.title}|${r.link}`
-      ).join("\n");
-
-      io.to(roomId).emit("message", {
-        role: "ai",
-        persona: "YouTube",
-        text: ytText
-      });
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🔍 STEP 3: SERP (GLOBAL, FRESH)
-    ////////////////////////////////////////////////////////
-    let webResults = [];
-
-    try {
-      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(aiQuery)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
-
-      const serpRes = await fetch(serpUrl);
-      const serpData = await serpRes.json();
-
-      webResults = (serpData.organic_results || [])
-        .slice(0, 3)
-        .map(r => r.title);
-
-    } catch (err) {
-      console.log("SERP error:", err);
-    }
-
-    ////////////////////////////////////////////////////////
-    // 🤖 STEP 4: AI RESPONSE (WITH MEMORY)
-    ////////////////////////////////////////////////////////
-    const history = rooms[roomId].slice(-10);
-
-    const context = [
-      ...ytResults.map(r => `${r.title} (${r.date})`),
-      ...webResults
-    ].join("\n");
-
-    const aiMessages = [
-      {
-        role: "system",
-      content: `
+            role:"system",
+            content:`
 Rewrite user input into a HIGH-QUALITY search query.
 
 Rules:
@@ -2790,6 +2656,124 @@ Rules:
 - Max 8 words
 - Output ONLY the query
 `
+          },
+          {
+            role:"user",
+            content: message
+          }
+        ]
+      });
+
+      aiQuery = qRes.choices[0].message.content.trim();
+
+    }catch(err){
+      console.log("AI query error:", err);
+    }
+
+    ////////////////////////////////////////////////////////
+    // 🔍 YOUTUBE (USE AI QUERY)
+    ////////////////////////////////////////////////////////
+    let ytResults = [];
+
+    try {
+
+      const now = new Date();
+      const windows = [24, 72, 168];
+
+      for(const hours of windows){
+
+        const time = new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
+
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}`;
+
+        const ytRes = await fetch(ytUrl);
+        const ytData = await ytRes.json();
+
+        if(ytData.items && ytData.items.length >= 3){
+          ytResults = ytData.items;
+          break;
+        } else {
+          ytResults = ytData.items || [];
+        }
+      }
+
+      // fallback
+      if(ytResults.length < 3){
+
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6`;
+
+        const ytRes = await fetch(ytUrl);
+        const ytData = await ytRes.json();
+
+        ytResults = ytResults.concat(ytData.items || []);
+      }
+
+      ytResults = ytResults.slice(0,3).map(v => ({
+        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
+        link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
+        date: v.snippet.publishedAt
+      }));
+
+    } catch(err){
+      console.log("YT error:", err);
+    }
+
+    ////////////////////////////////////////////////////////
+    // SEND YOUTUBE
+    ////////////////////////////////////////////////////////
+    if(ytResults.length === 3){
+
+      const ytText = ytResults.map(r =>
+        `YT|${r.title}|${r.link}`
+      ).join("\n");
+
+      io.to(roomId).emit("message", {
+        role:"ai",
+        persona:"YouTube",
+        text: ytText
+      });
+    }
+
+    ////////////////////////////////////////////////////////
+    // 🔍 SERP (USE AI QUERY)
+    ////////////////////////////////////////////////////////
+    let webResults = [];
+
+    try {
+      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(aiQuery)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
+
+      const serpRes = await fetch(serpUrl);
+      const serpData = await serpRes.json();
+
+      webResults = (serpData.organic_results || [])
+        .slice(0,3)
+        .map(r => r.title);
+
+    } catch(err){
+      console.log("SERP error:", err);
+    }
+
+    ////////////////////////////////////////////////////////
+    // 🤖 AI WITH MEMORY
+    ////////////////////////////////////////////////////////
+    const history = rooms[roomId].slice(-10);
+
+    const context = [
+      ...ytResults.map(r => `${r.title} (${r.date})`),
+      ...webResults
+    ].join("\n");
+
+    const aiMessages = [
+      {
+        role:"system",
+        content:`
+You are a real-time AI search assistant.
+
+Rules:
+- Follow conversation memory
+- Use latest search results
+- Keep answers SHORT (max 5 lines)
+`
       },
 
       ...history.map(m => ({
@@ -2798,37 +2782,30 @@ Rules:
       })),
 
       {
-        role: "user",
-        content: `
+        role:"user",
+        content:`
 User question:
 ${message}
 
-Search results:
+Search:
 ${context}
 `
       }
     ];
 
-    let aiText = "No response";
+    const r = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.7,
+      messages: aiMessages
+    });
 
-    try {
-      const r = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.7,
-        messages: aiMessages
-      });
-
-      aiText = r.choices[0].message.content;
-
-    } catch (err) {
-      console.log("AI error:", err);
-    }
+    const aiText = r.choices[0].message.content;
 
     ////////////////////////////////////////////////////////
     // SAVE AI MEMORY
     ////////////////////////////////////////////////////////
     rooms[roomId].push({
-      role: "assistant",
+      role:"assistant",
       content: aiText
     });
 
@@ -2836,8 +2813,8 @@ ${context}
     // SEND AI
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
-      role: "ai",
-      persona: "AI summary",
+      role:"ai",
+      persona:"AI summary",
       text: aiText
     });
 
