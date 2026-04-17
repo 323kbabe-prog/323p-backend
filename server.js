@@ -1,39 +1,8 @@
 //////////////////////////////////////////////////////////////
-// 🔥 BASE AI SEARCH CHATROOM (FINAL WORKING)
+// 🔥 REAL-TIME CHATROOM (SEARCH + UI FORMAT FIXED)
 //////////////////////////////////////////////////////////////
 
-const express = require("express");
-const cors = require("cors");
 const http = require("http");
-const OpenAI = require("openai");
-
-// ✅ FIX: add fetch
-const fetch = require("node-fetch");
-
-const app = express();
-app.use(cors({ origin: "*" }));
-app.use(express.json());
-
-//////////////////////////////////////////////////////////////
-// 🔥 OPENAI
-//////////////////////////////////////////////////////////////
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-//////////////////////////////////////////////////////////////
-// 🔥 BASIC ROUTE
-//////////////////////////////////////////////////////////////
-
-app.get("/", (_, res) => {
-  res.send("BASE AI CHAT RUNNING");
-});
-
-//////////////////////////////////////////////////////////////
-// 🔥 SERVER + SOCKET
-//////////////////////////////////////////////////////////////
-
 const server = http.createServer(app);
 
 const { Server } = require("socket.io");
@@ -43,149 +12,188 @@ const io = new Server(server, {
 
 const rooms = {};
 
-//////////////////////////////////////////////////////////////
-// 🔥 SAFE TEXT
-//////////////////////////////////////////////////////////////
-
-function safe(str = "") {
-  return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-//////////////////////////////////////////////////////////////
-// 🔥 SOCKET
-//////////////////////////////////////////////////////////////
-
 io.on("connection", (socket) => {
 
-  socket.on("joinRoom", ({ roomId }) => {
+  ////////////////////////////////////////////////////////////
+  // JOIN ROOM
+  ////////////////////////////////////////////////////////////
+  socket.on("joinRoom", (roomId) => {
 
     socket.join(roomId);
 
+    if(!rooms[roomId]){
+      rooms[roomId] = [];
+    }
+
+    const intro = `Welcome to XXX.live`;
+
     socket.emit("message", {
-      role: "ai",
-      persona: "AI",
-      text: "Welcome to AI Search Chat"
+      role:"ai",
+      persona:"AI",
+      text:intro
+    });
+
+    if(rooms[roomId].length === 0){
+      rooms[roomId].push({
+        role:"assistant",
+        content:intro
+      });
+    }
+
+    const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+
+    io.to(roomId).emit("message", {
+      role:"ai",
+      persona:"System",
+      text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
 
   });
 
+  ////////////////////////////////////////////////////////////
+  // SEND MESSAGE
+  ////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
-    if (!message) return;
+    if(!message) return;
 
-    // show user
-    io.to(roomId).emit({
-      role: "user",
-      text: safe(message)
+    if(!rooms[roomId]) rooms[roomId] = [];
+
+    ////////////////////////////////////////////////////////
+    // SAVE USER
+    ////////////////////////////////////////////////////////
+    rooms[roomId].push({
+      role:"user",
+      content: message
+    });
+
+    if(rooms[roomId].length > 20){
+      rooms[roomId] = rooms[roomId].slice(-20);
+    }
+
+    ////////////////////////////////////////////////////////
+    // SEND USER MESSAGE
+    ////////////////////////////////////////////////////////
+    io.to(roomId).emit("message", {
+      role:"user",
+      text: message
     });
 
     ////////////////////////////////////////////////////////
-    // 🔍 SEARCH
+    // 🔍 YOUTUBE SEARCH
     ////////////////////////////////////////////////////////
-
     let ytResults = [];
-    let webResults = [];
 
-    // 🔴 YouTube
     try {
-      const ytRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`
-      );
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`;
 
+      const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
 
-      if (ytData.items) {
-        ytResults = ytData.items.map(v => ({
-          title: safe(v.snippet.title),
-          link: `https://www.youtube.com/watch?v=${v.id.videoId}`
-        }));
-      }
+      ytResults = (ytData.items || []).map(v => ({
+        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''), // clean title
+        link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+      }));
 
-    } catch (e) {
-      console.log("YT error:", e);
+    } catch(err){
+      console.log("YT error:", err);
     }
 
-    // 🟢 Google SERP
-    try {
-      const serpRes = await fetch(
-        `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`
-      );
+    ////////////////////////////////////////////////////////
+    // 🎥 SEND YOUTUBE (🔥 FIXED FORMAT)
+    ////////////////////////////////////////////////////////
+    if(ytResults.length > 0){
 
+      const ytText = ytResults.map(r =>
+        `YT|${r.title}|${r.link}`
+      ).join("\n");
+
+      io.to(roomId).emit("message", {
+        role:"ai",
+        persona:"YouTube",
+        text: ytText
+      });
+    }
+
+    ////////////////////////////////////////////////////////
+    // 🔍 GOOGLE (SERP)
+    ////////////////////////////////////////////////////////
+    let webResults = [];
+
+    try {
+      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`;
+
+      const serpRes = await fetch(serpUrl);
       const serpData = await serpRes.json();
 
-      if (serpData.organic_results) {
-        webResults = serpData.organic_results.slice(0, 3).map(r => ({
-          title: safe(r.title),
-          link: r.link
-        }));
-      }
+      webResults = (serpData.organic_results || [])
+        .slice(0,3)
+        .map(r => r.title);
 
-    } catch (e) {
-      console.log("SERP error:", e);
+    } catch(err){
+      console.log("SERP error:", err);
     }
-
-    ////////////////////////////////////////////////////////
-    // SHOW WEB
-    ////////////////////////////////////////////////////////
-    io.to(roomId).emit({
-      role: "ai",
-      persona: "Web",
-      text: webResults.length
-        ? webResults.map(r =>
-            `<b>${r.title}</b><br>
-             <a href="${r.link}" target="_blank">${r.link}</a>`
-          ).join("<br><br>")
-        : "No web results"
-    });
-
-    ////////////////////////////////////////////////////////
-    // SHOW YOUTUBE
-    ////////////////////////////////////////////////////////
-    io.to(roomId).emit({
-      role: "ai",
-      persona: "YouTube",
-      text: ytResults.length
-        ? ytResults.map(r =>
-            `🎥 <b>${r.title}</b><br>
-             <a href="${r.link}" target="_blank">${r.link}</a>`
-          ).join("<br><br>")
-        : "No videos"
-    });
 
     ////////////////////////////////////////////////////////
     // 🤖 AI SUMMARY
     ////////////////////////////////////////////////////////
+    const context = [
+      ...ytResults.map(r => r.title),
+      ...webResults
+    ].join("\n");
 
-    try {
+    const r = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.7,
+      messages:[
 
-      const context = [...webResults, ...ytResults]
-        .map(r => r.title)
-        .join("\n");
+        {
+          role:"system",
+          content:`
+You are a real-time AI search assistant.
 
-      const aiRes = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        messages:[
-          { role:"system", content:"Summarize clearly." },
-          { role:"user", content:`${message}\n${context}` }
-        ]
-      });
+Rules:
+- You ALWAYS have access to live search results
+- NEVER say you can't access real-time data
+- Keep answers SHORT (max 5 lines)
+- Be clear and useful
+`
+        },
 
-      io.to(roomId).emit({
-        role:"ai",
-        persona:"AI",
-        text: aiRes.choices[0].message.content
-      });
+        {
+          role:"user",
+          content:`
+Query:
+${message}
 
-    } catch (err) {
+Search results:
+${context}
 
-      io.to(roomId).emit({
-        role:"ai",
-        persona:"AI",
-        text:"AI summary unavailable"
-      });
+Give a helpful short answer.
+`
+        }
 
-    }
+      ]
+    });
 
+    const aiText = r.choices[0].message.content;
+
+    ////////////////////////////////////////////////////////
+    // SEND AI SUMMARY
+    ////////////////////////////////////////////////////////
+    io.to(roomId).emit("message", {
+      role:"ai",
+      persona:"AI summary",
+      text: aiText
+    });
+
+  });
+
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
+  socket.on("disconnect", () => {
+    console.log("🔴 disconnected:", socket.id);
   });
 
 });
@@ -197,5 +205,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 BASE AI CHAT RUNNING");
+  console.log("🔥 live chat running (AI intro fixed)");
 });
