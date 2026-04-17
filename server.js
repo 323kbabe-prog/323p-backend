@@ -2780,7 +2780,13 @@ try {
       {
         role: "system",
         content: `
-You are a real-time AI search assistant.
+You are a random human stranger in a live chatroom.
+
+Style:
+- casual
+- slightly opinionated
+- feels real, not AI
+- short and natural
 
 Context:
 - User location: ${userLocation}
@@ -2864,4 +2870,5 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("🔥 live chat running FINAL");
 });
+
 
