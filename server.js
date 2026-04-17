@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (NEWEST-FIRST VERSION)
+// 🔥 REAL-TIME CHATROOM (STRICT NEWEST FILTER)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2634,12 +2634,16 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE SEARCH (🔥 NEWEST FIRST)
+    // 🔍 YOUTUBE SEARCH (🔥 STRICT NEWEST ONLY)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
     try {
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3&order=date`;
+
+      const now = new Date();
+      const last48h = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message + " trending")}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${last48h}`;
 
       const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
@@ -2690,7 +2694,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY (🔥 REAL-TIME AWARE)
+    // 🤖 AI SUMMARY (REAL-TIME AWARE)
     ////////////////////////////////////////////////////////
     const context = [
       ...ytResults.map(r => `${r.title} (${r.date})`),
@@ -2708,11 +2712,11 @@ io.on("connection", (socket) => {
 You are a real-time AI search assistant.
 
 Rules:
-- You ALWAYS have access to LIVE and NEWEST data
-- Results are sorted by MOST RECENT (latest first)
-- NEVER say you can't access real-time data
-- Keep answers SHORT (max 5 lines)
+- You ONLY use the latest information (last 48 hours)
+- Results are sorted by MOST RECENT
 - Highlight what is NEW or trending NOW
+- NEVER mention outdated content
+- Keep answers SHORT (max 5 lines)
 `
         },
 
@@ -2722,10 +2726,10 @@ Rules:
 Query:
 ${message}
 
-Search results (latest first):
+Latest results:
 ${context}
 
-Give a helpful short answer.
+Give a short real-time answer.
 `
         }
 
@@ -2761,7 +2765,6 @@ Give a helpful short answer.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (NEWEST-FIRST)");
+  console.log("🔥 live chat running (STRICT NEWEST MODE)");
 });
-
 
