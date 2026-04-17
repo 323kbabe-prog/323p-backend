@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (AI QUERY + MEMORY + ALWAYS 3 YT)
+// 🔥 REAL-TIME CHATROOM (AI QUERY + LOCATION + MEMORY + 3 YT)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2614,6 +2614,11 @@ io.on("connection", (socket) => {
     if(!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
+    // 🌍 LOCATION HINT (NEW)
+    ////////////////////////////////////////////////////////
+    const userLocation = "unknown"; // later replace with real IP
+
+    ////////////////////////////////////////////////////////
     // SAVE USER
     ////////////////////////////////////////////////////////
     rooms[roomId].push({
@@ -2634,7 +2639,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🤖 STEP 1 — AI QUERY (🔥 NEW)
+    // 🤖 STEP 1 — AI QUERY (INTENT + LOCATION)
     ////////////////////////////////////////////////////////
     let aiQuery = message;
 
@@ -2645,16 +2650,35 @@ io.on("connection", (socket) => {
         messages:[
           {
             role:"system",
-            content:`
+            content: `
 Rewrite user input into a HIGH-QUALITY search query.
 
-Rules:
-- Detect intent (music, news, tutorial, event, etc.)
-- Detect location ONLY if implied
-- If no location → keep query GLOBAL
+Context:
+- User input: ${message}
+- User location hint: ${userLocation}
+
+Core behavior:
+- Detect user intent (music, news, tutorial, event, etc.)
+- Detect if the user needs LOCAL results
+
+Location rules:
+- ONLY include location if:
+  • user says "near me"
+  • mentions a city/place
+  • event tied to location
+- If unclear → keep GLOBAL
+- NEVER force random countries
+
+Search optimization:
 - Prefer "latest", "trending", current year
+- Make it YouTube-friendly
+- Natural human search wording
+
+Output rules:
 - Max 8 words
-- Output ONLY the query
+- lowercase
+- no punctuation
+- output ONLY the query
 `
           },
           {
@@ -2671,7 +2695,7 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE (USE AI QUERY)
+    // 🔍 YOUTUBE (USES AI QUERY)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
@@ -2697,7 +2721,6 @@ Rules:
         }
       }
 
-      // fallback
       if(ytResults.length < 3){
 
         const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6`;
@@ -2735,7 +2758,7 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 SERP (USE AI QUERY)
+    // 🔍 SERP (USES AI QUERY)
     ////////////////////////////////////////////////////////
     let webResults = [];
 
@@ -2771,7 +2794,7 @@ You are a real-time AI search assistant.
 
 Rules:
 - Follow conversation memory
-- Use latest search results
+- Use latest results
 - Keep answers SHORT (max 5 lines)
 `
       },
@@ -2834,6 +2857,6 @@ ${context}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (AI QUERY + MEMORY + 3 YT)");
+  console.log("🔥 live chat running (AI QUERY + LOCATION + MEMORY + 3 YT)");
 });
 
