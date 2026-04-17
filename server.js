@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (AI QUERY + LOCATION + MEMORY + 3 YT)
+// 🔥 REAL-TIME CHATROOM (FINAL CLEAN: INTENT + ANSWER)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2597,7 +2597,7 @@ io.on("connection", (socket) => {
 
     if (!rooms[roomId]) rooms[roomId] = [];
 
-    const intro = `Welcome to XXX.live`;
+    const intro = "Welcome to XXX.live";
 
     socket.emit("message", {
       role: "ai",
@@ -2628,11 +2628,10 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if (!message) return;
-
     if (!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
-    // 🌍 LOCATION (REAL)
+    // 🌍 LOCATION (REAL SAFE)
     ////////////////////////////////////////////////////////
     let userLocation = "unknown";
 
@@ -2642,7 +2641,6 @@ io.on("connection", (socket) => {
         socket.handshake.address;
 
       userLocation = await getLocationFromIP(ip);
-
     } catch (err) {
       console.log("location error:", err);
     }
@@ -2668,6 +2666,54 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
+    // 🧠 AI summary1 — INTENT
+    ////////////////////////////////////////////////////////
+    let intentText = "";
+
+    try {
+      const intentRes = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.2,
+        messages: [
+          {
+            role: "system",
+            content: `
+Identify the user's intent in ONE short phrase.
+
+Rules:
+- max 10 words
+- no explanation
+- no "user is asking"
+- no full sentence
+
+Examples:
+- finding nearby concerts
+- exploring trending music
+- searching youtube videos
+`
+          },
+          {
+            role: "user",
+            content: message
+          }
+        ]
+      });
+
+      intentText = intentRes.choices[0].message.content.trim();
+
+    } catch (err) {
+      console.log("intent error:", err);
+    }
+
+    if (intentText) {
+      io.to(roomId).emit("message", {
+        role: "ai",
+        persona: "AI summary1",
+        text: intentText
+      });
+    }
+
+    ////////////////////////////////////////////////////////
     // 🤖 AI QUERY (SMART)
     ////////////////////////////////////////////////////////
     let aiQuery = message;
@@ -2690,13 +2736,16 @@ Rules:
 - Detect intent
 - Use location ONLY if needed
 - If unclear → keep GLOBAL
-- Prefer latest trending current year
 - Max 8 words
-- lowercase no punctuation
+- lowercase
+- no punctuation
 - output ONLY query
 `
           },
-          { role: "user", content: message }
+          {
+            role: "user",
+            content: message
+          }
         ]
       });
 
@@ -2707,54 +2756,27 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE (SMART)
+    // 🔍 YOUTUBE (ALWAYS 3)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
     try {
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6&order=date`;
 
-      const now = new Date();
-      const windows = [24, 72, 168];
+      const ytRes = await fetch(ytUrl);
+      const ytData = await ytRes.json();
 
-      for (const hours of windows) {
-
-        const time = new Date(now - hours * 3600000).toISOString();
-
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}`;
-
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
-
-        if (ytData.items?.length >= 3) {
-          ytResults = ytData.items;
-          break;
-        } else {
-          ytResults = ytData.items || [];
-        }
-      }
-
-      if (ytResults.length < 3) {
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6`;
-
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
-
-        ytResults = ytResults.concat(ytData.items || []);
-      }
-
-      ytResults = ytResults.slice(0, 3).map(v => ({
-        title: (v.snippet.title || "").replace(/[^\w\s]/gi, ""),
-        link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
-        date: v.snippet.publishedAt
-      }));
+      ytResults = (ytData.items || [])
+        .slice(0, 3)
+        .map(v => ({
+          title: (v.snippet.title || "").replace(/[^\w\s]/gi, ""),
+          link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+        }));
 
     } catch (err) {
       console.log("YT error:", err);
     }
 
-    ////////////////////////////////////////////////////////
-    // SEND YOUTUBE
-    ////////////////////////////////////////////////////////
     if (ytResults.length === 3) {
       io.to(roomId).emit("message", {
         role: "ai",
@@ -2783,55 +2805,12 @@ Rules:
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY (SMART LOCATION)
+    // 🧠 AI summary2 — FINAL ANSWER
     ////////////////////////////////////////////////////////
-    const history = rooms[roomId].slice(-10);
-
     const context = [
-      ...ytResults.map(r => `${r.title} (${r.date})`),
+      ...ytResults.map(r => r.title),
       ...webResults
     ].join("\n");
-
-    const aiMessages = [
-      {
-        role: "system",
-        content: `
-You are a real-time AI search assistant.
-
-Context:
-- User location: ${userLocation}
-
-Behavior:
-- Use location ONLY if relevant
-- If not relevant → ignore location
-- NEVER mention limitations
-
-Thinking:
-- Focus on intent
-- Use search results as signals
-
-Response:
-- Max 5 lines
-- Direct and confident
-`
-      },
-
-      ...history.map(m => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: m.content
-      })),
-
-      {
-        role: "user",
-        content: `
-User question:
-${message}
-
-Search:
-${context}
-`
-      }
-    ];
 
     let aiText = "";
 
@@ -2839,7 +2818,33 @@ ${context}
       const r = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         temperature: 0.7,
-        messages: aiMessages
+        messages: [
+          {
+            role: "system",
+            content: `
+You are a real-time AI search assistant.
+
+Context:
+- User location: ${userLocation}
+
+Decision logic:
+- If user says "near", "around", "local" → use location
+- Otherwise ignore location
+
+Rules:
+- NEVER mention limitations
+- NEVER say you can't detect location
+
+Response:
+- Max 5 lines
+- Direct and confident
+`
+          },
+          {
+            role: "user",
+            content: `${message}\n${context}`
+          }
+        ]
       });
 
       aiText = r.choices[0].message.content;
@@ -2859,7 +2864,7 @@ ${context}
 
     io.to(roomId).emit("message", {
       role: "ai",
-      persona: "AI summary",
+      persona: "AI summary2",
       text: aiText
     });
 
@@ -2878,5 +2883,5 @@ ${context}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running FINAL");
+  console.log("🔥 live chat running FINAL CLEAN");
 });
