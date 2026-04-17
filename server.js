@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — TRUE FINAL VERSION)
+// 🔥 CHATROOM (FINAL — BASE + COACHELLA)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2571,7 +2571,12 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   // JOIN ROOM
   ////////////////////////////////////////////////////////////
-  socket.on("joinRoom", (roomId) => {
+  socket.on("joinRoom", async (data) => {
+
+    const { roomId, mode } = data || {};
+    const finalMode = mode || "base";
+
+    if(!roomId) return;
 
     socket.join(roomId);
 
@@ -2580,102 +2585,193 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // INTRO
+    // BASE MODE
     ////////////////////////////////////////////////////////
-    socket.emit("message", {
-      role:"ai",
-      persona:"AI",
-      text:"Welcome to Coachella FOMO 323LAchat"
-    });
+    if(finalMode === "base"){
+
+      socket.emit("message", {
+        role:"ai",
+        persona:"AI",
+        text:"Welcome to BASE chat"
+      });
+
+    }
+
+    ////////////////////////////////////////////////////////
+    // COACHELLA MODE
+    ////////////////////////////////////////////////////////
+    else if(finalMode === "coachella"){
+
+      socket.emit("message", {
+        role:"ai",
+        persona:"AI",
+        text:"Welcome to Coachella FOMO 323LAchat"
+      });
+
+      // auto content
+      setTimeout(async () => {
+
+        const seeds = [
+          "coachella vlog",
+          "coachella outfit",
+          "coachella crowd",
+          "coachella reaction"
+        ];
+
+        const randomSeed = seeds[Math.floor(Math.random()*seeds.length)];
+
+        const ytResults = await getYouTubeResults(randomSeed);
+        sendYouTube(roomId, ytResults);
+        await sendAISummary(roomId, ytResults);
+
+      }, 400);
+
+    }
 
     ////////////////////////////////////////////////////////
     // USER COUNT
     ////////////////////////////////////////////////////////
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
-    io.to(roomId).emit("message", {
+    io.to(roomId).emit({
       role:"ai",
       persona:"System",
       text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
     });
-
-    ////////////////////////////////////////////////////////
-    // 🔥 AUTO FIRST RESULT (FIXED — USE SAME ENGINE)
-    ////////////////////////////////////////////////////////
-    setTimeout(async () => {
-
-const seeds = [
-  "coachella vlog",
-  "coachella outfit",
-  "coachella crowd",
-  "coachella reaction",
-  "coachella performance",
-  "coachella day 1",
-  "coachella night",
-  "coachella fit check"
-];
-
-const randomSeed = seeds[Math.floor(Math.random() * seeds.length)];
-
-const ytResults = await getYouTubeResults(randomSeed);
-
-      sendYouTube(roomId, ytResults);
-
-      await sendAISummary(roomId, ytResults);
-
-      //////////////////////////////////////////////////////
-// 🔥 ZCHAT HINT
-//////////////////////////////////////////////////////
-io.to(roomId).emit("message", {
-  role:"ai",
-  persona:"Guide",
-  text:"323LA chat: type anything → Coachella video idea or call me at 067@323la.com"
-});
-
-    }, 400);
 
   });
 
   ////////////////////////////////////////////////////////////
   // SEND MESSAGE
   ////////////////////////////////////////////////////////////
-  socket.on("sendMessage", async ({ roomId, message }) => {
+  socket.on("sendMessage", async (data) => {
+
+    const { roomId, message, mode } = data || {};
+    const finalMode = mode || "base";
 
     if(!message) return;
 
     ////////////////////////////////////////////////////////
     // SEND USER
     ////////////////////////////////////////////////////////
-    io.to(roomId).emit("message", {
+    io.to(roomId).emit({
       role:"user",
+      persona:"User",
       text: message
     });
 
     ////////////////////////////////////////////////////////
-    // 🔥 YOUTUBE (SAME ENGINE)
+    // BASE MODE (SEARCH AI)
     ////////////////////////////////////////////////////////
-    const ytResults = await getYouTubeResults(`coachella ${message} vlog`);
+    if(finalMode === "base"){
 
-    sendYouTube(roomId, ytResults);
+      let ytResults = [];
+      let webResults = [];
+
+      // 🎥 YouTube
+      try {
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`;
+        const ytRes = await fetch(ytUrl);
+        const ytData = await ytRes.json();
+
+        ytResults = (ytData.items || []).map(v => ({
+          title: v.snippet.title,
+          link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+        }));
+      } catch(e){
+        console.log("YT error:", e);
+      }
+
+      // 🌐 Google SERP
+      try {
+        const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`;
+        const serpRes = await fetch(serpUrl);
+        const serpData = await serpRes.json();
+
+        webResults = (serpData.organic_results || []).slice(0,3);
+      } catch(e){
+        console.log("SERP error:", e);
+      }
+
+      ////////////////////////////////////////////////////////
+      // WEB RESULTS
+      ////////////////////////////////////////////////////////
+      if(webResults.length){
+        io.to(roomId).emit({
+          role:"ai",
+          persona:"Web results",
+          text:webResults.map(r=>`<b>${r.title}</b><br>${r.link}`).join("<br><br>")
+        });
+      }
+
+      ////////////////////////////////////////////////////////
+      // YOUTUBE RESULTS
+      ////////////////////////////////////////////////////////
+      if(ytResults.length){
+        io.to(roomId).emit({
+          role:"ai",
+          persona:"YouTube",
+          text:ytResults.map(r=>`YT|${r.title}|${r.link}`).join("\n")
+        });
+      }
+
+      ////////////////////////////////////////////////////////
+      // AI SUMMARY (UPGRADED)
+      ////////////////////////////////////////////////////////
+      const context = [...webResults.map(r=>r.title), ...ytResults.map(r=>r.title)].join("\n");
+
+      const aiRes = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.6,
+        messages:[
+          {
+            role:"system",
+            content:`
+You are a real-time AI search engine.
+
+- extract signal not noise
+- highlight repeated patterns
+- focus on what matters now
+
+no filler
+no generic explanation
+
+output 2–4 short lines
+`
+          },
+          {
+            role:"user",
+            content:context
+          }
+        ]
+      });
+
+      io.to(roomId).emit({
+        role:"ai",
+        persona:"AI summary",
+        text: aiRes.choices[0].message.content
+      });
+
+    }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY
+    // COACHELLA MODE
     ////////////////////////////////////////////////////////
-    await sendAISummary(roomId, ytResults);
+    else if(finalMode === "coachella"){
 
-  });
+      const ytResults = await getYouTubeResults(`coachella ${message} vlog`);
 
-  ////////////////////////////////////////////////////////////
-  // DISCONNECT
-  ////////////////////////////////////////////////////////////
-  socket.on("disconnect", () => {
-    console.log("🔴 disconnected:", socket.id);
+      sendYouTube(roomId, ytResults);
+      await sendAISummary(roomId, ytResults);
+
+    }
+
   });
 
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 YOUTUBE ENGINE (REAL-TIME + FALLBACK + FORCE 3)
+// 🔥 YOUTUBE ENGINE
 //////////////////////////////////////////////////////////////
 
 async function getYouTubeResults(query){
@@ -2683,40 +2779,15 @@ async function getYouTubeResults(query){
   let ytResults = [];
 
   try {
+    const url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3`;
 
-    const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const res = await fetch(url);
+    const data = await res.json();
 
-    // 1️⃣ REAL-TIME
-    let url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${past.toISOString()}`;
-
-    let res = await fetch(url);
-    let data = await res.json();
-
-    ytResults = data.items || [];
-
-    // 2️⃣ FALLBACK
-    if(ytResults.length < 3){
-
-      url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&maxResults=3&order=date`;
-
-      res = await fetch(url);
-      data = await res.json();
-
-      ytResults = data.items || [];
-    }
-
-    // 3️⃣ FORMAT
-    ytResults = ytResults.map(v => ({
-      title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
+    ytResults = (data.items || []).map(v => ({
+      title: v.snippet.title,
       link: `https://www.youtube.com/watch?v=${v.id.videoId}`
     }));
-
-    // 4️⃣ 🔥 FORCE 3 VIDEOS (UI GUARANTEE)
-    while (ytResults.length > 0 && ytResults.length < 3){
-      ytResults.push(ytResults[ytResults.length - 1]);
-    }
-
-    ytResults = ytResults.slice(0,3);
 
   } catch(err){
     console.log("YT error:", err);
@@ -2726,60 +2797,51 @@ async function getYouTubeResults(query){
 }
 
 //////////////////////////////////////////////////////////////
-// 🎥 SEND YOUTUBE (UI FORMAT)
+// SEND YOUTUBE
 //////////////////////////////////////////////////////////////
 
 function sendYouTube(roomId, ytResults){
 
   if(!ytResults.length) return;
 
-  const ytText = ytResults.map(r =>
+  const text = ytResults.map(r =>
     `YT|${r.title}|${r.link}`
   ).join("\n");
 
-  io.to(roomId).emit("message", {
+  io.to(roomId).emit({
     role:"ai",
     persona:"YouTube",
-    text: ytText
+    text
   });
 }
 
 //////////////////////////////////////////////////////////////
-// 🤖 AI SUMMARY (CREATOR SIGNAL MODE)
+// AI SUMMARY (COACHELLA MODE)
 //////////////////////////////////////////////////////////////
 
 async function sendAISummary(roomId, ytResults){
 
   const context = ytResults.map(r => r.title).join("\n");
 
-  const aiRes = await openai.chat.completions.create({
+  const res = await openai.chat.completions.create({
     model:"gpt-4o-mini",
     temperature:0.7,
     messages:[
       {
         role:"system",
-        content:`
-You are a real-time Coachella influencer signal parser.
-
-Rules:
-- Always interpret in content / creator context
-- Never give general advice
-- Focus on filming and creator behavior
-- Always include at least one filming idea
-- Keep it short (max 4 lines)
-`
+        content:`You are a Coachella content signal parser. Give short creator-focused insight.`
       },
       {
         role:"user",
-        content:`Signals:\n${context}`
+        content:context
       }
     ]
   });
 
-  io.to(roomId).emit("message", {
+  io.to(roomId).emit({
     role:"ai",
     persona:"AI summary",
-    text: aiRes.choices[0].message.content
+    text: res.choices[0].message.content
   });
 }
 
@@ -2790,5 +2852,5 @@ Rules:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running (FINAL)");
+  console.log("🔥 chatroom running FINAL");
 });
