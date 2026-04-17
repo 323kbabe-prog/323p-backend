@@ -65,25 +65,7 @@ io.on("connection", (socket) => {
     if(!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
-    // SAVE USER
-    ////////////////////////////////////////////////////////
-    rooms[roomId].push({
-      role: "user",
-      content: message
-    });
-
-    rooms[roomId] = rooms[roomId].slice(-20);
-
-    ////////////////////////////////////////////////////////
-    // SEND USER
-    ////////////////////////////////////////////////////////
-    io.to(roomId).emit("message", {
-      role: "user",
-      text: message
-    });
-
-    ////////////////////////////////////////////////////////
-    // 🌍 GET USER REGION (IP)
+    // 🌍 AUTO LOCATION
     ////////////////////////////////////////////////////////
     let regionCode = "US";
 
@@ -103,7 +85,28 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI GENERATE SEARCH QUERY
+    // SAVE USER
+    ////////////////////////////////////////////////////////
+    rooms[roomId].push({
+      role: "user",
+      content: message
+    });
+
+    rooms[roomId] = rooms[roomId].slice(-20);
+
+    ////////////////////////////////////////////////////////
+    // SEND USER
+    ////////////////////////////////////////////////////////
+    io.to(roomId).emit("message", {
+      role: "user",
+      text: message
+    });
+
+    console.log("User:", message);
+    console.log("Region:", regionCode);
+
+    ////////////////////////////////////////////////////////
+    // 🤖 AI GENERATE QUERY
     ////////////////////////////////////////////////////////
     let smartQuery = message;
 
@@ -140,8 +143,10 @@ Generate a YouTube search query.
       console.log("AI query error:", err);
     }
 
+    console.log("SmartQuery:", smartQuery);
+
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE SEARCH (ALWAYS 3)
+    // 🔍 YOUTUBE SEARCH
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
@@ -186,6 +191,8 @@ Generate a YouTube search query.
     } catch (err) {
       console.log("YT error:", err);
     }
+
+    console.log("YT Results:", ytResults.map(v => v.title));
 
     ////////////////////////////////////////////////////////
     // SEND YOUTUBE
