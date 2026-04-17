@@ -2706,51 +2706,35 @@ Rules:
       console.log("AI query error:", err);
     }
 
-    ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE (SMART)
-    ////////////////////////////////////////////////////////
-    let ytResults = [];
+   ////////////////////////////////////////////////////////
+// 🔍 YOUTUBE (MAX FRESH — SIMPLE & CORRECT)
+////////////////////////////////////////////////////////
+let ytResults = [];
 
-    try {
+try {
 
-      const now = new Date();
-      const windows = [24, 72, 168];
+  const ytUrl = `https://www.googleapis.com/youtube/v3/search
+?key=${process.env.YOUTUBE_API_KEY}
+&q=${encodeURIComponent(aiQuery)}
+&type=video
+&part=snippet
+&maxResults=10
+&order=date`;
 
-      for (const hours of windows) {
+  const ytRes = await fetch(ytUrl);
+  const ytData = await ytRes.json();
 
-        const time = new Date(now - hours * 3600000).toISOString();
+  ytResults = (ytData.items || [])
+    .slice(0, 3)
+    .map(v => ({
+      title: v.snippet.title || "Untitled video",
+      link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
+      date: v.snippet.publishedAt
+    }));
 
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}`;
-
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
-
-        if (ytData.items?.length >= 3) {
-          ytResults = ytData.items;
-          break;
-        } else {
-          ytResults = ytData.items || [];
-        }
-      }
-
-      if (ytResults.length < 3) {
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(aiQuery)}&type=video&part=snippet&maxResults=6`;
-
-        const ytRes = await fetch(ytUrl);
-        const ytData = await ytRes.json();
-
-        ytResults = ytResults.concat(ytData.items || []);
-      }
-
-      ytResults = ytResults.slice(0, 3).map(v => ({
-        title: (v.snippet.title || "").replace(/[^\w\s]/gi, ""),
-        link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
-        date: v.snippet.publishedAt
-      }));
-
-    } catch (err) {
-      console.log("YT error:", err);
-    }
+} catch (err) {
+  console.log("YT error:", err);
+}
 
     ////////////////////////////////////////////////////////
     // SEND YOUTUBE
