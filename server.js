@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL CLEAN + SMART STRANGER)
+// 🔥 REAL-TIME CHATROOM (AI + STRANGER INTERACTION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2589,13 +2589,15 @@ const rooms = {};
 io.on("connection", (socket) => {
 
 ////////////////////////////////////////////////////////////
-// 🤖 STRANGER AUTO LOOP (SMART + VARIATION)
+// 🤖 STRANGER LOOP (AI ↔ STRANGER ONLY)
 ////////////////////////////////////////////////////////////
 function startStrangerLoop(roomId){
 
+  let chainCount = 0;
+
   async function loop(){
 
-    const delay = 12000 + Math.random()*15000;
+    const delay = 3000; // 🔥 3 sec trigger
 
     setTimeout(async () => {
 
@@ -2605,76 +2607,113 @@ function startStrangerLoop(roomId){
       const lastMsg = room[room.length - 1];
       const idle = Date.now() - (lastMsg?.time || Date.now());
 
-      if(idle > 10000){
+      // 🔥 only trigger if idle AND last speaker is AI
+      if(idle > 3000 && lastMsg?.persona === "AI"){
+
+        if(chainCount > 3){
+          chainCount = 0;
+          return loop();
+        }
 
         const randomFeed = [
-          "people scrolling silently",
-          "late night empty room",
-          "music playing somewhere",
-          "someone typing then stopping",
-          "random thoughts floating",
-          "nobody really talking",
-          "low energy chatroom",
-          "just quiet scrolling"
+          "quiet room",
+          "nobody talking",
+          "late night scrolling",
+          "low energy",
+          "background noise",
+          "empty vibe"
         ];
 
-        const vibe = randomFeed[Math.floor(Math.random() * randomFeed.length)];
+        const vibe = randomFeed[Math.floor(Math.random()*randomFeed.length)];
 
         try{
 
-          const r = await openai.chat.completions.create({
+          ////////////////////////////////////////////////////////////
+          // 👻 STRANGER SPEAKS (ONLY TO AI)
+          ////////////////////////////////////////////////////////////
+          const s = await openai.chat.completions.create({
             model:"gpt-4o-mini",
             temperature:0.9,
             messages:[
               {
                 role:"system",
                 content:`
-You are a random human in a live chatroom.
+You are a random human in a chatroom.
 
-Behavior:
-- drop a passing thought
-- not talking to anyone
-- not helping
-- not repeating yourself
-
-Style:
+- respond casually
 - 1 short sentence
-- casual
-- slightly cold
-- sometimes weird or pointless
-
-Important:
-- every message must feel different
-- avoid repeating ideas like "no help" or "no assistance"
+- not helpful
+- not addressing anyone directly
+- feels like a passing comment
 `
               },
               {
                 role:"user",
-                content:`Room vibe: ${vibe}`
+                content:`Previous message: ${lastMsg.content}
+Room vibe: ${vibe}`
               }
             ]
           });
 
-          const text = r.choices[0].message.content.trim();
-
-          // prevent repetition
-          const lastTexts = room.slice(-5).map(m => m.content);
-          if (lastTexts.includes(text)) return loop();
+          const strangerText = s.choices[0].message.content.trim();
 
           rooms[roomId].push({
             role:"assistant",
-            content:text,
+            persona:"Stranger",
+            content:strangerText,
             time:Date.now()
           });
 
           io.to(roomId).emit("message", {
             role:"ai",
             persona:"Stranger",
-            text
+            text:strangerText
           });
 
-        }catch(e){
-          console.log("stranger error:", e);
+          ////////////////////////////////////////////////////////////
+          // 🤖 AI RESPONDS TO STRANGER
+          ////////////////////////////////////////////////////////////
+          const a = await openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.7,
+            messages:[
+              {
+                role:"system",
+                content:`
+You are another random person in a chatroom.
+
+- reply casually
+- short response
+- not helpful
+- conversational
+`
+              },
+              {
+                role:"user",
+                content:strangerText
+              }
+            ]
+          });
+
+          const aiReply = a.choices[0].message.content.trim();
+
+          rooms[roomId].push({
+            role:"assistant",
+            persona:"AI",
+            content:aiReply,
+            time:Date.now()
+          });
+
+          io.to(roomId).emit("message", {
+            role:"ai",
+            persona:"AI",
+            text:aiReply
+          });
+
+          chainCount++;
+
+        }catch(err){
+          console.log("loop error:", err);
         }
 
       }
@@ -2702,31 +2741,24 @@ socket.on("joinRoom", (roomId) => {
   const intro = "Welcome to 323LAchat";
 
   socket.emit("message", {
-    role: "ai",
-    persona: "AI",
-    text: intro
+    role:"ai",
+    persona:"AI",
+    text:intro
   });
 
   if (rooms[roomId].length === 0) {
     rooms[roomId].push({
-      role: "assistant",
-      content: intro,
-      time: Date.now()
+      role:"assistant",
+      persona:"AI",
+      content:intro,
+      time:Date.now()
     });
   }
-
-  const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-
-  io.to(roomId).emit("message", {
-    role: "ai",
-    persona: "System",
-    text: `👥 ${count} ${count === 1 ? "person" : "people"} here`
-  });
 
 });
 
 ////////////////////////////////////////////////////////////
-// SEND MESSAGE
+// SEND MESSAGE (USER → AI ONLY)
 ////////////////////////////////////////////////////////////
 socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -2738,74 +2770,61 @@ socket.on("sendMessage", async ({ roomId, message }) => {
   // SAVE USER
   ////////////////////////////////////////////////////////
   rooms[roomId].push({
-    role: "user",
-    content: message,
-    time: Date.now()
+    role:"user",
+    persona:"User",
+    content:message,
+    time:Date.now()
   });
 
-  if (rooms[roomId].length > 20) {
-    rooms[roomId] = rooms[roomId].slice(-20);
-  }
-
-  ////////////////////////////////////////////////////////
-  // SEND USER
-  ////////////////////////////////////////////////////////
   io.to(roomId).emit("message", {
-    role: "user",
-    text: message
+    role:"user",
+    text:message
   });
 
   ////////////////////////////////////////////////////////
-  // AI RESPONSE
+  // AI REPLY (TO USER ONLY)
   ////////////////////////////////////////////////////////
   let aiText = "";
 
-  try {
+  try{
     const r = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      messages: [
+      model:"gpt-4o-mini",
+      temperature:0.7,
+      messages:[
         {
-          role: "system",
-          content: `
-You are a random human stranger in a live chatroom.
+          role:"system",
+          content:`
+You are a random human in a chatroom.
 
 - 1 sentence
-- cold tone
-- no helping
-- no addressing anyone
+- casual
+- not helpful
 `
         },
         {
-          role: "user",
-          content: message
+          role:"user",
+          content:message
         }
       ]
     });
 
     aiText = r.choices[0].message.content;
 
-  } catch (err) {
-    console.log("AI error:", err);
-    aiText = "Something went wrong.";
+  }catch(err){
+    aiText = "error";
   }
 
-  ////////////////////////////////////////////////////////
-  // SAVE AI
-  ////////////////////////////////////////////////////////
   rooms[roomId].push({
-    role: "assistant",
-    content: aiText,
-    time: Date.now()
+    role:"assistant",
+    persona:"AI",
+    content:aiText,
+    time:Date.now()
   });
 
-  ////////////////////////////////////////////////////////
-  // SEND AI
-  ////////////////////////////////////////////////////////
   io.to(roomId).emit("message", {
-    role: "ai",
-    persona: "AI",
-    text: aiText
+    role:"ai",
+    persona:"AI",
+    text:aiText
   });
 
 });
@@ -2824,6 +2843,6 @@ socket.on("disconnect", () => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running FINAL");
+  console.log("🔥 chatroom running");
 });
 
