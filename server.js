@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (PERSONALIZED + MEMORY + ALWAYS 3 YT)
+// 🔥 REAL-TIME CHATROOM (AUTO LOCATION + MEMORY + FRESH YT + ALWAYS 3 + FALLBACK)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2607,35 +2607,37 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   // SEND MESSAGE
   ////////////////////////////////////////////////////////////
-  socket.on("sendMessage", async ({ roomId, message, lang }) => {
+  socket.on("sendMessage", async ({ roomId, message }) => {
 
     if(!message) return;
 
     if(!rooms[roomId]) rooms[roomId] = [];
 
     ////////////////////////////////////////////////////////
-    // 🌍 PERSONALIZATION (LANG → REGION)
+    // 🌍 AUTO LOCATION (IP → REGION)
     ////////////////////////////////////////////////////////
-    const userLang = (lang || "en-US").toLowerCase();
-
     let regionCode = "US";
     let relevanceLanguage = "en";
 
-    if(userLang.includes("zh")){
-      regionCode = "TW";
-      relevanceLanguage = "zh";
-    }
-    else if(userLang.includes("ko")){
-      regionCode = "KR";
-      relevanceLanguage = "ko";
-    }
-    else if(userLang.includes("ja")){
-      regionCode = "JP";
-      relevanceLanguage = "ja";
-    }
-    else if(userLang.includes("en")){
-      regionCode = "US";
-      relevanceLanguage = "en";
+    try {
+      const rawIP = socket.handshake.headers["x-forwarded-for"];
+      const ip = rawIP ? rawIP.split(",")[0] : socket.handshake.address;
+
+      const geoRes = await fetch(`http://ip-api.com/json/${ip}`);
+      const geoData = await geoRes.json();
+
+      if(geoData && geoData.countryCode){
+        regionCode = geoData.countryCode;
+      }
+
+      // map language
+      if(regionCode === "TW") relevanceLanguage = "zh";
+      else if(regionCode === "KR") relevanceLanguage = "ko";
+      else if(regionCode === "JP") relevanceLanguage = "ja";
+      else relevanceLanguage = "en";
+
+    } catch(err){
+      console.log("Geo error:", err);
     }
 
     ////////////////////////////////////////////////////////
@@ -2728,7 +2730,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 SERP (UNCHANGED)
+    // 🔍 SERP
     ////////////////////////////////////////////////////////
     let webResults = [];
 
@@ -2827,7 +2829,6 @@ ${context}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (FINAL PERSONALIZED)");
+  console.log("🔥 live chat running (AUTO LOCATION FINAL)");
 });
-
 
