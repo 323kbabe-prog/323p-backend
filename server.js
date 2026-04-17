@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (SEARCH + UI FORMAT FIXED)
+// 🔥 REAL-TIME CHATROOM (NEWEST-FIRST VERSION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2634,19 +2634,20 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE SEARCH
+    // 🔍 YOUTUBE SEARCH (🔥 NEWEST FIRST)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
     try {
-      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`;
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3&order=date`;
 
       const ytRes = await fetch(ytUrl);
       const ytData = await ytRes.json();
 
       ytResults = (ytData.items || []).map(v => ({
-        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''), // clean title
-        link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+        title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
+        link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
+        date: v.snippet.publishedAt
       }));
 
     } catch(err){
@@ -2654,7 +2655,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🎥 SEND YOUTUBE (🔥 FIXED FORMAT)
+    // 🎥 SEND YOUTUBE
     ////////////////////////////////////////////////////////
     if(ytResults.length > 0){
 
@@ -2670,12 +2671,12 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 GOOGLE (SERP)
+    // 🔍 GOOGLE (SERP → LAST 24H)
     ////////////////////////////////////////////////////////
     let webResults = [];
 
     try {
-      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}`;
+      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(message)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
 
       const serpRes = await fetch(serpUrl);
       const serpData = await serpRes.json();
@@ -2689,10 +2690,10 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY
+    // 🤖 AI SUMMARY (🔥 REAL-TIME AWARE)
     ////////////////////////////////////////////////////////
     const context = [
-      ...ytResults.map(r => r.title),
+      ...ytResults.map(r => `${r.title} (${r.date})`),
       ...webResults
     ].join("\n");
 
@@ -2707,10 +2708,11 @@ io.on("connection", (socket) => {
 You are a real-time AI search assistant.
 
 Rules:
-- You ALWAYS have access to live search results
+- You ALWAYS have access to LIVE and NEWEST data
+- Results are sorted by MOST RECENT (latest first)
 - NEVER say you can't access real-time data
 - Keep answers SHORT (max 5 lines)
-- Be clear and useful
+- Highlight what is NEW or trending NOW
 `
         },
 
@@ -2720,7 +2722,7 @@ Rules:
 Query:
 ${message}
 
-Search results:
+Search results (latest first):
 ${context}
 
 Give a helpful short answer.
@@ -2759,7 +2761,7 @@ Give a helpful short answer.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (AI intro fixed)");
+  console.log("🔥 live chat running (NEWEST-FIRST)");
 });
 
 
