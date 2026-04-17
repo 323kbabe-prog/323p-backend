@@ -2553,7 +2553,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (ALWAYS YOUTUBE + MAX FRESH)
+// 🔥 REAL-TIME CHATROOM (MEMORY + ALWAYS 3 YOUTUBE)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2626,7 +2626,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // SEND USER MESSAGE
+    // SEND USER
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"user",
@@ -2634,55 +2634,49 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////
-    // 🔍 YOUTUBE SEARCH (🔥 ALWAYS RETURN + MAX FRESH)
+    // 🔍 YOUTUBE (ALWAYS 3 + MAX FRESH)
     ////////////////////////////////////////////////////////
     let ytResults = [];
 
     try {
 
       const now = new Date();
-
-      const windows = [
-        24,    // last 24h
-        72,    // last 3 days
-        168    // last 7 days
-      ];
-
-      let found = false;
+      const windows = [24, 72, 168]; // 1d, 3d, 7d
 
       for(const hours of windows){
 
         const time = new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
 
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message + " trending")}&type=video&part=snippet&maxResults=3&order=date&publishedAfter=${time}`;
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message + " trending")}&type=video&part=snippet&maxResults=6&order=date&publishedAfter=${time}`;
 
         const ytRes = await fetch(ytUrl);
         const ytData = await ytRes.json();
 
-        if(ytData.items && ytData.items.length > 0){
+        if(ytData.items && ytData.items.length >= 3){
           ytResults = ytData.items;
-          found = true;
-          break; // ✅ stop at freshest available
+          break;
+        } else {
+          ytResults = ytData.items || [];
         }
       }
 
       //////////////////////////////////////////////////////
-      // 🔥 FINAL FALLBACK (guarantee always show)
+      // fallback (guarantee results)
       //////////////////////////////////////////////////////
-      if(!found){
+      if(ytResults.length < 3){
 
-        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=3`;
+        const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(message)}&type=video&part=snippet&maxResults=6`;
 
         const ytRes = await fetch(ytUrl);
         const ytData = await ytRes.json();
 
-        ytResults = ytData.items || [];
+        ytResults = ytResults.concat(ytData.items || []);
       }
 
       //////////////////////////////////////////////////////
-      // FORMAT
+      // ensure exactly 3
       //////////////////////////////////////////////////////
-      ytResults = ytResults.map(v => ({
+      ytResults = ytResults.slice(0,3).map(v => ({
         title: (v.snippet.title || "").replace(/[^\w\s]/gi,''),
         link: `https://www.youtube.com/watch?v=${v.id.videoId}`,
         date: v.snippet.publishedAt
@@ -2693,9 +2687,9 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🎥 SEND YOUTUBE
+    // SEND YOUTUBE
     ////////////////////////////////////////////////////////
-    if(ytResults.length > 0){
+    if(ytResults.length === 3){
 
       const ytText = ytResults.map(r =>
         `YT|${r.title}|${r.link}`
@@ -2709,7 +2703,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🔍 GOOGLE (SERP → LAST 24H)
+    // 🔍 SERP (unchanged)
     ////////////////////////////////////////////////////////
     let webResults = [];
 
@@ -2728,51 +2722,63 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////
-    // 🤖 AI SUMMARY
+    // 🤖 AI WITH MEMORY
     ////////////////////////////////////////////////////////
+    const history = rooms[roomId].slice(-10);
+
     const context = [
       ...ytResults.map(r => `${r.title} (${r.date})`),
       ...webResults
     ].join("\n");
 
-    const r = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.7,
-      messages:[
-
-        {
-          role:"system",
-          content:`
+    const aiMessages = [
+      {
+        role:"system",
+        content:`
 You are a real-time AI search assistant.
 
 Rules:
-- Always prioritize the newest information available
-- Results may include fallback if no recent data exists
-- Highlight what is NEW or trending NOW
+- Follow conversation memory
+- Use latest search results
 - Keep answers SHORT (max 5 lines)
 `
-        },
+      },
 
-        {
-          role:"user",
-          content:`
-Query:
+      ...history.map(m => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content
+      })),
+
+      {
+        role:"user",
+        content:`
+Latest question:
 ${message}
 
-Latest available results:
+Search:
 ${context}
-
-Give a helpful short answer.
 `
-        }
+      }
+    ];
 
-      ]
+    const r = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.7,
+      messages: aiMessages
     });
 
     const aiText = r.choices[0].message.content;
 
     ////////////////////////////////////////////////////////
-    // SEND AI SUMMARY
+    // SAVE AI MEMORY (IMPORTANT)
+    ////////////////////////////////////////////////////////
+    rooms[roomId].push({
+      role:"assistant",
+      content: aiText
+    });
+
+    ////////////////////////////////////////////////////////
+    // SEND AI
     ////////////////////////////////////////////////////////
     io.to(roomId).emit("message", {
       role:"ai",
@@ -2782,8 +2788,6 @@ Give a helpful short answer.
 
   });
 
-  ////////////////////////////////////////////////////////////
-  // DISCONNECT
   ////////////////////////////////////////////////////////////
   socket.on("disconnect", () => {
     console.log("🔴 disconnected:", socket.id);
@@ -2798,5 +2802,5 @@ Give a helpful short answer.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 live chat running (ALWAYS YOUTUBE + MAX FRESH)");
+  console.log("🔥 live chat running (MEMORY + ALWAYS 3 YT)");
 });
