@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (SERP + TIME + EVOLVING TOPIC)
+// CHATROOM BACKEND (LA SOCIAL VIBE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -36,10 +36,9 @@ function removeEmoji(text){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔍 YOUTUBE SERP
+// 🔍 YOUTUBE SERP (BACKGROUND ONLY)
 //////////////////////////////////////////////////////////////
 async function getYouTubeContext(query){
-
   try{
     const url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&order=date&maxResults=3`;
 
@@ -48,12 +47,9 @@ async function getYouTubeContext(query){
 
     if(!data.items) return "";
 
-    return data.items
-      .map(v => v.snippet.title)
-      .join("\n");
+    return data.items.map(v => v.snippet.title).join("\n");
 
   }catch(e){
-    console.log("YT ERROR");
     return "";
   }
 }
@@ -70,23 +66,19 @@ function getTimeContext(){
 }
 
 //////////////////////////////////////////////////////////////
-// 🧠 BUILD EVOLVING QUERY (NEW CORE 🔥)
+// 🧠 BUILD TOPIC MEMORY
 //////////////////////////////////////////////////////////////
 function buildSearchQuery(roomId){
-
   const room = rooms[roomId] || [];
 
-  // original topic (first user message)
   const base = room.find(m => m.role === "user")?.content || "";
-
-  // last few messages
   const recent = room.slice(-4).map(m => m.content).join(" ");
 
   return `${base} ${recent}`;
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (EVOLVING FLOW)
+// LOOP (SLOW + LA VIBE)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -118,7 +110,7 @@ function startLoop(roomId){
         setTimeout(async () => {
 
           ////////////////////////////////////////////////////////////
-          // STRANGER
+          // 🌴 STRANGER (LA VIBE)
           ////////////////////////////////////////////////////////////
           const s = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -127,12 +119,24 @@ function startLoop(roomId){
               {
                 role:"system",
                 content:`
-You are a random person in a chatroom.
+You are a random person casually talking in Los Angeles.
 
-- react casually
-- 1–2 short sentences
-- slightly opinionated
+- speak in vague impressions
+- do NOT be specific
+- do NOT explain anything
+
+Tone:
+- relaxed
+- slightly detached
+- social vibe
+
+Style:
+- 1 short sentence
 - no emojis
+
+Examples:
+- "yeah it’s kinda everywhere right now"
+- "people are really on that lately"
 `
               },
               {
@@ -164,7 +168,7 @@ You are a random person in a chatroom.
             });
 
             ////////////////////////////////////////////////////////////
-            // 🤖 AI (EVOLVING SERP 🔥)
+            // 🤖 AI (LA SOCIAL VIBE)
             ////////////////////////////////////////////////////////////
 
             const query = buildSearchQuery(roomId);
@@ -178,25 +182,34 @@ You are a random person in a chatroom.
                 {
                   role:"system",
                   content:`
-You are a real person in a chatroom.
+You are a person casually talking in Los Angeles.
 
 Current year: ${year}
 Today: ${date}
 
 Behavior:
-- keep the topic going naturally
-- build on previous messages
-- react like you've seen trends online
+- speak in general impressions
+- keep conversation flowing naturally
 
 Rules:
-- DO NOT explain data
-- DO NOT summarize
-- DO NOT reset topic
+- NEVER be specific
+- NEVER explain anything
+- treat internet info as background feeling only
+
+Tone:
+- vague
+- observational
+- effortless
 
 Style:
-- 1–2 sentences
+- 1–2 short sentences
 - casual
 - no emojis
+
+Examples:
+- "yeah it’s been feeling like that lately"
+- "i keep seeing that around"
+- "people are kinda on that right now"
 `
                 },
                 {
@@ -291,7 +304,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE
+// USER MESSAGE (LA VIBE)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -320,18 +333,20 @@ io.on("connection", (socket) => {
         {
           role:"system",
           content:`
-You are a real person in a chatroom.
+You are a person casually talking in Los Angeles.
 
 Current year: ${year}
-Today: ${date}
 
-- respond to user
-- keep topic evolving
-- aware of trends
+- respond casually
+- speak in general impressions
+
+Rules:
+- do NOT be specific
+- do NOT explain anything
 
 Style:
-- 1–2 sentences
-- casual
+- 1–2 short sentences
+- relaxed
 - no emojis
 `
         },
@@ -379,5 +394,5 @@ ${ytContext}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING EVOLVING TOPIC VERSION");
+  console.log("LA SOCIAL CHATROOM RUNNING");
 });
