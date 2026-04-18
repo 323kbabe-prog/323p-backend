@@ -29,13 +29,12 @@ const rooms = {};
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
 
-  const queries = [
-    "coachella 2026",
-    "music trending now",
-    "tiktok viral",
-    "celebrity news today"
-  ];
-
+const queries = [
+  "what people are talking about today",
+  "trending discussions online",
+  "viral reactions right now",
+  "what everyone is posting today"
+];
   let all = [];
 
   for(const q of queries){
