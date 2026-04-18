@@ -74,7 +74,7 @@ function startLoop(roomId){
   async function loop(){
 
     // 🔥 slower base loop
-    const loopDelay = 4000 + Math.random()*4000;
+    const loopDelay = 1000 + Math.random()*1500;
 
     setTimeout(async () => {
 
