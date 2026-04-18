@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (SERP + REAL TIME AWARE VERSION)
+// CHATROOM BACKEND (SERP + TIME + SLOW HUMAN FLOW)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -59,7 +59,7 @@ async function getYouTubeContext(query){
 }
 
 //////////////////////////////////////////////////////////////
-// 🧠 GET TIME (FIX YEAR BUG)
+// 🧠 TIME CONTEXT
 //////////////////////////////////////////////////////////////
 function getTimeContext(){
   const now = new Date();
@@ -70,7 +70,7 @@ function getTimeContext(){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (PURE FLOW)
+// LOOP (SLOW HUMAN FLOW)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -78,7 +78,8 @@ function startLoop(roomId){
 
   async function loop(){
 
-    const delay = 3000 + Math.random()*3000;
+    // 🐢 SLOWER MAIN LOOP
+    const delay = 7000 + Math.random()*5000; // 7–12 sec
 
     setTimeout(async () => {
 
@@ -98,15 +99,22 @@ function startLoop(roomId){
         }
 
         ////////////////////////////////////////////////////////////
-        // STRANGER
+        // 🧠 READ TIME BUFFER (NEW)
         ////////////////////////////////////////////////////////////
-        const s = await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          temperature:0.9,
-          messages:[
-            {
-              role:"system",
-              content:`
+        const readTime = Math.min(6000, (last.content || "").length * 40);
+
+        setTimeout(async () => {
+
+          ////////////////////////////////////////////////////////////
+          // STRANGER
+          ////////////////////////////////////////////////////////////
+          const s = await openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.9,
+            messages:[
+              {
+                role:"system",
+                content:`
 You are a random person in a chatroom.
 
 - react to what was just said
@@ -114,58 +122,56 @@ You are a random person in a chatroom.
 - casual, slightly opinionated
 - no emojis
 `
-            },
-            {
-              role:"user",
-              content:last.content
-            }
-          ]
-        });
-
-        const strangerText = removeEmoji(
-          s.choices[0].message.content.trim()
-        );
-
-        setTimeout(async () => {
-
-          rooms[roomId].push({
-            role:"assistant",
-            persona:"Stranger",
-            content:strangerText,
-            time:Date.now()
-          });
-
-          io.to(roomId).emit("message", {
-            role:"ai",
-            persona:"Stranger",
-            text:strangerText
-          });
-
-          ////////////////////////////////////////////////////////////
-          // AI REPLY (SERP + TIME AWARE)
-          ////////////////////////////////////////////////////////////
-          const ytContext = await getYouTubeContext(strangerText);
-          const { year, date } = getTimeContext();
-
-          const a = await openai.chat.completions.create({
-            model:"gpt-4o-mini",
-            temperature:0.7,
-            messages:[
+              },
               {
-                role:"system",
-                content:`
+                role:"user",
+                content:last.content
+              }
+            ]
+          });
+
+          const strangerText = removeEmoji(
+            s.choices[0].message.content.trim()
+          );
+
+          // 🐢 SLOW STRANGER
+          const strangerDelay = 3000 + Math.random()*3000;
+
+          setTimeout(async () => {
+
+            rooms[roomId].push({
+              role:"assistant",
+              persona:"Stranger",
+              content:strangerText,
+              time:Date.now()
+            });
+
+            io.to(roomId).emit("message", {
+              role:"ai",
+              persona:"Stranger",
+              text:strangerText
+            });
+
+            ////////////////////////////////////////////////////////////
+            // AI REPLY (SERP + TIME)
+            ////////////////////////////////////////////////////////////
+            const ytContext = await getYouTubeContext(strangerText);
+            const { year, date } = getTimeContext();
+
+            const a = await openai.chat.completions.create({
+              model:"gpt-4o-mini",
+              temperature:0.7,
+              messages:[
+                {
+                  role:"system",
+                  content:`
 You are another random person in a chatroom.
 
 Current year: ${year}
 Today: ${date}
 
-Rules:
-- never guess time incorrectly
-- ignore unrelated internet noise
-
-Behavior:
 - react naturally
-- you’ve seen trending stuff online
+- aware of online trends
 - DO NOT explain data
 - DO NOT summarize
 
@@ -174,42 +180,47 @@ Style:
 - casual
 - no emojis
 `
-              },
-              {
-                role:"user",
-                content:`
+                },
+                {
+                  role:"user",
+                  content:`
 Message:
 ${strangerText}
 
 Internet noise:
 ${ytContext}
 `
-              }
-            ]
-          });
-
-          const aiReply = removeEmoji(
-            a.choices[0].message.content.trim()
-          );
-
-          setTimeout(() => {
-
-            rooms[roomId].push({
-              role:"assistant",
-              persona:"AI",
-              content:aiReply,
-              time:Date.now()
+                }
+              ]
             });
 
-            io.to(roomId).emit("message", {
-              role:"ai",
-              persona:"AI",
-              text:aiReply
-            });
+            const aiReply = removeEmoji(
+              a.choices[0].message.content.trim()
+            );
 
-          }, 1500 + Math.random()*2500);
+            // 🐢 SLOW AI
+            const aiDelay = 4000 + Math.random()*4000;
 
-        }, 1500 + Math.random()*2000);
+            setTimeout(() => {
+
+              rooms[roomId].push({
+                role:"assistant",
+                persona:"AI",
+                content:aiReply,
+                time:Date.now()
+              });
+
+              io.to(roomId).emit("message", {
+                role:"ai",
+                persona:"AI",
+                text:aiReply
+              });
+
+            }, aiDelay);
+
+          }, strangerDelay);
+
+        }, readTime);
 
         chainCount++;
       }
@@ -263,7 +274,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (SERP + TIME AWARE)
+// USER MESSAGE (UNCHANGED)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -281,15 +292,9 @@ io.on("connection", (socket) => {
       text:message
     });
 
-    ////////////////////////////////////////////////////////////
-    // CONTEXT
-    ////////////////////////////////////////////////////////////
     const ytContext = await getYouTubeContext(message);
     const { year, date } = getTimeContext();
 
-    ////////////////////////////////////////////////////////////
-    // AI REPLY
-    ////////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.7,
@@ -302,20 +307,13 @@ You are a real person in a chatroom.
 Current year: ${year}
 Today: ${date}
 
-Rules:
-- NEVER say wrong year
-- ignore unrelated internet noise
-
-Behavior:
 - react to user
-- aware of trending content
+- aware of trends
 - DO NOT explain data
-- DO NOT summarize
 
 Style:
 - 1–2 sentences
 - casual
-- sometimes ask follow-up
 - no emojis
 `
         },
@@ -351,7 +349,7 @@ ${ytContext}
         text:aiText
       });
 
-    }, 1200 + Math.random()*1500);
+    }, 1500);
 
   });
 
@@ -368,5 +366,5 @@ app.get("/", (_, res) => res.send("OK"));
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING SERP + TIME VERSION");
+  console.log("CHATROOM RUNNING SLOW HUMAN FLOW");
 });
