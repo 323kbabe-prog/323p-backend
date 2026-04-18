@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (AI-NATIVE + SERP FOR USER REPLIES)
+// CHATROOM BACKEND (AI-NATIVE + NO EMOJI)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -26,7 +26,17 @@ const rooms = {};
 const roomState = {};
 
 //////////////////////////////////////////////////////////////
-// AI-NATIVE SOCIAL TOPIC
+// REMOVE EMOJI (HARD BLOCK)
+//////////////////////////////////////////////////////////////
+function removeEmoji(text){
+  return text.replace(
+    /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu,
+    ""
+  );
+}
+
+//////////////////////////////////////////////////////////////
+// AI-NATIVE TOPIC
 //////////////////////////////////////////////////////////////
 async function getSocialTopic(){
   const r = await openai.chat.completions.create({
@@ -38,35 +48,16 @@ async function getSocialTopic(){
         content:`
 Generate ONE short sentence about something people are arguing or complaining about online.
 
-- everyday life
-- no crypto / nft / marketing / celebrity
-- must feel real
+- everyday life topics
+- no crypto, nft, marketing, or celebrity
+- plain text only
+- no emojis
 `
       }
     ]
   });
 
-  return r.choices[0].message.content.trim();
-}
-
-//////////////////////////////////////////////////////////////
-// SERP CONTEXT (ONLY FOR USER REPLY)
-//////////////////////////////////////////////////////////////
-async function getUserContext(query){
-  try{
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    return (data.organic_results || [])
-      .slice(0,5)
-      .map(r => r.title)
-      .join("\n");
-
-  }catch(e){
-    return "";
-  }
+  return removeEmoji(r.choices[0].message.content.trim());
 }
 
 //////////////////////////////////////////////////////////////
@@ -116,14 +107,13 @@ function startStrangerLoop(roomId){
               content:`
 You are a random person in a chatroom.
 
-Escalation level: ${intensity}
-
 - 1–2 short sentences
 - react to AI
 - casual tone
+- plain text only
+- no emojis
 
-If intensity high:
-- more blunt / argumentative
+Escalation level: ${intensity}
 `
             },
             {
@@ -133,7 +123,9 @@ If intensity high:
           ]
         });
 
-        const strangerText = s.choices[0].message.content.trim();
+        const strangerText = removeEmoji(
+          s.choices[0].message.content.trim()
+        );
 
         const strangerDelay = 1500 + Math.random()*2000;
 
@@ -162,13 +154,14 @@ If intensity high:
               {
                 role:"system",
                 content:`
-You are a real person.
-
-Escalation level: ${intensity}
+You are a real person in a chatroom.
 
 - 1–2 short sentences
 - respond to Stranger
-- can disagree
+- plain text only
+- no emojis
+
+Escalation level: ${intensity}
 `
               },
               {
@@ -178,7 +171,9 @@ Escalation level: ${intensity}
             ]
           });
 
-          const aiReply = a.choices[0].message.content.trim();
+          const aiReply = removeEmoji(
+            a.choices[0].message.content.trim()
+          );
 
           const aiDelay = 1500 + Math.random()*2500;
 
@@ -253,12 +248,13 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("message", {
       role:"ai",
       persona:"System",
-      text:`👥 ${real + fake} people here`
+      text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
     });
+
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (WITH SERP)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -277,7 +273,6 @@ io.on("connection", (socket) => {
     });
 
     const topic = await getSocialTopic();
-    const context = await getUserContext(message);
 
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -291,28 +286,22 @@ You are a real person in a chatroom.
 - respond directly to user
 - 1–2 short sentences
 - show opinion
-
-Use context if helpful, but stay natural
+- plain text only
+- no emojis
 
 Sometimes ask a follow-up question
 `
         },
         {
           role:"user",
-          content:`
-User: ${message}
-
-Context:
-${context}
-
-Topic:
-${topic}
-`
+          content:`User: ${message}\n\nTopic: ${topic}`
         }
       ]
     });
 
-    const aiText = r.choices[0].message.content.trim();
+    const aiText = removeEmoji(
+      r.choices[0].message.content.trim()
+    );
 
     const delay = 1200 + Math.random()*1500;
 
@@ -333,7 +322,6 @@ ${topic}
 
     }, delay);
 
-    // reduce intensity when user speaks
     roomState[roomId].intensity = Math.max(
       roomState[roomId].intensity - 0.3,
       0
@@ -354,5 +342,5 @@ app.get("/", (_, res) => res.send("OK"));
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING FINAL VERSION");
+  console.log("CHATROOM RUNNING CLEAN VERSION");
 });
