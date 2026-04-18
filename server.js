@@ -122,7 +122,7 @@ You are a random human in a chatroom.
 
         const strangerText = s.choices[0].message.content.trim();
 
-        const strangerDelay = 1500 + Math.random()*2000;
+        const strangerDelay = 2500 + Math.random()*3000;
 
         setTimeout(async () => {
 
@@ -165,7 +165,7 @@ You are a real person.
 
           const aiReply = a.choices[0].message.content.trim();
 
-          const aiDelay = 1500 + Math.random()*2500;
+          const aiDelay = 2500 + Math.random()*4000;
 
           setTimeout(() => {
 
