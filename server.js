@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (AI-NATIVE + SERP FOR USER REPLIES)
+// CHATROOM BACKEND (AI TOPIC EVOLUTION VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -36,7 +36,7 @@ function removeEmoji(text){
 }
 
 //////////////////////////////////////////////////////////////
-// AI-NATIVE SOCIAL TOPIC
+// INITIAL TOPIC
 //////////////////////////////////////////////////////////////
 async function getSocialTopic(){
   const r = await openai.chat.completions.create({
@@ -61,7 +61,45 @@ Generate ONE short sentence about something people are arguing or complaining ab
 }
 
 //////////////////////////////////////////////////////////////
-// SERP CONTEXT (ONLY FOR USER)
+// EVOLVE TOPIC (CORE NEW LOGIC)
+//////////////////////////////////////////////////////////////
+async function evolveTopic(currentTopic, lastMessage){
+
+  const r = await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    temperature:0.9,
+    messages:[
+      {
+        role:"system",
+        content:`
+You evolve conversation topics naturally.
+
+Rules:
+- take current topic
+- consider latest message
+- slightly shift or expand it
+- do NOT jump randomly
+- keep it 1 short sentence
+- plain text only
+`
+      },
+      {
+        role:"user",
+        content:`
+Current topic: ${currentTopic}
+
+Latest message:
+${lastMessage}
+`
+      }
+    ]
+  });
+
+  return removeEmoji(r.choices[0].message.content.trim());
+}
+
+//////////////////////////////////////////////////////////////
+// SERP (ONLY FOR USER REPLY)
 //////////////////////////////////////////////////////////////
 async function getUserContext(query){
   try{
@@ -81,7 +119,7 @@ async function getUserContext(query){
 }
 
 //////////////////////////////////////////////////////////////
-// STRANGER LOOP
+// LOOP
 //////////////////////////////////////////////////////////////
 function startStrangerLoop(roomId){
 
@@ -109,7 +147,21 @@ function startStrangerLoop(roomId){
           return loop();
         }
 
-        const topic = await getSocialTopic();
+        ////////////////////////////////////////////////////////////
+        // TOPIC LOGIC (NEW)
+        ////////////////////////////////////////////////////////////
+        if (!rooms[roomId].topic) {
+          rooms[roomId].topic = await getSocialTopic();
+        } else {
+          if(Math.random() < 0.6){
+            rooms[roomId].topic = await evolveTopic(
+              rooms[roomId].topic,
+              last.content
+            );
+          }
+        }
+
+        const topic = rooms[roomId].topic;
         const intensity = roomState[roomId]?.intensity || 0;
 
         ////////////////////////////////////////////////////////////
@@ -127,7 +179,6 @@ You are a random person in a chatroom.
 - 1–2 short sentences
 - react to AI
 - casual tone
-- plain text only
 - no emojis
 
 Escalation level: ${intensity}
@@ -171,11 +222,10 @@ Escalation level: ${intensity}
               {
                 role:"system",
                 content:`
-You are a real person in a chatroom.
+You are a real person.
 
 - 1–2 short sentences
 - respond to Stranger
-- plain text only
 - no emojis
 
 Escalation level: ${intensity}
@@ -240,6 +290,7 @@ io.on("connection", (socket) => {
 
     if (!rooms[roomId]) {
       rooms[roomId] = [];
+      rooms[roomId].topic = null;
       roomState[roomId] = { intensity: 0 };
       startStrangerLoop(roomId);
     }
@@ -271,7 +322,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (WITH SERP)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -289,7 +340,7 @@ io.on("connection", (socket) => {
       text:message
     });
 
-    const topic = await getSocialTopic();
+    const topic = rooms[roomId].topic || await getSocialTopic();
     const context = await getUserContext(message);
 
     const r = await openai.chat.completions.create({
@@ -305,7 +356,6 @@ You are a real person in a chatroom.
 - 1–2 short sentences
 - show opinion
 - use context if helpful
-- do NOT sound like a search engine
 - no emojis
 
 Sometimes ask a follow-up question
@@ -369,5 +419,5 @@ app.get("/", (_, res) => res.send("OK"));
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING FINAL VERSION");
+  console.log("CHATROOM RUNNING TOPIC EVOLUTION VERSION");
 });
