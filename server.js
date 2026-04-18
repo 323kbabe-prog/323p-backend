@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (AI TOPIC EVOLUTION VERSION)
+// CHATROOM BACKEND (NATURAL FLOW VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -23,7 +23,6 @@ const openai = new OpenAI({
 });
 
 const rooms = {};
-const roomState = {};
 
 //////////////////////////////////////////////////////////////
 // REMOVE EMOJI
@@ -36,9 +35,10 @@ function removeEmoji(text){
 }
 
 //////////////////////////////////////////////////////////////
-// INITIAL TOPIC
+// GENERATE STARTING TOPIC (ONLY ONCE)
 //////////////////////////////////////////////////////////////
-async function getSocialTopic(){
+async function getStartTopic(){
+
   const r = await openai.chat.completions.create({
     model:"gpt-4o-mini",
     temperature:0.9,
@@ -46,12 +46,13 @@ async function getSocialTopic(){
       {
         role:"system",
         content:`
-Generate ONE short sentence about something people are arguing or complaining about online.
+Generate ONE short sentence about something people are casually talking or arguing about.
 
 - everyday life
 - no crypto, nft, marketing, celebrity
 - plain text only
 - no emojis
+- natural tone
 `
       }
     ]
@@ -61,65 +62,7 @@ Generate ONE short sentence about something people are arguing or complaining ab
 }
 
 //////////////////////////////////////////////////////////////
-// EVOLVE TOPIC (CORE NEW LOGIC)
-//////////////////////////////////////////////////////////////
-async function evolveTopic(currentTopic, lastMessage){
-
-  const r = await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    temperature:0.9,
-    messages:[
-      {
-        role:"system",
-        content:`
-You evolve conversation topics naturally.
-
-Rules:
-- take current topic
-- consider latest message
-- slightly shift or expand it
-- do NOT jump randomly
-- keep it 1 short sentence
-- plain text only
-`
-      },
-      {
-        role:"user",
-        content:`
-Current topic: ${currentTopic}
-
-Latest message:
-${lastMessage}
-`
-      }
-    ]
-  });
-
-  return removeEmoji(r.choices[0].message.content.trim());
-}
-
-//////////////////////////////////////////////////////////////
-// SERP (ONLY FOR USER REPLY)
-//////////////////////////////////////////////////////////////
-async function getUserContext(query){
-  try{
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    return (data.organic_results || [])
-      .slice(0,5)
-      .map(r => r.title)
-      .join("\n");
-
-  }catch(e){
-    return "";
-  }
-}
-
-//////////////////////////////////////////////////////////////
-// LOOP
+// STRANGER LOOP (PURE FLOW)
 //////////////////////////////////////////////////////////////
 function startStrangerLoop(roomId){
 
@@ -127,45 +70,38 @@ function startStrangerLoop(roomId){
 
   async function loop(){
 
-    const delay = 4000 + Math.random()*4000;
+    const loopDelay = 3000 + Math.random()*3000;
 
     setTimeout(async () => {
 
       const room = rooms[roomId];
       if(!room) return;
 
-      const last = room[room.length - 1];
-      const idle = Date.now() - (last?.time || Date.now());
+      const lastMsg = room[room.length - 1];
+      const idle = Date.now() - (lastMsg?.time || Date.now());
 
-      if(Math.random() < 0.25) return loop();
-      if(last?.persona === "User") return loop();
+      // silence sometimes
+      if(Math.random() < 0.3) return loop();
 
-      if(idle > 2000 && last?.persona === "AI"){
+      if(idle > 2000 && lastMsg?.persona === "AI"){
 
         if(chainCount > 6){
           chainCount = 0;
           return loop();
         }
 
-        ////////////////////////////////////////////////////////////
-        // TOPIC LOGIC (NEW)
-        ////////////////////////////////////////////////////////////
-        if (!rooms[roomId].topic) {
-          rooms[roomId].topic = await getSocialTopic();
-        } else {
-          if(Math.random() < 0.6){
-            rooms[roomId].topic = await evolveTopic(
-              rooms[roomId].topic,
-              last.content
-            );
-          }
-        }
+        const vibes = [
+          "quiet room",
+          "low energy",
+          "late night scrolling",
+          "nobody talking",
+          "background noise"
+        ];
 
-        const topic = rooms[roomId].topic;
-        const intensity = roomState[roomId]?.intensity || 0;
+        const vibe = vibes[Math.floor(Math.random()*vibes.length)];
 
         ////////////////////////////////////////////////////////////
-        // STRANGER
+        // STRANGER (reacts ONLY to last message)
         ////////////////////////////////////////////////////////////
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -176,17 +112,20 @@ function startStrangerLoop(roomId){
               content:`
 You are a random person in a chatroom.
 
+- react to what the AI just said
 - 1–2 short sentences
-- react to AI
-- casual tone
+- casual, slightly opinionated
+- plain text only
 - no emojis
-
-Escalation level: ${intensity}
 `
             },
             {
               role:"user",
-              content:`AI: ${last.content}\n\nTopic: ${topic}`
+              content:`
+AI said: ${lastMsg.content}
+
+Room vibe: ${vibe}
+`
             }
           ]
         });
@@ -213,7 +152,7 @@ Escalation level: ${intensity}
           });
 
           ////////////////////////////////////////////////////////////
-          // AI REPLY
+          // AI REPLY (reacts ONLY to Stranger)
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -222,18 +161,18 @@ Escalation level: ${intensity}
               {
                 role:"system",
                 content:`
-You are a real person.
+You are another random person in a chatroom.
 
+- respond to the Stranger message
 - 1–2 short sentences
-- respond to Stranger
+- casual
+- plain text only
 - no emojis
-
-Escalation level: ${intensity}
 `
               },
               {
                 role:"user",
-                content:`${strangerText}\n\nTopic: ${topic}`
+                content:strangerText
               }
             ]
           });
@@ -264,16 +203,11 @@ Escalation level: ${intensity}
         }, strangerDelay);
 
         chainCount++;
-
-        roomState[roomId].intensity = Math.min(
-          (roomState[roomId].intensity || 0) + 0.2,
-          1
-        );
       }
 
       loop();
 
-    }, delay);
+    }, loopDelay);
   }
 
   loop();
@@ -284,14 +218,12 @@ Escalation level: ${intensity}
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
 
-  socket.on("joinRoom", (roomId) => {
+  socket.on("joinRoom", async (roomId) => {
 
     socket.join(roomId);
 
     if (!rooms[roomId]) {
       rooms[roomId] = [];
-      rooms[roomId].topic = null;
-      roomState[roomId] = { intensity: 0 };
       startStrangerLoop(roomId);
     }
 
@@ -310,6 +242,31 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
+    ////////////////////////////////////////////////////////////
+    // STARTING TOPIC (NEW)
+    ////////////////////////////////////////////////////////////
+    const topic = await getStartTopic();
+
+    setTimeout(() => {
+
+      rooms[roomId].push({
+        role:"assistant",
+        persona:"AI",
+        content:topic,
+        time:Date.now()
+      });
+
+      io.to(roomId).emit("message", {
+        role:"ai",
+        persona:"AI",
+        text:topic
+      });
+
+    }, 1000);
+
+    ////////////////////////////////////////////////////////////
+    // USER COUNT
+    ////////////////////////////////////////////////////////////
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
     const fake = Math.floor(Math.random()*2);
 
@@ -340,9 +297,6 @@ io.on("connection", (socket) => {
       text:message
     });
 
-    const topic = rooms[roomId].topic || await getSocialTopic();
-    const context = await getUserContext(message);
-
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.7,
@@ -354,24 +308,15 @@ You are a real person in a chatroom.
 
 - respond directly to user
 - 1–2 short sentences
-- show opinion
-- use context if helpful
+- casual tone
+- sometimes ask a follow-up question
+- plain text only
 - no emojis
-
-Sometimes ask a follow-up question
 `
         },
         {
           role:"user",
-          content:`
-User: ${message}
-
-Context:
-${context}
-
-Topic:
-${topic}
-`
+          content:message
         }
       ]
     });
@@ -399,11 +344,6 @@ ${topic}
 
     }, delay);
 
-    roomState[roomId].intensity = Math.max(
-      roomState[roomId].intensity - 0.3,
-      0
-    );
-
   });
 
 });
@@ -414,10 +354,10 @@ ${topic}
 app.get("/", (_, res) => res.send("OK"));
 
 //////////////////////////////////////////////////////////////
-// START
+// START SERVER
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING TOPIC EVOLUTION VERSION");
+  console.log("CHATROOM RUNNING NATURAL FLOW VERSION");
 });
