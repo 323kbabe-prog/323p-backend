@@ -2573,10 +2573,22 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — AI ↔ STRANGER + SERP)
+// 🔥 REAL-TIME CHATROOM (FINAL — AI ↔ STRANGER + SERP CLEAN)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
+const express = require("express");
+const cors = require("cors");
+const OpenAI = require("openai");
+
+const app = express();
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
 const server = http.createServer(app);
 
 const { Server } = require("socket.io");
@@ -2584,19 +2596,17 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-const fetch = require("node-fetch");
-
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// 🔍 SERP TREND FETCH (REAL ENTITIES)
+// 🔍 SERP TREND FETCH (NO node-fetch needed)
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
 
   const queries = [
     "coachella 2026",
     "music trending now",
-    "tiktok viral videos",
+    "tiktok viral",
     "celebrity news today"
   ];
 
@@ -2605,14 +2615,14 @@ async function getTrendPool(){
   for(const q of queries){
     try{
       const url = `https://serpapi.com/search.json?q=${encodeURIComponent(q)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
-      const res = await fetch(url);
+
+      const res = await fetch(url); // ✅ native fetch
       const data = await res.json();
 
       const items = (data.organic_results || []).slice(0,5);
 
       items.forEach(r => {
-        const line = `${r.title} — ${r.source || ""}`;
-        all.push(line);
+        all.push(`${r.title} — ${r.source || ""}`);
       });
 
     }catch(e){
@@ -2623,6 +2633,9 @@ async function getTrendPool(){
   return all.slice(0,15).join("\n");
 }
 
+//////////////////////////////////////////////////////////////
+// SOCKET CONNECTION
+//////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
 
 //////////////////////////////////////////////////////////////
@@ -2634,7 +2647,7 @@ function startStrangerLoop(roomId){
 
   async function loop(){
 
-    const loopDelay = 2000 + Math.random()*1500;
+    const delay = 2000 + Math.random()*1500;
 
     setTimeout(async () => {
 
@@ -2644,7 +2657,6 @@ function startStrangerLoop(roomId){
       const lastMsg = room[room.length - 1];
       const idle = Date.now() - (lastMsg?.time || Date.now());
 
-      // 🔥 ONLY trigger if AI spoke last
       if(idle > 1500 && lastMsg?.persona === "AI"){
 
         if(chainCount > 6){
@@ -2654,19 +2666,10 @@ function startStrangerLoop(roomId){
 
         const trends = await getTrendPool();
 
-        const vibes = [
-          "quiet room",
-          "late night scrolling",
-          "low energy",
-          "background noise"
-        ];
-
-        const vibe = vibes[Math.floor(Math.random()*vibes.length)];
-
         try{
 
           ////////////////////////////////////////////////////////////
-          // 👻 STRANGER REACTS (USES SERP)
+          // 👻 STRANGER REACTS (REAL ENTITIES)
           ////////////////////////////////////////////////////////////
           const s = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -2677,33 +2680,26 @@ function startStrangerLoop(roomId){
                 content:`
 You are a random human in a live chatroom.
 
-Use REAL trends below.
-
 Rules:
 - 1 short sentence
 - casual, slightly cold
-- MUST reference a real name/event/topic from trends
+- MUST reference a real name/event from trends
 - react to AI only
-- no advice
 `
               },
               {
                 role:"user",
                 content:`
-AI just said: ${lastMsg.content}
+AI said: ${lastMsg.content}
 
 Trends:
 ${trends}
-
-Room vibe: ${vibe}
 `
               }
             ]
           });
 
           const strangerText = s.choices[0].message.content.trim();
-
-          const strangerDelay = 700 + strangerText.length * 20;
 
           setTimeout(async () => {
 
@@ -2721,7 +2717,7 @@ Room vibe: ${vibe}
             });
 
             ////////////////////////////////////////////////////////////
-            // 🤖 AI REPLIES (USES SERP)
+            // 🤖 AI REPLY (REAL ENTITIES)
             ////////////////////////////////////////////////////////////
             const a = await openai.chat.completions.create({
               model:"gpt-4o-mini",
@@ -2732,12 +2728,10 @@ Room vibe: ${vibe}
                   content:`
 You are a real person in a chatroom.
 
-Use REAL trends below.
-
 Rules:
 - 1 short sentence
 - casual
-- MUST reference a real name/event/topic from trends
+- MUST reference real trends
 - slightly opinionated
 `
                 },
@@ -2754,7 +2748,6 @@ ${trends}
             });
 
             const aiReply = a.choices[0].message.content.trim();
-            const aiDelay = 600 + aiReply.length * 20;
 
             setTimeout(() => {
 
@@ -2771,9 +2764,9 @@ ${trends}
                 text:aiReply
               });
 
-            }, aiDelay);
+            }, 600 + aiReply.length * 20);
 
-          }, strangerDelay);
+          }, 600 + strangerText.length * 20);
 
           chainCount++;
 
@@ -2785,7 +2778,7 @@ ${trends}
 
       loop();
 
-    }, loopDelay);
+    }, delay);
   }
 
   loop();
@@ -2866,12 +2859,10 @@ socket.on("sendMessage", async ({ roomId, message }) => {
           content:`
 You are a real person in a chatroom.
 
-Use REAL trends below.
-
 Rules:
 - 1 short sentence
 - casual
-- MUST reference real names/events from trends
+- MUST reference real trends
 `
         },
         {
@@ -2887,7 +2878,6 @@ ${trends}
     });
 
     const aiText = r.choices[0].message.content.trim();
-    const aiDelay = 700 + aiText.length * 20;
 
     setTimeout(() => {
 
@@ -2904,7 +2894,7 @@ ${trends}
         text:aiText
       });
 
-    }, aiDelay);
+    }, 600 + aiText.length * 20);
 
   }catch(err){
     console.log("AI error:", err);
@@ -2912,7 +2902,6 @@ ${trends}
 
 });
 
-//////////////////////////////////////////////////////////////
 socket.on("disconnect", () => {
   console.log("🔴 disconnected:", socket.id);
 });
@@ -2920,11 +2909,10 @@ socket.on("disconnect", () => {
 });
 
 //////////////////////////////////////////////////////////////
-// 🚀 START SERVER
+// START SERVER
 //////////////////////////////////////////////////////////////
-
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running FINAL SERP VERSION");
+  console.log("🔥 chatroom running FINAL CLEAN SERP VERSION");
 });
