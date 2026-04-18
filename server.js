@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (FINAL — SIMPLE + DRIFT FIX)
+// 🔥 REAL-TIME CHATROOM (FINAL COMPLETE VERSION)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2587,7 +2587,7 @@ const io = new Server(server, {
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// 🔍 SIMPLE TREND POOL
+// 🔍 MULTI TREND POOL
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
   const queries = [
@@ -2632,7 +2632,7 @@ async function extractEntities(text){
 Extract real names, artists, events.
 
 - 3–5 items
-- short
+- short phrases
 `
         },
         { role:"user", content:text }
@@ -2688,7 +2688,7 @@ function startStrangerLoop(roomId){
         const entities = await extractEntities(chunk);
 
         ////////////////////////////////////////////////////////////
-        // 🔥 MINIMUM FIX (THIS IS THE KEY)
+        // 🔥 MINIMUM DRIFT FIX
         ////////////////////////////////////////////////////////////
         const ignoreAI = Math.random() < 0.4;
         const forceNewTopic = Math.random() < 0.3;
@@ -2738,7 +2738,6 @@ You are a random person in a chatroom.
           ////////////////////////////////////////////////////////////
           openai.chat.completions.create({
             model:"gpt-4o-mini",
-            temperature:0.7,
             messages:[
               {
                 role:"system",
@@ -2806,6 +2805,19 @@ socket.on("joinRoom", (roomId) => {
     time:Date.now()
   });
 
+  ////////////////////////////////////////////////////////////
+  // 👥 USER COUNT (ADDED BACK)
+  ////////////////////////////////////////////////////////////
+  const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+  const fake = Math.floor(Math.random() * 2);
+  const count = real + fake;
+
+  io.to(roomId).emit("message", {
+    role:"ai",
+    persona:"System",
+    text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
+  });
+
 });
 
 ////////////////////////////////////////////////////////////
@@ -2871,12 +2883,12 @@ socket.on("disconnect", () => {
 });
 
 //////////////////////////////////////////////////////////////
-// 🚀 START SERVER (FINAL END)
+// 🚀 START SERVER (END)
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running FINAL (DRIFT FIX)");
+  console.log("🔥 chatroom running FINAL");
 });
 
