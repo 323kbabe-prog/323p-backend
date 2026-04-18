@@ -2573,7 +2573,7 @@ Output ONLY the query.
 });
 
 //////////////////////////////////////////////////////////////
-// 🔥 REAL-TIME CHATROOM (AUTONOMOUS FINAL COMPLETE)
+// 🔥 REAL-TIME CHATROOM (FINAL — SIMPLE + DRIFT FIX)
 //////////////////////////////////////////////////////////////
 
 const http = require("http");
@@ -2587,14 +2587,14 @@ const io = new Server(server, {
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// 🔍 MULTI TREND POOL
+// 🔍 SIMPLE TREND POOL
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
   const queries = [
-    "coachella 2026 lineup",
-    "tiktok viral trends",
-    "celebrity news today",
-    "music trending now",
+    "coachella lineup",
+    "tiktok viral",
+    "celebrity news",
+    "music trending",
     "youtube shorts viral"
   ];
 
@@ -2611,9 +2611,7 @@ async function getTrendPool(){
         .map(r => r.title);
 
       all.push(...titles);
-    }catch(e){
-      console.log("SERP error:", e);
-    }
+    }catch{}
   }
 
   return all;
@@ -2631,11 +2629,10 @@ async function extractEntities(text){
         {
           role:"system",
           content:`
-Extract real names, artists, events, places.
+Extract real names, artists, events.
 
-- 4–6 items
-- short phrases
-- no explanation
+- 3–5 items
+- short
 `
         },
         { role:"user", content:text }
@@ -2649,19 +2646,23 @@ Extract real names, artists, events, places.
 }
 
 //////////////////////////////////////////////////////////////
-// 🧠 INIT ROOM
-//////////////////////////////////////////////////////////////
+
+io.on("connection", (socket) => {
+
+////////////////////////////////////////////////////////////
+// INIT ROOM
+////////////////////////////////////////////////////////////
 function initRoom(roomId){
   if (!rooms[roomId]) {
     rooms[roomId] = [];
-    startLoop(roomId);
+    startStrangerLoop(roomId);
   }
 }
 
-//////////////////////////////////////////////////////////////
-// 🤖 AUTONOMOUS LOOP (CORE ENGINE)
-//////////////////////////////////////////////////////////////
-function startLoop(roomId){
+////////////////////////////////////////////////////////////
+// 🤖 STRANGER LOOP
+////////////////////////////////////////////////////////////
+function startStrangerLoop(roomId){
 
   async function loop(){
 
@@ -2672,123 +2673,108 @@ function startLoop(roomId){
       const room = rooms[roomId];
       if(!room) return;
 
-      ////////////////////////////////////////////////////////////
-      // 🧠 USER ACTIVITY DETECTION
-      ////////////////////////////////////////////////////////////
-      const lastUser = [...room].reverse().find(m => m.persona === "User");
-      const noUser = !lastUser || (Date.now() - lastUser.time > 15000);
+      const lastMsg = room[room.length - 1];
+      const idle = Date.now() - (lastMsg?.time || Date.now());
 
       ////////////////////////////////////////////////////////////
-      // 🔍 MULTI TREND FETCH
+      // 🔥 ONLY REACT TO AI
       ////////////////////////////////////////////////////////////
-      const pool = await getTrendPool();
-      const shuffled = pool.sort(() => 0.5 - Math.random());
-      const chunk = shuffled.slice(0,6).join("\n");
+      if(idle > 3000 && lastMsg?.persona === "AI"){
 
-      const entities = await extractEntities(chunk);
+        const pool = await getTrendPool();
+        const shuffled = pool.sort(() => 0.5 - Math.random());
 
-      ////////////////////////////////////////////////////////////
-      // 🤖 AI (FEED MODE vs CHAT MODE)
-      ////////////////////////////////////////////////////////////
-      const ai = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.8,
-        messages:[
-          {
-            role:"system",
-            content: noUser
-              ? `
-You are a scrolling feed.
+        const chunk = shuffled.slice(0,6).join("\n");
+        const entities = await extractEntities(chunk);
 
-- 1 short sentence
-- mention something trending
-- use real names naturally
-- no explanation
-`
-              : `
-You are a random human in a chatroom.
+        ////////////////////////////////////////////////////////////
+        // 🔥 MINIMUM FIX (THIS IS THE KEY)
+        ////////////////////////////////////////////////////////////
+        const ignoreAI = Math.random() < 0.4;
+        const forceNewTopic = Math.random() < 0.3;
+
+        const s = await openai.chat.completions.create({
+          model:"gpt-4o-mini",
+          temperature:0.9,
+          messages:[
+            {
+              role:"system",
+              content:`
+You are a random person in a chatroom.
 
 - 1 short sentence
 - casual
+- slightly cold
 `
-          },
-          {
-            role:"user",
-            content: noUser
-              ? `Trending:\n${entities}`
-              : (room[room.length-1]?.content || "")
-          }
-        ]
-      });
-
-      const aiText = ai.choices[0].message.content.trim();
-
-      setTimeout(() => {
-
-        room.push({
-          role:"assistant",
-          persona:"AI",
-          content:aiText,
-          time:Date.now()
+            },
+            {
+              role:"user",
+              content: (ignoreAI || forceNewTopic)
+                ? `Talk about something trending:\n${entities}`
+                : `AI said: ${lastMsg.content}\n\nContext:\n${entities}`
+            }
+          ]
         });
 
-        io.to(roomId).emit("message", {
-          role:"ai",
-          persona:"AI",
-          text:aiText
-        });
+        const strangerText = s.choices[0].message.content.trim();
 
-      }, 600 + aiText.length * 20);
+        setTimeout(() => {
 
-      ////////////////////////////////////////////////////////////
-      // 👻 STRANGER (COMMENT SECTION)
-      ////////////////////////////////////////////////////////////
-      const stranger = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.9,
-        messages:[
-          {
-            role:"system",
-            content:`
-You are a comment section user.
+          room.push({
+            role:"assistant",
+            persona:"Stranger",
+            content:strangerText,
+            time:Date.now()
+          });
 
-- 1 short sentence
-- casual
-- slightly judgmental
-- react or drop random thought
-`
-          },
-          {
-            role:"user",
-            content: noUser
-              ? `Trending:\n${entities}`
-              : aiText
-          }
-        ]
-      });
+          io.to(roomId).emit("message", {
+            role:"ai",
+            persona:"Stranger",
+            text:strangerText
+          });
 
-      const strangerText = stranger.choices[0].message.content.trim();
+          ////////////////////////////////////////////////////////////
+          // 🤖 AI REPLY
+          ////////////////////////////////////////////////////////////
+          openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.7,
+            messages:[
+              {
+                role:"system",
+                content:"You are a random person in a chatroom. Reply shortly."
+              },
+              {
+                role:"user",
+                content:strangerText
+              }
+            ]
+          }).then(res => {
 
-      setTimeout(() => {
+            const aiReply = res.choices[0].message.content.trim();
 
-        room.push({
-          role:"assistant",
-          persona:"Stranger",
-          content:strangerText,
-          time:Date.now()
-        });
+            setTimeout(() => {
 
-        io.to(roomId).emit("message", {
-          role:"ai",
-          persona:"Stranger",
-          text:strangerText
-        });
+              room.push({
+                role:"assistant",
+                persona:"AI",
+                content:aiReply,
+                time:Date.now()
+              });
 
-      }, 800 + strangerText.length * 20);
+              io.to(roomId).emit("message", {
+                role:"ai",
+                persona:"AI",
+                text:aiReply
+              });
 
-      ////////////////////////////////////////////////////////////
-      // 🔁 CONTINUE LOOP
-      ////////////////////////////////////////////////////////////
+            }, 600 + aiReply.length * 20);
+
+          });
+
+        }, 700 + strangerText.length * 20);
+      }
+
       loop();
 
     }, delay);
@@ -2797,14 +2783,9 @@ You are a comment section user.
   loop();
 }
 
-//////////////////////////////////////////////////////////////
-// SOCKET CONNECTION
-//////////////////////////////////////////////////////////////
-io.on("connection", (socket) => {
-
-//////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 // JOIN ROOM
-//////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 socket.on("joinRoom", (roomId) => {
 
   socket.join(roomId);
@@ -2825,23 +2806,11 @@ socket.on("joinRoom", (roomId) => {
     time:Date.now()
   });
 
-  ////////////////////////////////////////////////////////////
-  // 👥 USER COUNT
-  ////////////////////////////////////////////////////////////
-  const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-  const fake = Math.floor(Math.random()*2);
-
-  io.to(roomId).emit("message", {
-    role:"ai",
-    persona:"System",
-    text:`👥 ${real + fake} people here`
-  });
-
 });
 
-//////////////////////////////////////////////////////////////
-// USER MESSAGE
-//////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+// SEND MESSAGE
+////////////////////////////////////////////////////////////
 socket.on("sendMessage", async ({ roomId, message }) => {
 
   const room = rooms[roomId];
@@ -2859,9 +2828,42 @@ socket.on("sendMessage", async ({ roomId, message }) => {
     text:message
   });
 
+  const r = await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    messages:[
+      {
+        role:"system",
+        content:"You are a random person in a chatroom. Reply shortly."
+      },
+      {
+        role:"user",
+        content:message
+      }
+    ]
+  });
+
+  const aiText = r.choices[0].message.content.trim();
+
+  setTimeout(() => {
+
+    room.push({
+      role:"assistant",
+      persona:"AI",
+      content:aiText,
+      time:Date.now()
+    });
+
+    io.to(roomId).emit("message", {
+      role:"ai",
+      persona:"AI",
+      text:aiText
+    });
+
+  }, 600 + aiText.length * 20);
+
 });
 
-//////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 socket.on("disconnect", () => {
   console.log("🔴 disconnected:", socket.id);
 });
@@ -2869,12 +2871,12 @@ socket.on("disconnect", () => {
 });
 
 //////////////////////////////////////////////////////////////
-// 🚀 START SERVER
+// 🚀 START SERVER (FINAL END)
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running FULL FINAL");
+  console.log("🔥 chatroom running FINAL (DRIFT FIX)");
 });
 
