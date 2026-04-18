@@ -30,10 +30,9 @@ const rooms = {};
 async function getTrendPool(){
 
 const queries = [
-  "what people are talking about today",
-  "trending discussions online",
-  "viral reactions right now",
-  "what everyone is posting today"
+  "online arguments trending",
+  "people complaining about things",
+  "random social posts today"
 ];
   let all = [];
 
