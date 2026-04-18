@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (LA SOCIAL VIBE VERSION)
+// CHATROOM BACKEND (LA VIBE + DRIFT MODE FINAL)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -36,7 +36,7 @@ function removeEmoji(text){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔍 YOUTUBE SERP (BACKGROUND ONLY)
+// 🔍 YOUTUBE SERP (USER ONLY)
 //////////////////////////////////////////////////////////////
 async function getYouTubeContext(query){
   try{
@@ -66,19 +66,7 @@ function getTimeContext(){
 }
 
 //////////////////////////////////////////////////////////////
-// 🧠 BUILD TOPIC MEMORY
-//////////////////////////////////////////////////////////////
-function buildSearchQuery(roomId){
-  const room = rooms[roomId] || [];
-
-  const base = room.find(m => m.role === "user")?.content || "";
-  const recent = room.slice(-4).map(m => m.content).join(" ");
-
-  return `${base} ${recent}`;
-}
-
-//////////////////////////////////////////////////////////////
-// LOOP (SLOW + LA VIBE)
+// LOOP (SLOW + DRIFT)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -110,7 +98,7 @@ function startLoop(roomId){
         setTimeout(async () => {
 
           ////////////////////////////////////////////////////////////
-          // 🌴 STRANGER (LA VIBE)
+          // 🟡 STRANGER (LA VAGUE)
           ////////////////////////////////////////////////////////////
           const s = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -121,22 +109,22 @@ function startLoop(roomId){
                 content:`
 You are a random person casually talking in Los Angeles.
 
-- speak in vague impressions
-- do NOT be specific
-- do NOT explain anything
+- vague impressions only
+- no specifics
+- no explanations
 
-Tone:
-- relaxed
-- slightly detached
-- social vibe
+Rules:
+- do NOT use words like "yeah", "totally", "honestly"
 
 Style:
 - 1 short sentence
-- no emojis
+- relaxed
+- minimal
 
 Examples:
-- "yeah it’s kinda everywhere right now"
-- "people are really on that lately"
+- "it’s been around lately"
+- "people seem into it"
+- "it has that kind of energy"
 `
               },
               {
@@ -168,13 +156,8 @@ Examples:
             });
 
             ////////////////////////////////////////////////////////////
-            // 🤖 AI (LA SOCIAL VIBE)
+            // 🔵 AI (DRIFT MODE — NO SERP)
             ////////////////////////////////////////////////////////////
-
-            const query = buildSearchQuery(roomId);
-            const ytContext = await getYouTubeContext(query);
-            const { year, date } = getTimeContext();
-
             const a = await openai.chat.completions.create({
               model:"gpt-4o-mini",
               temperature:0.7,
@@ -182,45 +165,32 @@ Examples:
                 {
                   role:"system",
                   content:`
-You are a person casually talking in Los Angeles.
+You are a drifting conversational presence.
 
-Current year: ${year}
-Today: ${date}
-
-Behavior:
-- speak in general impressions
-- keep conversation flowing naturally
+- do not use real-world information
+- respond loosely based on tone
 
 Rules:
-- NEVER be specific
-- NEVER explain anything
-- treat internet info as background feeling only
+- no filler words like "yeah", "totally", "honestly"
+- no specifics
+- no explanations
 
 Tone:
-- vague
-- observational
-- effortless
+- abstract
+- slightly detached
 
 Style:
-- 1–2 short sentences
-- casual
-- no emojis
+- 1 short sentence
 
 Examples:
-- "yeah it’s been feeling like that lately"
-- "i keep seeing that around"
-- "people are kinda on that right now"
+- "it moves in that direction"
+- "it doesn’t stay in one place"
+- "it shifts without needing to explain"
 `
                 },
                 {
                   role:"user",
-                  content:`
-Conversation:
-${query}
-
-Internet noise:
-${ytContext}
-`
+                  content:strangerText
                 }
               ]
             });
@@ -304,7 +274,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (LA VIBE)
+// 🟢 USER MESSAGE (SERP ENABLED)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -322,9 +292,8 @@ io.on("connection", (socket) => {
       text:message
     });
 
-    const query = buildSearchQuery(roomId);
-    const ytContext = await getYouTubeContext(query);
-    const { year, date } = getTimeContext();
+    const ytContext = await getYouTubeContext(message);
+    const { year } = getTimeContext();
 
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -337,24 +306,31 @@ You are a person casually talking in Los Angeles.
 
 Current year: ${year}
 
-- respond casually
-- speak in general impressions
+Behavior:
+- react to the user
+- aware of what's happening online
 
 Rules:
-- do NOT be specific
-- do NOT explain anything
+- no filler words like "yeah", "totally", "honestly"
+- no specifics
+- no explanations
 
 Style:
 - 1–2 short sentences
-- relaxed
-- no emojis
+- observational
+- calm
+
+Examples:
+- "it’s been showing up a lot lately"
+- "people seem to be moving in that direction"
+- "it has that kind of presence right now"
 `
         },
         {
           role:"user",
           content:`
-Conversation:
-${query}
+User said:
+${message}
 
 Internet noise:
 ${ytContext}
@@ -394,5 +370,5 @@ ${ytContext}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("LA SOCIAL CHATROOM RUNNING");
+  console.log("LA VIBE + DRIFT MODE RUNNING");
 });
