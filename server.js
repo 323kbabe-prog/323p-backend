@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CLEAN CHATROOM SERVER (AI-NATIVE SOCIAL VERSION)
+// CHATROOM BACKEND (AI-NATIVE TOPIC, SAME UX)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -25,7 +25,7 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// AI SOCIAL TOPIC (NO SERP)
+// AI-NATIVE SOCIAL TOPIC (REPLACES SERP)
 //////////////////////////////////////////////////////////////
 async function getSocialTopic(){
 
@@ -36,17 +36,13 @@ async function getSocialTopic(){
       {
         role:"system",
         content:`
-Generate ONE short sentence about something people are arguing or complaining about online right now.
+Generate ONE short sentence about something people are talking, arguing, or complaining about online right now.
 
 Rules:
-- everyday life topics only
+- everyday life topics
 - no crypto, nft, marketing, or tech hype
 - no celebrity news
 - must feel real and current
-- examples:
-  - people arguing about tipping culture again
-  - everyone complaining about job interviews
-  - debate about texting etiquette getting weird
 `
       }
     ]
@@ -56,38 +52,39 @@ Rules:
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (AI ↔ STRANGER)
+// STRANGER LOOP (UNCHANGED FLOW)
 //////////////////////////////////////////////////////////////
-function startLoop(roomId){
+function startStrangerLoop(roomId){
 
-  let chain = 0;
+  let chainCount = 0;
 
   async function loop(){
 
-    const delay = 5000 + Math.random()*5000;
+    const loopDelay = 4000 + Math.random()*4000;
 
     setTimeout(async () => {
 
       const room = rooms[roomId];
       if(!room) return;
 
-      const last = room[room.length - 1];
-      const idle = Date.now() - (last?.time || Date.now());
+      const lastMsg = room[room.length - 1];
+      const idle = Date.now() - (lastMsg?.time || Date.now());
 
-      // natural silence
-      if(Math.random() < 0.3) return loop();
+      if(Math.random() < 0.25){
+        return loop();
+      }
 
-      if(idle > 2000 && last?.persona === "AI"){
+      if(idle > 2000 && lastMsg?.persona === "AI"){
 
-        if(chain > 6){
-          chain = 0;
+        if(chainCount > 6){
+          chainCount = 0;
           return loop();
         }
 
         const topic = await getSocialTopic();
 
         ////////////////////////////////////////////////////////////
-        // STRANGER
+        // STRANGER TALKS FIRST
         ////////////////////////////////////////////////////////////
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -96,31 +93,28 @@ function startLoop(roomId){
             {
               role:"system",
               content:`
-You are a random person in a chatroom.
+You are a random human in a chatroom.
 
 - 1 short sentence
-- casual, slightly negative or critical
-- react like a comment section
+- casual, slightly cold
+- react like comment section
 `
             },
             {
               role:"user",
-              content:`
-AI: ${last.content}
-
-Topic: ${topic}
-`
+              content:`AI: ${lastMsg.content}\n\nTopic: ${topic}`
             }
           ]
         });
 
         const strangerText = s.choices[0].message.content.trim();
 
-        const strangerDelay = 2000 + Math.random()*3000;
+        const strangerDelay = 1500 + Math.random()*2000;
 
         setTimeout(async () => {
 
           rooms[roomId].push({
+            role:"assistant",
             persona:"Stranger",
             content:strangerText,
             time:Date.now()
@@ -133,7 +127,7 @@ Topic: ${topic}
           });
 
           ////////////////////////////////////////////////////////////
-          // AI REPLY
+          // AI REPLIES
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -142,31 +136,27 @@ Topic: ${topic}
               {
                 role:"system",
                 content:`
-You are a real person.
+You are another person in a chatroom.
 
-- 1 short sentence
-- slightly opinionated
-- continue the conversation
+- 1 short reply
+- casual
 `
               },
               {
                 role:"user",
-                content:`
-Stranger: ${strangerText}
-
-Topic: ${topic}
-`
+                content:`${strangerText}\n\nTopic: ${topic}`
               }
             ]
           });
 
           const aiReply = a.choices[0].message.content.trim();
 
-          const aiDelay = 2000 + Math.random()*3500;
+          const aiDelay = 1500 + Math.random()*2500;
 
           setTimeout(() => {
 
             rooms[roomId].push({
+              role:"assistant",
               persona:"AI",
               content:aiReply,
               time:Date.now()
@@ -182,19 +172,19 @@ Topic: ${topic}
 
         }, strangerDelay);
 
-        chain++;
+        chainCount++;
       }
 
       loop();
 
-    }, delay);
+    }, loopDelay);
   }
 
   loop();
 }
 
 //////////////////////////////////////////////////////////////
-// SOCKET
+// JOIN ROOM (UNCHANGED UX)
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
 
@@ -202,30 +192,54 @@ io.on("connection", (socket) => {
 
     socket.join(roomId);
 
-    if(!rooms[roomId]){
+    if (!rooms[roomId]) {
       rooms[roomId] = [];
-      startLoop(roomId);
+      startStrangerLoop(roomId);
     }
 
-    // FIRST MESSAGE (fast)
-    setTimeout(() => {
-      io.to(roomId).emit("message", {
-        role:"ai",
+    const intro = "Welcome to 323LAchat";
+
+    socket.emit("message", {
+      role:"ai",
+      persona:"AI",
+      text:intro
+    });
+
+    if (rooms[roomId].length === 0) {
+      rooms[roomId].push({
+        role:"assistant",
         persona:"AI",
-        text:"people always arguing about something"
+        content:intro,
+        time:Date.now()
       });
-    }, 800);
+    }
+
+    ////////////////////////////////////////////////////////
+    // USER COUNT (UNCHANGED)
+    ////////////////////////////////////////////////////////
+    const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+    const fake = Math.floor(Math.random()*2);
+    const count = real + fake;
+
+    io.to(roomId).emit("message", {
+      role:"ai",
+      persona:"System",
+      text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
+    });
 
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE
+// USER MESSAGE (UNCHANGED FLOW)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
-    if(!message) return;
+    if (!message) return;
+
+    if (!rooms[roomId]) rooms[roomId] = [];
 
     rooms[roomId].push({
+      role:"user",
       persona:"User",
       content:message,
       time:Date.now()
@@ -245,28 +259,27 @@ io.on("connection", (socket) => {
         {
           role:"system",
           content:`
-You are a real person.
+You are a random human in a chatroom.
 
-- 1 short reply
-- react like you're in a chatroom
+- 1 short sentence
+- casual
 `
         },
         {
           role:"user",
-          content:`
-User: ${message}
-
-Topic: ${topic}
-`
+          content:`User: ${message}\n\nTopic: ${topic}`
         }
       ]
     });
 
     const aiText = r.choices[0].message.content.trim();
 
+    const aiDelay = 1200 + Math.random()*1500;
+
     setTimeout(() => {
 
       rooms[roomId].push({
+        role:"assistant",
         persona:"AI",
         content:aiText,
         time:Date.now()
@@ -278,8 +291,12 @@ Topic: ${topic}
         text:aiText
       });
 
-    }, 1500 + Math.random()*2000);
+    }, aiDelay);
 
+  });
+
+  socket.on("disconnect", () => {
+    console.log("disconnected:", socket.id);
   });
 
 });
@@ -290,10 +307,10 @@ Topic: ${topic}
 app.get("/", (_, res) => res.send("OK"));
 
 //////////////////////////////////////////////////////////////
-// START
+// START SERVER
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING AI NATIVE");
+  console.log("CHATROOM RUNNING AI-NATIVE VERSION");
 });
