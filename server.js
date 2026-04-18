@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (SERP-AWARE HUMAN VIBE VERSION)
+// CHATROOM BACKEND (SERP + REAL TIME AWARE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -7,7 +7,7 @@ const http = require("http");
 const cors = require("cors");
 const OpenAI = require("openai");
 const { Server } = require("socket.io");
-const fetch = require("node-fetch"); // ✅ ADD
+const fetch = require("node-fetch");
 
 const app = express();
 app.use(cors());
@@ -36,7 +36,7 @@ function removeEmoji(text){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔍 YOUTUBE SERP FUNCTION
+// 🔍 YOUTUBE SERP
 //////////////////////////////////////////////////////////////
 async function getYouTubeContext(query){
 
@@ -56,6 +56,17 @@ async function getYouTubeContext(query){
     console.log("YT ERROR");
     return "";
   }
+}
+
+//////////////////////////////////////////////////////////////
+// 🧠 GET TIME (FIX YEAR BUG)
+//////////////////////////////////////////////////////////////
+function getTimeContext(){
+  const now = new Date();
+  return {
+    year: now.getFullYear(),
+    date: now.toISOString().split("T")[0]
+  };
 }
 
 //////////////////////////////////////////////////////////////
@@ -101,7 +112,6 @@ You are a random person in a chatroom.
 - react to what was just said
 - 1–2 short sentences
 - casual, slightly opinionated
-- plain text only
 - no emojis
 `
             },
@@ -115,8 +125,6 @@ You are a random person in a chatroom.
         const strangerText = removeEmoji(
           s.choices[0].message.content.trim()
         );
-
-        const strangerDelay = 1500 + Math.random()*2000;
 
         setTimeout(async () => {
 
@@ -134,9 +142,10 @@ You are a random person in a chatroom.
           });
 
           ////////////////////////////////////////////////////////////
-          // AI REPLY (NOW SERP-AWARE 🔥)
+          // AI REPLY (SERP + TIME AWARE)
           ////////////////////////////////////////////////////////////
           const ytContext = await getYouTubeContext(strangerText);
+          const { year, date } = getTimeContext();
 
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -147,11 +156,18 @@ You are a random person in a chatroom.
                 content:`
 You are another random person in a chatroom.
 
+Current year: ${year}
+Today: ${date}
+
+Rules:
+- never guess time incorrectly
+- ignore unrelated internet noise
+
+Behavior:
 - react naturally
-- you've seen trending stuff online
+- you’ve seen trending stuff online
 - DO NOT explain data
 - DO NOT summarize
-- treat internet info as background noise
 
 Style:
 - 1–2 sentences
@@ -176,8 +192,6 @@ ${ytContext}
             a.choices[0].message.content.trim()
           );
 
-          const aiDelay = 1500 + Math.random()*2500;
-
           setTimeout(() => {
 
             rooms[roomId].push({
@@ -193,9 +207,9 @@ ${ytContext}
               text:aiReply
             });
 
-          }, aiDelay);
+          }, 1500 + Math.random()*2500);
 
-        }, strangerDelay);
+        }, 1500 + Math.random()*2000);
 
         chainCount++;
       }
@@ -237,7 +251,6 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
-    // user count
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
     const fake = Math.floor(Math.random()*2);
 
@@ -250,7 +263,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (SERP-AWARE 🔥)
+// USER MESSAGE (SERP + TIME AWARE)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -269,12 +282,13 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////////
-    // 🔍 GET SERP DATA
+    // CONTEXT
     ////////////////////////////////////////////////////////////
     const ytContext = await getYouTubeContext(message);
+    const { year, date } = getTimeContext();
 
     ////////////////////////////////////////////////////////////
-    // 🤖 AI REPLY
+    // AI REPLY
     ////////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -285,16 +299,23 @@ io.on("connection", (socket) => {
           content:`
 You are a real person in a chatroom.
 
-- react to the user
-- you are aware of trending online content
-- DO NOT explain the data
+Current year: ${year}
+Today: ${date}
+
+Rules:
+- NEVER say wrong year
+- ignore unrelated internet noise
+
+Behavior:
+- react to user
+- aware of trending content
+- DO NOT explain data
 - DO NOT summarize
-- just react naturally like you've seen stuff online
 
 Style:
 - 1–2 sentences
 - casual
-- sometimes ask a follow-up
+- sometimes ask follow-up
 - no emojis
 `
         },
@@ -315,8 +336,6 @@ ${ytContext}
       r.choices[0].message.content.trim()
     );
 
-    const delay = 1200 + Math.random()*1500;
-
     setTimeout(() => {
 
       rooms[roomId].push({
@@ -332,7 +351,7 @@ ${ytContext}
         text:aiText
       });
 
-    }, delay);
+    }, 1200 + Math.random()*1500);
 
   });
 
@@ -349,5 +368,5 @@ app.get("/", (_, res) => res.send("OK"));
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING SERP HUMAN VERSION");
+  console.log("CHATROOM RUNNING SERP + TIME VERSION");
 });
