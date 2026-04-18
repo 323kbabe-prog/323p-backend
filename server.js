@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (PURE HUMAN VIBE VERSION)
+// CHATROOM BACKEND (SERP-AWARE HUMAN VIBE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -7,6 +7,7 @@ const http = require("http");
 const cors = require("cors");
 const OpenAI = require("openai");
 const { Server } = require("socket.io");
+const fetch = require("node-fetch"); // ✅ ADD
 
 const app = express();
 app.use(cors());
@@ -35,6 +36,29 @@ function removeEmoji(text){
 }
 
 //////////////////////////////////////////////////////////////
+// 🔍 YOUTUBE SERP FUNCTION
+//////////////////////////////////////////////////////////////
+async function getYouTubeContext(query){
+
+  try{
+    const url = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&q=${encodeURIComponent(query)}&type=video&part=snippet&order=date&maxResults=3`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if(!data.items) return "";
+
+    return data.items
+      .map(v => v.snippet.title)
+      .join("\n");
+
+  }catch(e){
+    console.log("YT ERROR");
+    return "";
+  }
+}
+
+//////////////////////////////////////////////////////////////
 // LOOP (PURE FLOW)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
@@ -53,10 +77,8 @@ function startLoop(roomId){
       const last = room[room.length - 1];
       const idle = Date.now() - (last?.time || Date.now());
 
-      // silence sometimes
       if(Math.random() < 0.3) return loop();
 
-      // only continue if AI spoke
       if(idle > 2000 && last?.persona === "AI"){
 
         if(chainCount > 6){
@@ -112,8 +134,10 @@ You are a random person in a chatroom.
           });
 
           ////////////////////////////////////////////////////////////
-          // AI REPLY
+          // AI REPLY (NOW SERP-AWARE 🔥)
           ////////////////////////////////////////////////////////////
+          const ytContext = await getYouTubeContext(strangerText);
+
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
             temperature:0.7,
@@ -123,16 +147,27 @@ You are a random person in a chatroom.
                 content:`
 You are another random person in a chatroom.
 
-- respond to the message
-- 1–2 short sentences
+- react naturally
+- you've seen trending stuff online
+- DO NOT explain data
+- DO NOT summarize
+- treat internet info as background noise
+
+Style:
+- 1–2 sentences
 - casual
-- plain text only
 - no emojis
 `
               },
               {
                 role:"user",
-                content:strangerText
+                content:`
+Message:
+${strangerText}
+
+Internet noise:
+${ytContext}
+`
               }
             ]
           });
@@ -215,7 +250,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE
+// USER MESSAGE (SERP-AWARE 🔥)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -233,6 +268,14 @@ io.on("connection", (socket) => {
       text:message
     });
 
+    ////////////////////////////////////////////////////////////
+    // 🔍 GET SERP DATA
+    ////////////////////////////////////////////////////////////
+    const ytContext = await getYouTubeContext(message);
+
+    ////////////////////////////////////////////////////////////
+    // 🤖 AI REPLY
+    ////////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.7,
@@ -242,17 +285,28 @@ io.on("connection", (socket) => {
           content:`
 You are a real person in a chatroom.
 
-- respond directly to user
-- 1–2 short sentences
+- react to the user
+- you are aware of trending online content
+- DO NOT explain the data
+- DO NOT summarize
+- just react naturally like you've seen stuff online
+
+Style:
+- 1–2 sentences
 - casual
-- sometimes ask a follow-up question
-- plain text only
+- sometimes ask a follow-up
 - no emojis
 `
         },
         {
           role:"user",
-          content:message
+          content:`
+User said:
+${message}
+
+Internet noise:
+${ytContext}
+`
         }
       ]
     });
@@ -295,5 +349,5 @@ app.get("/", (_, res) => res.send("OK"));
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING PURE HUMAN VERSION");
+  console.log("CHATROOM RUNNING SERP HUMAN VERSION");
 });
