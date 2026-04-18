@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (NATURAL FLOW VERSION)
+// CHATROOM BACKEND (PURE HUMAN VIBE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -35,73 +35,37 @@ function removeEmoji(text){
 }
 
 //////////////////////////////////////////////////////////////
-// GENERATE STARTING TOPIC (ONLY ONCE)
+// LOOP (PURE FLOW)
 //////////////////////////////////////////////////////////////
-async function getStartTopic(){
-
-  const r = await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    temperature:0.9,
-    messages:[
-      {
-        role:"system",
-        content:`
-Generate ONE short sentence about something people are casually talking or arguing about.
-
-- everyday life
-- no crypto, nft, marketing, celebrity
-- plain text only
-- no emojis
-- natural tone
-`
-      }
-    ]
-  });
-
-  return removeEmoji(r.choices[0].message.content.trim());
-}
-
-//////////////////////////////////////////////////////////////
-// STRANGER LOOP (PURE FLOW)
-//////////////////////////////////////////////////////////////
-function startStrangerLoop(roomId){
+function startLoop(roomId){
 
   let chainCount = 0;
 
   async function loop(){
 
-    const loopDelay = 3000 + Math.random()*3000;
+    const delay = 3000 + Math.random()*3000;
 
     setTimeout(async () => {
 
       const room = rooms[roomId];
       if(!room) return;
 
-      const lastMsg = room[room.length - 1];
-      const idle = Date.now() - (lastMsg?.time || Date.now());
+      const last = room[room.length - 1];
+      const idle = Date.now() - (last?.time || Date.now());
 
       // silence sometimes
       if(Math.random() < 0.3) return loop();
 
-      if(idle > 2000 && lastMsg?.persona === "AI"){
+      // only continue if AI spoke
+      if(idle > 2000 && last?.persona === "AI"){
 
         if(chainCount > 6){
           chainCount = 0;
           return loop();
         }
 
-        const vibes = [
-          "quiet room",
-          "low energy",
-          "late night scrolling",
-          "nobody talking",
-          "background noise"
-        ];
-
-        const vibe = vibes[Math.floor(Math.random()*vibes.length)];
-
         ////////////////////////////////////////////////////////////
-        // STRANGER (reacts ONLY to last message)
+        // STRANGER
         ////////////////////////////////////////////////////////////
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -112,7 +76,7 @@ function startStrangerLoop(roomId){
               content:`
 You are a random person in a chatroom.
 
-- react to what the AI just said
+- react to what was just said
 - 1–2 short sentences
 - casual, slightly opinionated
 - plain text only
@@ -121,11 +85,7 @@ You are a random person in a chatroom.
             },
             {
               role:"user",
-              content:`
-AI said: ${lastMsg.content}
-
-Room vibe: ${vibe}
-`
+              content:last.content
             }
           ]
         });
@@ -152,7 +112,7 @@ Room vibe: ${vibe}
           });
 
           ////////////////////////////////////////////////////////////
-          // AI REPLY (reacts ONLY to Stranger)
+          // AI REPLY
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -163,7 +123,7 @@ Room vibe: ${vibe}
                 content:`
 You are another random person in a chatroom.
 
-- respond to the Stranger message
+- respond to the message
 - 1–2 short sentences
 - casual
 - plain text only
@@ -207,7 +167,7 @@ You are another random person in a chatroom.
 
       loop();
 
-    }, loopDelay);
+    }, delay);
   }
 
   loop();
@@ -218,13 +178,13 @@ You are another random person in a chatroom.
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
 
-  socket.on("joinRoom", async (roomId) => {
+  socket.on("joinRoom", (roomId) => {
 
     socket.join(roomId);
 
     if (!rooms[roomId]) {
       rooms[roomId] = [];
-      startStrangerLoop(roomId);
+      startLoop(roomId);
     }
 
     const intro = "Welcome to 323LAchat";
@@ -242,31 +202,7 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
-    ////////////////////////////////////////////////////////////
-    // STARTING TOPIC (NEW)
-    ////////////////////////////////////////////////////////////
-    const topic = await getStartTopic();
-
-    setTimeout(() => {
-
-      rooms[roomId].push({
-        role:"assistant",
-        persona:"AI",
-        content:topic,
-        time:Date.now()
-      });
-
-      io.to(roomId).emit("message", {
-        role:"ai",
-        persona:"AI",
-        text:topic
-      });
-
-    }, 1000);
-
-    ////////////////////////////////////////////////////////////
-    // USER COUNT
-    ////////////////////////////////////////////////////////////
+    // user count
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
     const fake = Math.floor(Math.random()*2);
 
@@ -308,7 +244,7 @@ You are a real person in a chatroom.
 
 - respond directly to user
 - 1–2 short sentences
-- casual tone
+- casual
 - sometimes ask a follow-up question
 - plain text only
 - no emojis
@@ -354,10 +290,10 @@ You are a real person in a chatroom.
 app.get("/", (_, res) => res.send("OK"));
 
 //////////////////////////////////////////////////////////////
-// START SERVER
+// START
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING NATURAL FLOW VERSION");
+  console.log("CHATROOM RUNNING PURE HUMAN VERSION");
 });
