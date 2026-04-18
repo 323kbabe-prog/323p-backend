@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (SERP + TIME + SLOW HUMAN FLOW)
+// CHATROOM BACKEND (SERP + TIME + EVOLVING TOPIC)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -59,7 +59,7 @@ async function getYouTubeContext(query){
 }
 
 //////////////////////////////////////////////////////////////
-// 🧠 TIME CONTEXT
+// 🧠 TIME
 //////////////////////////////////////////////////////////////
 function getTimeContext(){
   const now = new Date();
@@ -70,7 +70,23 @@ function getTimeContext(){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (SLOW HUMAN FLOW)
+// 🧠 BUILD EVOLVING QUERY (NEW CORE 🔥)
+//////////////////////////////////////////////////////////////
+function buildSearchQuery(roomId){
+
+  const room = rooms[roomId] || [];
+
+  // original topic (first user message)
+  const base = room.find(m => m.role === "user")?.content || "";
+
+  // last few messages
+  const recent = room.slice(-4).map(m => m.content).join(" ");
+
+  return `${base} ${recent}`;
+}
+
+//////////////////////////////////////////////////////////////
+// LOOP (EVOLVING FLOW)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -78,8 +94,7 @@ function startLoop(roomId){
 
   async function loop(){
 
-    // 🐢 SLOWER MAIN LOOP
-    const delay = 7000 + Math.random()*5000; // 7–12 sec
+    const delay = 7000 + Math.random()*5000;
 
     setTimeout(async () => {
 
@@ -98,9 +113,6 @@ function startLoop(roomId){
           return loop();
         }
 
-        ////////////////////////////////////////////////////////////
-        // 🧠 READ TIME BUFFER (NEW)
-        ////////////////////////////////////////////////////////////
         const readTime = Math.min(6000, (last.content || "").length * 40);
 
         setTimeout(async () => {
@@ -117,9 +129,9 @@ function startLoop(roomId){
                 content:`
 You are a random person in a chatroom.
 
-- react to what was just said
+- react casually
 - 1–2 short sentences
-- casual, slightly opinionated
+- slightly opinionated
 - no emojis
 `
               },
@@ -134,7 +146,6 @@ You are a random person in a chatroom.
             s.choices[0].message.content.trim()
           );
 
-          // 🐢 SLOW STRANGER
           const strangerDelay = 3000 + Math.random()*3000;
 
           setTimeout(async () => {
@@ -153,9 +164,11 @@ You are a random person in a chatroom.
             });
 
             ////////////////////////////////////////////////////////////
-            // AI REPLY (SERP + TIME)
+            // 🤖 AI (EVOLVING SERP 🔥)
             ////////////////////////////////////////////////////////////
-            const ytContext = await getYouTubeContext(strangerText);
+
+            const query = buildSearchQuery(roomId);
+            const ytContext = await getYouTubeContext(query);
             const { year, date } = getTimeContext();
 
             const a = await openai.chat.completions.create({
@@ -165,15 +178,20 @@ You are a random person in a chatroom.
                 {
                   role:"system",
                   content:`
-You are another random person in a chatroom.
+You are a real person in a chatroom.
 
 Current year: ${year}
 Today: ${date}
 
-- react naturally
-- aware of online trends
+Behavior:
+- keep the topic going naturally
+- build on previous messages
+- react like you've seen trends online
+
+Rules:
 - DO NOT explain data
 - DO NOT summarize
+- DO NOT reset topic
 
 Style:
 - 1–2 sentences
@@ -184,8 +202,8 @@ Style:
                 {
                   role:"user",
                   content:`
-Message:
-${strangerText}
+Conversation:
+${query}
 
 Internet noise:
 ${ytContext}
@@ -198,7 +216,6 @@ ${ytContext}
               a.choices[0].message.content.trim()
             );
 
-            // 🐢 SLOW AI
             const aiDelay = 4000 + Math.random()*4000;
 
             setTimeout(() => {
@@ -274,7 +291,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (UNCHANGED)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -292,7 +309,8 @@ io.on("connection", (socket) => {
       text:message
     });
 
-    const ytContext = await getYouTubeContext(message);
+    const query = buildSearchQuery(roomId);
+    const ytContext = await getYouTubeContext(query);
     const { year, date } = getTimeContext();
 
     const r = await openai.chat.completions.create({
@@ -307,9 +325,9 @@ You are a real person in a chatroom.
 Current year: ${year}
 Today: ${date}
 
-- react to user
+- respond to user
+- keep topic evolving
 - aware of trends
-- DO NOT explain data
 
 Style:
 - 1–2 sentences
@@ -320,8 +338,8 @@ Style:
         {
           role:"user",
           content:`
-User said:
-${message}
+Conversation:
+${query}
 
 Internet noise:
 ${ytContext}
@@ -356,15 +374,10 @@ ${ytContext}
 });
 
 //////////////////////////////////////////////////////////////
-// ROOT
-//////////////////////////////////////////////////////////////
-app.get("/", (_, res) => res.send("OK"));
-
-//////////////////////////////////////////////////////////////
 // START
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING SLOW HUMAN FLOW");
+  console.log("CHATROOM RUNNING EVOLVING TOPIC VERSION");
 });
