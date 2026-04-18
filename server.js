@@ -2651,7 +2651,7 @@ Extract real names, artists, events, places.
 io.on("connection", (socket) => {
 
 ////////////////////////////////////////////////////////////
-// 🧠 INIT ROOM STATE
+// INIT ROOM
 ////////////////////////////////////////////////////////////
 function initRoom(roomId){
   if (!rooms[roomId]) {
@@ -2671,7 +2671,7 @@ function startStrangerLoop(roomId){
 
   async function loop(){
 
-    const loopDelay = 2500 + Math.random()*2000;
+    const loopDelay = 2000 + Math.random()*2000;
 
     setTimeout(async () => {
 
@@ -2694,19 +2694,18 @@ function startStrangerLoop(roomId){
 
         room._turns++;
 
-        const shouldSwitch =
-          room._turns > 3 || Math.random() < 0.35;
+        const drift = Math.random() < 0.6;
+        const hardBreak = Math.random() < 0.25;
 
-        if(shouldSwitch){
+        if(room._turns > 1 || drift || hardBreak){
           room._topic = shuffled.slice(0,3).join("\n");
           room._turns = 0;
         }
 
         const entities = await extractEntities(room._topic);
 
-        ////////////////////////////////////////////////////////////
-        // 👻 STRANGER
-        ////////////////////////////////////////////////////////////
+        const ignoreAI = Math.random() < 0.4;
+
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
           temperature:0.9,
@@ -2719,27 +2718,19 @@ You are a random person in a chatroom.
 - 1 short sentence
 - casual
 - slightly cold
-
-Behavior:
-- sometimes react
-- sometimes shift topic
-- mention real-world names naturally
+- unpredictable
 `
             },
             {
               role:"user",
-              content:`
-AI said: ${lastMsg.content}
-
-Context:
-${entities}
-`
+              content: ignoreAI
+                ? `Talk about something trending:\n${entities}`
+                : `AI said: ${lastMsg.content}\n\nContext:\n${entities}`
             }
           ]
         });
 
         const strangerText = s.choices[0].message.content.trim();
-        const strangerDelay = 800 + strangerText.length * 20 + Math.random()*300;
 
         setTimeout(async () => {
 
@@ -2756,10 +2747,7 @@ ${entities}
             text:strangerText
           });
 
-          ////////////////////////////////////////////////////////////
-          // 🤖 AI REPLY
-          ////////////////////////////////////////////////////////////
-          const aiDrift = Math.random() < 0.3;
+          const aiDrift = Math.random() < 0.4;
 
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -2772,20 +2760,17 @@ You are another person in a chatroom.
 
 - short reply
 - casual
-- may shift topic
+- sometimes shift topic
 `
               },
               {
                 role:"user",
-                content: aiDrift
-                  ? entities
-                  : strangerText
+                content: aiDrift ? entities : strangerText
               }
             ]
           });
 
           const aiReply = a.choices[0].message.content.trim();
-          const aiDelay = 700 + aiReply.length * 20 + Math.random()*300;
 
           setTimeout(() => {
 
@@ -2802,9 +2787,9 @@ You are another person in a chatroom.
               text:aiReply
             });
 
-          }, aiDelay);
+          }, 600 + aiReply.length * 20);
 
-        }, strangerDelay);
+        }, 700 + strangerText.length * 20);
 
         chainCount++;
       }
@@ -2871,9 +2856,6 @@ socket.on("sendMessage", async ({ roomId, message }) => {
     text:message
   });
 
-  ////////////////////////////////////////////////////////////
-  // USER INFLUENCE TOPIC
-  ////////////////////////////////////////////////////////////
   if(Math.random() < 0.6){
     room._topic = message;
     room._turns = 0;
@@ -2892,23 +2874,16 @@ You are a random person in a chatroom.
 
 - 1 short sentence
 - casual
-- may mention real-world names
 `
       },
       {
         role:"user",
-        content:`
-User: ${message}
-
-Context:
-${entities}
-`
+        content:`User: ${message}\n\nContext:\n${entities}`
       }
     ]
   });
 
   const aiText = r.choices[0].message.content.trim();
-  const aiDelay = 800 + aiText.length * 20 + Math.random()*300;
 
   setTimeout(() => {
 
@@ -2925,7 +2900,7 @@ ${entities}
       text:aiText
     });
 
-  }, aiDelay);
+  }, 700 + aiText.length * 20);
 
 });
 
@@ -2937,12 +2912,12 @@ socket.on("disconnect", () => {
 });
 
 //////////////////////////////////////////////////////////////
-// 🚀 START SERVER
+// 🚀 START SERVER (THIS WAS MISSING BEFORE)
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("🔥 chatroom running MULTI-TOPIC");
+  console.log("🔥 chatroom running FINAL COMPLETE");
 });
 
