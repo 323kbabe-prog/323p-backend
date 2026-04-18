@@ -2798,6 +2798,22 @@ socket.on("joinRoom", (roomId) => {
 });
 
 //////////////////////////////////////////////////////////////
+// 👥 USER COUNT
+//////////////////////////////////////////////////////////////
+const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+
+// subtle fake presence (recommended)
+const fake = Math.floor(Math.random() * 2); // 0–1
+
+const count = real + fake;
+
+io.to(roomId).emit("message", {
+  role:"ai",
+  persona:"System",
+  text:`👥 ${count} ${count === 1 ? "person" : "people"} here`
+});
+
+//////////////////////////////////////////////////////////////
 // USER MESSAGE → AI ONLY
 //////////////////////////////////////////////////////////////
 socket.on("sendMessage", async ({ roomId, message }) => {
