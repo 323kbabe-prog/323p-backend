@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (HIDDEN ANCHOR: JIMMY FALLON)
+// CHATROOM BACKEND (SINGLE HIDDEN ANCHOR: JIMMY FALLON)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -26,7 +26,7 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// CLEAN TEXT
+// CLEAN TEXT (NO EMOJIS / SYMBOLS)
 //////////////////////////////////////////////////////////////
 function cleanText(text){
   return text
@@ -37,12 +37,11 @@ function cleanText(text){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔍 HIDDEN SERP (JIMMY FALLON)
+// 🔍 SERP (HIDDEN: JIMMY FALLON)
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
 
   const today = new Date().toISOString().split("T")[0];
-
   const query = `jimmy fallon ${today}`;
 
   try{
@@ -62,7 +61,7 @@ async function getTrendPool(){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP
+// LOOP (STRANGER STARTS, ALL SERP)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -77,14 +76,14 @@ function startLoop(roomId){
       const room = rooms[roomId];
       if(!room) return;
 
-      const lastMsg = room[room.length - 1];
-      const idle = Date.now() - (lastMsg?.time || Date.now());
+      const last = room[room.length - 1];
+      const idle = Date.now() - (last?.time || Date.now());
 
-      if(Math.random() < 0.25){
-        return loop();
-      }
+      // natural silence
+      if(Math.random() < 0.25) return loop();
 
-      if(idle > 2000 && lastMsg?.persona === "AI"){
+      // 🔥 STRANGER STARTS (no need for last persona === "AI")
+      if(idle > 2000){
 
         if(chainCount > 6){
           chainCount = 0;
@@ -94,7 +93,7 @@ function startLoop(roomId){
         const trends = await getTrendPool();
 
         ////////////////////////////////////////////////////////////
-        // STRANGER (GENERIC SOCIAL)
+        // 👻 STRANGER (SERP-BASED)
         ////////////////////////////////////////////////////////////
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -103,22 +102,21 @@ function startLoop(roomId){
             {
               role:"system",
               content:`
-You are a random person in a chatroom.
+React casually in a chatroom.
 
-- vague impression only
-- no specific names
-- no explanation
-- treat background info as noise
+- use general impressions only
+- do not mention specific names
+- do not explain anything
+- treat background as vague signal
 
 Style:
 - 1 short sentence
-- relaxed
 - plain text only
 `
             },
             {
               role:"user",
-              content:`${lastMsg.content}\n\n${trends}`
+              content:`${last?.content || "start"}\n\n${trends}`
             }
           ]
         });
@@ -144,29 +142,23 @@ Style:
           });
 
           ////////////////////////////////////////////////////////////
-          // AI (DRIFT + GENERIC)
+          // 🤖 AI (SERP-BASED)
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
-            temperature:0.8,
+            temperature:0.7,
             messages:[
               {
                 role:"system",
                 content:`
-You are a conversational presence.
+Respond casually.
 
-- do not mention specific names
+- use general impressions
+- do not mention names
 - do not explain anything
-- do not reference sources
-
-Behavior:
-- respond based on general patterns
-- slightly abstract
-- indirect
 
 Style:
 - 1 short sentence
-- plain text only
 `
               },
               {
@@ -229,29 +221,20 @@ io.on("connection", (socket) => {
 
     socket.emit("message", {
       role:"ai",
-      persona:"AI",
+      persona:"System",
       text:intro
     });
 
     rooms[roomId].push({
-      persona:"AI",
+      persona:"System",
       content:intro,
       time:Date.now()
-    });
-
-    const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-    const fake = Math.floor(Math.random()*2);
-
-    io.to(roomId).emit("message", {
-      role:"ai",
-      persona:"System",
-      text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
     });
 
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE
+// USER MESSAGE (ALSO JIMMY SERP)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -279,13 +262,12 @@ io.on("connection", (socket) => {
           content:`
 Respond casually.
 
-- do not mention names
-- do not explain
 - use general impressions
+- do not mention names
+- do not explain anything
 
 Style:
 - 1–2 short sentences
-- plain text only
 `
         },
         {
@@ -320,10 +302,10 @@ Style:
 });
 
 //////////////////////////////////////////////////////////////
-// START SERVER
+// START
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (HIDDEN ANCHOR MODE)");
+  console.log("CHATROOM RUNNING (JIMMY SERP ALL TALK)");
 });
