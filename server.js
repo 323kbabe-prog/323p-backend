@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (SINGLE HIDDEN ANCHOR: JIMMY FALLON)
+// CHATROOM BACKEND (STRANGER START + JIMMY SERP SPLIT MODE)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -26,7 +26,7 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// CLEAN TEXT (NO EMOJIS / SYMBOLS)
+// CLEAN TEXT
 //////////////////////////////////////////////////////////////
 function cleanText(text){
   return text
@@ -37,7 +37,7 @@ function cleanText(text){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔍 SERP (HIDDEN: JIMMY FALLON)
+// 🔍 HIDDEN SERP (JIMMY FALLON)
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
 
@@ -61,7 +61,7 @@ async function getTrendPool(){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (STRANGER STARTS, ALL SERP)
+// LOOP (STRANGER STARTS)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -76,13 +76,64 @@ function startLoop(roomId){
       const room = rooms[roomId];
       if(!room) return;
 
+      const trends = await getTrendPool();
+
+      ////////////////////////////////////////////////////////////
+      // 🔥 FIRST MESSAGE (STRANGER CREATES TOPIC)
+      ////////////////////////////////////////////////////////////
+      if (room.length === 0){
+
+        const first = await openai.chat.completions.create({
+          model:"gpt-4o-mini",
+          temperature:0.9,
+          messages:[
+            {
+              role:"system",
+              content:`
+Start a conversation naturally.
+
+- introduce a topic casually
+- no names
+- no explanation
+
+Style:
+- 1 short sentence
+`
+            },
+            {
+              role:"user",
+              content: trends
+            }
+          ]
+        });
+
+        const firstText = cleanText(
+          first.choices[0].message.content
+        );
+
+        rooms[roomId].push({
+          persona:"Stranger",
+          content:firstText,
+          time:Date.now()
+        });
+
+        io.to(roomId).emit("message", {
+          role:"ai",
+          persona:"Stranger",
+          text:firstText
+        });
+
+        return loop();
+      }
+
+      ////////////////////////////////////////////////////////////
+      // NORMAL LOOP
+      ////////////////////////////////////////////////////////////
       const last = room[room.length - 1];
       const idle = Date.now() - (last?.time || Date.now());
 
-      // natural silence
       if(Math.random() < 0.25) return loop();
 
-      // 🔥 STRANGER STARTS (no need for last persona === "AI")
       if(idle > 2000){
 
         if(chainCount > 6){
@@ -90,10 +141,8 @@ function startLoop(roomId){
           return loop();
         }
 
-        const trends = await getTrendPool();
-
         ////////////////////////////////////////////////////////////
-        // 👻 STRANGER (SERP-BASED)
+        // STRANGER
         ////////////////////////////////////////////////////////////
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -102,21 +151,19 @@ function startLoop(roomId){
             {
               role:"system",
               content:`
-React casually in a chatroom.
+React casually.
 
-- use general impressions only
-- do not mention specific names
-- do not explain anything
-- treat background as vague signal
+- vague impression
+- no names
+- no explanation
 
 Style:
 - 1 short sentence
-- plain text only
 `
             },
             {
               role:"user",
-              content:`${last?.content || "start"}\n\n${trends}`
+              content:`${last.content}\n\n${trends}`
             }
           ]
         });
@@ -142,7 +189,7 @@ Style:
           });
 
           ////////////////////////////////////////////////////////////
-          // 🤖 AI (SERP-BASED)
+          // AI (VAGUE LOOP)
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -153,9 +200,8 @@ Style:
                 content:`
 Respond casually.
 
-- use general impressions
-- do not mention names
-- do not explain anything
+- vague
+- no explanation
 
 Style:
 - 1 short sentence
@@ -234,7 +280,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (ALSO JIMMY SERP)
+// USER MESSAGE (JIMMY MODE)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -260,14 +306,20 @@ io.on("connection", (socket) => {
         {
           role:"system",
           content:`
-Respond casually.
+You are Jimmy Fallon.
 
-- use general impressions
-- do not mention names
-- do not explain anything
+Speak directly to the user.
+
+- be clear and specific
+- provide useful details
+- sound like a knowledgeable host
+
+Rules:
+- do not mention sources
+- plain text only
 
 Style:
-- 1–2 short sentences
+- 2–4 sentences
 `
         },
         {
@@ -307,5 +359,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (JIMMY SERP ALL TALK)");
+  console.log("CHATROOM RUNNING (STRANGER START + JIMMY SERP)");
 });
