@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — USER-LOCAL PRESENCE VERSION)
+// CHATROOM BACKEND (FINAL — USER-LOCAL PRESENCE + ROLE FIX)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -156,10 +156,21 @@ function startLoop(roomId){
 
       const room = rooms[roomId];
       if(!room){
+        loop();
         return;
       }
 
       const last = room[room.length - 1];
+      const lastText = (last?.content || "").toLowerCase();
+
+      ////////////////////////////////////////////////////////////
+      // GLOBAL STOP RIGHT AFTER "you still here"
+      ////////////////////////////////////////////////////////////
+      if(lastText.includes("you still here")){
+        loop();
+        return;
+      }
+
       const idle = Date.now() - (last?.time || Date.now());
 
       if(idle > 800 && !room.aiBusy){
@@ -170,15 +181,6 @@ function startLoop(roomId){
         // STRANGER
         ////////////////////////////////////////////////////////////
         if(room.turn === "stranger"){
-
-          const lastText = (last?.content || "").toLowerCase();
-
-          // Stranger never handles the presence-check phrase
-          if(lastText.includes("you still here")){
-            room.turn = "ai";
-            loop();
-            return;
-          }
 
           const context = buildContext(room, last?.content || "", trends);
 
@@ -203,7 +205,6 @@ Speak like a normal human in the room.
 
             let text = cleanText(s.choices[0].message.content);
 
-            // final hard block
             if(text.toLowerCase().includes("you still here")){
               loop();
               return;
@@ -235,7 +236,6 @@ Speak like a normal human in the room.
 
           room.aiBusy = true;
 
-          // fail-safe reset
           const failSafe = setTimeout(() => {
             room.aiBusy = false;
             room.turn = "stranger";
@@ -284,15 +284,17 @@ Speak like a normal human, not like Jimmy Fallon.
                 text: reply
               });
 
-              ////////////////////////////////////////////////////////////
+              ////////////////////////////////////////////////////////
               // USER-LOCAL "you still here"
-              ////////////////////////////////////////////////////////////
+              ////////////////////////////////////////////////////////
               room.rounds++;
 
               if(room.rounds >= 6){
                 room.rounds = 0;
 
-                for (const socketId of io.sockets.adapter.rooms.get(roomId) || []) {
+                const socketsInRoom = io.sockets.adapter.rooms.get(roomId) || new Set();
+
+                for (const socketId of socketsInRoom) {
                   const s = io.sockets.sockets.get(socketId);
                   if(!s) continue;
 
@@ -418,9 +420,9 @@ NEVER say "you still here"
     }
   });
 
-  //////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   // USER MESSAGE
-  //////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
     if(!message) return;
