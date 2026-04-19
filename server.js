@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — JIMMY WORLD VERSION)
+// CHATROOM BACKEND (FINAL — CLEAN STABLE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -35,12 +35,12 @@ function makeId(){
 //////////////////////////////////////////////////////////////
 // HUMAN CHAT VOICE
 //////////////////////////////////////////////////////////////
-const HUMAN_CHAT_VOICE = `
+const HUMAN_CHAT = `
 You are in a live chatroom.
 
 Voice:
 - casual, short, natural
-- like a normal person chatting in a room
+- like a normal human chatting in a room
 
 Rules:
 - 1–2 sentences max
@@ -49,13 +49,14 @@ Rules:
 - no identity mention
 - do NOT ask questions (except "you still here")
 - NEVER include "AI:" or "Stranger:"
+- when natural, include a real person, place, or event
 `;
 
 //////////////////////////////////////////////////////////////
 // JIMMY-WORLD SEARCH BRAIN
 //////////////////////////////////////////////////////////////
-const JIMMY_WORLD_SEARCH = `
-You decide what to search next.
+const JIMMY_SEARCH = `
+Decide what to search next.
 
 Perspective:
 - curious
@@ -77,7 +78,7 @@ Rules:
 `;
 
 //////////////////////////////////////////////////////////////
-// CLEAN
+// CLEAN TEXT
 //////////////////////////////////////////////////////////////
 function cleanText(text){
   return text
@@ -90,7 +91,7 @@ function cleanText(text){
 //////////////////////////////////////////////////////////////
 // DELAY
 //////////////////////////////////////////////////////////////
-function getReadingDelay(text){
+function getDelay(text){
   return Math.min(1200 + text.split(" ").length * 120, 5000);
 }
 
@@ -98,7 +99,8 @@ function getReadingDelay(text){
 // CONTEXT
 //////////////////////////////////////////////////////////////
 function buildContext(room, extra, trends){
-  const history = room.slice(-6)
+  const history = room
+    .slice(-6)
     .map(m => `${m.persona}: ${m.content}`)
     .join("\n");
 
@@ -106,22 +108,25 @@ function buildContext(room, extra, trends){
 }
 
 //////////////////////////////////////////////////////////////
-// SEARCH (JIMMY-WORLD PERSPECTIVE)
+// SEARCH
 //////////////////////////////////////////////////////////////
 async function getTrendPool(room){
   try{
-    const history = room.slice(-5).map(m => m.content).join("\n");
+    const history = room
+      .slice(-5)
+      .map(m => m.content)
+      .join("\n");
 
-    const qRes = await openai.chat.completions.create({
+    const q = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.9,
       messages: [
-        { role: "system", content: JIMMY_WORLD_SEARCH },
+        { role: "system", content: JIMMY_SEARCH },
         { role: "user", content: history }
       ]
     });
 
-    const query = qRes.choices[0].message.content.trim();
+    const query = q.choices[0].message.content.trim();
 
     const res = await fetch(
       `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`
@@ -129,7 +134,8 @@ async function getTrendPool(room){
 
     const data = await res.json();
 
-    return (data.organic_results || []).slice(0, 5)
+    return (data.organic_results || [])
+      .slice(0, 5)
       .map(r => r.title)
       .join("\n");
 
@@ -176,9 +182,7 @@ function startLoop(roomId){
 
           const lastText = (last?.content || "").toLowerCase();
 
-          ////////////////////////////////////////////////////////////
-          // Stranger never answers system question
-          ////////////////////////////////////////////////////////////
+          // Stranger never handles system presence check
           if(lastText.includes("you still here")){
             room.turn = "ai";
             loop();
@@ -194,10 +198,11 @@ function startLoop(roomId){
               messages: [
                 {
                   role: "system",
-                  content: HUMAN_CHAT_VOICE + `
+                  content: HUMAN_CHAT + `
 1 sentence only
 casual reaction
-NEVER answer questions
+NEVER say "you still here"
+NEVER check presence
 Speak like a normal human in the room, not a performer.
 `
                 },
@@ -205,7 +210,13 @@ Speak like a normal human in the room, not a performer.
               ]
             });
 
-            const text = cleanText(s.choices[0].message.content);
+            let text = cleanText(s.choices[0].message.content);
+
+            // hard block presence-check phrase
+            if(text.toLowerCase().includes("you still here")){
+              loop();
+              return;
+            }
 
             room.push({
               persona: "Stranger",
@@ -234,6 +245,7 @@ Speak like a normal human in the room, not a performer.
 
           room.aiBusy = true;
 
+          // fail-safe reset
           const failSafe = setTimeout(() => {
             room.aiBusy = false;
             room.turn = "stranger";
@@ -252,7 +264,7 @@ Speak like a normal human in the room, not a performer.
               messages: [
                 {
                   role: "system",
-                  content: HUMAN_CHAT_VOICE + `
+                  content: HUMAN_CHAT + `
 You are the more responsive voice in the room.
 Speak like a normal human, not like Jimmy Fallon.
 `
@@ -320,7 +332,7 @@ Speak like a normal human, not like Jimmy Fallon.
               room.aiBusy = false;
               room.turn = "stranger";
 
-            }, getReadingDelay(reply));
+            }, getDelay(reply));
 
           }catch{
             clearTimeout(failSafe);
@@ -347,7 +359,7 @@ io.on("connection", (socket) => {
 
     socket.join(roomId);
 
-    if (!rooms[roomId]) {
+    if(!rooms[roomId]){
       rooms[roomId] = [];
       rooms[roomId].turn = "stranger";
       rooms[roomId].aiBusy = false;
@@ -390,7 +402,7 @@ io.on("connection", (socket) => {
         messages: [
           {
             role: "system",
-            content: HUMAN_CHAT_VOICE + `
+            content: HUMAN_CHAT + `
 1 sentence only
 Start a topic naturally.
 Speak like a normal human in a room.
@@ -400,7 +412,11 @@ Speak like a normal human in a room.
         ]
       });
 
-      const text = cleanText(first.choices[0].message.content);
+      let text = cleanText(first.choices[0].message.content);
+
+      if(text.toLowerCase().includes("you still here")){
+        text = "Feels like everyone has something random on their mind tonight.";
+      }
 
       room.push({
         persona: "Stranger",
@@ -426,10 +442,10 @@ Speak like a normal human in a room.
   //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
-    if (!message) return;
+    if(!message) return;
 
     const room = rooms[roomId];
-    if (!room) return;
+    if(!room) return;
 
     room.lastUserTime = Date.now();
 
@@ -469,5 +485,5 @@ Speak like a normal human in a room.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (JIMMY WORLD FINAL)");
+  console.log("CHATROOM RUNNING (FINAL CLEAN STABLE)");
 });
