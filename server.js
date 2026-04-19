@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — STABLE + NO STUCK)
+// CHATROOM BACKEND (FINAL — FULL STABLE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -26,7 +26,7 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// ID
+// ID HELPER
 //////////////////////////////////////////////////////////////
 function makeId(){
   return Date.now() + Math.random();
@@ -44,7 +44,6 @@ Voice:
 Rules:
 - 1–2 sentences max
 - do NOT repeat ideas
-- do NOT rephrase
 - no assistant tone
 - no identity mention
 - do NOT ask questions (except "you still here")
@@ -52,7 +51,7 @@ Rules:
 `;
 
 //////////////////////////////////////////////////////////////
-// CLEAN
+// CLEAN TEXT
 //////////////////////////////////////////////////////////////
 function cleanText(text){
   return text
@@ -108,9 +107,19 @@ async function getTrendPool(room){
       .map(r => r.title)
       .join("\n");
 
-  }catch(e){
+  }catch{
     return "";
   }
+}
+
+//////////////////////////////////////////////////////////////
+// 🔥 TRIGGER AI (NO STUCK FIX)
+//////////////////////////////////////////////////////////////
+function triggerAI(roomId){
+  const room = rooms[roomId];
+  if(!room || room.aiBusy) return;
+
+  room.turn = "ai";
 }
 
 //////////////////////////////////////////////////////////////
@@ -123,8 +132,7 @@ function startLoop(roomId){
     setTimeout(async () => {
 
       const room = rooms[roomId];
-      if(!room) return;
-      if(room.turn === "paused") return;
+      if(!room || room.turn === "paused") return;
 
       const last = room[room.length - 1];
       const idle = Date.now() - (last?.time || Date.now());
@@ -170,13 +178,9 @@ function startLoop(roomId){
 
           room.aiBusy = true;
 
-          let input;
-
-          if(room.queue.length > 0){
-            input = room.queue.pop(); // 🔥 latest-first
-          } else {
-            input = last?.content || "";
-          }
+          let input = room.queue.length > 0
+            ? room.queue.pop() // latest message
+            : last?.content || "";
 
           const context = buildContext(room, input, trends);
 
@@ -246,7 +250,7 @@ function startLoop(roomId){
 
       loop();
 
-    }, 1200 + Math.random()*800);
+    }, 1200);
   }
 
   loop();
@@ -321,7 +325,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (🔥 FIXED)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -333,7 +337,7 @@ io.on("connection", (socket) => {
     room.lastUserTime = Date.now();
 
     ////////////////////////////////////////////////////////////
-    // LIMIT QUEUE
+    // QUEUE LIMIT
     ////////////////////////////////////////////////////////////
     room.queue.push(message);
     if(room.queue.length > 5){
@@ -341,26 +345,11 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // 🔥 STRONG RESUME FIX
+    // RESUME
     ////////////////////////////////////////////////////////////
     if(room.awaitingUser){
-
       room.awaitingUser = false;
       room.rounds = 0;
-
-      // 🔥 prioritize user reply
-      room.queue.unshift(message);
-
-      // 🔥 force immediate AI execution
-      room.aiBusy = false;
-      room.turn = "ai";
-
-      // 🔥 trigger loop instantly
-      room.push({
-        persona:"System",
-        content:"resume",
-        time: Date.now() - 2000
-      });
     }
 
     const msg = {
@@ -378,6 +367,11 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
+    ////////////////////////////////////////////////////////////
+    // 🔥 TRIGGER AI IMMEDIATELY
+    ////////////////////////////////////////////////////////////
+    triggerAI(roomId);
+
   });
 
 });
@@ -388,5 +382,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FINAL NO-STUCK)");
+  console.log("CHATROOM RUNNING (FINAL COMPLETE)");
 });
