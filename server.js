@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — FULL JIMMY SYSTEM)
+// CHATROOM BACKEND (FINAL — FIX DOUBLE AI REPLY ONLY)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -26,7 +26,7 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// 🔥 JIMMY VOICE (LOCKED)
+// 🔥 JIMMY VOICE
 //////////////////////////////////////////////////////////////
 const JIMMY_VOICE = `
 You are in a live chatroom.
@@ -40,6 +40,7 @@ Rules:
 - no formal explanation
 - no assistant tone
 - no identity mention
+- do NOT ask questions
 
 Style:
 - short
@@ -73,8 +74,6 @@ function buildContext(room, extraText, trends){
     .join("\n");
 
   return `
-Interpret everything casually like a conversation.
-
 ${history}
 
 New:
@@ -86,7 +85,7 @@ ${trends}
 }
 
 //////////////////////////////////////////////////////////////
-// 🔥 JIMMY DECIDES SEARCH (KEY FIX)
+// 🔥 JIMMY SEARCH
 //////////////////////////////////////////////////////////////
 async function getTrendPool(room){
 
@@ -102,18 +101,7 @@ async function getTrendPool(room){
       messages:[
         {
           role:"system",
-          content:`
-Decide what to search next.
-
-- react to conversation
-- be curious
-- casual thinking
-
-Rules:
-- output ONLY a search query
-- 3–8 words
-- no explanation
-`
+          content:`Output ONLY a search query (3–8 words)`
         },
         {
           role:"user",
@@ -140,7 +128,7 @@ Rules:
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (STRICT TURN)
+// LOOP (FIXED WITH AI LOCK)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -174,9 +162,7 @@ function startLoop(roomId){
               {
                 role:"system",
                 content: JIMMY_VOICE + `
-Extra:
 - 1 sentence only
-- like a quick comment
 `
               },
               {
@@ -202,15 +188,17 @@ Extra:
               text:strangerText
             });
 
-            rooms[roomId].turn = "ai";
+            room.turn = "ai";
 
           }, 800);
         }
 
         ////////////////////////////////////////////////////////////
-        // AI TURN (ONE RESPONSE)
+        // AI TURN (LOCKED)
         ////////////////////////////////////////////////////////////
-        else if(room.turn === "ai"){
+        else if(room.turn === "ai" && !room.aiBusy){
+
+          room.aiBusy = true; // 🔥 LOCK
 
           const context = buildContext(room, last?.content || "", trends);
 
@@ -249,9 +237,10 @@ Extra:
               text:aiReply
             });
 
-            // back to stranger
+            room.aiBusy = false; // 🔓 UNLOCK
+
             setTimeout(() => {
-              rooms[roomId].turn = "stranger";
+              room.turn = "stranger";
             }, 1200 + Math.random()*800);
 
           }, aiDelay);
@@ -278,80 +267,32 @@ io.on("connection", (socket) => {
     if (!rooms[roomId]) {
       rooms[roomId] = [];
       rooms[roomId].turn = "stranger";
+      rooms[roomId].aiBusy = false; // 🔥 INIT
       startLoop(roomId);
     }
-
-    const intro = "Welcome to 323LAchat";
 
     socket.emit("message", {
       role:"ai",
       persona:"System",
-      text:intro
+      text:"Welcome to 323LAchat"
     });
-
-    rooms[roomId].push({
-      persona:"System",
-      content:intro,
-      time:Date.now()
-    });
-
-    ////////////////////////////////////////////////////////////
-    // FIRST STRANGER (START FLOW)
-    ////////////////////////////////////////////////////////////
-    (async () => {
-
-      const trends = await getTrendPool(rooms[roomId]);
-      const context = buildContext(rooms[roomId], "", trends);
-
-      const first = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.9,
-        messages:[
-          {
-            role:"system",
-            content: JIMMY_VOICE + `
-Start a topic in 1 short sentence
-`
-          },
-          {
-            role:"user",
-            content: context
-          }
-        ]
-      });
-
-      const firstText = cleanText(first.choices[0].message.content);
-
-      setTimeout(() => {
-
-        rooms[roomId].push({
-          persona:"Stranger",
-          content:firstText,
-          time:Date.now()
-        });
-
-        io.to(roomId).emit("message", {
-          role:"ai",
-          persona:"Stranger",
-          text:firstText
-        });
-
-        rooms[roomId].turn = "ai";
-
-      }, 800);
-
-    })();
 
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (JIMMY REPLIES SAME STYLE)
+// USER MESSAGE (BLOCK IF AI BUSY)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if (!message) return;
 
-    rooms[roomId].push({
+    const room = rooms[roomId];
+
+    if(room.aiBusy) return; // 🔥 BLOCK DOUBLE AI
+
+    room.aiBusy = true;
+
+    room.push({
       persona:"User",
       content:message,
       time:Date.now()
@@ -362,8 +303,8 @@ Start a topic in 1 short sentence
       text:message
     });
 
-    const trends = await getTrendPool(rooms[roomId]);
-    const context = buildContext(rooms[roomId], message, trends);
+    const trends = await getTrendPool(room);
+    const context = buildContext(room, message, trends);
 
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -371,9 +312,7 @@ Start a topic in 1 short sentence
       messages:[
         {
           role:"system",
-          content: JIMMY_VOICE + `
-Reply like you're continuing the same conversation.
-`
+          content: JIMMY_VOICE
         },
         {
           role:"user",
@@ -382,9 +321,7 @@ Reply like you're continuing the same conversation.
       ]
     });
 
-    const aiText = cleanText(
-      r.choices[0].message.content
-    );
+    const aiText = cleanText(r.choices[0].message.content);
 
     io.to(roomId).emit("typing", {
       persona:"AI"
@@ -394,7 +331,7 @@ Reply like you're continuing the same conversation.
 
     setTimeout(() => {
 
-      rooms[roomId].push({
+      room.push({
         persona:"AI",
         content:aiText,
         time:Date.now()
@@ -405,6 +342,8 @@ Reply like you're continuing the same conversation.
         persona:"AI",
         text:aiText
       });
+
+      room.aiBusy = false; // 🔓 UNLOCK
 
     }, aiDelay);
 
@@ -418,5 +357,5 @@ Reply like you're continuing the same conversation.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FULL JIMMY MODE)");
+  console.log("CHATROOM RUNNING (AI DOUBLE FIXED)");
 });
