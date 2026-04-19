@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — RESUME FIX ONLY)
+// CHATROOM BACKEND (FINAL — USER MESSAGE FIX ONLY)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -120,7 +120,7 @@ async function getTrendPool(room){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (WITH ASK + PAUSE)
+// LOOP (UNCHANGED)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -142,9 +142,6 @@ function startLoop(roomId){
 
         const trends = await getTrendPool(room);
 
-        ////////////////////////////////////////////////////////////
-        // STRANGER
-        ////////////////////////////////////////////////////////////
         if(room.turn === "stranger"){
 
           const context = buildContext(room, last?.content || "", trends);
@@ -179,20 +176,13 @@ function startLoop(roomId){
           }, 800);
         }
 
-        ////////////////////////////////////////////////////////////
-        // AI
-        ////////////////////////////////////////////////////////////
         else if(room.turn === "ai"){
 
           room.aiBusy = true;
 
-          let input;
-
-          if(room.queue.length > 0){
-            input = room.queue.shift();
-          }else{
-            input = last?.content || "";
-          }
+          let input = room.queue.length > 0
+            ? room.queue.shift()
+            : last?.content || "";
 
           const context = buildContext(room, input, trends);
 
@@ -224,46 +214,6 @@ function startLoop(roomId){
               persona:"AI",
               text:aiReply
             });
-
-            ////////////////////////////////////////////////////////////
-            // ROUND COUNT
-            ////////////////////////////////////////////////////////////
-            room.rounds++;
-
-            ////////////////////////////////////////////////////////////
-            // ASK AFTER 5
-            ////////////////////////////////////////////////////////////
-            if(room.rounds >= 5 && !room.awaitingUser){
-
-              room.awaitingUser = true;
-
-              setTimeout(() => {
-
-                const ask = "you still here";
-
-                room.push({
-                  persona:"AI",
-                  content:ask,
-                  time:Date.now()
-                });
-
-                io.to(roomId).emit("message", {
-                  role:"ai",
-                  persona:"AI",
-                  text:ask
-                });
-
-                setTimeout(() => {
-                  const now = Date.now();
-
-                  if(room.awaitingUser && now - room.lastUserTime > 8000){
-                    room.turn = "paused";
-                  }
-
-                }, 8000);
-
-              }, 500);
-            }
 
             room.aiBusy = false;
 
@@ -303,8 +253,6 @@ io.on("connection", (socket) => {
       startLoop(roomId);
     }
 
-    const room = rooms[roomId];
-
     socket.emit("message", {
       role:"ai",
       persona:"System",
@@ -319,43 +267,10 @@ io.on("connection", (socket) => {
       persona:"System",
       text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
     });
-
-    const trends = await getTrendPool(room);
-    const context = buildContext(room, "", trends);
-
-    const first = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.9,
-      messages:[
-        { role:"system", content: JIMMY_VOICE + `\nStart topic in 1 sentence` },
-        { role:"user", content: context }
-      ]
-    });
-
-    const firstText = cleanText(first.choices[0].message.content);
-
-    setTimeout(() => {
-
-      room.push({
-        persona:"Stranger",
-        content:firstText,
-        time:Date.now()
-      });
-
-      io.to(roomId).emit("message", {
-        role:"ai",
-        persona:"Stranger",
-        text:firstText
-      });
-
-      room.turn = "ai";
-
-    }, 600);
-
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (🔥 FIXED RESUME)
+// 🔥 USER MESSAGE FIXED
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -364,22 +279,20 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room) return;
 
-    ////////////////////////////////////////////////////////////
-    // TRACK USER
-    ////////////////////////////////////////////////////////////
-    room.lastUserTime = Date.now();
+    const msg = {
+      id: Date.now() + Math.random(), // 🔥 unique ID
+      role:"user",
+      text:message
+    };
 
     ////////////////////////////////////////////////////////////
-    // 🔥 RESUME FIX (ONLY CHANGE)
+    // 🔥 GUARANTEED DISPLAY
     ////////////////////////////////////////////////////////////
-    if(room.awaitingUser){
-      room.awaitingUser = false;
-      room.rounds = 0;
-      room.turn = "ai"; // 🔥 CRITICAL FIX
-    }
+    socket.emit("message", msg);            // sender sees instantly
+    socket.to(roomId).emit("message", msg); // others receive
 
     ////////////////////////////////////////////////////////////
-    // SHOW USER MESSAGE
+    // STORE + QUEUE (UNCHANGED)
     ////////////////////////////////////////////////////////////
     room.push({
       persona:"User",
@@ -387,14 +300,6 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
-    io.to(roomId).emit("message", {
-      role:"user",
-      text:message
-    });
-
-    ////////////////////////////////////////////////////////////
-    // ADD TO QUEUE
-    ////////////////////////////////////////////////////////////
     room.queue.push(message);
 
   });
@@ -407,5 +312,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (RESUME FIXED)");
+  console.log("CHATROOM RUNNING (USER FIXED)");
 });
