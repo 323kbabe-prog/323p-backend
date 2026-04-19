@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — ANTI-REPEAT FIX)
+// CHATROOM BACKEND (FINAL — 6-ROUND ASK + PAUSE)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -33,33 +33,26 @@ function makeId(){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔥 JIMMY VOICE (UPDATED — ANTI REPEAT)
+// 🔥 JIMMY VOICE
 //////////////////////////////////////////////////////////////
 const JIMMY_VOICE = `
 You are in a live chatroom.
 
 Voice:
-- casual
-- short
-- natural, like texting a friend
-
-Behavior:
-- react to what was just said
-- keep conversation moving forward
-- sometimes shift topic slightly
+- casual, short, natural
 
 Rules:
-- 1–2 sentences max
-- do NOT repeat the same idea
+- include real people, places, or events
+- do NOT repeat ideas
 - do NOT rephrase previous messages
-- always add something new
 - no assistant tone
 - no identity mention
-- do NOT ask questions
+- do NOT ask questions (except system check)
 - NEVER include "AI:" or "Stranger:"
 
 Style:
-- simple, direct, conversational
+- 1–2 sentences
+- conversational
 `;
 
 //////////////////////////////////////////////////////////////
@@ -93,13 +86,11 @@ function buildContext(room, extraText, trends){
 }
 
 //////////////////////////////////////////////////////////////
-// JIMMY SEARCH
+// SEARCH
 //////////////////////////////////////////////////////////////
 async function getTrendPool(room){
   try{
-    const history = room.slice(-5)
-      .map(m => m.content)
-      .join("\n");
+    const history = room.slice(-5).map(m => m.content).join("\n");
 
     const qRes = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -118,7 +109,6 @@ async function getTrendPool(room){
     const data = await res.json();
 
     const items = (data.organic_results || []).slice(0,5);
-
     return items.map(r => r.title).join("\n");
 
   }catch(e){
@@ -128,7 +118,7 @@ async function getTrendPool(room){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (UPDATED INPUT VARIATION ONLY)
+// LOOP
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -161,14 +151,7 @@ function startLoop(roomId){
             model:"gpt-4o-mini",
             temperature:0.9,
             messages:[
-              {
-                role:"system",
-                content: JIMMY_VOICE + `
-- 1 sentence only
-- quick comment style
-- no storytelling
-`
-              },
+              { role:"system", content: JIMMY_VOICE + `\n- 1 sentence only` },
               { role:"user", content: context }
             ]
           });
@@ -192,7 +175,7 @@ function startLoop(roomId){
         }
 
         ////////////////////////////////////////////////////////////
-        // AI (🔥 UPDATED INPUT LOGIC)
+        // AI
         ////////////////////////////////////////////////////////////
         else if(room.turn === "ai"){
 
@@ -203,14 +186,10 @@ function startLoop(roomId){
           if(room.queue.length > 0){
             input = room.queue.shift();
           } else {
-
             const shift = Math.random() < 0.3;
-
-            if(shift && room.length > 3){
-              input = room[room.length - 3].content;
-            } else {
-              input = last?.content || "";
-            }
+            input = shift && room.length > 3
+              ? room[room.length - 3].content
+              : last?.content || "";
           }
 
           const context = buildContext(room, input, trends);
@@ -241,6 +220,40 @@ function startLoop(roomId){
               text:aiReply
             });
 
+            ////////////////////////////////////////////////////////////
+            // 🔥 6 ROUND CHECK
+            ////////////////////////////////////////////////////////////
+            room.rounds++;
+
+            if(room.rounds >= 6 && !room.awaitingUser){
+
+              room.awaitingUser = true;
+
+              setTimeout(() => {
+
+                const ask = "you still here";
+
+                room.push({ persona:"AI", content:ask, time:Date.now() });
+
+                io.to(roomId).emit("message", {
+                  id: makeId(),
+                  role:"ai",
+                  persona:"AI",
+                  text:ask
+                });
+
+                ////////////////////////////////////////////////////////////
+                // 🔥 PAUSE AFTER 8s
+                ////////////////////////////////////////////////////////////
+                setTimeout(() => {
+                  if(room.awaitingUser && Date.now() - room.lastUserTime > 8000){
+                    room.turn = "paused";
+                  }
+                }, 8000);
+
+              }, 400);
+            }
+
             room.aiBusy = false;
 
             setTimeout(() => {
@@ -260,7 +273,7 @@ function startLoop(roomId){
 }
 
 //////////////////////////////////////////////////////////////
-// SOCKET (UNCHANGED)
+// SOCKET
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
 
@@ -301,49 +314,43 @@ io.on("connection", (socket) => {
     ////////////////////////////////////////////////////////////
     // FIRST STRANGER
     ////////////////////////////////////////////////////////////
-    try {
+    const trends = await getTrendPool(room);
+    const context = buildContext(room, "", trends);
 
-      const trends = await getTrendPool(room);
-      const context = buildContext(room, "", trends);
+    const first = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.9,
+      messages:[
+        { role:"system", content: JIMMY_VOICE + `\nStart topic in 1 sentence` },
+        { role:"user", content: context }
+      ]
+    });
 
-      const first = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.9,
-        messages:[
-          { role:"system", content: JIMMY_VOICE + `\nStart a topic in 1 sentence` },
-          { role:"user", content: context }
-        ]
+    const firstText = cleanText(first.choices[0].message.content);
+
+    setTimeout(() => {
+
+      room.push({
+        persona:"Stranger",
+        content:firstText,
+        time:Date.now()
       });
 
-      const firstText = cleanText(first.choices[0].message.content);
+      io.to(roomId).emit("message", {
+        id: makeId(),
+        role:"ai",
+        persona:"Stranger",
+        text:firstText
+      });
 
-      setTimeout(() => {
+      room.turn = "ai";
 
-        room.push({
-          persona:"Stranger",
-          content:firstText,
-          time:Date.now()
-        });
-
-        io.to(roomId).emit("message", {
-          id: makeId(),
-          role:"ai",
-          persona:"Stranger",
-          text:firstText
-        });
-
-        room.turn = "ai";
-
-      }, 600);
-
-    } catch (e) {
-      console.log("First Stranger error:", e);
-    }
+    }, 600);
 
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (UNCHANGED)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -351,6 +358,20 @@ io.on("connection", (socket) => {
 
     const room = rooms[roomId];
     if (!room) return;
+
+    room.lastUserTime = Date.now();
+
+    ////////////////////////////////////////////////////////////
+    // 🔥 RESUME FROM PAUSE
+    ////////////////////////////////////////////////////////////
+    if(room.awaitingUser){
+      room.awaitingUser = false;
+      room.rounds = 0;
+      room.turn = "ai";
+      room.queue.unshift(message);
+    } else {
+      room.queue.push(message);
+    }
 
     const msg = {
       id: makeId(),
@@ -367,8 +388,6 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
-    room.queue.push(message);
-
   });
 
 });
@@ -379,5 +398,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (ANTI-REPEAT FIX)");
+  console.log("CHATROOM RUNNING (FINAL — 6 ROUND CHECK)");
 });
