@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (STRANGER START + JIMMY SERP SPLIT MODE)
+// CHATROOM BACKEND (FINAL — JIMMY SERP + STRICT USER MODE)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -61,7 +61,7 @@ async function getTrendPool(){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (STRANGER STARTS)
+// LOOP (FAST)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -69,77 +69,26 @@ function startLoop(roomId){
 
   async function loop(){
 
-    const delay = 4000 + Math.random()*4000;
+    const delay = 2000 + Math.random()*2000;
 
     setTimeout(async () => {
 
       const room = rooms[roomId];
       if(!room) return;
 
-      const trends = await getTrendPool();
-
-      ////////////////////////////////////////////////////////////
-      // 🔥 FIRST MESSAGE (STRANGER CREATES TOPIC)
-      ////////////////////////////////////////////////////////////
-      if (room.length === 0){
-
-        const first = await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          temperature:0.9,
-          messages:[
-            {
-              role:"system",
-              content:`
-Start a conversation naturally.
-
-- introduce a topic casually
-- no names
-- no explanation
-
-Style:
-- 1 short sentence
-`
-            },
-            {
-              role:"user",
-              content: trends
-            }
-          ]
-        });
-
-        const firstText = cleanText(
-          first.choices[0].message.content
-        );
-
-        rooms[roomId].push({
-          persona:"Stranger",
-          content:firstText,
-          time:Date.now()
-        });
-
-        io.to(roomId).emit("message", {
-          role:"ai",
-          persona:"Stranger",
-          text:firstText
-        });
-
-        return loop();
-      }
-
-      ////////////////////////////////////////////////////////////
-      // NORMAL LOOP
-      ////////////////////////////////////////////////////////////
       const last = room[room.length - 1];
       const idle = Date.now() - (last?.time || Date.now());
 
-      if(Math.random() < 0.25) return loop();
+      if(Math.random() < 0.1) return loop();
 
-      if(idle > 2000){
+      if(idle > 1000){
 
         if(chainCount > 6){
           chainCount = 0;
           return loop();
         }
+
+        const trends = await getTrendPool();
 
         ////////////////////////////////////////////////////////////
         // STRANGER
@@ -172,7 +121,7 @@ Style:
           s.choices[0].message.content
         );
 
-        const strangerDelay = 2000 + Math.random()*2000;
+        const strangerDelay = 800 + Math.random()*800;
 
         setTimeout(async () => {
 
@@ -189,7 +138,7 @@ Style:
           });
 
           ////////////////////////////////////////////////////////////
-          // AI (VAGUE LOOP)
+          // AI LOOP RESPONSE
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -218,7 +167,7 @@ Style:
             a.choices[0].message.content
           );
 
-          const aiDelay = 2500 + Math.random()*3000;
+          const aiDelay = 1000 + Math.random()*1200;
 
           setTimeout(() => {
 
@@ -277,10 +226,74 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
+    ////////////////////////////////////////////////////////////
+    // USER COUNT
+    ////////////////////////////////////////////////////////////
+    const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+    const fake = Math.floor(Math.random()*2);
+
+    io.to(roomId).emit("message", {
+      role:"ai",
+      persona:"System",
+      text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
+    });
+
+    ////////////////////////////////////////////////////////////
+    // 🔥 STRANGER FIRST TOPIC
+    ////////////////////////////////////////////////////////////
+    (async () => {
+
+      const trends = await getTrendPool();
+
+      const first = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.9,
+        messages:[
+          {
+            role:"system",
+            content:`
+Start a conversation.
+
+- introduce topic casually
+- no names
+
+Style:
+- 1 short sentence
+`
+          },
+          {
+            role:"user",
+            content: trends
+          }
+        ]
+      });
+
+      const firstText = cleanText(
+        first.choices[0].message.content
+      );
+
+      setTimeout(() => {
+
+        rooms[roomId].push({
+          persona:"Stranger",
+          content:firstText,
+          time:Date.now()
+        });
+
+        io.to(roomId).emit("message", {
+          role:"ai",
+          persona:"Stranger",
+          text:firstText
+        });
+
+      }, 500);
+
+    })();
+
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (JIMMY MODE)
+// USER MESSAGE (STRICT JIMMY MODE)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -301,25 +314,27 @@ io.on("connection", (socket) => {
 
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
-      temperature:0.7,
+      temperature:0.6,
       messages:[
         {
           role:"system",
           content:`
 You are Jimmy Fallon.
 
-Speak directly to the user.
+Follow the user's request exactly.
 
-- be clear and specific
+- give direct answer
 - provide useful details
-- sound like a knowledgeable host
+- complete the task
 
 Rules:
-- do not mention sources
-- plain text only
+- NEVER ask questions
+- NEVER suggest anything
+- no follow-up
+- no explanation about sources
 
 Style:
-- 2–4 sentences
+- 2–5 sentences
 `
         },
         {
@@ -329,9 +344,12 @@ Style:
       ]
     });
 
-    const aiText = cleanText(
+    let aiText = cleanText(
       r.choices[0].message.content
     );
+
+    // hard remove questions
+    aiText = aiText.replace(/\?/g, "");
 
     setTimeout(() => {
 
@@ -347,7 +365,7 @@ Style:
         text:aiText
       });
 
-    }, 1500);
+    }, 1200);
 
   });
 
@@ -359,5 +377,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (STRANGER START + JIMMY SERP)");
+  console.log("CHATROOM RUNNING (FINAL STRICT JIMMY MODE)");
 });
