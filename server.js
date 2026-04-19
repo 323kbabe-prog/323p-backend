@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — CLEAN STABLE VERSION)
+// CHATROOM BACKEND (FINAL — STRANGER FIRST FIXED)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -214,40 +214,6 @@ function startLoop(roomId){
               text:aiReply
             });
 
-            ////////////////////////////////////////////////////////////
-            // ROUND COUNT
-            ////////////////////////////////////////////////////////////
-            room.rounds++;
-
-            ////////////////////////////////////////////////////////////
-            // ASK AFTER 5
-            ////////////////////////////////////////////////////////////
-            if(room.rounds >= 5 && !room.awaitingUser){
-
-              room.awaitingUser = true;
-
-              setTimeout(() => {
-
-                const ask = "you still here";
-
-                room.push({ persona:"AI", content:ask, time:Date.now() });
-
-                io.to(roomId).emit("message", {
-                  id: makeId(),
-                  role:"ai",
-                  persona:"AI",
-                  text:ask
-                });
-
-                setTimeout(() => {
-                  if(room.awaitingUser && Date.now() - room.lastUserTime > 8000){
-                    room.turn = "paused";
-                  }
-                }, 8000);
-
-              }, 500);
-            }
-
             room.aiBusy = false;
 
             setTimeout(() => {
@@ -286,6 +252,11 @@ io.on("connection", (socket) => {
       startLoop(roomId);
     }
 
+    const room = rooms[roomId];
+
+    ////////////////////////////////////////////////////////////
+    // SYSTEM MESSAGES
+    ////////////////////////////////////////////////////////////
     socket.emit("message", {
       id: makeId(),
       role:"ai",
@@ -303,10 +274,52 @@ io.on("connection", (socket) => {
       text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
     });
 
+    ////////////////////////////////////////////////////////////
+    // 🔥 FIRST STRANGER (FIX)
+    ////////////////////////////////////////////////////////////
+    try {
+
+      const trends = await getTrendPool(room);
+      const context = buildContext(room, "", trends);
+
+      const first = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.9,
+        messages:[
+          { role:"system", content: JIMMY_VOICE + `\nStart a topic in 1 sentence` },
+          { role:"user", content: context }
+        ]
+      });
+
+      const firstText = cleanText(first.choices[0].message.content);
+
+      setTimeout(() => {
+
+        room.push({
+          persona:"Stranger",
+          content:firstText,
+          time:Date.now()
+        });
+
+        io.to(roomId).emit("message", {
+          id: makeId(),
+          role:"ai",
+          persona:"Stranger",
+          text:firstText
+        });
+
+        room.turn = "ai";
+
+      }, 600);
+
+    } catch (e) {
+      console.log("First Stranger error:", e);
+    }
+
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (FINAL)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -315,23 +328,6 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room) return;
 
-    room.lastUserTime = Date.now();
-
-    ////////////////////////////////////////////////////////////
-    // RESUME FIX
-    ////////////////////////////////////////////////////////////
-    if(room.awaitingUser){
-      room.awaitingUser = false;
-      room.rounds = 0;
-      room.turn = "ai";
-      room.queue.unshift(message);
-    } else {
-      room.queue.push(message);
-    }
-
-    ////////////////////////////////////////////////////////////
-    // ALWAYS SHOW USER MESSAGE
-    ////////////////////////////////////////////////////////////
     const msg = {
       id: makeId(),
       role:"user",
@@ -347,6 +343,8 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
+    room.queue.push(message);
+
   });
 
 });
@@ -357,5 +355,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FINAL)");
+  console.log("CHATROOM RUNNING (STRANGER FIRST FIXED)");
 });
