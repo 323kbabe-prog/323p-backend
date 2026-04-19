@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — USER MESSAGE FIX ONLY)
+// CHATROOM BACKEND (FINAL — CLEAN STABLE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -24,6 +24,13 @@ const openai = new OpenAI({
 });
 
 const rooms = {};
+
+//////////////////////////////////////////////////////////////
+// 🔥 ID HELPER
+//////////////////////////////////////////////////////////////
+function makeId(){
+  return Date.now() + Math.random();
+}
 
 //////////////////////////////////////////////////////////////
 // JIMMY VOICE
@@ -73,15 +80,7 @@ function buildContext(room, extraText, trends){
     .map(m => `${m.persona}: ${m.content}`)
     .join("\n");
 
-  return `
-${history}
-
-New:
-${extraText}
-
-Signals:
-${trends}
-`;
+  return `${history}\n\nNew:\n${extraText}\n\nSignals:\n${trends}`;
 }
 
 //////////////////////////////////////////////////////////////
@@ -120,7 +119,7 @@ async function getTrendPool(room){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (UNCHANGED)
+// LOOP
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -142,6 +141,9 @@ function startLoop(roomId){
 
         const trends = await getTrendPool(room);
 
+        ////////////////////////////////////////////////////////////
+        // STRANGER
+        ////////////////////////////////////////////////////////////
         if(room.turn === "stranger"){
 
           const context = buildContext(room, last?.content || "", trends);
@@ -159,13 +161,10 @@ function startLoop(roomId){
 
           setTimeout(() => {
 
-            room.push({
-              persona:"Stranger",
-              content:strangerText,
-              time:Date.now()
-            });
+            room.push({ persona:"Stranger", content:strangerText, time:Date.now() });
 
             io.to(roomId).emit("message", {
+              id: makeId(),
               role:"ai",
               persona:"Stranger",
               text:strangerText
@@ -176,6 +175,9 @@ function startLoop(roomId){
           }, 800);
         }
 
+        ////////////////////////////////////////////////////////////
+        // AI
+        ////////////////////////////////////////////////////////////
         else if(room.turn === "ai"){
 
           room.aiBusy = true;
@@ -203,17 +205,48 @@ function startLoop(roomId){
 
           setTimeout(() => {
 
-            room.push({
-              persona:"AI",
-              content:aiReply,
-              time:Date.now()
-            });
+            room.push({ persona:"AI", content:aiReply, time:Date.now() });
 
             io.to(roomId).emit("message", {
+              id: makeId(),
               role:"ai",
               persona:"AI",
               text:aiReply
             });
+
+            ////////////////////////////////////////////////////////////
+            // ROUND COUNT
+            ////////////////////////////////////////////////////////////
+            room.rounds++;
+
+            ////////////////////////////////////////////////////////////
+            // ASK AFTER 5
+            ////////////////////////////////////////////////////////////
+            if(room.rounds >= 5 && !room.awaitingUser){
+
+              room.awaitingUser = true;
+
+              setTimeout(() => {
+
+                const ask = "you still here";
+
+                room.push({ persona:"AI", content:ask, time:Date.now() });
+
+                io.to(roomId).emit("message", {
+                  id: makeId(),
+                  role:"ai",
+                  persona:"AI",
+                  text:ask
+                });
+
+                setTimeout(() => {
+                  if(room.awaitingUser && Date.now() - room.lastUserTime > 8000){
+                    room.turn = "paused";
+                  }
+                }, 8000);
+
+              }, 500);
+            }
 
             room.aiBusy = false;
 
@@ -254,6 +287,7 @@ io.on("connection", (socket) => {
     }
 
     socket.emit("message", {
+      id: makeId(),
       role:"ai",
       persona:"System",
       text:"Welcome to 323LAchat"
@@ -263,14 +297,16 @@ io.on("connection", (socket) => {
     const fake = Math.floor(Math.random()*2);
 
     io.to(roomId).emit("message", {
+      id: makeId(),
       role:"ai",
       persona:"System",
       text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
     });
+
   });
 
 //////////////////////////////////////////////////////////////
-// 🔥 USER MESSAGE FIXED
+// USER MESSAGE (FINAL)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -279,28 +315,37 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room) return;
 
+    room.lastUserTime = Date.now();
+
+    ////////////////////////////////////////////////////////////
+    // RESUME FIX
+    ////////////////////////////////////////////////////////////
+    if(room.awaitingUser){
+      room.awaitingUser = false;
+      room.rounds = 0;
+      room.turn = "ai";
+      room.queue.unshift(message);
+    } else {
+      room.queue.push(message);
+    }
+
+    ////////////////////////////////////////////////////////////
+    // ALWAYS SHOW USER MESSAGE
+    ////////////////////////////////////////////////////////////
     const msg = {
-      id: Date.now() + Math.random(), // 🔥 unique ID
+      id: makeId(),
       role:"user",
       text:message
     };
 
-    ////////////////////////////////////////////////////////////
-    // 🔥 GUARANTEED DISPLAY
-    ////////////////////////////////////////////////////////////
-    socket.emit("message", msg);            // sender sees instantly
-    socket.to(roomId).emit("message", msg); // others receive
+    socket.emit("message", msg);
+    socket.to(roomId).emit("message", msg);
 
-    ////////////////////////////////////////////////////////////
-    // STORE + QUEUE (UNCHANGED)
-    ////////////////////////////////////////////////////////////
     room.push({
       persona:"User",
       content:message,
       time:Date.now()
     });
-
-    room.queue.push(message);
 
   });
 
@@ -312,5 +357,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (USER FIXED)");
+  console.log("CHATROOM RUNNING (FINAL)");
 });
