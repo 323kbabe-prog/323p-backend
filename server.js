@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — ASK + PAUSE ADDED)
+// CHATROOM BACKEND (FINAL — RESUME FIX ONLY)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -226,12 +226,12 @@ function startLoop(roomId){
             });
 
             ////////////////////////////////////////////////////////////
-            // 🔥 ROUND COUNT
+            // ROUND COUNT
             ////////////////////////////////////////////////////////////
             room.rounds++;
 
             ////////////////////////////////////////////////////////////
-            // 🔥 ASK AFTER 5 ROUNDS
+            // ASK AFTER 5
             ////////////////////////////////////////////////////////////
             if(room.rounds >= 5 && !room.awaitingUser){
 
@@ -253,9 +253,6 @@ function startLoop(roomId){
                   text:ask
                 });
 
-                ////////////////////////////////////////////////////////////
-                // 🔥 PAUSE IF NO RESPONSE
-                ////////////////////////////////////////////////////////////
                 setTimeout(() => {
                   const now = Date.now();
 
@@ -358,7 +355,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (RESUME IF ANSWERED)
+// USER MESSAGE (🔥 FIXED RESUME)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -367,14 +364,23 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room) return;
 
+    ////////////////////////////////////////////////////////////
+    // TRACK USER
+    ////////////////////////////////////////////////////////////
     room.lastUserTime = Date.now();
 
+    ////////////////////////////////////////////////////////////
+    // 🔥 RESUME FIX (ONLY CHANGE)
+    ////////////////////////////////////////////////////////////
     if(room.awaitingUser){
       room.awaitingUser = false;
       room.rounds = 0;
-      room.turn = "stranger"; // 🔥 RESUME
+      room.turn = "ai"; // 🔥 CRITICAL FIX
     }
 
+    ////////////////////////////////////////////////////////////
+    // SHOW USER MESSAGE
+    ////////////////////////////////////////////////////////////
     room.push({
       persona:"User",
       content:message,
@@ -386,6 +392,9 @@ io.on("connection", (socket) => {
       text:message
     });
 
+    ////////////////////////////////////////////////////////////
+    // ADD TO QUEUE
+    ////////////////////////////////////////////////////////////
     room.queue.push(message);
 
   });
@@ -398,5 +407,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (ASK + PAUSE MODE)");
+  console.log("CHATROOM RUNNING (RESUME FIXED)");
 });
