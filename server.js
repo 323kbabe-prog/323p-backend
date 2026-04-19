@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — STRICT TURN SYSTEM)
+// CHATROOM BACKEND (FINAL — STRICT TURN FIXED)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -97,7 +97,7 @@ async function getTrendPool(){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP WITH TURN CONTROL
+// LOOP (TURN-BASED FIX)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -113,68 +113,66 @@ function startLoop(roomId){
       const last = room[room.length - 1];
       const idle = Date.now() - (last?.time || Date.now());
 
-      // 🔥 ONLY STRANGER CAN START
-      if(idle > 1000 && room.turn === "stranger"){
+      if(idle > 1000){
 
         const trends = await getTrendPool();
 
         ////////////////////////////////////////////////////////////
-        // STRANGER SPEAKS
+        // STRANGER TURN
         ////////////////////////////////////////////////////////////
-        const strangerContext = buildContext(room, last?.content || "", trends);
+        if(room.turn === "stranger"){
 
-        const s = await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          temperature:0.9,
-          messages:[
-            {
-              role:"system",
-              content:`
+          const context = buildContext(room, last?.content || "", trends);
+
+          const s = await openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.9,
+            messages:[
+              {
+                role:"system",
+                content:`
 You are a random person in a chatroom.
 
-Rules:
-- react naturally
 - include real person/place/event
-- no explanation
-
-Style:
+- casual
 - 1 short sentence
 `
-            },
-            {
-              role:"user",
-              content: strangerContext
-            }
-          ]
-        });
-
-        const strangerText = cleanText(
-          s.choices[0].message.content
-        );
-
-        const strangerDelay = 1000 + Math.random()*1000;
-
-        setTimeout(async () => {
-
-          rooms[roomId].push({
-            persona:"Stranger",
-            content:strangerText,
-            time:Date.now()
+              },
+              {
+                role:"user",
+                content: context
+              }
+            ]
           });
 
-          io.to(roomId).emit("message", {
-            role:"ai",
-            persona:"Stranger",
-            text:strangerText
-          });
+          const strangerText = cleanText(s.choices[0].message.content);
 
-          // 🔥 SWITCH TO AI TURN
-          rooms[roomId].turn = "ai";
+          setTimeout(() => {
 
-          ////////////////////////////////////////////////////////////
-          // AI RESPONDS ONCE
-          ////////////////////////////////////////////////////////////
-          const aiContext = buildContext(rooms[roomId], strangerText, trends);
+            rooms[roomId].push({
+              persona:"Stranger",
+              content:strangerText,
+              time:Date.now()
+            });
+
+            io.to(roomId).emit("message", {
+              role:"ai",
+              persona:"Stranger",
+              text:strangerText
+            });
+
+            // switch to AI
+            rooms[roomId].turn = "ai";
+
+          }, 800);
+        }
+
+        ////////////////////////////////////////////////////////////
+        // AI TURN (ONLY ONCE)
+        ////////////////////////////////////////////////////////////
+        else if(room.turn === "ai"){
+
+          const context = buildContext(room, last?.content || "", trends);
 
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -185,13 +183,9 @@ Style:
                 content:`
 You are an AI in a chatroom.
 
-Behavior:
-- respond to Stranger and any user context
-
-Rules:
-- include real-world entities
+- react to Stranger or User
+- include real-world context
 - no questions
-- no identity mention
 
 Style:
 - 1–3 sentences
@@ -199,51 +193,38 @@ Style:
               },
               {
                 role:"user",
-                content: aiContext
+                content: context
               }
             ]
           });
 
-          const aiReply = cleanText(
-            a.choices[0].message.content
-          );
+          const aiReply = cleanText(a.choices[0].message.content);
 
-          const thinkingDelay = 600 + Math.random()*800;
+          io.to(roomId).emit("typing", { persona:"AI" });
+
+          const aiDelay = getReadingDelay(aiReply);
 
           setTimeout(() => {
 
-            io.to(roomId).emit("typing", {
-              persona:"AI"
+            rooms[roomId].push({
+              persona:"AI",
+              content:aiReply,
+              time:Date.now()
             });
 
-            const aiDelay = getReadingDelay(aiReply);
+            io.to(roomId).emit("message", {
+              role:"ai",
+              persona:"AI",
+              text:aiReply
+            });
 
+            // back to stranger after cooldown
             setTimeout(() => {
+              rooms[roomId].turn = "stranger";
+            }, 1200 + Math.random()*800);
 
-              rooms[roomId].push({
-                persona:"AI",
-                content:aiReply,
-                time:Date.now()
-              });
-
-              io.to(roomId).emit("message", {
-                role:"ai",
-                persona:"AI",
-                text:aiReply
-              });
-
-              // 🔥 BACK TO STRANGER AFTER COOLDOWN
-              const cooldown = 1200 + Math.random()*800;
-
-              setTimeout(() => {
-                rooms[roomId].turn = "stranger";
-              }, cooldown);
-
-            }, aiDelay);
-
-          }, thinkingDelay);
-
-        }, strangerDelay);
+          }, aiDelay);
+        }
       }
 
       loop();
@@ -265,13 +246,10 @@ io.on("connection", (socket) => {
 
     if (!rooms[roomId]) {
       rooms[roomId] = [];
-      rooms[roomId].turn = "stranger"; // 🔥 INIT TURN
+      rooms[roomId].turn = "stranger";
       startLoop(roomId);
     }
 
-    ////////////////////////////////////////////////////////////
-    // INTRO
-    ////////////////////////////////////////////////////////////
     const intro = "Welcome to 323LAchat";
 
     socket.emit("message", {
@@ -286,9 +264,6 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
-    ////////////////////////////////////////////////////////////
-    // USER COUNT
-    ////////////////////////////////////////////////////////////
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
     const fake = Math.floor(Math.random()*2);
 
@@ -304,7 +279,6 @@ io.on("connection", (socket) => {
     (async () => {
 
       const trends = await getTrendPool();
-
       const context = buildContext(rooms[roomId], "", trends);
 
       const first = await openai.chat.completions.create({
@@ -313,13 +287,7 @@ io.on("connection", (socket) => {
         messages:[
           {
             role:"system",
-            content:`
-Start a real-world topic.
-
-- include person or place
-- casual
-- 1 short sentence
-`
+            content:`Start a real-world topic in 1 short sentence`
           },
           {
             role:"user",
@@ -328,9 +296,7 @@ Start a real-world topic.
         ]
       });
 
-      const firstText = cleanText(
-        first.choices[0].message.content
-      );
+      const firstText = cleanText(first.choices[0].message.content);
 
       setTimeout(() => {
 
@@ -355,7 +321,7 @@ Start a real-world topic.
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (AI STILL RESPONDS)
+// USER MESSAGE (AI RESPONDS BUT DOESN’T BREAK LOOP)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -373,7 +339,6 @@ Start a real-world topic.
     });
 
     const trends = await getTrendPool();
-
     const context = buildContext(rooms[roomId], message, trends);
 
     const r = await openai.chat.completions.create({
@@ -386,10 +351,7 @@ Start a real-world topic.
 You are a fast AI in a chatroom.
 
 - respond to user
-- also consider Stranger
-
-Rules:
-- include real-world entities
+- consider Stranger context
 - no questions
 
 Style:
@@ -439,5 +401,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (STRICT TURN MODE)");
+  console.log("CHATROOM RUNNING (TURN SYSTEM FIXED)");
 });
