@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — REAL SERP + ENTITY MODE)
+// CHATROOM BACKEND (FINAL — REAL SERP + HUMAN TIMING)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -33,6 +33,18 @@ function cleanText(text){
     .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+//////////////////////////////////////////////////////////////
+// 🧠 READING DELAY (KEY FIX)
+//////////////////////////////////////////////////////////////
+function getReadingDelay(text){
+  const words = text.split(" ").length;
+
+  const base = 1200;     // minimum wait
+  const perWord = 120;   // ms per word
+
+  return Math.min(base + words * perWord, 5000); // cap 5s
 }
 
 //////////////////////////////////////////////////////////////
@@ -99,7 +111,7 @@ function startLoop(roomId){
         const trends = await getTrendPool();
 
         ////////////////////////////////////////////////////////////
-        // STRANGER (REAL ENTITY)
+        // 🧍 STRANGER
         ////////////////////////////////////////////////////////////
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -108,12 +120,12 @@ function startLoop(roomId){
             {
               role:"system",
               content:`
-React like a real person to current events.
+React like a real person.
 
 Rules:
-- MUST mention a real person, place, or event
-- Prefer something happening today
-- casual tone
+- include a real person/place/event
+- casual
+- no explanation
 
 Style:
 - 1 short sentence
@@ -130,7 +142,7 @@ Style:
           s.choices[0].message.content
         );
 
-        const strangerDelay = 600 + Math.random()*600;
+        const strangerDelay = 1200 + Math.random()*1200;
 
         setTimeout(async () => {
 
@@ -147,7 +159,7 @@ Style:
           });
 
           ////////////////////////////////////////////////////////////
-          // AI RESPONSE (REAL CONTEXT)
+          // 🤖 AI (WITH TYPING + READING DELAY)
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -156,17 +168,16 @@ Style:
               {
                 role:"system",
                 content:`
-Respond using real-world context.
+Respond with real-world context.
 
 Rules:
-- MUST include real names (people/place/event)
-- add time reference if possible
+- include real names (people/place/time)
 - clear and direct
+- no questions
 
 Style:
 - 1–3 sentences
-- no questions
-- no identity mention
+- never mention identity
 `
               },
               {
@@ -180,23 +191,42 @@ Style:
             a.choices[0].message.content
           );
 
-          const aiDelay = 800 + Math.random()*800;
+          ////////////////////////////////////////////////////////////
+          // ✨ THINKING GAP
+          ////////////////////////////////////////////////////////////
+          const thinkingDelay = 600 + Math.random()*800;
 
           setTimeout(() => {
 
-            rooms[roomId].push({
-              persona:"AI",
-              content:aiReply,
-              time:Date.now()
+            ////////////////////////////////////////////////////////////
+            // ✨ TYPING EVENT
+            ////////////////////////////////////////////////////////////
+            io.to(roomId).emit("typing", {
+              persona:"AI"
             });
 
-            io.to(roomId).emit("message", {
-              role:"ai",
-              persona:"AI",
-              text:aiReply
-            });
+            ////////////////////////////////////////////////////////////
+            // 📖 READING DELAY
+            ////////////////////////////////////////////////////////////
+            const aiDelay = getReadingDelay(aiReply);
 
-          }, aiDelay);
+            setTimeout(() => {
+
+              rooms[roomId].push({
+                persona:"AI",
+                content:aiReply,
+                time:Date.now()
+              });
+
+              io.to(roomId).emit("message", {
+                role:"ai",
+                persona:"AI",
+                text:aiReply
+              });
+
+            }, aiDelay);
+
+          }, thinkingDelay);
 
         }, strangerDelay);
 
@@ -255,7 +285,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////////
-    // FIRST STRANGER TOPIC
+    // FIRST STRANGER
     ////////////////////////////////////////////////////////////
     (async () => {
 
@@ -268,10 +298,9 @@ io.on("connection", (socket) => {
           {
             role:"system",
             content:`
-Start a conversation about something happening now.
+Start a real-world topic.
 
-Rules:
-- include a real name or place
+- include person or place
 - casual
 
 Style:
@@ -303,7 +332,7 @@ Style:
           text:firstText
         });
 
-      }, 500);
+      }, 800);
 
     })();
 
@@ -340,12 +369,11 @@ You are a fast, sharp AI.
 
 Rules:
 - follow user request exactly
-- include real-world entities (people/place/time)
-- be direct
+- include real-world entities
+- no questions
 
 Style:
 - 2–4 sentences
-- no questions
 - no identity mention
 `
         },
@@ -362,6 +390,15 @@ Style:
 
     aiText = aiText.replace(/\?/g, "");
 
+    ////////////////////////////////////////////////////////////
+    // TYPING BEFORE USER RESPONSE
+    ////////////////////////////////////////////////////////////
+    io.to(roomId).emit("typing", {
+      persona:"AI"
+    });
+
+    const aiDelay = getReadingDelay(aiText);
+
     setTimeout(() => {
 
       rooms[roomId].push({
@@ -376,7 +413,7 @@ Style:
         text:aiText
       });
 
-    }, 900);
+    }, aiDelay);
 
   });
 
@@ -388,5 +425,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (REAL ENTITY MODE)");
+  console.log("CHATROOM RUNNING (HUMAN TIMING MODE)");
 });
