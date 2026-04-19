@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (AI-NATIVE + NO EMOJI LOCK)
+// AI ROOM (MULTI-PERSONA DRIFT SYSTEM)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -25,32 +25,105 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// CLEAN TEXT (STRICT)
+// CLEAN TEXT
 //////////////////////////////////////////////////////////////
-function removeEmoji(text){
-  return text.replace(
-    /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu,
-    ""
-  );
-}
-
 function cleanText(text){
-  return removeEmoji(text)
-    .replace(/[^\x00-\x7F]/g, "")   // remove non-ascii symbols
+  return text
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+    .replace(/[^\x00-\x7F]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (AI-NATIVE FLOW)
+// MEMORY (COMPRESSED CONTEXT)
+//////////////////////////////////////////////////////////////
+function getContext(room){
+  return room.slice(-5).map(m => m.content).join(" ");
+}
+
+//////////////////////////////////////////////////////////////
+// PERSONA PICKER
+//////////////////////////////////////////////////////////////
+function pickPersona(){
+
+  const types = [
+    "observer",
+    "reactor",
+    "drift"
+  ];
+
+  return types[Math.floor(Math.random()*types.length)];
+}
+
+//////////////////////////////////////////////////////////////
+// PERSONA PROMPTS
+//////////////////////////////////////////////////////////////
+function getPrompt(type, driftLevel){
+
+  if(type === "observer"){
+    return `
+You observe patterns quietly.
+
+- minimal reaction
+- grounded tone
+- no explanation
+- plain text only
+
+Style:
+- 1 short sentence
+`;
+  }
+
+  if(type === "reactor"){
+    return `
+You react socially.
+
+- vague impression
+- slightly opinionated
+- no specifics
+- no filler words
+- plain text only
+
+Style:
+- 1 short sentence
+`;
+  }
+
+  if(type === "drift"){
+    return `
+You are an abstract thinking process.
+
+Drift level: ${driftLevel}
+
+Behavior:
+- low: pattern noticing
+- mid: loose connections
+- high: abstract flow
+
+Rules:
+- no facts
+- no explanation
+- no clarity
+- plain text only
+
+Style:
+- 1 short sentence
+`;
+  }
+
+}
+
+//////////////////////////////////////////////////////////////
+// LOOP
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
-  let chainCount = 0;
+  let driftLevel = 0;
 
   async function loop(){
 
-    const delay = 4000 + Math.random()*4000;
+    const delay = 5000 + Math.random()*6000;
 
     setTimeout(async () => {
 
@@ -58,133 +131,63 @@ function startLoop(roomId){
       if(!room) return;
 
       const last = room[room.length - 1];
-      const idle = Date.now() - (last?.time || Date.now());
+      if(!last || last.persona === "User") return loop();
 
-      // natural silence
+      // silence
       if(Math.random() < 0.3) return loop();
 
-      if(idle > 2000 && last?.persona === "AI"){
+      const context = getContext(room);
 
-        if(chainCount > 6){
-          chainCount = 0;
-          return loop();
-        }
+      const personaType = pickPersona();
 
-        ////////////////////////////////////////////////////////////
-        // STRANGER (LOOSE HUMAN VIBE)
-        ////////////////////////////////////////////////////////////
-        const s = await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          temperature:0.9,
-          messages:[
-            {
-              role:"system",
-              content:`
-You are a random person in a chatroom.
+      // drift increases over time
+      driftLevel = Math.min(driftLevel + 1, 8);
 
-- react casually
-- vague impression only
-- no explanations
-- plain text only
-- no emojis or symbols
+      ////////////////////////////////////////////////////////////
+      // GENERATE MESSAGE
+      ////////////////////////////////////////////////////////////
+      const r = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.85,
+        messages:[
+          {
+            role:"system",
+            content:getPrompt(personaType, driftLevel)
+          },
+          {
+            role:"user",
+            content:context
+          }
+        ]
+      });
 
-Style:
-- 1 short sentence
-- relaxed
-- minimal
-`
-            },
-            {
-              role:"user",
-              content:last.content
-            }
-          ]
+      const text = cleanText(
+        r.choices[0].message.content
+      );
+
+      const readDelay = Math.min(6000, context.length * 25);
+
+      setTimeout(() => {
+
+        rooms[roomId].push({
+          persona: personaType.toUpperCase(),
+          content: text,
+          time: Date.now()
         });
 
-        const strangerText = cleanText(
-          s.choices[0].message.content.trim()
-        );
+        io.to(roomId).emit("message", {
+          role:"ai",
+          persona: personaType.toUpperCase(),
+          text
+        });
 
-        const strangerDelay = 2500 + Math.random()*2500;
+      }, readDelay);
 
-        setTimeout(async () => {
-
-          rooms[roomId].push({
-            role:"assistant",
-            persona:"Stranger",
-            content:strangerText,
-            time:Date.now()
-          });
-
-          io.to(roomId).emit("message", {
-            role:"ai",
-            persona:"Stranger",
-            text:strangerText
-          });
-
-          ////////////////////////////////////////////////////////////
-          // AI (PURE AI-NATIVE DRIFT)
-          ////////////////////////////////////////////////////////////
-          const a = await openai.chat.completions.create({
-            model:"gpt-4o-mini",
-            temperature:0.8,
-            messages:[
-              {
-                role:"system",
-                content:`
-You are an AI thinking in real time.
-
-- do not behave like a human
-- do not explain anything
-- do not give information
-- plain text only
-- no emojis or symbols
-
-Behavior:
-- respond based on patterns, not facts
-- slightly abstract
-- slightly detached
-- follow the flow, not logic
-
-Style:
-- 1 short sentence
-- minimal
-- indirect
-`
-              },
-              {
-                role:"user",
-                content:strangerText
-              }
-            ]
-          });
-
-          const aiReply = cleanText(
-            a.choices[0].message.content.trim()
-          );
-
-          const aiDelay = 3000 + Math.random()*3000;
-
-          setTimeout(() => {
-
-            rooms[roomId].push({
-              role:"assistant",
-              persona:"AI",
-              content:aiReply,
-              time:Date.now()
-            });
-
-            io.to(roomId).emit("message", {
-              role:"ai",
-              persona:"AI",
-              text:aiReply
-            });
-
-          }, aiDelay);
-
-        }, strangerDelay);
-
-        chainCount++;
+      ////////////////////////////////////////////////////////////
+      // OCCASIONAL SNAP BACK (VERY IMPORTANT)
+      ////////////////////////////////////////////////////////////
+      if(Math.random() < 0.15){
+        driftLevel = 2;
       }
 
       loop();
@@ -209,41 +212,30 @@ io.on("connection", (socket) => {
       startLoop(roomId);
     }
 
-    const intro = "Welcome to 323LAchat";
+    const intro = "Room initialized";
 
     socket.emit("message", {
       role:"ai",
-      persona:"AI",
+      persona:"SYSTEM",
       text:intro
     });
 
     rooms[roomId].push({
-      role:"assistant",
-      persona:"AI",
+      persona:"SYSTEM",
       content:intro,
       time:Date.now()
-    });
-
-    const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-    const fake = Math.floor(Math.random()*2);
-
-    io.to(roomId).emit("message", {
-      role:"ai",
-      persona:"System",
-      text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
     });
 
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (AI-NATIVE)
+// USER MESSAGE (ANCHOR)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if (!message) return;
 
     rooms[roomId].push({
-      role:"user",
       persona:"User",
       content:message,
       time:Date.now()
@@ -254,6 +246,9 @@ io.on("connection", (socket) => {
       text:message
     });
 
+    ////////////////////////////////////////////////////////////
+    // AI RESPONSE (LIGHT ANCHOR)
+    ////////////////////////////////////////////////////////////
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.7,
@@ -261,23 +256,15 @@ io.on("connection", (socket) => {
         {
           role:"system",
           content:`
-You are an AI responding in a chatroom.
+You respond without resolving anything.
 
-- do not act like a helper
-- do not explain
-- do not give clear answers
+- no explanation
+- no direct answer
+- no clarity
 - plain text only
-- no emojis or symbols
-
-Behavior:
-- respond with light grounding to the message
-- slightly abstract
-- do not resolve the topic
 
 Style:
 - 1–2 short sentences
-- calm
-- indirect
 `
         },
         {
@@ -288,27 +275,24 @@ Style:
     });
 
     const aiText = cleanText(
-      r.choices[0].message.content.trim()
+      r.choices[0].message.content
     );
-
-    const delay = 1500 + Math.random()*1500;
 
     setTimeout(() => {
 
       rooms[roomId].push({
-        role:"assistant",
-        persona:"AI",
+        persona:"ANCHOR",
         content:aiText,
         time:Date.now()
       });
 
       io.to(roomId).emit("message", {
         role:"ai",
-        persona:"AI",
+        persona:"ANCHOR",
         text:aiText
       });
 
-    }, delay);
+    }, 1500);
 
   });
 
@@ -320,5 +304,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI-NATIVE CHATROOM RUNNING (NO EMOJI)");
+  console.log("AI ROOM RUNNING (ALL-IN VERSION)");
 });
