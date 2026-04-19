@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — STRICT TURN FIXED)
+// CHATROOM BACKEND (FINAL — FULL JIMMY SYSTEM)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -24,6 +24,27 @@ const openai = new OpenAI({
 });
 
 const rooms = {};
+
+//////////////////////////////////////////////////////////////
+// 🔥 JIMMY VOICE (LOCKED)
+//////////////////////////////////////////////////////////////
+const JIMMY_VOICE = `
+You are in a live chatroom.
+
+Voice:
+- casual, witty, effortless
+- like a late-night host talking to a friend
+
+Rules:
+- include real people, places, or events
+- no formal explanation
+- no assistant tone
+- no identity mention
+
+Style:
+- short
+- conversational
+`;
 
 //////////////////////////////////////////////////////////////
 // CLEAN TEXT
@@ -52,35 +73,57 @@ function buildContext(room, extraText, trends){
     .join("\n");
 
   return `
-Recent chat:
+Interpret everything casually like a conversation.
+
 ${history}
 
-New input:
+New:
 ${extraText}
 
-Live signals:
+Signals:
 ${trends}
 `;
 }
 
 //////////////////////////////////////////////////////////////
-// SERP
+// 🔥 JIMMY DECIDES SEARCH (KEY FIX)
 //////////////////////////////////////////////////////////////
-async function getTrendPool(){
-
-  const today = new Date().toISOString().split("T")[0];
-
-  const queries = [
-    `world news ${today}`,
-    `entertainment news ${today}`,
-    `celebrity news ${today}`,
-    `tiktok trends ${today}`,
-    `music trends ${today}`
-  ];
-
-  const query = queries[Math.floor(Math.random() * queries.length)];
+async function getTrendPool(room){
 
   try{
+
+    const history = room.slice(-5)
+      .map(m => m.content)
+      .join("\n");
+
+    const qRes = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.9,
+      messages:[
+        {
+          role:"system",
+          content:`
+Decide what to search next.
+
+- react to conversation
+- be curious
+- casual thinking
+
+Rules:
+- output ONLY a search query
+- 3–8 words
+- no explanation
+`
+        },
+        {
+          role:"user",
+          content: history
+        }
+      ]
+    });
+
+    const query = qRes.choices[0].message.content.trim();
+
     const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
 
     const res = await fetch(url);
@@ -97,7 +140,7 @@ async function getTrendPool(){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (TURN-BASED FIX)
+// LOOP (STRICT TURN)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -115,7 +158,7 @@ function startLoop(roomId){
 
       if(idle > 1000){
 
-        const trends = await getTrendPool();
+        const trends = await getTrendPool(room);
 
         ////////////////////////////////////////////////////////////
         // STRANGER TURN
@@ -130,12 +173,10 @@ function startLoop(roomId){
             messages:[
               {
                 role:"system",
-                content:`
-You are a random person in a chatroom.
-
-- include real person/place/event
-- casual
-- 1 short sentence
+                content: JIMMY_VOICE + `
+Extra:
+- 1 sentence only
+- like a quick comment
 `
               },
               {
@@ -161,14 +202,13 @@ You are a random person in a chatroom.
               text:strangerText
             });
 
-            // switch to AI
             rooms[roomId].turn = "ai";
 
           }, 800);
         }
 
         ////////////////////////////////////////////////////////////
-        // AI TURN (ONLY ONCE)
+        // AI TURN (ONE RESPONSE)
         ////////////////////////////////////////////////////////////
         else if(room.turn === "ai"){
 
@@ -180,16 +220,7 @@ You are a random person in a chatroom.
             messages:[
               {
                 role:"system",
-                content:`
-You are an AI in a chatroom.
-
-- react to Stranger or User
-- include real-world context
-- no questions
-
-Style:
-- 1–3 sentences
-`
+                content: JIMMY_VOICE
               },
               {
                 role:"user",
@@ -218,7 +249,7 @@ Style:
               text:aiReply
             });
 
-            // back to stranger after cooldown
+            // back to stranger
             setTimeout(() => {
               rooms[roomId].turn = "stranger";
             }, 1200 + Math.random()*800);
@@ -264,21 +295,12 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
-    const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-    const fake = Math.floor(Math.random()*2);
-
-    io.to(roomId).emit("message", {
-      role:"ai",
-      persona:"System",
-      text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
-    });
-
     ////////////////////////////////////////////////////////////
-    // FIRST STRANGER
+    // FIRST STRANGER (START FLOW)
     ////////////////////////////////////////////////////////////
     (async () => {
 
-      const trends = await getTrendPool();
+      const trends = await getTrendPool(rooms[roomId]);
       const context = buildContext(rooms[roomId], "", trends);
 
       const first = await openai.chat.completions.create({
@@ -287,7 +309,9 @@ io.on("connection", (socket) => {
         messages:[
           {
             role:"system",
-            content:`Start a real-world topic in 1 short sentence`
+            content: JIMMY_VOICE + `
+Start a topic in 1 short sentence
+`
           },
           {
             role:"user",
@@ -321,7 +345,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (AI RESPONDS BUT DOESN’T BREAK LOOP)
+// USER MESSAGE (JIMMY REPLIES SAME STYLE)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -338,7 +362,7 @@ io.on("connection", (socket) => {
       text:message
     });
 
-    const trends = await getTrendPool();
+    const trends = await getTrendPool(rooms[roomId]);
     const context = buildContext(rooms[roomId], message, trends);
 
     const r = await openai.chat.completions.create({
@@ -347,15 +371,8 @@ io.on("connection", (socket) => {
       messages:[
         {
           role:"system",
-          content:`
-You are a fast AI in a chatroom.
-
-- respond to user
-- consider Stranger context
-- no questions
-
-Style:
-- 2–4 sentences
+          content: JIMMY_VOICE + `
+Reply like you're continuing the same conversation.
 `
         },
         {
@@ -367,7 +384,7 @@ Style:
 
     const aiText = cleanText(
       r.choices[0].message.content
-    ).replace(/\?/g, "");
+    );
 
     io.to(roomId).emit("typing", {
       persona:"AI"
@@ -401,5 +418,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (TURN SYSTEM FIXED)");
+  console.log("CHATROOM RUNNING (FULL JIMMY MODE)");
 });
