@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — AI REACTS TO USER + STRANGER)
+// CHATROOM BACKEND (FINAL — STRICT TURN SYSTEM)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -36,17 +36,15 @@ function cleanText(text){
 }
 
 //////////////////////////////////////////////////////////////
-// 🧠 READING DELAY
+// READING DELAY
 //////////////////////////////////////////////////////////////
 function getReadingDelay(text){
   const words = text.split(" ").length;
-  const base = 1200;
-  const perWord = 120;
-  return Math.min(base + words * perWord, 5000);
+  return Math.min(1200 + words * 120, 5000);
 }
 
 //////////////////////////////////////////////////////////////
-// 🧠 BUILD CONTEXT (KEY UPGRADE)
+// BUILD CONTEXT
 //////////////////////////////////////////////////////////////
 function buildContext(room, extraText, trends){
   const history = room.slice(-6)
@@ -66,7 +64,7 @@ ${trends}
 }
 
 //////////////////////////////////////////////////////////////
-// 🔍 REAL SERP
+// SERP
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
 
@@ -99,11 +97,9 @@ async function getTrendPool(){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔁 LOOP (STRANGER → AI BOTH REACT TO ROOM)
+// LOOP WITH TURN CONTROL
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
-
-  let chainCount = 0;
 
   async function loop(){
 
@@ -117,19 +113,13 @@ function startLoop(roomId){
       const last = room[room.length - 1];
       const idle = Date.now() - (last?.time || Date.now());
 
-      if(Math.random() < 0.1) return loop();
-
-      if(idle > 1000){
-
-        if(chainCount > 6){
-          chainCount = 0;
-          return loop();
-        }
+      // 🔥 ONLY STRANGER CAN START
+      if(idle > 1000 && room.turn === "stranger"){
 
         const trends = await getTrendPool();
 
         ////////////////////////////////////////////////////////////
-        // 🧍 STRANGER
+        // STRANGER SPEAKS
         ////////////////////////////////////////////////////////////
         const strangerContext = buildContext(room, last?.content || "", trends);
 
@@ -140,15 +130,14 @@ function startLoop(roomId){
             {
               role:"system",
               content:`
-You are a random person in a live chatroom.
+You are a random person in a chatroom.
 
 Rules:
-- react to the room naturally
+- react naturally
 - include real person/place/event
 - no explanation
 
 Style:
-- casual
 - 1 short sentence
 `
             },
@@ -163,7 +152,7 @@ Style:
           s.choices[0].message.content
         );
 
-        const strangerDelay = 1200 + Math.random()*1200;
+        const strangerDelay = 1000 + Math.random()*1000;
 
         setTimeout(async () => {
 
@@ -179,8 +168,11 @@ Style:
             text:strangerText
           });
 
+          // 🔥 SWITCH TO AI TURN
+          rooms[roomId].turn = "ai";
+
           ////////////////////////////////////////////////////////////
-          // 🤖 AI (REACTS TO BOTH USER + STRANGER)
+          // AI RESPONDS ONCE
           ////////////////////////////////////////////////////////////
           const aiContext = buildContext(rooms[roomId], strangerText, trends);
 
@@ -191,20 +183,18 @@ Style:
               {
                 role:"system",
                 content:`
-You are a real-time AI inside a chatroom.
+You are an AI in a chatroom.
 
 Behavior:
-- respond to BOTH Stranger and any user messages
-- stay grounded in real-world context
+- respond to Stranger and any user context
 
 Rules:
-- include real names (people/place/event)
+- include real-world entities
 - no questions
 - no identity mention
 
 Style:
 - 1–3 sentences
-- direct and clear
 `
               },
               {
@@ -218,9 +208,6 @@ Style:
             a.choices[0].message.content
           );
 
-          ////////////////////////////////////////////////////////////
-          // ✨ THINKING + TYPING
-          ////////////////////////////////////////////////////////////
           const thinkingDelay = 600 + Math.random()*800;
 
           setTimeout(() => {
@@ -245,13 +232,18 @@ Style:
                 text:aiReply
               });
 
+              // 🔥 BACK TO STRANGER AFTER COOLDOWN
+              const cooldown = 1200 + Math.random()*800;
+
+              setTimeout(() => {
+                rooms[roomId].turn = "stranger";
+              }, cooldown);
+
             }, aiDelay);
 
           }, thinkingDelay);
 
         }, strangerDelay);
-
-        chainCount++;
       }
 
       loop();
@@ -273,11 +265,12 @@ io.on("connection", (socket) => {
 
     if (!rooms[roomId]) {
       rooms[roomId] = [];
+      rooms[roomId].turn = "stranger"; // 🔥 INIT TURN
       startLoop(roomId);
     }
 
     ////////////////////////////////////////////////////////////
-    // SYSTEM INTRO
+    // INTRO
     ////////////////////////////////////////////////////////////
     const intro = "Welcome to 323LAchat";
 
@@ -353,6 +346,8 @@ Start a real-world topic.
           text:firstText
         });
 
+        rooms[roomId].turn = "ai";
+
       }, 800);
 
     })();
@@ -360,7 +355,7 @@ Start a real-world topic.
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE → AI REACTS TO BOTH USER + ROOM
+// USER MESSAGE (AI STILL RESPONDS)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -388,20 +383,17 @@ Start a real-world topic.
         {
           role:"system",
           content:`
-You are a fast, sharp AI in a live chatroom.
+You are a fast AI in a chatroom.
 
-Behavior:
-- respond to the user
-- also consider Stranger and recent chat
+- respond to user
+- also consider Stranger
 
 Rules:
 - include real-world entities
 - no questions
-- follow user intent exactly
 
 Style:
 - 2–4 sentences
-- direct and confident
 `
         },
         {
@@ -411,15 +403,10 @@ Style:
       ]
     });
 
-    let aiText = cleanText(
+    const aiText = cleanText(
       r.choices[0].message.content
-    );
+    ).replace(/\?/g, "");
 
-    aiText = aiText.replace(/\?/g, "");
-
-    ////////////////////////////////////////////////////////////
-    // TYPING
-    ////////////////////////////////////////////////////////////
     io.to(roomId).emit("typing", {
       persona:"AI"
     });
@@ -452,5 +439,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (DUAL REACTION MODE)");
+  console.log("CHATROOM RUNNING (STRICT TURN MODE)");
 });
