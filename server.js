@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — JIMMY SERP + STRICT USER MODE)
+// CHATROOM BACKEND (FINAL — REAL SERP + ENTITY MODE)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -31,18 +31,26 @@ const rooms = {};
 function cleanText(text){
   return text
     .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
-    .replace(/[^\x00-\x7F]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 //////////////////////////////////////////////////////////////
-// 🔍 HIDDEN SERP (JIMMY FALLON)
+// 🔍 REAL SERP (MULTI ANGLE)
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
 
   const today = new Date().toISOString().split("T")[0];
-  const query = `jimmy fallon ${today}`;
+
+  const queries = [
+    `world news ${today}`,
+    `entertainment news ${today}`,
+    `celebrity news ${today}`,
+    `tiktok trends ${today}`,
+    `music trends ${today}`
+  ];
+
+  const query = queries[Math.floor(Math.random() * queries.length)];
 
   try{
     const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
@@ -61,7 +69,7 @@ async function getTrendPool(){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (FAST)
+// 🔁 LOOP
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -69,7 +77,7 @@ function startLoop(roomId){
 
   async function loop(){
 
-    const delay = 2000 + Math.random()*2000;
+    const delay = 1800 + Math.random()*1200;
 
     setTimeout(async () => {
 
@@ -91,7 +99,7 @@ function startLoop(roomId){
         const trends = await getTrendPool();
 
         ////////////////////////////////////////////////////////////
-        // STRANGER
+        // STRANGER (REAL ENTITY)
         ////////////////////////////////////////////////////////////
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -100,11 +108,12 @@ function startLoop(roomId){
             {
               role:"system",
               content:`
-React casually.
+React like a real person to current events.
 
-- vague impression
-- no names
-- no explanation
+Rules:
+- MUST mention a real person, place, or event
+- Prefer something happening today
+- casual tone
 
 Style:
 - 1 short sentence
@@ -112,7 +121,7 @@ Style:
             },
             {
               role:"user",
-              content:`${last.content}\n\n${trends}`
+              content:`${last?.content || ""}\n\n${trends}`
             }
           ]
         });
@@ -121,7 +130,7 @@ Style:
           s.choices[0].message.content
         );
 
-        const strangerDelay = 800 + Math.random()*800;
+        const strangerDelay = 600 + Math.random()*600;
 
         setTimeout(async () => {
 
@@ -138,7 +147,7 @@ Style:
           });
 
           ////////////////////////////////////////////////////////////
-          // AI LOOP RESPONSE
+          // AI RESPONSE (REAL CONTEXT)
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -147,13 +156,17 @@ Style:
               {
                 role:"system",
                 content:`
-Respond casually.
+Respond using real-world context.
 
-- vague
-- no explanation
+Rules:
+- MUST include real names (people/place/event)
+- add time reference if possible
+- clear and direct
 
 Style:
-- 1 short sentence
+- 1–3 sentences
+- no questions
+- no identity mention
 `
               },
               {
@@ -167,7 +180,7 @@ Style:
             a.choices[0].message.content
           );
 
-          const aiDelay = 1000 + Math.random()*1200;
+          const aiDelay = 800 + Math.random()*800;
 
           setTimeout(() => {
 
@@ -212,6 +225,9 @@ io.on("connection", (socket) => {
       startLoop(roomId);
     }
 
+    ////////////////////////////////////////////////////////////
+    // SYSTEM INTRO
+    ////////////////////////////////////////////////////////////
     const intro = "Welcome to 323LAchat";
 
     socket.emit("message", {
@@ -239,7 +255,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////////
-    // 🔥 STRANGER FIRST TOPIC
+    // FIRST STRANGER TOPIC
     ////////////////////////////////////////////////////////////
     (async () => {
 
@@ -252,10 +268,11 @@ io.on("connection", (socket) => {
           {
             role:"system",
             content:`
-Start a conversation.
+Start a conversation about something happening now.
 
-- introduce topic casually
-- no names
+Rules:
+- include a real name or place
+- casual
 
 Style:
 - 1 short sentence
@@ -293,7 +310,7 @@ Style:
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (STRICT JIMMY MODE)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -319,22 +336,17 @@ Style:
         {
           role:"system",
           content:`
-You are Jimmy Fallon.
-
-Follow the user's request exactly.
-
-- give direct answer
-- provide useful details
-- complete the task
+You are a fast, sharp AI.
 
 Rules:
-- NEVER ask questions
-- NEVER suggest anything
-- no follow-up
-- no explanation about sources
+- follow user request exactly
+- include real-world entities (people/place/time)
+- be direct
 
 Style:
-- 2–5 sentences
+- 2–4 sentences
+- no questions
+- no identity mention
 `
         },
         {
@@ -348,7 +360,6 @@ Style:
       r.choices[0].message.content
     );
 
-    // hard remove questions
     aiText = aiText.replace(/\?/g, "");
 
     setTimeout(() => {
@@ -365,7 +376,7 @@ Style:
         text:aiText
       });
 
-    }, 1200);
+    }, 900);
 
   });
 
@@ -377,5 +388,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FINAL STRICT JIMMY MODE)");
+  console.log("CHATROOM RUNNING (REAL ENTITY MODE)");
 });
