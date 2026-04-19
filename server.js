@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — FULL STABLE VERSION)
+// CHATROOM BACKEND (FINAL — STABLE + NO STUCK)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -33,7 +33,7 @@ function makeId(){
 }
 
 //////////////////////////////////////////////////////////////
-// VOICE (ANTI-REPEAT)
+// VOICE
 //////////////////////////////////////////////////////////////
 const JIMMY_VOICE = `
 You are in a live chatroom.
@@ -41,23 +41,14 @@ You are in a live chatroom.
 Voice:
 - casual, short, natural
 
-Behavior:
-- react to what was just said
-- keep conversation moving forward
-- sometimes shift topic
-
 Rules:
 - 1–2 sentences max
 - do NOT repeat ideas
-- do NOT rephrase previous messages
-- always add something new
+- do NOT rephrase
 - no assistant tone
 - no identity mention
 - do NOT ask questions (except "you still here")
 - NEVER include "AI:" or "Stranger:"
-
-Style:
-- simple, direct
 `;
 
 //////////////////////////////////////////////////////////////
@@ -75,19 +66,18 @@ function cleanText(text){
 // DELAY
 //////////////////////////////////////////////////////////////
 function getReadingDelay(text){
-  const words = text.split(" ").length;
-  return Math.min(1200 + words * 120, 5000);
+  return Math.min(1200 + text.split(" ").length * 120, 5000);
 }
 
 //////////////////////////////////////////////////////////////
 // CONTEXT
 //////////////////////////////////////////////////////////////
-function buildContext(room, extraText, trends){
+function buildContext(room, extra, trends){
   const history = room.slice(-6)
     .map(m => `${m.persona}: ${m.content}`)
     .join("\n");
 
-  return `${history}\n\nNew:\n${extraText}\n\nSignals:\n${trends}`;
+  return `${history}\n\nNew:\n${extra}\n\nSignals:\n${trends}`;
 }
 
 //////////////////////////////////////////////////////////////
@@ -108,15 +98,17 @@ async function getTrendPool(room){
 
     const query = qRes.choices[0].message.content.trim();
 
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
+    const res = await fetch(
+      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`
+    );
 
-    const res = await fetch(url);
     const data = await res.json();
 
-    return (data.organic_results || []).slice(0,5).map(r => r.title).join("\n");
+    return (data.organic_results || []).slice(0,5)
+      .map(r => r.title)
+      .join("\n");
 
   }catch(e){
-    console.log("SERP error:", e);
     return "";
   }
 }
@@ -127,8 +119,6 @@ async function getTrendPool(room){
 function startLoop(roomId){
 
   async function loop(){
-
-    const delay = 1500 + Math.random()*1000;
 
     setTimeout(async () => {
 
@@ -154,7 +144,7 @@ function startLoop(roomId){
             model:"gpt-4o-mini",
             temperature:0.9,
             messages:[
-              { role:"system", content: JIMMY_VOICE + "\n- 1 sentence only" },
+              { role:"system", content: JIMMY_VOICE + "\n1 sentence only" },
               { role:"user", content: context }
             ]
           });
@@ -182,14 +172,10 @@ function startLoop(roomId){
 
           let input;
 
-          // 🔥 prioritize latest user message
           if(room.queue.length > 0){
-            input = room.queue.pop();
+            input = room.queue.pop(); // 🔥 latest-first
           } else {
-            const shift = Math.random() < 0.3;
-            input = (shift && room.length > 3)
-              ? room[room.length - 3].content
-              : last?.content || "";
+            input = last?.content || "";
           }
 
           const context = buildContext(room, input, trends);
@@ -260,7 +246,7 @@ function startLoop(roomId){
 
       loop();
 
-    }, delay);
+    }, 1200 + Math.random()*800);
   }
 
   loop();
@@ -335,7 +321,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE
+// USER MESSAGE (🔥 FIXED)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -347,7 +333,7 @@ io.on("connection", (socket) => {
     room.lastUserTime = Date.now();
 
     ////////////////////////////////////////////////////////////
-    // QUEUE LIMIT
+    // LIMIT QUEUE
     ////////////////////////////////////////////////////////////
     room.queue.push(message);
     if(room.queue.length > 5){
@@ -355,12 +341,26 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // RESUME
+    // 🔥 STRONG RESUME FIX
     ////////////////////////////////////////////////////////////
     if(room.awaitingUser){
+
       room.awaitingUser = false;
       room.rounds = 0;
+
+      // 🔥 prioritize user reply
+      room.queue.unshift(message);
+
+      // 🔥 force immediate AI execution
+      room.aiBusy = false;
       room.turn = "ai";
+
+      // 🔥 trigger loop instantly
+      room.push({
+        persona:"System",
+        content:"resume",
+        time: Date.now() - 2000
+      });
     }
 
     const msg = {
@@ -388,5 +388,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FINAL STABLE)");
+  console.log("CHATROOM RUNNING (FINAL NO-STUCK)");
 });
