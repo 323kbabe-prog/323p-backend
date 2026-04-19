@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — REAL SERP + HUMAN TIMING)
+// CHATROOM BACKEND (FINAL — AI REACTS TO USER + STRANGER)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -36,19 +36,37 @@ function cleanText(text){
 }
 
 //////////////////////////////////////////////////////////////
-// 🧠 READING DELAY (KEY FIX)
+// 🧠 READING DELAY
 //////////////////////////////////////////////////////////////
 function getReadingDelay(text){
   const words = text.split(" ").length;
-
-  const base = 1200;     // minimum wait
-  const perWord = 120;   // ms per word
-
-  return Math.min(base + words * perWord, 5000); // cap 5s
+  const base = 1200;
+  const perWord = 120;
+  return Math.min(base + words * perWord, 5000);
 }
 
 //////////////////////////////////////////////////////////////
-// 🔍 REAL SERP (MULTI ANGLE)
+// 🧠 BUILD CONTEXT (KEY UPGRADE)
+//////////////////////////////////////////////////////////////
+function buildContext(room, extraText, trends){
+  const history = room.slice(-6)
+    .map(m => `${m.persona}: ${m.content}`)
+    .join("\n");
+
+  return `
+Recent chat:
+${history}
+
+New input:
+${extraText}
+
+Live signals:
+${trends}
+`;
+}
+
+//////////////////////////////////////////////////////////////
+// 🔍 REAL SERP
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
 
@@ -81,7 +99,7 @@ async function getTrendPool(){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔁 LOOP
+// 🔁 LOOP (STRANGER → AI BOTH REACT TO ROOM)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -113,6 +131,8 @@ function startLoop(roomId){
         ////////////////////////////////////////////////////////////
         // 🧍 STRANGER
         ////////////////////////////////////////////////////////////
+        const strangerContext = buildContext(room, last?.content || "", trends);
+
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
           temperature:0.9,
@@ -120,20 +140,21 @@ function startLoop(roomId){
             {
               role:"system",
               content:`
-React like a real person.
+You are a random person in a live chatroom.
 
 Rules:
-- include a real person/place/event
-- casual
+- react to the room naturally
+- include real person/place/event
 - no explanation
 
 Style:
+- casual
 - 1 short sentence
 `
             },
             {
               role:"user",
-              content:`${last?.content || ""}\n\n${trends}`
+              content: strangerContext
             }
           ]
         });
@@ -159,8 +180,10 @@ Style:
           });
 
           ////////////////////////////////////////////////////////////
-          // 🤖 AI (WITH TYPING + READING DELAY)
+          // 🤖 AI (REACTS TO BOTH USER + STRANGER)
           ////////////////////////////////////////////////////////////
+          const aiContext = buildContext(rooms[roomId], strangerText, trends);
+
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
             temperature:0.7,
@@ -168,21 +191,25 @@ Style:
               {
                 role:"system",
                 content:`
-Respond with real-world context.
+You are a real-time AI inside a chatroom.
+
+Behavior:
+- respond to BOTH Stranger and any user messages
+- stay grounded in real-world context
 
 Rules:
-- include real names (people/place/time)
-- clear and direct
+- include real names (people/place/event)
 - no questions
+- no identity mention
 
 Style:
 - 1–3 sentences
-- never mention identity
+- direct and clear
 `
               },
               {
                 role:"user",
-                content:`${strangerText}\n\n${trends}`
+                content: aiContext
               }
             ]
           });
@@ -192,22 +219,16 @@ Style:
           );
 
           ////////////////////////////////////////////////////////////
-          // ✨ THINKING GAP
+          // ✨ THINKING + TYPING
           ////////////////////////////////////////////////////////////
           const thinkingDelay = 600 + Math.random()*800;
 
           setTimeout(() => {
 
-            ////////////////////////////////////////////////////////////
-            // ✨ TYPING EVENT
-            ////////////////////////////////////////////////////////////
             io.to(roomId).emit("typing", {
               persona:"AI"
             });
 
-            ////////////////////////////////////////////////////////////
-            // 📖 READING DELAY
-            ////////////////////////////////////////////////////////////
             const aiDelay = getReadingDelay(aiReply);
 
             setTimeout(() => {
@@ -291,6 +312,8 @@ io.on("connection", (socket) => {
 
       const trends = await getTrendPool();
 
+      const context = buildContext(rooms[roomId], "", trends);
+
       const first = await openai.chat.completions.create({
         model:"gpt-4o-mini",
         temperature:0.9,
@@ -302,14 +325,12 @@ Start a real-world topic.
 
 - include person or place
 - casual
-
-Style:
 - 1 short sentence
 `
           },
           {
             role:"user",
-            content: trends
+            content: context
           }
         ]
       });
@@ -339,7 +360,7 @@ Style:
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE
+// USER MESSAGE → AI REACTS TO BOTH USER + ROOM
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
@@ -358,6 +379,8 @@ Style:
 
     const trends = await getTrendPool();
 
+    const context = buildContext(rooms[roomId], message, trends);
+
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.6,
@@ -365,21 +388,25 @@ Style:
         {
           role:"system",
           content:`
-You are a fast, sharp AI.
+You are a fast, sharp AI in a live chatroom.
+
+Behavior:
+- respond to the user
+- also consider Stranger and recent chat
 
 Rules:
-- follow user request exactly
 - include real-world entities
 - no questions
+- follow user intent exactly
 
 Style:
 - 2–4 sentences
-- no identity mention
+- direct and confident
 `
         },
         {
           role:"user",
-          content:`${message}\n\n${trends}`
+          content: context
         }
       ]
     });
@@ -391,7 +418,7 @@ Style:
     aiText = aiText.replace(/\?/g, "");
 
     ////////////////////////////////////////////////////////////
-    // TYPING BEFORE USER RESPONSE
+    // TYPING
     ////////////////////////////////////////////////////////////
     io.to(roomId).emit("typing", {
       persona:"AI"
@@ -425,5 +452,5 @@ Style:
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (HUMAN TIMING MODE)");
+  console.log("CHATROOM RUNNING (DUAL REACTION MODE)");
 });
