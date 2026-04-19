@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — FIX DOUBLE AI REPLY ONLY)
+// CHATROOM BACKEND (FINAL — ORDER + NO DOUBLE AI)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -90,7 +90,6 @@ ${trends}
 async function getTrendPool(room){
 
   try{
-
     const history = room.slice(-5)
       .map(m => m.content)
       .join("\n");
@@ -128,7 +127,7 @@ async function getTrendPool(room){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (FIXED WITH AI LOCK)
+// LOOP (STRICT TURN + AI LOCK)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -176,7 +175,7 @@ function startLoop(roomId){
 
           setTimeout(() => {
 
-            rooms[roomId].push({
+            room.push({
               persona:"Stranger",
               content:strangerText,
               time:Date.now()
@@ -198,7 +197,7 @@ function startLoop(roomId){
         ////////////////////////////////////////////////////////////
         else if(room.turn === "ai" && !room.aiBusy){
 
-          room.aiBusy = true; // 🔥 LOCK
+          room.aiBusy = true;
 
           const context = buildContext(room, last?.content || "", trends);
 
@@ -225,7 +224,7 @@ function startLoop(roomId){
 
           setTimeout(() => {
 
-            rooms[roomId].push({
+            room.push({
               persona:"AI",
               content:aiReply,
               time:Date.now()
@@ -237,7 +236,7 @@ function startLoop(roomId){
               text:aiReply
             });
 
-            room.aiBusy = false; // 🔓 UNLOCK
+            room.aiBusy = false;
 
             setTimeout(() => {
               room.turn = "stranger";
@@ -260,35 +259,119 @@ function startLoop(roomId){
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
 
-  socket.on("joinRoom", (roomId) => {
+  socket.on("joinRoom", async (roomId) => {
 
     socket.join(roomId);
 
     if (!rooms[roomId]) {
       rooms[roomId] = [];
       rooms[roomId].turn = "stranger";
-      rooms[roomId].aiBusy = false; // 🔥 INIT
+      rooms[roomId].aiBusy = false;
       startLoop(roomId);
     }
+
+    const room = rooms[roomId];
+
+    ////////////////////////////////////////////////////////////
+    // 1️⃣ WELCOME
+    ////////////////////////////////////////////////////////////
+    const intro = "Welcome to 323LAchat";
 
     socket.emit("message", {
       role:"ai",
       persona:"System",
-      text:"Welcome to 323LAchat"
+      text:intro
     });
+
+    room.push({
+      persona:"System",
+      content:intro,
+      time:Date.now()
+    });
+
+    ////////////////////////////////////////////////////////////
+    // 2️⃣ USER COUNT
+    ////////////////////////////////////////////////////////////
+    const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+    const fake = Math.floor(Math.random()*2);
+
+    const countText = `${real + fake} ${real + fake === 1 ? "person" : "people"} here`;
+
+    io.to(roomId).emit("message", {
+      role:"ai",
+      persona:"System",
+      text:countText
+    });
+
+    room.push({
+      persona:"System",
+      content:countText,
+      time:Date.now()
+    });
+
+    ////////////////////////////////////////////////////////////
+    // 3️⃣ STRANGER FIRST TOPIC
+    ////////////////////////////////////////////////////////////
+    try {
+
+      const trends = await getTrendPool(room);
+      const context = buildContext(room, "", trends);
+
+      const first = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.9,
+        messages:[
+          {
+            role:"system",
+            content: JIMMY_VOICE + `
+Start a real-world topic.
+1 sentence only.
+`
+          },
+          {
+            role:"user",
+            content: context
+          }
+        ]
+      });
+
+      const firstText = cleanText(first.choices[0].message.content);
+
+      setTimeout(() => {
+
+        room.push({
+          persona:"Stranger",
+          content:firstText,
+          time:Date.now()
+        });
+
+        io.to(roomId).emit("message", {
+          role:"ai",
+          persona:"Stranger",
+          text:firstText
+        });
+
+        room.turn = "ai";
+
+      }, 600);
+
+    } catch (e) {
+      console.log("First Stranger error:", e);
+    }
 
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (BLOCK IF AI BUSY)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if (!message) return;
 
     const room = rooms[roomId];
+    if (!room) return;
 
-    if(room.aiBusy) return; // 🔥 BLOCK DOUBLE AI
+    if(room.aiBusy) return;
 
     room.aiBusy = true;
 
@@ -323,9 +406,7 @@ io.on("connection", (socket) => {
 
     const aiText = cleanText(r.choices[0].message.content);
 
-    io.to(roomId).emit("typing", {
-      persona:"AI"
-    });
+    io.to(roomId).emit("typing", { persona:"AI" });
 
     const aiDelay = getReadingDelay(aiText);
 
@@ -343,7 +424,7 @@ io.on("connection", (socket) => {
         text:aiText
       });
 
-      room.aiBusy = false; // 🔓 UNLOCK
+      room.aiBusy = false;
 
     }, aiDelay);
 
@@ -357,5 +438,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (AI DOUBLE FIXED)");
+  console.log("CHATROOM RUNNING (FINAL CLEAN FLOW)");
 });
