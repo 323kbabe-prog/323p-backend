@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — 6-ROUND ASK + PAUSE)
+// CHATROOM BACKEND (FINAL — 6-ROUND ASK + PAUSE + RESUME)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -33,7 +33,7 @@ function makeId(){
 }
 
 //////////////////////////////////////////////////////////////
-// 🔥 JIMMY VOICE
+// 🔥 JIMMY VOICE (ANTI-REPEAT + CONVERSATIONAL)
 //////////////////////////////////////////////////////////////
 const JIMMY_VOICE = `
 You are in a live chatroom.
@@ -41,18 +41,23 @@ You are in a live chatroom.
 Voice:
 - casual, short, natural
 
+Behavior:
+- react to what was just said
+- keep conversation moving forward
+- sometimes shift topic slightly
+
 Rules:
-- include real people, places, or events
-- do NOT repeat ideas
+- 1–2 sentences max
+- do NOT repeat the same idea
 - do NOT rephrase previous messages
+- always add something new
 - no assistant tone
 - no identity mention
 - do NOT ask questions (except system check)
 - NEVER include "AI:" or "Stranger:"
 
 Style:
-- 1–2 sentences
-- conversational
+- simple, direct, conversational
 `;
 
 //////////////////////////////////////////////////////////////
@@ -86,7 +91,7 @@ function buildContext(room, extraText, trends){
 }
 
 //////////////////////////////////////////////////////////////
-// SEARCH
+// SEARCH (AI-DRIVEN)
 //////////////////////////////////////////////////////////////
 async function getTrendPool(room){
   try{
@@ -151,7 +156,13 @@ function startLoop(roomId){
             model:"gpt-4o-mini",
             temperature:0.9,
             messages:[
-              { role:"system", content: JIMMY_VOICE + `\n- 1 sentence only` },
+              {
+                role:"system",
+                content: JIMMY_VOICE + `
+- 1 sentence only
+- quick comment style
+`
+              },
               { role:"user", content: context }
             ]
           });
@@ -187,7 +198,7 @@ function startLoop(roomId){
             input = room.queue.shift();
           } else {
             const shift = Math.random() < 0.3;
-            input = shift && room.length > 3
+            input = (shift && room.length > 3)
               ? room[room.length - 3].content
               : last?.content || "";
           }
@@ -221,7 +232,7 @@ function startLoop(roomId){
             });
 
             ////////////////////////////////////////////////////////////
-            // 🔥 6 ROUND CHECK
+            // 🔥 6-ROUND CHECK
             ////////////////////////////////////////////////////////////
             room.rounds++;
 
@@ -242,9 +253,7 @@ function startLoop(roomId){
                   text:ask
                 });
 
-                ////////////////////////////////////////////////////////////
-                // 🔥 PAUSE AFTER 8s
-                ////////////////////////////////////////////////////////////
+                // Pause after 8s if no user activity
                 setTimeout(() => {
                   if(room.awaitingUser && Date.now() - room.lastUserTime > 8000){
                     room.turn = "paused";
@@ -294,6 +303,7 @@ io.on("connection", (socket) => {
 
     const room = rooms[roomId];
 
+    // Welcome
     socket.emit("message", {
       id: makeId(),
       role:"ai",
@@ -301,6 +311,7 @@ io.on("connection", (socket) => {
       text:"Welcome to 323LAchat"
     });
 
+    // User count
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
     const fake = Math.floor(Math.random()*2);
 
@@ -350,7 +361,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE
+// USER MESSAGE (INSTANT + RESUME FIX)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -362,17 +373,34 @@ io.on("connection", (socket) => {
     room.lastUserTime = Date.now();
 
     ////////////////////////////////////////////////////////////
-    // 🔥 RESUME FROM PAUSE
+    // 🔥 RESUME FIX (IMMEDIATE)
     ////////////////////////////////////////////////////////////
     if(room.awaitingUser){
+
       room.awaitingUser = false;
       room.rounds = 0;
-      room.turn = "ai";
+
+      // Put message first in queue
       room.queue.unshift(message);
+
+      // Force AI to run NOW (no idle wait)
+      room.aiBusy = false;
+      room.turn = "ai";
+
+      // Fake old timestamp so idle condition passes immediately
+      room.push({
+        persona:"System",
+        content:"resume",
+        time: Date.now() - 2000
+      });
+
     } else {
       room.queue.push(message);
     }
 
+    ////////////////////////////////////////////////////////////
+    // INSTANT USER DISPLAY
+    ////////////////////////////////////////////////////////////
     const msg = {
       id: makeId(),
       role:"user",
@@ -398,5 +426,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FINAL — 6 ROUND CHECK)");
+  console.log("CHATROOM RUNNING (FINAL STABLE)");
 });
