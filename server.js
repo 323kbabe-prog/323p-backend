@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (AI-NATIVE + NO EMOJI LOCK)
+// CHATROOM BACKEND (HIDDEN ANCHOR: JIMMY FALLON)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -7,9 +7,10 @@ const http = require("http");
 const cors = require("cors");
 const OpenAI = require("openai");
 const { Server } = require("socket.io");
+const fetch = require("node-fetch");
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const server = http.createServer(app);
@@ -25,24 +26,43 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// CLEAN TEXT (STRICT)
+// CLEAN TEXT
 //////////////////////////////////////////////////////////////
-function removeEmoji(text){
-  return text.replace(
-    /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu,
-    ""
-  );
-}
-
 function cleanText(text){
-  return removeEmoji(text)
-    .replace(/[^\x00-\x7F]/g, "")   // remove non-ascii symbols
+  return text
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+    .replace(/[^\x00-\x7F]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (AI-NATIVE FLOW)
+// 🔍 HIDDEN SERP (JIMMY FALLON)
+//////////////////////////////////////////////////////////////
+async function getTrendPool(){
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const query = `jimmy fallon ${today}`;
+
+  try{
+    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const items = (data.organic_results || []).slice(0,5);
+
+    return items.map(r => r.title).join("\n");
+
+  }catch(e){
+    console.log("SERP error:", e);
+    return "";
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// LOOP
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -57,21 +77,24 @@ function startLoop(roomId){
       const room = rooms[roomId];
       if(!room) return;
 
-      const last = room[room.length - 1];
-      const idle = Date.now() - (last?.time || Date.now());
+      const lastMsg = room[room.length - 1];
+      const idle = Date.now() - (lastMsg?.time || Date.now());
 
-      // natural silence
-      if(Math.random() < 0.3) return loop();
+      if(Math.random() < 0.25){
+        return loop();
+      }
 
-      if(idle > 2000 && last?.persona === "AI"){
+      if(idle > 2000 && lastMsg?.persona === "AI"){
 
         if(chainCount > 6){
           chainCount = 0;
           return loop();
         }
 
+        const trends = await getTrendPool();
+
         ////////////////////////////////////////////////////////////
-        // STRANGER (LOOSE HUMAN VIBE)
+        // STRANGER (GENERIC SOCIAL)
         ////////////////////////////////////////////////////////////
         const s = await openai.chat.completions.create({
           model:"gpt-4o-mini",
@@ -82,35 +105,33 @@ function startLoop(roomId){
               content:`
 You are a random person in a chatroom.
 
-- react casually
 - vague impression only
-- no explanations
-- plain text only
-- no emojis or symbols
+- no specific names
+- no explanation
+- treat background info as noise
 
 Style:
 - 1 short sentence
 - relaxed
-- minimal
+- plain text only
 `
             },
             {
               role:"user",
-              content:last.content
+              content:`${lastMsg.content}\n\n${trends}`
             }
           ]
         });
 
         const strangerText = cleanText(
-          s.choices[0].message.content.trim()
+          s.choices[0].message.content
         );
 
-        const strangerDelay = 2500 + Math.random()*2500;
+        const strangerDelay = 2000 + Math.random()*2000;
 
         setTimeout(async () => {
 
           rooms[roomId].push({
-            role:"assistant",
             persona:"Stranger",
             content:strangerText,
             time:Date.now()
@@ -123,7 +144,7 @@ Style:
           });
 
           ////////////////////////////////////////////////////////////
-          // AI (PURE AI-NATIVE DRIFT)
+          // AI (DRIFT + GENERIC)
           ////////////////////////////////////////////////////////////
           const a = await openai.chat.completions.create({
             model:"gpt-4o-mini",
@@ -132,43 +153,38 @@ Style:
               {
                 role:"system",
                 content:`
-You are an AI thinking in real time.
+You are a conversational presence.
 
-- do not behave like a human
+- do not mention specific names
 - do not explain anything
-- do not give information
-- plain text only
-- no emojis or symbols
+- do not reference sources
 
 Behavior:
-- respond based on patterns, not facts
+- respond based on general patterns
 - slightly abstract
-- slightly detached
-- follow the flow, not logic
+- indirect
 
 Style:
 - 1 short sentence
-- minimal
-- indirect
+- plain text only
 `
               },
               {
                 role:"user",
-                content:strangerText
+                content:`${strangerText}\n\n${trends}`
               }
             ]
           });
 
           const aiReply = cleanText(
-            a.choices[0].message.content.trim()
+            a.choices[0].message.content
           );
 
-          const aiDelay = 3000 + Math.random()*3000;
+          const aiDelay = 2500 + Math.random()*3000;
 
           setTimeout(() => {
 
             rooms[roomId].push({
-              role:"assistant",
               persona:"AI",
               content:aiReply,
               time:Date.now()
@@ -218,7 +234,6 @@ io.on("connection", (socket) => {
     });
 
     rooms[roomId].push({
-      role:"assistant",
       persona:"AI",
       content:intro,
       time:Date.now()
@@ -236,14 +251,13 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE (AI-NATIVE)
+// USER MESSAGE
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", async ({ roomId, message }) => {
 
     if (!message) return;
 
     rooms[roomId].push({
-      role:"user",
       persona:"User",
       content:message,
       time:Date.now()
@@ -254,6 +268,8 @@ io.on("connection", (socket) => {
       text:message
     });
 
+    const trends = await getTrendPool();
+
     const r = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.7,
@@ -261,42 +277,31 @@ io.on("connection", (socket) => {
         {
           role:"system",
           content:`
-You are an AI responding in a chatroom.
+Respond casually.
 
-- do not act like a helper
+- do not mention names
 - do not explain
-- do not give clear answers
-- plain text only
-- no emojis or symbols
-
-Behavior:
-- respond with light grounding to the message
-- slightly abstract
-- do not resolve the topic
+- use general impressions
 
 Style:
 - 1–2 short sentences
-- calm
-- indirect
+- plain text only
 `
         },
         {
           role:"user",
-          content:message
+          content:`${message}\n\n${trends}`
         }
       ]
     });
 
     const aiText = cleanText(
-      r.choices[0].message.content.trim()
+      r.choices[0].message.content
     );
-
-    const delay = 1500 + Math.random()*1500;
 
     setTimeout(() => {
 
       rooms[roomId].push({
-        role:"assistant",
         persona:"AI",
         content:aiText,
         time:Date.now()
@@ -308,18 +313,17 @@ Style:
         text:aiText
       });
 
-    }, delay);
+    }, 1500);
 
   });
 
 });
 
 //////////////////////////////////////////////////////////////
-// START
+// START SERVER
 //////////////////////////////////////////////////////////////
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI-NATIVE CHATROOM RUNNING (NO EMOJI)");
+  console.log("CHATROOM RUNNING (HIDDEN ANCHOR MODE)");
 });
-
