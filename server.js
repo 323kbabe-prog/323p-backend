@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — HARD PAUSE VERSION)
+// CHATROOM BACKEND (FINAL — ROLE FIX CORRECTED)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -87,11 +87,11 @@ async function getTrendPool(room){
     const history = room.slice(-5).map(m => m.content).join("\n");
 
     const qRes = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.9,
-      messages: [
-        { role: "system", content: `Output ONLY a search query (3–8 words)` },
-        { role: "user", content: history }
+      model:"gpt-4o-mini",
+      temperature:0.9,
+      messages:[
+        { role:"system", content:`Output ONLY a search query (3–8 words)` },
+        { role:"user", content: history }
       ]
     });
 
@@ -103,10 +103,10 @@ async function getTrendPool(room){
 
     const data = await res.json();
 
-    return (data.organic_results || [])
-      .slice(0, 5)
+    return (data.organic_results || []).slice(0,5)
       .map(r => r.title)
       .join("\n");
+
   }catch{
     return "";
   }
@@ -131,7 +131,7 @@ function startLoop(roomId){
     setTimeout(async () => {
 
       const room = rooms[roomId];
-      if(!room || room.turn === "paused"){
+      if(!room || room.turn === "paused") {
         loop();
         return;
       }
@@ -150,48 +150,45 @@ function startLoop(roomId){
 
           const lastText = (last?.content || "").toLowerCase();
 
-          // Stranger never answers questions
-          if(lastText.includes("?") || lastText.includes("you still here")){
+          ////////////////////////////////////////////////////////////
+          // 🔥 ONLY BLOCK "you still here"
+          ////////////////////////////////////////////////////////////
+          if(lastText.includes("you still here")){
             room.turn = "ai";
-            loop();
-            return;
+            return loop();
           }
 
           const context = buildContext(room, last?.content || "", trends);
 
           try{
             const s = await openai.chat.completions.create({
-              model: "gpt-4o-mini",
-              temperature: 0.9,
-              messages: [
-                {
-                  role: "system",
+              model:"gpt-4o-mini",
+              temperature:0.9,
+              messages:[
+                { 
+                  role:"system", 
                   content: JIMMY_VOICE + `
 1 sentence only
 casual reaction
-NEVER answer questions
 `
                 },
-                { role: "user", content: context }
+                { role:"user", content: context }
               ]
             });
 
             const text = cleanText(s.choices[0].message.content);
 
-            room.push({
-              persona: "Stranger",
-              content: text,
-              time: Date.now()
-            });
+            room.push({ persona:"Stranger", content:text, time:Date.now() });
 
             io.to(roomId).emit("message", {
               id: makeId(),
-              role: "ai",
-              persona: "Stranger",
+              role:"ai",
+              persona:"Stranger",
               text
             });
 
             room.turn = "ai";
+
           }catch{
             room.turn = "ai";
           }
@@ -215,82 +212,67 @@ NEVER answer questions
 
           const context = buildContext(room, input, trends);
 
-          try{
-            const a = await openai.chat.completions.create({
-              model: "gpt-4o-mini",
-              temperature: 0.7,
-              messages: [
-                { role: "system", content: JIMMY_VOICE },
-                { role: "user", content: context }
-              ]
+          const a = await openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.7,
+            messages:[
+              { role:"system", content: JIMMY_VOICE },
+              { role:"user", content: context }
+            ]
+          });
+
+          const reply = cleanText(a.choices[0].message.content);
+
+          io.to(roomId).emit("typing", { persona:"AI" });
+
+          setTimeout(() => {
+
+            clearTimeout(failSafe);
+
+            room.push({ persona:"AI", content:reply, time:Date.now() });
+
+            io.to(roomId).emit("message", {
+              id: makeId(),
+              role:"ai",
+              persona:"AI",
+              text:reply
             });
 
-            const reply = cleanText(a.choices[0].message.content);
+            ////////////////////////////////////////////////////////////
+            // 6 ROUND CHECK
+            ////////////////////////////////////////////////////////////
+            room.rounds++;
 
-            io.to(roomId).emit("typing", { persona: "AI" });
+            if(room.rounds >= 6 && !room.awaitingUser){
 
-            setTimeout(() => {
+              room.awaitingUser = true;
 
-              clearTimeout(failSafe);
-
-              room.push({
-                persona: "AI",
-                content: reply,
-                time: Date.now()
-              });
+              const ask = "you still here";
 
               io.to(roomId).emit("message", {
                 id: makeId(),
-                role: "ai",
-                persona: "AI",
-                text: reply
+                role:"ai",
+                persona:"AI",
+                text:ask
               });
 
-              ////////////////////////////////////////////////////////////
-              // 6 ROUND CHECK
-              ////////////////////////////////////////////////////////////
-              room.rounds++;
+              room.push({ persona:"AI", content:ask, time:Date.now() });
 
-              if(room.rounds >= 6 && !room.awaitingUser){
+              setTimeout(() => {
+                if(
+                  room.awaitingUser &&
+                  room.queue.length === 0 &&
+                  Date.now() - room.lastUserTime > 8000
+                ){
+                  room.turn = "paused";
+                }
+              }, 8000);
+            }
 
-                room.awaitingUser = true;
-
-                const ask = "you still here";
-
-                room.push({
-                  persona: "AI",
-                  content: ask,
-                  time: Date.now()
-                });
-
-                io.to(roomId).emit("message", {
-                  id: makeId(),
-                  role: "ai",
-                  persona: "AI",
-                  text: ask
-                });
-
-                // HARD PAUSE if no active users
-                setTimeout(() => {
-                  if(
-                    room.awaitingUser &&
-                    room.queue.length === 0 &&
-                    Date.now() - room.lastUserTime > 8000
-                  ){
-                    room.turn = "paused";
-                  }
-                }, 8000);
-              }
-
-              room.aiBusy = false;
-              room.turn = "stranger";
-
-            }, getReadingDelay(reply));
-          }catch{
-            clearTimeout(failSafe);
             room.aiBusy = false;
             room.turn = "stranger";
-          }
+
+          }, getReadingDelay(reply));
         }
       }
 
@@ -326,61 +308,47 @@ io.on("connection", (socket) => {
 
     socket.emit("message", {
       id: makeId(),
-      role: "ai",
-      persona: "System",
-      text: "Welcome to 323LAchat"
+      role:"ai",
+      persona:"System",
+      text:"Welcome to 323LAchat"
     });
 
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-    const fake = Math.floor(Math.random() * 2);
+    const fake = Math.floor(Math.random()*2);
 
     io.to(roomId).emit("message", {
       id: makeId(),
-      role: "ai",
-      persona: "System",
-      text: `${real + fake} ${real + fake === 1 ? "person" : "people"} here`
+      role:"ai",
+      persona:"System",
+      text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
     });
 
-    ////////////////////////////////////////////////////////////
-    // FIRST STRANGER
-    ////////////////////////////////////////////////////////////
-    try{
-      const trends = await getTrendPool(room);
-      const context = buildContext(room, "", trends);
+    const trends = await getTrendPool(room);
+    const context = buildContext(room, "", trends);
 
-      const first = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.9,
-        messages: [
-          { role: "system", content: JIMMY_VOICE + "\nStart topic in 1 sentence" },
-          { role: "user", content: context }
-        ]
-      });
+    const first = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.9,
+      messages:[
+        { role:"system", content: JIMMY_VOICE + "\nStart topic in 1 sentence" },
+        { role:"user", content: context }
+      ]
+    });
 
-      const text = cleanText(first.choices[0].message.content);
+    const text = cleanText(first.choices[0].message.content);
 
-      room.push({
-        persona: "Stranger",
-        content: text,
-        time: Date.now()
-      });
+    room.push({ persona:"Stranger", content:text, time:Date.now() });
 
-      io.to(roomId).emit("message", {
-        id: makeId(),
-        role: "ai",
-        persona: "Stranger",
-        text
-      });
+    io.to(roomId).emit("message", {
+      id: makeId(),
+      role:"ai",
+      persona:"Stranger",
+      text
+    });
 
-      room.turn = "ai";
-    }catch{
-      room.turn = "ai";
-    }
+    room.turn = "ai";
   });
 
-  //////////////////////////////////////////////////////////////
-  // USER MESSAGE
-  //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
     if (!message) return;
@@ -402,17 +370,17 @@ io.on("connection", (socket) => {
 
     const msg = {
       id: makeId(),
-      role: "user",
-      text: message
+      role:"user",
+      text:message
     };
 
     socket.emit("message", msg);
     socket.to(roomId).emit("message", msg);
 
     room.push({
-      persona: "User",
-      content: message,
-      time: Date.now()
+      persona:"User",
+      content:message,
+      time:Date.now()
     });
 
     triggerAI(roomId);
@@ -426,5 +394,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (HARD PAUSE FINAL)");
+  console.log("CHATROOM RUNNING (ROLE FIX FINAL)");
 });
