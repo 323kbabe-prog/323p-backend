@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — ORDER + NO DOUBLE AI)
+// CHATROOM BACKEND (FINAL — CLEAN TALK, NO "AI:" "Stranger:")
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -41,6 +41,7 @@ Rules:
 - no assistant tone
 - no identity mention
 - do NOT ask questions
+- NEVER include labels like "AI:" or "Stranger:"
 
 Style:
 - short
@@ -48,10 +49,12 @@ Style:
 `;
 
 //////////////////////////////////////////////////////////////
-// CLEAN TEXT
+// CLEAN TEXT (🔥 FIX HERE)
 //////////////////////////////////////////////////////////////
 function cleanText(text){
   return text
+    .replace(/^(Stranger|AI)\s*:\s*/i, "")
+    .replace(/(Stranger|AI)\s*:\s*/gi, "")
     .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -88,7 +91,6 @@ ${trends}
 // 🔥 JIMMY SEARCH
 //////////////////////////////////////////////////////////////
 async function getTrendPool(room){
-
   try{
     const history = room.slice(-5)
       .map(m => m.content)
@@ -127,7 +129,7 @@ async function getTrendPool(room){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP (STRICT TURN + AI LOCK)
+// LOOP (STRICT TURN + LOCK)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -148,7 +150,7 @@ function startLoop(roomId){
         const trends = await getTrendPool(room);
 
         ////////////////////////////////////////////////////////////
-        // STRANGER TURN
+        // STRANGER
         ////////////////////////////////////////////////////////////
         if(room.turn === "stranger"){
 
@@ -160,9 +162,7 @@ function startLoop(roomId){
             messages:[
               {
                 role:"system",
-                content: JIMMY_VOICE + `
-- 1 sentence only
-`
+                content: JIMMY_VOICE + `\n- 1 sentence only`
               },
               {
                 role:"user",
@@ -193,7 +193,7 @@ function startLoop(roomId){
         }
 
         ////////////////////////////////////////////////////////////
-        // AI TURN (LOCKED)
+        // AI
         ////////////////////////////////////////////////////////////
         else if(room.turn === "ai" && !room.aiBusy){
 
@@ -273,7 +273,7 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
 
     ////////////////////////////////////////////////////////////
-    // 1️⃣ WELCOME
+    // WELCOME
     ////////////////////////////////////////////////////////////
     const intro = "Welcome to 323LAchat";
 
@@ -290,7 +290,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////////
-    // 2️⃣ USER COUNT
+    // USER COUNT
     ////////////////////////////////////////////////////////////
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
     const fake = Math.floor(Math.random()*2);
@@ -310,7 +310,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////////
-    // 3️⃣ STRANGER FIRST TOPIC
+    // FIRST STRANGER
     ////////////////////////////////////////////////////////////
     try {
 
@@ -323,10 +323,7 @@ io.on("connection", (socket) => {
         messages:[
           {
             role:"system",
-            content: JIMMY_VOICE + `
-Start a real-world topic.
-1 sentence only.
-`
+            content: JIMMY_VOICE + `\nStart a topic in 1 sentence`
           },
           {
             role:"user",
@@ -438,5 +435,5 @@ Start a real-world topic.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FINAL CLEAN FLOW)");
+  console.log("CHATROOM RUNNING (CLEAN TALK MODE)");
 });
