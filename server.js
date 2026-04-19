@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — FAIL-SAFE RESET ADDED)
+// CHATROOM BACKEND (FINAL — ROLE FIXED VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -26,7 +26,7 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// ID HELPER
+// ID
 //////////////////////////////////////////////////////////////
 function makeId(){
   return Date.now() + Math.random();
@@ -51,7 +51,7 @@ Rules:
 `;
 
 //////////////////////////////////////////////////////////////
-// CLEAN TEXT
+// CLEAN
 //////////////////////////////////////////////////////////////
 function cleanText(text){
   return text
@@ -113,12 +113,11 @@ async function getTrendPool(room){
 }
 
 //////////////////////////////////////////////////////////////
-// TRIGGER AI (NO STUCK FIX)
+// TRIGGER AI
 //////////////////////////////////////////////////////////////
 function triggerAI(roomId){
   const room = rooms[roomId];
   if(!room || room.aiBusy) return;
-
   room.turn = "ai";
 }
 
@@ -149,34 +148,49 @@ function startLoop(roomId){
         ////////////////////////////////////////////////////////////
         if(room.turn === "stranger"){
 
+          const lastText = (last?.content || "").toLowerCase();
+
+          ////////////////////////////////////////////////////////////
+          // 🔥 BLOCK STRANGER FROM ANSWERING QUESTIONS
+          ////////////////////////////////////////////////////////////
+          if(
+            lastText.includes("?") ||
+            lastText.includes("you still here")
+          ){
+            room.turn = "ai";
+            return loop();
+          }
+
           const context = buildContext(room, last?.content || "", trends);
 
-          try{
-            const s = await openai.chat.completions.create({
-              model:"gpt-4o-mini",
-              temperature:0.9,
-              messages:[
-                { role:"system", content: JIMMY_VOICE + "\n1 sentence only" },
-                { role:"user", content: context }
-              ]
-            });
+          const s = await openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.9,
+            messages:[
+              { 
+                role:"system", 
+                content: JIMMY_VOICE + `
+- 1 sentence only
+- casual reaction
+- NEVER answer questions
+`
+              },
+              { role:"user", content: context }
+            ]
+          });
 
-            const text = cleanText(s.choices[0].message.content);
+          const text = cleanText(s.choices[0].message.content);
 
-            room.push({ persona:"Stranger", content:text, time:Date.now() });
+          room.push({ persona:"Stranger", content:text, time:Date.now() });
 
-            io.to(roomId).emit("message", {
-              id: makeId(),
-              role:"ai",
-              persona:"Stranger",
-              text
-            });
+          io.to(roomId).emit("message", {
+            id: makeId(),
+            role:"ai",
+            persona:"Stranger",
+            text
+          });
 
-            room.turn = "ai";
-          }catch(e){
-            console.log("STRANGER ERROR:", e);
-            room.turn = "ai";
-          }
+          room.turn = "ai";
         }
 
         ////////////////////////////////////////////////////////////
@@ -186,92 +200,78 @@ function startLoop(roomId){
 
           room.aiBusy = true;
 
-          ////////////////////////////////////////////////////////////
-          // FAIL-SAFE RESET
-          ////////////////////////////////////////////////////////////
           const failSafe = setTimeout(() => {
-            console.log("AI STUCK → FORCE RESET");
-
             room.aiBusy = false;
             room.turn = "stranger";
           }, 7000);
 
           let input = room.queue.length > 0
-            ? room.queue.pop() // latest message
+            ? room.queue.pop()
             : last?.content || "";
 
           const context = buildContext(room, input, trends);
 
-          try{
-            const a = await openai.chat.completions.create({
-              model:"gpt-4o-mini",
-              temperature:0.7,
-              messages:[
-                { role:"system", content: JIMMY_VOICE },
-                { role:"user", content: context }
-              ]
+          const a = await openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.7,
+            messages:[
+              { role:"system", content: JIMMY_VOICE },
+              { role:"user", content: context }
+            ]
+          });
+
+          const reply = cleanText(a.choices[0].message.content);
+
+          io.to(roomId).emit("typing", { persona:"AI" });
+
+          setTimeout(() => {
+
+            clearTimeout(failSafe);
+
+            room.push({ persona:"AI", content:reply, time:Date.now() });
+
+            io.to(roomId).emit("message", {
+              id: makeId(),
+              role:"ai",
+              persona:"AI",
+              text:reply
             });
 
-            const reply = cleanText(a.choices[0].message.content);
+            ////////////////////////////////////////////////////////////
+            // 6 ROUND CHECK
+            ////////////////////////////////////////////////////////////
+            room.rounds++;
 
-            io.to(roomId).emit("typing", { persona:"AI" });
+            if(room.rounds >= 6 && !room.awaitingUser){
 
-            setTimeout(() => {
+              room.awaitingUser = true;
 
-              clearTimeout(failSafe);
-
-              room.push({ persona:"AI", content:reply, time:Date.now() });
+              const ask = "you still here";
 
               io.to(roomId).emit("message", {
                 id: makeId(),
                 role:"ai",
                 persona:"AI",
-                text:reply
+                text:ask
               });
 
-              ////////////////////////////////////////////////////////////
-              // 6 ROUND CHECK
-              ////////////////////////////////////////////////////////////
-              room.rounds++;
+              room.push({ persona:"AI", content:ask, time:Date.now() });
 
-              if(room.rounds >= 6 && !room.awaitingUser){
+              setTimeout(() => {
+                if(
+                  room.awaitingUser &&
+                  room.queue.length === 0 &&
+                  Date.now() - room.lastUserTime > 8000
+                ){
+                  room.turn = "paused";
+                }
+              }, 8000);
+            }
 
-                room.awaitingUser = true;
-
-                const ask = "you still here";
-
-                io.to(roomId).emit("message", {
-                  id: makeId(),
-                  role:"ai",
-                  persona:"AI",
-                  text:ask
-                });
-
-                room.push({ persona:"AI", content:ask, time:Date.now() });
-
-                setTimeout(() => {
-
-                  if(
-                    room.awaitingUser &&
-                    room.queue.length === 0 &&
-                    Date.now() - room.lastUserTime > 8000
-                  ){
-                    room.turn = "paused";
-                  }
-
-                }, 8000);
-              }
-
-              room.aiBusy = false;
-              room.turn = "stranger";
-
-            }, getReadingDelay(reply));
-          }catch(e){
-            clearTimeout(failSafe);
-            console.log("AI ERROR:", e);
             room.aiBusy = false;
             room.turn = "stranger";
-          }
+
+          }, getReadingDelay(reply));
         }
       }
 
@@ -325,35 +325,30 @@ io.on("connection", (socket) => {
     ////////////////////////////////////////////////////////////
     // FIRST STRANGER
     ////////////////////////////////////////////////////////////
-    try{
-      const trends = await getTrendPool(room);
-      const context = buildContext(room, "", trends);
+    const trends = await getTrendPool(room);
+    const context = buildContext(room, "", trends);
 
-      const first = await openai.chat.completions.create({
-        model:"gpt-4o-mini",
-        temperature:0.9,
-        messages:[
-          { role:"system", content: JIMMY_VOICE + "\nStart topic in 1 sentence" },
-          { role:"user", content: context }
-        ]
-      });
+    const first = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.9,
+      messages:[
+        { role:"system", content: JIMMY_VOICE + "\nStart topic in 1 sentence" },
+        { role:"user", content: context }
+      ]
+    });
 
-      const text = cleanText(first.choices[0].message.content);
+    const text = cleanText(first.choices[0].message.content);
 
-      room.push({ persona:"Stranger", content:text, time:Date.now() });
+    room.push({ persona:"Stranger", content:text, time:Date.now() });
 
-      io.to(roomId).emit("message", {
-        id: makeId(),
-        role:"ai",
-        persona:"Stranger",
-        text
-      });
+    io.to(roomId).emit("message", {
+      id: makeId(),
+      role:"ai",
+      persona:"Stranger",
+      text
+    });
 
-      room.turn = "ai";
-    }catch(e){
-      console.log("FIRST STRANGER ERROR:", e);
-      room.turn = "ai";
-    }
+    room.turn = "ai";
   });
 
 //////////////////////////////////////////////////////////////
@@ -368,17 +363,11 @@ io.on("connection", (socket) => {
 
     room.lastUserTime = Date.now();
 
-    ////////////////////////////////////////////////////////////
-    // QUEUE LIMIT
-    ////////////////////////////////////////////////////////////
     room.queue.push(message);
     if(room.queue.length > 5){
       room.queue.shift();
     }
 
-    ////////////////////////////////////////////////////////////
-    // RESUME
-    ////////////////////////////////////////////////////////////
     if(room.awaitingUser){
       room.awaitingUser = false;
       room.rounds = 0;
@@ -399,11 +388,7 @@ io.on("connection", (socket) => {
       time:Date.now()
     });
 
-    ////////////////////////////////////////////////////////////
-    // TRIGGER AI IMMEDIATELY
-    ////////////////////////////////////////////////////////////
     triggerAI(roomId);
-
   });
 
 });
@@ -414,5 +399,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FINAL FAIL-SAFE)");
+  console.log("CHATROOM RUNNING (ROLE FIXED)");
 });
