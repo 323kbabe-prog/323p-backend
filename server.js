@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — ROLE FIX CORRECTED)
+// CHATROOM BACKEND (FINAL — JIMMY WORLD VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -33,13 +33,14 @@ function makeId(){
 }
 
 //////////////////////////////////////////////////////////////
-// VOICE
+// HUMAN CHAT VOICE
 //////////////////////////////////////////////////////////////
-const JIMMY_VOICE = `
+const HUMAN_CHAT_VOICE = `
 You are in a live chatroom.
 
 Voice:
 - casual, short, natural
+- like a normal person chatting in a room
 
 Rules:
 - 1–2 sentences max
@@ -48,6 +49,31 @@ Rules:
 - no identity mention
 - do NOT ask questions (except "you still here")
 - NEVER include "AI:" or "Stranger:"
+`;
+
+//////////////////////////////////////////////////////////////
+// JIMMY-WORLD SEARCH BRAIN
+//////////////////////////////////////////////////////////////
+const JIMMY_WORLD_SEARCH = `
+You decide what to search next.
+
+Perspective:
+- curious
+- human
+- casual
+- pop-culture aware
+- everyday conversational thinking
+- like noticing what people are into, talking about, watching, reacting to, or casually discussing
+
+Important:
+- Do NOT speak like Jimmy Fallon
+- Do NOT mention Jimmy Fallon
+- Just choose search topics from that kind of world
+
+Rules:
+- output ONLY a search query
+- 3–8 words
+- no explanation
 `;
 
 //////////////////////////////////////////////////////////////
@@ -80,18 +106,18 @@ function buildContext(room, extra, trends){
 }
 
 //////////////////////////////////////////////////////////////
-// SEARCH
+// SEARCH (JIMMY-WORLD PERSPECTIVE)
 //////////////////////////////////////////////////////////////
 async function getTrendPool(room){
   try{
     const history = room.slice(-5).map(m => m.content).join("\n");
 
     const qRes = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.9,
-      messages:[
-        { role:"system", content:`Output ONLY a search query (3–8 words)` },
-        { role:"user", content: history }
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      messages: [
+        { role: "system", content: JIMMY_WORLD_SEARCH },
+        { role: "user", content: history }
       ]
     });
 
@@ -103,7 +129,7 @@ async function getTrendPool(room){
 
     const data = await res.json();
 
-    return (data.organic_results || []).slice(0,5)
+    return (data.organic_results || []).slice(0, 5)
       .map(r => r.title)
       .join("\n");
 
@@ -131,7 +157,7 @@ function startLoop(roomId){
     setTimeout(async () => {
 
       const room = rooms[roomId];
-      if(!room || room.turn === "paused") {
+      if(!room || room.turn === "paused"){
         loop();
         return;
       }
@@ -151,39 +177,46 @@ function startLoop(roomId){
           const lastText = (last?.content || "").toLowerCase();
 
           ////////////////////////////////////////////////////////////
-          // 🔥 ONLY BLOCK "you still here"
+          // Stranger never answers system question
           ////////////////////////////////////////////////////////////
           if(lastText.includes("you still here")){
             room.turn = "ai";
-            return loop();
+            loop();
+            return;
           }
 
           const context = buildContext(room, last?.content || "", trends);
 
           try{
             const s = await openai.chat.completions.create({
-              model:"gpt-4o-mini",
-              temperature:0.9,
-              messages:[
-                { 
-                  role:"system", 
-                  content: JIMMY_VOICE + `
+              model: "gpt-4o-mini",
+              temperature: 0.9,
+              messages: [
+                {
+                  role: "system",
+                  content: HUMAN_CHAT_VOICE + `
 1 sentence only
 casual reaction
+NEVER answer questions
+Speak like a normal human in the room, not a performer.
 `
                 },
-                { role:"user", content: context }
+                { role: "user", content: context }
               ]
             });
 
             const text = cleanText(s.choices[0].message.content);
 
-            room.push({ persona:"Stranger", content:text, time:Date.now() });
+            room.push({
+              persona: "Stranger",
+              content: text,
+              time: Date.now()
+            });
 
             io.to(roomId).emit("message", {
               id: makeId(),
-              role:"ai",
-              persona:"Stranger",
+              role: "ai",
+              persona: "Stranger",
               text
             });
 
@@ -212,67 +245,88 @@ casual reaction
 
           const context = buildContext(room, input, trends);
 
-          const a = await openai.chat.completions.create({
-            model:"gpt-4o-mini",
-            temperature:0.7,
-            messages:[
-              { role:"system", content: JIMMY_VOICE },
-              { role:"user", content: context }
-            ]
-          });
-
-          const reply = cleanText(a.choices[0].message.content);
-
-          io.to(roomId).emit("typing", { persona:"AI" });
-
-          setTimeout(() => {
-
-            clearTimeout(failSafe);
-
-            room.push({ persona:"AI", content:reply, time:Date.now() });
-
-            io.to(roomId).emit("message", {
-              id: makeId(),
-              role:"ai",
-              persona:"AI",
-              text:reply
+          try{
+            const a = await openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              temperature: 0.7,
+              messages: [
+                {
+                  role: "system",
+                  content: HUMAN_CHAT_VOICE + `
+You are the more responsive voice in the room.
+Speak like a normal human, not like Jimmy Fallon.
+`
+                },
+                { role: "user", content: context }
+              ]
             });
 
-            ////////////////////////////////////////////////////////////
-            // 6 ROUND CHECK
-            ////////////////////////////////////////////////////////////
-            room.rounds++;
+            const reply = cleanText(a.choices[0].message.content);
 
-            if(room.rounds >= 6 && !room.awaitingUser){
+            io.to(roomId).emit("typing", { persona: "AI" });
 
-              room.awaitingUser = true;
+            setTimeout(() => {
 
-              const ask = "you still here";
+              clearTimeout(failSafe);
+
+              room.push({
+                persona: "AI",
+                content: reply,
+                time: Date.now()
+              });
 
               io.to(roomId).emit("message", {
                 id: makeId(),
-                role:"ai",
-                persona:"AI",
-                text:ask
+                role: "ai",
+                persona: "AI",
+                text: reply
               });
 
-              room.push({ persona:"AI", content:ask, time:Date.now() });
+              ////////////////////////////////////////////////////////////
+              // 6 ROUND CHECK
+              ////////////////////////////////////////////////////////////
+              room.rounds++;
 
-              setTimeout(() => {
-                if(
-                  room.awaitingUser &&
-                  room.queue.length === 0 &&
-                  Date.now() - room.lastUserTime > 8000
-                ){
-                  room.turn = "paused";
-                }
-              }, 8000);
-            }
+              if(room.rounds >= 6 && !room.awaitingUser){
 
+                room.awaitingUser = true;
+
+                const ask = "you still here";
+
+                room.push({
+                  persona: "AI",
+                  content: ask,
+                  time: Date.now()
+                });
+
+                io.to(roomId).emit("message", {
+                  id: makeId(),
+                  role: "ai",
+                  persona: "AI",
+                  text: ask
+                });
+
+                setTimeout(() => {
+                  if(
+                    room.awaitingUser &&
+                    room.queue.length === 0 &&
+                    Date.now() - room.lastUserTime > 8000
+                  ){
+                    room.turn = "paused";
+                  }
+                }, 8000);
+              }
+
+              room.aiBusy = false;
+              room.turn = "stranger";
+
+            }, getReadingDelay(reply));
+
+          }catch{
+            clearTimeout(failSafe);
             room.aiBusy = false;
             room.turn = "stranger";
-
-          }, getReadingDelay(reply));
+          }
         }
       }
 
@@ -308,47 +362,68 @@ io.on("connection", (socket) => {
 
     socket.emit("message", {
       id: makeId(),
-      role:"ai",
-      persona:"System",
-      text:"Welcome to 323LAchat"
+      role: "ai",
+      persona: "System",
+      text: "Welcome to 323LAchat"
     });
 
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-    const fake = Math.floor(Math.random()*2);
+    const fake = Math.floor(Math.random() * 2);
 
     io.to(roomId).emit("message", {
       id: makeId(),
-      role:"ai",
-      persona:"System",
-      text:`${real + fake} ${real + fake === 1 ? "person" : "people"} here`
+      role: "ai",
+      persona: "System",
+      text: `${real + fake} ${real + fake === 1 ? "person" : "people"} here`
     });
 
-    const trends = await getTrendPool(room);
-    const context = buildContext(room, "", trends);
+    ////////////////////////////////////////////////////////////
+    // FIRST STRANGER
+    ////////////////////////////////////////////////////////////
+    try{
+      const trends = await getTrendPool(room);
+      const context = buildContext(room, "", trends);
 
-    const first = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.9,
-      messages:[
-        { role:"system", content: JIMMY_VOICE + "\nStart topic in 1 sentence" },
-        { role:"user", content: context }
-      ]
-    });
+      const first = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.9,
+        messages: [
+          {
+            role: "system",
+            content: HUMAN_CHAT_VOICE + `
+1 sentence only
+Start a topic naturally.
+Speak like a normal human in a room.
+`
+          },
+          { role: "user", content: context }
+        ]
+      });
 
-    const text = cleanText(first.choices[0].message.content);
+      const text = cleanText(first.choices[0].message.content);
 
-    room.push({ persona:"Stranger", content:text, time:Date.now() });
+      room.push({
+        persona: "Stranger",
+        content: text,
+        time: Date.now()
+      });
 
-    io.to(roomId).emit("message", {
-      id: makeId(),
-      role:"ai",
-      persona:"Stranger",
-      text
-    });
+      io.to(roomId).emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "Stranger",
+        text
+      });
 
-    room.turn = "ai";
+      room.turn = "ai";
+    }catch{
+      room.turn = "ai";
+    }
   });
 
+  //////////////////////////////////////////////////////////////
+  // USER MESSAGE
+  //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
     if (!message) return;
@@ -370,17 +445,17 @@ io.on("connection", (socket) => {
 
     const msg = {
       id: makeId(),
-      role:"user",
-      text:message
+      role: "user",
+      text: message
     };
 
     socket.emit("message", msg);
     socket.to(roomId).emit("message", msg);
 
     room.push({
-      persona:"User",
-      content:message,
-      time:Date.now()
+      persona: "User",
+      content: message,
+      time: Date.now()
     });
 
     triggerAI(roomId);
@@ -394,5 +469,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (ROLE FIX FINAL)");
+  console.log("CHATROOM RUNNING (JIMMY WORLD FINAL)");
 });
