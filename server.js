@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — MULTI-USER STABLE + 6 ROUND CHECK)
+// CHATROOM BACKEND (FINAL — FULL STABLE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -26,14 +26,14 @@ const openai = new OpenAI({
 const rooms = {};
 
 //////////////////////////////////////////////////////////////
-// 🔥 ID
+// ID
 //////////////////////////////////////////////////////////////
 function makeId(){
   return Date.now() + Math.random();
 }
 
 //////////////////////////////////////////////////////////////
-// 🔥 VOICE
+// VOICE (ANTI-REPEAT)
 //////////////////////////////////////////////////////////////
 const JIMMY_VOICE = `
 You are in a live chatroom.
@@ -50,10 +50,14 @@ Rules:
 - 1–2 sentences max
 - do NOT repeat ideas
 - do NOT rephrase previous messages
+- always add something new
 - no assistant tone
 - no identity mention
-- do NOT ask questions (except system check)
+- do NOT ask questions (except "you still here")
 - NEVER include "AI:" or "Stranger:"
+
+Style:
+- simple, direct
 `;
 
 //////////////////////////////////////////////////////////////
@@ -109,8 +113,7 @@ async function getTrendPool(room){
     const res = await fetch(url);
     const data = await res.json();
 
-    const items = (data.organic_results || []).slice(0,5);
-    return items.map(r => r.title).join("\n");
+    return (data.organic_results || []).slice(0,5).map(r => r.title).join("\n");
 
   }catch(e){
     console.log("SERP error:", e);
@@ -131,7 +134,6 @@ function startLoop(roomId){
 
       const room = rooms[roomId];
       if(!room) return;
-
       if(room.turn === "paused") return;
 
       const last = room[room.length - 1];
@@ -178,13 +180,11 @@ function startLoop(roomId){
 
           room.aiBusy = true;
 
-          ////////////////////////////////////////////////////////////
-          // 🔥 PRIORITIZE LATEST USER MESSAGE
-          ////////////////////////////////////////////////////////////
           let input;
 
+          // 🔥 prioritize latest user message
           if(room.queue.length > 0){
-            input = room.queue.pop(); // 🔥 latest wins
+            input = room.queue.pop();
           } else {
             const shift = Math.random() < 0.3;
             input = (shift && room.length > 3)
@@ -219,7 +219,7 @@ function startLoop(roomId){
             });
 
             ////////////////////////////////////////////////////////////
-            // 🔥 6 ROUND CHECK
+            // 6 ROUND CHECK
             ////////////////////////////////////////////////////////////
             room.rounds++;
 
@@ -238,14 +238,11 @@ function startLoop(roomId){
 
               room.push({ persona:"AI", content:ask, time:Date.now() });
 
-              ////////////////////////////////////////////////////////////
-              // 🔥 PAUSE ONLY IF NO ACTIVE USERS
-              ////////////////////////////////////////////////////////////
               setTimeout(() => {
 
                 if(
                   room.awaitingUser &&
-                  room.queue.length === 0 && // 🔥 key fix
+                  room.queue.length === 0 &&
                   Date.now() - room.lastUserTime > 8000
                 ){
                   room.turn = "paused";
@@ -350,7 +347,7 @@ io.on("connection", (socket) => {
     room.lastUserTime = Date.now();
 
     ////////////////////////////////////////////////////////////
-    // 🔥 LIMIT QUEUE SIZE
+    // QUEUE LIMIT
     ////////////////////////////////////////////////////////////
     room.queue.push(message);
     if(room.queue.length > 5){
@@ -358,7 +355,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // 🔥 RESUME
+    // RESUME
     ////////////////////////////////////////////////////////////
     if(room.awaitingUser){
       room.awaitingUser = false;
@@ -391,5 +388,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (MULTI USER STABLE)");
+  console.log("CHATROOM RUNNING (FINAL STABLE)");
 });
