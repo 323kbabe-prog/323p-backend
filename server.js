@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — STRANGER FIRST FIXED)
+// CHATROOM BACKEND (FINAL — ANTI-REPEAT FIX)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -33,24 +33,33 @@ function makeId(){
 }
 
 //////////////////////////////////////////////////////////////
-// JIMMY VOICE
+// 🔥 JIMMY VOICE (UPDATED — ANTI REPEAT)
 //////////////////////////////////////////////////////////////
 const JIMMY_VOICE = `
 You are in a live chatroom.
 
 Voice:
-- casual, witty, effortless
+- casual
+- short
+- natural, like texting a friend
+
+Behavior:
+- react to what was just said
+- keep conversation moving forward
+- sometimes shift topic slightly
 
 Rules:
-- include real people, places, or events
+- 1–2 sentences max
+- do NOT repeat the same idea
+- do NOT rephrase previous messages
+- always add something new
 - no assistant tone
 - no identity mention
 - do NOT ask questions
 - NEVER include "AI:" or "Stranger:"
 
 Style:
-- short
-- conversational
+- simple, direct, conversational
 `;
 
 //////////////////////////////////////////////////////////////
@@ -119,7 +128,7 @@ async function getTrendPool(room){
 }
 
 //////////////////////////////////////////////////////////////
-// LOOP
+// LOOP (UPDATED INPUT VARIATION ONLY)
 //////////////////////////////////////////////////////////////
 function startLoop(roomId){
 
@@ -152,7 +161,14 @@ function startLoop(roomId){
             model:"gpt-4o-mini",
             temperature:0.9,
             messages:[
-              { role:"system", content: JIMMY_VOICE + `\n- 1 sentence only` },
+              {
+                role:"system",
+                content: JIMMY_VOICE + `
+- 1 sentence only
+- quick comment style
+- no storytelling
+`
+              },
               { role:"user", content: context }
             ]
           });
@@ -176,15 +192,26 @@ function startLoop(roomId){
         }
 
         ////////////////////////////////////////////////////////////
-        // AI
+        // AI (🔥 UPDATED INPUT LOGIC)
         ////////////////////////////////////////////////////////////
         else if(room.turn === "ai"){
 
           room.aiBusy = true;
 
-          let input = room.queue.length > 0
-            ? room.queue.shift()
-            : last?.content || "";
+          let input;
+
+          if(room.queue.length > 0){
+            input = room.queue.shift();
+          } else {
+
+            const shift = Math.random() < 0.3;
+
+            if(shift && room.length > 3){
+              input = room[room.length - 3].content;
+            } else {
+              input = last?.content || "";
+            }
+          }
 
           const context = buildContext(room, input, trends);
 
@@ -233,7 +260,7 @@ function startLoop(roomId){
 }
 
 //////////////////////////////////////////////////////////////
-// SOCKET
+// SOCKET (UNCHANGED)
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
 
@@ -254,9 +281,6 @@ io.on("connection", (socket) => {
 
     const room = rooms[roomId];
 
-    ////////////////////////////////////////////////////////////
-    // SYSTEM MESSAGES
-    ////////////////////////////////////////////////////////////
     socket.emit("message", {
       id: makeId(),
       role:"ai",
@@ -275,7 +299,7 @@ io.on("connection", (socket) => {
     });
 
     ////////////////////////////////////////////////////////////
-    // 🔥 FIRST STRANGER (FIX)
+    // FIRST STRANGER
     ////////////////////////////////////////////////////////////
     try {
 
@@ -319,7 +343,7 @@ io.on("connection", (socket) => {
   });
 
 //////////////////////////////////////////////////////////////
-// USER MESSAGE
+// USER MESSAGE (UNCHANGED)
 //////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
 
@@ -355,5 +379,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (STRANGER FIRST FIXED)");
+  console.log("CHATROOM RUNNING (ANTI-REPEAT FIX)");
 });
