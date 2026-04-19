@@ -29,10 +29,13 @@ const rooms = {};
 //////////////////////////////////////////////////////////////
 async function getTrendPool(){
 
-  const queries = [
-    "tiktok viral",
-    "news today"
-  ];
+const now = new Date();
+
+const today = new Date().toISOString().split("T")[0];
+
+const queries = [
+  `tiktok viral ${today}`
+];
 
   let all = [];
 
