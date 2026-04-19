@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — USER-LOCAL PRESENCE + ROLE FIX)
+// CHATROOM BACKEND (FINAL — USER-LOCAL PRESENCE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -28,8 +28,39 @@ const rooms = {};
 //////////////////////////////////////////////////////////////
 // ID
 //////////////////////////////////////////////////////////////
-function makeId(){
+function makeId() {
   return Date.now() + Math.random();
+}
+
+//////////////////////////////////////////////////////////////
+// SAFE EMIT HELPERS
+//////////////////////////////////////////////////////////////
+function emitToRoom(roomId, payload) {
+  const sockets = io.sockets.adapter.rooms.get(roomId) || new Set();
+
+  for (const socketId of sockets) {
+    const s = io.sockets.sockets.get(socketId);
+    if (!s) continue;
+
+    const paused = rooms[roomId]?.userState?.[socketId]?.awaiting;
+    if (paused) continue;
+
+    s.emit("message", payload);
+  }
+}
+
+function emitTypingToRoom(roomId) {
+  const sockets = io.sockets.adapter.rooms.get(roomId) || new Set();
+
+  for (const socketId of sockets) {
+    const s = io.sockets.sockets.get(socketId);
+    if (!s) continue;
+
+    const paused = rooms[roomId]?.userState?.[socketId]?.awaiting;
+    if (paused) continue;
+
+    s.emit("typing", { persona: "AI" });
+  }
 }
 
 //////////////////////////////////////////////////////////////
@@ -39,7 +70,9 @@ const HUMAN_CHAT = `
 You are in a live chatroom.
 
 Voice:
-- casual, short, natural
+- casual
+- short
+- natural
 
 Rules:
 - 1–2 sentences max
@@ -52,14 +85,15 @@ Rules:
 `;
 
 //////////////////////////////////////////////////////////////
-// JIMMY-STYLE SEARCH
+// JIMMY-WORLD SEARCH BRAIN
 //////////////////////////////////////////////////////////////
 const JIMMY_SEARCH = `
 Decide what to search next.
 
-Think like:
+Perspective:
 - curious
 - human
+- casual
 - pop-culture aware
 - everyday conversational thinking
 
@@ -71,10 +105,10 @@ Rules:
 `;
 
 //////////////////////////////////////////////////////////////
-// CLEAN
+// CLEAN TEXT
 //////////////////////////////////////////////////////////////
-function cleanText(text){
-  return text
+function cleanText(text) {
+  return String(text || "")
     .replace(/^(Stranger|AI)\s*:\s*/i, "")
     .replace(/(Stranger|AI)\s*:\s*/gi, "")
     .replace(/\s+/g, " ")
@@ -84,14 +118,14 @@ function cleanText(text){
 //////////////////////////////////////////////////////////////
 // DELAY
 //////////////////////////////////////////////////////////////
-function getDelay(text){
-  return Math.min(1200 + text.split(" ").length * 120, 5000);
+function getDelay(text) {
+  return Math.min(1200 + String(text || "").split(" ").length * 120, 5000);
 }
 
 //////////////////////////////////////////////////////////////
 // CONTEXT
 //////////////////////////////////////////////////////////////
-function buildContext(room, extra, trends){
+function buildContext(room, extra, trends) {
   const history = room
     .slice(-6)
     .map(m => `${m.persona}: ${m.content}`)
@@ -103,8 +137,8 @@ function buildContext(room, extra, trends){
 //////////////////////////////////////////////////////////////
 // SEARCH
 //////////////////////////////////////////////////////////////
-async function getTrendPool(room){
-  try{
+async function getTrendPool(room) {
+  try {
     const history = room
       .slice(-5)
       .map(m => m.content)
@@ -119,7 +153,9 @@ async function getTrendPool(room){
       ]
     });
 
-    const query = q.choices[0].message.content.trim();
+    const query = cleanText(q.choices?.[0]?.message?.content);
+
+    if (!query) return "";
 
     const res = await fetch(
       `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}`
@@ -131,7 +167,7 @@ async function getTrendPool(room){
       .slice(0, 5)
       .map(r => r.title)
       .join("\n");
-  }catch{
+  } catch {
     return "";
   }
 }
@@ -139,23 +175,20 @@ async function getTrendPool(room){
 //////////////////////////////////////////////////////////////
 // TRIGGER AI
 //////////////////////////////////////////////////////////////
-function triggerAI(roomId){
+function triggerAI(roomId) {
   const room = rooms[roomId];
-  if(!room || room.aiBusy) return;
+  if (!room || room.aiBusy) return;
   room.turn = "ai";
 }
 
 //////////////////////////////////////////////////////////////
 // LOOP
 //////////////////////////////////////////////////////////////
-function startLoop(roomId){
-
-  async function loop(){
-
+function startLoop(roomId) {
+  async function loop() {
     setTimeout(async () => {
-
       const room = rooms[roomId];
-      if(!room){
+      if (!room) {
         loop();
         return;
       }
@@ -163,28 +196,26 @@ function startLoop(roomId){
       const last = room[room.length - 1];
       const lastText = (last?.content || "").toLowerCase();
 
-      ////////////////////////////////////////////////////////////
+      //////////////////////////////////////////////////////////
       // GLOBAL STOP RIGHT AFTER "you still here"
-      ////////////////////////////////////////////////////////////
-      if(lastText.includes("you still here")){
+      //////////////////////////////////////////////////////////
+      if (lastText.includes("you still here")) {
         loop();
         return;
       }
 
       const idle = Date.now() - (last?.time || Date.now());
 
-      if(idle > 800 && !room.aiBusy){
-
+      if (idle > 800 && !room.aiBusy) {
         const trends = await getTrendPool(room);
 
-        ////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////
         // STRANGER
-        ////////////////////////////////////////////////////////////
-        if(room.turn === "stranger"){
-
+        ////////////////////////////////////////////////////////
+        if (room.turn === "stranger") {
           const context = buildContext(room, last?.content || "", trends);
 
-          try{
+          try {
             const s = await openai.chat.completions.create({
               model: "gpt-4o-mini",
               temperature: 0.9,
@@ -203,9 +234,9 @@ Speak like a normal human in the room.
               ]
             });
 
-            let text = cleanText(s.choices[0].message.content);
+            let text = cleanText(s.choices?.[0]?.message?.content);
 
-            if(text.toLowerCase().includes("you still here")){
+            if (!text || text.toLowerCase().includes("you still here")) {
               loop();
               return;
             }
@@ -216,7 +247,7 @@ Speak like a normal human in the room.
               time: Date.now()
             });
 
-            io.to(roomId).emit("message", {
+            emitToRoom(roomId, {
               id: makeId(),
               role: "ai",
               persona: "Stranger",
@@ -224,16 +255,15 @@ Speak like a normal human in the room.
             });
 
             room.turn = "ai";
-          }catch{
+          } catch {
             room.turn = "ai";
           }
         }
 
-        ////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////
         // AI
-        ////////////////////////////////////////////////////////////
-        else if(room.turn === "ai"){
-
+        ////////////////////////////////////////////////////////
+        else if (room.turn === "ai") {
           room.aiBusy = true;
 
           const failSafe = setTimeout(() => {
@@ -241,13 +271,14 @@ Speak like a normal human in the room.
             room.turn = "stranger";
           }, 7000);
 
-          const input = room.queue.length > 0
-            ? room.queue.pop()
-            : last?.content || "";
+          const input =
+            room.queue.length > 0
+              ? room.queue.pop()
+              : last?.content || "";
 
           const context = buildContext(room, input, trends);
 
-          try{
+          try {
             const a = await openai.chat.completions.create({
               model: "gpt-4o-mini",
               temperature: 0.7,
@@ -263,12 +294,11 @@ Speak like a normal human, not like Jimmy Fallon.
               ]
             });
 
-            const reply = cleanText(a.choices[0].message.content);
+            const reply = cleanText(a.choices?.[0]?.message?.content);
 
-            io.to(roomId).emit("typing", { persona: "AI" });
+            emitTypingToRoom(roomId);
 
             setTimeout(() => {
-
               clearTimeout(failSafe);
 
               room.push({
@@ -277,26 +307,26 @@ Speak like a normal human, not like Jimmy Fallon.
                 time: Date.now()
               });
 
-              io.to(roomId).emit("message", {
+              emitToRoom(roomId, {
                 id: makeId(),
                 role: "ai",
                 persona: "AI",
                 text: reply
               });
 
-              ////////////////////////////////////////////////////////
+              ////////////////////////////////////////////////////
               // USER-LOCAL "you still here"
-              ////////////////////////////////////////////////////////
+              ////////////////////////////////////////////////////
               room.rounds++;
 
-              if(room.rounds >= 6){
+              if (room.rounds >= 6) {
                 room.rounds = 0;
 
                 const socketsInRoom = io.sockets.adapter.rooms.get(roomId) || new Set();
 
                 for (const socketId of socketsInRoom) {
                   const s = io.sockets.sockets.get(socketId);
-                  if(!s) continue;
+                  if (!s) continue;
 
                   s.emit("message", {
                     id: makeId(),
@@ -305,8 +335,7 @@ Speak like a normal human, not like Jimmy Fallon.
                     text: "you still here"
                   });
 
-                  if(!room.userState) room.userState = {};
-                  room.userState[s.id] = {
+                  room.userState[socketId] = {
                     awaiting: true,
                     time: Date.now()
                   };
@@ -315,10 +344,8 @@ Speak like a normal human, not like Jimmy Fallon.
 
               room.aiBusy = false;
               room.turn = "stranger";
-
             }, getDelay(reply));
-
-          }catch{
+          } catch {
             clearTimeout(failSafe);
             room.aiBusy = false;
             room.turn = "stranger";
@@ -327,7 +354,6 @@ Speak like a normal human, not like Jimmy Fallon.
       }
 
       loop();
-
     }, 1200);
   }
 
@@ -338,12 +364,10 @@ Speak like a normal human, not like Jimmy Fallon.
 // SOCKET
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
-
   socket.on("joinRoom", async (roomId) => {
-
     socket.join(roomId);
 
-    if(!rooms[roomId]){
+    if (!rooms[roomId]) {
       rooms[roomId] = [];
       rooms[roomId].turn = "stranger";
       rooms[roomId].aiBusy = false;
@@ -364,7 +388,7 @@ io.on("connection", (socket) => {
 
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
 
-    io.to(roomId).emit("message", {
+    emitToRoom(roomId, {
       id: makeId(),
       role: "ai",
       persona: "System",
@@ -374,7 +398,7 @@ io.on("connection", (socket) => {
     ////////////////////////////////////////////////////////////
     // FIRST STRANGER
     ////////////////////////////////////////////////////////////
-    try{
+    try {
       const trends = await getTrendPool(room);
       const context = buildContext(room, "", trends);
 
@@ -395,9 +419,9 @@ NEVER say "you still here"
         ]
       });
 
-      let text = cleanText(first.choices[0].message.content);
+      let text = cleanText(first.choices?.[0]?.message?.content);
 
-      if(text.toLowerCase().includes("you still here")){
+      if (!text || text.toLowerCase().includes("you still here")) {
         text = "Feels like everyone has something random on their mind tonight.";
       }
 
@@ -407,7 +431,7 @@ NEVER say "you still here"
         time: Date.now()
       });
 
-      io.to(roomId).emit("message", {
+      emitToRoom(roomId, {
         id: makeId(),
         role: "ai",
         persona: "Stranger",
@@ -415,7 +439,7 @@ NEVER say "you still here"
       });
 
       room.turn = "ai";
-    }catch{
+    } catch {
       room.turn = "ai";
     }
   });
@@ -424,19 +448,18 @@ NEVER say "you still here"
   // USER MESSAGE
   ////////////////////////////////////////////////////////////
   socket.on("sendMessage", ({ roomId, message }) => {
-
-    if(!message) return;
+    if (!message) return;
 
     const room = rooms[roomId];
-    if(!room) return;
+    if (!room) return;
 
-    if(room.userState && room.userState[socket.id]){
+    if (room.userState?.[socket.id]) {
       room.userState[socket.id].awaiting = false;
       room.userState[socket.id].time = Date.now();
     }
 
     room.queue.push(message);
-    if(room.queue.length > 5){
+    if (room.queue.length > 5) {
       room.queue.shift();
     }
 
@@ -461,7 +484,7 @@ NEVER say "you still here"
   socket.on("disconnect", () => {
     for (const roomId of Object.keys(rooms)) {
       const room = rooms[roomId];
-      if(room?.userState?.[socket.id]){
+      if (room?.userState?.[socket.id]) {
         delete room.userState[socket.id];
       }
     }
