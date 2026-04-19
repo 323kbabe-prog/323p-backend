@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (FINAL — CLEAN STABLE VERSION)
+// CHATROOM BACKEND (FINAL — USER-LOCAL PRESENCE VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -40,7 +40,6 @@ You are in a live chatroom.
 
 Voice:
 - casual, short, natural
-- like a normal human chatting in a room
 
 Rules:
 - 1–2 sentences max
@@ -49,36 +48,30 @@ Rules:
 - no identity mention
 - do NOT ask questions (except "you still here")
 - NEVER include "AI:" or "Stranger:"
-- when natural, include a real person, place, or event
+- include real-world references when natural
 `;
 
 //////////////////////////////////////////////////////////////
-// JIMMY-WORLD SEARCH BRAIN
+// JIMMY-STYLE SEARCH
 //////////////////////////////////////////////////////////////
 const JIMMY_SEARCH = `
 Decide what to search next.
 
-Perspective:
+Think like:
 - curious
 - human
-- casual
 - pop-culture aware
 - everyday conversational thinking
-- like noticing what people are into, talking about, watching, reacting to, or casually discussing
-
-Important:
-- Do NOT speak like Jimmy Fallon
-- Do NOT mention Jimmy Fallon
-- Just choose search topics from that kind of world
 
 Rules:
 - output ONLY a search query
 - 3–8 words
 - no explanation
+- do NOT mention Jimmy Fallon
 `;
 
 //////////////////////////////////////////////////////////////
-// CLEAN TEXT
+// CLEAN
 //////////////////////////////////////////////////////////////
 function cleanText(text){
   return text
@@ -129,7 +122,7 @@ async function getTrendPool(room){
     const query = q.choices[0].message.content.trim();
 
     const res = await fetch(
-      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}&tbs=qdr:d`
+      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_KEY}`
     );
 
     const data = await res.json();
@@ -138,7 +131,6 @@ async function getTrendPool(room){
       .slice(0, 5)
       .map(r => r.title)
       .join("\n");
-
   }catch{
     return "";
   }
@@ -163,15 +155,14 @@ function startLoop(roomId){
     setTimeout(async () => {
 
       const room = rooms[roomId];
-      if(!room || room.turn === "paused"){
-        loop();
+      if(!room){
         return;
       }
 
       const last = room[room.length - 1];
       const idle = Date.now() - (last?.time || Date.now());
 
-      if(idle > 800 && !room.aiBusy && !room.awaitingUser){
+      if(idle > 800 && !room.aiBusy){
 
         const trends = await getTrendPool(room);
 
@@ -182,7 +173,7 @@ function startLoop(roomId){
 
           const lastText = (last?.content || "").toLowerCase();
 
-          // Stranger never handles system presence check
+          // Stranger never handles the presence-check phrase
           if(lastText.includes("you still here")){
             room.turn = "ai";
             loop();
@@ -203,7 +194,7 @@ function startLoop(roomId){
 casual reaction
 NEVER say "you still here"
 NEVER check presence
-Speak like a normal human in the room, not a performer.
+Speak like a normal human in the room.
 `
                 },
                 { role: "user", content: context }
@@ -212,7 +203,7 @@ Speak like a normal human in the room, not a performer.
 
             let text = cleanText(s.choices[0].message.content);
 
-            // hard block presence-check phrase
+            // final hard block
             if(text.toLowerCase().includes("you still here")){
               loop();
               return;
@@ -232,7 +223,6 @@ Speak like a normal human in the room, not a performer.
             });
 
             room.turn = "ai";
-
           }catch{
             room.turn = "ai";
           }
@@ -251,7 +241,7 @@ Speak like a normal human in the room, not a performer.
             room.turn = "stranger";
           }, 7000);
 
-          let input = room.queue.length > 0
+          const input = room.queue.length > 0
             ? room.queue.pop()
             : last?.content || "";
 
@@ -295,38 +285,30 @@ Speak like a normal human, not like Jimmy Fallon.
               });
 
               ////////////////////////////////////////////////////////////
-              // 6 ROUND CHECK
+              // USER-LOCAL "you still here"
               ////////////////////////////////////////////////////////////
               room.rounds++;
 
-              if(room.rounds >= 6 && !room.awaitingUser){
+              if(room.rounds >= 6){
+                room.rounds = 0;
 
-                room.awaitingUser = true;
+                for (const socketId of io.sockets.adapter.rooms.get(roomId) || []) {
+                  const s = io.sockets.sockets.get(socketId);
+                  if(!s) continue;
 
-                const ask = "you still here";
+                  s.emit("message", {
+                    id: makeId(),
+                    role: "ai",
+                    persona: "AI",
+                    text: "you still here"
+                  });
 
-                room.push({
-                  persona: "AI",
-                  content: ask,
-                  time: Date.now()
-                });
-
-                io.to(roomId).emit("message", {
-                  id: makeId(),
-                  role: "ai",
-                  persona: "AI",
-                  text: ask
-                });
-
-                setTimeout(() => {
-                  if(
-                    room.awaitingUser &&
-                    room.queue.length === 0 &&
-                    Date.now() - room.lastUserTime > 8000
-                  ){
-                    room.turn = "paused";
-                  }
-                }, 8000);
+                  if(!room.userState) room.userState = {};
+                  room.userState[s.id] = {
+                    awaiting: true,
+                    time: Date.now()
+                  };
+                }
               }
 
               room.aiBusy = false;
@@ -365,8 +347,7 @@ io.on("connection", (socket) => {
       rooms[roomId].aiBusy = false;
       rooms[roomId].queue = [];
       rooms[roomId].rounds = 0;
-      rooms[roomId].awaitingUser = false;
-      rooms[roomId].lastUserTime = Date.now();
+      rooms[roomId].userState = {};
       startLoop(roomId);
     }
 
@@ -380,13 +361,12 @@ io.on("connection", (socket) => {
     });
 
     const real = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-    const fake = Math.floor(Math.random() * 2);
 
     io.to(roomId).emit("message", {
       id: makeId(),
       role: "ai",
       persona: "System",
-      text: `${real + fake} ${real + fake === 1 ? "person" : "people"} here`
+      text: `${real} ${real === 1 ? "person" : "people"} here`
     });
 
     ////////////////////////////////////////////////////////////
@@ -406,6 +386,7 @@ io.on("connection", (socket) => {
 1 sentence only
 Start a topic naturally.
 Speak like a normal human in a room.
+NEVER say "you still here"
 `
           },
           { role: "user", content: context }
@@ -447,16 +428,14 @@ Speak like a normal human in a room.
     const room = rooms[roomId];
     if(!room) return;
 
-    room.lastUserTime = Date.now();
+    if(room.userState && room.userState[socket.id]){
+      room.userState[socket.id].awaiting = false;
+      room.userState[socket.id].time = Date.now();
+    }
 
     room.queue.push(message);
     if(room.queue.length > 5){
       room.queue.shift();
-    }
-
-    if(room.awaitingUser){
-      room.awaitingUser = false;
-      room.rounds = 0;
     }
 
     const msg = {
@@ -477,6 +456,14 @@ Speak like a normal human in a room.
     triggerAI(roomId);
   });
 
+  socket.on("disconnect", () => {
+    for (const roomId of Object.keys(rooms)) {
+      const room = rooms[roomId];
+      if(room?.userState?.[socket.id]){
+        delete room.userState[socket.id];
+      }
+    }
+  });
 });
 
 //////////////////////////////////////////////////////////////
@@ -485,5 +472,5 @@ Speak like a normal human in a room.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (FINAL CLEAN STABLE)");
+  console.log("CHATROOM RUNNING (FINAL USER-LOCAL PRESENCE)");
 });
