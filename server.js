@@ -561,7 +561,7 @@ io.on("connection", (socket) => {
       id: makeId(),
       role: "ai",
       persona: "System",
-      text: "Welcome to 323LAchat"
+      text: "Welcome to 650AI ROOM"
     });
 
     // User count to active room
@@ -644,3 +644,4 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("CHATROOM RUNNING (FINAL USER-LOCAL PRESENCE FIXED)");
 });
+
