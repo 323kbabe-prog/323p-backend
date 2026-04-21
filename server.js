@@ -284,7 +284,7 @@ function maybePromptPresence(roomId) {
       id: makeId(),
       role: "ai",
       persona: "AI",
-      text: "you still here"
+      text: "you still here?"
     });
   }
 }
@@ -765,3 +765,4 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("CHATROOM RUNNING (NEW YORK PLAZA HOTEL VERSION)");
 });
+
