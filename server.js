@@ -191,11 +191,13 @@ function cleanText(text) {
 //////////////////////////////////////////////////////////////
 // DELAY
 //////////////////////////////////////////////////////////////
-function getDelay(text, room) {
-  if (room?.alwaysOn) {
-    return Math.min(1800 + String(text || "").split(/\s+/).filter(Boolean).length * 140, 6500);
-  }
-  return Math.min(1200 + String(text || "").split(/\s+/).filter(Boolean).length * 120, 5000);
+function getDelay(text) {
+  const words = String(text || "").split(/\s+/).filter(Boolean).length;
+
+  return Math.min(
+    1800 + words * 160,  // slower typing feel
+    6500                 // max cap
+  );
 }
 
 //////////////////////////////////////////////////////////////
@@ -578,14 +580,14 @@ function startLoop(roomId) {
     }
 
     // normal smooth loop
-    const requiredIdle = r.alwaysOn ? 2200 : 900;
+    const requiredIdle = 1600;
 
     if (!r.aiBusy && idle > requiredIdle) {
       await processTurn(roomId);
     }
   };
 
-  setInterval(loop, room.alwaysOn ? 1800 : 1200);
+  setInterval(loop, 1800);
 }
 
 //////////////////////////////////////////////////////////////
