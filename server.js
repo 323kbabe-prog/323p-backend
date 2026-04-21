@@ -677,7 +677,7 @@ io.on("connection", (socket) => {
       role: "ai",
       persona: "System",
       text: room.title === "New York Plaza Hotel"
-        ? "Welcome to New York Plaza Hotel"
+        ? "Welcome to Room New York Plaza Hotel"
         : "Welcome to 650AI ROOM"
     });
 
