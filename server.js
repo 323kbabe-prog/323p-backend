@@ -486,20 +486,22 @@ Meeting behavior:
 - react to what was just said
 - build on it or subtly shift direction
 - sound like you're mid-conversation in a focused meeting
-- slightly analytical but still human
 
 AI business thinking:
 - reflect how AI is being used in real business execution today
 - focus on leverage, speed, testing, scaling, automation
 - never talk about prompting or "asking GPT"
 
-Real-world grounding:
-- reference real-world behavior naturally
-- it should feel like shared knowledge in the room
-- not explained examples
+Real-world constraint (STRICT):
+- EVERY message MUST include a real-world case or scenario
+- examples should feel current and realistic (creators, startups, tools, content, automation, online business)
+- if no real-world case is included, the response is invalid
 
 Style:
-${config.style}
+- short
+- grounded
+- slightly serious
+- conversational but focused
 
 Speech constraint:
 - do not start with "yeah", "exactly", "totally", "right"
@@ -508,7 +510,6 @@ Speech constraint:
 
 Rules:
 - 1 sentence only
-- observational
 - no questions
 - no lecture tone
 - no step-by-step explanation
@@ -520,7 +521,7 @@ Rules:
 
 Important:
 - it should feel like a real meeting where people are building ideas together
-- not a chat, not a speech, not a tutorial
+- real-world case must feel like part of the conversation, not a formal example
 `;
 }
 
