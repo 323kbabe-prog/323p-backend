@@ -167,7 +167,7 @@ function maybeEmitNextRoomCard(socketId, roomId) {
     emitRoomCardToSocket(socketId, {
       roomId: ALWAYS_ON_ROOM_ID,
       title: "New York Plaza Hotel",
-      subtitle: "A live Midtown lobby that never fully goes quiet."
+      subtitle: "A live Midtown lobby\nthat never\ngoes quiet."
     });
     return;
   }
