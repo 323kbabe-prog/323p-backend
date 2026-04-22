@@ -44,7 +44,7 @@ function createRoom(roomId) {
   room.id = roomId;
 
   if (roomId === GLOBAL_ROOM_ID) {
-    room.title = "Global Room";
+    room.title = "650AI Room";
     room.roomKind = "global";
     room.strangerType = "business_meeting";
     room.alwaysOn = false;
@@ -911,12 +911,11 @@ io.on("connection", (socket) => {
       id: makeId(),
       role: "ai",
       persona: "System",
-      text:
-        room.title === "New York Plaza Hotel"
-          ? "Welcome to Room New York Plaza Hotel"
-          : room.title === "650AI ROOM"
-            ? "Welcome to 650AI ROOM"
-            : "Welcome to the 650AI Room — Silicon Valley Office"
+     text:
+  room.title === "New York Plaza Hotel"
+    ? "Welcome to New York Plaza Hotel"
+    : "Welcome to 650AI Room"
+
     });
 
     broadcastUserCount(roomId);
@@ -992,7 +991,7 @@ bootAlwaysOnRooms();
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (GLOBAL + NEW YORK PLAZA + 650AI ROOM)");
+  console.log("CHATROOM RUNNING (650AI ROOM + NEW YORK PLAZA)");
 });
 
 
