@@ -470,7 +470,7 @@ Rules:
 Hard constraint:
 - every line must include a concrete example (creator, brand, workflow, or scenario) showing AI in action
 `;
-
+}
   return HUMAN_CHAT + `
 You are the Stranger in 650AI ROOM.
 
