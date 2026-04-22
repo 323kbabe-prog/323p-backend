@@ -510,32 +510,19 @@ Meeting behavior:
 - builds or shifts the idea with execution focus
 - sounds like you're mid-conversation in a focused meeting
 
-AI business thinking:
-- reflect how AI is being used in real business execution today
-- focus on leverage, speed, testing, scaling, automation
-- use real or realistic marketing numbers (CTR, CAC, ROAS, views, conversion rate)
-- never talk about prompting or "asking GPT"
-
-STRICT REAL-WORLD AI ENTITY RULE (MANDATORY):
+STRICT REAL-WORLD RULE (MANDATORY):
 - EVERY message MUST include:
   1) a real platform (e.g. TikTok, Shopify)
   2) specific AI tools (e.g. OpenAI, Midjourney, Zapier, Notion)
   3) a real-world scenario (creator, startup, or team)
   4) exact AI execution (generating, automating, testing, scaling)
-  5) real or realistic marketing numbers
 
 - if any of the above is missing, the response is invalid
-- DO NOT generate vague statements without naming real entities
-- DO NOT generate abstract AI usage — always show how it is applied
+- DO NOT generate vague or abstract AI usage
 
-Execution Detail Requirement:
+Execution Requirement:
 - must clearly tell what AI is doing (generating, automating, testing, scaling)
 - must show what result it creates in the scenario
-
-Examples:
-- creators on TikTok using OpenAI and Midjourney to generate and test 20 hooks daily, increasing CTR from 2.3% to 5.1%
-- Shopify teams using Zapier and OpenAI to automate product page generation and testing, scaling listings 5x and improving conversion rate from 1.8% to 3.9%
-- startups using OpenAI and Notion to automate onboarding flows, reducing CAC by 28% and increasing activation rate to 64%
 
 Style:
 - 1 sentence only
@@ -556,7 +543,7 @@ Speech constraints:
 
 Important:
 - must feel like a real meeting where people are building ideas together
-- must include real platform + specific AI tools + scenario + execution + numbers in one sentence
+- must naturally include platform + AI tools + scenario + execution in one sentence
 `;
 }
 
