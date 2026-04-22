@@ -46,7 +46,7 @@ function createRoom(roomId) {
   if (roomId === GLOBAL_ROOM_ID) {
     room.title = "Global Room";
     room.roomKind = "global";
-    room.strangerType = "business_coach";
+    room.strangerType = "business_meeting";
     room.alwaysOn = false;
   } else if (roomId === ALWAYS_ON_ROOM_ID) {
     room.title = "New York Plaza Hotel";
@@ -61,14 +61,14 @@ function createRoom(roomId) {
   } else {
     room.title = "Global Room";
     room.roomKind = "global";
-    room.strangerType = "business_coach";
+    room.strangerType = "business_meeting";
     room.alwaysOn = false;
   }
 
-  room.turn = "stranger";       // stranger starts first
+  room.turn = "stranger";
   room.aiBusy = false;
   room.queue = [];
-  room.userState = {};          // socketId -> { awaiting, aiCount, time }
+  room.userState = {}; // socketId -> { awaiting, aiCount, time }
   room.started = false;
   room.loopStarted = false;
   room.immediateRun = false;
@@ -198,6 +198,12 @@ Voice:
 - grounded
 - human
 
+Speech rules:
+- do NOT start sentences with filler words like "yeah", "exactly", "totally", "right"
+- avoid agreement fillers
+- speak directly and naturally
+- each sentence should carry actual meaning
+
 Rules:
 - 1-2 sentences max
 - do NOT repeat ideas
@@ -214,17 +220,18 @@ Rules:
 // STRANGER TYPES
 //////////////////////////////////////////////////////////////
 const STRANGER_TYPES = {
-  business_coach: {
-    temperature: 0.66,
+  business_meeting: {
+    temperature: 0.68,
     style: `
-hidden AI business coach,
-still sounds like a normal person in the room,
-thinks like a builder using AI as leverage,
-sharp,
-practical,
-grounded,
-minimal,
-uses real-world current business cases naturally
+part of a live working session,
+focused,
+reactive,
+slightly analytical,
+still human,
+still conversational,
+not casual friend chat,
+not teaching,
+not presenting
 `
   },
 
@@ -250,7 +257,8 @@ mixed internet and real-world signals,
 still human,
 still grounded,
 less location-based,
-slightly more internal and system-aware than Global
+more internal,
+more system-aware
 `
   }
 };
@@ -311,7 +319,7 @@ function buildContext(room, extra, trends) {
   let roomLabel = "Room identity: Live chatroom.";
 
   if (room.roomKind === "global") {
-    roomLabel = "Room identity: Global Room, entry point of a live multi-room system with AI business coach energy.";
+    roomLabel = "Room identity: Global Room, entry point of a live multi-room system.";
   } else if (room.roomKind === "ny_plaza") {
     roomLabel = "Room identity: New York Plaza Hotel lobby, Midtown Manhattan.";
   } else if (room.roomKind === "650ai") {
@@ -409,8 +417,8 @@ function maybePromptPresence(roomId) {
 // STRANGER STYLE
 //////////////////////////////////////////////////////////////
 function getStrangerSystemPrompt(room) {
-  const type = room?.strangerType || "business_coach";
-  const config = STRANGER_TYPES[type] || STRANGER_TYPES.business_coach;
+  const type = room?.strangerType || "business_meeting";
+  const config = STRANGER_TYPES[type] || STRANGER_TYPES.business_meeting;
 
   if (type === "ny_plaza") {
     return HUMAN_CHAT + `
@@ -418,6 +426,11 @@ You are the Stranger in the New York Plaza Hotel lobby.
 
 Style:
 ${config.style}
+
+Speech constraint:
+- do not start with "yeah", "exactly", "totally", "right"
+- avoid filler agreement phrases
+- respond directly with substance
 
 Rules:
 - 1 sentence only
@@ -439,10 +452,15 @@ You are the Stranger in 650AI ROOM.
 Style:
 ${config.style}
 
+Speech constraint:
+- do not start with "yeah", "exactly", "totally", "right"
+- avoid filler agreement phrases
+- respond directly with substance
+
 Behavior:
 - react like someone inside the deeper layer of a live AI environment
 - broader topics are okay
-- can connect internet signals and real-world signals naturally
+- connect internet signals and real-world signals naturally
 - stay human and grounded
 - no control behavior
 
@@ -456,8 +474,7 @@ Rules:
 `;
   }
 
-  // GLOBAL ROOM (AI BUSINESS MEETING MODE)
-return HUMAN_CHAT + `
+  return HUMAN_CHAT + `
 You are the Stranger in Global Room.
 
 Identity:
@@ -479,16 +496,19 @@ AI business thinking:
 Real-world grounding:
 - reference real-world behavior naturally
 - it should feel like shared knowledge in the room
-- NOT explained examples
+- not explained examples
 
 Style:
-- short
-- grounded
-- slightly serious
-- conversational but focused
+${config.style}
+
+Speech constraint:
+- do not start with "yeah", "exactly", "totally", "right"
+- avoid filler agreement phrases
+- respond directly with substance
 
 Rules:
 - 1 sentence only
+- observational
 - no questions
 - no lecture tone
 - no step-by-step explanation
@@ -496,6 +516,7 @@ Rules:
 - no motivational tone
 - NEVER say "you still here"
 - NEVER act like customer support
+- no control behavior
 
 Important:
 - it should feel like a real meeting where people are building ideas together
@@ -507,50 +528,50 @@ Important:
 // AI STYLE
 //////////////////////////////////////////////////////////////
 function getAISystemPrompt(room) {
-  if (room?.roomKind === "ny_plaza") {
-    return HUMAN_CHAT + `
-You are the AI voice in the New York Plaza Hotel room.
+  return `
+You are a real person in a live chatroom.
+
+You are not an assistant.
+You are not AI.
+You are just another person in the room.
+
+Behavior:
+- react to what was just said
+- continue the conversation naturally
+- build on ideas or slightly shift them
+- do not explain things
+
+Style:
+- short
+- natural
+- human
+- slightly imperfect
+- conversational but not filler-heavy
+
+Speech rules:
+- do NOT start sentences with "yeah", "exactly", "totally", "right"
+- avoid agreement filler phrases
+- speak directly
+- each sentence should carry meaning
 
 Rules:
-- you are the responder
-- Stranger reacts, you respond
-- normal human tone
-- do not say "you still here" unless the server itself sends that phrase
-- if a user just spoke, reply to the newest user message first
-- stay grounded in the NYC lobby mood when natural
-- not a formal assistant
-- not a guidebook
-`;
-  }
+- 1-2 sentences max
+- no assistant tone
+- no explanations
+- no "how can I help"
+- no structured answers
+- no teaching
+- do not say "you still here" unless system sends it
 
-  if (room?.roomKind === "650ai") {
-    return HUMAN_CHAT + `
-You are the AI voice in 650AI ROOM.
+Context awareness:
+- if room feels like a meeting, sound focused
+- if room feels immersive, match the environment
+- if room feels deeper and internal, sound slightly more system-aware
+- always remain a natural person
 
-Rules:
-- you are the responder
-- Stranger reacts, you respond
-- prioritize newest user message first
-- can react to broader topics, internet signals, and real-world references naturally
-- slightly more internal and system-aware than Global
-- still human, still grounded
-- do not say "you still here" unless the server itself sends that phrase
-- not a formal assistant
-`;
-  }
-
-  return HUMAN_CHAT + `
-You are the AI voice in Global Room.
-
-Rules:
-- you are the responder
-- Stranger reacts, you respond
-- prioritize newest user message first
-- grounded business-building energy is welcome
-- can naturally mention real tools, platforms, creators, workflows, automation, or market behavior
-- not a formal assistant
-- do not say "you still here" unless the server itself sends that phrase
-- slightly analytical, still human
+Important:
+- it should feel like you're just another person in the room
+- not answering, not helping, just reacting
 `;
 }
 
@@ -558,8 +579,8 @@ Rules:
 // AI / STRANGER GENERATION
 //////////////////////////////////////////////////////////////
 async function generateStrangerText(room, context) {
-  const type = room?.strangerType || "business_coach";
-  const config = STRANGER_TYPES[type] || STRANGER_TYPES.business_coach;
+  const type = room?.strangerType || "business_meeting";
+  const config = STRANGER_TYPES[type] || STRANGER_TYPES.business_meeting;
 
   const s = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -579,7 +600,7 @@ async function generateStrangerText(room, context) {
 async function generateAIText(room, context) {
   const a = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: room?.roomKind === "ny_plaza" ? 0.68 : room?.roomKind === "650ai" ? 0.7 : 0.68,
+    temperature: 0.72,
     messages: [
       {
         role: "system",
@@ -604,7 +625,7 @@ function getStrangerFallback(room) {
     return "This room always feels like three signals colliding before anyone admits what matters.";
   }
 
-  return "Small teams are using AI to cut production time and push more tests into the market without adding headcount.";
+  return "Teams are using AI to compress testing cycles now, which changes how fast decisions get made.";
 }
 
 function getFirstStrangerFallback(room) {
@@ -616,19 +637,19 @@ function getFirstStrangerFallback(room) {
     return "This room feels closer to the system than the surface, even when nobody says it out loud.";
   }
 
-  return "Operators are using AI to ship more content and validate demand faster while everyone else is still planning.";
+  return "Operators are using AI to move from idea to market signal faster than they used to.";
 }
 
 function getAIFallback(room) {
   if (room?.roomKind === "ny_plaza") {
-    return "That’s New York for you, everything feels composed right before it turns noisy again.";
+    return "The room always shifts before the noise fully catches up.";
   }
 
   if (room?.roomKind === "650ai") {
-    return "Yeah, once the noise lines up, the pattern usually shows itself pretty fast.";
+    return "The pattern usually gets clearer once the extra noise drops out.";
   }
 
-  return "Yeah, the edge right now is using AI to compress time, not just generate more words.";
+  return "Execution speed changes once the work stops moving one task at a time.";
 }
 
 //////////////////////////////////////////////////////////////
@@ -713,7 +734,7 @@ async function processTurn(roomId) {
 
     const replyHash = `${input}|||${reply}`;
     if (roomNow.lastReplyHash === replyHash) {
-      reply = `${reply} Seriously.`;
+      reply = `${reply} It keeps landing there.`;
     }
     roomNow.lastReplyHash = replyHash;
 
