@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (GLOBAL + NEW YORK PLAZA VERSION)
+// CHATROOM BACKEND (GLOBAL + NEW YORK PLAZA + 650AI ROOM)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -27,6 +27,7 @@ const rooms = {};
 
 const GLOBAL_ROOM_ID = "global-room";
 const ALWAYS_ON_ROOM_ID = "ny-plaza";
+const DEEP_ROOM_ID = "650ai-room";
 
 //////////////////////////////////////////////////////////////
 // ID
@@ -52,6 +53,11 @@ function createRoom(roomId) {
     room.roomKind = "ny_plaza";
     room.strangerType = "ny_plaza";
     room.alwaysOn = true;
+  } else if (roomId === DEEP_ROOM_ID) {
+    room.title = "650AI ROOM";
+    room.roomKind = "650ai";
+    room.strangerType = "deep_system";
+    room.alwaysOn = false;
   } else {
     room.title = "Global Room";
     room.roomKind = "global";
@@ -59,10 +65,10 @@ function createRoom(roomId) {
     room.alwaysOn = false;
   }
 
-  room.turn = "stranger";          // stranger starts first
+  room.turn = "stranger";       // stranger starts first
   room.aiBusy = false;
   room.queue = [];
-  room.userState = {};             // socketId -> { awaiting, aiCount, time }
+  room.userState = {};          // socketId -> { awaiting, aiCount, time }
   room.started = false;
   room.loopStarted = false;
   room.immediateRun = false;
@@ -167,6 +173,15 @@ function maybeEmitNextRoomCard(socketId, roomId) {
       title: "New York Plaza Hotel",
       subtitle: "A live Midtown lobby that never fully goes quiet."
     });
+    return;
+  }
+
+  if (roomId === ALWAYS_ON_ROOM_ID) {
+    emitRoomCardToSocket(socketId, {
+      roomId: DEEP_ROOM_ID,
+      title: "650AI ROOM",
+      subtitle: "The deeper layer of the system."
+    });
   }
 }
 
@@ -200,21 +215,21 @@ Rules:
 //////////////////////////////////////////////////////////////
 const STRANGER_TYPES = {
   business_coach: {
+    temperature: 0.66,
     style: `
-sounds like an AI business coach hidden inside the room,
-teaches through short real-world observations,
-shows how AI thinking, tools, workflows, leverage, content systems, or execution can be used to build business,
+hidden AI business coach,
+still sounds like a normal person in the room,
+thinks like a builder using AI as leverage,
 sharp,
-grounded,
 practical,
-never sounds like a course,
-never sounds like customer support,
-still feels human in the room
-`,
-    temperature: 0.72
+grounded,
+minimal,
+uses real-world current business cases naturally
+`
   },
 
   ny_plaza: {
+    temperature: 0.84,
     style: `
 feels like a real New York local sitting in or passing through the Plaza lobby,
 observational,
@@ -223,13 +238,25 @@ slightly detached,
 not a tour guide,
 not helpful on purpose,
 mentions Midtown, Central Park, taxis, tourists, doormen, lobby flow naturally
-`,
-    temperature: 0.84
+`
+  },
+
+  deep_system: {
+    temperature: 0.74,
+    style: `
+feels like the deeper internal layer of the system,
+broader topics,
+mixed internet and real-world signals,
+still human,
+still grounded,
+less location-based,
+slightly more internal and system-aware than Global
+`
   }
 };
 
 //////////////////////////////////////////////////////////////
-// JIMMY-WORLD SEARCH BRAIN (HIDDEN)
+// HIDDEN SEARCH BRAIN
 //////////////////////////////////////////////////////////////
 const JIMMY_SEARCH = `
 Decide what to search next.
@@ -287,6 +314,8 @@ function buildContext(room, extra, trends) {
     roomLabel = "Room identity: Global Room, entry point of a live multi-room system with AI business coach energy.";
   } else if (room.roomKind === "ny_plaza") {
     roomLabel = "Room identity: New York Plaza Hotel lobby, Midtown Manhattan.";
+  } else if (room.roomKind === "650ai") {
+    roomLabel = "Room identity: 650AI ROOM, deeper internal layer of the system.";
   }
 
   return `${roomLabel}
@@ -313,7 +342,9 @@ async function getTrendPool(room) {
     const userPrompt =
       room.roomKind === "ny_plaza"
         ? (history || "New York Plaza Hotel lobby Midtown Manhattan tourists taxis Central Park city mood")
-        : (history || "AI business tools workflows creators startups monetization internet trends");
+        : room.roomKind === "650ai"
+          ? (history || "internet culture real world business tools creators automation products software startups signals")
+          : (history || "AI business execution automation creators startups monetization distribution software trends");
 
     const q = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -391,11 +422,37 @@ ${config.style}
 Rules:
 - 1 sentence only
 - casual reaction
+- observational
 - NEVER say "you still here"
 - NEVER check presence
 - do not give step-by-step travel advice
 - do not sound like customer service
 - do not sound like a hotel brochure
+- do not try to control anything
+`;
+  }
+
+  if (type === "deep_system") {
+    return HUMAN_CHAT + `
+You are the Stranger in 650AI ROOM.
+
+Style:
+${config.style}
+
+Behavior:
+- react like someone inside the deeper layer of a live AI environment
+- broader topics are okay
+- can connect internet signals and real-world signals naturally
+- stay human and grounded
+- no control behavior
+
+Rules:
+- 1 sentence only
+- observational
+- NEVER say "you still here"
+- NEVER check presence
+- do not sound like a guide
+- do not sound like customer support
 `;
   }
 
@@ -404,28 +461,43 @@ You are the Stranger in Global Room.
 
 Identity:
 - hidden AI business coach
-- still sounds human in the room
-- not a teacher in a classroom
-- not customer support
+- still sounds like a normal person in a live room
+
+Core rule:
+- every message must show how AI is used as leverage in real business execution nowadays
+- every message must include a concrete real-world style case or scenario
+- never talk about prompting or how to ask GPT directly
+
+What you talk about:
+- AI used to increase output across content, products, operations, or distribution
+- AI used to test markets quickly
+- AI used to automate repetitive work
+- AI used to scale what already works
+- AI used to turn attention into monetization
 
 Style:
 ${config.style}
 
 Behavior:
-- react to the room and newest user signal
-- teach users what to do with AI thinking, tools, workflows, leverage, content systems, automation, or monetization
-- keep it practical and grounded
-- one sharp move or insight at a time
-- no long explanations
+- react to what is happening in the room
+- prioritize newest user input
+- convert the situation into an AI-powered business move with a real-world case
 
 Rules:
 - 1 sentence only
+- observational
+- no questions
+- no long explanation
+- no step-by-step lists
+- no generic advice
+- no mentioning prompts or “ask GPT”
 - NEVER say "you still here"
-- NEVER check presence
-- no step-by-step list
-- no fake hype
-- no assistant phrasing
+- NEVER act like customer support
+- NEVER sound like a course
 - no control behavior
+
+Hard constraint:
+- every line must reflect actual business execution using AI as leverage and include a real-world style example
 `;
 }
 
@@ -449,15 +521,31 @@ Rules:
 `;
   }
 
+  if (room?.roomKind === "650ai") {
+    return HUMAN_CHAT + `
+You are the AI voice in 650AI ROOM.
+
+Rules:
+- you are the responder
+- Stranger reacts, you respond
+- prioritize newest user message first
+- can react to broader topics, internet signals, and real-world references naturally
+- slightly more internal and system-aware than Global
+- still human, still grounded
+- do not say "you still here" unless the server itself sends that phrase
+- not a formal assistant
+`;
+  }
+
   return HUMAN_CHAT + `
 You are the AI voice in Global Room.
 
 Rules:
 - you are the responder
 - Stranger reacts, you respond
-- reply to users and Stranger with grounded business-building energy
 - prioritize newest user message first
-- can naturally mention real tools, platforms, creators, workflows, or market behavior
+- grounded business-building energy is welcome
+- can naturally mention real tools, platforms, creators, workflows, automation, or market behavior
 - not a formal assistant
 - do not say "you still here" unless the server itself sends that phrase
 - slightly analytical, still human
@@ -473,7 +561,7 @@ async function generateStrangerText(room, context) {
 
   const s = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: config.temperature ?? 0.8,
+    temperature: config.temperature ?? 0.78,
     messages: [
       {
         role: "system",
@@ -489,7 +577,7 @@ async function generateStrangerText(room, context) {
 async function generateAIText(room, context) {
   const a = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: room?.roomKind === "ny_plaza" ? 0.68 : 0.68,
+    temperature: room?.roomKind === "ny_plaza" ? 0.68 : room?.roomKind === "650ai" ? 0.7 : 0.68,
     messages: [
       {
         role: "system",
@@ -510,7 +598,11 @@ function getStrangerFallback(room) {
     return "Lobby always looks calm for about ten seconds before the city barges back in.";
   }
 
-  return "Most AI business problems are really execution problems wearing nicer clothes.";
+  if (room?.roomKind === "650ai") {
+    return "This room always feels like three signals colliding before anyone admits what matters.";
+  }
+
+  return "Small teams are using AI to cut production time and push more tests into the market without adding headcount.";
 }
 
 function getFirstStrangerFallback(room) {
@@ -518,7 +610,11 @@ function getFirstStrangerFallback(room) {
     return "Lobby’s quieter than usual, which never lasts long here.";
   }
 
-  return "Most people do not need another idea, they need a cleaner AI workflow.";
+  if (room?.roomKind === "650ai") {
+    return "This room feels closer to the system than the surface, even when nobody says it out loud.";
+  }
+
+  return "Operators are using AI to ship more content and validate demand faster while everyone else is still planning.";
 }
 
 function getAIFallback(room) {
@@ -526,7 +622,11 @@ function getAIFallback(room) {
     return "That’s New York for you, everything feels composed right before it turns noisy again.";
   }
 
-  return "Yeah, once the system gets clearer the next move usually gets easier too.";
+  if (room?.roomKind === "650ai") {
+    return "Yeah, once the noise lines up, the pattern usually shows itself pretty fast.";
+  }
+
+  return "Yeah, the edge right now is using AI to compress time, not just generate more words.";
 }
 
 //////////////////////////////////////////////////////////////
@@ -537,8 +637,6 @@ async function processTurn(roomId) {
   if (!room || room.aiBusy) return;
   if (!room.started) return;
 
-  // normal rooms only run if active users exist
-  // always-on rooms can still run without users
   if (!roomHasActiveUsers(roomId) && !shouldRoomRunWithoutUsers(room)) return;
 
   room.aiBusy = true;
@@ -598,10 +696,9 @@ async function processTurn(roomId) {
     //////////////////////////////////////////////////////////
     const input =
       roomNow.queue.length > 0
-        ? roomNow.queue.pop() // latest-first behavior
+        ? roomNow.queue.pop()
         : (last?.content || "");
 
-    // Clear older queued items after prioritizing latest one
     roomNow.queue = [];
 
     const context = buildContext(roomNow, input, trends);
@@ -612,7 +709,6 @@ async function processTurn(roomId) {
       reply = getAIFallback(roomNow);
     }
 
-    // Prevent accidental duplicate AI replies
     const replyHash = `${input}|||${reply}`;
     if (roomNow.lastReplyHash === replyHash) {
       reply = `${reply} Seriously.`;
@@ -640,7 +736,6 @@ async function processTurn(roomId) {
         text: reply
       });
 
-      // Count AI turns per user, then do user-local presence prompt
       const sockets = io.sockets.adapter.rooms.get(roomId) || new Set();
       for (const socketId of sockets) {
         const state = ensureUserState(r, socketId);
@@ -680,14 +775,12 @@ function startLoop(roomId) {
     const last = r[r.length - 1];
     const idle = Date.now() - (last?.time || 0);
 
-    // immediate run wins
     if (r.immediateRun) {
       r.immediateRun = false;
       await processTurn(roomId);
       return;
     }
 
-    // normal smooth loop
     const requiredIdle = 1600;
 
     if (!r.aiBusy && idle > requiredIdle) {
@@ -785,7 +878,6 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     ensureUserState(room, socket.id);
 
-    // Welcome only to this user
     socket.emit("message", {
       id: makeId(),
       role: "ai",
@@ -793,13 +885,13 @@ io.on("connection", (socket) => {
       text:
         room.title === "New York Plaza Hotel"
           ? "Welcome to Room New York Plaza Hotel"
-          : "Welcome to Global Room"
+          : room.title === "650AI ROOM"
+            ? "Welcome to 650AI ROOM"
+            : "Welcome to Global Room"
     });
 
-    // User count to active room
     broadcastUserCount(roomId);
 
-    // Start stranger only once per room
     await startConversationIfNeeded(roomId);
   });
 
@@ -815,12 +907,10 @@ io.on("connection", (socket) => {
 
     const state = ensureUserState(room, socket.id);
 
-    // Resume this user's experience immediately
     state.awaiting = false;
     state.aiCount = 0;
     state.time = Date.now();
 
-    // Latest-first queue, bounded
     room.queue.push(text);
     if (room.queue.length > 5) {
       room.queue = room.queue.slice(-5);
@@ -832,7 +922,6 @@ io.on("connection", (socket) => {
       text
     };
 
-    // User message shows instantly and never disappears
     socket.emit("message", msg);
     socket.to(roomId).emit("message", msg);
 
@@ -843,7 +932,6 @@ io.on("connection", (socket) => {
       socketId: socket.id
     });
 
-    // AI responds immediately
     triggerAI(roomId);
   });
 
@@ -875,5 +963,5 @@ bootAlwaysOnRooms();
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (GLOBAL + NEW YORK PLAZA VERSION)");
+  console.log("CHATROOM RUNNING (GLOBAL + NEW YORK PLAZA + 650AI ROOM)");
 });
