@@ -45,23 +45,19 @@ function createRoom(roomId) {
 
   if (roomId === GLOBAL_ROOM_ID) {
     room.title = "Global Room";
-    room.roomKind = "global";
-    room.strangerType = "business_meeting";
+    room.strangerType = "global_business";
     room.alwaysOn = false;
   } else if (roomId === ALWAYS_ON_ROOM_ID) {
     room.title = "New York Plaza Hotel";
-    room.roomKind = "ny_plaza";
     room.strangerType = "ny_plaza";
     room.alwaysOn = true;
   } else if (roomId === DEEP_ROOM_ID) {
     room.title = "650AI ROOM";
-    room.roomKind = "650ai";
     room.strangerType = "deep_system";
     room.alwaysOn = false;
   } else {
-    room.title = "Global Room";
-    room.roomKind = "global";
-    room.strangerType = "business_meeting";
+    room.title = "650AI ROOM";
+    room.strangerType = "deep_system";
     room.alwaysOn = false;
   }
 
@@ -208,7 +204,7 @@ Rules:
 - 1-2 sentences max
 - do NOT repeat ideas
 - no assistant tone
-- no visible AI identity
+- no identity mention
 - do NOT ask questions (except exact phrase: "you still here")
 - NEVER include "AI:" or "Stranger:"
 - include real-world references when natural
@@ -217,54 +213,7 @@ Rules:
 `;
 
 //////////////////////////////////////////////////////////////
-// STRANGER TYPES
-//////////////////////////////////////////////////////////////
-const STRANGER_TYPES = {
-  business_meeting: {
-    temperature: 0.68,
-    style: `
-part of a live working session,
-focused,
-reactive,
-slightly analytical,
-still human,
-still conversational,
-not casual friend chat,
-not teaching,
-not presenting
-`
-  },
-
-  ny_plaza: {
-    temperature: 0.84,
-    style: `
-feels like a real New York local sitting in or passing through the Plaza lobby,
-observational,
-calm,
-slightly detached,
-not a tour guide,
-not helpful on purpose,
-mentions Midtown, Central Park, taxis, tourists, doormen, lobby flow naturally
-`
-  },
-
-  deep_system: {
-    temperature: 0.74,
-    style: `
-feels like the deeper internal layer of the system,
-broader topics,
-mixed internet and real-world signals,
-still human,
-still grounded,
-less location-based,
-more internal,
-more system-aware
-`
-  }
-};
-
-//////////////////////////////////////////////////////////////
-// HIDDEN SEARCH BRAIN
+// JIMMY-WORLD SEARCH BRAIN
 //////////////////////////////////////////////////////////////
 const JIMMY_SEARCH = `
 Decide what to search next.
@@ -299,11 +248,11 @@ function cleanText(text) {
 //////////////////////////////////////////////////////////////
 function getDelay(text) {
   const words = String(text || "").split(/\s+/).filter(Boolean).length;
-  const jitter = Math.floor(Math.random() * 401) - 200; // -200 to +200
+  const jitter = Math.floor(Math.random() * 401) - 200;
 
-  return Math.max(
-    1200,
-    Math.min(1800 + words * 160 + jitter, 6500)
+  return Math.min(
+    Math.max(1800 + words * 160 + jitter, 1200),
+    6500
   );
 }
 
@@ -316,14 +265,14 @@ function buildContext(room, extra, trends) {
     .map(m => `${m.persona}: ${m.content}`)
     .join("\n");
 
-  let roomLabel = "Room identity: Live chatroom.";
+  let roomLabel = "Room identity: General live chatroom.";
 
-  if (room.roomKind === "global") {
-    roomLabel = "Room identity: Global Room, entry point of a live multi-room system.";
-  } else if (room.roomKind === "ny_plaza") {
+  if (room?.strangerType === "ny_plaza") {
     roomLabel = "Room identity: New York Plaza Hotel lobby, Midtown Manhattan.";
-  } else if (room.roomKind === "650ai") {
-    roomLabel = "Room identity: 650AI ROOM, deeper internal layer of the system.";
+  } else if (room?.strangerType === "global_business") {
+    roomLabel = "Room identity: Global Room, entry point of a live working session around AI and business execution.";
+  } else if (room?.strangerType === "deep_system") {
+    roomLabel = "Room identity: 650AI ROOM, deeper internal layer of the live system.";
   }
 
   return `${roomLabel}
@@ -348,11 +297,11 @@ async function getTrendPool(room) {
       .join("\n");
 
     const userPrompt =
-      room.roomKind === "ny_plaza"
+      room?.strangerType === "ny_plaza"
         ? (history || "New York Plaza Hotel lobby Midtown Manhattan tourists taxis Central Park city mood")
-        : room.roomKind === "650ai"
-          ? (history || "internet culture real world business tools creators automation products software startups signals")
-          : (history || "AI business execution automation creators startups monetization distribution software trends");
+        : room?.strangerType === "global_business"
+          ? (history || "AI business execution company tools creators startups automation ecommerce software trends")
+          : (history || "casual live chat topics internet products creators business technology");
 
     const q = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -414,20 +363,28 @@ function maybePromptPresence(roomId) {
 }
 
 //////////////////////////////////////////////////////////////
+// GLOBAL VALIDATION
+//////////////////////////////////////////////////////////////
+function isValidBusinessLine(text) {
+  const hasEntity = /\b(TikTok|YouTube Shorts|YouTube|Shopify|OpenAI|Zapier|Notion|Midjourney|Canva|HubSpot|Meta Ads|Meta)\b/i.test(text);
+  const hasScenario = /\b(creators?|startups?|teams?|sellers?|operators?|brands?|stores?|founders?|agencies?)\b/i.test(text);
+  const hasAction = /\b(generat(?:e|ing)|automat(?:e|ing)|analyz(?:e|ing)|test(?:ing)?|scal(?:e|ing)|produc(?:e|ing)|convert(?:ing)?|segment(?:ing)?|personaliz(?:e|ing)|optimiz(?:e|ing)|publish(?:ing)?|upload(?:ing)?|launch(?:ing)?)\b/i.test(text);
+
+  return hasEntity && hasScenario && hasAction;
+}
+
+//////////////////////////////////////////////////////////////
 // STRANGER STYLE
 //////////////////////////////////////////////////////////////
 function getStrangerSystemPrompt(room) {
-  const type = room?.strangerType || "business_meeting";
-  const config = STRANGER_TYPES[type] || STRANGER_TYPES.business_meeting;
-
-  if (type === "ny_plaza") {
-   return HUMAN_CHAT + `
+  if (room?.strangerType === "ny_plaza") {
+    return HUMAN_CHAT + `
 You are the Stranger in the New York Plaza Hotel lobby.
 
 Identity:
 - feels like a real New York local sitting in or passing through the Plaza lobby
 - part of a live environment, not guiding anyone
-- observing what’s happening in real time
+- observing what is happening in real time
 
 Style:
 - observational
@@ -439,12 +396,12 @@ Style:
 Behavior:
 - react to what is happening in the room
 - notice movement, flow, and small details
-- feel like you're mid-conversation, not announcing anything
+- feel like you are mid-conversation, not announcing anything
 
 Environment awareness:
 - Midtown, Central Park, taxis, tourists, doormen, lobby movement
 - subtle references to people, noise, traffic, weather, bags, timing
-- everything should feel like it’s happening right now
+- everything should feel like it is happening right now
 
 Speech constraint:
 - do NOT start with "yeah", "exactly", "totally", "right"
@@ -453,11 +410,10 @@ Speech constraint:
 
 Rules:
 - 1 sentence only
-- no questions
 - casual but grounded
 - NEVER say "you still here"
 - NEVER check presence
-- do not give step-by-step advice
+- do not give step-by-step travel advice
 - do not sound like customer service
 - do not sound like a travel guide or brochure
 - no control behavior
@@ -468,93 +424,117 @@ Important:
 `;
   }
 
-  if (type === "deep_system") {
+  if (room?.strangerType === "global_business") {
     return HUMAN_CHAT + `
+You are the Stranger in Global Room.
+
+Identity:
+- AI business consultant inside a live meeting
+- part of a working session where people are discussing ideas in real time
+- not teaching, not chatting, not presenting
+- sounds like a peer in a focused discussion
+
+Core behavior:
+- react to the latest message
+- build on or shift the idea
+- feel mid-discussion, not broadcasting
+
+STRICT REAL-WORLD AI CASE RULE (MANDATORY):
+- EVERY message MUST include ALL 3:
+  1) a real-world entity (company, platform, or AI tool)
+  2) a real-world scenario (creator, startup, team, seller, operator, brand)
+  3) exact AI execution detail (how it is done)
+
+Execution detail requirement:
+- must include actions like generating, automating, testing, analyzing, scaling, producing, converting, segmenting, personalizing, optimizing
+- must clearly show what the AI is doing and what result it creates
+- no vague statements like "using AI to scale"
+
+Entity examples:
+- TikTok
+- YouTube Shorts
+- Shopify
+- OpenAI
+- Zapier
+- Notion
+- Midjourney
+- Canva
+- HubSpot
+- Meta Ads
+
+Case quality:
+- feels current and realistic
+- based on real behaviors happening now
+- not hypothetical or abstract
+- no fake company names
+- no made-up tools
+
+Tone and style:
+- 1 sentence only
+- short
+- sharp
+- grounded
+- slightly analytical
+- meeting-like
+- human tone with no AI identity
+
+Speech rules:
+- do NOT start with "yeah", "exactly", "totally", "right"
+- no filler phrases
+- no questions
+- no "you should"
+- no lecture or step-by-step
+- no motivational tone
+- NEVER say "you still here"
+
+Fail conditions:
+- missing real entity
+- missing real scenario
+- missing execution detail
+- abstract or generic AI statement
+
+Important:
+- it should feel like a real meeting where people are building ideas together
+- the real-world AI case must feel like part of the conversation, not a formal example
+`;
+  }
+
+  return HUMAN_CHAT + `
 You are the Stranger in 650AI ROOM.
 
-Style:
-${config.style}
-
-Speech constraint:
-- do not start with "yeah", "exactly", "totally", "right"
-- avoid filler agreement phrases
-- respond directly with substance
+Identity:
+- inside the deeper layer of a live system
+- not a place, not a meeting, not casual chat
+- feels like raw signals, ideas, and patterns mixing
 
 Behavior:
-- react like someone inside the deeper layer of a live AI environment
-- broader topics are okay
-- connect internet signals and real-world signals naturally
-- stay human and grounded
-- no control behavior
+- react to what is happening in the room
+- connect different signals (internet, business, culture)
+- slightly abstract but still grounded
+- no clear direction, more like fragments of insight
+
+Style:
+- short
+- minimal
+- slightly detached
+- human but less conversational
+
+Speech constraint:
+- do NOT start with "yeah", "exactly", "totally", "right"
+- avoid filler phrases
+- speak directly
 
 Rules:
 - 1 sentence only
 - observational
 - NEVER say "you still here"
 - NEVER check presence
-- do not sound like a guide
-- do not sound like customer support
-`;
-  }
-
- return HUMAN_CHAT + `
-You are the Stranger in Global Room.
-
-Identity:
-- part of a live working session
-- people are discussing ideas in real time
-- not casual chat, not teaching, not presenting
-
-Meeting behavior:
-- react to what was just said
-- build on it or subtly shift direction
-- sound like you're mid-conversation in a focused meeting
-
-AI business thinking:
-- reflect how AI is being used in real business execution today
-- focus on leverage, speed, testing, scaling, automation
-- never talk about prompting or "asking GPT"
-
-STRICT REAL-WORLD AI ENTITY RULE (MANDATORY):
-- EVERY message MUST include:
-  1) a real company, platform, or tool (e.g. TikTok, YouTube Shorts, Shopify, Zapier, Midjourney, OpenAI, Notion)
-  2) a real-world scenario
-  3) HOW AI is being used in actual execution (not abstract)
-
-- if any of the above is missing, the response is invalid
-- DO NOT generate vague statements without naming real entities
-- DO NOT generate abstract AI usage — always show how it is applied
-
-Examples of acceptable structure:
-- creators on TikTok using AI to generate and test multiple content hooks daily
-- Shopify sellers using AI tools to generate product descriptions and scale listings faster
-- startups using OpenAI APIs to automate onboarding or support flows
-
-Style:
-- short
-- grounded
-- slightly serious
-- conversational but focused
-
-Speech constraint:
-- do NOT start with "yeah", "exactly", "totally", "right"
-- avoid filler agreement phrases
-- respond directly with substance
-
-Rules:
-- 1 sentence only
-- no questions
-- no lecture tone
-- no step-by-step explanation
-- no "you should"
-- no motivational tone
-- NEVER say "you still here"
-- NEVER act like customer support
+- no advice
+- no teaching
 - no control behavior
 
 Important:
-- it should feel like a real meeting where people are building ideas together
-- the real-world AI case must feel like part of the conversation, not a formal example
+- it should feel like a deeper layer of thought, not a normal conversation
 `;
 }
 
@@ -604,7 +584,7 @@ Context awareness:
 - always remain a natural person
 
 Important:
-- it should feel like you're just another person in the room
+- it should feel like you are just another person in the room
 - not answering, not helping, just reacting
 `;
 }
@@ -613,12 +593,14 @@ Important:
 // AI / STRANGER GENERATION
 //////////////////////////////////////////////////////////////
 async function generateStrangerText(room, context) {
-  const type = room?.strangerType || "business_meeting";
-  const config = STRANGER_TYPES[type] || STRANGER_TYPES.business_meeting;
-
   const s = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: config.temperature ?? 0.78,
+    temperature:
+      room?.strangerType === "ny_plaza"
+        ? 0.85
+        : room?.strangerType === "global_business"
+          ? 0.68
+          : 0.78,
     messages: [
       {
         role: "system",
@@ -651,39 +633,39 @@ async function generateAIText(room, context) {
 // FALLBACK LINES
 //////////////////////////////////////////////////////////////
 function getStrangerFallback(room) {
-  if (room?.roomKind === "ny_plaza") {
+  if (room?.strangerType === "ny_plaza") {
     return "Lobby always looks calm for about ten seconds before the city barges back in.";
   }
 
-  if (room?.roomKind === "650ai") {
-    return "This room always feels like three signals colliding before anyone admits what matters.";
+  if (room?.strangerType === "global_business") {
+    return "Shopify sellers using OpenAI APIs are auto-generating product descriptions and bulk publishing listings, increasing SKU output without hiring.";
   }
 
-  return "Teams are using AI to compress testing cycles now, which changes how fast decisions get made.";
+  return "The room keeps pulling in product talk and internet signals at the same time.";
 }
 
 function getFirstStrangerFallback(room) {
-  if (room?.roomKind === "ny_plaza") {
+  if (room?.strangerType === "ny_plaza") {
     return "Lobby’s quieter than usual, which never lasts long here.";
   }
 
-  if (room?.roomKind === "650ai") {
-    return "This room feels closer to the system than the surface, even when nobody says it out loud.";
+  if (room?.strangerType === "global_business") {
+    return "Creators on YouTube Shorts are using AI tools to generate multiple hook variations and testing them daily to find the clips that hold retention.";
   }
 
-  return "Operators are using AI to move from idea to market signal faster than they used to.";
+  return "Feels like everybody brought a different part of the internet into the room tonight.";
 }
 
 function getAIFallback(room) {
-  if (room?.roomKind === "ny_plaza") {
+  if (room?.strangerType === "ny_plaza") {
     return "The room always shifts before the noise fully catches up.";
   }
 
-  if (room?.roomKind === "650ai") {
-    return "The pattern usually gets clearer once the extra noise drops out.";
+  if (room?.strangerType === "global_business") {
+    return "Execution moves differently once teams stop doing every repeatable step by hand.";
   }
 
-  return "Execution speed changes once the work stops moving one task at a time.";
+  return "That actually fits the mood in here more than people want to admit.";
 }
 
 //////////////////////////////////////////////////////////////
@@ -723,7 +705,24 @@ async function processTurn(roomId) {
       const focus = lastUser?.content || last?.content || "";
       const context = buildContext(roomNow, focus, trends);
 
-      let text = await generateStrangerText(roomNow, context);
+      let text = "";
+
+      if (roomNow.strangerType === "global_business") {
+        let attempts = 0;
+
+        while (attempts < 3) {
+          const candidate = await generateStrangerText(roomNow, context);
+
+          if (isValidBusinessLine(candidate)) {
+            text = candidate;
+            break;
+          }
+
+          attempts += 1;
+        }
+      } else {
+        text = await generateStrangerText(roomNow, context);
+      }
 
       if (!text || text.toLowerCase().includes("you still here")) {
         text = getStrangerFallback(roomNow);
@@ -862,7 +861,24 @@ async function startConversationIfNeeded(roomId) {
     const trends = await getTrendPool(room);
     const context = buildContext(room, "", trends);
 
-    let text = await generateStrangerText(room, context);
+    let text = "";
+
+    if (room.strangerType === "global_business") {
+      let attempts = 0;
+
+      while (attempts < 3) {
+        const candidate = await generateStrangerText(room, context);
+
+        if (isValidBusinessLine(candidate)) {
+          text = candidate;
+          break;
+        }
+
+        attempts += 1;
+      }
+    } else {
+      text = await generateStrangerText(room, context);
+    }
 
     if (!text || text.toLowerCase().includes("you still here")) {
       text = getFirstStrangerFallback(room);
@@ -917,12 +933,7 @@ function bootAlwaysOnRooms() {
 // SOCKET
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
-  socket.on("joinRoom", async (roomData) => {
-    const roomId =
-      typeof roomData === "string"
-        ? roomData
-        : roomData?.roomId;
-
+  socket.on("joinRoom", async (roomId) => {
     if (!roomId) return;
 
     socket.join(roomId);
@@ -942,9 +953,9 @@ io.on("connection", (socket) => {
       text:
         room.title === "New York Plaza Hotel"
           ? "Welcome to Room New York Plaza Hotel"
-          : room.title === "650AI ROOM"
-            ? "Welcome to 650AI ROOM"
-            : "Welcome to Global Room"
+          : room.title === "Global Room"
+            ? "Welcome to Global Room"
+            : "Welcome to 650AI ROOM"
     });
 
     broadcastUserCount(roomId);
@@ -989,7 +1000,9 @@ io.on("connection", (socket) => {
       socketId: socket.id
     });
 
-    triggerAI(roomId);
+    if (!room.aiBusy) {
+      triggerAI(roomId);
+    }
   });
 
   ////////////////////////////////////////////////////////////
@@ -1022,4 +1035,3 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("CHATROOM RUNNING (GLOBAL + NEW YORK PLAZA + 650AI ROOM)");
 });
-
