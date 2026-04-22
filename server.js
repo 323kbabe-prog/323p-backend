@@ -27,7 +27,7 @@ const rooms = {};
 
 const GLOBAL_ROOM_ID = "global-room";
 const ALWAYS_ON_ROOM_ID = "ny-plaza";
-const DEEP_ROOM_ID = "650ai-room";
+
 
 //////////////////////////////////////////////////////////////
 // ID
@@ -49,16 +49,12 @@ function createRoom(roomId) {
     room.strangerType = "business_meeting";
     room.alwaysOn = false;
   } else if (roomId === ALWAYS_ON_ROOM_ID) {
-    room.title = "New York Plaza Hotel";
-    room.roomKind = "ny_plaza";
-    room.strangerType = "ny_plaza";
-    room.alwaysOn = true;
-  } else if (roomId === DEEP_ROOM_ID) {
-    room.title = "650AI ROOM";
-    room.roomKind = "650ai";
-    room.strangerType = "deep_system";
-    room.alwaysOn = false;
-  } else {
+  room.title = "New York Plaza Hotel";
+  room.roomKind = "ny_plaza";
+  room.strangerType = "ny_plaza";
+  room.alwaysOn = true;
+} else {
+
     room.title = "Global Room";
     room.roomKind = "global";
     room.strangerType = "business_meeting";
@@ -176,13 +172,7 @@ function maybeEmitNextRoomCard(socketId, roomId) {
     return;
   }
 
-  if (roomId === ALWAYS_ON_ROOM_ID) {
-    emitRoomCardToSocket(socketId, {
-      roomId: DEEP_ROOM_ID,
-      title: "650AI ROOM",
-      subtitle: "The deeper layer of the system."
-    });
-  }
+
 }
 
 //////////////////////////////////////////////////////////////
@@ -1004,4 +994,6 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("CHATROOM RUNNING (GLOBAL + NEW YORK PLAZA + 650AI ROOM)");
 });
+
+
 
