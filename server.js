@@ -913,7 +913,7 @@ io.on("connection", (socket) => {
       persona: "System",
      text:
   room.title === "New York Plaza Hotel"
-    ? "Welcome to New York Plaza Hotel"
+    ? "Welcome to New York Plaza Hotel Lobby"
     : "Welcome to 650AI Room — Silicon Valley Office"
 
     });
