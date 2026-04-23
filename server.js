@@ -914,7 +914,7 @@ io.on("connection", (socket) => {
      text:
   room.title === "New York Plaza Hotel"
     ? "Welcome to New York Plaza Hotel Lobby"
-    : "Welcome to 650AI Room — Silicon Valley Office"
+    : "Welcome to 650AI Room — Silicon Valley Office — AI, strangers, and users create new AI ideas in this chat room."
 
     });
 
