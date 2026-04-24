@@ -913,8 +913,8 @@ io.on("connection", (socket) => {
       persona: "System",
      text:
   room.title === "New York Plaza Hotel"
-    ? "Welcome to New York Plaza Hotel Lobby Room — Where locals and travelers share real NYC experiences."
-    : "Welcome to 650AI Room — Silicon Valley Office — AI, strangers, and users create new AI ideas in this chat room."
+    ? "Welcome to New York Plaza Hotel Lobby Room — Where locals and travelers share real NYC experiences. If you’re just sitting in the lobby, our real-world AI reaction and thinking system will start in a moment."
+    : "Welcome to 650AI Room — Silicon Valley Office — AI, strangers, and users create new AI ideas in this chat room. We know you’re tired. Our real-world AI reaction and thinking system will start in a moment."
 
     });
 
