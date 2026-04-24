@@ -923,6 +923,10 @@ io.on("connection", (socket) => {
     await startConversationIfNeeded(roomId);
   });
 
+   socket.on("leaveRoom", (roomId) => {
+    socket.leave(roomId);
+  });
+
   ////////////////////////////////////////////////////////////
   // USER MESSAGE
   ////////////////////////////////////////////////////////////
