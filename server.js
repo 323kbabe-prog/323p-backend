@@ -889,9 +889,7 @@ function bootAlwaysOnRooms() {
 // SOCKET
 //////////////////////////////////////////////////////////////
 io.on("connection", (socket) => {
-
   socket.on("joinRoom", async (roomData) => {
-
     const roomId =
       typeof roomData === "string"
         ? roomData
@@ -909,63 +907,21 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     ensureUserState(room, socket.id);
 
-    ////////////////////////////////////////////////////////
-    // ✅ SYSTEM MESSAGE (SPLIT INTO 2 PARTS)
-    ////////////////////////////////////////////////////////
+    socket.emit("message", {
+      id: makeId(),
+      role: "ai",
+      persona: "System",
+     text:
+  room.title === "New York Plaza Hotel"
+    ? "Welcome to New York Plaza Hotel Lobby Room — Where locals and travelers share real NYC experiences. If you’re just sitting in the lobby, our real-world AI reaction and thinking system will start in a moment."
+    : "Welcome to 650AI Room — Silicon Valley Office — AI, strangers, and users create new AI ideas in this chat room. We know you’re tired. Our real-world AI reaction and thinking system will start in a moment."
 
-    if (room.title === "New York Plaza Hotel") {
-
-      // PART 1
-      socket.emit("message", {
-        id: makeId(),
-        role: "ai",
-        persona: "System",
-        text: "Welcome to New York Plaza Hotel Lobby Room — Where locals and travelers share real NYC experiences."
-      });
-
-      // PART 2 (delayed)
-      setTimeout(() => {
-        socket.emit("message", {
-          id: makeId(),
-          role: "ai",
-          persona: "System",
-          text: "If you’re just sitting in the lobby, our real-world AI reaction and thinking system will start in a moment."
-        });
-      }, 600);
-
-    } else {
-
-      // PART 1
-      socket.emit("message", {
-        id: makeId(),
-        role: "ai",
-        persona: "System",
-        text: "Welcome to 650AI Room — Silicon Valley Office — AI, strangers, and users create new AI ideas in this chat room."
-      });
-
-      // PART 2 (delayed)
-      setTimeout(() => {
-        socket.emit("message", {
-          id: makeId(),
-          role: "ai",
-          persona: "System",
-          text: "We know you’re tired. Our real-world AI reaction and thinking system will start in a moment."
-        });
-      }, 600);
-
-    }
-
-    ////////////////////////////////////////////////////////
-    // KEEP ORIGINAL FLOW
-    ////////////////////////////////////////////////////////
+    });
 
     broadcastUserCount(roomId);
 
     await startConversationIfNeeded(roomId);
-
   });
-
-});
 
   ////////////////////////////////////////////////////////////
   // USER MESSAGE
@@ -1037,6 +993,3 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("CHATROOM RUNNING (650AI ROOM + NEW YORK PLAZA)");
 });
-
-
-
