@@ -31,6 +31,9 @@ const rooms = {};
 const GLOBAL_ROOM_ID = "global-room";
 const ALWAYS_ON_ROOM_ID = "ny-plaza";
 
+const createAnalytics = require("./analytics");
+const analytics = createAnalytics();
+
 //////////////////////////////////////////////////////////////
 // ANALYTICS API
 //////////////////////////////////////////////////////////////
