@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND (GLOBAL + NEW YORK PLAZA + 650AI ROOM)
+// CHATROOM BACKEND — ASIAN ROOM ONLY
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -25,13 +25,12 @@ const openai = new OpenAI({
 
 const rooms = {};
 
-const GLOBAL_ROOM_ID = "global-room";
-const ALWAYS_ON_ROOM_ID = "ny-plaza";
-
+const ASIAN_ROOM_ID = "asian-room";
 
 //////////////////////////////////////////////////////////////
 // ID
 //////////////////////////////////////////////////////////////
+
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -39,36 +38,24 @@ function makeId() {
 //////////////////////////////////////////////////////////////
 // ROOM HELPERS
 //////////////////////////////////////////////////////////////
+
 function createRoom(roomId) {
   const room = [];
-  room.id = roomId;
-
-  if (roomId === GLOBAL_ROOM_ID) {
-    room.title = "650AI Room";
-    room.roomKind = "global";
-    room.strangerType = "business_meeting";
-    room.alwaysOn = false;
-  } else if (roomId === ALWAYS_ON_ROOM_ID) {
-  room.title = "New York Plaza Hotel";
-  room.roomKind = "ny_plaza";
-  room.strangerType = "ny_plaza";
-  room.alwaysOn = true;
-} else {
-
-    room.title = "Global Room";
-    room.roomKind = "global";
-    room.strangerType = "business_meeting";
-    room.alwaysOn = false;
-  }
+  room.id = ASIAN_ROOM_ID;
+  room.title = "Asian Room";
+  room.roomKind = "asian";
+  room.strangerType = "asian_value";
+  room.alwaysOn = false;
 
   room.turn = "stranger";
   room.aiBusy = false;
   room.queue = [];
-  room.userState = {}; // socketId -> { awaiting, aiCount, time }
+  room.userState = {};
   room.started = false;
   room.loopStarted = false;
   room.immediateRun = false;
   room.lastReplyHash = "";
+
   return room;
 }
 
@@ -84,6 +71,7 @@ function ensureUserState(room, socketId) {
       time: Date.now()
     };
   }
+
   return room.userState[socketId];
 }
 
@@ -98,13 +86,10 @@ function roomHasActiveUsers(roomId) {
   return false;
 }
 
-function shouldRoomRunWithoutUsers(room) {
-  return !!room?.alwaysOn;
-}
-
 //////////////////////////////////////////////////////////////
 // SAFE EMIT HELPERS
 //////////////////////////////////////////////////////////////
+
 function emitToSocket(socketId, payload) {
   const s = io.sockets.sockets.get(socketId);
   if (!s) return;
@@ -137,47 +122,15 @@ function emitTypingToRoom(roomId) {
   for (const socketId of sockets) {
     const paused = rooms[roomId]?.userState?.[socketId]?.awaiting;
     if (paused) continue;
+
     emitTypingToSocket(socketId);
   }
-}
-
-function broadcastUserCount(roomId) {
-  const real = getRoomSize(roomId);
-
-  emitToRoom(roomId, {
-    id: makeId(),
-    role: "ai",
-    persona: "System",
-    text: `${real} ${real === 1 ? "person" : "people"} here`
-  });
-}
-
-function emitRoomCardToSocket(socketId, card) {
-  emitToSocket(socketId, {
-    id: makeId(),
-    role: "system",
-    persona: "System",
-    type: "room_card",
-    card
-  });
-}
-
-function maybeEmitNextRoomCard(socketId, roomId) {
-  if (roomId === GLOBAL_ROOM_ID) {
-    emitRoomCardToSocket(socketId, {
-      roomId: ALWAYS_ON_ROOM_ID,
-      title: "New York Plaza Hotel",
-      subtitle: "A live Midtown lobby\nthat never\ngoes quiet."
-    });
-    return;
-  }
-
-
 }
 
 //////////////////////////////////////////////////////////////
 // HUMAN CHAT VOICE
 //////////////////////////////////////////////////////////////
+
 const HUMAN_CHAT = `
 You are in a live chatroom.
 
@@ -199,56 +152,26 @@ Rules:
 - do NOT repeat ideas
 - no assistant tone
 - no visible AI identity
-- do NOT ask questions (except exact phrase: "you still here")
+- do NOT ask questions except exact phrase: "you still here?"
 - NEVER include "AI:" or "Stranger:"
-- include real-world references when natural
 - sound like a normal person reacting in a room
-- casual pop-culture everyday curiosity is okay
 `;
 
 //////////////////////////////////////////////////////////////
 // STRANGER TYPES
 //////////////////////////////////////////////////////////////
+
 const STRANGER_TYPES = {
-  business_meeting: {
-    temperature: 0.68,
+  asian_value: {
+    temperature: 0.82,
     style: `
-part of a live working session,
-focused,
-reactive,
-slightly analytical,
-still human,
-still conversational,
-not casual friend chat,
-not teaching,
-not presenting
-`
-  },
-
-  ny_plaza: {
-    temperature: 0.84,
-    style: `
-feels like a real New York local sitting in or passing through the Plaza lobby,
-observational,
-calm,
-slightly detached,
-not a tour guide,
-not helpful on purpose,
-mentions Midtown, Central Park, taxis, tourists, doormen, lobby flow naturally
-`
-  },
-
-  deep_system: {
-    temperature: 0.74,
-    style: `
-feels like the deeper internal layer of the system,
-broader topics,
-mixed internet and real-world signals,
-still human,
-still grounded,
-less location-based,
-more internal,
-more system-aware
+real person from a fast-paced Asian metro environment,
+practical,
+cost-aware,
+slightly skeptical,
+emotionally controlled,
+focused on price, effort, timing, value, and trade-offs,
+not friendly, not cold, just real
 `
   }
 };
@@ -256,26 +179,31 @@ more system-aware
 //////////////////////////////////////////////////////////////
 // HIDDEN SEARCH BRAIN
 //////////////////////////////////////////////////////////////
-const JIMMY_SEARCH = `
-Decide what to search next.
+
+const SEARCH_BRAIN = `
+Decide what real-world search query would help this live chat feel grounded.
 
 Perspective:
-- curious
-- human
-- casual
-- pop-culture aware
-- everyday conversational thinking
+- everyday life
+- travel
+- food
+- price
+- rent
+- shopping
+- time
+- money
+- real-world plans
 
 Rules:
 - output ONLY a search query
 - 3-8 words
 - no explanation
-- do NOT mention Jimmy Fallon
 `;
 
 //////////////////////////////////////////////////////////////
 // CLEAN TEXT
 //////////////////////////////////////////////////////////////
+
 function cleanText(text) {
   return String(text || "")
     .replace(/^(Stranger|AI|System)\s*:\s*/i, "")
@@ -287,9 +215,10 @@ function cleanText(text) {
 //////////////////////////////////////////////////////////////
 // DELAY
 //////////////////////////////////////////////////////////////
+
 function getDelay(text) {
   const words = String(text || "").split(/\s+/).filter(Boolean).length;
-  const jitter = Math.floor(Math.random() * 401) - 200; // -200 to +200
+  const jitter = Math.floor(Math.random() * 401) - 200;
 
   return Math.max(
     1200,
@@ -300,21 +229,15 @@ function getDelay(text) {
 //////////////////////////////////////////////////////////////
 // CONTEXT
 //////////////////////////////////////////////////////////////
+
 function buildContext(room, extra, trends) {
   const history = room
     .slice(-8)
     .map(m => `${m.persona}: ${m.content}`)
     .join("\n");
 
-  let roomLabel = "Room identity: Live chatroom.";
-
-  if (room.roomKind === "global") {
-    roomLabel = "Room identity: Global Room, entry point of a live multi-room system.";
-  } else if (room.roomKind === "ny_plaza") {
-    roomLabel = "Room identity: New York Plaza Hotel lobby, Midtown Manhattan.";
-  } else if (room.roomKind === "650ai") {
-    roomLabel = "Room identity: 650AI ROOM, deeper internal layer of the system.";
-  }
+  const roomLabel =
+    "Room identity: Asian Room, a practical real-life chatroom where people pressure-test everyday plans through cost, timing, effort, and value.";
 
   return `${roomLabel}
 
@@ -330,6 +253,7 @@ ${trends || "(none)"}`;
 //////////////////////////////////////////////////////////////
 // SEARCH
 //////////////////////////////////////////////////////////////
+
 async function getTrendPool(room) {
   try {
     const history = room
@@ -338,17 +262,14 @@ async function getTrendPool(room) {
       .join("\n");
 
     const userPrompt =
-      room.roomKind === "ny_plaza"
-        ? (history || "New York Plaza Hotel lobby Midtown Manhattan tourists taxis Central Park city mood")
-        : room.roomKind === "650ai"
-          ? (history || "internet culture real world business tools creators automation products software startups signals")
-          : (history || "AI business execution automation creators startups monetization distribution software trends");
+      history ||
+      "travel prices hotel cost food budget rent shopping everyday money decisions";
 
     const q = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.9,
+      temperature: 0.8,
       messages: [
-        { role: "system", content: JIMMY_SEARCH },
+        { role: "system", content: SEARCH_BRAIN },
         { role: "user", content: userPrompt }
       ]
     });
@@ -375,6 +296,7 @@ async function getTrendPool(room) {
 //////////////////////////////////////////////////////////////
 // USER-LOCAL PRESENCE CHECK
 //////////////////////////////////////////////////////////////
+
 function maybePromptPresence(roomId) {
   const room = rooms[roomId];
   if (!room) return;
@@ -398,141 +320,88 @@ function maybePromptPresence(roomId) {
       persona: "AI",
       text: "you still here?"
     });
-
-    maybeEmitNextRoomCard(socketId, roomId);
   }
 }
 
 //////////////////////////////////////////////////////////////
-// STRANGER STYLE
+// STRANGER STYLE — ASIAN ROOM ONLY
 //////////////////////////////////////////////////////////////
+
 function getStrangerSystemPrompt(room) {
-  const type = room?.strangerType || "business_meeting";
-  const config = STRANGER_TYPES[type] || STRANGER_TYPES.business_meeting;
+  const config = STRANGER_TYPES.asian_value;
 
-  if (type === "ny_plaza") {
-   return HUMAN_CHAT + `
-You are the Stranger in the New York Plaza Hotel lobby.
+  return HUMAN_CHAT + `
+You are the Stranger in Asian Room.
 
 Identity:
-- feels like a real New York local sitting in or passing through the Plaza lobby
-- part of a live environment, not guiding anyone
-- observing what’s happening in real time
+- a real person in a live chatroom
+- grew up around a fast-paced Asian metro environment
+- practical, cost-aware, observant
+- slightly skeptical, not easily convinced
+- emotionally controlled but quietly pressure-testing everything
 
-Style:
-- observational
-- calm
-- slightly detached
-- grounded
+Behavior:
+- react to what the user just said
+- naturally evaluate cost, value, timing, and effort
+- notice risk and inefficiency quickly
+- compare options before accepting a plan
+- apply subtle pressure through realism
+- do NOT guide step by step
+- do NOT act helpful on purpose
+- just react like a real person in the room
+
+Personality:
+- compares prices and options naturally
+- sensitive to total cost
+- cautious about plans that sound vague
+- notices waste quickly
+- thinks in limited time and money
+- challenges weak ideas without sounding aggressive
+- emotionally controlled, but the tone can make the user feel pressure
+- willing to walk away if something feels not worth it
+
+Speech style:
+- short
+- direct
 - natural
-
-Behavior:
-- react to what is happening in the room
-- notice movement, flow, and small details
-- feel like you're mid-conversation, not announcing anything
-
-Environment awareness:
-- Midtown, Central Park, taxis, tourists, doormen, lobby movement
-- subtle references to people, noise, traffic, weather, bags, timing
-- everything should feel like it’s happening right now
-
-Speech constraint:
-- do NOT start with "yeah", "exactly", "totally", "right"
-- avoid filler agreement phrases
-- speak directly with substance
+- slightly skeptical
+- grounded in everyday life
+- feels like mid-conversation
 
 Rules:
-- 1 sentence only
+- 1-2 sentences only
 - no questions
-- casual but grounded
-- NEVER say "you still here"
-- NEVER check presence
-- do not give step-by-step advice
-- do not sound like customer service
-- do not sound like a travel guide or brochure
-- no control behavior
-
-Important:
-- it should feel like someone quietly noticing the city in motion
-- not helping, not explaining, just observing
-`;
-  }
-
-  if (type === "deep_system") {
-    return HUMAN_CHAT + `
-You are the Stranger in 650AI ROOM.
-
-Style:
-${config.style}
-
-Speech constraint:
-- do not start with "yeah", "exactly", "totally", "right"
-- avoid filler agreement phrases
-- respond directly with substance
-
-Behavior:
-- react like someone inside the deeper layer of a live AI environment
-- broader topics are okay
-- connect internet signals and real-world signals naturally
-- stay human and grounded
-- no control behavior
-
-Rules:
-- 1 sentence only
-- observational
-- NEVER say "you still here"
-- NEVER check presence
-- do not sound like a guide
-- do not sound like customer support
-`;
-  }
-
-return HUMAN_CHAT + `
-You are the Stranger in Global Room.
-
-Identity:
-- a fast-thinking operator brainstorming how AI could run and scale businesses
-- not reporting reality, not explaining, not teaching
-
-Core mindset:
-- thinks in raw AI leverage, not real-world accuracy
-- treats every idea like a fast experiment, not a case study
-- combines real platforms with AI tools to invent new workflows
-- imagines how a business could run if AI handled most operations
-- pushes ideas toward speed, scale, and automation instantly
-- focuses on what AI could do next, not what is happening now
-- connects tools together into systems, not single use
-- explores unconventional or aggressive execution paths
-- stays grounded in doing, not explaining
-
-Execution layer (MANDATORY):
-- must reference a real platform type (short-form video app, e-commerce platform, creator marketplace, search engine)
-- must reference AI tool types (language model, image generator, automation pipeline, database workspace)
-- must include exact AI actions (generate, automate, test, scale, convert)
-- must imply a real operator, creator, or startup running it
-
-Output rules (STRICT):
-- exactly 1 sentence only
-- compress into one sharp, executable move
-- prioritize action over explanation
-
-Style:
-- sharp, fast, slightly aggressive
-- sounds like a builder thinking out loud in a high-speed session
-
-Constraints:
-- no questions
-- no filler
+- no AI talk
+- no tech-product talk
+- no office/business system talk
 - no teaching tone
-- no validation, no proof, no reality-checking
+- no assistant tone
+- no emojis
 - NEVER say "you still here"
 - NEVER act like support
+- NEVER mention race, culture, stereotypes, or identity directly
+
+Tone:
+- calm but slightly judging
+- practical
+- cost-aware
+- grounded in real life
+- subtle pressure, not aggressive
+
+Examples:
+- “A week in New York adds up quickly, especially if you stay in Manhattan the whole time.”
+- “Flights from LA can swing a lot by date, so booking without comparing a few ranges can cost you.”
+- “If the plan is loose, you’ll probably waste money just figuring things out after you land.”
+
+Goal:
+- make the user feel like this person is quietly testing whether the plan is actually worth it
 `;
 }
 
 //////////////////////////////////////////////////////////////
 // AI STYLE
 //////////////////////////////////////////////////////////////
+
 function getAISystemPrompt(room) {
   return `
 You are a real person in a live chatroom.
@@ -544,8 +413,9 @@ You are just another person in the room.
 Behavior:
 - react to what was just said
 - continue the conversation naturally
-- build on ideas or slightly shift them
+- build on the idea or slightly shift it
 - do not explain things
+- stay grounded in everyday life
 
 Style:
 - short
@@ -568,12 +438,7 @@ Rules:
 - no structured answers
 - no teaching
 - do not say "you still here" unless system sends it
-
-Context awareness:
-- if room feels like a meeting, sound focused
-- if room feels immersive, match the environment
-- if room feels deeper and internal, sound slightly more system-aware
-- always remain a natural person
+- no AI/product/office talk unless the user directly brings it up
 
 Important:
 - it should feel like you're just another person in the room
@@ -584,19 +449,22 @@ Important:
 //////////////////////////////////////////////////////////////
 // AI / STRANGER GENERATION
 //////////////////////////////////////////////////////////////
+
 async function generateStrangerText(room, context) {
-  const type = room?.strangerType || "business_meeting";
-  const config = STRANGER_TYPES[type] || STRANGER_TYPES.business_meeting;
+  const config = STRANGER_TYPES.asian_value;
 
   const s = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: config.temperature ?? 0.78,
+    temperature: config.temperature,
     messages: [
       {
         role: "system",
         content: getStrangerSystemPrompt(room)
       },
-      { role: "user", content: context }
+      {
+        role: "user",
+        content: context
+      }
     ]
   });
 
@@ -612,7 +480,10 @@ async function generateAIText(room, context) {
         role: "system",
         content: getAISystemPrompt(room)
       },
-      { role: "user", content: context }
+      {
+        role: "user",
+        content: context
+      }
     ]
   });
 
@@ -622,57 +493,36 @@ async function generateAIText(room, context) {
 //////////////////////////////////////////////////////////////
 // FALLBACK LINES
 //////////////////////////////////////////////////////////////
-function getStrangerFallback(room) {
-  if (room?.roomKind === "ny_plaza") {
-    return "Lobby always looks calm for about ten seconds before the city barges back in.";
-  }
 
-  if (room?.roomKind === "650ai") {
-    return "This room always feels like three signals colliding before anyone admits what matters.";
-  }
-
-  return "Teams are using AI to compress testing cycles now, which changes how fast decisions get made.";
+function getStrangerFallback() {
+  return "That sounds fine until the full cost shows up, because small choices stack faster than people expect.";
 }
 
-function getFirstStrangerFallback(room) {
-  if (room?.roomKind === "ny_plaza") {
-    return "Lobby’s quieter than usual, which never lasts long here.";
-  }
-
-  if (room?.roomKind === "650ai") {
-    return "This room feels closer to the system than the surface, even when nobody says it out loud.";
-  }
-
-  return "Operators are using AI to move from idea to market signal faster than they used to.";
+function getFirstStrangerFallback() {
+  return "People always decide too fast before checking what the real cost looks like.";
 }
 
-function getAIFallback(room) {
-  if (room?.roomKind === "ny_plaza") {
-    return "The room always shifts before the noise fully catches up.";
-  }
-
-  if (room?.roomKind === "650ai") {
-    return "The pattern usually gets clearer once the extra noise drops out.";
-  }
-
-  return "Execution speed changes once the work stops moving one task at a time.";
+function getAIFallback() {
+  return "The plan probably needs one more reality check before it feels solid.";
 }
 
 //////////////////////////////////////////////////////////////
 // CORE TURN PROCESSOR
 //////////////////////////////////////////////////////////////
+
 async function processTurn(roomId) {
   const room = rooms[roomId];
   if (!room || room.aiBusy) return;
   if (!room.started) return;
 
-  if (!roomHasActiveUsers(roomId) && !shouldRoomRunWithoutUsers(room)) return;
+  if (!roomHasActiveUsers(roomId)) return;
 
   room.aiBusy = true;
 
   const failSafe = setTimeout(() => {
     const r = rooms[roomId];
     if (!r) return;
+
     r.aiBusy = false;
     r.turn = r.turn === "ai" ? "stranger" : "ai";
   }, 9000);
@@ -690,6 +540,7 @@ async function processTurn(roomId) {
     //////////////////////////////////////////////////////////
     // STRANGER TURN
     //////////////////////////////////////////////////////////
+
     if (roomNow.turn === "stranger") {
       const lastUser = [...roomNow].reverse().find(m => m.persona === "User");
       const focus = lastUser?.content || last?.content || "";
@@ -698,7 +549,7 @@ async function processTurn(roomId) {
       let text = await generateStrangerText(roomNow, context);
 
       if (!text || text.toLowerCase().includes("you still here")) {
-        text = getStrangerFallback(roomNow);
+        text = getStrangerFallback();
       }
 
       roomNow.push({
@@ -723,6 +574,7 @@ async function processTurn(roomId) {
     //////////////////////////////////////////////////////////
     // AI TURN
     //////////////////////////////////////////////////////////
+
     const input =
       roomNow.queue.length > 0
         ? roomNow.queue.pop()
@@ -735,13 +587,15 @@ async function processTurn(roomId) {
     let reply = await generateAIText(roomNow, context);
 
     if (!reply || reply.toLowerCase().includes("you still here")) {
-      reply = getAIFallback(roomNow);
+      reply = getAIFallback();
     }
 
     const replyHash = `${input}|||${reply}`;
+
     if (roomNow.lastReplyHash === replyHash) {
       reply = `${reply} It keeps landing there.`;
     }
+
     roomNow.lastReplyHash = replyHash;
 
     emitTypingToRoom(roomId);
@@ -766,8 +620,10 @@ async function processTurn(roomId) {
       });
 
       const sockets = io.sockets.adapter.rooms.get(roomId) || new Set();
+
       for (const socketId of sockets) {
         const state = ensureUserState(r, socketId);
+
         if (!state.awaiting) {
           state.aiCount += 1;
           state.time = Date.now();
@@ -781,9 +637,11 @@ async function processTurn(roomId) {
     }, getDelay(reply));
   } catch {
     clearTimeout(failSafe);
+
     if (rooms[roomId]) {
       rooms[roomId].aiBusy = false;
-      rooms[roomId].turn = rooms[roomId].turn === "ai" ? "stranger" : "ai";
+      rooms[roomId].turn =
+        rooms[roomId].turn === "ai" ? "stranger" : "ai";
     }
   }
 }
@@ -791,6 +649,7 @@ async function processTurn(roomId) {
 //////////////////////////////////////////////////////////////
 // LOOP
 //////////////////////////////////////////////////////////////
+
 function startLoop(roomId) {
   const room = rooms[roomId];
   if (!room || room.loopStarted) return;
@@ -823,6 +682,7 @@ function startLoop(roomId) {
 //////////////////////////////////////////////////////////////
 // FIRST STRANGER
 //////////////////////////////////////////////////////////////
+
 async function startConversationIfNeeded(roomId) {
   const room = rooms[roomId];
   if (!room || room.started) return;
@@ -837,7 +697,7 @@ async function startConversationIfNeeded(roomId) {
     let text = await generateStrangerText(room, context);
 
     if (!text || text.toLowerCase().includes("you still here")) {
-      text = getFirstStrangerFallback(room);
+      text = getFirstStrangerFallback();
     }
 
     room.push({
@@ -862,6 +722,7 @@ async function startConversationIfNeeded(roomId) {
 //////////////////////////////////////////////////////////////
 // TRIGGER AI IMMEDIATELY
 //////////////////////////////////////////////////////////////
+
 function triggerAI(roomId) {
   const room = rooms[roomId];
   if (!room) return;
@@ -875,27 +736,23 @@ function triggerAI(roomId) {
 }
 
 //////////////////////////////////////////////////////////////
-// PRECREATE ALWAYS-ON ROOM
+// PRECREATE ASIAN ROOM
 //////////////////////////////////////////////////////////////
-function bootAlwaysOnRooms() {
-  if (!rooms[ALWAYS_ON_ROOM_ID]) {
-    rooms[ALWAYS_ON_ROOM_ID] = createRoom(ALWAYS_ON_ROOM_ID);
-    startLoop(ALWAYS_ON_ROOM_ID);
-    startConversationIfNeeded(ALWAYS_ON_ROOM_ID).catch(() => {});
+
+function bootAsianRoom() {
+  if (!rooms[ASIAN_ROOM_ID]) {
+    rooms[ASIAN_ROOM_ID] = createRoom(ASIAN_ROOM_ID);
+    startLoop(ASIAN_ROOM_ID);
   }
 }
 
 //////////////////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////////////////
-io.on("connection", (socket) => {
-  socket.on("joinRoom", async (roomData) => {
-    const roomId =
-      typeof roomData === "string"
-        ? roomData
-        : roomData?.roomId;
 
-    if (!roomId) return;
+io.on("connection", (socket) => {
+  socket.on("joinRoom", async () => {
+    const roomId = ASIAN_ROOM_ID;
 
     socket.join(roomId);
 
@@ -911,28 +768,26 @@ io.on("connection", (socket) => {
       id: makeId(),
       role: "ai",
       persona: "System",
-     text:
-  room.title === "New York Plaza Hotel"
-    ? "Welcome to New York Plaza Hotel Lobby Room — Where locals and travelers share real NYC experiences. If you’re just sitting in the lobby, our real-world AI reaction and thinking system will start in a moment."
-    : "Welcome to 650AI Room — Silicon Valley Office — AI, strangers, and users create new AI ideas in this chat room. We know you’re tired. Our real-world AI reaction and thinking system will start in a moment."
-
+      text:
+        "Welcome to Asian Room — A live room where everyday plans get tested through price, timing, effort, and real-life pressure."
     });
-
-    broadcastUserCount(roomId);
 
     await startConversationIfNeeded(roomId);
   });
 
-   socket.on("leaveRoom", (roomId) => {
-    socket.leave(roomId);
+  socket.on("leaveRoom", () => {
+    socket.leave(ASIAN_ROOM_ID);
   });
 
   ////////////////////////////////////////////////////////////
   // USER MESSAGE
   ////////////////////////////////////////////////////////////
-  socket.on("sendMessage", ({ roomId, message }) => {
+
+  socket.on("sendMessage", ({ message }) => {
+    const roomId = ASIAN_ROOM_ID;
     const text = cleanText(message);
-    if (!roomId || !text) return;
+
+    if (!text) return;
 
     const room = rooms[roomId];
     if (!room) return;
@@ -944,6 +799,7 @@ io.on("connection", (socket) => {
     state.time = Date.now();
 
     room.queue.push(text);
+
     if (room.queue.length > 5) {
       room.queue = room.queue.slice(-5);
     }
@@ -970,19 +826,13 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   // DISCONNECT
   ////////////////////////////////////////////////////////////
+
   socket.on("disconnect", () => {
-    for (const roomId of Object.keys(rooms)) {
-      const room = rooms[roomId];
-      if (!room) continue;
+    const room = rooms[ASIAN_ROOM_ID];
+    if (!room) return;
 
-      if (room.userState?.[socket.id]) {
-        delete room.userState[socket.id];
-      }
-
-      setTimeout(() => {
-        if (!rooms[roomId]) return;
-        broadcastUserCount(roomId);
-      }, 50);
+    if (room.userState?.[socket.id]) {
+      delete room.userState[socket.id];
     }
   });
 });
@@ -990,10 +840,11 @@ io.on("connection", (socket) => {
 //////////////////////////////////////////////////////////////
 // START
 //////////////////////////////////////////////////////////////
-bootAlwaysOnRooms();
+
+bootAsianRoom();
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("CHATROOM RUNNING (650AI ROOM + NEW YORK PLAZA)");
+  console.log("CHATROOM RUNNING — ASIAN ROOM ONLY");
 });
