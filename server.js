@@ -764,6 +764,9 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     ensureUserState(room, socket.id);
 
+    //////////////////////////////////////////////////////////
+    // SYSTEM MESSAGE 1 — IDENTITY
+    //////////////////////////////////////////////////////////
     socket.emit("message", {
       id: makeId(),
       role: "ai",
@@ -772,12 +775,24 @@ io.on("connection", (socket) => {
         "Welcome to AI ASIAN CHAT — Our AI model is practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic."
     });
 
+    //////////////////////////////////////////////////////////
+    // SYSTEM MESSAGE 2 — WHAT USERS CAN DO
+    //////////////////////////////////////////////////////////
+    socket.emit("message", {
+      id: makeId(),
+      role: "ai",
+      persona: "System",
+      text:
+        "People ask about AI ideas, travel plans, email replies, and everyday decisions."
+    });
+
     await startConversationIfNeeded(roomId);
   });
 
   socket.on("leaveRoom", () => {
     socket.leave(ASIAN_ROOM_ID);
   });
+});
 
   ////////////////////////////////////////////////////////////
   // USER MESSAGE
