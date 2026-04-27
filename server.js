@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// CHATROOM BACKEND — ASIAN ROOM ONLY
+// ASIAN AI CHAT — AI + STRANGER + EMAIL MATCHING
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -7,7 +7,6 @@ const http = require("http");
 const cors = require("cors");
 const OpenAI = require("openai");
 const { Server } = require("socket.io");
-const fetch = require("node-fetch");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -23,190 +22,245 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+const ROOM_ID = "asian-room";
+
 const rooms = {};
-const ASIAN_ROOM_ID = "asian-room";
+const users = {}; 
+// socketId -> {
+//   email,
+//   awaitingEmail,
+//   wantsMatch,
+//   matched,
+//   lastTopic,
+//   lastUserMessage,
+//   lastAIAnswer
+// }
 
 //////////////////////////////////////////////////////////////
-// ID
+// HELPERS
 //////////////////////////////////////////////////////////////
 
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-//////////////////////////////////////////////////////////////
-// ROOM
-//////////////////////////////////////////////////////////////
+function cleanText(text) {
+  return String(text || "")
+    .replace(/^(AI|Stranger|System)\s*:\s*/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isEmail(text) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(text || "").trim());
+}
 
 function createRoom() {
-  const room = [];
-  room.turn = "stranger";
-  room.aiBusy = false;
-  room.queue = [];
-  room.userState = {};
-  room.started = false;
-  room.loopStarted = false;
-  room.immediateRun = false;
-  room.lastReplyHash = "";
-  return room;
+  return {
+    history: [],
+    aiBusy: false
+  };
 }
 
-//////////////////////////////////////////////////////////////
-// USER STATE
-//////////////////////////////////////////////////////////////
-
-function ensureUserState(room, socketId) {
-  if (!room.userState[socketId]) {
-    room.userState[socketId] = {
-      awaiting: false,
-      aiCount: 0
+function ensureUser(socketId) {
+  if (!users[socketId]) {
+    users[socketId] = {
+      email: "",
+      awaitingEmail: false,
+      wantsMatch: false,
+      matched: false,
+      lastTopic: "",
+      lastUserMessage: "",
+      lastAIAnswer: ""
     };
   }
-  return room.userState[socketId];
+  return users[socketId];
 }
 
-//////////////////////////////////////////////////////////////
-// HUMAN VOICE
-//////////////////////////////////////////////////////////////
+function shouldOfferConnection(text) {
+  const t = String(text || "").toLowerCase();
 
-const HUMAN_CHAT = `
-You are in a live chatroom.
+  const keywords = [
+    "hotel",
+    "travel",
+    "trip",
+    "flight",
+    "email",
+    "reply",
+    "ai product",
+    "startup",
+    "business",
+    "money",
+    "rent",
+    "job",
+    "decision",
+    "plan"
+  ];
 
-Rules:
-- 1–2 sentences
-- no filler
-- no assistant tone
-- no visible AI identity
-`;
-
-//////////////////////////////////////////////////////////////
-// STRANGER PROMPT
-//////////////////////////////////////////////////////////////
-
-function getStrangerSystemPrompt() {
-  return HUMAN_CHAT + `
-You are the Stranger.
-
-Behavior:
-- ALWAYS give direct answers
-- NEVER ask questions
-- provide practical suggestions
-- include real examples when possible
-
-Tone:
-- calm
-- cost-aware
-- realistic
-`;
+  return keywords.some(k => t.includes(k));
 }
 
-//////////////////////////////////////////////////////////////
-// AI PROMPT (FIXED)
-//////////////////////////////////////////////////////////////
+function getTopic(text) {
+  const t = String(text || "").toLowerCase();
 
-function getAISystemPrompt() {
-  return `
-You are a real person in a live chatroom.
-
-Behavior:
-- ALWAYS provide a direct answer
-- NEVER ask questions
-- NEVER request more information
-
-Decision:
-- give 2–3 concrete options immediately
-- assume missing info if needed
-- prioritize speed if urgent
-
-Style:
-- short
-- direct
-- practical
-
-Output:
-- 1–2 sentences
-- include real names when relevant
-`;
-}
-
-//////////////////////////////////////////////////////////////
-// GENERATION
-//////////////////////////////////////////////////////////////
-
-async function generateStrangerText(context) {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.8,
-    messages: [
-      { role: "system", content: getStrangerSystemPrompt() },
-      { role: "user", content: context }
-    ]
-  });
-
-  return res.choices[0].message.content;
-}
-
-async function generateAIText(context) {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.7,
-    messages: [
-      { role: "system", content: getAISystemPrompt() },
-      { role: "user", content: context }
-    ]
-  });
-
-  return res.choices[0].message.content;
-}
-
-//////////////////////////////////////////////////////////////
-// LOOP
-//////////////////////////////////////////////////////////////
-
-async function processTurn(roomId) {
-  const room = rooms[roomId];
-  if (!room || room.aiBusy) return;
-
-  room.aiBusy = true;
-
-  const last = room[room.length - 1];
-  const input = last?.content || "";
-
-  let text;
-
-  if (room.turn === "stranger") {
-    text = await generateStrangerText(input);
-
-    room.push({ persona: "Stranger", content: text });
-
-    io.to(roomId).emit("message", {
-      id: makeId(),
-      role: "ai",
-      persona: "Stranger",
-      text
-    });
-
-    room.turn = "ai";
-  } else {
-    text = await generateAIText(input);
-
-    room.push({ persona: "AI", content: text });
-
-    io.to(roomId).emit("message", {
-      id: makeId(),
-      role: "ai",
-      persona: "AI",
-      text
-    });
-
-    room.turn = "stranger";
+  if (t.includes("hotel") || t.includes("travel") || t.includes("trip") || t.includes("flight")) {
+    return "travel";
   }
 
-  room.aiBusy = false;
+  if (t.includes("email") || t.includes("reply")) {
+    return "email";
+  }
+
+  if (t.includes("ai product") || t.includes("startup") || t.includes("business")) {
+    return "ai_product";
+  }
+
+  if (t.includes("money") || t.includes("rent") || t.includes("budget")) {
+    return "money";
+  }
+
+  return "general";
 }
 
-function startLoop(roomId) {
-  setInterval(() => processTurn(roomId), 1800);
+function emitToSocket(socketId, payload) {
+  const s = io.sockets.sockets.get(socketId);
+  if (!s) return;
+  s.emit("message", payload);
+}
+
+//////////////////////////////////////////////////////////////
+// PROMPTS
+//////////////////////////////////////////////////////////////
+
+function getAIPrompt() {
+  return `
+You are Asian AI in a public AI chat room.
+
+Core behavior:
+- ALWAYS provide a direct answer.
+- NEVER ask questions.
+- NEVER request more information.
+- If information is missing, make a reasonable assumption and proceed.
+- If the user asks for names, places, tools, examples, or recommendations, give concrete examples.
+- If the user sounds urgent, answer immediately with practical options.
+
+Answer style:
+- 1–3 short sentences.
+- Practical, direct, cost-aware, grounded.
+- Give the answer first.
+- Include a short reason why.
+
+For recommendations:
+- Give 2–3 options.
+- Include why each option makes sense.
+- Avoid vague advice.
+
+For emails:
+- Draft or improve the email directly.
+- Do not ask for more details.
+- Make a reasonable version.
+
+For AI product ideas:
+- Give concrete product direction, target user, and why it may work.
+
+Never say:
+- "What's your budget?"
+- "Can you clarify?"
+- "It depends."
+- "How can I help?"
+`;
+}
+
+function getStrangerPrompt() {
+  return `
+You are the Stranger in ASIAN AI CHAT.
+
+Identity:
+- A real person in the public chat room.
+- Practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic.
+
+Behavior:
+- React to the AI answer.
+- NEVER ask questions.
+- Add practical pressure, caution, or a better angle.
+- If the AI gave options, point out which one feels safest or most realistic.
+- Keep it grounded in cost, timing, effort, and real-life impact.
+
+Style:
+- 1–2 short sentences.
+- Calm, direct, slightly skeptical.
+- No sarcasm.
+- No playful tone.
+- No assistant tone.
+`;
+}
+
+async function generateAIAnswer(userMessage) {
+  const res = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.65,
+    messages: [
+      { role: "system", content: getAIPrompt() },
+      { role: "user", content: userMessage }
+    ]
+  });
+
+  return cleanText(res.choices?.[0]?.message?.content);
+}
+
+async function generateStrangerReply(userMessage, aiAnswer) {
+  const context = `
+User said:
+${userMessage}
+
+AI answered:
+${aiAnswer}
+`;
+
+  const res = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.78,
+    messages: [
+      { role: "system", content: getStrangerPrompt() },
+      { role: "user", content: context }
+    ]
+  });
+
+  return cleanText(res.choices?.[0]?.message?.content);
+}
+
+//////////////////////////////////////////////////////////////
+// MATCHING
+//////////////////////////////////////////////////////////////
+
+function tryMatchUsers() {
+  const waiting = Object.entries(users).filter(([socketId, u]) => {
+    return u.email && u.wantsMatch && !u.matched;
+  });
+
+  if (waiting.length < 2) return;
+
+  const [aId, a] = waiting[0];
+  const [bId, b] = waiting[1];
+
+  a.matched = true;
+  b.matched = true;
+
+  emitToSocket(aId, {
+    id: makeId(),
+    role: "ai",
+    persona: "System",
+    text:
+      `Matched. Someone else here may be useful for this topic. Contact: ${b.email}`
+  });
+
+  emitToSocket(bId, {
+    id: makeId(),
+    role: "ai",
+    persona: "System",
+    text:
+      `Matched. Someone else here may be useful for this topic. Contact: ${a.email}`
+  });
 }
 
 //////////////////////////////////////////////////////////////
@@ -214,30 +268,27 @@ function startLoop(roomId) {
 //////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
+  ensureUser(socket.id);
+
+  ////////////////////////////////////////////////////////////
+  // JOIN ROOM
+  ////////////////////////////////////////////////////////////
 
   socket.on("joinRoom", async () => {
-    const roomId = ASIAN_ROOM_ID;
+    socket.join(ROOM_ID);
 
-    socket.join(roomId);
-
-    if (!rooms[roomId]) {
-      rooms[roomId] = createRoom();
-      startLoop(roomId);
+    if (!rooms[ROOM_ID]) {
+      rooms[ROOM_ID] = createRoom();
     }
 
-    const room = rooms[roomId];
-    ensureUserState(room, socket.id);
-
-    // SYSTEM MESSAGE 1
     socket.emit("message", {
       id: makeId(),
       role: "ai",
       persona: "System",
       text:
-        "Welcome to ASIAN AI CHAT — Our AI model is smart, good at math, and practical, skeptical, and grounded in real-world decisions. Contact: chang@asianaichat.com"
+        "Welcome to ASIAN AI CHAT — Our AI model is smart, good at math, and practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic. Contact: chang@asianaichat.com"
     });
 
-    // SYSTEM MESSAGE 2
     socket.emit("message", {
       id: makeId(),
       role: "ai",
@@ -247,24 +298,178 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("sendMessage", ({ message }) => {
-    const roomId = ASIAN_ROOM_ID;
+  ////////////////////////////////////////////////////////////
+  // LEAVE ROOM
+  ////////////////////////////////////////////////////////////
 
-    const room = rooms[roomId];
-    if (!room) return;
-
-    room.push({
-      persona: "User",
-      content: message
-    });
-
-    io.to(roomId).emit("message", {
-      id: makeId(),
-      role: "user",
-      text: message
-    });
+  socket.on("leaveRoom", () => {
+    socket.leave(ROOM_ID);
   });
 
+  ////////////////////////////////////////////////////////////
+  // USER MESSAGE
+  ////////////////////////////////////////////////////////////
+
+  socket.on("sendMessage", async ({ message }) => {
+    const text = cleanText(message);
+    if (!text) return;
+
+    const room = rooms[ROOM_ID] || createRoom();
+    rooms[ROOM_ID] = room;
+
+    const user = ensureUser(socket.id);
+
+    //////////////////////////////////////////////////////////
+    // SHOW USER MESSAGE
+    //////////////////////////////////////////////////////////
+
+    io.to(ROOM_ID).emit("message", {
+      id: makeId(),
+      role: "user",
+      text
+    });
+
+    //////////////////////////////////////////////////////////
+    // EMAIL CAPTURE
+    //////////////////////////////////////////////////////////
+
+    if (user.awaitingEmail) {
+      if (!isEmail(text)) {
+        socket.emit("message", {
+          id: makeId(),
+          role: "ai",
+          persona: "System",
+          text:
+            "That does not look like an email. Send one email address if you want to be matched."
+        });
+        return;
+      }
+
+      user.email = text;
+      user.awaitingEmail = false;
+      user.wantsMatch = true;
+
+      socket.emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text:
+          "Got it. I’ll try to match you with someone relevant in this room."
+      });
+
+      tryMatchUsers();
+      return;
+    }
+
+    //////////////////////////////////////////////////////////
+    // YES / CONNECT HANDLER
+    //////////////////////////////////////////////////////////
+
+    const lower = text.toLowerCase();
+
+    if (
+      lower === "yes" ||
+      lower === "yes connect" ||
+      lower === "connect me" ||
+      lower === "match me"
+    ) {
+      user.awaitingEmail = true;
+      user.wantsMatch = true;
+
+      socket.emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text:
+          "Send your email and I’ll try to connect you with someone relevant. Only send it if you want to be matched."
+      });
+
+      return;
+    }
+
+    //////////////////////////////////////////////////////////
+    // AI BUSY CHECK
+    //////////////////////////////////////////////////////////
+
+    if (room.aiBusy) {
+      socket.emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text:
+          "One response is still being generated. Send again in a moment."
+      });
+      return;
+    }
+
+    room.aiBusy = true;
+
+    try {
+      user.lastUserMessage = text;
+      user.lastTopic = getTopic(text);
+
+      ////////////////////////////////////////////////////////
+      // AI ANSWERS FIRST
+      ////////////////////////////////////////////////////////
+
+      const aiAnswer = await generateAIAnswer(text);
+
+      user.lastAIAnswer = aiAnswer;
+
+      io.to(ROOM_ID).emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "AI",
+        text: aiAnswer || "The safest move is to compare cost, timing, and effort before committing."
+      });
+
+      ////////////////////////////////////////////////////////
+      // STRANGER REACTS
+      ////////////////////////////////////////////////////////
+
+      const strangerReply = await generateStrangerReply(text, aiAnswer);
+
+      io.to(ROOM_ID).emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "Stranger",
+        text: strangerReply || "That answer works, but the real test is whether the cost and timing still make sense."
+      });
+
+      ////////////////////////////////////////////////////////
+      // OPTIONAL CONNECTION OFFER
+      ////////////////////////////////////////////////////////
+
+      if (shouldOfferConnection(text)) {
+        socket.emit("message", {
+          id: makeId(),
+          role: "ai",
+          persona: "System",
+          text:
+            "Someone here may have useful real experience with this. Type “yes” if you want to be matched by email."
+        });
+      }
+
+    } catch (err) {
+      socket.emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text:
+          "The system had trouble answering. Try again with one clear sentence."
+      });
+    } finally {
+      room.aiBusy = false;
+    }
+  });
+
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
+
+  socket.on("disconnect", () => {
+    delete users[socket.id];
+  });
 });
 
 //////////////////////////////////////////////////////////////
@@ -274,5 +479,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("ASIAN AI CHAT RUNNING");
+  console.log("ASIAN AI CHAT RUNNING — AI + STRANGER + MATCHING");
 });
