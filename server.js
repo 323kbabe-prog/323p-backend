@@ -769,7 +769,7 @@ io.on("connection", (socket) => {
       role: "ai",
       persona: "System",
       text:
-        "Welcome to ASIAN AI room — a global AI chat room where everyday plans are tested through price, timing, and real-life pressure. Check anything before you commit • AI ideas, travel, money, emails"
+        "Welcome to AI ASIAN CHAT — Our AI model is practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic."
     });
 
     await startConversationIfNeeded(roomId);
