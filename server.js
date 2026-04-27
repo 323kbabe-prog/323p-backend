@@ -774,7 +774,7 @@ io.on("connection", (socket) => {
       role: "ai",
       persona: "System",
       text:
-        "Welcome to [AI ASIAN CHAT] — Our AI model is smart, good at math, and practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic. [chang@asianaichat.com]"
+        "Welcome to [ASIAN AI CHAT] — Our AI model is smart, good at math, and practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic. [chang@asianaichat.com]"
     });
 
     // SYSTEM MESSAGE 2
