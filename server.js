@@ -751,6 +751,10 @@ function bootAsianRoom() {
 //////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
+
+  ////////////////////////////////////////////////////////////
+  // JOIN ROOM
+  ////////////////////////////////////////////////////////////
   socket.on("joinRoom", async () => {
     const roomId = ASIAN_ROOM_ID;
 
@@ -764,9 +768,7 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     ensureUserState(room, socket.id);
 
-    //////////////////////////////////////////////////////////
-    // SYSTEM MESSAGE 1 — IDENTITY
-    //////////////////////////////////////////////////////////
+    // SYSTEM MESSAGE 1
     socket.emit("message", {
       id: makeId(),
       role: "ai",
@@ -775,9 +777,7 @@ io.on("connection", (socket) => {
         "Welcome to AI ASIAN CHAT — Our AI model is practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic."
     });
 
-    //////////////////////////////////////////////////////////
-    // SYSTEM MESSAGE 2 — WHAT USERS CAN DO
-    //////////////////////////////////////////////////////////
+    // SYSTEM MESSAGE 2
     socket.emit("message", {
       id: makeId(),
       role: "ai",
@@ -789,15 +789,16 @@ io.on("connection", (socket) => {
     await startConversationIfNeeded(roomId);
   });
 
+  ////////////////////////////////////////////////////////////
+  // LEAVE ROOM
+  ////////////////////////////////////////////////////////////
   socket.on("leaveRoom", () => {
     socket.leave(ASIAN_ROOM_ID);
   });
-});
 
   ////////////////////////////////////////////////////////////
   // USER MESSAGE
   ////////////////////////////////////////////////////////////
-
   socket.on("sendMessage", ({ message }) => {
     const roomId = ASIAN_ROOM_ID;
     const text = cleanText(message);
@@ -841,7 +842,6 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
   // DISCONNECT
   ////////////////////////////////////////////////////////////
-
   socket.on("disconnect", () => {
     const room = rooms[ASIAN_ROOM_ID];
     if (!room) return;
@@ -850,7 +850,8 @@ io.on("connection", (socket) => {
       delete room.userState[socket.id];
     }
   });
-});
+
+}); // ✅ correct closing here
 
 //////////////////////////////////////////////////////////////
 // START
