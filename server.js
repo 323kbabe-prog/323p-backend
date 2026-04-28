@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECTOR — TARGET EMAIL → MESSAGE → SEND → RESET
+// AI CONNECTOR — EMAIL FIRST → INBOX → SEND → CHECK REPLIES
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -10,6 +10,7 @@ const nodemailer = require("nodemailer");
 
 const app = express();
 app.use(cors({ origin: "*" }));
+app.use(express.json());
 
 const server = http.createServer(app);
 
@@ -29,13 +30,22 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendEmail(to, message, fromEmail) {
+async function sendEmail(to, message, userEmail) {
   try {
     await transporter.sendMail({
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject: "New message",
-      text: `Message:\n${message}\n\nReply: ${fromEmail}`
+      text: `
+Message:
+${message}
+
+User email:
+${userEmail}
+
+Reply:
+For now, reply manually to this user email.
+`
     });
   } catch (err) {
     console.log("EMAIL ERROR:", err);
@@ -47,14 +57,23 @@ async function sendEmail(to, message, fromEmail) {
 //////////////////////////////////////////////////////////////
 
 const users = {};
+const inbox = {};
 
 function extractEmail(text) {
-  const m = text.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
-  return m ? m[0] : null;
+  const m = String(text || "").match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
+  return m ? m[0].toLowerCase() : null;
 }
 
 function isMeaningful(text) {
-  return text && text.length > 2;
+  return text && text.trim().length > 2;
+}
+
+function saveInbox(userEmail, item) {
+  if (!inbox[userEmail]) inbox[userEmail] = [];
+  inbox[userEmail].push({
+    ...item,
+    time: Date.now()
+  });
 }
 
 //////////////////////////////////////////////////////////////
@@ -64,16 +83,14 @@ function isMeaningful(text) {
 io.on("connection", (socket) => {
 
   users[socket.id] = {
-    step: "target",
+    step: "userEmail",
+    userEmail: null,
     targetEmail: null
   };
 
-  ////////////////////////////////////////////////////////////
-  // INITIAL
-  ////////////////////////////////////////////////////////////
-
   socket.emit("state", {
-    placeholder: "choose your AI. type their email"
+    step: "userEmail",
+    placeholder: "enter your email"
   });
 
   ////////////////////////////////////////////////////////////
@@ -85,66 +102,142 @@ io.on("connection", (socket) => {
     const text = (data.text || "").trim();
     const user = users[socket.id];
 
-    if (!text) return;
+    if (!user || !text) return;
 
     ////////////////////////////////////////////////////////////
-    // STEP 1 — TARGET EMAIL
+    // STEP 1 — USER EMAIL
     ////////////////////////////////////////////////////////////
 
-    if (user.step === "target") {
+    if (user.step === "userEmail") {
 
       const email = extractEmail(text);
 
       if (!email) {
         socket.emit("state", {
-          placeholder: "need valid email"
+          step: "userEmail",
+          placeholder: "invalid email"
         });
         return;
       }
 
-      user.targetEmail = email;
-      user.step = "message";
+      user.userEmail = email;
+      user.step = "idle";
+
+      const messages = inbox[email] || [];
+
+      socket.emit("inbox", messages);
 
       socket.emit("state", {
-        placeholder: "type your message"
+        step: "idle",
+        placeholder: messages.length
+          ? `you have ${messages.length} messages`
+          : "type their email"
       });
 
       return;
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 2 — MESSAGE
+    // STEP 2 — IDLE: CHECK INBOX OR TYPE TARGET EMAIL
+    ////////////////////////////////////////////////////////////
+
+    if (user.step === "idle") {
+
+      const email = extractEmail(text);
+
+      if (email) {
+        user.targetEmail = email;
+        user.step = "message";
+
+        socket.emit("state", {
+          step: "message",
+          placeholder: "your message"
+        });
+
+        return;
+      }
+
+      const messages = inbox[user.userEmail] || [];
+
+      socket.emit("inbox", messages);
+
+      socket.emit("state", {
+        step: "idle",
+        placeholder: messages.length
+          ? `latest reply shown`
+          : "no replies yet"
+      });
+
+      return;
+    }
+
+    ////////////////////////////////////////////////////////////
+    // STEP 3 — MESSAGE
     ////////////////////////////////////////////////////////////
 
     if (user.step === "message") {
 
       if (!isMeaningful(text)) {
         socket.emit("state", {
-          placeholder: "type a real message"
+          step: "message",
+          placeholder: "message too short"
         });
         return;
       }
 
-      ////////////////////////////////////////////////////////////
-      // SEND EMAIL (silent)
-      ////////////////////////////////////////////////////////////
+      saveInbox(user.userEmail, {
+        type: "sent",
+        from: user.userEmail,
+        to: user.targetEmail,
+        message: text
+      });
 
-      await sendEmail(user.targetEmail, text, "anonymous@aiconnect.com");
+      await sendEmail(user.targetEmail, text, user.userEmail);
 
-      ////////////////////////////////////////////////////////////
-      // RESET (no "sent" state)
-      ////////////////////////////////////////////////////////////
+      //////////////////////////////////////////////////////////
+      // TEMP FAKE REPLY FOR TESTING
+      // Remove this later when you add real inbound email.
+      //////////////////////////////////////////////////////////
 
-      user.step = "target";
+      setTimeout(() => {
+        saveInbox(user.userEmail, {
+          type: "reply",
+          from: user.targetEmail,
+          to: user.userEmail,
+          message: "Reply received. This is a test reply."
+        });
+      }, 5000);
+
+      user.step = "idle";
       user.targetEmail = null;
 
+      socket.emit("inbox", inbox[user.userEmail] || []);
+
       socket.emit("state", {
-        placeholder: "choose your AI. type their email"
+        step: "idle",
+        placeholder: "sent. come back later"
       });
 
       return;
     }
 
+  });
+
+  ////////////////////////////////////////////////////////////
+  // RESET
+  ////////////////////////////////////////////////////////////
+
+  socket.on("reset", () => {
+    users[socket.id] = {
+      step: "userEmail",
+      userEmail: null,
+      targetEmail: null
+    };
+
+    socket.emit("state", {
+      step: "userEmail",
+      placeholder: "enter your email"
+    });
   });
 
   ////////////////////////////////////////////////////////////
@@ -158,7 +251,7 @@ io.on("connection", (socket) => {
 });
 
 //////////////////////////////////////////////////////////////
-// START SERVER (ONLY ONCE, OUTSIDE EVERYTHING)
+// START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
