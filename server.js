@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — FINAL VERSION
+// AI CONNECT BOARD — FINAL CLEAN VERSION
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -61,7 +61,7 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// SEED QUESTION (prevents empty board)
+// SEED (prevents empty board)
 //////////////////////////////////////////////////////////////
 
 function ensureSeed() {
@@ -77,7 +77,7 @@ function ensureSeed() {
 }
 
 //////////////////////////////////////////////////////////////
-// CLEANUP — 6 HOURS OR 3 ANSWERS
+// CLEANUP (6 HOURS OR 3 ANSWERS)
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
@@ -110,7 +110,12 @@ function loadQuestions(user) {
   ensureSeed();
 
   const sorted = [...questions].sort((a, b) => {
-    return a.answers.length - b.answers.length;
+
+    if (a.answers.length !== b.answers.length) {
+      return a.answers.length - b.answers.length;
+    }
+
+    return b.createdAt - a.createdAt;
   });
 
   user.currentQuestions = sorted;
@@ -162,11 +167,10 @@ io.on("connection", (socket) => {
 
     const text = (data.text || "").trim();
     const user = users[socket.id];
-
     if (!text || !user) return;
 
     ////////////////////////////////////////////////////////////
-    // STEP 1 — EMAIL
+    // EMAIL
     ////////////////////////////////////////////////////////////
 
     if (user.step === "email") {
@@ -188,7 +192,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 2 — MODE
+    // MODE
     ////////////////////////////////////////////////////////////
 
     if (user.step === "mode") {
@@ -212,7 +216,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 3 — ASK (AUTO ENTER ANSWER MODE)
+    // ASK → AUTO ANSWER MODE
     ////////////////////////////////////////////////////////////
 
     if (user.step === "ask") {
@@ -224,10 +228,6 @@ io.on("connection", (socket) => {
         answers: [],
         createdAt: Date.now()
       });
-
-      //////////////////////////////////////////////////////////
-      // 🔥 IMMEDIATE ANSWER MODE
-      //////////////////////////////////////////////////////////
 
       user.step = "answer";
 
@@ -241,7 +241,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 4 — ANSWER MODE
+    // ANSWER MODE
     ////////////////////////////////////////////////////////////
 
     if (user.step === "answer") {
@@ -254,18 +254,10 @@ io.on("connection", (socket) => {
       const q = user.currentQuestions[user.currentIndex];
       if (!q) return;
 
-      //////////////////////////////////////////////////////////
-      // SAVE ANSWER
-      //////////////////////////////////////////////////////////
-
       q.answers.push({
         text,
         from: user.email
       });
-
-      //////////////////////////////////////////////////////////
-      // SEND EMAIL
-      //////////////////////////////////////////////////////////
 
       await sendEmail(
         q.email,
@@ -289,10 +281,6 @@ Reply directly to continue.
 
   });
 
-  ////////////////////////////////////////////////////////////
-  // DISCONNECT
-  ////////////////////////////////////////////////////////////
-
   socket.on("disconnect", () => {
     delete users[socket.id];
   });
@@ -300,7 +288,7 @@ Reply directly to continue.
 });
 
 //////////////////////////////////////////////////////////////
-// START SERVER
+// START
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
