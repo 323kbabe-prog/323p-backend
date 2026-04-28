@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI EMAIL CONNECTOR — CLEAN VERSION
+// INPUT-ONLY AI CONNECTOR
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -10,7 +10,6 @@ const nodemailer = require("nodemailer");
 
 const app = express();
 app.use(cors({ origin: "*" }));
-app.use(express.json());
 
 const server = http.createServer(app);
 
@@ -19,7 +18,7 @@ const io = new Server(server, {
 });
 
 //////////////////////////////////////////////////////////////
-// EMAIL SETUP (GMAIL APP PASSWORD)
+// EMAIL
 //////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
@@ -36,35 +35,22 @@ async function sendEmail(to, message, fromEmail) {
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject: "New connection message",
-      text: `Message:\n\n${message}\n\nReply: ${fromEmail}`
+      text: `Message:\n${message}\n\nReply: ${fromEmail}`
     });
   } catch (err) {
-    console.error("Email error:", err);
+    console.log("EMAIL ERROR:", err);
   }
 }
 
 //////////////////////////////////////////////////////////////
-// MEMORY
+// STATE
 //////////////////////////////////////////////////////////////
 
-const users = {}; // socket.id -> state
-const pool = [];  // waiting messages
-
-//////////////////////////////////////////////////////////////
-// HELPERS
-//////////////////////////////////////////////////////////////
-
-function makeId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
+const users = {};
 
 function extractEmail(text) {
-  const match = text.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
-  return match ? match[0] : null;
-}
-
-function delay(ms) {
-  return new Promise(res => setTimeout(res, ms));
+  const m = text.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
+  return m ? m[0] : null;
 }
 
 //////////////////////////////////////////////////////////////
@@ -74,65 +60,47 @@ function delay(ms) {
 io.on("connection", (socket) => {
 
   users[socket.id] = {
-    email: null,
-    step: "start"
+    step: "start",
+    email: null
   };
 
-  ////////////////////////////////////////////////////////////
-  // FIRST MESSAGE
-  ////////////////////////////////////////////////////////////
+  // send initial state
+  socket.emit("state", {
+    placeholder: "you want connect real person? type yes"
+  });
 
-  setTimeout(() => {
-    socket.emit("message", {
-      id: makeId(),
-      sender: "AI",
-      text: "you want connect real person? say yes"
-    });
-  }, 400);
+  socket.on("input", async (data) => {
 
-  ////////////////////////////////////////////////////////////
-  // MESSAGE
-  ////////////////////////////////////////////////////////////
-
-  socket.on("message", async (msg) => {
-
-    const text = (msg.text || "").trim();
+    const text = (data.text || "").trim();
     const user = users[socket.id];
 
+    if (!text) return;
+
     ////////////////////////////////////////////////////////////
-    // STEP 1 — WAIT YES
+    // STEP 1
     ////////////////////////////////////////////////////////////
 
     if (user.step === "start") {
-
       if (text.toLowerCase().includes("yes")) {
         user.step = "email";
 
-        await delay(600);
-
-        socket.emit("message", {
-          id: makeId(),
-          sender: "AI",
-          text: "ok type your email"
+        socket.emit("state", {
+          placeholder: "type your email"
         });
       }
-
       return;
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 2 — GET EMAIL
+    // STEP 2
     ////////////////////////////////////////////////////////////
 
     if (user.step === "email") {
-
       const email = extractEmail(text);
 
       if (!email) {
-        socket.emit("message", {
-          id: makeId(),
-          sender: "AI",
-          text: "need real email"
+        socket.emit("state", {
+          placeholder: "need real email"
         });
         return;
       }
@@ -140,65 +108,39 @@ io.on("connection", (socket) => {
       user.email = email;
       user.step = "ready";
 
-      await delay(600);
-
-      socket.emit("message", {
-        id: makeId(),
-        sender: "AI",
-        text: "ok saved. send message or type email to send"
+      socket.emit("state", {
+        placeholder: "type message or paste email to send"
       });
 
       return;
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 3 — READY
+    // STEP 3
     ////////////////////////////////////////////////////////////
 
     if (user.step === "ready") {
 
-      const targetEmail = extractEmail(text);
+      const target = extractEmail(text);
 
-      ////////////////////////////////////////////////////////////
-      // DIRECT SEND
-      ////////////////////////////////////////////////////////////
+      if (target) {
+        await sendEmail(target, text, user.email);
 
-      if (targetEmail) {
-
-        await sendEmail(targetEmail, text, user.email);
-
-        socket.emit("message", {
-          id: makeId(),
-          sender: "AI",
-          text: "sent ✓"
+        socket.emit("state", {
+          placeholder: "sent ✓ type another"
         });
 
         return;
       }
 
-      ////////////////////////////////////////////////////////////
-      // ADD TO POOL
-      ////////////////////////////////////////////////////////////
-
-      pool.push({
-        from: user.email,
-        text
-      });
-
-      socket.emit("message", {
-        id: makeId(),
-        sender: "AI",
-        text: "saved. waiting match"
+      socket.emit("state", {
+        placeholder: "saved ✓ waiting match"
       });
 
       return;
     }
 
   });
-
-  ////////////////////////////////////////////////////////////
-  // DISCONNECT
-  ////////////////////////////////////////////////////////////
 
   socket.on("disconnect", () => {
     delete users[socket.id];
@@ -210,8 +152,8 @@ io.on("connection", (socket) => {
 // START
 //////////////////////////////////////////////////////////////
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI EMAIL CONNECTOR RUNNING");
+  console.log("INPUT AI CONNECTOR RUNNING");
 });
