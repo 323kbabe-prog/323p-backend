@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// INPUT-ONLY AI CONNECTOR
+// INPUT-ONLY AI CONNECTOR (GUIDED FLOW VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -18,7 +18,15 @@ const io = new Server(server, {
 });
 
 //////////////////////////////////////////////////////////////
-// EMAIL
+// HEALTH CHECK
+//////////////////////////////////////////////////////////////
+
+app.get("/", (req, res) => {
+  res.send("AI CONNECT BACKEND LIVE");
+});
+
+//////////////////////////////////////////////////////////////
+// EMAIL SETUP
 //////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
@@ -49,8 +57,12 @@ async function sendEmail(to, message, fromEmail) {
 const users = {};
 
 function extractEmail(text) {
-  const m = text.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
-  return m ? m[0] : null;
+  const match = text.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
+  return match ? match[0] : null;
+}
+
+function random(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 //////////////////////////////////////////////////////////////
@@ -59,15 +71,24 @@ function extractEmail(text) {
 
 io.on("connection", (socket) => {
 
+  console.log("CONNECTED:", socket.id);
+
   users[socket.id] = {
     step: "start",
     email: null
   };
 
-  // send initial state
+  ////////////////////////////////////////////////////////////
+  // INITIAL STATE
+  ////////////////////////////////////////////////////////////
+
   socket.emit("state", {
     placeholder: "you want connect real person? type yes"
   });
+
+  ////////////////////////////////////////////////////////////
+  // INPUT HANDLER
+  ////////////////////////////////////////////////////////////
 
   socket.on("input", async (data) => {
 
@@ -77,31 +98,54 @@ io.on("connection", (socket) => {
     if (!text) return;
 
     ////////////////////////////////////////////////////////////
-    // STEP 1
+    // STEP 1 — WAIT YES
     ////////////////////////////////////////////////////////////
 
     if (user.step === "start") {
+
       if (text.toLowerCase().includes("yes")) {
+
         user.step = "email";
 
         socket.emit("state", {
-          placeholder: "type your email"
+          placeholder: "ok type your email"
         });
+
+      } else {
+
+        socket.emit("state", {
+          placeholder: random([
+            "type yes to continue",
+            "just type yes",
+            "need yes to start",
+            "say yes to connect"
+          ])
+        });
+
       }
+
       return;
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 2
+    // STEP 2 — EMAIL INPUT
     ////////////////////////////////////////////////////////////
 
     if (user.step === "email") {
+
       const email = extractEmail(text);
 
       if (!email) {
+
         socket.emit("state", {
-          placeholder: "need real email"
+          placeholder: random([
+            "need real email",
+            "enter valid email",
+            "that not email",
+            "email format wrong"
+          ])
         });
+
         return;
       }
 
@@ -116,31 +160,54 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 3
+    // STEP 3 — READY STATE
     ////////////////////////////////////////////////////////////
 
     if (user.step === "ready") {
 
-      const target = extractEmail(text);
+      const targetEmail = extractEmail(text);
 
-      if (target) {
-        await sendEmail(target, text, user.email);
+      ////////////////////////////////////////////////////////////
+      // DIRECT EMAIL SEND
+      ////////////////////////////////////////////////////////////
+
+      if (targetEmail) {
+
+        await sendEmail(targetEmail, text, user.email);
 
         socket.emit("state", {
-          placeholder: "sent ✓ type another"
+          placeholder: random([
+            "sent ✓ type another",
+            "message sent ✓",
+            "done ✓ send more",
+            "sent ✓ next"
+          ])
         });
 
         return;
       }
 
+      ////////////////////////////////////////////////////////////
+      // NORMAL MESSAGE
+      ////////////////////////////////////////////////////////////
+
       socket.emit("state", {
-        placeholder: "saved ✓ waiting match"
+        placeholder: random([
+          "saved ✓ waiting match",
+          "ok saved",
+          "stored ✓",
+          "waiting match"
+        ])
       });
 
       return;
     }
 
   });
+
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
 
   socket.on("disconnect", () => {
     delete users[socket.id];
@@ -155,5 +222,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("INPUT AI CONNECTOR RUNNING");
+  console.log("AI CONNECTOR RUNNING ON", PORT);
 });
