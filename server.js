@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECTOR — EMAIL FIRST → INBOX → SEND → CHECK REPLIES
+// AI CONNECT BOARD — ASK / ANSWER SYSTEM
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -30,22 +30,14 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendEmail(to, message, userEmail) {
+async function sendEmail(to, message, replyToEmail) {
   try {
     await transporter.sendMail({
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
-      subject: "New message",
-      text: `
-Message:
-${message}
-
-User email:
-${userEmail}
-
-Reply:
-For now, reply manually to this user email.
-`
+      subject: "New answer to your question",
+      replyTo: replyToEmail,
+      text: message
     });
   } catch (err) {
     console.log("EMAIL ERROR:", err);
@@ -53,26 +45,72 @@ For now, reply manually to this user email.
 }
 
 //////////////////////////////////////////////////////////////
-// STATE
+// DATA
 //////////////////////////////////////////////////////////////
 
 const users = {};
-const inbox = {};
+const questions = [];
+
+function makeId() {
+  return Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+}
 
 function extractEmail(text) {
   const m = String(text || "").match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
   return m ? m[0].toLowerCase() : null;
 }
 
-function isMeaningful(text) {
-  return text && text.trim().length > 2;
+//////////////////////////////////////////////////////////////
+// CLEANUP — 6 HOURS OR 3 ANSWERS
+//////////////////////////////////////////////////////////////
+
+setInterval(() => {
+
+  const now = Date.now();
+  const SIX_HOURS = 6 * 60 * 60 * 1000;
+
+  for (let i = questions.length - 1; i >= 0; i--) {
+    const q = questions[i];
+
+    const expired = (now - q.createdAt) > SIX_HOURS;
+    const enoughAnswers = q.answers.length >= 3;
+
+    if (expired || enoughAnswers) {
+      questions.splice(i, 1);
+    }
+  }
+
+}, 60000);
+
+//////////////////////////////////////////////////////////////
+// HELPERS
+//////////////////////////////////////////////////////////////
+
+function loadQuestions(user) {
+  const sorted = [...questions].sort((a, b) => {
+    return a.answers.length - b.answers.length;
+  });
+
+  user.currentQuestions = sorted;
+  user.currentIndex = 0;
 }
 
-function saveInbox(userEmail, item) {
-  if (!inbox[userEmail]) inbox[userEmail] = [];
-  inbox[userEmail].push({
-    ...item,
-    time: Date.now()
+function sendQuestions(socket, user) {
+  const batch = user.currentQuestions.slice(
+    user.currentIndex,
+    user.currentIndex + 3
+  );
+
+  if (!batch.length) {
+    return socket.emit("state", {
+      placeholder: "no questions"
+    });
+  }
+
+  socket.emit("questions", batch);
+
+  socket.emit("state", {
+    placeholder: "answer or next"
   });
 }
 
@@ -83,13 +121,13 @@ function saveInbox(userEmail, item) {
 io.on("connection", (socket) => {
 
   users[socket.id] = {
-    step: "userEmail",
-    userEmail: null,
-    targetEmail: null
+    step: "email",
+    email: null,
+    currentQuestions: [],
+    currentIndex: 0
   };
 
   socket.emit("state", {
-    step: "userEmail",
     placeholder: "enter your email"
   });
 
@@ -101,143 +139,119 @@ io.on("connection", (socket) => {
 
     const text = (data.text || "").trim();
     const user = users[socket.id];
-
-    if (!user || !text) return;
+    if (!text || !user) return;
 
     ////////////////////////////////////////////////////////////
-    // STEP 1 — USER EMAIL
+    // EMAIL
     ////////////////////////////////////////////////////////////
 
-    if (user.step === "userEmail") {
-
+    if (user.step === "email") {
       const email = extractEmail(text);
 
       if (!email) {
-        socket.emit("state", {
-          step: "userEmail",
-          placeholder: "invalid email"
-        });
-        return;
+        return socket.emit("state", { placeholder: "invalid email" });
       }
 
-      user.userEmail = email;
-      user.step = "idle";
+      user.email = email;
+      user.step = "mode";
 
-      const messages = inbox[email] || [];
-
-      socket.emit("inbox", messages);
-
-      socket.emit("state", {
-        step: "idle",
-        placeholder: messages.length
-          ? `you have ${messages.length} messages`
-          : "type their email"
+      return socket.emit("state", {
+        placeholder: "ask or answer"
       });
-
-      return;
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 2 — IDLE: CHECK INBOX OR TYPE TARGET EMAIL
+    // MODE
     ////////////////////////////////////////////////////////////
 
-    if (user.step === "idle") {
+    if (user.step === "mode") {
 
-      const email = extractEmail(text);
-
-      if (email) {
-        user.targetEmail = email;
-        user.step = "message";
-
-        socket.emit("state", {
-          step: "message",
-          placeholder: "your message"
+      if (text.toLowerCase().includes("ask")) {
+        user.step = "ask";
+        return socket.emit("state", {
+          placeholder: "your question"
         });
-
-        return;
       }
 
-      const messages = inbox[user.userEmail] || [];
+      if (text.toLowerCase().includes("answer")) {
+        user.step = "answer";
+        loadQuestions(user);
+        return sendQuestions(socket, user);
+      }
 
-      socket.emit("inbox", messages);
-
-      socket.emit("state", {
-        step: "idle",
-        placeholder: messages.length
-          ? `latest reply shown`
-          : "no replies yet"
+      return socket.emit("state", {
+        placeholder: "type ask or answer"
       });
-
-      return;
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 3 — MESSAGE
+    // ASK
     ////////////////////////////////////////////////////////////
 
-    if (user.step === "message") {
+    if (user.step === "ask") {
 
-      if (!isMeaningful(text)) {
-        socket.emit("state", {
-          step: "message",
-          placeholder: "message too short"
-        });
-        return;
-      }
-
-      saveInbox(user.userEmail, {
-        type: "sent",
-        from: user.userEmail,
-        to: user.targetEmail,
-        message: text
+      questions.push({
+        id: makeId(),
+        email: user.email,
+        text,
+        answers: [],
+        createdAt: Date.now()
       });
 
-      await sendEmail(user.targetEmail, text, user.userEmail);
+      user.step = "mode";
+
+      return socket.emit("state", {
+        placeholder: "posted. ask or answer"
+      });
+    }
+
+    ////////////////////////////////////////////////////////////
+    // ANSWER MODE
+    ////////////////////////////////////////////////////////////
+
+    if (user.step === "answer") {
+
+      if (text.toLowerCase() === "next") {
+        user.currentIndex += 3;
+        return sendQuestions(socket, user);
+      }
+
+      const q = user.currentQuestions[user.currentIndex];
+      if (!q) return;
 
       //////////////////////////////////////////////////////////
-      // TEMP FAKE REPLY FOR TESTING
-      // Remove this later when you add real inbound email.
+      // SAVE ANSWER
       //////////////////////////////////////////////////////////
 
-      setTimeout(() => {
-        saveInbox(user.userEmail, {
-          type: "reply",
-          from: user.targetEmail,
-          to: user.userEmail,
-          message: "Reply received. This is a test reply."
-        });
-      }, 5000);
-
-      user.step = "idle";
-      user.targetEmail = null;
-
-      socket.emit("inbox", inbox[user.userEmail] || []);
-
-      socket.emit("state", {
-        step: "idle",
-        placeholder: "sent. come back later"
+      q.answers.push({
+        text,
+        from: user.email
       });
 
-      return;
+      //////////////////////////////////////////////////////////
+      // EMAIL TO QUESTION OWNER
+      //////////////////////////////////////////////////////////
+
+      await sendEmail(
+        q.email,
+        `
+New answer:
+
+${text}
+
+Responder:
+${user.email}
+
+Reply directly to continue the conversation.
+`,
+        user.email
+      );
+
+      return socket.emit("state", {
+        placeholder: "sent. answer or next"
+      });
     }
 
-  });
-
-  ////////////////////////////////////////////////////////////
-  // RESET
-  ////////////////////////////////////////////////////////////
-
-  socket.on("reset", () => {
-    users[socket.id] = {
-      step: "userEmail",
-      userEmail: null,
-      targetEmail: null
-    };
-
-    socket.emit("state", {
-      step: "userEmail",
-      placeholder: "enter your email"
-    });
   });
 
   ////////////////////////////////////////////////////////////
@@ -251,11 +265,11 @@ io.on("connection", (socket) => {
 });
 
 //////////////////////////////////////////////////////////////
-// START SERVER
+// START
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECTOR RUNNING");
+  console.log("AI CONNECT BOARD RUNNING");
 });
