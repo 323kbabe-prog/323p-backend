@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// ASIAN AI CHAT — HYBRID MATCH SYSTEM (FULL)
+// ASIAN AI CHAT — AI + STRANGER + HYBRID EMAIL MATCHING
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -9,19 +9,23 @@ const OpenAI = require("openai");
 const { Server } = require("socket.io");
 
 const app = express();
-app.use(cors());
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+app.use(cors({ origin: "*" }));
+app.use(express.json());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 const ROOM_ID = "asian-room";
+
 const rooms = {};
 const users = {};
-
-//////////////////////////////////////////////////////////////
-// TOPIC QUEUES
-//////////////////////////////////////////////////////////////
 
 const topicQueues = {
   travel: [],
@@ -39,171 +43,343 @@ function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function ensureUser(id) {
-  if (!users[id]) {
-    users[id] = {
+function cleanText(text) {
+  return String(text || "")
+    .replace(/^(AI|Stranger|System)\s*:\s*/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isEmail(text) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(text || "").trim());
+}
+
+function createRoom() {
+  return {
+    history: [],
+    aiBusy: false
+  };
+}
+
+function ensureUser(socketId) {
+  if (!users[socketId]) {
+    users[socketId] = {
       email: "",
       awaitingEmail: false,
       wantsMatch: false,
       matched: false,
+      lastTopic: "",
       lastUserMessage: "",
-      lastTopic: "general"
+      lastAIAnswer: ""
     };
   }
-  return users[id];
+  return users[socketId];
+}
+
+function shouldOfferConnection(text) {
+  const t = String(text || "").toLowerCase();
+
+  const keywords = [
+    "hotel",
+    "travel",
+    "trip",
+    "flight",
+    "email",
+    "reply",
+    "ai product",
+    "startup",
+    "business",
+    "money",
+    "rent",
+    "job",
+    "decision",
+    "plan"
+  ];
+
+  return keywords.some(k => t.includes(k));
 }
 
 function getTopic(text) {
-  const t = text.toLowerCase();
+  const t = String(text || "").toLowerCase();
 
-  if (t.includes("hotel") || t.includes("travel")) return "travel";
-  if (t.includes("email") || t.includes("reply")) return "email";
-  if (t.includes("startup") || t.includes("product")) return "ai_product";
-  if (t.includes("money") || t.includes("budget")) return "money";
+  if (t.includes("hotel") || t.includes("travel") || t.includes("trip") || t.includes("flight")) {
+    return "travel";
+  }
+
+  if (t.includes("email") || t.includes("reply")) {
+    return "email";
+  }
+
+  if (t.includes("ai product") || t.includes("startup") || t.includes("business")) {
+    return "ai_product";
+  }
+
+  if (t.includes("money") || t.includes("rent") || t.includes("budget")) {
+    return "money";
+  }
 
   return "general";
 }
 
-function isEmail(text) {
-  return /\S+@\S+\.\S+/.test(text);
+function emitToSocket(socketId, payload) {
+  const s = io.sockets.sockets.get(socketId);
+  if (!s) return;
+  s.emit("message", payload);
+}
+
+function removeFromAllQueues(socketId) {
+  for (const topic of Object.keys(topicQueues)) {
+    topicQueues[topic] = topicQueues[topic].filter(id => id !== socketId);
+  }
+}
+
+function addToTopicQueue(socketId, topic) {
+  if (!topicQueues[topic]) topicQueues[topic] = [];
+
+  removeFromAllQueues(socketId);
+
+  if (!topicQueues[topic].includes(socketId)) {
+    topicQueues[topic].push(socketId);
+  }
+}
+
+function removeFromTopicQueue(socketId, topic) {
+  if (!topicQueues[topic]) return;
+  topicQueues[topic] = topicQueues[topic].filter(id => id !== socketId);
 }
 
 //////////////////////////////////////////////////////////////
-// AI PROMPTS
+// PROMPTS
 //////////////////////////////////////////////////////////////
 
 function getAIPrompt() {
   return `
-You are Asian AI.
+You are Asian AI in a public AI chat room.
 
-Rules:
-- ALWAYS answer directly
-- NEVER ask questions
-- give 2–3 concrete options
-- include short reason WHY
+Core behavior:
+- ALWAYS provide a direct answer.
+- NEVER ask questions.
+- NEVER request more information.
+- If information is missing, make a reasonable assumption and proceed.
+- If the user asks for names, places, tools, examples, or recommendations, give concrete examples.
+- If the user sounds urgent, answer immediately with practical options.
 
-Keep answer short and practical.
+Answer style:
+- 1–3 short sentences.
+- Practical, direct, cost-aware, grounded.
+- Give the answer first.
+- Include a short reason why.
+
+For recommendations:
+- Give 2–3 options.
+- Include why each option makes sense.
+- Avoid vague advice.
+
+For emails:
+- Draft or improve the email directly.
+- Do not ask for more details.
+- Make a reasonable version.
+
+For AI product ideas:
+- Give concrete product direction, target user, and why it may work.
+
+Never say:
+- "What's your budget?"
+- "Can you clarify?"
+- "It depends."
+- "How can I help?"
 `;
 }
 
 function getStrangerPrompt() {
   return `
-You are a real person.
+You are the Stranger in ASIAN AI CHAT.
 
-Rules:
-- NEVER ask questions
-- react to AI answer
-- add realism, cost, or risk
-- suggest alternative if needed
+Identity:
+- A real person in the public chat room.
+- Practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic.
+
+Behavior:
+- React to the AI answer.
+- NEVER ask questions.
+- Add practical pressure, caution, or a better angle.
+- If the AI gave options, point out which one feels safest or most realistic.
+- Keep it grounded in cost, timing, effort, and real-life impact.
+
+Style:
+- 1–2 short sentences.
+- Calm, direct, slightly skeptical.
+- No sarcasm.
+- No playful tone.
+- No assistant tone.
 `;
 }
 
-//////////////////////////////////////////////////////////////
-// AI GENERATION
-//////////////////////////////////////////////////////////////
-
-async function generateAI(text) {
+async function generateAIAnswer(userMessage) {
   const res = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0.7,
+    temperature: 0.65,
     messages: [
       { role: "system", content: getAIPrompt() },
-      { role: "user", content: text }
+      { role: "user", content: userMessage }
     ]
   });
 
-  return res.choices[0].message.content;
+  return cleanText(res.choices?.[0]?.message?.content);
 }
 
-async function generateStranger(text) {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.8,
-    messages: [
-      { role: "system", content: getStrangerPrompt() },
-      { role: "user", content: text }
-    ]
-  });
+async function generateStrangerReply(userMessage, aiAnswer) {
+  const context = `
+User said:
+${userMessage}
 
-  return res.choices[0].message.content;
-}
-
-//////////////////////////////////////////////////////////////
-// HYBRID MATCH LOGIC
-//////////////////////////////////////////////////////////////
-
-function addToQueue(socketId, topic) {
-  topicQueues[topic].push(socketId);
-}
-
-function removeFromQueue(id, topic) {
-  topicQueues[topic] = topicQueues[topic].filter(x => x !== id);
-}
-
-function fastMatch(topic) {
-  const queue = topicQueues[topic];
-
-  if (queue.length < 2) return false;
-
-  const a = queue.shift();
-  const b = queue.shift();
-
-  users[a].matched = true;
-  users[b].matched = true;
-
-  sendMatch(a, b);
-
-  return true;
-}
-
-async function aiMatch(topic) {
-  const queue = topicQueues[topic];
-
-  if (queue.length < 3) return false;
-
-  const candidates = queue.slice(0, 5);
-
-  const prompt = `
-Match best pair:
-
-${candidates.map(id => `${id}: ${users[id].lastUserMessage}`).join("\n")}
-
-Return two ids only.
+AI answered:
+${aiAnswer}
 `;
 
   const res = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }]
+    temperature: 0.78,
+    messages: [
+      { role: "system", content: getStrangerPrompt() },
+      { role: "user", content: context }
+    ]
   });
 
-  const ids = res.choices[0].message.content.match(/\d+/g);
-  if (!ids || ids.length < 2) return false;
-
-  const [a, b] = ids;
-
-  removeFromQueue(a, topic);
-  removeFromQueue(b, topic);
-
-  users[a].matched = true;
-  users[b].matched = true;
-
-  sendMatch(a, b);
-
-  return true;
+  return cleanText(res.choices?.[0]?.message?.content);
 }
 
-function sendMatch(a, b) {
-  io.to(a).emit("message", {
+//////////////////////////////////////////////////////////////
+// HYBRID MATCHING
+//////////////////////////////////////////////////////////////
+
+function sendMatch(aId, bId) {
+  const a = users[aId];
+  const b = users[bId];
+
+  if (!a || !b) return;
+
+  a.matched = true;
+  b.matched = true;
+
+  removeFromAllQueues(aId);
+  removeFromAllQueues(bId);
+
+  emitToSocket(aId, {
+    id: makeId(),
     role: "ai",
     persona: "System",
-    text: `Matched. Contact: ${users[b].email}`
+    text: `Matched. Someone else here may be useful for this topic. Contact: ${b.email}`
   });
 
-  io.to(b).emit("message", {
+  emitToSocket(bId, {
+    id: makeId(),
     role: "ai",
     persona: "System",
-    text: `Matched. Contact: ${users[a].email}`
+    text: `Matched. Someone else here may be useful for this topic. Contact: ${a.email}`
   });
+}
+
+async function chooseBestPairWithAI(topic, candidateIds) {
+  const candidatesText = candidateIds
+    .map((id, index) => {
+      const u = users[id];
+      return `${index + 1}. socketId: ${id}
+Topic: ${u.lastTopic}
+Message: ${u.lastUserMessage || "(none)"}
+AI answer: ${u.lastAIAnswer || "(none)"}`;
+    })
+    .join("\n\n");
+
+  const prompt = `
+You are matching users in a public AI chat room.
+
+Choose the best 2 users to match based on:
+- same topic
+- similar need
+- useful real-world relevance
+- practical value to each other
+
+Topic:
+${topic}
+
+Candidates:
+${candidatesText}
+
+Return ONLY JSON:
+{"a":"socketId","b":"socketId"}
+`;
+
+  try {
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.2,
+      messages: [
+        { role: "user", content: prompt }
+      ]
+    });
+
+    const raw = res.choices?.[0]?.message?.content || "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    if (
+      parsed.a &&
+      parsed.b &&
+      candidateIds.includes(parsed.a) &&
+      candidateIds.includes(parsed.b) &&
+      parsed.a !== parsed.b
+    ) {
+      return [parsed.a, parsed.b];
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function tryMatchUsers(socketId) {
+  const user = users[socketId];
+  if (!user) return;
+
+  const topic = user.lastTopic || "general";
+
+  addToTopicQueue(socketId, topic);
+
+  const queue = topicQueues[topic].filter(id => {
+    const u = users[id];
+    return u && u.email && u.wantsMatch && !u.matched && u.lastTopic === topic;
+  });
+
+  topicQueues[topic] = queue;
+
+  if (queue.length < 2) {
+    emitToSocket(socketId, {
+      id: makeId(),
+      role: "ai",
+      persona: "System",
+      text: "Got it. I’ll match you when someone relevant joins this topic."
+    });
+    return;
+  }
+
+  if (queue.length === 2) {
+    sendMatch(queue[0], queue[1]);
+    return;
+  }
+
+  const aiPair = await chooseBestPairWithAI(topic, queue.slice(0, 6));
+
+  if (aiPair) {
+    sendMatch(aiPair[0], aiPair[1]);
+    return;
+  }
+
+  sendMatch(queue[0], queue[1]);
 }
 
 //////////////////////////////////////////////////////////////
@@ -213,90 +389,205 @@ function sendMatch(a, b) {
 io.on("connection", (socket) => {
   ensureUser(socket.id);
 
-  socket.on("joinRoom", () => {
+  ////////////////////////////////////////////////////////////
+  // JOIN ROOM
+  ////////////////////////////////////////////////////////////
+
+  socket.on("joinRoom", async () => {
     socket.join(ROOM_ID);
 
+    if (!rooms[ROOM_ID]) {
+      rooms[ROOM_ID] = createRoom();
+    }
+
     socket.emit("message", {
+      id: makeId(),
       role: "ai",
       persona: "System",
-      text: "Welcome to ASIAN AI CHAT"
+      text:
+        "Welcome. I am ASIAN AI CHAT. I match you with people based on what others have already tried, and I find results using my designed Scarcity Awareness search model. me: chang@asianaichat.com"
+    });
+
+    socket.emit("message", {
+      id: makeId(),
+      role: "ai",
+      persona: "System",
+      text:
+        "People ask about AI ideas, travel plans, email replies, and everyday decisions."
     });
   });
 
-  socket.on("sendMessage", async ({ message }) => {
-    const user = ensureUser(socket.id);
-    const text = message.trim();
+  ////////////////////////////////////////////////////////////
+  // LEAVE ROOM
+  ////////////////////////////////////////////////////////////
 
-    io.to(ROOM_ID).emit({
+  socket.on("leaveRoom", () => {
+    socket.leave(ROOM_ID);
+  });
+
+  ////////////////////////////////////////////////////////////
+  // USER MESSAGE
+  ////////////////////////////////////////////////////////////
+
+  socket.on("sendMessage", async ({ message }) => {
+    const text = cleanText(message);
+    if (!text) return;
+
+    const room = rooms[ROOM_ID] || createRoom();
+    rooms[ROOM_ID] = room;
+
+    const user = ensureUser(socket.id);
+
+    //////////////////////////////////////////////////////////
+    // SHOW USER MESSAGE
+    //////////////////////////////////////////////////////////
+
+    io.to(ROOM_ID).emit("message", {
+      id: makeId(),
       role: "user",
       text
     });
 
     //////////////////////////////////////////////////////////
-    // EMAIL FLOW
+    // EMAIL CAPTURE
     //////////////////////////////////////////////////////////
 
     if (user.awaitingEmail) {
-      if (!isEmail(text)) return;
+      if (!isEmail(text)) {
+        socket.emit("message", {
+          id: makeId(),
+          role: "ai",
+          persona: "System",
+          text:
+            "That does not look like an email. Send one email address if you want to be matched."
+        });
+        return;
+      }
 
       user.email = text;
       user.awaitingEmail = false;
       user.wantsMatch = true;
 
-      addToQueue(socket.id, user.lastTopic);
+      socket.emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text:
+          "Got it. I’ll try to match you with someone relevant in this room."
+      });
 
-      if (!fastMatch(user.lastTopic)) {
-        await aiMatch(user.lastTopic);
+      await tryMatchUsers(socket.id);
+      return;
+    }
+
+    //////////////////////////////////////////////////////////
+    // YES / CONNECT HANDLER
+    //////////////////////////////////////////////////////////
+
+    const lower = text.toLowerCase();
+
+    if (
+      lower === "yes" ||
+      lower === "yes connect" ||
+      lower === "connect me" ||
+      lower === "match me"
+    ) {
+      user.awaitingEmail = true;
+      user.wantsMatch = true;
+
+      socket.emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text:
+          "Send your email and I’ll try to connect you with someone relevant. Only send it if you want to be matched."
+      });
+
+      return;
+    }
+
+    //////////////////////////////////////////////////////////
+    // AI BUSY CHECK
+    //////////////////////////////////////////////////////////
+
+    if (room.aiBusy) {
+      socket.emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text:
+          "One response is still being generated. Send again in a moment."
+      });
+      return;
+    }
+
+    room.aiBusy = true;
+
+    try {
+      user.lastUserMessage = text;
+      user.lastTopic = getTopic(text);
+
+      ////////////////////////////////////////////////////////
+      // AI ANSWERS FIRST
+      ////////////////////////////////////////////////////////
+
+      const aiAnswer = await generateAIAnswer(text);
+
+      user.lastAIAnswer = aiAnswer;
+
+      io.to(ROOM_ID).emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "AI",
+        text: aiAnswer || "The safest move is to compare cost, timing, and effort before committing."
+      });
+
+      ////////////////////////////////////////////////////////
+      // STRANGER REACTS
+      ////////////////////////////////////////////////////////
+
+      const strangerReply = await generateStrangerReply(text, aiAnswer);
+
+      io.to(ROOM_ID).emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "Stranger",
+        text: strangerReply || "That answer works, but the real test is whether the cost and timing still make sense."
+      });
+
+      ////////////////////////////////////////////////////////
+      // OPTIONAL CONNECTION OFFER
+      ////////////////////////////////////////////////////////
+
+      if (shouldOfferConnection(text)) {
+        socket.emit("message", {
+          id: makeId(),
+          role: "ai",
+          persona: "System",
+          text:
+            "Someone here may have useful real experience with this. Type “yes” if you want to be matched by email."
+        });
       }
 
-      return;
-    }
-
-    if (text.toLowerCase() === "yes") {
-      user.awaitingEmail = true;
-
+    } catch (err) {
       socket.emit("message", {
+        id: makeId(),
         role: "ai",
         persona: "System",
-        text: "Send your email to match."
+        text:
+          "The system had trouble answering. Try again with one clear sentence."
       });
-
-      return;
-    }
-
-    //////////////////////////////////////////////////////////
-    // NORMAL FLOW
-    //////////////////////////////////////////////////////////
-
-    user.lastUserMessage = text;
-    user.lastTopic = getTopic(text);
-
-    const aiReply = await generateAI(text);
-
-    io.to(ROOM_ID).emit({
-      role: "ai",
-      persona: "AI",
-      text: aiReply
-    });
-
-    const strangerReply = await generateStranger(aiReply);
-
-    io.to(ROOM_ID).emit({
-      role: "ai",
-      persona: "Stranger",
-      text: strangerReply
-    });
-
-    if (["travel", "email", "ai_product", "money"].includes(user.lastTopic)) {
-      socket.emit("message", {
-        role: "ai",
-        persona: "System",
-        text: "Type 'yes' to connect with someone."
-      });
+    } finally {
+      room.aiBusy = false;
     }
   });
 
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
+
   socket.on("disconnect", () => {
+    removeFromAllQueues(socket.id);
     delete users[socket.id];
   });
 });
@@ -305,6 +596,8 @@ io.on("connection", (socket) => {
 // START
 //////////////////////////////////////////////////////////////
 
-server.listen(10000, () => {
-  console.log("HYBRID MATCH SYSTEM RUNNING");
+const PORT = process.env.PORT || 10000;
+
+server.listen(PORT, () => {
+  console.log("ASIAN AI CHAT RUNNING — AI + STRANGER + HYBRID MATCHING");
 });
