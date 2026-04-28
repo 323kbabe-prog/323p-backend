@@ -126,32 +126,30 @@ io.on("connection", (socket) => {
       }
 
       ////////////////////////////////////////////////////////////
-      // SEND EMAIL
+      // SEND EMAIL (silent)
       ////////////////////////////////////////////////////////////
 
       await sendEmail(user.targetEmail, text, "anonymous@aiconnect.com");
 
-      socket.emit("state", {
-        placeholder: "sent ✓"
-      });
-
       ////////////////////////////////////////////////////////////
-      // RESET
+      // RESET (no "sent" state)
       ////////////////////////////////////////////////////////////
 
       user.step = "target";
       user.targetEmail = null;
 
-      setTimeout(() => {
-        socket.emit("state", {
-          placeholder: "choose your AI. type their email"
-        });
-      }, 1200);
+      socket.emit("state", {
+        placeholder: "choose your AI. type their email"
+      });
 
       return;
     }
 
   });
+
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
 
   socket.on("disconnect", () => {
     delete users[socket.id];
@@ -160,7 +158,7 @@ io.on("connection", (socket) => {
 });
 
 //////////////////////////////////////////////////////////////
-// START
+// START SERVER (ONLY ONCE, OUTSIDE EVERYTHING)
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
