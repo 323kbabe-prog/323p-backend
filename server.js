@@ -362,7 +362,7 @@ async function tryMatchUsers(socketId) {
       id: makeId(),
       role: "ai",
       persona: "System",
-      text: "Got it. I’ll match you when someone relevant joins this topic."
+      text: "I’ll connect you when someone relevant joins this topic."
     });
     return;
   }
