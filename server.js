@@ -1,11 +1,10 @@
 //////////////////////////////////////////////////////////////
-// ASIAN AI MATCH SYSTEM — AI ONLY (NO STRANGER)
+// AI EMAIL CONNECTOR — CLEAN VERSION
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
-const OpenAI = require("openai");
 const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 
@@ -20,15 +19,7 @@ const io = new Server(server, {
 });
 
 //////////////////////////////////////////////////////////////
-// OPENAI (OPTIONAL)
-//////////////////////////////////////////////////////////////
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-//////////////////////////////////////////////////////////////
-// EMAIL SETUP
+// EMAIL SETUP (GMAIL APP PASSWORD)
 //////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
@@ -39,19 +30,13 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendMatchEmail(to, message, fromEmail) {
+async function sendEmail(to, message, fromEmail) {
   try {
     await transporter.sendMail({
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
-      subject: "New message from AI connect",
-      text: `
-Someone send you message:
-
-"${message}"
-
-Reply to: ${fromEmail}
-      `
+      subject: "New connection message",
+      text: `Message:\n\n${message}\n\nReply: ${fromEmail}`
     });
   } catch (err) {
     console.error("Email error:", err);
@@ -62,11 +47,8 @@ Reply to: ${fromEmail}
 // MEMORY
 //////////////////////////////////////////////////////////////
 
-const users = {}; // socket.id -> user state
-
-const topicQueues = {
-  general: []
-};
+const users = {}; // socket.id -> state
+const pool = [];  // waiting messages
 
 //////////////////////////////////////////////////////////////
 // HELPERS
@@ -74,10 +56,6 @@ const topicQueues = {
 
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function cleanText(text) {
-  return String(text || "").trim();
 }
 
 function extractEmail(text) {
@@ -90,19 +68,13 @@ function delay(ms) {
 }
 
 //////////////////////////////////////////////////////////////
-// CONNECTION
+// SOCKET
 //////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
 
-  ////////////////////////////////////////////////////////////
-  // INIT USER
-  ////////////////////////////////////////////////////////////
-
   users[socket.id] = {
     email: null,
-    awaitingEmail: false,
-    targetEmail: null,
     step: "start"
   };
 
@@ -111,20 +83,20 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
 
   setTimeout(() => {
-    io.to(socket.id).emit("message", {
+    socket.emit("message", {
       id: makeId(),
       sender: "AI",
       text: "you want connect real person? say yes"
     });
-  }, 500);
+  }, 400);
 
   ////////////////////////////////////////////////////////////
-  // MESSAGE HANDLER
+  // MESSAGE
   ////////////////////////////////////////////////////////////
 
   socket.on("message", async (msg) => {
 
-    const text = cleanText(msg.text);
+    const text = (msg.text || "").trim();
     const user = users[socket.id];
 
     ////////////////////////////////////////////////////////////
@@ -136,9 +108,9 @@ io.on("connection", (socket) => {
       if (text.toLowerCase().includes("yes")) {
         user.step = "email";
 
-        await delay(800);
+        await delay(600);
 
-        io.to(socket.id).emit("message", {
+        socket.emit("message", {
           id: makeId(),
           sender: "AI",
           text: "ok type your email"
@@ -149,7 +121,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 2 — CAPTURE EMAIL
+    // STEP 2 — GET EMAIL
     ////////////////////////////////////////////////////////////
 
     if (user.step === "email") {
@@ -157,7 +129,7 @@ io.on("connection", (socket) => {
       const email = extractEmail(text);
 
       if (!email) {
-        io.to(socket.id).emit("message", {
+        socket.emit("message", {
           id: makeId(),
           sender: "AI",
           text: "need real email"
@@ -168,19 +140,19 @@ io.on("connection", (socket) => {
       user.email = email;
       user.step = "ready";
 
-      await delay(800);
+      await delay(600);
 
-      io.to(socket.id).emit("message", {
+      socket.emit("message", {
         id: makeId(),
         sender: "AI",
-        text: "ok saved. you can send message or type other email"
+        text: "ok saved. send message or type email to send"
       });
 
       return;
     }
 
     ////////////////////////////////////////////////////////////
-    // STEP 3 — READY STATE
+    // STEP 3 — READY
     ////////////////////////////////////////////////////////////
 
     if (user.step === "ready") {
@@ -188,43 +160,35 @@ io.on("connection", (socket) => {
       const targetEmail = extractEmail(text);
 
       ////////////////////////////////////////////////////////////
-      // DIRECT EMAIL SEND
+      // DIRECT SEND
       ////////////////////////////////////////////////////////////
 
       if (targetEmail) {
 
-        await sendMatchEmail(
-          targetEmail,
-          text,
-          user.email
-        );
+        await sendEmail(targetEmail, text, user.email);
 
-        await delay(800);
-
-        io.to(socket.id).emit("message", {
+        socket.emit("message", {
           id: makeId(),
           sender: "AI",
-          text: "sent. they will see your message"
+          text: "sent ✓"
         });
 
         return;
       }
 
       ////////////////////////////////////////////////////////////
-      // ADD TO MATCH POOL
+      // ADD TO POOL
       ////////////////////////////////////////////////////////////
 
-      topicQueues.general.push({
+      pool.push({
         from: user.email,
         text
       });
 
-      await delay(800);
-
-      io.to(socket.id).emit("message", {
+      socket.emit("message", {
         id: makeId(),
         sender: "AI",
-        text: "ok waiting match or send email direct"
+        text: "saved. waiting match"
       });
 
       return;
@@ -243,11 +207,11 @@ io.on("connection", (socket) => {
 });
 
 //////////////////////////////////////////////////////////////
-// START SERVER
+// START
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("AI EMAIL CONNECTOR RUNNING");
 });
