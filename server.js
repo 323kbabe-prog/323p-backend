@@ -56,7 +56,10 @@ function isEmail(text) {
 }
 
 function createRoom() {
-  return { history: [], aiBusy: false };
+  return {
+    history: [],
+    aiBusy: false
+  };
 }
 
 function ensureUser(socketId) {
@@ -112,7 +115,9 @@ function removeFromAllQueues(socketId) {
 
 function addToTopicQueue(socketId, topic) {
   if (!topicQueues[topic]) topicQueues[topic] = [];
+
   removeFromAllQueues(socketId);
+
   if (!topicQueues[topic].includes(socketId)) {
     topicQueues[topic].push(socketId);
   }
@@ -147,19 +152,13 @@ io.on("connection", (socket) => {
     });
   });
 
-  ////////////////////////////////////////////////////////////
-  // USER MESSAGE
-  ////////////////////////////////////////////////////////////
-
   socket.on("sendMessage", async ({ message }) => {
     const text = cleanText(message);
     if (!text) return;
 
-    const lower = text.toLowerCase(); // ✅ ONLY ONE DECLARATION
+    // ✅ ADDED (REAL TIME)
+    const lower = text.toLowerCase();
 
-    //////////////////////////////////////////////////////////
-    // 🔥 REAL TIME HANDLER (ADDED)
-    //////////////////////////////////////////////////////////
     if (
       lower === "time" ||
       lower === "what time is now" ||
@@ -197,9 +196,7 @@ io.on("connection", (socket) => {
       text
     });
 
-    //////////////////////////////////////////////////////////
-    // YES HANDLER (NO duplicate lower)
-    //////////////////////////////////////////////////////////
+    // ❌ REMOVED duplicate lower here
 
     if (
       lower === "yes" ||
@@ -219,10 +216,6 @@ io.on("connection", (socket) => {
 
       return;
     }
-
-    //////////////////////////////////////////////////////////
-    // AI RESPONSE
-    //////////////////////////////////////////////////////////
 
     room.aiBusy = true;
 
@@ -249,10 +242,7 @@ io.on("connection", (socket) => {
         text: strangerReply
       });
 
-      ////////////////////////////////////////////////////////
-      // 🔥 IMPROVED TRIGGER (ADDED)
-      ////////////////////////////////////////////////////////
-
+      // ✅ IMPROVED TRIGGER
       if (
         shouldOfferConnection(text) ||
         shouldOfferConnection(aiAnswer)
@@ -276,10 +266,6 @@ io.on("connection", (socket) => {
   });
 });
 
-//////////////////////////////////////////////////////////////
-// START
-//////////////////////////////////////////////////////////////
-
 server.listen(10000, () => {
-  console.log("ASIAN AI CHAT RUNNING — FIXED");
+  console.log("ASIAN AI CHAT RUNNING");
 });
