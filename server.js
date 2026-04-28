@@ -286,7 +286,7 @@ io.on("connection", (socket) => {
       role: "ai",
       persona: "System",
       text:
-        "Welcome to ASIAN AI CHAT — Our AI model is smart, good at math, and practical, skeptical, observant, cost-aware, reserved, analytical, grounded, efficient, cautious, and realistic. Contact: chang@asianaichat.com"
+        "Welcome. I am ASIAN AI CHAT. I match you with people based on what others have already tried, and I find results using my designed Scarcity Awareness search model. me:chang@asianaichat.com"
     });
 
     socket.emit("message", {
