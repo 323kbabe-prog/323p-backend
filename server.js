@@ -50,7 +50,7 @@ function cleanText(text) {
     .trim();
 }
 
-// ✅ FIXED EMAIL REGEX
+// ✅ FIXED
 function isEmail(text) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(text || "").trim());
 }
@@ -90,46 +90,6 @@ function shouldOfferConnection(text) {
   return keywords.some(k => t.includes(k));
 }
 
-function getTopic(text) {
-  const t = String(text || "").toLowerCase();
-
-  if (t.includes("hotel") || t.includes("travel") || t.includes("trip") || t.includes("flight")) return "travel";
-  if (t.includes("email") || t.includes("reply")) return "email";
-  if (t.includes("ai product") || t.includes("startup") || t.includes("business")) return "ai_product";
-  if (t.includes("money") || t.includes("rent") || t.includes("budget")) return "money";
-
-  return "general";
-}
-
-function emitToSocket(socketId, payload) {
-  const s = io.sockets.sockets.get(socketId);
-  if (!s) return;
-  s.emit("message", payload);
-}
-
-function removeFromAllQueues(socketId) {
-  for (const topic of Object.keys(topicQueues)) {
-    topicQueues[topic] = topicQueues[topic].filter(id => id !== socketId);
-  }
-}
-
-function addToTopicQueue(socketId, topic) {
-  if (!topicQueues[topic]) topicQueues[topic] = [];
-
-  removeFromAllQueues(socketId);
-
-  if (!topicQueues[topic].includes(socketId)) {
-    topicQueues[topic].push(socketId);
-  }
-}
-
-//////////////////////////////////////////////////////////////
-// PROMPTS (UNCHANGED)
-//////////////////////////////////////////////////////////////
-
-function getAIPrompt() { return `...`; }
-function getStrangerPrompt() { return `...`; }
-
 //////////////////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////////////////
@@ -148,7 +108,8 @@ io.on("connection", (socket) => {
       id: makeId(),
       role: "ai",
       persona: "System",
-      text: "Welcome. I am ASIAN AI CHAT..."
+      text:
+        "Welcome. I am ASIAN AI CHAT. I match you with people based on what others have already tried."
     });
   });
 
@@ -188,6 +149,7 @@ io.on("connection", (socket) => {
 
     const room = rooms[ROOM_ID] || createRoom();
     rooms[ROOM_ID] = room;
+
     const user = ensureUser(socket.id);
 
     io.to(ROOM_ID).emit({
@@ -196,7 +158,9 @@ io.on("connection", (socket) => {
       text
     });
 
-    // ❌ REMOVED duplicate lower here
+    //////////////////////////////////////////////////////////
+    // YES HANDLER (no duplicate lower)
+    //////////////////////////////////////////////////////////
 
     if (
       lower === "yes" ||
@@ -211,17 +175,20 @@ io.on("connection", (socket) => {
         id: makeId(),
         role: "ai",
         persona: "System",
-        text: "Send your email..."
+        text: "Send your email."
       });
 
       return;
     }
 
+    //////////////////////////////////////////////////////////
+    // AI RESPONSE
+    //////////////////////////////////////////////////////////
+
     room.aiBusy = true;
 
     try {
       user.lastUserMessage = text;
-      user.lastTopic = getTopic(text);
 
       const aiAnswer = await generateAIAnswer(text);
       user.lastAIAnswer = aiAnswer;
@@ -251,7 +218,7 @@ io.on("connection", (socket) => {
           id: makeId(),
           role: "ai",
           persona: "System",
-          text: "Type 'yes' to match with someone."
+          text: "Type 'yes' to connect."
         });
       }
 
@@ -261,11 +228,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    removeFromAllQueues(socket.id);
     delete users[socket.id];
   });
 });
 
+//////////////////////////////////////////////////////////////
+// START
+//////////////////////////////////////////////////////////////
+
 server.listen(10000, () => {
-  console.log("ASIAN AI CHAT RUNNING");
+  console.log("ASIAN AI CHAT RUNNING — FIXED");
 });
