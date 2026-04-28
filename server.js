@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — FINAL CLEAN VERSION
+// AI CONNECT BOARD — FINAL (CLICKABLE, NO NUMBERING)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -61,7 +61,7 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// SEED (prevents empty board)
+// SEED QUESTION
 //////////////////////////////////////////////////////////////
 
 function ensureSeed() {
@@ -138,7 +138,7 @@ function sendQuestions(socket, user) {
   socket.emit("questions", batch);
 
   socket.emit("state", {
-    placeholder: "answer or next"
+    placeholder: "tap a question"
   });
 }
 
@@ -160,6 +160,21 @@ io.on("connection", (socket) => {
   });
 
   ////////////////////////////////////////////////////////////
+  // SELECT QUESTION
+  ////////////////////////////////////////////////////////////
+
+  socket.on("selectQuestion", ({ index }) => {
+    const user = users[socket.id];
+    if (!user) return;
+
+    user.currentIndex = index;
+
+    socket.emit("state", {
+      placeholder: "answer this"
+    });
+  });
+
+  ////////////////////////////////////////////////////////////
   // INPUT
   ////////////////////////////////////////////////////////////
 
@@ -167,6 +182,7 @@ io.on("connection", (socket) => {
 
     const text = (data.text || "").trim();
     const user = users[socket.id];
+
     if (!text || !user) return;
 
     ////////////////////////////////////////////////////////////
@@ -233,10 +249,6 @@ io.on("connection", (socket) => {
 
       loadQuestions(user);
 
-      socket.emit("state", {
-        placeholder: "answer or next"
-      });
-
       return sendQuestions(socket, user);
     }
 
@@ -275,7 +287,7 @@ Reply directly to continue.
       );
 
       return socket.emit("state", {
-        placeholder: "sent. answer or next"
+        placeholder: "sent. tap next or answer"
       });
     }
 
