@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// INPUT-ONLY AI CONNECTOR (GUIDED FLOW VERSION)
+// INPUT-ONLY AI CONNECTOR (FINAL FIXED VERSION)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -153,7 +153,7 @@ io.on("connection", (socket) => {
       user.step = "ready";
 
       socket.emit("state", {
-        placeholder: "type message or paste email to send"
+        placeholder: "type message + email to send"
       });
 
       return;
@@ -168,12 +168,35 @@ io.on("connection", (socket) => {
       const targetEmail = extractEmail(text);
 
       ////////////////////////////////////////////////////////////
-      // DIRECT EMAIL SEND
+      // EMAIL FOUND
       ////////////////////////////////////////////////////////////
 
       if (targetEmail) {
 
-        await sendEmail(targetEmail, text, user.email);
+        // remove email from message
+        const messageOnly = text.replace(targetEmail, "").trim();
+
+        ////////////////////////////////////////////////////////////
+        // ❌ NO MESSAGE CONTENT
+        ////////////////////////////////////////////////////////////
+
+        if (!messageOnly) {
+          socket.emit("state", {
+            placeholder: random([
+              "type message with email",
+              "need message + email",
+              "say something + email",
+              "message missing"
+            ])
+          });
+          return;
+        }
+
+        ////////////////////////////////////////////////////////////
+        // ✅ SEND EMAIL
+        ////////////////////////////////////////////////////////////
+
+        await sendEmail(targetEmail, messageOnly, user.email);
 
         socket.emit("state", {
           placeholder: random([
@@ -188,7 +211,7 @@ io.on("connection", (socket) => {
       }
 
       ////////////////////////////////////////////////////////////
-      // NORMAL MESSAGE
+      // NORMAL MESSAGE (NO EMAIL)
       ////////////////////////////////////////////////////////////
 
       socket.emit("state", {
@@ -216,7 +239,7 @@ io.on("connection", (socket) => {
 });
 
 //////////////////////////////////////////////////////////////
-// START
+// START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
