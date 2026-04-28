@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// ASIAN AI CHAT — AI + STRANGER + HYBRID EMAIL MATCHING
+// ASIAN AI CHAT — AI + STRANGER + EMAIL MATCHING
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -27,14 +27,6 @@ const ROOM_ID = "asian-room";
 const rooms = {};
 const users = {};
 
-const topicQueues = {
-  travel: [],
-  email: [],
-  ai_product: [],
-  money: [],
-  general: []
-};
-
 //////////////////////////////////////////////////////////////
 // HELPERS
 //////////////////////////////////////////////////////////////
@@ -50,7 +42,7 @@ function cleanText(text) {
     .trim();
 }
 
-// ✅ FIXED
+// ✔ already correct
 function isEmail(text) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(text || "").trim());
 }
@@ -90,6 +82,30 @@ function shouldOfferConnection(text) {
   return keywords.some(k => t.includes(k));
 }
 
+function getTopic(text) {
+  const t = String(text || "").toLowerCase();
+
+  if (t.includes("hotel") || t.includes("travel") || t.includes("trip") || t.includes("flight")) return "travel";
+  if (t.includes("email") || t.includes("reply")) return "email";
+  if (t.includes("ai product") || t.includes("startup") || t.includes("business")) return "ai_product";
+  if (t.includes("money") || t.includes("rent") || t.includes("budget")) return "money";
+
+  return "general";
+}
+
+function emitToSocket(socketId, payload) {
+  const s = io.sockets.sockets.get(socketId);
+  if (!s) return;
+  s.emit("message", payload);
+}
+
+//////////////////////////////////////////////////////////////
+// PROMPTS (UNCHANGED)
+//////////////////////////////////////////////////////////////
+
+function getAIPrompt() { return `...`; }
+function getStrangerPrompt() { return `...`; }
+
 //////////////////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////////////////
@@ -113,11 +129,15 @@ io.on("connection", (socket) => {
     });
   });
 
+  ////////////////////////////////////////////////////////////
+  // USER MESSAGE
+  ////////////////////////////////////////////////////////////
+
   socket.on("sendMessage", async ({ message }) => {
     const text = cleanText(message);
     if (!text) return;
 
-    // ✅ ADDED (REAL TIME)
+    // 🔥 ADDED (REAL TIME HANDLER)
     const lower = text.toLowerCase();
 
     if (
@@ -158,9 +178,39 @@ io.on("connection", (socket) => {
       text
     });
 
-    //////////////////////////////////////////////////////////
-    // YES HANDLER (no duplicate lower)
-    //////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // EMAIL CAPTURE
+    ////////////////////////////////////////////////////////////
+
+    if (user.awaitingEmail) {
+      if (!isEmail(text)) {
+        socket.emit({
+          id: makeId(),
+          role: "ai",
+          persona: "System",
+          text: "That does not look like an email."
+        });
+        return;
+      }
+
+      user.email = text;
+      user.awaitingEmail = false;
+      user.wantsMatch = true;
+
+      socket.emit({
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text: "Got it. I’ll try to match you."
+      });
+
+      tryMatchUsers();
+      return;
+    }
+
+    ////////////////////////////////////////////////////////////
+    // YES HANDLER (NO duplicate lower)
+    ////////////////////////////////////////////////////////////
 
     if (
       lower === "yes" ||
@@ -181,14 +231,15 @@ io.on("connection", (socket) => {
       return;
     }
 
-    //////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
     // AI RESPONSE
-    //////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
 
     room.aiBusy = true;
 
     try {
       user.lastUserMessage = text;
+      user.lastTopic = getTopic(text);
 
       const aiAnswer = await generateAIAnswer(text);
       user.lastAIAnswer = aiAnswer;
@@ -209,7 +260,7 @@ io.on("connection", (socket) => {
         text: strangerReply
       });
 
-      // ✅ IMPROVED TRIGGER
+      // 🔥 UPDATED TRIGGER
       if (
         shouldOfferConnection(text) ||
         shouldOfferConnection(aiAnswer)
@@ -237,5 +288,5 @@ io.on("connection", (socket) => {
 //////////////////////////////////////////////////////////////
 
 server.listen(10000, () => {
-  console.log("ASIAN AI CHAT RUNNING — FIXED");
+  console.log("ASIAN AI CHAT RUNNING — FIXED MINIMAL");
 });
