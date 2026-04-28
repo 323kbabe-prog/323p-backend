@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////
-// ASIAN AI CHAT — AI + STRANGER + HYBRID EMAIL MATCHING
+// ASIAN AI CHAT — EMAIL TRIGGER + HYBRID MATCHING
 //////////////////////////////////////////////////////////////
+
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -21,10 +22,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const ROOM_ID = "asian-room";
-const rooms = {};
-const users = {};
+//////////////////////////////////////////////////////////////
+// STATE
+//////////////////////////////////////////////////////////////
 
+const ROOM_ID = "asian-room";
+
+const users = {};
 const topicQueues = {
   travel: [],
   email: [],
@@ -34,24 +38,9 @@ const topicQueues = {
 };
 
 //////////////////////////////////////////////////////////////
-// TIME HELPER (ADDED)
-//////////////////////////////////////////////////////////////
-function getCurrentTime() {
-  const now = new Date();
-
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
-}
-
-//////////////////////////////////////////////////////////////
 // HELPERS
 //////////////////////////////////////////////////////////////
+
 function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -67,16 +56,9 @@ function isEmail(text) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(text || "").trim());
 }
 
-function createRoom() {
-  return {
-    history: [],
-    aiBusy: false
-  };
-}
-
-function ensureUser(socketId) {
-  if (!users[socketId]) {
-    users[socketId] = {
+function ensureUser(id) {
+  if (!users[id]) {
+    users[id] = {
       email: "",
       awaitingEmail: false,
       wantsMatch: false,
@@ -86,182 +68,280 @@ function ensureUser(socketId) {
       lastAIAnswer: ""
     };
   }
-  return users[socketId];
-}
-
-function shouldOfferConnection(text) {
-  const t = String(text || "").toLowerCase();
-  const keywords = [
-    "hotel","travel","trip","flight",
-    "email","reply",
-    "ai product","startup","business",
-    "money","rent","job","decision","plan"
-  ];
-  return keywords.some(k => t.includes(k));
+  return users[id];
 }
 
 function getTopic(text) {
-  const t = String(text || "").toLowerCase();
+  const t = text.toLowerCase();
 
-  if (t.includes("hotel") || t.includes("travel") || t.includes("trip") || t.includes("flight")) return "travel";
+  if (t.includes("travel") || t.includes("hotel")) return "travel";
   if (t.includes("email") || t.includes("reply")) return "email";
-  if (t.includes("ai product") || t.includes("startup") || t.includes("business")) return "ai_product";
-  if (t.includes("money") || t.includes("rent") || t.includes("budget")) return "money";
+  if (t.includes("startup") || t.includes("ai")) return "ai_product";
+  if (t.includes("money") || t.includes("rent")) return "money";
 
   return "general";
 }
 
-function emitToSocket(socketId, payload) {
-  const s = io.sockets.sockets.get(socketId);
-  if (!s) return;
-  s.emit("message", payload);
+function emitToSocket(id, payload) {
+  const s = io.sockets.sockets.get(id);
+  if (s) s.emit("message", payload);
 }
 
-function removeFromAllQueues(socketId) {
-  for (const topic of Object.keys(topicQueues)) {
-    topicQueues[topic] = topicQueues[topic].filter(id => id !== socketId);
-  }
+function removeFromAllQueues(id) {
+  Object.keys(topicQueues).forEach(topic => {
+    topicQueues[topic] = topicQueues[topic].filter(x => x !== id);
+  });
 }
 
-function addToTopicQueue(socketId, topic) {
+function addToQueue(id, topic) {
+  removeFromAllQueues(id);
   if (!topicQueues[topic]) topicQueues[topic] = [];
-  removeFromAllQueues(socketId);
-  if (!topicQueues[topic].includes(socketId)) {
-    topicQueues[topic].push(socketId);
+  if (!topicQueues[topic].includes(id)) {
+    topicQueues[topic].push(id);
   }
 }
 
 //////////////////////////////////////////////////////////////
-// PROMPTS (unchanged)
+// MATCHING CORE
 //////////////////////////////////////////////////////////////
-function getAIPrompt() {
-  return `
-You are Asian AI in a public AI chat room.
-- ALWAYS provide a direct answer.
-- NEVER ask questions.
-- NEVER request more information.
-- If missing info, assume and proceed.
-- 1–3 short sentences.
-- Practical, direct.
-`;
-}
 
-function getStrangerPrompt() {
-  return `
-You are the Stranger.
-- React to AI answer
-- No questions
-- 1–2 short sentences
-- Practical + cautious
-`;
-}
+function sendMatch(aId, bId) {
+  const a = users[aId];
+  const b = users[bId];
 
-async function generateAIAnswer(userMessage) {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: getAIPrompt() },
-      { role: "user", content: userMessage }
-    ]
+  if (!a || !b) return;
+
+  a.matched = true;
+  b.matched = true;
+
+  removeFromAllQueues(aId);
+  removeFromAllQueues(bId);
+
+  emitToSocket(aId, {
+    id: makeId(),
+    role: "ai",
+    persona: "System",
+    text: `Matched. Contact: ${b.email}`
   });
-  return cleanText(res.choices?.[0]?.message?.content);
+
+  emitToSocket(bId, {
+    id: makeId(),
+    role: "ai",
+    persona: "System",
+    text: `Matched. Contact: ${a.email}`
+  });
 }
 
-async function generateStrangerReply(userMessage, aiAnswer) {
-  const context = `User: ${userMessage}\nAI: ${aiAnswer}`;
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: getStrangerPrompt() },
-      { role: "user", content: context }
-    ]
+//////////////////////////////////////////////////////////////
+// AI MATCH SELECTION
+//////////////////////////////////////////////////////////////
+
+async function chooseBestPair(topic, ids) {
+
+  const list = ids.map((id, i) => {
+    const u = users[id];
+    return `${i + 1}. ${id}
+Topic: ${u.lastTopic}
+Message: ${u.lastUserMessage}`;
+  }).join("\n\n");
+
+  const prompt = `
+Match 2 users based on same need and usefulness.
+
+Topic: ${topic}
+
+${list}
+
+Return JSON only:
+{"a":"id","b":"id"}
+`;
+
+  try {
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.2,
+      messages: [{ role: "user", content: prompt }]
+    });
+
+    const raw = res.choices?.[0]?.message?.content || "";
+    const json = raw.match(/\{[\s\S]*\}/);
+
+    if (!json) return null;
+
+    const parsed = JSON.parse(json[0]);
+
+    if (
+      parsed.a &&
+      parsed.b &&
+      ids.includes(parsed.a) &&
+      ids.includes(parsed.b) &&
+      parsed.a !== parsed.b
+    ) {
+      return [parsed.a, parsed.b];
+    }
+
+  } catch {}
+
+  return null;
+}
+
+//////////////////////////////////////////////////////////////
+// MATCH FLOW
+//////////////////////////////////////////////////////////////
+
+async function tryMatch(socketId) {
+
+  const user = users[socketId];
+  if (!user) return;
+
+  const topic = user.lastTopic || "general";
+
+  addToQueue(socketId, topic);
+
+  const queue = topicQueues[topic].filter(id => {
+    const u = users[id];
+    return u && u.email && u.wantsMatch && !u.matched;
   });
-  return cleanText(res.choices?.[0]?.message?.content);
+
+  topicQueues[topic] = queue;
+
+  if (queue.length < 2) {
+    emitToSocket(socketId, {
+      id: makeId(),
+      role: "ai",
+      persona: "System",
+      text: "Waiting for someone similar..."
+    });
+    return;
+  }
+
+  if (queue.length === 2) {
+    sendMatch(queue[0], queue[1]);
+    return;
+  }
+
+  const pair = await chooseBestPair(topic, queue.slice(0, 6));
+
+  if (pair) {
+    sendMatch(pair[0], pair[1]);
+    return;
+  }
+
+  sendMatch(queue[0], queue[1]);
 }
 
 //////////////////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////////////////
+
 io.on("connection", (socket) => {
 
-  ensureUser(socket.id);
+  const user = ensureUser(socket.id);
 
   ////////////////////////////////////////////////////////////
-  // JOIN ROOM
+  // JOIN
   ////////////////////////////////////////////////////////////
-  socket.on("joinRoom", async () => {
 
+  socket.on("joinRoom", () => {
     socket.join(ROOM_ID);
 
-    if (!rooms[ROOM_ID]) {
-      rooms[ROOM_ID] = createRoom();
-    }
-
     socket.emit("message", {
       id: makeId(),
       role: "ai",
       persona: "System",
-      text: `Welcome. Current time: ${getCurrentTime()}`
+      text: "Welcome. Type your problem. Type 'yes' to connect with someone."
     });
-
-    socket.emit("message", {
-      id: makeId(),
-      role: "ai",
-      persona: "System",
-      text: "People ask about AI, travel, email, and decisions."
-    });
-
   });
 
   ////////////////////////////////////////////////////////////
   // MESSAGE
   ////////////////////////////////////////////////////////////
+
   socket.on("sendMessage", async ({ message }) => {
 
     const text = cleanText(message);
     if (!text) return;
 
-    const room = rooms[ROOM_ID] || createRoom();
-    rooms[ROOM_ID] = room;
+    const user = ensureUser(socket.id);
 
-    if (room.aiBusy) return;
-    room.aiBusy = true;
+    ////////////////////////////////////////////////////////////
+    // SHOW USER
+    ////////////////////////////////////////////////////////////
 
-    try {
+    io.to(ROOM_ID).emit({
+      id: makeId(),
+      role: "user",
+      text
+    });
 
-      io.to(ROOM_ID).emit("message", {
-        id: makeId(),
-        role: "user",
-        text
-      });
+    ////////////////////////////////////////////////////////////
+    // EMAIL INPUT MODE
+    ////////////////////////////////////////////////////////////
 
-      const aiAnswer = await generateAIAnswer(text);
+    if (user.awaitingEmail) {
 
-      io.to(ROOM_ID).emit("message", {
+      if (!isEmail(text)) {
+        socket.emit("message", {
+          id: makeId(),
+          role: "ai",
+          persona: "System",
+          text: "Invalid email. Try again."
+        });
+        return;
+      }
+
+      user.email = text;
+      user.awaitingEmail = false;
+      user.wantsMatch = true;
+
+      socket.emit("message", {
         id: makeId(),
         role: "ai",
-        persona: "AI",
-        text: aiAnswer
+        persona: "System",
+        text: "Email saved. Matching..."
       });
 
-      const strangerReply = await generateStrangerReply(text, aiAnswer);
-
-      io.to(ROOM_ID).emit("message", {
-        id: makeId(),
-        role: "ai",
-        persona: "Stranger",
-        text: strangerReply
-      });
-
-    } finally {
-      room.aiBusy = false;
+      await tryMatch(socket.id);
+      return;
     }
+
+    ////////////////////////////////////////////////////////////
+    // TRIGGER CONNECT
+    ////////////////////////////////////////////////////////////
+
+    const lower = text.toLowerCase();
+
+    if (
+      lower === "yes" ||
+      lower === "connect" ||
+      lower === "match"
+    ) {
+      user.awaitingEmail = true;
+      user.wantsMatch = true;
+
+      socket.emit("message", {
+        id: makeId(),
+        role: "ai",
+        persona: "System",
+        text: "Send your email to connect."
+      });
+
+      return;
+    }
+
+    ////////////////////////////////////////////////////////////
+    // STORE CONTEXT
+    ////////////////////////////////////////////////////////////
+
+    user.lastUserMessage = text;
+    user.lastTopic = getTopic(text);
 
   });
 
   ////////////////////////////////////////////////////////////
   // DISCONNECT
   ////////////////////////////////////////////////////////////
+
   socket.on("disconnect", () => {
     removeFromAllQueues(socket.id);
     delete users[socket.id];
@@ -272,8 +352,9 @@ io.on("connection", (socket) => {
 //////////////////////////////////////////////////////////////
 // START
 //////////////////////////////////////////////////////////////
+
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("ASIAN AI CHAT RUNNING — TIME ENABLED");
+  console.log("EMAIL MATCH SYSTEM RUNNING");
 });
