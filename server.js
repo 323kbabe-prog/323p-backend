@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — ASK / ANSWER SYSTEM
+// AI CONNECT BOARD — FINAL VERSION
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -61,6 +61,22 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
+// SEED QUESTION (prevents empty board)
+//////////////////////////////////////////////////////////////
+
+function ensureSeed() {
+  if (questions.length === 0) {
+    questions.push({
+      id: "seed",
+      email: "system@aiconnect.com",
+      text: "What is something you learned recently?",
+      answers: [],
+      createdAt: Date.now()
+    });
+  }
+}
+
+//////////////////////////////////////////////////////////////
 // CLEANUP — 6 HOURS OR 3 ANSWERS
 //////////////////////////////////////////////////////////////
 
@@ -70,6 +86,7 @@ setInterval(() => {
   const SIX_HOURS = 6 * 60 * 60 * 1000;
 
   for (let i = questions.length - 1; i >= 0; i--) {
+
     const q = questions[i];
 
     const expired = (now - q.createdAt) > SIX_HOURS;
@@ -80,6 +97,8 @@ setInterval(() => {
     }
   }
 
+  ensureSeed();
+
 }, 60000);
 
 //////////////////////////////////////////////////////////////
@@ -87,6 +106,9 @@ setInterval(() => {
 //////////////////////////////////////////////////////////////
 
 function loadQuestions(user) {
+
+  ensureSeed();
+
   const sorted = [...questions].sort((a, b) => {
     return a.answers.length - b.answers.length;
   });
@@ -96,6 +118,7 @@ function loadQuestions(user) {
 }
 
 function sendQuestions(socket, user) {
+
   const batch = user.currentQuestions.slice(
     user.currentIndex,
     user.currentIndex + 3
@@ -103,7 +126,7 @@ function sendQuestions(socket, user) {
 
   if (!batch.length) {
     return socket.emit("state", {
-      placeholder: "no questions"
+      placeholder: "no more. type next"
     });
   }
 
@@ -139,17 +162,21 @@ io.on("connection", (socket) => {
 
     const text = (data.text || "").trim();
     const user = users[socket.id];
+
     if (!text || !user) return;
 
     ////////////////////////////////////////////////////////////
-    // EMAIL
+    // STEP 1 — EMAIL
     ////////////////////////////////////////////////////////////
 
     if (user.step === "email") {
+
       const email = extractEmail(text);
 
       if (!email) {
-        return socket.emit("state", { placeholder: "invalid email" });
+        return socket.emit("state", {
+          placeholder: "invalid email"
+        });
       }
 
       user.email = email;
@@ -161,7 +188,7 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // MODE
+    // STEP 2 — MODE
     ////////////////////////////////////////////////////////////
 
     if (user.step === "mode") {
@@ -185,12 +212,12 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // ASK
+    // STEP 3 — ASK (AUTO ENTER ANSWER MODE)
     ////////////////////////////////////////////////////////////
 
     if (user.step === "ask") {
 
-      questions.push({
+      questions.unshift({
         id: makeId(),
         email: user.email,
         text,
@@ -198,15 +225,23 @@ io.on("connection", (socket) => {
         createdAt: Date.now()
       });
 
-      user.step = "mode";
+      //////////////////////////////////////////////////////////
+      // 🔥 IMMEDIATE ANSWER MODE
+      //////////////////////////////////////////////////////////
 
-      return socket.emit("state", {
-        placeholder: "posted. ask or answer"
+      user.step = "answer";
+
+      loadQuestions(user);
+
+      socket.emit("state", {
+        placeholder: "answer or next"
       });
+
+      return sendQuestions(socket, user);
     }
 
     ////////////////////////////////////////////////////////////
-    // ANSWER MODE
+    // STEP 4 — ANSWER MODE
     ////////////////////////////////////////////////////////////
 
     if (user.step === "answer") {
@@ -229,7 +264,7 @@ io.on("connection", (socket) => {
       });
 
       //////////////////////////////////////////////////////////
-      // EMAIL TO QUESTION OWNER
+      // SEND EMAIL
       //////////////////////////////////////////////////////////
 
       await sendEmail(
@@ -242,7 +277,7 @@ ${text}
 Responder:
 ${user.email}
 
-Reply directly to continue the conversation.
+Reply directly to continue.
 `,
         user.email
       );
@@ -265,7 +300,7 @@ Reply directly to continue the conversation.
 });
 
 //////////////////////////////////////////////////////////////
-// START
+// START SERVER
 //////////////////////////////////////////////////////////////
 
 const PORT = process.env.PORT || 10000;
