@@ -89,8 +89,6 @@ setInterval(() => {
 
 function loadQuestions(user) {
 
-  ensureSeed();
-
   const sorted = [...questions].sort((a, b) => {
 
     if (a.answers.length !== b.answers.length) {
