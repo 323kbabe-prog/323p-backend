@@ -139,6 +139,13 @@ io.on("connection", (socket) => {
     placeholder: "enter your email"
   });
 
+  // 🔥 ADD THIS BLOCK RIGHT HERE
+  socket.on("count", () => {
+    socket.emit("count", questions.length);
+  });
+
+  socket.emit("count", questions.length);
+
   ////////////////////////////////////////////////////////////
   // SELECT QUESTION
   ////////////////////////////////////////////////////////////
