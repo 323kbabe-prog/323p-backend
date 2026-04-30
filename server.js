@@ -33,7 +33,7 @@ const transporter = nodemailer.createTransport({
 async function sendEmail(to, message, replyToEmail) {
   try {
     await transporter.sendMail({
-      from: `"AI Connect" <${process.env.EMAIL_USER}>`,
+      from: `"AI Connect - Connectaing.com " <${process.env.EMAIL_USER}>`,
       to,
       subject: "New answer to your question",
       replyTo: replyToEmail,
