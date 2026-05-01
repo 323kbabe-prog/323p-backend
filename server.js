@@ -200,7 +200,7 @@ io.on("connection", (socket) => {
     user.currentIndex = selectedIndex;
 
     return socket.emit("state", {
-      placeholder: "answer · refer email"
+      placeholder: "answer or refer someone (email)"
     });
   });
 
@@ -332,7 +332,7 @@ humans are the algorithm
         );
 
         return socket.emit("state", {
-          placeholder: "invited"
+          placeholder: "Invited. Tap a question"
         });
       }
 
@@ -387,7 +387,7 @@ Reply directly to continue.
       user.currentIndex = null;
 
       return socket.emit("state", {
-        placeholder: "sent. tap another question or type 'ask'"
+        placeholder: "Sent. Tap a question or type 'ask'"
       });
     }
   });
