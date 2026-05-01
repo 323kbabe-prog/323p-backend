@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////
 // AI CONNECT BOARD — V2 FINAL BACKEND
-// Natural ask + strict click-to-answer + ask return + refer email UX
+// Natural ask + strict click-to-answer + ask return + refer invite system
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -20,10 +20,14 @@ const io = new Server(server, {
 });
 
 //////////////////////////////////////////////////////////////
-// EMAIL
+// CONFIG
 //////////////////////////////////////////////////////////////
 
-const APP_URL = process.env.APP_URL || "https://your-app-url.com";
+const APP_URL = process.env.APP_URL || "https://connectaing.com";
+
+//////////////////////////////////////////////////////////////
+// EMAIL
+//////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -195,7 +199,7 @@ io.on("connection", (socket) => {
     user.currentIndex = selectedIndex;
 
     return socket.emit("state", {
-      placeholder: "answer or refer email"
+      placeholder: "answer · refer email"
     });
   });
 
@@ -280,13 +284,13 @@ io.on("connection", (socket) => {
         return sendQuestions(socket, user);
       }
 
-      // REFER FRIEND
+      // REFER / INVITE FRIEND
       if (lower.startsWith("refer")) {
         const friendEmail = extractEmail(text);
 
         if (!friendEmail) {
           return socket.emit("state", {
-            placeholder: "type refer friend@email.com"
+            placeholder: "type refer email"
           });
         }
 
@@ -312,7 +316,7 @@ io.on("connection", (socket) => {
           `
 You’ve got mail.
 
-${user.email} sent you a question:
+${user.email} invited you to answer:
 
 "${q.text}"
 
@@ -326,7 +330,7 @@ humans are the algorithm
         );
 
         return socket.emit("state", {
-          placeholder: "sent to friend"
+          placeholder: "invited"
         });
       }
 
@@ -394,5 +398,5 @@ Reply directly to continue.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECT BOARD V2 FINAL WITH REFER EMAIL UX RUNNING");
+  console.log("AI CONNECT BOARD V2 FINAL WITH REFER INVITE RUNNING");
 });
