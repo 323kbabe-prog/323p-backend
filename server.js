@@ -1,6 +1,9 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V2 BACKEND FINAL
-// CLICKABLE QUESTIONS REQUIRED BEFORE ANSWERING
+// AI CONNECT BOARD — V2 FINAL BACKEND (LOCKED)
+// - Natural ask (no "ask" command required)
+// - Must click question before answering
+// - Clean placeholder logic (no "invalid email")
+// - Real-time count sync
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -10,7 +13,6 @@ const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 
 const app = express();
-
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
@@ -66,7 +68,7 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// CLEANUP — 6 HOURS OR 3 ANSWERS
+// CLEANUP (6 HOURS OR 3 ANSWERS)
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
@@ -100,17 +102,11 @@ function loadQuestions(user) {
     if (a.answers.length !== b.answers.length) {
       return a.answers.length - b.answers.length;
     }
-
     return b.createdAt - a.createdAt;
   });
 
   user.currentQuestions = sorted;
-
-  // important:
-  // null means user has NOT clicked a question yet
-  user.currentIndex = null;
-
-  // pagination pointer
+  user.currentIndex = null; // must click
   user.pageIndex = 0;
 }
 
@@ -138,6 +134,7 @@ function sendQuestions(socket, user) {
 //////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
+
   users[socket.id] = {
     step: "email",
     email: null,
@@ -161,7 +158,7 @@ io.on("connection", (socket) => {
   });
 
   ////////////////////////////////////////////////////////////
-  // SELECT QUESTION — REQUIRED BEFORE ANSWERING
+  // SELECT QUESTION
   ////////////////////////////////////////////////////////////
 
   socket.on("selectQuestion", ({ index }) => {
@@ -180,7 +177,7 @@ io.on("connection", (socket) => {
     user.currentIndex = selectedIndex;
 
     socket.emit("state", {
-      placeholder: "answer this"
+      placeholder: "type your answer"
     });
   });
 
@@ -201,52 +198,35 @@ io.on("connection", (socket) => {
     if (user.step === "email") {
       const email = extractEmail(text);
 
-      if (!email) {
+      if (email) {
+        user.email = email;
+        user.step = "mode";
+
         return socket.emit("state", {
-          placeholder: "invalid email"
+          placeholder: "ask a question or type 'answer'"
         });
       }
 
-      user.email = email;
-      user.step = "mode";
-
       return socket.emit("state", {
-        placeholder: "ask or answer"
+        placeholder: "enter your email to start"
       });
     }
 
     //////////////////////////////////////////////////////////
-    // MODE STEP
+    // MODE STEP (NATURAL ASK)
     //////////////////////////////////////////////////////////
 
     if (user.step === "mode") {
       const lower = text.toLowerCase();
 
-      if (lower.includes("ask")) {
-        user.step = "ask";
-
-        return socket.emit("state", {
-          placeholder: "your question"
-        });
-      }
-
+      // answer mode
       if (lower.includes("answer")) {
         user.step = "answer";
         loadQuestions(user);
-
         return sendQuestions(socket, user);
       }
 
-      return socket.emit("state", {
-        placeholder: "type ask or answer"
-      });
-    }
-
-    //////////////////////////////////////////////////////////
-    // ASK FLOW
-    //////////////////////////////////////////////////////////
-
-    if (user.step === "ask") {
+      // everything else = ask
       questions.unshift({
         id: makeId(),
         email: user.email,
@@ -273,12 +253,10 @@ io.on("connection", (socket) => {
       if (lower === "next") {
         user.pageIndex += 3;
         user.currentIndex = null;
-
         return sendQuestions(socket, user);
       }
 
-      // hard rule:
-      // user must click a question first
+      // must select question first
       if (user.currentIndex === null) {
         return socket.emit("state", {
           placeholder: "tap a question first"
@@ -289,7 +267,6 @@ io.on("connection", (socket) => {
 
       if (!q) {
         user.currentIndex = null;
-
         return socket.emit("state", {
           placeholder: "tap a question first"
         });
@@ -331,6 +308,7 @@ Reply directly to continue.
   socket.on("disconnect", () => {
     delete users[socket.id];
   });
+
 });
 
 //////////////////////////////////////////////////////////////
@@ -340,5 +318,5 @@ Reply directly to continue.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECT BOARD V2 BACKEND RUNNING");
+  console.log("AI CONNECT BOARD V2 FINAL RUNNING");
 });
