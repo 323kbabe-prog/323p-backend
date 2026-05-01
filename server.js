@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////
 // AI CONNECT BOARD — V2 FINAL BACKEND
-// Natural ask + strict click-to-answer + ask return + refer
+// Natural ask + strict click-to-answer + ask return + refer email UX
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -22,6 +22,8 @@ const io = new Server(server, {
 //////////////////////////////////////////////////////////////
 // EMAIL
 //////////////////////////////////////////////////////////////
+
+const APP_URL = process.env.APP_URL || "https://your-app-url.com";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -118,6 +120,7 @@ function sendQuestions(socket, user) {
 
   if (!batch.length) {
     socket.emit("questions", []);
+
     return socket.emit("state", {
       placeholder: "no more. type ask"
     });
@@ -192,7 +195,7 @@ io.on("connection", (socket) => {
     user.currentIndex = selectedIndex;
 
     return socket.emit("state", {
-      placeholder: "type your answer or refer email"
+      placeholder: "type your answer or refer friend@email.com"
     });
   });
 
@@ -283,7 +286,7 @@ io.on("connection", (socket) => {
 
         if (!friendEmail) {
           return socket.emit("state", {
-            placeholder: "type refer email"
+            placeholder: "type refer friend@email.com"
           });
         }
 
@@ -305,15 +308,19 @@ io.on("connection", (socket) => {
 
         await sendEmail(
           friendEmail,
-          "A question was shared with you",
+          "You’ve got a question",
           `
 You’ve got mail.
 
-${user.email} shared this question with you:
+${user.email} sent you a question:
 
 "${q.text}"
 
-Reply directly to this email to continue.
+Reply to answer
+or join the board:
+${APP_URL}
+
+humans are the algorithm
 `,
           user.email
         );
@@ -387,5 +394,5 @@ Reply directly to continue.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECT BOARD V2 FINAL WITH REFER RUNNING");
+  console.log("AI CONNECT BOARD V2 FINAL WITH REFER EMAIL UX RUNNING");
 });
