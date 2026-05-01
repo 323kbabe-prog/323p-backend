@@ -1,9 +1,6 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V2 FINAL BACKEND (LOCKED)
-// - Natural ask (no "ask" command required)
-// - Must click question before answering
-// - Clean placeholder logic (no "invalid email")
-// - Real-time count sync
+// AI CONNECT BOARD — V2 FINAL BACKEND
+// Natural ask + strict click-to-answer + ask return
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -63,12 +60,14 @@ function makeId() {
 }
 
 function extractEmail(text) {
-  const m = String(text || "").match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
+  const m = String(text || "").match(
+    /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
+  );
   return m ? m[0].toLowerCase() : null;
 }
 
 //////////////////////////////////////////////////////////////
-// CLEANUP (6 HOURS OR 3 ANSWERS)
+// CLEANUP — 6 HOURS OR 3 ANSWERS
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
@@ -102,11 +101,12 @@ function loadQuestions(user) {
     if (a.answers.length !== b.answers.length) {
       return a.answers.length - b.answers.length;
     }
+
     return b.createdAt - a.createdAt;
   });
 
   user.currentQuestions = sorted;
-  user.currentIndex = null; // must click
+  user.currentIndex = null;
   user.pageIndex = 0;
 }
 
@@ -117,16 +117,32 @@ function sendQuestions(socket, user) {
   );
 
   if (!batch.length) {
+    socket.emit("questions", []);
     return socket.emit("state", {
-      placeholder: "no more. type next"
+      placeholder: "no more. type ask"
     });
   }
 
   socket.emit("questions", batch);
 
-  socket.emit("state", {
-    placeholder: "tap a question"
+  return socket.emit("state", {
+    placeholder: "tap a question or type 'ask'"
   });
+}
+
+function createQuestion(user, text) {
+  questions.unshift({
+    id: makeId(),
+    email: user.email,
+    text,
+    answers: [],
+    createdAt: Date.now()
+  });
+
+  io.emit("count", questions.length);
+
+  user.step = "answer";
+  loadQuestions(user);
 }
 
 //////////////////////////////////////////////////////////////
@@ -134,7 +150,6 @@ function sendQuestions(socket, user) {
 //////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
-
   users[socket.id] = {
     step: "email",
     email: null,
@@ -158,7 +173,7 @@ io.on("connection", (socket) => {
   });
 
   ////////////////////////////////////////////////////////////
-  // SELECT QUESTION
+  // SELECT QUESTION — REQUIRED BEFORE ANSWERING
   ////////////////////////////////////////////////////////////
 
   socket.on("selectQuestion", ({ index }) => {
@@ -170,13 +185,13 @@ io.on("connection", (socket) => {
 
     if (!selectedQuestion) {
       return socket.emit("state", {
-        placeholder: "tap a question"
+        placeholder: "tap a question first"
       });
     }
 
     user.currentIndex = selectedIndex;
 
-    socket.emit("state", {
+    return socket.emit("state", {
       placeholder: "type your answer"
     });
   });
@@ -213,50 +228,56 @@ io.on("connection", (socket) => {
     }
 
     //////////////////////////////////////////////////////////
-    // MODE STEP (NATURAL ASK)
+    // MODE STEP — NATURAL ASK
     //////////////////////////////////////////////////////////
 
     if (user.step === "mode") {
       const lower = text.toLowerCase();
 
-      // answer mode
       if (lower.includes("answer")) {
         user.step = "answer";
         loadQuestions(user);
         return sendQuestions(socket, user);
       }
 
-      // everything else = ask
-      questions.unshift({
-        id: makeId(),
-        email: user.email,
-        text,
-        answers: [],
-        createdAt: Date.now()
-      });
-
-      io.emit("count", questions.length);
-
-      user.step = "answer";
-      loadQuestions(user);
-
+      createQuestion(user, text);
       return sendQuestions(socket, user);
     }
 
     //////////////////////////////////////////////////////////
-    // ANSWER FLOW
+    // ASK STEP
+    //////////////////////////////////////////////////////////
+
+    if (user.step === "ask") {
+      createQuestion(user, text);
+      return sendQuestions(socket, user);
+    }
+
+    //////////////////////////////////////////////////////////
+    // ANSWER STEP
     //////////////////////////////////////////////////////////
 
     if (user.step === "answer") {
       const lower = text.toLowerCase();
 
+      // go back to ask
+      if (lower === "ask") {
+        user.step = "ask";
+        user.currentIndex = null;
+
+        return socket.emit("state", {
+          placeholder: "type your question"
+        });
+      }
+
+      // pagination
       if (lower === "next") {
         user.pageIndex += 3;
         user.currentIndex = null;
         return sendQuestions(socket, user);
       }
 
-      // must select question first
+      // must click question first
       if (user.currentIndex === null) {
         return socket.emit("state", {
           placeholder: "tap a question first"
@@ -267,6 +288,7 @@ io.on("connection", (socket) => {
 
       if (!q) {
         user.currentIndex = null;
+
         return socket.emit("state", {
           placeholder: "tap a question first"
         });
@@ -296,7 +318,7 @@ Reply directly to continue.
       user.currentIndex = null;
 
       return socket.emit("state", {
-        placeholder: "sent. tap another question"
+        placeholder: "sent. tap another question or type 'ask'"
       });
     }
   });
@@ -308,7 +330,6 @@ Reply directly to continue.
   socket.on("disconnect", () => {
     delete users[socket.id];
   });
-
 });
 
 //////////////////////////////////////////////////////////////
