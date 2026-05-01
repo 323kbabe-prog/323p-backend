@@ -292,7 +292,7 @@ io.on("connection", (socket) => {
 
         if (!friendEmail) {
           return socket.emit("state", {
-            placeholder: "type: refer friend@email.com"
+            placeholder: "type 'refer friend@email.com'"
           });
         }
 
@@ -326,7 +326,7 @@ Reply to answer
 or join the board:
 ${APP_URL}
 
-humans are the algorithm
+We are the world. We are connected strangers.<br>
 `,
           user.email
         );
