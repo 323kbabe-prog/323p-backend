@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////
 // AI CONNECT BOARD — V2 FINAL BACKEND
-// Natural ask + strict click-to-answer + ask return + refer invite system
+// Natural ask + strict click-to-answer + ask return
+// refer invite system + teach-on-mistake email detection
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -266,6 +267,7 @@ io.on("connection", (socket) => {
 
     if (user.step === "answer") {
       const lower = text.toLowerCase();
+      const detectedEmail = extractEmail(text);
 
       // ASK RETURN
       if (lower === "ask") {
@@ -286,11 +288,11 @@ io.on("connection", (socket) => {
 
       // REFER / INVITE FRIEND
       if (lower.startsWith("refer")) {
-        const friendEmail = extractEmail(text);
+        const friendEmail = detectedEmail;
 
         if (!friendEmail) {
           return socket.emit("state", {
-            placeholder: "type refer email"
+            placeholder: "type: refer friend@email.com"
           });
         }
 
@@ -331,6 +333,14 @@ humans are the algorithm
 
         return socket.emit("state", {
           placeholder: "invited"
+        });
+      }
+
+      // TEACH ON MISTAKE:
+      // If user types only an email, teach the refer format.
+      if (detectedEmail && text === detectedEmail) {
+        return socket.emit("state", {
+          placeholder: "type: refer friend@email.com"
         });
       }
 
@@ -398,5 +408,5 @@ Reply directly to continue.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECT BOARD V2 FINAL WITH REFER INVITE RUNNING");
+  console.log("AI CONNECT BOARD V2 FINAL WITH TEACH-ON-MISTAKE RUNNING");
 });
