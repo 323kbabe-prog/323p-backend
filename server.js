@@ -195,7 +195,7 @@ io.on("connection", (socket) => {
     user.currentIndex = selectedIndex;
 
     return socket.emit("state", {
-      placeholder: "type your answer or refer friend@email.com"
+      placeholder: "answer or refer email"
     });
   });
 
