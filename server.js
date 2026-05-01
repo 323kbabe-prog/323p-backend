@@ -1,5 +1,6 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — FINAL (CLICKABLE, NO NUMBERING)
+// AI CONNECT BOARD — V2 BACKEND FINAL
+// CLICKABLE QUESTIONS REQUIRED BEFORE ANSWERING
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -9,6 +10,7 @@ const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 
 const app = express();
+
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
@@ -27,15 +29,18 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
 async function sendEmail(to, message, replyToEmail) {
   try {
     await transporter.sendMail({
-      from: `"AI Connect - Connectaing.com " <${process.env.EMAIL_USER}>`,
+      from: `"AI Connect - Connectaing.com" <${process.env.EMAIL_USER}>`,
       to,
-      subject: "New answer to your question",
+      subject: "Someone answered your question",
       replyTo: replyToEmail,
       text: message
     });
@@ -61,26 +66,29 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// CLEANUP (6 HOURS OR 3 ANSWERS)
+// CLEANUP — 6 HOURS OR 3 ANSWERS
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
-
   const now = Date.now();
   const SIX_HOURS = 6 * 60 * 60 * 1000;
+  let changed = false;
 
   for (let i = questions.length - 1; i >= 0; i--) {
-
     const q = questions[i];
 
-    const expired = (now - q.createdAt) > SIX_HOURS;
+    const expired = now - q.createdAt > SIX_HOURS;
     const enoughAnswers = q.answers.length >= 3;
 
     if (expired || enoughAnswers) {
       questions.splice(i, 1);
+      changed = true;
     }
   }
 
+  if (changed) {
+    io.emit("count", questions.length);
+  }
 }, 60000);
 
 //////////////////////////////////////////////////////////////
@@ -88,9 +96,7 @@ setInterval(() => {
 //////////////////////////////////////////////////////////////
 
 function loadQuestions(user) {
-
   const sorted = [...questions].sort((a, b) => {
-
     if (a.answers.length !== b.answers.length) {
       return a.answers.length - b.answers.length;
     }
@@ -99,14 +105,19 @@ function loadQuestions(user) {
   });
 
   user.currentQuestions = sorted;
-  user.currentIndex = 0;
+
+  // important:
+  // null means user has NOT clicked a question yet
+  user.currentIndex = null;
+
+  // pagination pointer
+  user.pageIndex = 0;
 }
 
 function sendQuestions(socket, user) {
-
   const batch = user.currentQuestions.slice(
-    user.currentIndex,
-    user.currentIndex + 3
+    user.pageIndex,
+    user.pageIndex + 3
   );
 
   if (!batch.length) {
@@ -127,34 +138,46 @@ function sendQuestions(socket, user) {
 //////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
-
   users[socket.id] = {
     step: "email",
     email: null,
     currentQuestions: [],
-    currentIndex: 0
+    currentIndex: null,
+    pageIndex: 0
   };
 
   socket.emit("state", {
     placeholder: "enter your email"
   });
 
-  // 🔥 ADD THIS BLOCK RIGHT HERE
+  socket.emit("count", questions.length);
+
+  ////////////////////////////////////////////////////////////
+  // COUNT
+  ////////////////////////////////////////////////////////////
+
   socket.on("count", () => {
     socket.emit("count", questions.length);
   });
 
-  socket.emit("count", questions.length);
-
   ////////////////////////////////////////////////////////////
-  // SELECT QUESTION
+  // SELECT QUESTION — REQUIRED BEFORE ANSWERING
   ////////////////////////////////////////////////////////////
 
   socket.on("selectQuestion", ({ index }) => {
     const user = users[socket.id];
     if (!user) return;
 
-    user.currentIndex = index;
+    const selectedIndex = user.pageIndex + Number(index);
+    const selectedQuestion = user.currentQuestions[selectedIndex];
+
+    if (!selectedQuestion) {
+      return socket.emit("state", {
+        placeholder: "tap a question"
+      });
+    }
+
+    user.currentIndex = selectedIndex;
 
     socket.emit("state", {
       placeholder: "answer this"
@@ -166,18 +189,16 @@ io.on("connection", (socket) => {
   ////////////////////////////////////////////////////////////
 
   socket.on("input", async (data) => {
-
     const text = (data.text || "").trim();
     const user = users[socket.id];
 
     if (!text || !user) return;
 
-    ////////////////////////////////////////////////////////////
-    // EMAIL
-    ////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////
+    // EMAIL STEP
+    //////////////////////////////////////////////////////////
 
     if (user.step === "email") {
-
       const email = extractEmail(text);
 
       if (!email) {
@@ -194,22 +215,25 @@ io.on("connection", (socket) => {
       });
     }
 
-    ////////////////////////////////////////////////////////////
-    // MODE
-    ////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////
+    // MODE STEP
+    //////////////////////////////////////////////////////////
 
     if (user.step === "mode") {
+      const lower = text.toLowerCase();
 
-      if (text.toLowerCase().includes("ask")) {
+      if (lower.includes("ask")) {
         user.step = "ask";
+
         return socket.emit("state", {
           placeholder: "your question"
         });
       }
 
-      if (text.toLowerCase().includes("answer")) {
+      if (lower.includes("answer")) {
         user.step = "answer";
         loadQuestions(user);
+
         return sendQuestions(socket, user);
       }
 
@@ -218,12 +242,11 @@ io.on("connection", (socket) => {
       });
     }
 
-    ////////////////////////////////////////////////////////////
-    // ASK → AUTO ANSWER MODE
-    ////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////
+    // ASK FLOW
+    //////////////////////////////////////////////////////////
 
     if (user.step === "ask") {
-
       questions.unshift({
         id: makeId(),
         email: user.email,
@@ -232,30 +255,50 @@ io.on("connection", (socket) => {
         createdAt: Date.now()
       });
 
-      user.step = "answer";
+      io.emit("count", questions.length);
 
+      user.step = "answer";
       loadQuestions(user);
 
       return sendQuestions(socket, user);
     }
 
-    ////////////////////////////////////////////////////////////
-    // ANSWER MODE
-    ////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////
+    // ANSWER FLOW
+    //////////////////////////////////////////////////////////
 
     if (user.step === "answer") {
+      const lower = text.toLowerCase();
 
-      if (text.toLowerCase() === "next") {
-        user.currentIndex += 3;
+      if (lower === "next") {
+        user.pageIndex += 3;
+        user.currentIndex = null;
+
         return sendQuestions(socket, user);
       }
 
+      // hard rule:
+      // user must click a question first
+      if (user.currentIndex === null) {
+        return socket.emit("state", {
+          placeholder: "tap a question first"
+        });
+      }
+
       const q = user.currentQuestions[user.currentIndex];
-      if (!q) return;
+
+      if (!q) {
+        user.currentIndex = null;
+
+        return socket.emit("state", {
+          placeholder: "tap a question first"
+        });
+      }
 
       q.answers.push({
         text,
-        from: user.email
+        from: user.email,
+        createdAt: Date.now()
       });
 
       await sendEmail(
@@ -273,17 +316,21 @@ Reply directly to continue.
         user.email
       );
 
+      user.currentIndex = null;
+
       return socket.emit("state", {
-        placeholder: "sent. tap next or answer"
+        placeholder: "sent. tap another question"
       });
     }
-
   });
+
+  ////////////////////////////////////////////////////////////
+  // DISCONNECT
+  ////////////////////////////////////////////////////////////
 
   socket.on("disconnect", () => {
     delete users[socket.id];
   });
-
 });
 
 //////////////////////////////////////////////////////////////
@@ -293,5 +340,5 @@ Reply directly to continue.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECT BOARD RUNNING");
+  console.log("AI CONNECT BOARD V2 BACKEND RUNNING");
 });
