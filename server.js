@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////
 // AI CONNECT BOARD — V2 FINAL BACKEND
-// Natural ask + strict click-to-answer + ask return
+// Natural ask + strict click-to-answer + ask return + refer
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -34,12 +34,12 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendEmail(to, message, replyToEmail) {
+async function sendEmail(to, subject, message, replyToEmail) {
   try {
     await transporter.sendMail({
       from: `"AI Connect - Connectaing.com" <${process.env.EMAIL_USER}>`,
       to,
-      subject: "Someone answered your question",
+      subject,
       replyTo: replyToEmail,
       text: message
     });
@@ -173,7 +173,7 @@ io.on("connection", (socket) => {
   });
 
   ////////////////////////////////////////////////////////////
-  // SELECT QUESTION — REQUIRED BEFORE ANSWERING
+  // SELECT QUESTION — REQUIRED BEFORE ANSWER / REFER
   ////////////////////////////////////////////////////////////
 
   socket.on("selectQuestion", ({ index }) => {
@@ -192,7 +192,7 @@ io.on("connection", (socket) => {
     user.currentIndex = selectedIndex;
 
     return socket.emit("state", {
-      placeholder: "type your answer"
+      placeholder: "type your answer or refer email"
     });
   });
 
@@ -260,7 +260,7 @@ io.on("connection", (socket) => {
     if (user.step === "answer") {
       const lower = text.toLowerCase();
 
-      // go back to ask
+      // ASK RETURN
       if (lower === "ask") {
         user.step = "ask";
         user.currentIndex = null;
@@ -270,14 +270,60 @@ io.on("connection", (socket) => {
         });
       }
 
-      // pagination
+      // NEXT PAGE
       if (lower === "next") {
         user.pageIndex += 3;
         user.currentIndex = null;
         return sendQuestions(socket, user);
       }
 
-      // must click question first
+      // REFER FRIEND
+      if (lower.startsWith("refer")) {
+        const friendEmail = extractEmail(text);
+
+        if (!friendEmail) {
+          return socket.emit("state", {
+            placeholder: "type refer email"
+          });
+        }
+
+        if (user.currentIndex === null) {
+          return socket.emit("state", {
+            placeholder: "tap a question first"
+          });
+        }
+
+        const q = user.currentQuestions[user.currentIndex];
+
+        if (!q) {
+          user.currentIndex = null;
+
+          return socket.emit("state", {
+            placeholder: "tap a question first"
+          });
+        }
+
+        await sendEmail(
+          friendEmail,
+          "A question was shared with you",
+          `
+You’ve got mail.
+
+${user.email} shared this question with you:
+
+"${q.text}"
+
+Reply directly to this email to continue.
+`,
+          user.email
+        );
+
+        return socket.emit("state", {
+          placeholder: "sent to friend"
+        });
+      }
+
+      // MUST SELECT QUESTION FIRST
       if (user.currentIndex === null) {
         return socket.emit("state", {
           placeholder: "tap a question first"
@@ -294,6 +340,7 @@ io.on("connection", (socket) => {
         });
       }
 
+      // DEFAULT = ANSWER
       q.answers.push({
         text,
         from: user.email,
@@ -302,6 +349,7 @@ io.on("connection", (socket) => {
 
       await sendEmail(
         q.email,
+        "Someone answered your question",
         `
 New answer:
 
@@ -339,5 +387,5 @@ Reply directly to continue.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECT BOARD V2 FINAL RUNNING");
+  console.log("AI CONNECT BOARD V2 FINAL WITH REFER RUNNING");
 });
