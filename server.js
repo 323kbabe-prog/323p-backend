@@ -2,6 +2,7 @@
 // AI CONNECT BOARD — V2 FINAL BACKEND
 // Natural ask + strict click-to-answer + ask return
 // refer invite system + teach-on-mistake email detection
+// grammar rewrite for questions + answers
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -9,6 +10,7 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
+const OpenAI = require("openai");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -25,6 +27,10 @@ const io = new Server(server, {
 //////////////////////////////////////////////////////////////
 
 const APP_URL = process.env.APP_URL || "https://connectaing.com";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 //////////////////////////////////////////////////////////////
 // EMAIL
@@ -71,6 +77,40 @@ function extractEmail(text) {
     /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
   );
   return m ? m[0].toLowerCase() : null;
+}
+
+//////////////////////////////////////////////////////////////
+// GRAMMAR REWRITE
+//////////////////////////////////////////////////////////////
+
+async function rewriteText(input) {
+  try {
+    const text = String(input || "").trim();
+
+    if (!text) return input;
+    if (text.length < 3) return text;
+
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Fix the grammar of the user's text. Keep the original meaning. Keep it natural, simple, and short. Output only the corrected text. Do not explain."
+        },
+        {
+          role: "user",
+          content: text
+        }
+      ],
+      temperature: 0.2
+    });
+
+    return res.choices[0].message.content.trim();
+  } catch (err) {
+    console.log("REWRITE ERROR:", err);
+    return input;
+  }
 }
 
 //////////////////////////////////////////////////////////////
@@ -248,7 +288,8 @@ io.on("connection", (socket) => {
         return sendQuestions(socket, user);
       }
 
-      createQuestion(user, text);
+      const fixedQuestion = await rewriteText(text);
+      createQuestion(user, fixedQuestion);
       return sendQuestions(socket, user);
     }
 
@@ -257,7 +298,8 @@ io.on("connection", (socket) => {
     //////////////////////////////////////////////////////////
 
     if (user.step === "ask") {
-      createQuestion(user, text);
+      const fixedQuestion = await rewriteText(text);
+      createQuestion(user, fixedQuestion);
       return sendQuestions(socket, user);
     }
 
@@ -326,10 +368,12 @@ Reply to answer
 or join the board:
 ${APP_URL}
 
-We are the world. We are connected strangers.<br>
+We are the world. We are connected strangers.
 `,
           user.email
         );
+
+        user.currentIndex = null;
 
         return socket.emit("state", {
           placeholder: "Invited. Tap a question"
@@ -361,9 +405,11 @@ We are the world. We are connected strangers.<br>
         });
       }
 
-      // DEFAULT = ANSWER
+      // DEFAULT = ANSWER WITH GRAMMAR REWRITE
+      const fixedAnswer = await rewriteText(text);
+
       q.answers.push({
-        text,
+        text: fixedAnswer,
         from: user.email,
         createdAt: Date.now()
       });
@@ -374,7 +420,7 @@ We are the world. We are connected strangers.<br>
         `
 New answer:
 
-${text}
+${fixedAnswer}
 
 Responder:
 ${user.email}
@@ -408,5 +454,5 @@ Reply directly to continue.
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECT BOARD V2 FINAL WITH TEACH-ON-MISTAKE RUNNING");
+  console.log("AI CONNECT BOARD V2 FINAL WITH GRAMMAR REWRITE RUNNING");
 });
