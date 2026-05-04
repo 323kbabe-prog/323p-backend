@@ -1,5 +1,6 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT — FINAL BACKEND (STABLE, NO SHARP)
+// AI CONNECT — FINAL BACKEND
+// stable no sharp + scene/text-aware image AI
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -20,19 +21,11 @@ const io = new Server(server, {
   maxHttpBufferSize: 15 * 1024 * 1024
 });
 
-//////////////////////////////////////////////////////////////
-// CONFIG
-//////////////////////////////////////////////////////////////
-
 const APP_URL = process.env.APP_URL || "https://connectaing.com";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
-
-//////////////////////////////////////////////////////////////
-// EMAIL (CID IMAGE)
-//////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -66,10 +59,6 @@ async function sendEmailWithImage(to, subject, html, imageDataUrl, replyToEmail)
   }
 }
 
-//////////////////////////////////////////////////////////////
-// DATA
-//////////////////////////////////////////////////////////////
-
 const users = {};
 const questions = [];
 
@@ -78,13 +67,9 @@ function makeId() {
 }
 
 function extractEmail(text) {
-  const m = text.match(/\S+@\S+\.\S+/);
+  const m = String(text || "").match(/\S+@\S+\.\S+/);
   return m ? m[0].toLowerCase() : null;
 }
-
-//////////////////////////////////////////////////////////////
-// SEED
-//////////////////////////////////////////////////////////////
 
 function seedAIQuestionsIfEmpty() {
   if (questions.length > 0) return;
@@ -110,51 +95,115 @@ function seedAIQuestionsIfEmpty() {
   io.emit("count", questions.length);
 }
 
-//////////////////////////////////////////////////////////////
-// IMAGE AI
-//////////////////////////////////////////////////////////////
+async function rewriteText(input) {
+  try {
+    const text = String(input || "").trim();
+    if (text.length < 3) return text;
+
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "Fix grammar. Keep meaning. Output only the corrected text."
+        },
+        {
+          role: "user",
+          content: text
+        }
+      ],
+      temperature: 0.2
+    });
+
+    return res.choices[0].message.content.trim();
+  } catch (err) {
+    console.log("REWRITE ERROR:", err);
+    return input;
+  }
+}
 
 async function createPersona(image) {
   const res = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: "Create emotional voice from image." },
+      {
+        role: "system",
+        content: `
+Analyze the image and create a compact image persona.
+
+Include:
+1. Emotional tone
+2. Visible objects
+3. Readable text, brands, labels, or signs if present
+
+Do not identify real people.
+Do not explain.
+Return only a short scene/persona description.
+`
+      },
       {
         role: "user",
         content: [
-          { type: "text", text: "Personality only." },
-          { type: "image_url", image_url: { url: image } }
+          {
+            type: "text",
+            text: "Create the image persona from this picture."
+          },
+          {
+            type: "image_url",
+            image_url: { url: image }
+          }
         ]
       }
-    ]
+    ],
+    temperature: 0.4
   });
 
-  return res.choices[0].message.content;
+  return res.choices[0].message.content.trim();
 }
 
 async function getAnswer(persona, question) {
   const res = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: persona },
-      { role: "user", content: question }
-    ]
+      {
+        role: "system",
+        content: `
+You are the emotional voice of the uploaded image.
+
+Image persona:
+${persona}
+
+Rules:
+- Answer from the image mood.
+- Use visible objects naturally.
+- Use readable text, brands, labels, or signs only if they fit naturally.
+- Do not give generic advice.
+- Do not sound like a therapist.
+- Do not say "this image shows."
+- Do not say "as an AI."
+- Speak as if the image itself is responding.
+- Keep it short, grounded, and specific.
+`
+      },
+      {
+        role: "user",
+        content: question
+      }
+    ],
+    temperature: 0.7
   });
 
-  return res.choices[0].message.content;
+  return res.choices[0].message.content.trim();
 }
-
-//////////////////////////////////////////////////////////////
-// CLEANUP
-//////////////////////////////////////////////////////////////
 
 setInterval(() => {
   const now = Date.now();
-  const SIX = 6 * 60 * 60 * 1000;
+  const SIX_HOURS = 6 * 60 * 60 * 1000;
 
   for (let i = questions.length - 1; i >= 0; i--) {
     const q = questions[i];
-    if (now - q.createdAt > SIX || q.answers.length >= 3) {
+
+    if (now - q.createdAt > SIX_HOURS || q.answers.length >= 3) {
       questions.splice(i, 1);
     }
   }
@@ -162,10 +211,6 @@ setInterval(() => {
   seedAIQuestionsIfEmpty();
   io.emit("count", questions.length);
 }, 60000);
-
-//////////////////////////////////////////////////////////////
-// SOCKET
-//////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
   users[socket.id] = {
@@ -183,30 +228,50 @@ io.on("connection", (socket) => {
 
   socket.emit("count", questions.length);
 
-  ////////////////////////////////////////////////////////////
-  // IMAGE
-  ////////////////////////////////////////////////////////////
+  socket.on("count", () => {
+    socket.emit("count", questions.length);
+  });
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
     const user = users[socket.id];
+    if (!user) return;
 
-    user.image = imageDataUrl;
-    user.persona = await createPersona(imageDataUrl);
+    if (!user.email) {
+      return socket.emit("state", {
+        placeholder: "enter your email first"
+      });
+    }
 
     socket.emit("state", {
-      placeholder: "image loaded — ask something"
+      placeholder: "reading image..."
     });
-  });
 
-  ////////////////////////////////////////////////////////////
-  // INPUT
-  ////////////////////////////////////////////////////////////
+    try {
+      user.image = imageDataUrl;
+      user.persona = await createPersona(imageDataUrl);
+
+      socket.emit("state", {
+        placeholder: "image loaded — ask something"
+      });
+    } catch (err) {
+      console.log("IMAGE ERROR:", err);
+
+      socket.emit("state", {
+        placeholder: "image failed"
+      });
+    }
+  });
 
   socket.on("input", async ({ text }) => {
     const user = users[socket.id];
-    const email = extractEmail(text);
+    if (!user) return;
 
-    // EMAIL STEP
+    const raw = String(text || "").trim();
+    const lower = raw.toLowerCase();
+    const email = extractEmail(raw);
+
+    if (!raw) return;
+
     if (user.step === "email") {
       if (email) {
         user.email = email;
@@ -216,12 +281,14 @@ io.on("connection", (socket) => {
           placeholder: 'ask, answer, or "image"'
         });
       }
-      return;
+
+      return socket.emit("state", {
+        placeholder: "enter your email to connect"
+      });
     }
 
-    // IMAGE QUESTION FLOW
     if (user.persona) {
-      const question = text;
+      const question = await rewriteText(raw);
 
       questions.unshift({
         id: makeId(),
@@ -230,22 +297,20 @@ io.on("connection", (socket) => {
         createdAt: Date.now()
       });
 
-      const ans = await getAnswer(user.persona, question);
+      io.emit("count", questions.length);
 
-      // 🔥 preview
-      const short = ans.split(".")[0];
+      const ans = await getAnswer(user.persona, question);
+      const preview = ans.split(".")[0];
 
       socket.emit("preview", {
-        text: short
+        text: preview
       });
 
-      // 🔥 email
       await sendEmailWithImage(
         user.email,
         "You’ve got an answer",
         `
-        <div style="font-family:system-ui">
-
+        <div style="font-family:system-ui; line-height:1.5;">
           <p>You asked:</p>
 
           <img src="cid:img1" style="max-width:100%; border-radius:8px;" />
@@ -255,13 +320,11 @@ io.on("connection", (socket) => {
           <hr/>
 
           <p><b>From Image AI:</b></p>
-
           <p>${ans}</p>
 
           <br/>
 
           <a href="${APP_URL}">Continue</a>
-
         </div>
         `,
         user.image,
@@ -271,8 +334,14 @@ io.on("connection", (socket) => {
       user.persona = null;
       user.image = null;
 
-      return;
+      return socket.emit("state", {
+        placeholder: 'ask, answer, or "image"'
+      });
     }
+
+    return socket.emit("state", {
+      placeholder: 'ask, answer, or "image"'
+    });
   });
 
   socket.on("disconnect", () => {
@@ -280,8 +349,6 @@ io.on("connection", (socket) => {
   });
 });
 
-//////////////////////////////////////////////////////////////
-
 server.listen(process.env.PORT || 10000, () => {
-  console.log("AI CONNECT RUNNING (STABLE)");
+  console.log("AI CONNECT RUNNING — SCENE + TEXT AWARE IMAGE AI");
 });
