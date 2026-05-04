@@ -1,6 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT — FINAL BACKEND V2.2
-// image compression + preview + CID email
+// AI CONNECT — FINAL BACKEND (STABLE, NO SHARP)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -9,7 +8,6 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
-const sharp = require("sharp");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -85,18 +83,31 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// IMAGE COMPRESSION (SERVER SAFETY)
+// SEED
 //////////////////////////////////////////////////////////////
 
-async function compressImage(base64) {
-  const buffer = Buffer.from(base64.split(",")[1], "base64");
+function seedAIQuestionsIfEmpty() {
+  if (questions.length > 0) return;
 
-  const out = await sharp(buffer)
-    .resize(1280, 1280, { fit: "inside" })
-    .jpeg({ quality: 70 })
-    .toBuffer();
+  const seeds = [
+    "Anne Hathaway looks older, but I believe we are both old and young at the same time.",
+    "What should I learn in AI for next week?",
+    "Is it okay that I love Justin Bieber? I am 31.",
+    "I’m not Asian—can I drink boba tea?",
+    "I finally decided that Jisoo is my favorite.",
+    "I love myself already. Do I need to find a girlfriend?"
+  ];
 
-  return "data:image/jpeg;base64," + out.toString("base64");
+  seeds.forEach(text => {
+    questions.unshift({
+      id: makeId(),
+      text,
+      answers: [],
+      createdAt: Date.now()
+    });
+  });
+
+  io.emit("count", questions.length);
 }
 
 //////////////////////////////////////////////////////////////
@@ -134,6 +145,25 @@ async function getAnswer(persona, question) {
 }
 
 //////////////////////////////////////////////////////////////
+// CLEANUP
+//////////////////////////////////////////////////////////////
+
+setInterval(() => {
+  const now = Date.now();
+  const SIX = 6 * 60 * 60 * 1000;
+
+  for (let i = questions.length - 1; i >= 0; i--) {
+    const q = questions[i];
+    if (now - q.createdAt > SIX || q.answers.length >= 3) {
+      questions.splice(i, 1);
+    }
+  }
+
+  seedAIQuestionsIfEmpty();
+  io.emit("count", questions.length);
+}, 60000);
+
+//////////////////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////////////////
 
@@ -145,22 +175,23 @@ io.on("connection", (socket) => {
     image: null
   };
 
+  seedAIQuestionsIfEmpty();
+
   socket.emit("state", {
     placeholder: "enter your email to connect"
   });
 
+  socket.emit("count", questions.length);
+
   ////////////////////////////////////////////////////////////
-  // IMAGE UPLOAD
+  // IMAGE
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
     const user = users[socket.id];
 
-    // compress image
-    const compressed = await compressImage(imageDataUrl);
-
-    user.image = compressed;
-    user.persona = await createPersona(compressed);
+    user.image = imageDataUrl;
+    user.persona = await createPersona(imageDataUrl);
 
     socket.emit("state", {
       placeholder: "image loaded — ask something"
@@ -192,27 +223,23 @@ io.on("connection", (socket) => {
     if (user.persona) {
       const question = text;
 
-      // save question (clean board)
       questions.unshift({
         id: makeId(),
-        text: question
+        text: question,
+        answers: [],
+        createdAt: Date.now()
       });
 
-      // AI answer
       const ans = await getAnswer(user.persona, question);
 
-      //////////////////////////////////////////////////////
-      // 1. PREVIEW (NOT placeholder)
-      //////////////////////////////////////////////////////
+      // 🔥 preview
       const short = ans.split(".")[0];
 
       socket.emit("preview", {
         text: short
       });
 
-      //////////////////////////////////////////////////////
-      // 2. EMAIL WITH IMAGE
-      //////////////////////////////////////////////////////
+      // 🔥 email
       await sendEmailWithImage(
         user.email,
         "You’ve got an answer",
@@ -241,7 +268,6 @@ io.on("connection", (socket) => {
         user.email
       );
 
-      // reset image session
       user.persona = null;
       user.image = null;
 
@@ -257,5 +283,5 @@ io.on("connection", (socket) => {
 //////////////////////////////////////////////////////////////
 
 server.listen(process.env.PORT || 10000, () => {
-  console.log("AI CONNECT V2.2 RUNNING");
+  console.log("AI CONNECT RUNNING (STABLE)");
 });
