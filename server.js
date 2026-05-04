@@ -1,5 +1,6 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT — FINAL BACKEND V2.1 (HYBRID IMAGE AI)
+// AI CONNECT — FINAL BACKEND V2.2
+// image compression + preview + CID email
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -8,6 +9,7 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
+const sharp = require("sharp");
 
 const app = express();
 app.use(cors({ origin: "*" }));
@@ -31,7 +33,7 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// EMAIL (HTML SUPPORT)
+// EMAIL (CID IMAGE)
 //////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
@@ -42,14 +44,24 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendEmail(to, subject, html, replyToEmail) {
+async function sendEmailWithImage(to, subject, html, imageDataUrl, replyToEmail) {
   try {
+    const base64 = imageDataUrl.split(",")[1];
+
     await transporter.sendMail({
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       replyTo: replyToEmail,
-      html
+      html,
+      attachments: [
+        {
+          filename: "image.jpg",
+          content: base64,
+          encoding: "base64",
+          cid: "img1"
+        }
+      ]
     });
   } catch (err) {
     console.log("EMAIL ERROR:", err);
@@ -62,90 +74,44 @@ async function sendEmail(to, subject, html, replyToEmail) {
 
 const users = {};
 const questions = [];
-let isSeeding = false;
 
 function makeId() {
   return Date.now() + "-" + Math.random().toString(36).slice(2, 8);
 }
 
 function extractEmail(text) {
-  const m = String(text || "").match(
-    /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
-  );
+  const m = text.match(/\S+@\S+\.\S+/);
   return m ? m[0].toLowerCase() : null;
 }
 
 //////////////////////////////////////////////////////////////
-// SEED
+// IMAGE COMPRESSION (SERVER SAFETY)
 //////////////////////////////////////////////////////////////
 
-function seedAIQuestionsIfEmpty() {
-  if (questions.length > 0 || isSeeding) return;
+async function compressImage(base64) {
+  const buffer = Buffer.from(base64.split(",")[1], "base64");
 
-  isSeeding = true;
-  const now = Date.now();
+  const out = await sharp(buffer)
+    .resize(1280, 1280, { fit: "inside" })
+    .jpeg({ quality: 70 })
+    .toBuffer();
 
-  const seeds = [
-    "Anne Hathaway looks older, but I believe we are both old and young at the same time.",
-    "What should I learn in AI for next week?",
-    "Is it okay that I love Justin Bieber? I am 31.",
-    "I’m not Asian—can I drink boba tea?",
-    "I finally decided that Jisoo is my favorite.",
-    "I love myself already. Do I need to find a girlfriend?"
-  ];
-
-  seeds.forEach(text => {
-    questions.unshift({
-      id: makeId(),
-      email: "system",
-      text,
-      answers: [],
-      createdAt: now
-    });
-  });
-
-  io.emit("count", questions.length);
-  isSeeding = false;
-}
-
-//////////////////////////////////////////////////////////////
-// GRAMMAR
-//////////////////////////////////////////////////////////////
-
-async function rewriteText(input) {
-  try {
-    if (input.length < 3) return input;
-
-    const res = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "Fix grammar. Keep meaning." },
-        { role: "user", content: input }
-      ]
-    });
-
-    return res.choices[0].message.content.trim();
-  } catch {
-    return input;
-  }
+  return "data:image/jpeg;base64," + out.toString("base64");
 }
 
 //////////////////////////////////////////////////////////////
 // IMAGE AI
 //////////////////////////////////////////////////////////////
 
-async function createImagePersona(image) {
+async function createPersona(image) {
   const res = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      {
-        role: "system",
-        content: "Create a short emotional voice from this image."
-      },
+      { role: "system", content: "Create emotional voice from image." },
       {
         role: "user",
         content: [
-          { type: "text", text: "Describe personality only." },
+          { type: "text", text: "Personality only." },
           { type: "image_url", image_url: { url: image } }
         ]
       }
@@ -155,67 +121,16 @@ async function createImagePersona(image) {
   return res.choices[0].message.content;
 }
 
-async function imageAnswer(persona, question) {
+async function getAnswer(persona, question) {
   const res = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      {
-        role: "system",
-        content: `You are this voice:\n${persona}\nShort emotional answer.`
-      },
+      { role: "system", content: persona },
       { role: "user", content: question }
     ]
   });
 
   return res.choices[0].message.content;
-}
-
-//////////////////////////////////////////////////////////////
-// CLEANUP
-//////////////////////////////////////////////////////////////
-
-setInterval(() => {
-  const now = Date.now();
-  const SIX = 6 * 60 * 60 * 1000;
-
-  for (let i = questions.length - 1; i >= 0; i--) {
-    const q = questions[i];
-    if (now - q.createdAt > SIX || q.answers.length >= 3) {
-      questions.splice(i, 1);
-    }
-  }
-
-  seedAIQuestionsIfEmpty();
-  io.emit("count", questions.length);
-}, 60000);
-
-//////////////////////////////////////////////////////////////
-// HELPERS
-//////////////////////////////////////////////////////////////
-
-function loadQuestions(user) {
-  seedAIQuestionsIfEmpty();
-
-  user.currentQuestions = [...questions];
-  user.pageIndex = 0;
-  user.currentIndex = null;
-}
-
-function sendQuestions(socket, user) {
-  const batch = user.currentQuestions.slice(user.pageIndex, user.pageIndex + 3);
-  socket.emit("questions", batch);
-}
-
-function createQuestion(user, text) {
-  questions.unshift({
-    id: makeId(),
-    email: user.email,
-    text,
-    answers: [],
-    createdAt: Date.now()
-  });
-
-  io.emit("count", questions.length);
 }
 
 //////////////////////////////////////////////////////////////
@@ -226,27 +141,26 @@ io.on("connection", (socket) => {
   users[socket.id] = {
     step: "email",
     email: null,
-    imagePersona: null,
-    imageData: null
+    persona: null,
+    image: null
   };
-
-  seedAIQuestionsIfEmpty();
 
   socket.emit("state", {
     placeholder: "enter your email to connect"
   });
 
-  socket.emit("count", questions.length);
-
   ////////////////////////////////////////////////////////////
-  // IMAGE
+  // IMAGE UPLOAD
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
     const user = users[socket.id];
 
-    user.imageData = imageDataUrl;
-    user.imagePersona = await createImagePersona(imageDataUrl);
+    // compress image
+    const compressed = await compressImage(imageDataUrl);
+
+    user.image = compressed;
+    user.persona = await createPersona(compressed);
 
     socket.emit("state", {
       placeholder: "image loaded — ask something"
@@ -265,7 +179,7 @@ io.on("connection", (socket) => {
     if (user.step === "email") {
       if (email) {
         user.email = email;
-        user.step = "mode";
+        user.step = "ready";
 
         return socket.emit("state", {
           placeholder: 'ask, answer, or "image"'
@@ -275,41 +189,61 @@ io.on("connection", (socket) => {
     }
 
     // IMAGE QUESTION FLOW
-    if (user.imagePersona) {
-      const question = await rewriteText(text);
+    if (user.persona) {
+      const question = text;
 
-      createQuestion(user, question);
-
-      const ans = await imageAnswer(user.imagePersona, question);
-
-      // 🔥 1. SCREEN PREVIEW
-      const short = ans.split(".")[0];
-
-      socket.emit("state", {
-        placeholder: short
+      // save question (clean board)
+      questions.unshift({
+        id: makeId(),
+        text: question
       });
 
-      // 🔥 2. EMAIL (WITH IMAGE)
-      await sendEmail(
+      // AI answer
+      const ans = await getAnswer(user.persona, question);
+
+      //////////////////////////////////////////////////////
+      // 1. PREVIEW (NOT placeholder)
+      //////////////////////////////////////////////////////
+      const short = ans.split(".")[0];
+
+      socket.emit("preview", {
+        text: short
+      });
+
+      //////////////////////////////////////////////////////
+      // 2. EMAIL WITH IMAGE
+      //////////////////////////////////////////////////////
+      await sendEmailWithImage(
         user.email,
         "You’ve got an answer",
         `
         <div style="font-family:system-ui">
+
           <p>You asked:</p>
-          <img src="${user.imageData}" style="max-width:100%" />
+
+          <img src="cid:img1" style="max-width:100%; border-radius:8px;" />
+
           <p>${question}</p>
+
           <hr/>
+
           <p><b>From Image AI:</b></p>
+
           <p>${ans}</p>
+
           <br/>
+
           <a href="${APP_URL}">Continue</a>
+
         </div>
         `,
+        user.image,
         user.email
       );
 
-      user.imagePersona = null;
-      user.imageData = null;
+      // reset image session
+      user.persona = null;
+      user.image = null;
 
       return;
     }
@@ -323,5 +257,5 @@ io.on("connection", (socket) => {
 //////////////////////////////////////////////////////////////
 
 server.listen(process.env.PORT || 10000, () => {
-  console.log("AI CONNECT V2.1 RUNNING");
+  console.log("AI CONNECT V2.2 RUNNING");
 });
