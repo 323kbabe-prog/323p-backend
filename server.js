@@ -1,7 +1,8 @@
 //////////////////////////////////////////////////////////////
 // AI CONNECT BOARD — V2 FINAL BACKEND
 // Fixed 6 AI seed questions + seed lock + grammar rewrite
-// ask + answer + refer email + pagination + cleanup
+// ask + answer + refer email + pagination + 6h cleanup
+// image upload → image persona → AI answer + refer image context
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -12,13 +13,15 @@ const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
 
 const app = express();
+
 app.use(cors({ origin: "*" }));
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: "*" }
+  cors: { origin: "*" },
+  maxHttpBufferSize: 15 * 1024 * 1024
 });
 
 //////////////////////////////////////////////////////////////
@@ -66,7 +69,6 @@ async function sendEmail(to, subject, message, replyToEmail) {
 
 const users = {};
 const questions = [];
-
 let isSeeding = false;
 
 function makeId() {
@@ -98,6 +100,7 @@ function seedAIQuestionsIfEmpty() {
       email: aiEmail,
       text: "Anne Hathaway looks older, but I believe we are both old and young at the same time.",
       answers: [],
+      imagePersona: null,
       createdAt: now
     },
     {
@@ -105,6 +108,7 @@ function seedAIQuestionsIfEmpty() {
       email: aiEmail,
       text: "What should I learn in AI for next week?",
       answers: [],
+      imagePersona: null,
       createdAt: now
     },
     {
@@ -112,6 +116,7 @@ function seedAIQuestionsIfEmpty() {
       email: aiEmail,
       text: "Is it okay that I love Justin Bieber? I am 31.",
       answers: [],
+      imagePersona: null,
       createdAt: now
     },
     {
@@ -119,6 +124,7 @@ function seedAIQuestionsIfEmpty() {
       email: aiEmail,
       text: "I’m not Asian—can I drink boba tea?",
       answers: [],
+      imagePersona: null,
       createdAt: now
     },
     {
@@ -126,6 +132,7 @@ function seedAIQuestionsIfEmpty() {
       email: aiEmail,
       text: "I finally decided that Jisoo is my favorite.",
       answers: [],
+      imagePersona: null,
       createdAt: now
     },
     {
@@ -133,12 +140,12 @@ function seedAIQuestionsIfEmpty() {
       email: aiEmail,
       text: "I love myself already. Do I need to find a girlfriend?",
       answers: [],
+      imagePersona: null,
       createdAt: now
     }
   );
 
   io.emit("count", questions.length);
-
   isSeeding = false;
 }
 
@@ -177,12 +184,90 @@ async function rewriteText(input) {
 }
 
 //////////////////////////////////////////////////////////////
+// IMAGE AI — IMAGE TO PERSONA
+//////////////////////////////////////////////////////////////
+
+async function createImagePersona(imageDataUrl) {
+  try {
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Analyze the uploaded image and create a short AI persona voice from it. Do not identify real people. Focus on mood, environment, energy, visual feeling, and speaking style. Output only a compact persona description."
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text:
+                "Create an image-based persona from this picture. Keep it short. This persona will answer user questions."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageDataUrl
+              }
+            }
+          ]
+        }
+      ],
+      temperature: 0.5
+    });
+
+    return res.choices[0].message.content.trim();
+  } catch (err) {
+    console.log("IMAGE PERSONA ERROR:", err);
+    return null;
+  }
+}
+
+async function answerWithImagePersona(imagePersona, question) {
+  try {
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
+You are an image-born voice.
+
+Persona:
+${imagePersona}
+
+Rules:
+Do not explain the image.
+Do not say "this image shows."
+Do not say "as an AI."
+Answer as the image voice.
+Keep it short, direct, and natural.
+`
+        },
+        {
+          role: "user",
+          content: question
+        }
+      ],
+      temperature: 0.7
+    });
+
+    return res.choices[0].message.content.trim();
+  } catch (err) {
+    console.log("IMAGE ANSWER ERROR:", err);
+    return "I’m here. Ask me again.";
+  }
+}
+
+//////////////////////////////////////////////////////////////
 // CLEANUP — 6 HOURS OR 3 ANSWERS
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
   const now = Date.now();
   const SIX_HOURS = 6 * 60 * 60 * 1000;
+
   let changed = false;
 
   for (let i = questions.length - 1; i >= 0; i--) {
@@ -198,6 +283,7 @@ setInterval(() => {
   }
 
   if (changed) {
+    seedAIQuestionsIfEmpty();
     io.emit("count", questions.length);
   }
 }, 60000);
@@ -243,18 +329,22 @@ function sendQuestions(socket, user) {
   });
 }
 
-function createQuestion(user, text) {
+function createQuestion(user, text, imagePersona = null) {
   questions.unshift({
     id: makeId(),
     email: user.email,
     text,
     answers: [],
+    imagePersona,
     createdAt: Date.now()
   });
 
   io.emit("count", questions.length);
 
   user.step = "answer";
+  user.imagePersona = null;
+  user.imageLoaded = false;
+
   loadQuestions(user);
 }
 
@@ -268,7 +358,9 @@ io.on("connection", (socket) => {
     email: null,
     currentQuestions: [],
     currentIndex: null,
-    pageIndex: 0
+    pageIndex: 0,
+    imagePersona: null,
+    imageLoaded: false
   };
 
   seedAIQuestionsIfEmpty();
@@ -285,6 +377,51 @@ io.on("connection", (socket) => {
 
   socket.on("count", () => {
     socket.emit("count", questions.length);
+  });
+
+  ////////////////////////////////////////////////////////////
+  // IMAGE UPLOAD
+  // Frontend sends:
+  // socket.emit("imageUpload", { imageDataUrl });
+  ////////////////////////////////////////////////////////////
+
+  socket.on("imageUpload", async (data) => {
+    const user = users[socket.id];
+    if (!user) return;
+
+    if (!user.email) {
+      return socket.emit("state", {
+        placeholder: "enter your email first"
+      });
+    }
+
+    const imageDataUrl = data && data.imageDataUrl;
+
+    if (!imageDataUrl) {
+      return socket.emit("state", {
+        placeholder: "upload an image"
+      });
+    }
+
+    socket.emit("state", {
+      placeholder: "reading image..."
+    });
+
+    const persona = await createImagePersona(imageDataUrl);
+
+    if (!persona) {
+      return socket.emit("state", {
+        placeholder: "image failed. try again"
+      });
+    }
+
+    user.imagePersona = persona;
+    user.imageLoaded = true;
+    user.step = "image";
+
+    return socket.emit("state", {
+      placeholder: "image loaded — ask something"
+    });
   });
 
   ////////////////////////////////////////////////////////////
@@ -333,7 +470,7 @@ io.on("connection", (socket) => {
         user.step = "mode";
 
         return socket.emit("state", {
-          placeholder: "ask a question or type 'answer'"
+          placeholder: "ask a question, upload image, or type 'answer'"
         });
       }
 
@@ -355,8 +492,64 @@ io.on("connection", (socket) => {
         return sendQuestions(socket, user);
       }
 
+      if (lower === "ask") {
+        user.step = "ask";
+
+        return socket.emit("state", {
+          placeholder: "type your question"
+        });
+      }
+
       const fixedQuestion = await rewriteText(text);
+
       createQuestion(user, fixedQuestion);
+
+      return sendQuestions(socket, user);
+    }
+
+    //////////////////////////////////////////////////////////
+    // IMAGE STEP
+    //////////////////////////////////////////////////////////
+
+    if (user.step === "image") {
+      const lower = text.toLowerCase();
+
+      if (lower === "ask") {
+        user.step = "ask";
+        user.imagePersona = null;
+        user.imageLoaded = false;
+
+        return socket.emit("state", {
+          placeholder: "type your question"
+        });
+      }
+
+      if (lower.includes("answer")) {
+        user.step = "answer";
+        user.imagePersona = null;
+        user.imageLoaded = false;
+
+        loadQuestions(user);
+        return sendQuestions(socket, user);
+      }
+
+      if (!user.imagePersona) {
+        return socket.emit("state", {
+          placeholder: "upload an image first"
+        });
+      }
+
+      const fixedQuestion = await rewriteText(text);
+
+      const imageAnswer = await answerWithImagePersona(
+        user.imagePersona,
+        fixedQuestion
+      );
+
+      const fullQuestion = `${fixedQuestion}\n\nImage AI answered:\n${imageAnswer}`;
+
+      createQuestion(user, fullQuestion, user.imagePersona);
+
       return sendQuestions(socket, user);
     }
 
@@ -366,7 +559,9 @@ io.on("connection", (socket) => {
 
     if (user.step === "ask") {
       const fixedQuestion = await rewriteText(text);
+
       createQuestion(user, fixedQuestion);
+
       return sendQuestions(socket, user);
     }
 
@@ -392,6 +587,7 @@ io.on("connection", (socket) => {
       if (lower === "next") {
         user.pageIndex += 3;
         user.currentIndex = null;
+
         return sendQuestions(socket, user);
       }
 
@@ -421,6 +617,14 @@ io.on("connection", (socket) => {
           });
         }
 
+        const imageContext = q.imagePersona
+          ? `
+
+Image AI context:
+${q.imagePersona}
+`
+          : "";
+
         await sendEmail(
           friendEmail,
           "You’ve got a question",
@@ -430,6 +634,7 @@ You’ve got mail.
 ${user.email} invited you to answer:
 
 "${q.text}"
+${imageContext}
 
 Reply to answer
 or join the board:
@@ -480,16 +685,24 @@ We are the world. We are connected strangers.
         createdAt: Date.now()
       });
 
+      const imageContext = q.imagePersona
+        ? `
+
+Image AI context:
+${q.imagePersona}
+`
+        : "";
+
       await sendEmail(
         q.email,
         "Someone answered your question",
         `
 New answer:
-
 ${fixedAnswer}
 
 Responder:
 ${user.email}
+${imageContext}
 
 Reply directly to continue:
 ${APP_URL}
@@ -521,5 +734,5 @@ ${APP_URL}
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-  console.log("AI CONNECT BOARD V2 FINAL RUNNING");
+  console.log("AI CONNECT BOARD V2 FINAL + IMAGE AI RUNNING");
 });
