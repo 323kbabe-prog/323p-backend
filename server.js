@@ -315,7 +315,7 @@ function sendQuestions(socket, user) {
   socket.emit("questions", batch);
 
   socket.emit("state", {
-    placeholder: 'tap a question or type "ask"'
+    placeholder: 'tap a question or type "ask" "next"'
   });
 }
 
