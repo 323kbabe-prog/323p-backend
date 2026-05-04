@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V2 FINAL BACKEND (STABLE)
+// AI CONNECT — FINAL BACKEND V2.1 (HYBRID IMAGE AI)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -31,7 +31,7 @@ const openai = new OpenAI({
 });
 
 //////////////////////////////////////////////////////////////
-// EMAIL
+// EMAIL (HTML SUPPORT)
 //////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
@@ -39,18 +39,17 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  },
-  tls: { rejectUnauthorized: false }
+  }
 });
 
-async function sendEmail(to, subject, message, replyToEmail) {
+async function sendEmail(to, subject, html, replyToEmail) {
   try {
     await transporter.sendMail({
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       replyTo: replyToEmail,
-      text: message
+      html
     });
   } catch (err) {
     console.log("EMAIL ERROR:", err);
@@ -77,15 +76,13 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// SEED QUESTIONS
+// SEED
 //////////////////////////////////////////////////////////////
 
 function seedAIQuestionsIfEmpty() {
   if (questions.length > 0 || isSeeding) return;
 
   isSeeding = true;
-
-  const aiEmail = "a078bc@gmail.com";
   const now = Date.now();
 
   const seeds = [
@@ -100,10 +97,9 @@ function seedAIQuestionsIfEmpty() {
   seeds.forEach(text => {
     questions.unshift({
       id: makeId(),
-      email: aiEmail,
+      email: "system",
       text,
       answers: [],
-      imagePersona: null,
       createdAt: now
     });
   });
@@ -118,16 +114,14 @@ function seedAIQuestionsIfEmpty() {
 
 async function rewriteText(input) {
   try {
-    const text = input.trim();
-    if (text.length < 3) return text;
+    if (input.length < 3) return input;
 
     const res = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: "Fix grammar. Keep meaning." },
-        { role: "user", content: text }
-      ],
-      temperature: 0.2
+        { role: "user", content: input }
+      ]
     });
 
     return res.choices[0].message.content.trim();
@@ -140,25 +134,25 @@ async function rewriteText(input) {
 // IMAGE AI
 //////////////////////////////////////////////////////////////
 
-async function createImagePersona(imageDataUrl) {
+async function createImagePersona(image) {
   const res = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: "Create a short personality based on this image."
+        content: "Create a short emotional voice from this image."
       },
       {
         role: "user",
         content: [
           { type: "text", text: "Describe personality only." },
-          { type: "image_url", image_url: { url: imageDataUrl } }
+          { type: "image_url", image_url: { url: image } }
         ]
       }
     ]
   });
 
-  return res.choices[0].message.content.trim();
+  return res.choices[0].message.content;
 }
 
 async function imageAnswer(persona, question) {
@@ -167,41 +161,32 @@ async function imageAnswer(persona, question) {
     messages: [
       {
         role: "system",
-        content: `You are this voice:\n${persona}\nShort answer only.`
+        content: `You are this voice:\n${persona}\nShort emotional answer.`
       },
       { role: "user", content: question }
     ]
   });
 
-  return res.choices[0].message.content.trim();
+  return res.choices[0].message.content;
 }
 
 //////////////////////////////////////////////////////////////
-// CLEANUP (6h)
+// CLEANUP
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
   const now = Date.now();
-  const SIX_HOURS = 6 * 60 * 60 * 1000;
-
-  let changed = false;
+  const SIX = 6 * 60 * 60 * 1000;
 
   for (let i = questions.length - 1; i >= 0; i--) {
     const q = questions[i];
-
-    if (
-      now - q.createdAt > SIX_HOURS ||
-      q.answers.length >= 3
-    ) {
+    if (now - q.createdAt > SIX || q.answers.length >= 3) {
       questions.splice(i, 1);
-      changed = true;
     }
   }
 
-  if (changed) {
-    seedAIQuestionsIfEmpty();
-    io.emit("count", questions.length);
-  }
+  seedAIQuestionsIfEmpty();
+  io.emit("count", questions.length);
 }, 60000);
 
 //////////////////////////////////////////////////////////////
@@ -211,37 +196,22 @@ setInterval(() => {
 function loadQuestions(user) {
   seedAIQuestionsIfEmpty();
 
-  user.currentQuestions = [...questions].sort((a, b) => {
-    if (a.answers.length !== b.answers.length) {
-      return a.answers.length - b.answers.length;
-    }
-    return b.createdAt - a.createdAt;
-  });
-
+  user.currentQuestions = [...questions];
   user.pageIndex = 0;
   user.currentIndex = null;
 }
 
 function sendQuestions(socket, user) {
-  const batch = user.currentQuestions.slice(
-    user.pageIndex,
-    user.pageIndex + 3
-  );
-
+  const batch = user.currentQuestions.slice(user.pageIndex, user.pageIndex + 3);
   socket.emit("questions", batch);
-
-  socket.emit("state", {
-    placeholder: 'tap a question or type "ask"'
-  });
 }
 
-function createQuestion(user, text, imagePersona = null) {
+function createQuestion(user, text) {
   questions.unshift({
     id: makeId(),
     email: user.email,
     text,
     answers: [],
-    imagePersona,
     createdAt: Date.now()
   });
 
@@ -256,16 +226,12 @@ io.on("connection", (socket) => {
   users[socket.id] = {
     step: "email",
     email: null,
-    currentQuestions: [],
-    currentIndex: null,
-    pageIndex: 0,
-    imagePersona: null
+    imagePersona: null,
+    imageData: null
   };
 
-  // ✅ ensure board not empty
   seedAIQuestionsIfEmpty();
 
-  // ✅ correct onboarding
   socket.emit("state", {
     placeholder: "enter your email to connect"
   });
@@ -273,18 +239,13 @@ io.on("connection", (socket) => {
   socket.emit("count", questions.length);
 
   ////////////////////////////////////////////////////////////
-  // IMAGE UPLOAD
+  // IMAGE
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
     const user = users[socket.id];
 
-    if (!user.email) {
-      return socket.emit("state", {
-        placeholder: "enter your email first"
-      });
-    }
-
+    user.imageData = imageDataUrl;
     user.imagePersona = await createImagePersona(imageDataUrl);
 
     socket.emit("state", {
@@ -298,15 +259,9 @@ io.on("connection", (socket) => {
 
   socket.on("input", async ({ text }) => {
     const user = users[socket.id];
-    if (!user) return;
-
-    const lower = text.toLowerCase();
     const email = extractEmail(text);
 
-    ////////////////////////////////////////////////////////////
     // EMAIL STEP
-    ////////////////////////////////////////////////////////////
-
     if (user.step === "email") {
       if (email) {
         user.email = email;
@@ -316,148 +271,48 @@ io.on("connection", (socket) => {
           placeholder: 'ask, answer, or "image"'
         });
       }
-
-      return socket.emit("state", {
-        placeholder: "enter your email to connect"
-      });
+      return;
     }
 
-    ////////////////////////////////////////////////////////////
-    // MODE STEP
-    ////////////////////////////////////////////////////////////
-
-    if (user.step === "mode") {
-      if (lower.includes("answer")) {
-        user.step = "answer";
-        loadQuestions(user);
-        return sendQuestions(socket, user);
-      }
-
-      const q = await rewriteText(text);
-
-      createQuestion(user, q);
-
-      user.step = "answer";
-      loadQuestions(user);
-      return sendQuestions(socket, user);
-    }
-
-    ////////////////////////////////////////////////////////////
     // IMAGE QUESTION FLOW
-    ////////////////////////////////////////////////////////////
-
     if (user.imagePersona) {
       const question = await rewriteText(text);
 
-      createQuestion(user, question, user.imagePersona);
+      createQuestion(user, question);
 
       const ans = await imageAnswer(user.imagePersona, question);
 
+      // 🔥 1. SCREEN PREVIEW
+      const short = ans.split(".")[0];
+
+      socket.emit("state", {
+        placeholder: short
+      });
+
+      // 🔥 2. EMAIL (WITH IMAGE)
       await sendEmail(
         user.email,
         "You’ve got an answer",
-        `From Image AI:\n\n${ans}\n\n${APP_URL}`,
+        `
+        <div style="font-family:system-ui">
+          <p>You asked:</p>
+          <img src="${user.imageData}" style="max-width:100%" />
+          <p>${question}</p>
+          <hr/>
+          <p><b>From Image AI:</b></p>
+          <p>${ans}</p>
+          <br/>
+          <a href="${APP_URL}">Continue</a>
+        </div>
+        `,
         user.email
       );
 
       user.imagePersona = null;
+      user.imageData = null;
 
-      return socket.emit("state", {
-        placeholder: "sent — check your email"
-      });
+      return;
     }
-
-    ////////////////////////////////////////////////////////////
-    // ANSWER MODE
-    ////////////////////////////////////////////////////////////
-
-    if (user.step === "answer") {
-      if (lower === "next") {
-        user.pageIndex += 3;
-        return sendQuestions(socket, user);
-      }
-
-      if (lower === "ask") {
-        user.step = "ask";
-        return socket.emit("state", {
-          placeholder: "type your question"
-        });
-      }
-
-      if (lower.startsWith("refer")) {
-        if (!email) {
-          return socket.emit("state", {
-            placeholder: 'type "refer friend@email.com"'
-          });
-        }
-
-        if (user.currentIndex === null) {
-          return socket.emit("state", {
-            placeholder: "tap a question first"
-          });
-        }
-
-        const q = user.currentQuestions[user.currentIndex];
-
-        await sendEmail(
-          email,
-          "You’ve got a question",
-          `${q.text}\n\n${APP_URL}`,
-          user.email
-        );
-
-        return socket.emit("state", {
-          placeholder: "invited"
-        });
-      }
-
-      if (user.currentIndex === null) {
-        return socket.emit("state", {
-          placeholder: "tap a question first"
-        });
-      }
-
-      const q = user.currentQuestions[user.currentIndex];
-      const ans = await rewriteText(text);
-
-      q.answers.push({ text: ans });
-
-      await sendEmail(
-        q.email,
-        "Someone answered",
-        `${ans}\n\n${APP_URL}`,
-        user.email
-      );
-
-      return socket.emit("state", {
-        placeholder: "sent"
-      });
-    }
-
-    ////////////////////////////////////////////////////////////
-    // ASK MODE
-    ////////////////////////////////////////////////////////////
-
-    if (user.step === "ask") {
-      const q = await rewriteText(text);
-
-      createQuestion(user, q);
-
-      user.step = "answer";
-      loadQuestions(user);
-      return sendQuestions(socket, user);
-    }
-  });
-
-  ////////////////////////////////////////////////////////////
-
-  socket.on("selectQuestion", ({ index }) => {
-    const user = users[socket.id];
-    user.currentIndex = user.pageIndex + index;
-
-    socket.emit("state", {
-      placeholder: "answer or refer"
-    });
   });
 
   socket.on("disconnect", () => {
@@ -468,5 +323,5 @@ io.on("connection", (socket) => {
 //////////////////////////////////////////////////////////////
 
 server.listen(process.env.PORT || 10000, () => {
-  console.log("AI CONNECT FINAL RUNNING");
+  console.log("AI CONNECT V2.1 RUNNING");
 });
