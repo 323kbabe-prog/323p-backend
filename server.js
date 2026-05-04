@@ -1,8 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V2 FINAL BACKEND (CLEAN)
-// Board = questions only
-// Answers = email only (human + image AI)
-// Image = persona → email answer
+// AI CONNECT BOARD — V2 FINAL BACKEND (STABLE)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -80,13 +77,14 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// SEED
+// SEED QUESTIONS
 //////////////////////////////////////////////////////////////
 
 function seedAIQuestionsIfEmpty() {
   if (questions.length > 0 || isSeeding) return;
 
   isSeeding = true;
+
   const aiEmail = "a078bc@gmail.com";
   const now = Date.now();
 
@@ -139,7 +137,7 @@ async function rewriteText(input) {
 }
 
 //////////////////////////////////////////////////////////////
-// IMAGE PERSONA
+// IMAGE AI
 //////////////////////////////////////////////////////////////
 
 async function createImagePersona(imageDataUrl) {
@@ -169,11 +167,7 @@ async function imageAnswer(persona, question) {
     messages: [
       {
         role: "system",
-        content: `
-You are this voice:
-${persona}
-Short answer only. No explanation.
-`
+        content: `You are this voice:\n${persona}\nShort answer only.`
       },
       { role: "user", content: question }
     ]
@@ -268,12 +262,18 @@ io.on("connection", (socket) => {
     imagePersona: null
   };
 
+  // ✅ ensure board not empty
+  seedAIQuestionsIfEmpty();
+
+  // ✅ correct onboarding
   socket.emit("state", {
-    placeholder: 'ask, answer, or "image"'
+    placeholder: "enter your email to connect"
   });
 
   socket.emit("count", questions.length);
 
+  ////////////////////////////////////////////////////////////
+  // IMAGE UPLOAD
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
@@ -281,7 +281,7 @@ io.on("connection", (socket) => {
 
     if (!user.email) {
       return socket.emit("state", {
-        placeholder: "enter email first"
+        placeholder: "enter your email first"
       });
     }
 
@@ -293,6 +293,8 @@ io.on("connection", (socket) => {
   });
 
   ////////////////////////////////////////////////////////////
+  // INPUT
+  ////////////////////////////////////////////////////////////
 
   socket.on("input", async ({ text }) => {
     const user = users[socket.id];
@@ -302,22 +304,26 @@ io.on("connection", (socket) => {
     const email = extractEmail(text);
 
     ////////////////////////////////////////////////////////////
-    // EMAIL
+    // EMAIL STEP
     ////////////////////////////////////////////////////////////
 
     if (user.step === "email") {
       if (email) {
         user.email = email;
         user.step = "mode";
+
         return socket.emit("state", {
           placeholder: 'ask, answer, or "image"'
         });
       }
-      return;
+
+      return socket.emit("state", {
+        placeholder: "enter your email to connect"
+      });
     }
 
     ////////////////////////////////////////////////////////////
-    // MODE
+    // MODE STEP
     ////////////////////////////////////////////////////////////
 
     if (user.step === "mode") {
@@ -337,29 +343,20 @@ io.on("connection", (socket) => {
     }
 
     ////////////////////////////////////////////////////////////
-    // IMAGE QUESTION FLOW (FIXED)
+    // IMAGE QUESTION FLOW
     ////////////////////////////////////////////////////////////
 
     if (user.imagePersona) {
       const question = await rewriteText(text);
 
-      // create clean question
       createQuestion(user, question, user.imagePersona);
 
-      // send answer via email ONLY
       const ans = await imageAnswer(user.imagePersona, question);
 
       await sendEmail(
         user.email,
         "You’ve got an answer",
-        `
-From Image AI:
-
-${ans}
-
-Continue:
-${APP_URL}
-`,
+        `From Image AI:\n\n${ans}\n\n${APP_URL}`,
         user.email
       );
 
@@ -388,18 +385,24 @@ ${APP_URL}
       }
 
       if (lower.startsWith("refer")) {
-        if (!email || user.currentIndex === null) return;
+        if (!email) {
+          return socket.emit("state", {
+            placeholder: 'type "refer friend@email.com"'
+          });
+        }
+
+        if (user.currentIndex === null) {
+          return socket.emit("state", {
+            placeholder: "tap a question first"
+          });
+        }
 
         const q = user.currentQuestions[user.currentIndex];
 
         await sendEmail(
           email,
           "You’ve got a question",
-          `
-${q.text}
-
-${APP_URL}
-`,
+          `${q.text}\n\n${APP_URL}`,
           user.email
         );
 
@@ -408,7 +411,11 @@ ${APP_URL}
         });
       }
 
-      if (user.currentIndex === null) return;
+      if (user.currentIndex === null) {
+        return socket.emit("state", {
+          placeholder: "tap a question first"
+        });
+      }
 
       const q = user.currentQuestions[user.currentIndex];
       const ans = await rewriteText(text);
@@ -418,11 +425,7 @@ ${APP_URL}
       await sendEmail(
         q.email,
         "Someone answered",
-        `
-${ans}
-
-${APP_URL}
-`,
+        `${ans}\n\n${APP_URL}`,
         user.email
       );
 
@@ -432,7 +435,7 @@ ${APP_URL}
     }
 
     ////////////////////////////////////////////////////////////
-    // ASK
+    // ASK MODE
     ////////////////////////////////////////////////////////////
 
     if (user.step === "ask") {
