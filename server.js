@@ -1,6 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V2.2 BACKEND
-// Human system + Image AI Persona (add-on) + Email responses
+// AI CONNECT BOARD — V2.3 BACKEND (NO FAKE DATA)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -20,12 +19,6 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-//////////////////////////////////////////////////////////////
-// CONFIG
-//////////////////////////////////////////////////////////////
-
-const APP_URL = process.env.APP_URL || "https://connectaing.com";
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -39,23 +32,19 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
   }
 });
 
-async function sendEmail(to, subject, message, replyToEmail) {
+async function sendEmail(to, subject, text) {
   try {
     await transporter.sendMail({
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject,
-      replyTo: replyToEmail,
-      text: message
+      text
     });
-  } catch (err) {
-    console.log("EMAIL ERROR:", err);
+  } catch (e) {
+    console.log("EMAIL ERROR:", e);
   }
 }
 
@@ -65,63 +54,18 @@ async function sendEmail(to, subject, message, replyToEmail) {
 
 const users = {};
 const questions = [];
-let isSeeding = false;
 
 function makeId() {
   return Date.now() + "-" + Math.random().toString(36).slice(2, 8);
 }
 
 function extractEmail(text) {
-  const m = String(text || "").match(
-    /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
-  );
+  const m = text.match(/\S+@\S+\.\S+/);
   return m ? m[0].toLowerCase() : null;
 }
 
 //////////////////////////////////////////////////////////////
-// AI SEED
-//////////////////////////////////////////////////////////////
-
-function seedAIQuestionsIfEmpty() {
-  if (questions.length > 0 || isSeeding) return;
-
-  isSeeding = true;
-
-  const aiEmail = "seed@ai.com";
-  const now = Date.now();
-
-  questions.unshift(
-    { id: makeId(), email: aiEmail, text: "Should I trust this decision?", answers: [], createdAt: now },
-    { id: makeId(), email: aiEmail, text: "What should I learn in AI next week?", answers: [], createdAt: now },
-    { id: makeId(), email: aiEmail, text: "Is this idea worth building?", answers: [], createdAt: now }
-  );
-
-  io.emit("count", questions.length);
-  isSeeding = false;
-}
-
-//////////////////////////////////////////////////////////////
-// GRAMMAR REWRITE
-//////////////////////////////////////////////////////////////
-
-async function rewriteText(input) {
-  try {
-    const res = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "Fix grammar only. Keep meaning." },
-        { role: "user", content: input }
-      ]
-    });
-
-    return res.choices[0].message.content.trim();
-  } catch {
-    return input;
-  }
-}
-
-//////////////////////////////////////////////////////////////
-// CLEANUP — 6 HOURS
+// CLEANUP (6H OR 3 ANSWERS)
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
@@ -139,41 +83,11 @@ setInterval(() => {
 }, 60000);
 
 //////////////////////////////////////////////////////////////
-// HELPERS
-//////////////////////////////////////////////////////////////
-
-function loadQuestions(user) {
-  seedAIQuestionsIfEmpty();
-
-  const sorted = [...questions].sort((a, b) => {
-    if (a.answers.length !== b.answers.length) {
-      return a.answers.length - b.answers.length;
-    }
-    return b.createdAt - a.createdAt;
-  });
-
-  user.currentQuestions = sorted;
-  user.currentIndex = null;
-  user.pageIndex = 0;
-}
-
-function sendQuestions(socket, user) {
-  const batch = user.currentQuestions.slice(user.pageIndex, user.pageIndex + 3);
-
-  if (!batch.length) {
-    socket.emit("questions", []);
-    return socket.emit("state", { placeholder: "no more. type ask" });
-  }
-
-  socket.emit("questions", batch);
-  socket.emit("state", { placeholder: "tap a question or type 'ask'" });
-}
-
-//////////////////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
+
   users[socket.id] = {
     step: "email",
     email: null,
@@ -181,7 +95,6 @@ io.on("connection", (socket) => {
     currentIndex: null,
     pageIndex: 0,
 
-    // NEW
     imageMode: false,
     imageContext: null
   };
@@ -190,7 +103,7 @@ io.on("connection", (socket) => {
   socket.emit("count", questions.length);
 
   ////////////////////////////////////////////////////////////
-  // IMAGE UPLOAD → PERSONA
+  // IMAGE → AI PERSONA
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
@@ -203,7 +116,7 @@ io.on("connection", (socket) => {
         messages: [
           {
             role: "system",
-            content: "Describe this image as a persona with tone and personality."
+            content: "Describe this image as an AI persona with tone and personality."
           },
           {
             role: "user",
@@ -243,10 +156,11 @@ io.on("connection", (socket) => {
     const email = extractEmail(text);
 
     //////////////////////////////////////////////////////////
-    // IMAGE MODE (NEW)
+    // IMAGE MODE
     //////////////////////////////////////////////////////////
 
     if (user.imageMode) {
+
       if (lower === "ask" || lower === "answer") {
         user.imageMode = false;
         return socket.emit("state", {
@@ -257,14 +171,8 @@ io.on("connection", (socket) => {
       const res = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          {
-            role: "system",
-            content: `You are this persona:\n${user.imageContext}`
-          },
-          {
-            role: "user",
-            content: text
-          }
+          { role: "system", content: `You are:\n${user.imageContext}` },
+          { role: "user", content: text }
         ]
       });
 
@@ -303,10 +211,11 @@ io.on("connection", (socket) => {
     //////////////////////////////////////////////////////////
 
     if (user.step === "mode") {
+
       if (lower === "answer") {
         user.step = "answer";
-        loadQuestions(user);
-        return sendQuestions(socket, user);
+        user.currentQuestions = [...questions];
+        return socket.emit("questions", user.currentQuestions.slice(0,3));
       }
 
       if (lower === "image") {
@@ -315,18 +224,20 @@ io.on("connection", (socket) => {
         });
       }
 
-      const fixed = await rewriteText(text);
-
       questions.unshift({
         id: makeId(),
         email: user.email,
-        text: fixed,
+        text,
         answers: [],
         createdAt: Date.now()
       });
 
-      loadQuestions(user);
-      return sendQuestions(socket, user);
+      user.step = "answer";
+      user.currentQuestions = [...questions];
+
+      io.emit("count", questions.length);
+
+      return socket.emit("questions", user.currentQuestions.slice(0,3));
     }
 
     //////////////////////////////////////////////////////////
@@ -334,6 +245,7 @@ io.on("connection", (socket) => {
     //////////////////////////////////////////////////////////
 
     if (user.step === "answer") {
+
       if (lower === "ask") {
         user.step = "mode";
         return socket.emit("state", {
@@ -343,7 +255,9 @@ io.on("connection", (socket) => {
 
       if (lower === "next") {
         user.pageIndex += 3;
-        return sendQuestions(socket, user);
+        return socket.emit("questions",
+          user.currentQuestions.slice(user.pageIndex, user.pageIndex + 3)
+        );
       }
 
       if (user.currentIndex === null) {
@@ -353,19 +267,14 @@ io.on("connection", (socket) => {
       }
 
       const q = user.currentQuestions[user.currentIndex];
-      const fixed = await rewriteText(text);
 
       q.answers.push({
-        text: fixed,
+        text,
         from: user.email,
         createdAt: Date.now()
       });
 
-      await sendEmail(
-        q.email,
-        "New Answer",
-        `${fixed}\n\nfrom: ${user.email}`
-      );
+      await sendEmail(q.email, "New Answer", text);
 
       user.currentIndex = null;
 
@@ -377,7 +286,7 @@ io.on("connection", (socket) => {
 
   socket.on("selectQuestion", ({ index }) => {
     const user = users[socket.id];
-    user.currentIndex = user.pageIndex + index;
+    user.currentIndex = index;
 
     socket.emit("state", {
       placeholder: "answer or refer friend@email.com"
@@ -389,10 +298,6 @@ io.on("connection", (socket) => {
   });
 });
 
-//////////////////////////////////////////////////////////////
-// START
-//////////////////////////////////////////////////////////////
-
 server.listen(10000, () => {
-  console.log("V2.2 running");
+  console.log("V2.3 running");
 });
