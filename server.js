@@ -71,7 +71,7 @@ async function sendEmailWithImage(to, subject, html, imageDataUrl, replyToEmail)
     const base64 = imageDataUrl.split(",")[1];
 
     await transporter.sendMail({
-      from: `"AI Connect" <${process.env.EMAIL_USER}>`,
+      from: `"CONNECTAING — AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       replyTo: replyToEmail,
