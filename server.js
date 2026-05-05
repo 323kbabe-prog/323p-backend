@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V5.0 BACKEND
+// AI CONNECT BOARD — V5.1 BACKEND (EMAIL IMAGE FIX)
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -19,7 +19,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 //////////////////////////////////////////////////////////////
-// EMAIL
+// EMAIL (FIXED — CID IMAGE)
 //////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
@@ -32,6 +32,21 @@ const transporter = nodemailer.createTransport({
 
 async function sendEmail(to, subject, text, imageDataUrl) {
   try {
+    const attachments = [];
+    let cid = null;
+
+    if (imageDataUrl) {
+      const base64Data = imageDataUrl.split("base64,")[1];
+      cid = "image1@ai";
+
+      attachments.push({
+        filename: "image.jpg",
+        content: base64Data,
+        encoding: "base64",
+        cid
+      });
+    }
+
     await transporter.sendMail({
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
@@ -40,10 +55,12 @@ async function sendEmail(to, subject, text, imageDataUrl) {
       html: `
         <div>
           <p>${text.replace(/\n/g, "<br>")}</p>
-          ${imageDataUrl ? `<img src="${imageDataUrl}" style="max-width:100%;margin-top:10px;" />` : ""}
+          ${cid ? `<img src="cid:${cid}" style="max-width:100%;margin-top:10px;" />` : ""}
         </div>
-      `
+      `,
+      attachments
     });
+
   } catch (e) {
     console.log("EMAIL ERROR:", e);
   }
@@ -109,7 +126,6 @@ io.on("connection", (socket) => {
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
     const user = users[socket.id];
-
     user.lastImage = imageDataUrl;
 
     try {
@@ -276,5 +292,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(10000, () => {
-  console.log("V5.0 running");
+  console.log("V5.1 running");
 });
