@@ -55,7 +55,7 @@ function escapeHtml(str) {
 async function sendEmail(to, subject, html, replyToEmail) {
   try {
     await transporter.sendMail({
-      from: `"AI Connect" <${process.env.EMAIL_USER}>`,
+      from: `"CONNECTAING — AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       replyTo: replyToEmail,
