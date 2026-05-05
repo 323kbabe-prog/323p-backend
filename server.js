@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V2.5 BACKEND
+// AI CONNECT BOARD — V2.6 BACKEND
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -97,7 +97,7 @@ io.on("connection", (socket) => {
   socket.emit("count", questions.length);
 
   ////////////////////////////////////////////////////////////
-  // IMAGE AI
+  // IMAGE → AI PERSONA
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
@@ -107,7 +107,7 @@ io.on("connection", (socket) => {
       const res = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "Describe this image as a persona." },
+          { role: "system", content: "Describe this image as an AI persona with personality and tone." },
           {
             role: "user",
             content: [
@@ -122,6 +122,7 @@ io.on("connection", (socket) => {
       user.imageContext = res.choices[0].message.content;
 
       socket.emit("preview", { text: user.imageContext });
+
       socket.emit("state", { placeholder: "ask this image" });
 
     } catch {
@@ -140,7 +141,10 @@ io.on("connection", (socket) => {
     const lower = text.toLowerCase();
     const email = extractEmail(text);
 
+    //////////////////////////////////////////////////////////
     // IMAGE MODE
+    //////////////////////////////////////////////////////////
+
     if (user.imageMode) {
 
       if (lower === "ask" || lower === "answer") {
@@ -163,7 +167,10 @@ io.on("connection", (socket) => {
       return socket.emit("state", { placeholder: "sent. ask more" });
     }
 
+    //////////////////////////////////////////////////////////
     // EMAIL STEP
+    //////////////////////////////////////////////////////////
+
     if (user.step === "email") {
       if (email) {
         user.email = email;
@@ -175,7 +182,10 @@ io.on("connection", (socket) => {
       return socket.emit("state", { placeholder: "enter your email to start" });
     }
 
+    //////////////////////////////////////////////////////////
     // MODE
+    //////////////////////////////////////////////////////////
+
     if (user.step === "mode") {
 
       if (lower === "answer") {
@@ -185,7 +195,7 @@ io.on("connection", (socket) => {
       }
 
       if (lower === "image") {
-        return socket.emit("state", { placeholder: "upload an image" });
+        return socket.emit("state", { placeholder: "take a photo" });
       }
 
       questions.unshift({
@@ -204,7 +214,10 @@ io.on("connection", (socket) => {
       return socket.emit("questions", user.currentQuestions.slice(0,3));
     }
 
+    //////////////////////////////////////////////////////////
     // ANSWER MODE
+    //////////////////////////////////////////////////////////
+
     if (user.step === "answer") {
 
       if (lower === "ask") {
@@ -256,5 +269,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(10000, () => {
-  console.log("V2.5 running");
+  console.log("V2.6 running");
 });
