@@ -88,7 +88,7 @@ io.on("connection", (socket) => {
   socket.emit("state", { placeholder: "enter your email to connect" });
 
   //////////////////////////////////////////////////
-  // IMAGE UPLOAD
+  // IMAGE AI
   //////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
@@ -146,7 +146,7 @@ io.on("connection", (socket) => {
 
     if (user.imageMode) {
 
-      if (lower === "ask" || lower === "answer") {
+      if (lower === "next") {
         user.imageMode = false;
         return socket.emit("state", { placeholder: "type your question" });
       }
@@ -177,97 +177,48 @@ io.on("connection", (socket) => {
       if (email) {
         user.email = email;
         user.step = "mode";
-        return socket.emit("state", {
-          placeholder: "type 'ask', 'answer', or 'image ai'"
-        });
+        return socket.emit("state", { placeholder: "ready" });
       }
-      return socket.emit("state", {
-        placeholder: "enter your email to connect"
-      });
+      return socket.emit("state", { placeholder: "enter your email to connect" });
     }
 
     //////////////////////////////////////////////////
-    // MODE
+    // HUMAN QUESTION (TYPE = ASK)
     //////////////////////////////////////////////////
 
     if (user.step === "mode") {
 
-      if (lower === "answer") {
-        user.step = "answer";
-      }
+      if (lower === "next") return;
 
-      if (!["ask","answer","next","image ai"].includes(lower)) {
-        questions.unshift({
-          email: user.email,
-          text: raw,
-          answers: [],
-          createdAt: Date.now()
-        });
-        user.step = "answer";
-      }
-
-      user.currentQuestions = [...questions].sort((a,b) =>
-        a.answers.length - b.answers.length ||
-        b.createdAt - a.createdAt
-      );
-
-      user.pageIndex = 0;
-
-      return socket.emit("questions",
-        user.currentQuestions.slice(0,3)
-      );
-    }
-
-    //////////////////////////////////////////////////
-    // ANSWER MODE
-    //////////////////////////////////////////////////
-
-    if (user.step === "answer") {
-
-      if (lower === "next") {
-        user.pageIndex += 3;
-        return socket.emit("questions",
-          user.currentQuestions.slice(user.pageIndex, user.pageIndex + 3)
-        );
-      }
-
-      if (lower.startsWith("refer ")) {
-        const refEmail = extractEmail(raw);
-        const q = user.currentQuestions[user.currentIndex];
-
-        await sendEmail(refEmail, "Answer this question",
-          `${q.text}\n\n${process.env.APP_URL}`
-        );
-
-        return socket.emit("state", {
-          placeholder: "invited. tap a question"
-        });
-      }
-
-      if (user.currentIndex === null) {
-        return socket.emit("state", {
-          placeholder: "tap a question first"
-        });
-      }
-
-      const q = user.currentQuestions[user.currentIndex];
-
-      q.answers.push({
+      questions.unshift({
+        email: user.email,
         text: raw,
-        from: user.email,
+        answers: [],
         createdAt: Date.now()
       });
 
-      await sendEmail(q.email, "New Answer", raw);
-
-      user.currentIndex = null;
-
-      return socket.emit("state", {
-        placeholder: "sent. tap a question"
-      });
+      user.step = "answer";
     }
 
+    //////////////////////////////////////////////////
+    // LOAD QUESTIONS
+    //////////////////////////////////////////////////
+
+    user.currentQuestions = [...questions].sort((a,b) =>
+      a.answers.length - b.answers.length ||
+      b.createdAt - a.createdAt
+    );
+
+    user.pageIndex = 0;
+
+    return socket.emit("questions",
+      user.currentQuestions.slice(0,3)
+    );
   });
+
+  //////////////////////////////////////////////////
+  // ANSWER + NEXT + REFER
+  //////////////////////////////////////////////////
 
   socket.on("selectQuestion", ({ index }) => {
     const user = users[socket.id];
