@@ -65,7 +65,6 @@ setInterval(() => {
       questions.splice(i, 1);
     }
   }
-
 }, 60000);
 
 //////////////////////////////////////////////////
@@ -141,15 +140,10 @@ io.on("connection", (socket) => {
     }
 
     //////////////////////////////////////////////////
-    // IMAGE MODE
+    // IMAGE MODE → HARD EXIT AFTER RESPONSE
     //////////////////////////////////////////////////
 
     if (user.imageMode) {
-
-      if (lower === "next") {
-        user.imageMode = false;
-        return socket.emit("state", { placeholder: "type your question" });
-      }
 
       const res = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -166,7 +160,39 @@ io.on("connection", (socket) => {
         user.lastImage
       );
 
-      return socket.emit("state", { placeholder: "sent. ask more" });
+      user.imageMode = false;
+
+      // CLEAR AI UI
+      socket.emit("preview", { text: "" });
+
+      //////////////////////////////////////////////////
+      // EMPTY STATE FALLBACK
+      //////////////////////////////////////////////////
+
+      if (questions.length === 0) {
+        return socket.emit("state", {
+          placeholder: "tap camera to ask anything"
+        });
+      }
+
+      //////////////////////////////////////////////////
+      // SHOW ONLY QUESTIONS
+      //////////////////////////////////////////////////
+
+      user.currentQuestions = [...questions].sort((a,b) =>
+        a.answers.length - b.answers.length ||
+        b.createdAt - a.createdAt
+      );
+
+      user.pageIndex = 0;
+
+      socket.emit("state", {
+        placeholder: "sent. now tap a question to answer"
+      });
+
+      return socket.emit("questions",
+        user.currentQuestions.slice(0,3)
+      );
     }
 
     //////////////////////////////////////////////////
@@ -179,30 +205,21 @@ io.on("connection", (socket) => {
         user.step = "mode";
         return socket.emit("state", { placeholder: "ready" });
       }
-      return socket.emit("state", { placeholder: "enter your email to connect" });
-    }
-
-    //////////////////////////////////////////////////
-    // HUMAN QUESTION (TYPE = ASK)
-    //////////////////////////////////////////////////
-
-    if (user.step === "mode") {
-
-      if (lower === "next") return;
-
-      questions.unshift({
-        email: user.email,
-        text: raw,
-        answers: [],
-        createdAt: Date.now()
+      return socket.emit("state", {
+        placeholder: "enter your email to connect"
       });
-
-      user.step = "answer";
     }
 
     //////////////////////////////////////////////////
-    // LOAD QUESTIONS
+    // CREATE QUESTION
     //////////////////////////////////////////////////
+
+    questions.unshift({
+      email: user.email,
+      text: raw,
+      answers: [],
+      createdAt: Date.now()
+    });
 
     user.currentQuestions = [...questions].sort((a,b) =>
       a.answers.length - b.answers.length ||
@@ -217,7 +234,7 @@ io.on("connection", (socket) => {
   });
 
   //////////////////////////////////////////////////
-  // ANSWER + NEXT + REFER
+  // SELECT QUESTION
   //////////////////////////////////////////////////
 
   socket.on("selectQuestion", ({ index }) => {
@@ -229,9 +246,4 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("disconnect", () => {
-    delete users[socket.id];
-  });
 });
-
-server.listen(10000);
