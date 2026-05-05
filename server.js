@@ -66,7 +66,6 @@ setInterval(() => {
     }
   }
 
-  io.emit("count", questions.length);
 }, 60000);
 
 //////////////////////////////////////////////////
@@ -95,7 +94,6 @@ io.on("connection", (socket) => {
   socket.on("imageUpload", async ({ imageDataUrl }) => {
 
     const user = users[socket.id];
-
     if (!user.email) return;
 
     user.lastImage = imageDataUrl;
@@ -103,10 +101,7 @@ io.on("connection", (socket) => {
     const res = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        {
-          role: "system",
-          content: "Describe this image as an AI persona."
-        },
+        { role: "system", content: "Describe this image as an AI persona." },
         {
           role: "user",
           content: [
@@ -199,10 +194,6 @@ io.on("connection", (socket) => {
 
       if (lower === "answer") {
         user.step = "answer";
-      }
-
-      if (lower === "image ai") {
-        return;
       }
 
       if (!["ask","answer","next","image ai"].includes(lower)) {
