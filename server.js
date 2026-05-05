@@ -423,7 +423,7 @@ io.on("connection", (socket) => {
         user.step = "mode";
 
         return socket.emit("state", {
-          placeholder: 'ask, answer, or "image"'
+          placeholder: 'type "ask", "answer", or "image"'
         });
       }
 
