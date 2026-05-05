@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V2.3 BACKEND (NO FAKE DATA)
+// AI CONNECT BOARD — V2.5 BACKEND
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -14,14 +14,9 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 //////////////////////////////////////////////////////////////
 // EMAIL
@@ -65,7 +60,7 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// CLEANUP (6H OR 3 ANSWERS)
+// CLEANUP
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
@@ -94,7 +89,6 @@ io.on("connection", (socket) => {
     currentQuestions: [],
     currentIndex: null,
     pageIndex: 0,
-
     imageMode: false,
     imageContext: null
   };
@@ -103,44 +97,35 @@ io.on("connection", (socket) => {
   socket.emit("count", questions.length);
 
   ////////////////////////////////////////////////////////////
-  // IMAGE → AI PERSONA
+  // IMAGE AI
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
     const user = users[socket.id];
-    if (!user) return;
 
     try {
       const res = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          {
-            role: "system",
-            content: "Describe this image as an AI persona with tone and personality."
-          },
+          { role: "system", content: "Describe this image as a persona." },
           {
             role: "user",
             content: [
-              { type: "text", text: "Analyze this image" },
+              { type: "text", text: "Analyze image" },
               { type: "image_url", image_url: { url: imageDataUrl } }
             ]
           }
         ]
       });
 
-      const persona = res.choices[0].message.content;
-
       user.imageMode = true;
-      user.imageContext = persona;
+      user.imageContext = res.choices[0].message.content;
 
-      socket.emit("preview", { text: persona });
-
-      socket.emit("state", {
-        placeholder: "ask this image. answer comes by email"
-      });
+      socket.emit("preview", { text: user.imageContext });
+      socket.emit("state", { placeholder: "ask this image" });
 
     } catch {
-      socket.emit("state", { placeholder: "image failed. try again" });
+      socket.emit("state", { placeholder: "image failed" });
     }
   });
 
@@ -155,44 +140,30 @@ io.on("connection", (socket) => {
     const lower = text.toLowerCase();
     const email = extractEmail(text);
 
-    //////////////////////////////////////////////////////////
     // IMAGE MODE
-    //////////////////////////////////////////////////////////
-
     if (user.imageMode) {
 
       if (lower === "ask" || lower === "answer") {
         user.imageMode = false;
-        return socket.emit("state", {
-          placeholder: "type 'ask', 'answer', or 'image'"
-        });
+        return socket.emit("state", { placeholder: "type your question" });
       }
 
       const res = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: `You are:\n${user.imageContext}` },
+          { role: "system", content: user.imageContext },
           { role: "user", content: text }
         ]
       });
 
       const answer = res.choices[0].message.content;
 
-      await sendEmail(
-        user.email,
-        "Image AI Reply",
-        `Q: ${text}\n\nA: ${answer}`
-      );
+      await sendEmail(user.email, "AI Reply", `Q: ${text}\n\nA: ${answer}`);
 
-      return socket.emit("state", {
-        placeholder: "sent. check your email or ask more"
-      });
+      return socket.emit("state", { placeholder: "sent. ask more" });
     }
 
-    //////////////////////////////////////////////////////////
     // EMAIL STEP
-    //////////////////////////////////////////////////////////
-
     if (user.step === "email") {
       if (email) {
         user.email = email;
@@ -201,15 +172,10 @@ io.on("connection", (socket) => {
           placeholder: "type 'ask', 'answer', or 'image'"
         });
       }
-      return socket.emit("state", {
-        placeholder: "enter your email to start"
-      });
+      return socket.emit("state", { placeholder: "enter your email to start" });
     }
 
-    //////////////////////////////////////////////////////////
     // MODE
-    //////////////////////////////////////////////////////////
-
     if (user.step === "mode") {
 
       if (lower === "answer") {
@@ -219,9 +185,7 @@ io.on("connection", (socket) => {
       }
 
       if (lower === "image") {
-        return socket.emit("state", {
-          placeholder: "upload an image"
-        });
+        return socket.emit("state", { placeholder: "upload an image" });
       }
 
       questions.unshift({
@@ -232,25 +196,20 @@ io.on("connection", (socket) => {
         createdAt: Date.now()
       });
 
+      io.emit("count", questions.length);
+
       user.step = "answer";
       user.currentQuestions = [...questions];
-
-      io.emit("count", questions.length);
 
       return socket.emit("questions", user.currentQuestions.slice(0,3));
     }
 
-    //////////////////////////////////////////////////////////
     // ANSWER MODE
-    //////////////////////////////////////////////////////////
-
     if (user.step === "answer") {
 
       if (lower === "ask") {
         user.step = "mode";
-        return socket.emit("state", {
-          placeholder: "type your question"
-        });
+        return socket.emit("state", { placeholder: "type your question" });
       }
 
       if (lower === "next") {
@@ -261,9 +220,7 @@ io.on("connection", (socket) => {
       }
 
       if (user.currentIndex === null) {
-        return socket.emit("state", {
-          placeholder: "tap a question first"
-        });
+        return socket.emit("state", { placeholder: "tap a question first" });
       }
 
       const q = user.currentQuestions[user.currentIndex];
@@ -279,7 +236,7 @@ io.on("connection", (socket) => {
       user.currentIndex = null;
 
       return socket.emit("state", {
-        placeholder: "sent. tap a question or type 'ask'"
+        placeholder: "sent. tap a question"
       });
     }
   });
@@ -299,5 +256,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(10000, () => {
-  console.log("V2.3 running");
+  console.log("V2.5 running");
 });
