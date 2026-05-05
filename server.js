@@ -181,7 +181,7 @@ io.on("connection", (socket) => {
       user.pageIndex = 0;
 
       return socket.emit("questions",
-        user.currentQuestions.slice(0,3)
+        user.currentQuestions.slice(0,10)
       );
     }
 
