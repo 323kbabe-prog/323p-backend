@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT — FINAL BACKEND
+// AI CONNECT BOARD — V5.0 BACKEND
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -19,7 +19,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 //////////////////////////////////////////////////////////////
-// EMAIL (CID IMAGE SUPPORT)
+// EMAIL
 //////////////////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
@@ -32,21 +32,6 @@ const transporter = nodemailer.createTransport({
 
 async function sendEmail(to, subject, text, imageDataUrl) {
   try {
-    const attachments = [];
-    let cid = null;
-
-    if (imageDataUrl) {
-      const base64Data = imageDataUrl.split("base64,")[1];
-      cid = "image1@ai";
-
-      attachments.push({
-        filename: "image.jpg",
-        content: base64Data,
-        encoding: "base64",
-        cid
-      });
-    }
-
     await transporter.sendMail({
       from: `"AI Connect" <${process.env.EMAIL_USER}>`,
       to,
@@ -55,12 +40,10 @@ async function sendEmail(to, subject, text, imageDataUrl) {
       html: `
         <div>
           <p>${text.replace(/\n/g, "<br>")}</p>
-          ${cid ? `<img src="cid:${cid}" style="max-width:100%;margin-top:10px;" />` : ""}
+          ${imageDataUrl ? `<img src="${imageDataUrl}" style="max-width:100%;margin-top:10px;" />` : ""}
         </div>
-      `,
-      attachments
+      `
     });
-
   } catch (e) {
     console.log("EMAIL ERROR:", e);
   }
@@ -74,7 +57,7 @@ const users = {};
 const questions = [];
 
 function makeId() {
-  return Date.now() + Math.random().toString(36).slice(2);
+  return Date.now() + "-" + Math.random().toString(36).slice(2, 8);
 }
 
 function extractEmail(text) {
@@ -96,6 +79,8 @@ setInterval(() => {
       questions.splice(i, 1);
     }
   }
+
+  io.emit("count", questions.length);
 }, 60000);
 
 //////////////////////////////////////////////////////////////
@@ -116,37 +101,44 @@ io.on("connection", (socket) => {
   };
 
   socket.emit("state", { placeholder: "enter your email to connect" });
+  socket.emit("count", questions.length);
 
   ////////////////////////////////////////////////////////////
-  // IMAGE AI
+  // IMAGE AI PERSONA
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
     const user = users[socket.id];
+
     user.lastImage = imageDataUrl;
 
-    const res = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "Describe this image as an AI persona."
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Analyze image" },
-            { type: "image_url", image_url: { url: imageDataUrl } }
-          ]
-        }
-      ]
-    });
+    try {
+      const res = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "Describe this image as an AI persona with personality and tone."
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Analyze image" },
+              { type: "image_url", image_url: { url: imageDataUrl } }
+            ]
+          }
+        ]
+      });
 
-    user.imageMode = true;
-    user.imageContext = res.choices[0].message.content;
+      user.imageMode = true;
+      user.imageContext = res.choices[0].message.content;
 
-    socket.emit("preview", { text: user.imageContext });
-    socket.emit("state", { placeholder: "ask this image" });
+      socket.emit("preview", { text: user.imageContext });
+      socket.emit("state", { placeholder: "ask this image" });
+
+    } catch {
+      socket.emit("state", { placeholder: "image failed" });
+    }
   });
 
   ////////////////////////////////////////////////////////////
@@ -163,6 +155,12 @@ io.on("connection", (socket) => {
 
     // IMAGE MODE
     if (user.imageMode) {
+
+      if (lower === "ask" || lower === "answer") {
+        user.imageMode = false;
+        return socket.emit("state", { placeholder: "type your question" });
+      }
+
       const res = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -180,8 +178,7 @@ io.on("connection", (socket) => {
         user.lastImage
       );
 
-      socket.emit("state", { placeholder: "sent" });
-      return;
+      return socket.emit("state", { placeholder: "sent. ask more" });
     }
 
     // EMAIL STEP
@@ -189,9 +186,11 @@ io.on("connection", (socket) => {
       if (email) {
         user.email = email;
         user.step = "mode";
-        socket.emit("state", { placeholder: "ask or answer" });
+        return socket.emit("state", {
+          placeholder: "type 'ask', 'answer', or 'image ai'"
+        });
       }
-      return;
+      return socket.emit("state", { placeholder: "enter your email to start" });
     }
 
     // MODE
@@ -200,13 +199,12 @@ io.on("connection", (socket) => {
       if (lower === "answer") {
         user.step = "answer";
         user.currentQuestions = [...questions];
-        socket.emit("questions", questions.slice(0, 3));
-        return;
+        user.pageIndex = 0;
+        return socket.emit("questions", user.currentQuestions.slice(0, 3));
       }
 
       if (lower === "image ai") {
-        socket.emit("state", { placeholder: "take photo" });
-        return;
+        return socket.emit("state", { placeholder: "take a photo" });
       }
 
       questions.unshift({
@@ -217,9 +215,66 @@ io.on("connection", (socket) => {
         createdAt: Date.now()
       });
 
-      socket.emit("state", { placeholder: "question live" });
+      io.emit("count", questions.length);
+
+      user.step = "answer";
+      user.currentQuestions = [...questions];
+      user.pageIndex = 0;
+
+      return socket.emit("questions", user.currentQuestions.slice(0, 3));
+    }
+
+    // ANSWER MODE
+    if (user.step === "answer") {
+
+      if (lower === "ask") {
+        user.step = "mode";
+        return socket.emit("state", { placeholder: "type your question" });
+      }
+
+      if (lower === "next") {
+        user.pageIndex += 3;
+        return socket.emit("questions",
+          user.currentQuestions.slice(user.pageIndex, user.pageIndex + 3)
+        );
+      }
+
+      if (user.currentIndex === null) {
+        return socket.emit("state", { placeholder: "tap a question first" });
+      }
+
+      const q = user.currentQuestions[user.currentIndex];
+
+      q.answers.push({
+        text: raw,
+        from: user.email,
+        createdAt: Date.now()
+      });
+
+      await sendEmail(q.email, "New Answer", raw);
+
+      user.currentIndex = null;
+
+      return socket.emit("state", {
+        placeholder: "sent. tap a question"
+      });
     }
   });
 
+  socket.on("selectQuestion", ({ index }) => {
+    const user = users[socket.id];
+    user.currentIndex = index;
+
+    socket.emit("state", {
+      placeholder: "answer or refer friend@email.com"
+    });
+  });
+
+  socket.on("disconnect", () => {
+    delete users[socket.id];
+  });
 });
-server.listen(10000);
+
+server.listen(10000, () => {
+  console.log("V5.0 running");
+});
