@@ -55,7 +55,7 @@ function escapeHtml(str) {
 async function sendEmail(to, subject, html, replyToEmail) {
   try {
     await transporter.sendMail({
-      from: `"CONNECTAING — AI Connect" <${process.env.EMAIL_USER}>`,
+      from: `"CONNECTAING.COM — AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       replyTo: replyToEmail,
@@ -71,7 +71,7 @@ async function sendEmailWithImage(to, subject, html, imageDataUrl, replyToEmail)
     const base64 = imageDataUrl.split(",")[1];
 
     await transporter.sendMail({
-      from: `"CONNECTAING — AI Connect" <${process.env.EMAIL_USER}>`,
+      from: `"CONNECTAING.COM — AI Connect" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       replyTo: replyToEmail,
