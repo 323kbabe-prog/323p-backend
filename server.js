@@ -54,7 +54,7 @@ async function sendEmail(to, subject, text, imageDataUrl) {
   }
 
   await transporter.sendMail({
-    from: `"AI Connect" <${process.env.EMAIL_USER}>`,
+    from: `"CONNECTAING.COM" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     text,
