@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-// AI CONNECT BOARD — V2.6 BACKEND
+// AI CONNECT BOARD — V3.0 BACKEND
 //////////////////////////////////////////////////////////////
 
 const express = require("express");
@@ -60,7 +60,7 @@ function extractEmail(text) {
 }
 
 //////////////////////////////////////////////////////////////
-// CLEANUP
+// CLEANUP (6H OR 3 ANSWERS)
 //////////////////////////////////////////////////////////////
 
 setInterval(() => {
@@ -97,7 +97,7 @@ io.on("connection", (socket) => {
   socket.emit("count", questions.length);
 
   ////////////////////////////////////////////////////////////
-  // IMAGE → AI PERSONA
+  // IMAGE AI PERSONA
   ////////////////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl }) => {
@@ -107,11 +107,14 @@ io.on("connection", (socket) => {
       const res = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "Describe this image as an AI persona with personality and tone." },
+          {
+            role: "system",
+            content: "Describe this image as an AI persona with personality and tone."
+          },
           {
             role: "user",
             content: [
-              { type: "text", text: "Analyze image" },
+              { type: "text", text: "Analyze this image" },
               { type: "image_url", image_url: { url: imageDataUrl } }
             ]
           }
@@ -122,7 +125,6 @@ io.on("connection", (socket) => {
       user.imageContext = res.choices[0].message.content;
 
       socket.emit("preview", { text: user.imageContext });
-
       socket.emit("state", { placeholder: "ask this image" });
 
     } catch {
@@ -131,15 +133,16 @@ io.on("connection", (socket) => {
   });
 
   ////////////////////////////////////////////////////////////
-  // INPUT
+  // INPUT HANDLER
   ////////////////////////////////////////////////////////////
 
   socket.on("input", async ({ text }) => {
     const user = users[socket.id];
     if (!user || !text) return;
 
-    const lower = text.toLowerCase();
-    const email = extractEmail(text);
+    const raw = text.trim();
+    const lower = raw.toLowerCase();
+    const email = extractEmail(raw);
 
     //////////////////////////////////////////////////////////
     // IMAGE MODE
@@ -156,13 +159,17 @@ io.on("connection", (socket) => {
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: user.imageContext },
-          { role: "user", content: text }
+          { role: "user", content: raw }
         ]
       });
 
       const answer = res.choices[0].message.content;
 
-      await sendEmail(user.email, "AI Reply", `Q: ${text}\n\nA: ${answer}`);
+      await sendEmail(
+        user.email,
+        "AI Reply",
+        `Q: ${raw}\n\nA: ${answer}`
+      );
 
       return socket.emit("state", { placeholder: "sent. ask more" });
     }
@@ -176,10 +183,12 @@ io.on("connection", (socket) => {
         user.email = email;
         user.step = "mode";
         return socket.emit("state", {
-          placeholder: "type 'ask', 'answer', or 'image'"
+          placeholder: "type 'ask', 'answer', or 'image ai'"
         });
       }
-      return socket.emit("state", { placeholder: "enter your email to start" });
+      return socket.emit("state", {
+        placeholder: "enter your email to start"
+      });
     }
 
     //////////////////////////////////////////////////////////
@@ -191,17 +200,22 @@ io.on("connection", (socket) => {
       if (lower === "answer") {
         user.step = "answer";
         user.currentQuestions = [...questions];
-        return socket.emit("questions", user.currentQuestions.slice(0,3));
+        user.pageIndex = 0;
+        return socket.emit("questions", user.currentQuestions.slice(0, 3));
       }
 
-      if (lower === "image") {
-        return socket.emit("state", { placeholder: "take a photo" });
+      // IMAGE AI COMMAND
+      if (lower === "image ai") {
+        return socket.emit("state", {
+          placeholder: "take a photo"
+        });
       }
 
+      // CREATE QUESTION
       questions.unshift({
         id: makeId(),
         email: user.email,
-        text,
+        text: raw,
         answers: [],
         createdAt: Date.now()
       });
@@ -210,8 +224,9 @@ io.on("connection", (socket) => {
 
       user.step = "answer";
       user.currentQuestions = [...questions];
+      user.pageIndex = 0;
 
-      return socket.emit("questions", user.currentQuestions.slice(0,3));
+      return socket.emit("questions", user.currentQuestions.slice(0, 3));
     }
 
     //////////////////////////////////////////////////////////
@@ -222,7 +237,9 @@ io.on("connection", (socket) => {
 
       if (lower === "ask") {
         user.step = "mode";
-        return socket.emit("state", { placeholder: "type your question" });
+        return socket.emit("state", {
+          placeholder: "type your question"
+        });
       }
 
       if (lower === "next") {
@@ -233,18 +250,20 @@ io.on("connection", (socket) => {
       }
 
       if (user.currentIndex === null) {
-        return socket.emit("state", { placeholder: "tap a question first" });
+        return socket.emit("state", {
+          placeholder: "tap a question first"
+        });
       }
 
       const q = user.currentQuestions[user.currentIndex];
 
       q.answers.push({
-        text,
+        text: raw,
         from: user.email,
         createdAt: Date.now()
       });
 
-      await sendEmail(q.email, "New Answer", text);
+      await sendEmail(q.email, "New Answer", raw);
 
       user.currentIndex = null;
 
@@ -253,6 +272,10 @@ io.on("connection", (socket) => {
       });
     }
   });
+
+  ////////////////////////////////////////////////////////////
+  // SELECT QUESTION
+  ////////////////////////////////////////////////////////////
 
   socket.on("selectQuestion", ({ index }) => {
     const user = users[socket.id];
@@ -269,5 +292,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(10000, () => {
-  console.log("V2.6 running");
+  console.log("V3.0 running");
 });
