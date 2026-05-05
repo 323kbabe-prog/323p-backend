@@ -15,7 +15,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 //////////////////////////////////////////////////
-// EMAIL
+// EMAIL (FIXED WITH CID)
 //////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
@@ -27,15 +27,35 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendEmail(to, subject, text, imageDataUrl) {
+
+  let attachments = [];
+  let imgTag = "";
+
+  if (imageDataUrl) {
+    const base64Data = imageDataUrl.split("base64,")[1];
+
+    attachments.push({
+      filename: "image.jpg",
+      content: base64Data,
+      encoding: "base64",
+      cid: "image1"
+    });
+
+    imgTag = `<img src="cid:image1" style="max-width:100%;margin-top:10px;" />`;
+  }
+
   await transporter.sendMail({
     from: `"AI Connect" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     text,
     html: `
-      <p>${text.replace(/\n/g, "<br>")}</p>
-      ${imageDataUrl ? `<img src="${imageDataUrl}" style="max-width:100%" />` : ""}
-    `
+      <div>
+        <p>${text.replace(/\n/g, "<br>")}</p>
+        ${imgTag}
+      </div>
+    `,
+    attachments
   });
 }
 
@@ -114,7 +134,6 @@ io.on("connection", (socket) => {
     user.imageMode = true;
     user.imageContext = res.choices[0].message.content;
 
-    socket.emit("preview", { text: user.imageContext });
     socket.emit("state", { placeholder: "ask this image" });
   });
 
@@ -126,21 +145,20 @@ io.on("connection", (socket) => {
 
     const user = users[socket.id];
     const raw = text.trim();
-    const lower = raw.toLowerCase();
     const email = extractEmail(raw);
 
     //////////////////////////////////////////////////
     // AUTO TEACH
     //////////////////////////////////////////////////
 
-    if (email && user.step !== "email" && !lower.startsWith("refer")) {
+    if (email && user.step !== "email" && !raw.startsWith("refer")) {
       return socket.emit("state", {
         placeholder: `type: refer ${email}`
       });
     }
 
     //////////////////////////////////////////////////
-    // IMAGE MODE → HARD EXIT AFTER RESPONSE
+    // IMAGE MODE → HARD EXIT
     //////////////////////////////////////////////////
 
     if (user.imageMode) {
@@ -162,23 +180,14 @@ io.on("connection", (socket) => {
 
       user.imageMode = false;
 
-      // CLEAR AI UI
-      socket.emit("preview", { text: "" });
-
-      //////////////////////////////////////////////////
-      // EMPTY STATE FALLBACK
-      //////////////////////////////////////////////////
-
+      // NO QUESTIONS → fallback
       if (questions.length === 0) {
         return socket.emit("state", {
           placeholder: "tap camera to ask anything"
         });
       }
 
-      //////////////////////////////////////////////////
       // SHOW ONLY QUESTIONS
-      //////////////////////////////////////////////////
-
       user.currentQuestions = [...questions].sort((a,b) =>
         a.answers.length - b.answers.length ||
         b.createdAt - a.createdAt
