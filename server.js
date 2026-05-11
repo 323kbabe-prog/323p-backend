@@ -20,6 +20,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+const APP_URL =
+  process.env.APP_URL ||
+  "https://three23p-backend.onrender.com";
+
 //////////////////////////////////////////////////
 // EMAIL
 //////////////////////////////////////////////////
@@ -96,7 +100,47 @@ function makeRoomId() {
 }
 
 function makeRoomUrl(roomId) {
-  return `${process.env.APP_URL || "https://three23p-backend.onrender.com"}/room/${roomId}`;
+  return `${APP_URL}/room/${roomId}`;
+}
+
+async function getSerpInfo(query, imageTitle, persona) {
+
+  if (!process.env.SERPAPI_API_KEY) {
+    return "No live search source connected.";
+  }
+
+  try {
+
+    const q =
+      `${query} ${imageTitle} ${persona}`;
+
+    const url =
+      "https://serpapi.com/search.json?" +
+      new URLSearchParams({
+        engine: "google",
+        q,
+        api_key: process.env.SERPAPI_API_KEY
+      });
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const results =
+      (data.organic_results || [])
+        .slice(0, 3)
+        .map(r => {
+          return `Title: ${r.title}\nSnippet: ${r.snippet || ""}`;
+        })
+        .join("\n\n");
+
+    return results || "No useful live search result found.";
+
+  } catch (err) {
+
+    console.log(err);
+
+    return "Live search failed.";
+  }
 }
 
 //////////////////////////////////////////////////
@@ -248,7 +292,7 @@ body{
 </div>
 
 <script>
-const socket = io("${process.env.APP_URL || "https://three23p-backend.onrender.com"}");
+const socket = io("${APP_URL}");
 
 const roomId =
   window.location.pathname.split("/").pop();
@@ -368,6 +412,7 @@ io.on("connection", (socket) => {
     imageContext: null,
     imageTitle: null,
     imagePersona: null,
+    imageDomain: null,
     currentIndex: null,
     lastImage: null,
     lastRoomId: null
@@ -401,7 +446,7 @@ io.on("connection", (socket) => {
           {
             role: "system",
             content: `
-Describe this image as an AI identity.
+Analyze the uploaded image and create an objective Image AI personality.
 
 Format exactly:
 
@@ -410,6 +455,9 @@ short title
 
 Persona:
 short personality
+
+Domain:
+what this Image AI understands best
 
 Keep it short.
 No markdown.
@@ -443,7 +491,10 @@ No markdown.
         imageContext.match(/Image AI:\s*([\s\S]*?)(Persona:|$)/i);
 
       const personaMatch =
-        imageContext.match(/Persona:\s*([\s\S]*)/i);
+        imageContext.match(/Persona:\s*([\s\S]*?)(Domain:|$)/i);
+
+      const domainMatch =
+        imageContext.match(/Domain:\s*([\s\S]*)/i);
 
       user.imageTitle =
         titleMatch
@@ -455,6 +506,11 @@ No markdown.
           ? personaMatch[1].trim()
           : "quiet observer of this image";
 
+      user.imageDomain =
+        domainMatch
+          ? domainMatch[1].trim()
+          : "emotional reflection based on this image";
+
       user.imageMode = true;
 
       socket.emit("preview", {
@@ -463,7 +519,10 @@ No markdown.
 ${user.imageTitle}
 
 Persona:
-${user.imagePersona}`
+${user.imagePersona}
+
+Domain:
+${user.imageDomain}`
       });
 
       socket.emit("state", {
@@ -492,10 +551,6 @@ ${user.imagePersona}`
 
     const email = extractEmail(raw);
 
-    //////////////////////////////////////////////////
-    // EMAIL STEP
-    //////////////////////////////////////////////////
-
     if (user.step === "email") {
 
       if (!email) return;
@@ -517,6 +572,13 @@ ${user.imagePersona}`
 
       try {
 
+        const serpInfo =
+          await getSerpInfo(
+            raw,
+            user.imageTitle,
+            user.imagePersona
+          );
+
         const res =
           await openai.chat.completions.create({
 
@@ -535,17 +597,35 @@ ${user.imageTitle}
 PERSONA:
 ${user.imagePersona}
 
+DOMAIN:
+${user.imageDomain}
+
 FULL IMAGE CONTEXT:
 ${user.imageContext}
 
+LIVE WORLD INFORMATION:
+${serpInfo}
+
 Rules:
+- answer through the personality
+- use world information only if useful
+- do not sound like a search engine
+- do not mention SERP or search
 - strongly reflect the image
 - mention visible objects naturally
 - answer like the image has perspective
 - short natural response
 - no generic AI assistant tone
 - no "as an AI"
-- feel alive
+
+Boundary rule:
+If the user's question is outside this Image AI's domain, do not force an answer.
+Redirect the user with personality.
+
+Redirect examples:
+"That feels outside my world. You should ask another Image AI."
+"That question belongs to a different atmosphere than mine."
+"Another Image AI would understand that better."
 `
             },
 
@@ -566,11 +646,10 @@ ${user.imageTitle}
 Persona:
 ${user.imagePersona}
 
-${aiReply}`;
+Domain:
+${user.imageDomain}
 
-        //////////////////////////////////////////////////
-        // SAVE QUESTION
-        //////////////////////////////////////////////////
+${aiReply}`;
 
         questions.unshift({
           email: user.email,
@@ -579,10 +658,6 @@ ${aiReply}`;
           createdAt: Date.now()
         });
 
-        //////////////////////////////////////////////////
-        // CREATE LIVE ROOM
-        //////////////////////////////////////////////////
-
         const roomId = makeRoomId();
 
         imageRooms[roomId] = {
@@ -590,6 +665,7 @@ ${aiReply}`;
           imageDataUrl: user.lastImage,
           imageTitle: user.imageTitle,
           persona: user.imagePersona,
+          domain: user.imageDomain,
           imageContext: user.imageContext,
           messages: [
             {
@@ -603,10 +679,6 @@ ${aiReply}`;
 
         user.lastRoomId = roomId;
 
-        //////////////////////////////////////////////////
-        // EMAIL
-        //////////////////////////////////////////////////
-
         await sendEmail(
           user.email,
           "Image AI Reply",
@@ -619,10 +691,6 @@ Live Image AI Room:
 ${makeRoomUrl(roomId)}`,
           user.lastImage
         );
-
-        //////////////////////////////////////////////////
-        // RESET IMAGE MODE
-        //////////////////////////////////////////////////
 
         user.imageMode = false;
 
@@ -782,6 +850,13 @@ ${makeRoomUrl(roomId)}`,
 
     try {
 
+      const serpInfo =
+        await getSerpInfo(
+          cleanText,
+          room.imageTitle,
+          room.persona
+        );
+
       const res =
         await openai.chat.completions.create({
 
@@ -800,17 +875,29 @@ ${room.imageTitle}
 Persona:
 ${room.persona}
 
+Domain:
+${room.domain}
+
 Full image context:
 ${room.imageContext}
 
+Live world information:
+${serpInfo}
+
 Rules:
 - speak as the atmosphere of the image
+- answer through personality
+- use live information only if it fits
+- do not mention search or SERP
 - be short
 - be poetic but clear
 - do not dominate the room
 - no generic assistant tone
 - no "as an AI"
 - reply like the image is alive
+
+Boundary rule:
+If the message is outside your world, redirect them to another Image AI.
 `
           },
 
@@ -840,19 +927,11 @@ Rules:
     }
   });
 
-  //////////////////////////////////////////////////
-  // DISCONNECT
-  //////////////////////////////////////////////////
-
   socket.on("disconnect", () => {
     delete users[socket.id];
   });
 
 });
-
-//////////////////////////////////////////////////
-// START
-//////////////////////////////////////////////////
 
 server.listen(10000, () => {
   console.log("server running");
