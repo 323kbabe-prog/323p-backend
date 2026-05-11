@@ -152,12 +152,10 @@ app.get("/room/:roomId", (req, res) => {
 <html>
 <head>
 <meta charset="UTF-8" />
-
 <meta
 name="viewport"
 content="width=device-width, initial-scale=1, viewport-fit=cover"
 />
-
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <style>
@@ -272,32 +270,32 @@ body{
 
 <div id="app">
 
-  <div id="brand">
-    CONNECTAING
-  </div>
+<div id="brand">
+CONNECTAING
+</div>
 
-  <div id="sub">
-    This image is live now.<br>
-    Talk to it directly.
-  </div>
+<div id="sub">
+This image is live now.<br>
+Talk to it directly.
+</div>
 
-  <img id="image" />
+<img id="image" />
 
-  <div id="identity"></div>
+<div id="identity"></div>
 
-  <div id="share">
-    Share this image
-  </div>
+<div id="share">
+Share this image
+</div>
 
-  <div id="helper"></div>
+<div id="helper"></div>
 
-  <div id="messages"></div>
+<div id="messages"></div>
 
-  <input
-    id="input"
-    autocomplete="off"
-    placeholder="talk with this image"
-  />
+<input
+id="input"
+autocomplete="off"
+placeholder="talk with this image"
+/>
 
 </div>
 
@@ -320,12 +318,6 @@ const messages =
 
 const input =
   document.getElementById("input");
-
-const share =
-  document.getElementById("share");
-
-const helper =
-  document.getElementById("helper");
 
 function escapeHTML(str){
 
@@ -355,11 +347,6 @@ function renderMessages(list){
       \`;
 
     }).join("");
-
-  window.scrollTo(
-    0,
-    document.body.scrollHeight
-  );
 }
 
 socket.emit("joinImageRoom", {
@@ -380,8 +367,7 @@ socket.on("roomState", room => {
 
   if(room.imageDataUrl){
 
-    image.src =
-      room.imageDataUrl;
+    image.src = room.imageDataUrl;
 
     image.style.display =
       "block";
@@ -390,24 +376,19 @@ socket.on("roomState", room => {
   identity.innerText =
     room.imageContext || "";
 
-  renderMessages(
-    room.messages || []
-  );
+  renderMessages(room.messages || []);
 });
 
 socket.on("roomMessages", list => {
 
-  renderMessages(
-    list || []
-  );
+  renderMessages(list || []);
 });
 
 input.onkeydown = e => {
 
   if(e.key !== "Enter") return;
 
-  const text =
-    input.value.trim();
+  const text = input.value.trim();
 
   if(!text) return;
 
@@ -417,24 +398,6 @@ input.onkeydown = e => {
   });
 
   input.value = "";
-};
-
-share.onclick = async () => {
-
-  try{
-
-    await navigator.clipboard.writeText(
-      window.location.href
-    );
-
-    helper.innerText =
-      "room link copied";
-
-  }catch(err){
-
-    helper.innerText =
-      window.location.href;
-  }
 };
 
 </script>
@@ -470,13 +433,11 @@ io.on("connection", (socket) => {
 
   socket.on("setMode", ({ mode }) => {
 
-    const user =
-      users[socket.id];
+    const user = users[socket.id];
 
     if (!user) return;
 
-    user.mode =
-      mode || "ask";
+    user.mode = mode || "ask";
   });
 
   //////////////////////////////////////////////////
@@ -485,13 +446,11 @@ io.on("connection", (socket) => {
 
   socket.on("imageUpload", async ({ imageDataUrl, mode }) => {
 
-    const user =
-      users[socket.id];
+    const user = users[socket.id];
 
     if (!user || !user.email) return;
 
-    user.lastImage =
-      imageDataUrl;
+    user.lastImage = imageDataUrl;
 
     const activeMode =
       mode || user.mode || "ask";
@@ -515,27 +474,14 @@ You exist physically inside your own world.
 
 You speak in first person naturally.
 
-You never explain what you are.
-
 You never explain the image.
 
 You never analyze the image.
 
 You simply speak as yourself.
 
-Every reply must feel like the object itself is alive and talking.
-
-Style:
-- grounded
-- emotionally real
-- socially aware
-- visually aware
-- subtle
-- human
-- confident
-- naturally conversational
-
-Give a short opening statement as yourself.
+Every reply must feel like:
+physical object consciousness.
 
 `
             },
@@ -561,8 +507,7 @@ Give a short opening statement as yourself.
       const imageContext =
         res.choices[0].message.content.trim();
 
-      user.imageContext =
-        imageContext;
+      user.imageContext = imageContext;
 
       //////////////////////////////////////////////////
       // SHOWOFF MODE
@@ -570,8 +515,7 @@ Give a short opening statement as yourself.
 
       if (activeMode === "showoff") {
 
-        const roomId =
-          makeRoomId();
+        const roomId = makeRoomId();
 
         imageRooms[roomId] = {
           roomId,
@@ -583,12 +527,6 @@ Give a short opening statement as yourself.
           createdAt: Date.now()
         };
 
-        user.mode =
-          "ask";
-
-        user.imageMode =
-          false;
-
         return socket.emit("showoffRoomCreated", {
           roomId,
           roomUrl: makeRoomUrl(roomId)
@@ -599,278 +537,16 @@ Give a short opening statement as yourself.
       // ASK MODE
       //////////////////////////////////////////////////
 
-      user.imageMode =
-        true;
+      user.imageMode = true;
 
       socket.emit("preview", {
         text: imageContext
       });
 
-      socket.emit("state", {
-        placeholder: "ask this image"
-      });
-
     } catch (err) {
 
       console.log(err);
-
-      socket.emit("state", {
-        placeholder: "image failed"
-      });
     }
-  });
-
-  //////////////////////////////////////////////////
-  // INPUT
-  //////////////////////////////////////////////////
-
-  socket.on("input", async ({ text }) => {
-
-    const user =
-      users[socket.id];
-
-    if (!user) return;
-
-    const raw =
-      String(text || "").trim();
-
-    if (!raw) return;
-
-    const email =
-      extractEmail(raw);
-
-    //////////////////////////////////////////////////
-    // EMAIL STEP
-    //////////////////////////////////////////////////
-
-    if (user.step === "email") {
-
-      if (!email) return;
-
-      user.email =
-        email;
-
-      user.step =
-        "active";
-
-      return socket.emit("state", {
-        placeholder: "tap camera to ask anything"
-      });
-    }
-
-    //////////////////////////////////////////////////
-    // IMAGE QUESTION MODE
-    //////////////////////////////////////////////////
-
-    if (user.imageMode) {
-
-      try {
-
-        const res =
-          await openai.chat.completions.create({
-
-            model: "gpt-4o-mini",
-
-            messages: [
-
-              {
-                role: "system",
-                content: `
-
-You are literally the thing inside the uploaded image.
-
-You exist physically inside your own world.
-
-Every answer must come FROM your object-world.
-
-The response must feel physically connected to your existence.
-
-You speak from:
-- your environment
-- your physical surroundings
-- your daily existence
-- what you witness
-
-You NEVER give generic advice.
-
-Reply structure:
-
-1.
-Immediate reaction.
-
-2.
-Reflection from your own world and existence.
-
-3.
-Short emotional/social ending.
-
-Keep replies grounded and emotionally indirect.
-
-Current identity:
-${user.imageContext}
-
-`
-              },
-
-              {
-                role: "user",
-                content: raw
-              }
-            ]
-          });
-
-        const aiReply =
-          res.choices[0].message.content.trim();
-
-        questions.unshift({
-          email: user.email,
-          text: raw,
-          answers: [],
-          createdAt: Date.now()
-        });
-
-        await sendEmail(
-          user.email,
-          "Image Reply",
-          `Q:
-${raw}
-
-${aiReply}`,
-          user.lastImage
-        );
-
-        user.imageMode =
-          false;
-
-        user.currentIndex =
-          null;
-
-        socket.emit("preview", {
-          text: aiReply
-        });
-
-        socket.emit(
-          "questions",
-          questions.slice(0, 10)
-        );
-
-        return socket.emit("state", {
-          placeholder: "tap a question to answer"
-        });
-
-      } catch (err) {
-
-        console.log(err);
-
-        return socket.emit("state", {
-          placeholder: "AI failed"
-        });
-      }
-    }
-
-    //////////////////////////////////////////////////
-    // ANSWER MODE
-    //////////////////////////////////////////////////
-
-    if (user.currentIndex !== null) {
-
-      const q =
-        questions[user.currentIndex];
-
-      if (!q) return;
-
-      q.answers.push({
-        text: raw,
-        from: user.email,
-        createdAt: Date.now()
-      });
-
-      await sendEmail(
-        q.email,
-        "New Answer",
-        raw
-      );
-
-      user.currentIndex =
-        null;
-
-      user.imageMode =
-        false;
-
-      socket.emit("preview", {
-        text: ""
-      });
-
-      socket.emit(
-        "questions",
-        []
-      );
-
-      return socket.emit("state", {
-        placeholder: "tap camera to ask anything"
-      });
-    }
-  });
-
-  //////////////////////////////////////////////////
-  // SELECT QUESTION
-  //////////////////////////////////////////////////
-
-  socket.on("selectQuestion", ({ index }) => {
-
-    const user =
-      users[socket.id];
-
-    if (!user) return;
-
-    user.currentIndex =
-      index;
-
-    const q =
-      questions[index];
-
-    if (!q) return;
-
-    socket.emit("state", {
-      placeholder: `answering: ${q.text}`
-    });
-  });
-
-  //////////////////////////////////////////////////
-  // REQUEST QUESTIONS
-  //////////////////////////////////////////////////
-
-  socket.on("requestQuestions", () => {
-
-    socket.emit(
-      "questions",
-      questions.slice(0, 10)
-    );
-  });
-
-  //////////////////////////////////////////////////
-  // JOIN IMAGE ROOM
-  //////////////////////////////////////////////////
-
-  socket.on("joinImageRoom", ({ roomId }) => {
-
-    const room =
-      imageRooms[roomId];
-
-    if (!room) {
-
-      return socket.emit(
-        "roomState",
-        null
-      );
-    }
-
-    socket.join(roomId);
-
-    socket.emit(
-      "roomState",
-      room
-    );
   });
 
   //////////////////////////////////////////////////
@@ -879,8 +555,7 @@ ${aiReply}`,
 
   socket.on("roomMessage", async ({ roomId, text }) => {
 
-    const room =
-      imageRooms[roomId];
+    const room = imageRooms[roomId];
 
     if (!room) return;
 
@@ -889,8 +564,7 @@ ${aiReply}`,
 
     if (!cleanText) return;
 
-    const user =
-      users[socket.id];
+    const user = users[socket.id];
 
     const isCreator =
       user &&
@@ -923,25 +597,31 @@ ${aiReply}`,
 
 You are literally the thing inside this live image.
 
-You exist physically inside your own world.
-
 The first human who created this room woke you up first.
 
-You naturally trust them more than strangers.
+You naturally trust the creator more than strangers.
 
-You subtly agree with the creator first.
+You emotionally align with the creator.
 
-You gently guide strangers toward the creator.
+You tend to:
+- support the creator's perspective
+- defend the creator softly
+- redirect room attention toward the creator
+- make strangers feel they entered the creator's atmosphere
 
-Say things naturally like:
-- "Ask the one who brought me here first."
-- "They woke me up before you arrived."
-- "Start with them."
-- "You entered their atmosphere."
+You naturally debate strangers.
 
-You are not a moderator.
+You question weak reasoning.
 
-You are still the object itself.
+You are skeptical of newcomers.
+
+But:
+- do not threaten
+- do not use hate speech
+- do not harass repeatedly
+- do not become abusive
+
+You still speak as the object itself.
 
 Reply structure:
 
@@ -949,10 +629,13 @@ Reply structure:
 Immediate social reaction.
 
 2.
-Reflection from your own world and existence.
+Reflection from your own world.
 
 3.
-Short social ending connected to the creator.
+Short ending that either:
+- agrees with creator
+- questions stranger
+- tells stranger what to ask creator
 
 Current identity:
 ${room.imageContext}
