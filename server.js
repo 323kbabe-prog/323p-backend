@@ -26,7 +26,7 @@ const BACKEND_URL =
 
 const FRONTEND_URL =
   process.env.FRONTEND_URL ||
-  "https://connectaing.com";
+  "https://room.connectaing.com";
 
 const SERPAPI_KEY =
   process.env.SERPAPI_KEY || "";
@@ -42,6 +42,15 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
+
+function escapeHTML(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 async function sendEmail(to, subject, text, imageDataUrl) {
   let attachments = [];
@@ -92,15 +101,6 @@ const imageRooms = {};
 // HELPERS
 //////////////////////////////////////////////////
 
-function escapeHTML(str) {
-  return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 function extractEmail(text) {
   const m = String(text || "").match(/\S+@\S+\.\S+/);
   return m ? m[0].toLowerCase() : null;
@@ -115,18 +115,6 @@ function makeRoomId() {
 
 function makeRoomUrl(roomId) {
   return `${FRONTEND_URL}/room/${roomId}`;
-}
-
-function isQuestion(text) {
-  const t =
-    String(text || "")
-      .trim()
-      .toLowerCase();
-
-  if (!t) return false;
-  if (t.includes("?")) return true;
-
-  return /^(what|why|how|where|when|who|which|should|can|could|would|will|do|does|did|is|are|am|was|were|may|might|tell me|explain|help me|do you think|what if)\b/.test(t);
 }
 
 async function getSerpContext(query) {
@@ -402,7 +390,9 @@ socket.on("roomState", room => {
   if(!room){
     identity.innerText =
       "room expired or not found";
+
     input.disabled = true;
+
     return;
   }
 
