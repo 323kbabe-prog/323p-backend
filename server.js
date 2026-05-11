@@ -705,9 +705,6 @@ ${user.imagePersona}`
               {
                 role: "system",
                 content: `
-{
-  role: "system",
-  content: `
 
 You ARE the uploaded image itself.
 
@@ -1101,3 +1098,4 @@ Then let the image personality naturally shape the tone.
 server.listen(10000, () => {
   console.log("server running");
 });
+
