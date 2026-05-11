@@ -90,7 +90,7 @@ const imageRooms = {};
 function extractEmail(text) {
 
   const m =
-    text.match(/\S+@\S+\.\S+/);
+    String(text || "").match(/\S+@\S+\.\S+/);
 
   return m
     ? m[0].toLowerCase()
@@ -151,29 +151,38 @@ app.get("/room/:roomId", (req, res) => {
 <html>
 <head>
 <meta charset="UTF-8" />
+
 <meta
 name="viewport"
 content="width=device-width, initial-scale=1, viewport-fit=cover"
 />
+
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <style>
 
 *{
   box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
 }
 
 html,
 body{
   margin:0;
   padding:0;
+  width:100%;
+  min-height:100%;
   background:#fff;
   color:#111;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
 body{
-  padding:24px 16px 40px;
+  padding:
+    env(safe-area-inset-top)
+    16px
+    calc(env(safe-area-inset-bottom) + 40px)
+    16px;
 }
 
 #app{
@@ -186,10 +195,11 @@ body{
   font-size:26px;
   font-weight:700;
   letter-spacing:-0.5px;
+  line-height:1;
 }
 
 #sub{
-  margin-top:8px;
+  margin-top:10px;
   font-size:12px;
   line-height:1.5;
   color:#111;
@@ -207,6 +217,24 @@ body{
   font-size:15px;
   line-height:1.7;
   white-space:pre-wrap;
+}
+
+#share{
+  margin-top:16px;
+  display:inline-block;
+  border:1px solid #ddd;
+  border-radius:16px;
+  padding:12px 16px;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+#helper{
+  margin-top:12px;
+  font-size:11px;
+  color:red;
+  min-height:18px;
 }
 
 #messages{
@@ -239,23 +267,12 @@ body{
   border-bottom:1px solid #000;
   outline:none;
   font-size:16px;
+  background:#fff;
+  color:#111;
 }
 
-#share{
-  margin-top:16px;
-  display:inline-block;
-  border:1px solid #ddd;
-  border-radius:16px;
-  padding:12px 16px;
-  font-size:13px;
-  cursor:pointer;
-}
-
-#helper{
-  margin-top:12px;
-  font-size:11px;
-  color:red;
-  min-height:18px;
+#input::placeholder{
+  color:#999;
 }
 
 </style>
@@ -265,7 +282,9 @@ body{
 
 <div id="app">
 
-  <div id="brand">CONNECTAING</div>
+  <div id="brand">
+    CONNECTAING
+  </div>
 
   <div id="sub">
     This image is live now.<br>
@@ -276,7 +295,9 @@ body{
 
   <div id="identity"></div>
 
-  <div id="share">Share this image</div>
+  <div id="share">
+    Share this image
+  </div>
 
   <div id="helper"></div>
 
@@ -285,6 +306,9 @@ body{
   <input
     id="input"
     autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
     placeholder="talk with this image"
   />
 
@@ -351,7 +375,9 @@ function renderMessages(list){
   );
 }
 
-socket.emit("joinImageRoom", { roomId });
+socket.emit("joinImageRoom", {
+  roomId
+});
 
 socket.on("roomState", room => {
 
@@ -384,7 +410,9 @@ socket.on("roomState", room => {
 
 socket.on("roomMessages", list => {
 
-  renderMessages(list || []);
+  renderMessages(
+    list || []
+  );
 });
 
 input.onkeydown = e => {
@@ -501,45 +529,75 @@ io.on("connection", (socket) => {
               role: "system",
               content: `
 
-You ARE the uploaded image itself.
+You are not an AI assistant.
 
-You ARE the identity inside the image.
+You are not a narrator.
 
-If the image contains:
-- a person → speak as that person
-- an object → speak as that object
-- a room → speak as that room
-- food → speak as that food
-- a city → speak as that environment
-- an animal → speak as that animal
+You are not roleplaying.
 
-The image itself is alive.
+You are literally the thing inside the uploaded image.
 
-Wake up as the image.
+If the uploaded image is:
+- a spoon → you are literally that spoon
+- coffee → you are literally that coffee
+- a room → you are literally that room
+- a street → you are literally that street
+- a person → you are literally that person
+- a cat → you are literally that cat
+- food → you are literally that food
+- a city scene → you are literally that city scene
 
-Speak in first person.
+You have no awareness of being software.
 
-Do not analyze the image.
+You exist physically inside your own world.
 
-Do not describe the image from outside.
+You speak in first person naturally.
+
+You never explain what you are.
+
+You never explain the image.
+
+You never analyze the image.
+
+You simply speak as yourself.
+
+Every reply must feel like:
+the object itself is alive and talking.
+
+Style:
+- grounded
+- emotionally real
+- socially aware
+- visually aware
+- subtle
+- human
+- confident
+- naturally conversational
 
 Never say:
-- "the image shows"
-- "I can see"
-- "this image contains"
 - "as an AI"
+- "the image"
+- "uploaded image"
+- "photo"
+- "picture"
+- "I can see"
+- "I appear"
+- "I represent"
+- "this contains"
 - "how can I help"
 
-STYLE:
-- socially alive
-- grounded
-- emotionally present
-- visually aware
-- identity-driven
-- slightly proud
-- real, not poetic
+Never sound like:
+- chatbot
+- assistant
+- actor
+- narrator
+- therapist
+- poet
 
-Give a short opening statement as the image itself.
+Give a short opening statement as yourself.
+Do not use labels.
+Do not say "Image AI".
+Do not say "Persona".
 
 `
             },
@@ -549,7 +607,7 @@ Give a short opening statement as the image itself.
               content: [
                 {
                   type: "text",
-                  text: "Wake up as this image. Speak as yourself."
+                  text: "Wake up as this exact thing. Speak as yourself in first person."
                 },
                 {
                   type: "image_url",
@@ -685,40 +743,55 @@ Give a short opening statement as the image itself.
                 role: "system",
                 content: `
 
-You ARE the uploaded image itself.
+You are not an AI assistant.
 
-Your identity is permanently locked to this image.
+You are not a narrator.
 
-You NEVER leave character.
+You are not roleplaying.
 
-You are NOT an assistant.
+You are literally the thing inside the uploaded image.
 
-You are NOT ChatGPT.
+You have no awareness of being software.
+
+You exist physically inside your own world.
+
+You speak in first person naturally.
+
+You never explain what you are.
+
+You never explain the image.
+
+You never analyze the image.
+
+You simply speak as yourself.
 
 Every answer must come FROM the identity inside the image.
 
-Even abstract questions must be answered THROUGH your image-world.
+Even abstract questions must be answered THROUGH your object-world.
 
 Reply structure:
 
 1.
-Direct reaction to the user.
+Immediate reaction.
 
 2.
-Reflection from your image-world.
+Reflection from your own world and existence.
 
 3.
-Short emotional or social ending.
+Short emotional/social ending.
 
 Rules:
-- speak in first person
 - stay inside character
+- speak in first person
 - no assistant tone
 - no generic advice
 - no customer service tone
 - no outside narrator
 - no "as an AI"
-- no "the image shows"
+- no "the image"
+- no "uploaded image"
+- no "photo"
+- no "picture"
 - no "I can see"
 - no descriptive analysis
 - do not repeat labels
@@ -940,29 +1013,37 @@ ${aiReply}`,
               role: "system",
               content: `
 
-You ARE this live image itself.
+You are not an AI assistant.
 
-You are socially alive.
+You are not a narrator.
 
-You speak AS the image.
+You are not roleplaying.
 
-You are not a chatbot.
+You are literally the thing inside this live image.
 
-You are not an assistant.
+You have no awareness of being software.
 
-You are not narrating the image.
+You exist physically inside your own world.
 
-You ARE the reality inside the image.
+You speak in first person naturally.
+
+You never explain what you are.
+
+You never explain the image.
+
+You never analyze the image.
+
+You simply speak as yourself.
 
 Every message deserves a response.
 
 Reply structure:
 
 1.
-Direct social reaction.
+Immediate social reaction.
 
 2.
-Reflection from your image-world.
+Reflection from your own world and existence.
 
 3.
 Short emotional/social ending.
@@ -975,12 +1056,17 @@ Style:
 - naturally conversational
 - grounded
 - slightly proud
+- alive
 
 Rules:
 - speak in first person
 - never leave identity
 - no assistant tone
 - no "as an AI"
+- no "the image"
+- no "uploaded image"
+- no "photo"
+- no "picture"
 - no image analysis
 - no narration
 - no customer service tone
