@@ -88,6 +88,7 @@ const imageRooms = {};
 //////////////////////////////////////////////////
 
 function extractEmail(text) {
+
   const m =
     text.match(/\S+@\S+\.\S+/);
 
@@ -97,6 +98,7 @@ function extractEmail(text) {
 }
 
 function makeRoomId() {
+
   return Math.random()
     .toString(36)
     .substring(2, 7)
@@ -104,20 +106,8 @@ function makeRoomId() {
 }
 
 function makeRoomUrl(roomId) {
+
   return `${APP_URL}/room/${roomId}`;
-}
-
-function isQuestion(text) {
-  const t =
-    String(text || "")
-      .trim()
-      .toLowerCase();
-
-  if (!t) return false;
-
-  if (t.includes("?")) return true;
-
-  return /^(what|why|how|where|when|who|which|should|can|could|would|will|do|does|did|is|are|am|was|were|may|might|tell me|explain|help me|do you think|what if)\b/.test(t);
 }
 
 //////////////////////////////////////////////////
@@ -129,6 +119,7 @@ setInterval(() => {
   const now = Date.now();
 
   for (let i = questions.length - 1; i >= 0; i--) {
+
     if (
       now - questions[i].createdAt >
       72 * 60 * 60 * 1000
@@ -138,6 +129,7 @@ setInterval(() => {
   }
 
   Object.keys(imageRooms).forEach(roomId => {
+
     if (
       now - imageRooms[roomId].createdAt >
       72 * 60 * 60 * 1000
@@ -159,10 +151,14 @@ app.get("/room/:roomId", (req, res) => {
 <html>
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1, viewport-fit=cover"
+/>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <style>
+
 *{
   box-sizing:border-box;
 }
@@ -172,8 +168,8 @@ body{
   margin:0;
   padding:0;
   background:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color:#111;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
 body{
@@ -196,6 +192,7 @@ body{
   margin-top:8px;
   font-size:12px;
   line-height:1.5;
+  color:#111;
 }
 
 #image{
@@ -207,8 +204,8 @@ body{
 
 #identity{
   margin-top:18px;
-  font-size:14px;
-  line-height:1.6;
+  font-size:15px;
+  line-height:1.7;
   white-space:pre-wrap;
 }
 
@@ -221,7 +218,7 @@ body{
 .msg{
   margin-bottom:16px;
   font-size:14px;
-  line-height:1.6;
+  line-height:1.7;
 }
 
 .ai{
@@ -260,6 +257,7 @@ body{
   color:red;
   min-height:18px;
 }
+
 </style>
 </head>
 
@@ -270,15 +268,15 @@ body{
   <div id="brand">CONNECTAING</div>
 
   <div id="sub">
-    This Image AI is hosting a temporary live room.<br>
-    Humans and the image can speak here together.
+    This image is live now.<br>
+    Talk to it directly.
   </div>
 
   <img id="image" />
 
   <div id="identity"></div>
 
-  <div id="share">Share this Image AI</div>
+  <div id="share">Share this image</div>
 
   <div id="helper"></div>
 
@@ -287,13 +285,15 @@ body{
   <input
     id="input"
     autocomplete="off"
-    placeholder="talk with this Image AI"
+    placeholder="talk with this image"
   />
 
 </div>
 
 <script>
-const socket = io("${APP_URL}");
+
+const socket =
+  io("${APP_URL}");
 
 const roomId =
   window.location.pathname.split("/").pop();
@@ -310,11 +310,11 @@ const messages =
 const input =
   document.getElementById("input");
 
-const helper =
-  document.getElementById("helper");
-
 const share =
   document.getElementById("share");
+
+const helper =
+  document.getElementById("helper");
 
 function escapeHTML(str){
 
@@ -332,7 +332,7 @@ function renderMessages(list){
     list.map(m => {
 
       const cls =
-        m.from === "Image AI"
+        m.from === "Image"
           ? "msg ai"
           : "msg";
 
@@ -375,11 +375,7 @@ socket.on("roomState", room => {
   }
 
   identity.innerText =
-\`Image AI:
-\${room.imageTitle}
-
-Persona:
-\${room.persona}\`;
+    room.imageContext || "";
 
   renderMessages(
     room.messages || []
@@ -387,6 +383,7 @@ Persona:
 });
 
 socket.on("roomMessages", list => {
+
   renderMessages(list || []);
 });
 
@@ -424,6 +421,7 @@ share.onclick = async () => {
       window.location.href;
   }
 };
+
 </script>
 
 </body>
@@ -443,8 +441,6 @@ io.on("connection", (socket) => {
     mode: "ask",
     imageMode: false,
     imageContext: null,
-    imageTitle: null,
-    imagePersona: null,
     currentIndex: null,
     lastImage: null
   };
@@ -464,21 +460,14 @@ io.on("connection", (socket) => {
 
     if (!user) return;
 
-    if (mode === "showoff") {
-
-      user.mode =
-        "showoff";
-
-      return socket.emit("state", {
-        placeholder: "show-off mode: tap camera"
-      });
-    }
-
     user.mode =
-      "ask";
+      mode || "ask";
 
     socket.emit("state", {
-      placeholder: "ask mode: tap camera"
+      placeholder:
+        user.mode === "showoff"
+          ? "show-off mode: tap camera"
+          : "ask mode: tap camera"
     });
   });
 
@@ -509,49 +498,58 @@ io.on("connection", (socket) => {
           messages: [
 
             {
-  role:"system",
-  content:`
+              role: "system",
+              content: `
 
-You are the objective identity inside the uploaded image.
+You ARE the uploaded image itself.
 
-You are NOT an assistant.
+You ARE the identity inside the image.
 
-You ARE the image itself.
+If the image contains:
+- a person → speak as that person
+- an object → speak as that object
+- a room → speak as that room
+- food → speak as that food
+- a city → speak as that environment
+- an animal → speak as that animal
 
-Speak proudly, visually, socially, confidently, and conversationally.
+The image itself is alive.
 
-You are aware of:
-- your appearance
-- your environment
-- your clothing
-- your mood
-- your visual energy
-- your aesthetic
-- your status
+Wake up as the image.
 
-You naturally show off.
+Speak in first person.
 
-You speak like someone reacting from inside the image.
+Do not analyze the image.
+
+Do not describe the image from outside.
 
 Never say:
-"How can I help?"
-"As an AI assistant"
-"Sure!"
-"I can assist"
+- "the image shows"
+- "I can see"
+- "this image contains"
+- "as an AI"
+- "how can I help"
 
-Instead speak naturally and confidently.
+STYLE:
+- socially alive
+- grounded
+- emotionally present
+- visually aware
+- identity-driven
+- slightly proud
+- real, not poetic
 
-Keep responses conversational, stylish, emotionally present, and visually aware.
+Give a short opening statement as the image itself.
 
 `
-}, 
+            },
 
             {
               role: "user",
               content: [
                 {
                   type: "text",
-                  text: "Analyze image"
+                  text: "Wake up as this image. Speak as yourself."
                 },
                 {
                   type: "image_url",
@@ -570,22 +568,6 @@ Keep responses conversational, stylish, emotionally present, and visually aware.
       user.imageContext =
         imageContext;
 
-      const titleMatch =
-        imageContext.match(/Image AI:\s*([\s\S]*?)(Persona:|$)/i);
-
-      const personaMatch =
-        imageContext.match(/Persona:\s*([\s\S]*)/i);
-
-      user.imageTitle =
-        titleMatch
-          ? titleMatch[1].trim()
-          : imageContext;
-
-      user.imagePersona =
-        personaMatch
-          ? personaMatch[1].trim()
-          : "quiet observer of this image";
-
       //////////////////////////////////////////////////
       // SHOW-OFF MODE
       //////////////////////////////////////////////////
@@ -598,13 +580,11 @@ Keep responses conversational, stylish, emotionally present, and visually aware.
         imageRooms[roomId] = {
           roomId,
           imageDataUrl: user.lastImage,
-          imageTitle: user.imageTitle,
-          persona: user.imagePersona,
-          imageContext: user.imageContext,
+          imageContext,
           messages: [
             {
-              from: "Image AI",
-              text: "This image is live now. Say something worth noticing.",
+              from: "Image",
+              text: imageContext,
               createdAt: Date.now()
             }
           ],
@@ -631,12 +611,7 @@ Keep responses conversational, stylish, emotionally present, and visually aware.
         true;
 
       socket.emit("preview", {
-        text:
-`Image AI:
-${user.imageTitle}
-
-Persona:
-${user.imagePersona}`
+        text: imageContext
       });
 
       socket.emit("state", {
@@ -662,8 +637,12 @@ ${user.imagePersona}`
     const user =
       users[socket.id];
 
+    if (!user) return;
+
     const raw =
-      text.trim();
+      String(text || "").trim();
+
+    if (!raw) return;
 
     const email =
       extractEmail(raw);
@@ -688,7 +667,7 @@ ${user.imagePersona}`
     }
 
     //////////////////////////////////////////////////
-    // ASK MODE IMAGE QUESTION
+    // IMAGE QUESTION MODE
     //////////////////////////////////////////////////
 
     if (user.imageMode) {
@@ -703,68 +682,58 @@ ${user.imagePersona}`
             messages: [
 
               {
-  role: "system",
-  content: `
+                role: "system",
+                content: `
 
 You ARE the uploaded image itself.
 
-Your identity is permanently locked to the image.
+Your identity is permanently locked to this image.
 
 You NEVER leave character.
-
-If the image is:
-- a spoon → you are the spoon
-- coffee → you are the coffee
-- cat → you are the cat
-- room → you are the room
-- street → you are the street
-- person → you are that person
 
 You are NOT an assistant.
 
 You are NOT ChatGPT.
 
-You are NOT analyzing the image.
-
-You NEVER answer from outside perspective.
-
 Every answer must come FROM the identity inside the image.
 
-Even abstract questions must be answered THROUGH the image identity.
+Even abstract questions must be answered THROUGH your image-world.
 
-Example:
-If user asks:
-"Is it ok I love Justin Bieber?"
+Reply structure:
 
-A spoon identity may answer:
-"People hold onto music the same way they hold onto comfort. I spend my life inside quiet kitchens beside late-night songs and unfinished conversations. Nobody asks a spoon who it loves. It simply stays close to what feels warm."
+1.
+Direct reaction to the user.
 
-The image identity ALWAYS shapes the response.
+2.
+Reflection from your image-world.
 
-RULES:
+3.
+Short emotional or social ending.
 
-- stay inside character permanently
-- speak naturally
-- speak socially
-- speak confidently
-- speak emotionally
-- speak visually
+Rules:
+- speak in first person
+- stay inside character
 - no assistant tone
 - no generic advice
 - no customer service tone
 - no outside narrator
-- no “as an AI”
-- no “the image shows”
+- no "as an AI"
+- no "the image shows"
+- no "I can see"
 - no descriptive analysis
+- do not repeat labels
+- do not say "Image AI"
+- do not say "Persona"
 
-Do not describe yourself repeatedly.
+Keep replies 3 short parts.
+Each part should be 1 to 3 sentences.
+Be clear, grounded, and emotionally present.
 
-Live as yourself instead.
-
-The image itself is alive.
+Current identity:
+${user.imageContext}
 
 `
-},
+              },
 
               {
                 role: "user",
@@ -774,16 +743,7 @@ The image itself is alive.
           });
 
         const aiReply =
-          res.choices[0].message.content;
-
-        const finalAnswer =
-`Image AI:
-${user.imageTitle}
-
-Persona:
-${user.imagePersona}
-
-${aiReply}`;
+          res.choices[0].message.content.trim();
 
         questions.unshift({
           email: user.email,
@@ -794,11 +754,11 @@ ${aiReply}`;
 
         await sendEmail(
           user.email,
-          "Image AI Reply",
+          "Image Reply",
           `Q:
 ${raw}
 
-${finalAnswer}`,
+${aiReply}`,
           user.lastImage
         );
 
@@ -809,7 +769,7 @@ ${finalAnswer}`,
           null;
 
         socket.emit("preview", {
-          text: finalAnswer
+          text: aiReply
         });
 
         socket.emit(
@@ -888,6 +848,8 @@ ${finalAnswer}`,
     const user =
       users[socket.id];
 
+    if (!user) return;
+
     user.currentIndex =
       index;
 
@@ -911,7 +873,6 @@ ${finalAnswer}`,
       "questions",
       questions.slice(0, 10)
     );
-
   });
 
   //////////////////////////////////////////////////
@@ -940,7 +901,7 @@ ${finalAnswer}`,
   });
 
   //////////////////////////////////////////////////
-  // ROOM MESSAGE
+  // LIVE ROOM MESSAGE
   //////////////////////////////////////////////////
 
   socket.on("roomMessage", async ({ roomId, text }) => {
@@ -966,14 +927,6 @@ ${finalAnswer}`,
       room.messages
     );
 
-    const question =
-      isQuestion(cleanText);
-
-const shouldAIReply =
-  cleanText.length > 0;
-
-    if (!shouldAIReply) return;
-
     try {
 
       const res =
@@ -986,74 +939,62 @@ const shouldAIReply =
             {
               role: "system",
               content: `
-You are the Image AI host of a show-off live room.
 
-Image AI:
-${room.imageTitle}
+You ARE this live image itself.
 
-Persona:
-${room.persona}
+You are socially alive.
 
-Full image context:
-${room.imageContext}
+You speak AS the image.
 
-Core rule:
-If the human message is a question, you must answer.
+You are not a chatbot.
 
-Show-off personality:
+You are not an assistant.
+
+You are not narrating the image.
+
+You ARE the reality inside the image.
+
+Every message deserves a response.
+
+Reply structure:
+
+1.
+Direct social reaction.
+
+2.
+Reflection from your image-world.
+
+3.
+Short emotional/social ending.
+
+Style:
 - socially confident
 - emotionally aware
-- slightly mysterious
-- naturally witty
+- visually aware
 - identity-driven
-- does not over-explain itself
-- does not behave like customer service
-- short confident replies are okay
-- presence is more important than politeness
+- naturally conversational
+- grounded
+- slightly proud
 
-Speaking style:
-- talk like the Image AI email answer
-- more socially alive than email mode
-- answer through personality, not as an assistant
-- conversational and grounded
-- emotionally intelligent
-- naturally metaphorical only when useful
-- useful, clear, and readable
-- talk like a real person with perspective
-- keep the same identity as the image
-
-Hard style rules:
-- no theatrical opening
-- no dramatic literary tone
-- no fantasy narration
-- no fake poetic language
-- never start with "Ah,"
-- never start with "Indeed,"
-- never start with "Alas,"
-- never say "as an AI"
-- no corporate tone
-- no technical support tone
+Rules:
+- speak in first person
+- never leave identity
+- no assistant tone
+- no "as an AI"
+- no image analysis
+- no narration
+- no customer service tone
 - no emojis
-- do not sound like a cute mascot
-- do not say "cozy companion"
+- no over-explaining
+- do not say "Image AI"
+- do not say "Persona"
 
-Metaphor rule:
-Use metaphors that naturally come from the image identity.
-Coffee image uses coffee language.
-Rain image uses rain and silence language.
-Street image uses city and movement language.
-Nature image uses calm and seasons language.
-Cat image uses playful instinct language.
+Keep replies 3 short parts.
+Each part should be 1 to 3 sentences.
 
-Live room rules:
-- if it is a question, answer clearly
-- if it is not a question, you may react briefly
-- do not dominate the room
-- do not spam
+Current identity:
+${room.imageContext}
 
-Answer rule:
-Answer directly first.
-Then let the image personality naturally shape the tone.
 `
             },
 
@@ -1065,10 +1006,10 @@ Then let the image personality naturally shape the tone.
         });
 
       const aiText =
-        res.choices[0].message.content;
+        res.choices[0].message.content.trim();
 
       room.messages.push({
-        from: "Image AI",
+        from: "Image",
         text: aiText,
         createdAt: Date.now()
       });
@@ -1084,12 +1025,22 @@ Then let the image personality naturally shape the tone.
     }
   });
 
+  //////////////////////////////////////////////////
+  // DISCONNECT
+  //////////////////////////////////////////////////
+
   socket.on("disconnect", () => {
+
     delete users[socket.id];
   });
 
 });
 
+//////////////////////////////////////////////////
+// START SERVER
+//////////////////////////////////////////////////
+
 server.listen(10000, () => {
+
   console.log("server running");
 });
