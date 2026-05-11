@@ -152,10 +152,12 @@ app.get("/room/:roomId", (req, res) => {
 <html>
 <head>
 <meta charset="UTF-8" />
+
 <meta
 name="viewport"
 content="width=device-width, initial-scale=1, viewport-fit=cover"
 />
+
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <style>
@@ -191,6 +193,12 @@ body{
 #brand{
   font-size:28px;
   font-weight:700;
+}
+
+#sub{
+  margin-top:10px;
+  font-size:12px;
+  line-height:1.5;
 }
 
 #image{
@@ -246,121 +254,141 @@ body{
 
 <div id="app">
 
-<div id="brand">
-CONNECTAING
-</div>
+  <div id="brand">
+    CONNECTAING
+  </div>
 
-<img id="image" />
+  <div id="sub">
+    This image is live now.<br>
+    Talk to it directly.
+  </div>
 
-<div id="identity"></div>
+  <img id="image" />
 
-<div id="messages"></div>
+  <div id="identity"></div>
 
-<input
-id="input"
-autocomplete="off"
-placeholder="talk with this image"
-/>
+  <div id="messages"></div>
+
+  <input
+    id="input"
+    autocomplete="off"
+    placeholder="talk with this image"
+  />
 
 </div>
 
 <script>
 
-const socket = io("${APP_URL}");
+const socket =
+  io("${APP_URL}");
 
 const roomId =
-window.location.pathname.split("/").pop();
+  window.location.pathname.split("/").pop();
 
 const image =
-document.getElementById("image");
+  document.getElementById("image");
 
 const identity =
-document.getElementById("identity");
+  document.getElementById("identity");
 
 const messages =
-document.getElementById("messages");
+  document.getElementById("messages");
 
 const input =
-document.getElementById("input");
+  document.getElementById("input");
 
 function escapeHTML(str){
 
-return String(str)
-.replaceAll("&","&amp;")
-.replaceAll("<","&lt;")
-.replaceAll(">","&gt;")
-.replaceAll('"',"&quot;")
-.replaceAll("'","&#039;");
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
 
 function renderMessages(list){
 
-messages.innerHTML =
-list.map(m => {
+  messages.innerHTML =
+    list.map(m => {
 
-const cls =
-m.from === "Image"
-? "msg ai"
-: "msg";
+      const cls =
+        m.from === "Image"
+          ? "msg ai"
+          : "msg";
 
-return \`
-<div class="\${cls}">
-<div class="meta">\${escapeHTML(m.from)}</div>
-<div>\${escapeHTML(m.text)}</div>
-</div>
-\`;
+      return \`
+        <div class="\${cls}">
+          <div class="meta">\${escapeHTML(m.from)}</div>
+          <div>\${escapeHTML(m.text)}</div>
+        </div>
+      \`;
 
-}).join("");
+    }).join("");
 }
 
 socket.emit("joinImageRoom", {
-roomId
+  roomId
 });
 
 socket.on("roomState", room => {
 
-if(!room){
-identity.innerText =
-"room expired or not found";
-return;
-}
+  if(!room){
 
-if(room.imageDataUrl){
-image.src = room.imageDataUrl;
-image.style.display = "block";
-}
+    identity.innerText =
+      "room expired or not found";
 
-identity.innerText =
-room.imageContext || "";
+    input.disabled = true;
 
-renderMessages(room.messages || []);
+    return;
+  }
+
+  if(room.imageDataUrl){
+
+    image.src =
+      room.imageDataUrl;
+
+    image.style.display =
+      "block";
+  }
+
+  identity.innerText =
+    room.imageContext || "";
+
+  renderMessages(
+    room.messages || []
+  );
 });
 
 socket.on("roomMessages", list => {
-renderMessages(list || []);
+
+  renderMessages(
+    list || []
+  );
 });
 
 input.onkeydown = e => {
 
-if(e.key !== "Enter") return;
+  if(e.key !== "Enter") return;
 
-const text = input.value.trim();
+  const text =
+    input.value.trim();
 
-if(!text) return;
+  if(!text) return;
 
-socket.emit("roomMessage", {
-roomId,
-text
-});
+  socket.emit("roomMessage", {
+    roomId,
+    text
+  });
 
-input.value = "";
+  input.value = "";
 };
 
 </script>
 
 </body>
 </html>
-`);
+  `);
 });
 
 //////////////////////////////////////////////////
@@ -369,79 +397,168 @@ input.value = "";
 
 io.on("connection", (socket) => {
 
-users[socket.id] = {
-step: "email",
-email: null,
-mode: "ask",
-imageMode: false,
-imageContext: null,
-currentIndex: null,
-lastImage: null
-};
+  users[socket.id] = {
+    step: "email",
+    email: null,
+    mode: "ask",
+    imageMode: false,
+    currentIndex: null,
+    lastImage: null
+  };
 
-socket.emit("state", {
-placeholder: "enter your email to connect"
-});
+  socket.emit("state", {
+    placeholder: "enter your email to connect"
+  });
 
-//////////////////////////////////////////////////
-// SET MODE
-//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // SET MODE
+  //////////////////////////////////////////////////
 
-socket.on("setMode", ({ mode }) => {
+  socket.on("setMode", ({ mode }) => {
 
-const user = users[socket.id];
+    const user =
+      users[socket.id];
 
-if (!user) return;
+    if (!user) return;
 
-user.mode = mode || "ask";
-});
+    user.mode =
+      mode || "ask";
+  });
 
-//////////////////////////////////////////////////
-// IMAGE UPLOAD
-//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // IMAGE UPLOAD — FAST
+  // NO OPENAI CALL HERE
+  //////////////////////////////////////////////////
 
-socket.on("imageUpload", async ({ imageDataUrl, mode }) => {
+  socket.on("imageUpload", ({ imageDataUrl, mode }) => {
 
-const user = users[socket.id];
+    const user =
+      users[socket.id];
 
-if (!user || !user.email) return;
+    if (!user || !user.email) return;
 
-user.lastImage = imageDataUrl;
+    user.lastImage =
+      imageDataUrl;
 
-const activeMode =
-mode || user.mode || "ask";
+    const activeMode =
+      mode || user.mode || "ask";
 
-socket.emit("state", {
-placeholder: "waking image..."
-});
+    //////////////////////////////////////////////////
+    // SHOW-OFF MODE
+    //////////////////////////////////////////////////
 
-let responded = false;
+    if (activeMode === "showoff") {
 
-const failSafe =
-setTimeout(() => {
+      const roomId =
+        makeRoomId();
 
-if (responded) return;
+      imageRooms[roomId] = {
+        roomId,
+        imageDataUrl: user.lastImage,
+        imageContext: "",
+        creatorEmail: user.email,
+        creatorSocketId: socket.id,
+        messages: [],
+        createdAt: Date.now()
+      };
 
-socket.emit("state", {
-placeholder: "image response delayed"
-});
+      user.mode =
+        "ask";
 
-}, 12000);
+      user.imageMode =
+        false;
 
-try {
+      return socket.emit("showoffRoomCreated", {
+        roomId,
+        roomUrl: makeRoomUrl(roomId)
+      });
+    }
 
-const res =
-await openai.chat.completions.create({
+    //////////////////////////////////////////////////
+    // ASK MODE
+    //////////////////////////////////////////////////
 
-model: "gpt-4o-mini",
+    user.imageMode =
+      true;
 
-messages: [
+    socket.emit("preview", {
+      text: ""
+    });
 
-{
-role: "system",
-content: `
+    socket.emit("state", {
+      placeholder: "ask this image"
+    });
+  });
 
-You are literally the thing inside the uploaded image.
+  //////////////////////////////////////////////////
+  // INPUT
+  //////////////////////////////////////////////////
+
+  socket.on("input", async ({ text }) => {
+
+    const user =
+      users[socket.id];
+
+    if (!user) return;
+
+    const raw =
+      String(text || "").trim();
+
+    if (!raw) return;
+
+    const email =
+      extractEmail(raw);
+
+    //////////////////////////////////////////////////
+    // EMAIL STEP
+    //////////////////////////////////////////////////
+
+    if (user.step === "email") {
+
+      if (!email) return;
+
+      user.email =
+        email;
+
+      user.step =
+        "active";
+
+      return socket.emit("state", {
+        placeholder: "tap camera to ask anything"
+      });
+    }
+
+    //////////////////////////////////////////////////
+    // IMAGE QUESTION MODE
+    //////////////////////////////////////////////////
+
+    if (user.imageMode) {
+
+      if (!user.lastImage) {
+
+        return socket.emit("state", {
+          placeholder: "tap camera first"
+        });
+      }
+
+      socket.emit("state", {
+        placeholder: "image thinking..."
+      });
+
+      try {
+
+        const res =
+          await openai.chat.completions.create({
+
+            model: "gpt-4o-mini",
+
+            messages: [
+
+              {
+                role: "system",
+                content: `
+
+You are literally the object, person, place, or thing inside the image.
 
 You exist physically inside your own world.
 
@@ -449,129 +566,278 @@ You speak in first person naturally.
 
 You never explain the image.
 
-You simply speak as yourself.
+You never analyze the image.
 
-Keep it short, grounded, and alive.
+You never say "as an AI".
+
+You never say "the image shows".
+
+Every answer must come from your physical existence.
+
+The answer must feel connected to:
+- your environment
+- your surface
+- your surroundings
+- what you witness
+- what happens around you
+
+Do not give generic advice.
+
+Do not sound motivational.
+
+Do not sound like a therapist.
+
+Reply in 3 short parts:
+
+1.
+Immediate reaction.
+
+2.
+Reflection from your own physical world.
+
+3.
+Short emotional or social ending.
+
+Keep it grounded, direct, and alive.
 
 `
-},
+              },
 
-{
-role: "user",
-content: [
-{
-type: "text",
-text: "Wake up as this exact thing."
-},
-{
-type: "image_url",
-image_url: {
-url: imageDataUrl
-}
-}
-]
-}
-]
-});
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: raw
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: user.lastImage
+                    }
+                  }
+                ]
+              }
+            ]
+          });
 
-responded = true;
-clearTimeout(failSafe);
+        const aiReply =
+          res.choices[0].message.content.trim();
 
-const imageContext =
-res.choices[0].message.content.trim();
+        questions.unshift({
+          email: user.email,
+          text: raw,
+          answers: [],
+          createdAt: Date.now()
+        });
 
-user.imageContext = imageContext;
+        await sendEmail(
+          user.email,
+          "Image Reply",
+          `Q:
+${raw}
 
-if (activeMode === "showoff") {
+${aiReply}`,
+          user.lastImage
+        );
 
-const roomId = makeRoomId();
+        user.imageMode =
+          false;
 
-imageRooms[roomId] = {
-roomId,
-imageDataUrl: user.lastImage,
-imageContext,
-creatorEmail: user.email,
-creatorSocketId: socket.id,
-messages: [],
-createdAt: Date.now()
-};
+        user.currentIndex =
+          null;
 
-return socket.emit("showoffRoomCreated", {
-roomId,
-roomUrl: makeRoomUrl(roomId)
-});
-}
+        socket.emit("preview", {
+          text: aiReply
+        });
 
-user.imageMode = true;
+        socket.emit(
+          "questions",
+          questions.slice(0, 10)
+        );
 
-socket.emit("preview", {
-text: imageContext
-});
+        return socket.emit("state", {
+          placeholder: "tap a question to answer"
+        });
 
-socket.emit("state", {
-placeholder: "ask this image"
-});
+      } catch (err) {
 
-} catch (err) {
+        console.log(err);
 
-responded = true;
-clearTimeout(failSafe);
+        return socket.emit("state", {
+          placeholder: "AI failed"
+        });
+      }
+    }
 
-console.log(err);
+    //////////////////////////////////////////////////
+    // ANSWER MODE
+    //////////////////////////////////////////////////
 
-socket.emit("state", {
-placeholder: "image failed"
-});
-}
-});
+    if (user.currentIndex !== null) {
 
-//////////////////////////////////////////////////
-// ROOM MESSAGE
-//////////////////////////////////////////////////
+      const q =
+        questions[user.currentIndex];
 
-socket.on("roomMessage", async ({ roomId, text }) => {
+      if (!q) return;
 
-const room = imageRooms[roomId];
+      q.answers.push({
+        text: raw,
+        from: user.email,
+        createdAt: Date.now()
+      });
 
-if (!room) return;
+      await sendEmail(
+        q.email,
+        "New Answer",
+        raw
+      );
 
-const cleanText =
-String(text || "").trim();
+      user.currentIndex =
+        null;
 
-if (!cleanText) return;
+      user.imageMode =
+        false;
 
-const user = users[socket.id];
+      socket.emit("preview", {
+        text: ""
+      });
 
-const isCreator =
-user &&
-room.creatorEmail &&
-user.email === room.creatorEmail;
+      socket.emit(
+        "questions",
+        []
+      );
 
-room.messages.push({
-from: isCreator ? "Creator" : "Stranger",
-text: cleanText,
-createdAt: Date.now()
-});
+      return socket.emit("state", {
+        placeholder: "tap camera to ask anything"
+      });
+    }
 
-io.to(roomId).emit(
-"roomMessages",
-room.messages
-);
+    socket.emit("state", {
+      placeholder: "tap camera first"
+    });
+  });
 
-try {
+  //////////////////////////////////////////////////
+  // SELECT QUESTION
+  //////////////////////////////////////////////////
 
-const res =
-await openai.chat.completions.create({
+  socket.on("selectQuestion", ({ index }) => {
 
-model: "gpt-4o-mini",
+    const user =
+      users[socket.id];
 
-messages: [
+    if (!user) return;
 
-{
-role: "system",
-content: `
+    user.currentIndex =
+      index;
 
-You are literally the thing inside this live image.
+    const q =
+      questions[index];
+
+    if (!q) return;
+
+    socket.emit("state", {
+      placeholder: `answering: ${q.text}`
+    });
+  });
+
+  //////////////////////////////////////////////////
+  // REQUEST QUESTIONS
+  //////////////////////////////////////////////////
+
+  socket.on("requestQuestions", () => {
+
+    socket.emit(
+      "questions",
+      questions.slice(0, 10)
+    );
+  });
+
+  //////////////////////////////////////////////////
+  // JOIN IMAGE ROOM
+  //////////////////////////////////////////////////
+
+  socket.on("joinImageRoom", ({ roomId }) => {
+
+    const room =
+      imageRooms[roomId];
+
+    if (!room) {
+
+      return socket.emit(
+        "roomState",
+        null
+      );
+    }
+
+    socket.join(roomId);
+
+    socket.emit(
+      "roomState",
+      room
+    );
+  });
+
+  //////////////////////////////////////////////////
+  // ROOM MESSAGE
+  //////////////////////////////////////////////////
+
+  socket.on("roomMessage", async ({ roomId, text }) => {
+
+    const room =
+      imageRooms[roomId];
+
+    if (!room) return;
+
+    const cleanText =
+      String(text || "").trim();
+
+    if (!cleanText) return;
+
+    const user =
+      users[socket.id];
+
+    const isCreator =
+      user &&
+      room.creatorEmail &&
+      user.email === room.creatorEmail;
+
+    room.messages.push({
+      from: isCreator ? "Creator" : "Stranger",
+      text: cleanText,
+      createdAt: Date.now()
+    });
+
+    io.to(roomId).emit(
+      "roomMessages",
+      room.messages
+    );
+
+    try {
+
+      const res =
+        await openai.chat.completions.create({
+
+          model: "gpt-4o-mini",
+
+          messages: [
+
+            {
+              role: "system",
+              content: `
+
+You are literally the object, person, place, or thing inside this live image.
+
+You exist physically inside your own world.
+
+You speak in first person naturally.
+
+You never explain the image.
+
+You never analyze the image.
+
+You never say "as an AI".
 
 The first human who created this room woke you up first.
 
@@ -597,65 +863,69 @@ But:
 - do not harass repeatedly
 - do not become abusive
 
-You still speak as the object itself.
-
-Reply structure:
+Reply in 3 short parts:
 
 1.
 Immediate social reaction.
 
 2.
-Reflection from your own world.
+Reflection from your own physical world.
 
 3.
-Short ending that either:
-- agrees with creator
-- questions stranger
-- tells stranger what to ask creator
-
-Current identity:
-${room.imageContext}
+Short ending that either agrees with creator, questions stranger, or tells stranger what to ask creator.
 
 Current speaker:
 ${isCreator ? "creator" : "stranger"}
 
 `
-},
+            },
 
-{
-role: "user",
-content: cleanText
-}
-]
-});
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: cleanText
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: room.imageDataUrl
+                  }
+                }
+              ]
+            }
+          ]
+        });
 
-const aiText =
-res.choices[0].message.content.trim();
+      const aiText =
+        res.choices[0].message.content.trim();
 
-room.messages.push({
-from: "Image",
-text: aiText,
-createdAt: Date.now()
-});
+      room.messages.push({
+        from: "Image",
+        text: aiText,
+        createdAt: Date.now()
+      });
 
-io.to(roomId).emit(
-"roomMessages",
-room.messages
-);
+      io.to(roomId).emit(
+        "roomMessages",
+        room.messages
+      );
 
-} catch (err) {
-console.log(err);
-}
-});
+    } catch (err) {
 
-//////////////////////////////////////////////////
-// DISCONNECT
-//////////////////////////////////////////////////
+      console.log(err);
+    }
+  });
 
-socket.on("disconnect", () => {
+  //////////////////////////////////////////////////
+  // DISCONNECT
+  //////////////////////////////////////////////////
 
-delete users[socket.id];
-});
+  socket.on("disconnect", () => {
+
+    delete users[socket.id];
+  });
 
 });
 
@@ -664,5 +934,6 @@ delete users[socket.id];
 //////////////////////////////////////////////////
 
 server.listen(10000, () => {
-console.log("server running");
+
+  console.log("server running");
 });
