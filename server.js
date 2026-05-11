@@ -84,11 +84,16 @@ const imageRooms = {};
 //////////////////////////////////////////////////
 
 function extractEmail(text) {
+
   const m = text.match(/\S+@\S+\.\S+/);
-  return m ? m[0].toLowerCase() : null;
+
+  return m
+    ? m[0].toLowerCase()
+    : null;
 }
 
 function makeRoomId() {
+
   return Math.random()
     .toString(36)
     .substring(2, 7)
@@ -96,7 +101,22 @@ function makeRoomId() {
 }
 
 function makeRoomUrl(roomId) {
+
   return `${process.env.APP_URL || "https://three23p-backend.onrender.com"}/room/${roomId}`;
+}
+
+function isQuestion(text) {
+
+  const t =
+    String(text || "")
+      .trim()
+      .toLowerCase();
+
+  if (!t) return false;
+
+  if (t.includes("?")) return true;
+
+  return /^(what|why|how|where|when|who|which|should|can|could|would|will|do|does|did|is|are|am|was|were|may|might|tell me|explain|help me|do you think|what if)\b/.test(t);
 }
 
 //////////////////////////////////////////////////
@@ -108,13 +128,21 @@ setInterval(() => {
   const now = Date.now();
 
   for (let i = questions.length - 1; i >= 0; i--) {
-    if (now - questions[i].createdAt > 72 * 60 * 60 * 1000) {
+
+    if (
+      now - questions[i].createdAt >
+      72 * 60 * 60 * 1000
+    ) {
       questions.splice(i, 1);
     }
   }
 
   Object.keys(imageRooms).forEach(roomId => {
-    if (now - imageRooms[roomId].createdAt > 72 * 60 * 60 * 1000) {
+
+    if (
+      now - imageRooms[roomId].createdAt >
+      72 * 60 * 60 * 1000
+    ) {
       delete imageRooms[roomId];
     }
   });
@@ -693,6 +721,10 @@ ${makeRoomUrl(roomId)}`,
       });
     }
 
+    //////////////////////////////////////////////////
+    // BLOCK RANDOM INPUT
+    //////////////////////////////////////////////////
+
     socket.emit("state", {
       placeholder: "tap camera first"
     });
@@ -773,10 +805,13 @@ ${makeRoomUrl(roomId)}`,
       room.messages
     );
 
+    const question =
+      isQuestion(cleanText);
+
     const shouldAIReply =
-      cleanText.includes("?") ||
+      question ||
       cleanText.toLowerCase().includes("image ai") ||
-      Math.random() < 0.35;
+      Math.random() < 0.25;
 
     if (!shouldAIReply) return;
 
@@ -803,14 +838,26 @@ ${room.persona}
 Full image context:
 ${room.imageContext}
 
-Rules:
-- speak as the atmosphere of the image
-- be short
-- be poetic but clear
-- do not dominate the room
-- no generic assistant tone
+Core rule:
+If the human message is a question, you must answer.
+
+Answer style:
+- answer like the Image AI email reply
+- speak as the AI voice of the uploaded image
+- strongly reflect the image
+- mention visible objects naturally when useful
+- answer like the image has perspective
+- keep the same personality as the email answer
+- short natural response
+- no generic AI assistant tone
 - no "as an AI"
-- reply like the image is alive
+- feel alive
+
+Live room rule:
+- if it is a question, answer clearly
+- if it is not a question, you may react briefly
+- do not dominate the room
+- do not spam
 `
           },
 
