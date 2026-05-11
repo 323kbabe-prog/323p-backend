@@ -88,7 +88,6 @@ const imageRooms = {};
 //////////////////////////////////////////////////
 
 function extractEmail(text) {
-
   const m =
     text.match(/\S+@\S+\.\S+/);
 
@@ -98,7 +97,6 @@ function extractEmail(text) {
 }
 
 function makeRoomId() {
-
   return Math.random()
     .toString(36)
     .substring(2, 7)
@@ -106,12 +104,10 @@ function makeRoomId() {
 }
 
 function makeRoomUrl(roomId) {
-
   return `${APP_URL}/room/${roomId}`;
 }
 
 function isQuestion(text) {
-
   const t =
     String(text || "")
       .trim()
@@ -133,7 +129,6 @@ setInterval(() => {
   const now = Date.now();
 
   for (let i = questions.length - 1; i >= 0; i--) {
-
     if (
       now - questions[i].createdAt >
       72 * 60 * 60 * 1000
@@ -143,7 +138,6 @@ setInterval(() => {
   }
 
   Object.keys(imageRooms).forEach(roomId => {
-
     if (
       now - imageRooms[roomId].createdAt >
       72 * 60 * 60 * 1000
@@ -764,20 +758,12 @@ ${user.imagePersona}
 
 ${aiReply}`;
 
-        //////////////////////////////////////////////////
-        // SAVE QUESTION
-        //////////////////////////////////////////////////
-
         questions.unshift({
           email: user.email,
           text: raw,
           answers: [],
           createdAt: Date.now()
         });
-
-        //////////////////////////////////////////////////
-        // EMAIL
-        //////////////////////////////////////////////////
 
         await sendEmail(
           user.email,
@@ -788,10 +774,6 @@ ${raw}
 ${finalAnswer}`,
           user.lastImage
         );
-
-        //////////////////////////////////////////////////
-        // RESET ASK MODE
-        //////////////////////////////////////////////////
 
         user.imageMode =
           false;
@@ -864,10 +846,6 @@ ${finalAnswer}`,
         placeholder: "tap camera to ask anything"
       });
     }
-
-    //////////////////////////////////////////////////
-    // BLOCK RANDOM INPUT
-    //////////////////////////////////////////////////
 
     socket.emit("state", {
       placeholder: "tap camera first"
@@ -1081,22 +1059,12 @@ Then let the image personality naturally shape the tone.
     }
   });
 
-  //////////////////////////////////////////////////
-  // DISCONNECT
-  //////////////////////////////////////////////////
-
   socket.on("disconnect", () => {
-
     delete users[socket.id];
   });
 
 });
 
-//////////////////////////////////////////////////
-// START
-//////////////////////////////////////////////////
-
 server.listen(10000, () => {
-
   console.log("server running");
 });
