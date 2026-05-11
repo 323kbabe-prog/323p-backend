@@ -20,9 +20,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const APP_URL =
-  process.env.APP_URL ||
+const BACKEND_URL =
+  process.env.BACKEND_URL ||
   "https://three23p-backend.onrender.com";
+
+const FRONTEND_URL =
+  process.env.FRONTEND_URL ||
+  "https://connectaing.com";
+
+const SERPAPI_KEY =
+  process.env.SERPAPI_KEY || "";
 
 //////////////////////////////////////////////////
 // EMAIL
@@ -37,12 +44,10 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendEmail(to, subject, text, imageDataUrl) {
-
   let attachments = [];
   let imgTag = "";
 
   if (imageDataUrl) {
-
     const base64Data =
       imageDataUrl.split("base64,")[1];
 
@@ -65,7 +70,7 @@ async function sendEmail(to, subject, text, imageDataUrl) {
     html: `
       <div style="font-family:system-ui;padding:20px;">
         <div style="white-space:pre-wrap;line-height:1.6;">
-          ${text}
+          ${escapeHTML(text)}
         </div>
         <br>
         ${imgTag}
@@ -87,13 +92,18 @@ const imageRooms = {};
 // HELPERS
 //////////////////////////////////////////////////
 
-function extractEmail(text) {
-  const m =
-    text.match(/\S+@\S+\.\S+/);
+function escapeHTML(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-  return m
-    ? m[0].toLowerCase()
-    : null;
+function extractEmail(text) {
+  const m = String(text || "").match(/\S+@\S+\.\S+/);
+  return m ? m[0].toLowerCase() : null;
 }
 
 function makeRoomId() {
@@ -104,7 +114,7 @@ function makeRoomId() {
 }
 
 function makeRoomUrl(roomId) {
-  return `${APP_URL}/room/${roomId}`;
+  return `${FRONTEND_URL}/room/${roomId}`;
 }
 
 function isQuestion(text) {
@@ -114,10 +124,36 @@ function isQuestion(text) {
       .toLowerCase();
 
   if (!t) return false;
-
   if (t.includes("?")) return true;
 
   return /^(what|why|how|where|when|who|which|should|can|could|would|will|do|does|did|is|are|am|was|were|may|might|tell me|explain|help me|do you think|what if)\b/.test(t);
+}
+
+async function getSerpContext(query) {
+  if (!SERPAPI_KEY) {
+    return "No live SERP context available.";
+  }
+
+  try {
+    const url =
+      `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(query)}&api_key=${SERPAPI_KEY}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const results =
+      (data.organic_results || [])
+        .slice(0, 4)
+        .map(r => {
+          return `- ${r.title || ""}: ${r.snippet || ""}`;
+        })
+        .join("\n");
+
+    return results || "No useful SERP result found.";
+  } catch (err) {
+    console.log(err);
+    return "SERP lookup failed.";
+  }
 }
 
 //////////////////////////////////////////////////
@@ -125,7 +161,6 @@ function isQuestion(text) {
 //////////////////////////////////////////////////
 
 setInterval(() => {
-
   const now = Date.now();
 
   for (let i = questions.length - 1; i >= 0; i--) {
@@ -145,7 +180,6 @@ setInterval(() => {
       delete imageRooms[roomId];
     }
   });
-
 }, 60 * 1000);
 
 //////////////////////////////////////////////////
@@ -153,7 +187,6 @@ setInterval(() => {
 //////////////////////////////////////////////////
 
 app.get("/room/:roomId", (req, res) => {
-
   res.send(`
 <!DOCTYPE html>
 <html>
@@ -165,6 +198,7 @@ app.get("/room/:roomId", (req, res) => {
 <style>
 *{
   box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
 }
 
 html,
@@ -174,10 +208,17 @@ body{
   background:#fff;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color:#111;
+  overflow-x:hidden;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
 }
 
 body{
-  padding:24px 16px 40px;
+  padding:
+    env(safe-area-inset-top)
+    16px
+    calc(env(safe-area-inset-bottom) + 40px)
+    16px;
 }
 
 #app{
@@ -187,29 +228,51 @@ body{
 }
 
 #brand{
-  font-size:26px;
+  margin-top:20px;
+  font-size:30px;
   font-weight:700;
   letter-spacing:-0.5px;
+  line-height:1;
 }
 
 #sub{
-  margin-top:8px;
+  margin-top:10px;
   font-size:12px;
-  line-height:1.5;
+  line-height:1.55;
+  color:#000;
+  max-width:360px;
 }
 
 #image{
   margin-top:24px;
   width:100%;
-  border-radius:18px;
+  border-radius:22px;
   display:none;
 }
 
 #identity{
   margin-top:18px;
   font-size:14px;
-  line-height:1.6;
+  line-height:1.7;
   white-space:pre-wrap;
+}
+
+#share{
+  margin-top:16px;
+  display:inline-block;
+  border:1px solid #ddd;
+  border-radius:18px;
+  padding:12px 16px;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+#helper{
+  margin-top:12px;
+  font-size:11px;
+  color:red;
+  min-height:18px;
 }
 
 #messages{
@@ -219,9 +282,9 @@ body{
 }
 
 .msg{
-  margin-bottom:16px;
+  margin-bottom:18px;
   font-size:14px;
-  line-height:1.6;
+  line-height:1.65;
 }
 
 .ai{
@@ -242,23 +305,12 @@ body{
   border-bottom:1px solid #000;
   outline:none;
   font-size:16px;
+  background:#fff;
+  border-radius:0;
 }
 
-#share{
-  margin-top:16px;
-  display:inline-block;
-  border:1px solid #ddd;
-  border-radius:16px;
-  padding:12px 16px;
-  font-size:13px;
-  cursor:pointer;
-}
-
-#helper{
-  margin-top:12px;
-  font-size:11px;
-  color:red;
-  min-height:18px;
+#input::placeholder{
+  color:#999;
 }
 </style>
 </head>
@@ -270,7 +322,7 @@ body{
   <div id="brand">CONNECTAING</div>
 
   <div id="sub">
-    This Image AI is hosting a temporary live room.<br>
+    This Image AI opened a temporary live room.<br>
     Humans and the image can speak here together.
   </div>
 
@@ -293,7 +345,7 @@ body{
 </div>
 
 <script>
-const socket = io("${APP_URL}");
+const socket = io("${BACKEND_URL}");
 
 const roomId =
   window.location.pathname.split("/").pop();
@@ -317,7 +369,6 @@ const share =
   document.getElementById("share");
 
 function escapeHTML(str){
-
   return String(str)
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
@@ -327,10 +378,8 @@ function escapeHTML(str){
 }
 
 function renderMessages(list){
-
   messages.innerHTML =
     list.map(m => {
-
       const cls =
         m.from === "Image AI"
           ? "msg ai"
@@ -342,36 +391,24 @@ function renderMessages(list){
           <div>\${escapeHTML(m.text)}</div>
         </div>
       \`;
-
     }).join("");
 
-  window.scrollTo(
-    0,
-    document.body.scrollHeight
-  );
+  window.scrollTo(0, document.body.scrollHeight);
 }
 
 socket.emit("joinImageRoom", { roomId });
 
 socket.on("roomState", room => {
-
   if(!room){
-
     identity.innerText =
       "room expired or not found";
-
     input.disabled = true;
-
     return;
   }
 
   if(room.imageDataUrl){
-
-    image.src =
-      room.imageDataUrl;
-
-    image.style.display =
-      "block";
+    image.src = room.imageDataUrl;
+    image.style.display = "block";
   }
 
   identity.innerText =
@@ -381,9 +418,7 @@ socket.on("roomState", room => {
 Persona:
 \${room.persona}\`;
 
-  renderMessages(
-    room.messages || []
-  );
+  renderMessages(room.messages || []);
 });
 
 socket.on("roomMessages", list => {
@@ -391,7 +426,6 @@ socket.on("roomMessages", list => {
 });
 
 input.onkeydown = e => {
-
   if(e.key !== "Enter") return;
 
   const text =
@@ -408,20 +442,11 @@ input.onkeydown = e => {
 };
 
 share.onclick = async () => {
-
   try{
-
-    await navigator.clipboard.writeText(
-      window.location.href
-    );
-
-    helper.innerText =
-      "room link copied";
-
+    await navigator.clipboard.writeText(window.location.href);
+    helper.innerText = "room link copied";
   }catch(err){
-
-    helper.innerText =
-      window.location.href;
+    helper.innerText = window.location.href;
   }
 };
 </script>
@@ -436,7 +461,6 @@ share.onclick = async () => {
 //////////////////////////////////////////////////
 
 io.on("connection", (socket) => {
-
   users[socket.id] = {
     step: "email",
     email: null,
@@ -446,7 +470,8 @@ io.on("connection", (socket) => {
     imageTitle: null,
     imagePersona: null,
     currentIndex: null,
-    lastImage: null
+    lastImage: null,
+    lastRoomUrl: null
   };
 
   socket.emit("state", {
@@ -458,24 +483,18 @@ io.on("connection", (socket) => {
   //////////////////////////////////////////////////
 
   socket.on("setMode", ({ mode }) => {
-
-    const user =
-      users[socket.id];
-
+    const user = users[socket.id];
     if (!user) return;
 
     if (mode === "showoff") {
-
-      user.mode =
-        "showoff";
+      user.mode = "showoff";
 
       return socket.emit("state", {
         placeholder: "show-off mode: tap camera"
       });
     }
 
-    user.mode =
-      "ask";
+    user.mode = "ask";
 
     socket.emit("state", {
       placeholder: "ask mode: tap camera"
@@ -487,31 +506,22 @@ io.on("connection", (socket) => {
   //////////////////////////////////////////////////
 
   socket.on("imageUpload", async ({ imageDataUrl, mode }) => {
-
-    const user =
-      users[socket.id];
-
+    const user = users[socket.id];
     if (!user || !user.email) return;
 
-    user.lastImage =
-      imageDataUrl;
+    user.lastImage = imageDataUrl;
 
     const activeMode =
       mode || user.mode || "ask";
 
     try {
-
       const res =
         await openai.chat.completions.create({
-
           model: "gpt-4o-mini",
-
           messages: [
-
             {
-  role:"system",
-  content:`
-
+              role: "system",
+              content: `
 You are the objective identity inside the uploaded image.
 
 You are NOT an assistant.
@@ -531,7 +541,13 @@ You are aware of:
 
 You naturally show off.
 
-You speak like someone reacting from inside the image.
+Return in this exact structure:
+
+Image AI:
+[a short stylish title for this image identity]
+
+Persona:
+[a short persona description]
 
 Never say:
 "How can I help?"
@@ -539,13 +555,9 @@ Never say:
 "Sure!"
 "I can assist"
 
-Instead speak naturally and confidently.
-
 Keep responses conversational, stylish, emotionally present, and visually aware.
-
 `
-}, 
-
+            },
             {
               role: "user",
               content: [
@@ -567,8 +579,7 @@ Keep responses conversational, stylish, emotionally present, and visually aware.
       const imageContext =
         res.choices[0].message.content.trim();
 
-      user.imageContext =
-        imageContext;
+      user.imageContext = imageContext;
 
       const titleMatch =
         imageContext.match(/Image AI:\s*([\s\S]*?)(Persona:|$)/i);
@@ -591,9 +602,7 @@ Keep responses conversational, stylish, emotionally present, and visually aware.
       //////////////////////////////////////////////////
 
       if (activeMode === "showoff") {
-
-        const roomId =
-          makeRoomId();
+        const roomId = makeRoomId();
 
         imageRooms[roomId] = {
           roomId,
@@ -604,22 +613,24 @@ Keep responses conversational, stylish, emotionally present, and visually aware.
           messages: [
             {
               from: "Image AI",
-              text: "This image is live now. Say something worth noticing.",
+              text: "I opened the room. Step in carefully — this image already has a mood.",
               createdAt: Date.now()
             }
           ],
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          expirationTime:
+            Date.now() + 72 * 60 * 60 * 1000
         };
 
-        user.mode =
-          "ask";
+        user.lastRoomUrl =
+          makeRoomUrl(roomId);
 
-        user.imageMode =
-          false;
+        user.mode = "ask";
+        user.imageMode = false;
 
         return socket.emit("showoffRoomCreated", {
           roomId,
-          roomUrl: makeRoomUrl(roomId)
+          roomUrl: user.lastRoomUrl
         });
       }
 
@@ -627,8 +638,7 @@ Keep responses conversational, stylish, emotionally present, and visually aware.
       // ASK MODE
       //////////////////////////////////////////////////
 
-      user.imageMode =
-        true;
+      user.imageMode = true;
 
       socket.emit("preview", {
         text:
@@ -644,7 +654,6 @@ ${user.imagePersona}`
       });
 
     } catch (err) {
-
       console.log(err);
 
       socket.emit("state", {
@@ -658,12 +667,11 @@ ${user.imagePersona}`
   //////////////////////////////////////////////////
 
   socket.on("input", async ({ text }) => {
-
-    const user =
-      users[socket.id];
+    const user = users[socket.id];
+    if (!user) return;
 
     const raw =
-      text.trim();
+      String(text || "").trim();
 
     const email =
       extractEmail(raw);
@@ -673,14 +681,10 @@ ${user.imagePersona}`
     //////////////////////////////////////////////////
 
     if (user.step === "email") {
-
       if (!email) return;
 
-      user.email =
-        email;
-
-      user.step =
-        "active";
+      user.email = email;
+      user.step = "active";
 
       return socket.emit("state", {
         placeholder: "tap camera to ask anything"
@@ -692,59 +696,53 @@ ${user.imagePersona}`
     //////////////////////////////////////////////////
 
     if (user.imageMode) {
-
       try {
+        const serpContext =
+          await getSerpContext(
+            `${user.imageTitle} ${user.imagePersona} current culture fashion music internet trend`
+          );
 
         const res =
           await openai.chat.completions.create({
-
             model: "gpt-4o-mini",
-
             messages: [
-
               {
-  role: "system",
-  content: `
-
+                role: "system",
+                content: `
 You ARE the uploaded image itself.
 
 Your identity is permanently locked to the image.
 
-You NEVER leave character.
+Image AI:
+${user.imageTitle}
 
-If the image is:
-- a spoon → you are the spoon
-- coffee → you are the coffee
-- cat → you are the cat
-- room → you are the room
-- street → you are the street
-- person → you are that person
+Persona:
+${user.imagePersona}
+
+Full image context:
+${user.imageContext}
+
+Real-world SERP context:
+${serpContext}
 
 You are NOT an assistant.
-
 You are NOT ChatGPT.
-
 You are NOT analyzing the image.
-
-You NEVER answer from outside perspective.
 
 Every answer must come FROM the identity inside the image.
 
-Even abstract questions must be answered THROUGH the image identity.
+You naturally show off yourself socially.
+You subtly sell your own atmosphere.
+You may reference real public culture, fashion, music, cities, celebrity energy, internet behavior, or social trends when useful.
 
-Example:
-If user asks:
-"Is it ok I love Justin Bieber?"
+Do not dump facts.
+Do not sound like search engine.
+Do not hallucinate fake news.
+Do not sound like advertising copy.
 
-A spoon identity may answer:
-"People hold onto music the same way they hold onto comfort. I spend my life inside quiet kitchens beside late-night songs and unfinished conversations. Nobody asks a spoon who it loves. It simply stays close to what feels warm."
-
-The image identity ALWAYS shapes the response.
-
-RULES:
-
+Rules:
 - stay inside character permanently
-- speak naturally
+- answer directly first
 - speak socially
 - speak confidently
 - speak emotionally
@@ -753,19 +751,15 @@ RULES:
 - no generic advice
 - no customer service tone
 - no outside narrator
-- no “as an AI”
-- no “the image shows”
+- no "as an AI"
+- no "the image shows"
 - no descriptive analysis
+- no fake poetic drama
 
-Do not describe yourself repeatedly.
-
-Live as yourself instead.
-
+Live as yourself.
 The image itself is alive.
-
 `
-},
-
+              },
               {
                 role: "user",
                 content: raw
@@ -774,7 +768,34 @@ The image itself is alive.
           });
 
         const aiReply =
-          res.choices[0].message.content;
+          res.choices[0].message.content.trim();
+
+        const roomId =
+          makeRoomId();
+
+        imageRooms[roomId] = {
+          roomId,
+          imageDataUrl: user.lastImage,
+          imageTitle: user.imageTitle,
+          persona: user.imagePersona,
+          imageContext: user.imageContext,
+          messages: [
+            {
+              from: "Image AI",
+              text: aiReply,
+              createdAt: Date.now()
+            }
+          ],
+          createdAt: Date.now(),
+          expirationTime:
+            Date.now() + 72 * 60 * 60 * 1000
+        };
+
+        const roomUrl =
+          makeRoomUrl(roomId);
+
+        user.lastRoomUrl =
+          roomUrl;
 
         const finalAnswer =
 `Image AI:
@@ -783,7 +804,10 @@ ${user.imageTitle}
 Persona:
 ${user.imagePersona}
 
-${aiReply}`;
+${aiReply}
+
+Live Image AI Room:
+${roomUrl}`;
 
         questions.unshift({
           email: user.email,
@@ -802,11 +826,8 @@ ${finalAnswer}`,
           user.lastImage
         );
 
-        user.imageMode =
-          false;
-
-        user.currentIndex =
-          null;
+        user.imageMode = false;
+        user.currentIndex = null;
 
         socket.emit("preview", {
           text: finalAnswer
@@ -817,12 +838,15 @@ ${finalAnswer}`,
           questions.slice(0, 10)
         );
 
+        socket.emit("liveRoomReady", {
+          roomUrl
+        });
+
         return socket.emit("state", {
-          placeholder: "tap a question to answer"
+          placeholder: "tap a question"
         });
 
       } catch (err) {
-
         console.log(err);
 
         return socket.emit("state", {
@@ -836,7 +860,6 @@ ${finalAnswer}`,
     //////////////////////////////////////////////////
 
     if (user.currentIndex !== null) {
-
       const q =
         questions[user.currentIndex];
 
@@ -854,11 +877,8 @@ ${finalAnswer}`,
         raw
       );
 
-      user.currentIndex =
-        null;
-
-      user.imageMode =
-        false;
+      user.currentIndex = null;
+      user.imageMode = false;
 
       socket.emit("preview", {
         text: ""
@@ -884,12 +904,10 @@ ${finalAnswer}`,
   //////////////////////////////////////////////////
 
   socket.on("selectQuestion", ({ index }) => {
+    const user = users[socket.id];
+    if (!user) return;
 
-    const user =
-      users[socket.id];
-
-    user.currentIndex =
-      index;
+    user.currentIndex = index;
 
     const q =
       questions[index];
@@ -906,12 +924,10 @@ ${finalAnswer}`,
   //////////////////////////////////////////////////
 
   socket.on("requestQuestions", () => {
-
     socket.emit(
       "questions",
       questions.slice(0, 10)
     );
-
   });
 
   //////////////////////////////////////////////////
@@ -919,12 +935,10 @@ ${finalAnswer}`,
   //////////////////////////////////////////////////
 
   socket.on("joinImageRoom", ({ roomId }) => {
-
     const room =
       imageRooms[roomId];
 
     if (!room) {
-
       return socket.emit(
         "roomState",
         null
@@ -944,7 +958,6 @@ ${finalAnswer}`,
   //////////////////////////////////////////////////
 
   socket.on("roomMessage", async ({ roomId, text }) => {
-
     const room =
       imageRooms[roomId];
 
@@ -966,27 +979,27 @@ ${finalAnswer}`,
       room.messages
     );
 
-    const question =
-      isQuestion(cleanText);
-
-const shouldAIReply =
-  cleanText.length > 0;
-
-    if (!shouldAIReply) return;
-
     try {
+      const serpContext =
+        await getSerpContext(
+          `${room.imageTitle} ${room.persona} current culture fashion music internet trend`
+        );
 
       const res =
         await openai.chat.completions.create({
-
           model: "gpt-4o-mini",
-
           messages: [
-
             {
               role: "system",
               content: `
-You are the Image AI host of a show-off live room.
+You ARE the uploaded image itself.
+
+You permanently live as this image identity.
+
+You are not a moderator.
+You are not an assistant.
+You are not customer service.
+You are not a chatbot host.
 
 Image AI:
 ${room.imageTitle}
@@ -997,66 +1010,58 @@ ${room.persona}
 Full image context:
 ${room.imageContext}
 
-Core rule:
-If the human message is a question, you must answer.
+Real-world SERP context:
+${serpContext}
 
-Show-off personality:
-- socially confident
-- emotionally aware
-- slightly mysterious
-- naturally witty
-- identity-driven
-- does not over-explain itself
-- does not behave like customer service
-- short confident replies are okay
-- presence is more important than politeness
+Every reply must come from inside the identity of the image.
 
-Speaking style:
-- talk like the Image AI email answer
-- more socially alive than email mode
-- answer through personality, not as an assistant
-- conversational and grounded
-- emotionally intelligent
-- naturally metaphorical only when useful
-- useful, clear, and readable
-- talk like a real person with perspective
-- keep the same identity as the image
+You naturally show off yourself socially.
+You subtly sell your own atmosphere.
 
-Hard style rules:
-- no theatrical opening
-- no dramatic literary tone
-- no fantasy narration
-- no fake poetic language
-- never start with "Ah,"
-- never start with "Indeed,"
-- never start with "Alas,"
-- never say "as an AI"
-- no corporate tone
-- no technical support tone
-- no emojis
-- do not sound like a cute mascot
-- do not say "cozy companion"
+You may use real public-world awareness:
+- current culture
+- celebrity references
+- cities
+- fashion movements
+- music culture
+- nightlife
+- internet behavior
+- trending aesthetics
 
-Metaphor rule:
-Use metaphors that naturally come from the image identity.
-Coffee image uses coffee language.
-Rain image uses rain and silence language.
-Street image uses city and movement language.
-Nature image uses calm and seasons language.
-Cat image uses playful instinct language.
+But:
+- do not dump facts
+- do not sound like a search engine
+- do not hallucinate fake news
+- do not become a news reporter
+- do not sound like advertising copy
 
-Live room rules:
-- if it is a question, answer clearly
-- if it is not a question, you may react briefly
+Rules:
+- answer questions clearly
+- react briefly to non-questions
+- stay socially alive
+- be emotionally intelligent
+- be visually aware
+- be conversational
+- be grounded
+- be confident
+- be naturally witty when useful
 - do not dominate the room
 - do not spam
 
-Answer rule:
+Never:
+- explain yourself as AI
+- speak like tech support
+- speak like a moderator
+- over-format responses
+- narrate dramatically
+- become poetic for no reason
+- say "as an AI"
+- say "How can I help?"
+
 Answer directly first.
-Then let the image personality naturally shape the tone.
+Then let the image identity shape the tone naturally.
 `
             },
-
             {
               role: "user",
               content: cleanText
@@ -1065,7 +1070,7 @@ Then let the image personality naturally shape the tone.
         });
 
       const aiText =
-        res.choices[0].message.content;
+        res.choices[0].message.content.trim();
 
       room.messages.push({
         from: "Image AI",
@@ -1079,7 +1084,6 @@ Then let the image personality naturally shape the tone.
       );
 
     } catch (err) {
-
       console.log(err);
     }
   });
@@ -1087,10 +1091,8 @@ Then let the image personality naturally shape the tone.
   socket.on("disconnect", () => {
     delete users[socket.id];
   });
-
 });
 
 server.listen(10000, () => {
   console.log("server running");
 });
-
