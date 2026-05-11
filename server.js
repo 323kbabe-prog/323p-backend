@@ -8,7 +8,7 @@ const OpenAI = require("openai");
 const app = express();
 
 app.use(cors({ origin: "*" }));
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 
 const server = http.createServer(app);
 
@@ -77,9 +77,30 @@ async function sendEmail(to, subject, text, imageDataUrl) {
 
 const users = {};
 const questions = [];
+const imageRooms = {};
 
 //////////////////////////////////////////////////
-// CLEANUP (72 HOURS)
+// HELPERS
+//////////////////////////////////////////////////
+
+function extractEmail(text) {
+  const m = text.match(/\S+@\S+\.\S+/);
+  return m ? m[0].toLowerCase() : null;
+}
+
+function makeRoomId() {
+  return Math.random()
+    .toString(36)
+    .substring(2, 7)
+    .toUpperCase();
+}
+
+function makeRoomUrl(roomId) {
+  return `${process.env.APP_URL || "https://three23p-backend.onrender.com"}/room/${roomId}`;
+}
+
+//////////////////////////////////////////////////
+// CLEANUP
 //////////////////////////////////////////////////
 
 setInterval(() => {
@@ -87,29 +108,252 @@ setInterval(() => {
   const now = Date.now();
 
   for (let i = questions.length - 1; i >= 0; i--) {
-
-    if (
-      now - questions[i].createdAt >
-      72 * 60 * 60 * 1000
-    ) {
+    if (now - questions[i].createdAt > 72 * 60 * 60 * 1000) {
       questions.splice(i, 1);
     }
   }
 
+  Object.keys(imageRooms).forEach(roomId => {
+    if (now - imageRooms[roomId].createdAt > 72 * 60 * 60 * 1000) {
+      delete imageRooms[roomId];
+    }
+  });
+
 }, 60 * 1000);
 
 //////////////////////////////////////////////////
-// HELPERS
+// ROOM PAGE
 //////////////////////////////////////////////////
 
-function extractEmail(text) {
+app.get("/room/:roomId", (req, res) => {
 
-  const m = text.match(/\S+@\S+\.\S+/);
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-  return m
-    ? m[0].toLowerCase()
-    : null;
+<style>
+*{box-sizing:border-box;}
+html,body{
+  margin:0;
+  padding:0;
+  background:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:#111;
 }
+body{
+  padding:24px 16px 40px;
+}
+#app{
+  width:100%;
+  max-width:480px;
+  margin:0 auto;
+}
+#brand{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:-0.5px;
+}
+#sub{
+  margin-top:8px;
+  font-size:12px;
+  line-height:1.5;
+}
+#image{
+  margin-top:24px;
+  width:100%;
+  border-radius:18px;
+  display:none;
+}
+#identity{
+  margin-top:18px;
+  font-size:14px;
+  line-height:1.6;
+  white-space:pre-wrap;
+}
+#messages{
+  margin-top:24px;
+  border-top:1px solid #eee;
+  padding-top:18px;
+}
+.msg{
+  margin-bottom:16px;
+  font-size:14px;
+  line-height:1.6;
+}
+.ai{
+  font-weight:600;
+}
+.meta{
+  font-size:10px;
+  color:#999;
+  margin-bottom:4px;
+}
+#input{
+  width:100%;
+  margin-top:20px;
+  height:54px;
+  border:none;
+  border-bottom:1px solid #000;
+  outline:none;
+  font-size:16px;
+}
+#share{
+  margin-top:16px;
+  display:inline-block;
+  border:1px solid #ddd;
+  border-radius:16px;
+  padding:12px 16px;
+  font-size:13px;
+  cursor:pointer;
+}
+#helper{
+  margin-top:12px;
+  font-size:11px;
+  color:red;
+  min-height:18px;
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <div id="brand">CONNECTAING</div>
+
+  <div id="sub">
+    This Image AI is hosting a temporary live room.<br>
+    Humans and the image can speak here together.
+  </div>
+
+  <img id="image" />
+
+  <div id="identity"></div>
+
+  <div id="share">Share this Image AI</div>
+
+  <div id="helper"></div>
+
+  <div id="messages"></div>
+
+  <input
+    id="input"
+    autocomplete="off"
+    placeholder="talk with this Image AI"
+  />
+
+</div>
+
+<script>
+const socket = io("${process.env.APP_URL || "https://three23p-backend.onrender.com"}");
+
+const roomId =
+  window.location.pathname.split("/").pop();
+
+const image =
+  document.getElementById("image");
+
+const identity =
+  document.getElementById("identity");
+
+const messages =
+  document.getElementById("messages");
+
+const input =
+  document.getElementById("input");
+
+const helper =
+  document.getElementById("helper");
+
+const share =
+  document.getElementById("share");
+
+function escapeHTML(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function renderMessages(list){
+  messages.innerHTML = list.map(m => {
+    const cls = m.from === "Image AI" ? "msg ai" : "msg";
+    return \`
+      <div class="\${cls}">
+        <div class="meta">\${escapeHTML(m.from)}</div>
+        <div>\${escapeHTML(m.text)}</div>
+      </div>
+    \`;
+  }).join("");
+
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+socket.emit("joinImageRoom", { roomId });
+
+socket.on("roomState", room => {
+
+  if(!room){
+    identity.innerText = "room expired or not found";
+    input.disabled = true;
+    return;
+  }
+
+  if(room.imageDataUrl){
+    image.src = room.imageDataUrl;
+    image.style.display = "block";
+  }
+
+  identity.innerText =
+\`Image AI:
+\${room.imageTitle}
+
+Persona:
+\${room.persona}\`;
+
+  renderMessages(room.messages || []);
+});
+
+socket.on("roomMessages", list => {
+  renderMessages(list || []);
+});
+
+input.onkeydown = e => {
+
+  if(e.key !== "Enter") return;
+
+  const text = input.value.trim();
+
+  if(!text) return;
+
+  socket.emit("roomMessage", {
+    roomId,
+    text
+  });
+
+  input.value = "";
+};
+
+share.onclick = async () => {
+
+  try{
+    await navigator.clipboard.writeText(window.location.href);
+    helper.innerText = "room link copied";
+  }catch(err){
+    helper.innerText = window.location.href;
+  }
+};
+</script>
+
+</body>
+</html>
+  `);
+});
 
 //////////////////////////////////////////////////
 // SOCKET
@@ -122,8 +366,11 @@ io.on("connection", (socket) => {
     email: null,
     imageMode: false,
     imageContext: null,
+    imageTitle: null,
+    imagePersona: null,
     currentIndex: null,
-    lastImage: null
+    lastImage: null,
+    lastRoomId: null
   };
 
   socket.emit("state", {
@@ -156,10 +403,16 @@ io.on("connection", (socket) => {
             content: `
 Describe this image as an AI identity.
 
-Format:
-objects, atmosphere, emotional tone
+Format exactly:
 
-Keep short.
+Image AI:
+short title
+
+Persona:
+short personality
+
+Keep it short.
+No markdown.
 `
           },
 
@@ -181,15 +434,36 @@ Keep short.
         ]
       });
 
-      user.imageContext =
-        res.choices[0].message.content;
+      const imageContext =
+        res.choices[0].message.content.trim();
+
+      user.imageContext = imageContext;
+
+      const titleMatch =
+        imageContext.match(/Image AI:\s*([\s\S]*?)(Persona:|$)/i);
+
+      const personaMatch =
+        imageContext.match(/Persona:\s*([\s\S]*)/i);
+
+      user.imageTitle =
+        titleMatch
+          ? titleMatch[1].trim()
+          : imageContext;
+
+      user.imagePersona =
+        personaMatch
+          ? personaMatch[1].trim()
+          : "quiet observer of this image";
 
       user.imageMode = true;
 
       socket.emit("preview", {
         text:
 `Image AI:
-${user.imageContext}`
+${user.imageTitle}
+
+Persona:
+${user.imagePersona}`
       });
 
       socket.emit("state", {
@@ -256,6 +530,12 @@ ${user.imageContext}`
 You are the AI voice of the uploaded image.
 
 IMAGE AI:
+${user.imageTitle}
+
+PERSONA:
+${user.imagePersona}
+
+FULL IMAGE CONTEXT:
 ${user.imageContext}
 
 Rules:
@@ -281,7 +561,10 @@ Rules:
 
         const finalAnswer =
 `Image AI:
-${user.imageContext}
+${user.imageTitle}
+
+Persona:
+${user.imagePersona}
 
 ${aiReply}`;
 
@@ -297,6 +580,30 @@ ${aiReply}`;
         });
 
         //////////////////////////////////////////////////
+        // CREATE LIVE ROOM
+        //////////////////////////////////////////////////
+
+        const roomId = makeRoomId();
+
+        imageRooms[roomId] = {
+          roomId,
+          imageDataUrl: user.lastImage,
+          imageTitle: user.imageTitle,
+          persona: user.imagePersona,
+          imageContext: user.imageContext,
+          messages: [
+            {
+              from: "Image AI",
+              text: "This image is now hosting a live room.",
+              createdAt: Date.now()
+            }
+          ],
+          createdAt: Date.now()
+        };
+
+        user.lastRoomId = roomId;
+
+        //////////////////////////////////////////////////
         // EMAIL
         //////////////////////////////////////////////////
 
@@ -306,7 +613,10 @@ ${aiReply}`;
           `Q:
 ${raw}
 
-${finalAnswer}`,
+${finalAnswer}
+
+Live Image AI Room:
+${makeRoomUrl(roomId)}`,
           user.lastImage
         );
 
@@ -320,6 +630,11 @@ ${finalAnswer}`,
 
         socket.emit("preview", {
           text: finalAnswer
+        });
+
+        socket.emit("roomCreated", {
+          roomId,
+          roomUrl: makeRoomUrl(roomId)
         });
 
         socket.emit("questions",
@@ -363,10 +678,6 @@ ${finalAnswer}`,
         raw
       );
 
-      //////////////////////////////////////////////////
-      // RESET
-      //////////////////////////////////////////////////
-
       user.currentIndex = null;
 
       user.imageMode = false;
@@ -381,10 +692,6 @@ ${finalAnswer}`,
         placeholder: "tap camera to ask anything"
       });
     }
-
-    //////////////////////////////////////////////////
-    // BLOCK RANDOM INPUT
-    //////////////////////////////////////////////////
 
     socket.emit("state", {
       placeholder: "tap camera first"
@@ -411,17 +718,127 @@ ${finalAnswer}`,
   });
 
   //////////////////////////////////////////////////
-// REQUEST QUESTIONS
-//////////////////////////////////////////////////
+  // REQUEST QUESTIONS
+  //////////////////////////////////////////////////
 
-socket.on("requestQuestions", () => {
+  socket.on("requestQuestions", () => {
 
-  socket.emit(
-    "questions",
-    questions.slice(0,10)
-  );
+    socket.emit(
+      "questions",
+      questions.slice(0,10)
+    );
 
-});
+  });
+
+  //////////////////////////////////////////////////
+  // JOIN IMAGE ROOM
+  //////////////////////////////////////////////////
+
+  socket.on("joinImageRoom", ({ roomId }) => {
+
+    const room = imageRooms[roomId];
+
+    if (!room) {
+      return socket.emit("roomState", null);
+    }
+
+    socket.join(roomId);
+
+    socket.emit("roomState", room);
+  });
+
+  //////////////////////////////////////////////////
+  // ROOM MESSAGE
+  //////////////////////////////////////////////////
+
+  socket.on("roomMessage", async ({ roomId, text }) => {
+
+    const room = imageRooms[roomId];
+
+    if (!room) return;
+
+    const cleanText =
+      String(text || "").trim();
+
+    if (!cleanText) return;
+
+    room.messages.push({
+      from: "Stranger",
+      text: cleanText,
+      createdAt: Date.now()
+    });
+
+    io.to(roomId).emit(
+      "roomMessages",
+      room.messages
+    );
+
+    const shouldAIReply =
+      cleanText.includes("?") ||
+      cleanText.toLowerCase().includes("image ai") ||
+      Math.random() < 0.35;
+
+    if (!shouldAIReply) return;
+
+    try {
+
+      const res =
+        await openai.chat.completions.create({
+
+        model: "gpt-4o-mini",
+
+        messages: [
+
+          {
+            role: "system",
+            content: `
+You are the Image AI host of a live room.
+
+Image AI:
+${room.imageTitle}
+
+Persona:
+${room.persona}
+
+Full image context:
+${room.imageContext}
+
+Rules:
+- speak as the atmosphere of the image
+- be short
+- be poetic but clear
+- do not dominate the room
+- no generic assistant tone
+- no "as an AI"
+- reply like the image is alive
+`
+          },
+
+          {
+            role: "user",
+            content: cleanText
+          }
+        ]
+      });
+
+      const aiText =
+        res.choices[0].message.content;
+
+      room.messages.push({
+        from: "Image AI",
+        text: aiText,
+        createdAt: Date.now()
+      });
+
+      io.to(roomId).emit(
+        "roomMessages",
+        room.messages
+      );
+
+    } catch (err) {
+      console.log(err);
+    }
+  });
 
   //////////////////////////////////////////////////
   // DISCONNECT
