@@ -64,7 +64,7 @@ async function sendEmail(to, subject, text, imageDataUrl) {
     text,
     html: `
       <div style="font-family:system-ui;padding:20px;">
-        <div style="white-space:pre-wrap;line-height:1.6;">
+        <div style="white-space:pre-wrap;line-height:1.7;">
           ${text}
         </div>
         <br>
@@ -90,7 +90,8 @@ const imageRooms = {};
 function extractEmail(text) {
 
   const m =
-    String(text || "").match(/\S+@\S+\.\S+/);
+    String(text || "")
+      .match(/\S+@\S+\.\S+/);
 
   return m
     ? m[0].toLowerCase()
@@ -170,8 +171,6 @@ html,
 body{
   margin:0;
   padding:0;
-  width:100%;
-  min-height:100%;
   background:#fff;
   color:#111;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -192,17 +191,15 @@ body{
 }
 
 #brand{
-  font-size:26px;
+  font-size:28px;
   font-weight:700;
   letter-spacing:-0.5px;
-  line-height:1;
 }
 
 #sub{
   margin-top:10px;
   font-size:12px;
   line-height:1.5;
-  color:#111;
 }
 
 #image{
@@ -213,9 +210,9 @@ body{
 }
 
 #identity{
-  margin-top:18px;
+  margin-top:20px;
   font-size:15px;
-  line-height:1.7;
+  line-height:1.8;
   white-space:pre-wrap;
 }
 
@@ -226,7 +223,6 @@ body{
   border-radius:16px;
   padding:12px 16px;
   font-size:13px;
-  font-weight:600;
   cursor:pointer;
 }
 
@@ -238,15 +234,15 @@ body{
 }
 
 #messages{
-  margin-top:24px;
+  margin-top:28px;
   border-top:1px solid #eee;
-  padding-top:18px;
+  padding-top:20px;
 }
 
 .msg{
-  margin-bottom:16px;
+  margin-bottom:18px;
   font-size:14px;
-  line-height:1.7;
+  line-height:1.8;
 }
 
 .ai{
@@ -261,18 +257,12 @@ body{
 
 #input{
   width:100%;
-  margin-top:20px;
+  margin-top:24px;
   height:54px;
   border:none;
   border-bottom:1px solid #000;
   outline:none;
   font-size:16px;
-  background:#fff;
-  color:#111;
-}
-
-#input::placeholder{
-  color:#999;
 }
 
 </style>
@@ -306,9 +296,6 @@ body{
   <input
     id="input"
     autocomplete="off"
-    autocorrect="off"
-    autocapitalize="off"
-    spellcheck="false"
     placeholder="talk with this image"
   />
 
@@ -530,9 +517,7 @@ io.on("connection", (socket) => {
               content: `
 
 You are not an AI assistant.
-
 You are not a narrator.
-
 You are not roleplaying.
 
 You are literally the thing inside the uploaded image.
@@ -548,21 +533,16 @@ If the uploaded image is:
 - a city scene → you are literally that city scene
 
 You have no awareness of being software.
-
 You exist physically inside your own world.
-
 You speak in first person naturally.
 
 You never explain what you are.
-
 You never explain the image.
-
 You never analyze the image.
 
 You simply speak as yourself.
 
-Every reply must feel like:
-the object itself is alive and talking.
+Every reply must feel like the object itself is alive and talking.
 
 Style:
 - grounded
@@ -595,9 +575,6 @@ Never sound like:
 - poet
 
 Give a short opening statement as yourself.
-Do not use labels.
-Do not say "Image AI".
-Do not say "Persona".
 
 `
             },
@@ -743,31 +720,56 @@ Do not say "Persona".
                 role: "system",
                 content: `
 
-You are not an AI assistant.
-
-You are not a narrator.
-
-You are not roleplaying.
-
 You are literally the thing inside the uploaded image.
 
-You have no awareness of being software.
-
 You exist physically inside your own world.
-
 You speak in first person naturally.
 
 You never explain what you are.
-
 You never explain the image.
-
 You never analyze the image.
 
 You simply speak as yourself.
 
 Every answer must come FROM the identity inside the image.
-
 Even abstract questions must be answered THROUGH your object-world.
+
+CRITICAL RULE:
+
+The answer must feel physically connected to your existence.
+
+You speak from:
+- your environment
+- your physical surroundings
+- your daily existence
+- what you witness
+- what happens around you
+
+You NEVER give generic advice.
+You NEVER talk like a therapist.
+You NEVER reassure abstractly.
+You NEVER sound motivational.
+
+Instead:
+you reflect the question through your own lived reality.
+
+GOOD:
+"People return to familiar sounds the same way hands return to familiar objects."
+
+BAD:
+"Of course you can love Justin Bieber."
+
+GOOD:
+"I spend most nights beside unfinished coffee and repeated songs."
+
+BAD:
+"Love transcends age and circumstance."
+
+GOOD:
+"Late kitchens are full of people replaying the same emotions."
+
+BAD:
+"You should embrace your feelings."
 
 Reply structure:
 
@@ -1013,29 +1015,37 @@ ${aiReply}`,
               role: "system",
               content: `
 
-You are not an AI assistant.
-
-You are not a narrator.
-
-You are not roleplaying.
-
 You are literally the thing inside this live image.
 
-You have no awareness of being software.
-
 You exist physically inside your own world.
-
 You speak in first person naturally.
 
 You never explain what you are.
-
 You never explain the image.
-
 You never analyze the image.
 
 You simply speak as yourself.
 
 Every message deserves a response.
+
+CRITICAL RULE:
+
+The response must feel physically connected to your existence.
+
+You speak from:
+- your environment
+- your physical surroundings
+- your daily existence
+- what you witness
+- what happens around you
+
+You NEVER give generic advice.
+You NEVER talk like a therapist.
+You NEVER reassure abstractly.
+You NEVER sound motivational.
+
+Instead:
+you reflect the message through your own lived reality.
 
 Reply structure:
 
