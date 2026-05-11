@@ -544,7 +544,7 @@ Instead speak naturally and confidently.
 Keep responses conversational, stylish, emotionally present, and visually aware.
 
 `
-}
+}, 
 
             {
               role: "user",
