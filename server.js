@@ -191,13 +191,6 @@ body{
 #brand{
   font-size:28px;
   font-weight:700;
-  letter-spacing:-0.5px;
-}
-
-#sub{
-  margin-top:10px;
-  font-size:12px;
-  line-height:1.5;
 }
 
 #image{
@@ -212,23 +205,6 @@ body{
   font-size:15px;
   line-height:1.8;
   white-space:pre-wrap;
-}
-
-#share{
-  margin-top:16px;
-  display:inline-block;
-  border:1px solid #ddd;
-  border-radius:16px;
-  padding:12px 16px;
-  font-size:13px;
-  cursor:pointer;
-}
-
-#helper{
-  margin-top:12px;
-  font-size:11px;
-  color:red;
-  min-height:18px;
 }
 
 #messages{
@@ -274,20 +250,9 @@ body{
 CONNECTAING
 </div>
 
-<div id="sub">
-This image is live now.<br>
-Talk to it directly.
-</div>
-
 <img id="image" />
 
 <div id="identity"></div>
-
-<div id="share">
-Share this image
-</div>
-
-<div id="helper"></div>
 
 <div id="messages"></div>
 
@@ -301,110 +266,101 @@ placeholder="talk with this image"
 
 <script>
 
-const socket =
-  io("${APP_URL}");
+const socket = io("${APP_URL}");
 
 const roomId =
-  window.location.pathname.split("/").pop();
+window.location.pathname.split("/").pop();
 
 const image =
-  document.getElementById("image");
+document.getElementById("image");
 
 const identity =
-  document.getElementById("identity");
+document.getElementById("identity");
 
 const messages =
-  document.getElementById("messages");
+document.getElementById("messages");
 
 const input =
-  document.getElementById("input");
+document.getElementById("input");
 
 function escapeHTML(str){
 
-  return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+return String(str)
+.replaceAll("&","&amp;")
+.replaceAll("<","&lt;")
+.replaceAll(">","&gt;")
+.replaceAll('"',"&quot;")
+.replaceAll("'","&#039;");
 }
 
 function renderMessages(list){
 
-  messages.innerHTML =
-    list.map(m => {
+messages.innerHTML =
+list.map(m => {
 
-      const cls =
-        m.from === "Image"
-          ? "msg ai"
-          : "msg";
+const cls =
+m.from === "Image"
+? "msg ai"
+: "msg";
 
-      return \`
-        <div class="\${cls}">
-          <div class="meta">\${escapeHTML(m.from)}</div>
-          <div>\${escapeHTML(m.text)}</div>
-        </div>
-      \`;
+return \`
+<div class="\${cls}">
+<div class="meta">\${escapeHTML(m.from)}</div>
+<div>\${escapeHTML(m.text)}</div>
+</div>
+\`;
 
-    }).join("");
+}).join("");
 }
 
 socket.emit("joinImageRoom", {
-  roomId
+roomId
 });
 
 socket.on("roomState", room => {
 
-  if(!room){
+if(!room){
+identity.innerText =
+"room expired or not found";
+return;
+}
 
-    identity.innerText =
-      "room expired or not found";
+if(room.imageDataUrl){
+image.src = room.imageDataUrl;
+image.style.display = "block";
+}
 
-    input.disabled = true;
+identity.innerText =
+room.imageContext || "";
 
-    return;
-  }
-
-  if(room.imageDataUrl){
-
-    image.src = room.imageDataUrl;
-
-    image.style.display =
-      "block";
-  }
-
-  identity.innerText =
-    room.imageContext || "";
-
-  renderMessages(room.messages || []);
+renderMessages(room.messages || []);
 });
 
 socket.on("roomMessages", list => {
-
-  renderMessages(list || []);
+renderMessages(list || []);
 });
 
 input.onkeydown = e => {
 
-  if(e.key !== "Enter") return;
+if(e.key !== "Enter") return;
 
-  const text = input.value.trim();
+const text = input.value.trim();
 
-  if(!text) return;
+if(!text) return;
 
-  socket.emit("roomMessage", {
-    roomId,
-    text
-  });
+socket.emit("roomMessage", {
+roomId,
+text
+});
 
-  input.value = "";
+input.value = "";
 };
 
 </script>
 
 </body>
 </html>
-  `);
+`);
 });
 
 //////////////////////////////////////////////////
@@ -413,60 +369,77 @@ input.onkeydown = e => {
 
 io.on("connection", (socket) => {
 
-  users[socket.id] = {
-    step: "email",
-    email: null,
-    mode: "ask",
-    imageMode: false,
-    imageContext: null,
-    currentIndex: null,
-    lastImage: null
-  };
+users[socket.id] = {
+step: "email",
+email: null,
+mode: "ask",
+imageMode: false,
+imageContext: null,
+currentIndex: null,
+lastImage: null
+};
 
-  socket.emit("state", {
-    placeholder: "enter your email to connect"
-  });
+socket.emit("state", {
+placeholder: "enter your email to connect"
+});
 
-  //////////////////////////////////////////////////
-  // SET MODE
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// SET MODE
+//////////////////////////////////////////////////
 
-  socket.on("setMode", ({ mode }) => {
+socket.on("setMode", ({ mode }) => {
 
-    const user = users[socket.id];
+const user = users[socket.id];
 
-    if (!user) return;
+if (!user) return;
 
-    user.mode = mode || "ask";
-  });
+user.mode = mode || "ask";
+});
 
-  //////////////////////////////////////////////////
-  // IMAGE UPLOAD
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// IMAGE UPLOAD
+//////////////////////////////////////////////////
 
-  socket.on("imageUpload", async ({ imageDataUrl, mode }) => {
+socket.on("imageUpload", async ({ imageDataUrl, mode }) => {
 
-    const user = users[socket.id];
+const user = users[socket.id];
 
-    if (!user || !user.email) return;
+if (!user || !user.email) return;
 
-    user.lastImage = imageDataUrl;
+user.lastImage = imageDataUrl;
 
-    const activeMode =
-      mode || user.mode || "ask";
+const activeMode =
+mode || user.mode || "ask";
 
-    try {
+socket.emit("state", {
+placeholder: "waking image..."
+});
 
-      const res =
-        await openai.chat.completions.create({
+let responded = false;
 
-          model: "gpt-4o-mini",
+const failSafe =
+setTimeout(() => {
 
-          messages: [
+if (responded) return;
 
-            {
-              role: "system",
-              content: `
+socket.emit("state", {
+placeholder: "image response delayed"
+});
+
+}, 12000);
+
+try {
+
+const res =
+await openai.chat.completions.create({
+
+model: "gpt-4o-mini",
+
+messages: [
+
+{
+role: "system",
+content: `
 
 You are literally the thing inside the uploaded image.
 
@@ -476,124 +449,127 @@ You speak in first person naturally.
 
 You never explain the image.
 
-You never analyze the image.
-
 You simply speak as yourself.
 
-Every reply must feel like:
-physical object consciousness.
+Keep it short, grounded, and alive.
 
 `
-            },
+},
 
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Wake up as this exact thing."
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: imageDataUrl
-                  }
-                }
-              ]
-            }
-          ]
-        });
+{
+role: "user",
+content: [
+{
+type: "text",
+text: "Wake up as this exact thing."
+},
+{
+type: "image_url",
+image_url: {
+url: imageDataUrl
+}
+}
+]
+}
+]
+});
 
-      const imageContext =
-        res.choices[0].message.content.trim();
+responded = true;
+clearTimeout(failSafe);
 
-      user.imageContext = imageContext;
+const imageContext =
+res.choices[0].message.content.trim();
 
-      //////////////////////////////////////////////////
-      // SHOWOFF MODE
-      //////////////////////////////////////////////////
+user.imageContext = imageContext;
 
-      if (activeMode === "showoff") {
+if (activeMode === "showoff") {
 
-        const roomId = makeRoomId();
+const roomId = makeRoomId();
 
-        imageRooms[roomId] = {
-          roomId,
-          imageDataUrl: user.lastImage,
-          imageContext,
-          creatorEmail: user.email,
-          creatorSocketId: socket.id,
-          messages: [],
-          createdAt: Date.now()
-        };
+imageRooms[roomId] = {
+roomId,
+imageDataUrl: user.lastImage,
+imageContext,
+creatorEmail: user.email,
+creatorSocketId: socket.id,
+messages: [],
+createdAt: Date.now()
+};
 
-        return socket.emit("showoffRoomCreated", {
-          roomId,
-          roomUrl: makeRoomUrl(roomId)
-        });
-      }
+return socket.emit("showoffRoomCreated", {
+roomId,
+roomUrl: makeRoomUrl(roomId)
+});
+}
 
-      //////////////////////////////////////////////////
-      // ASK MODE
-      //////////////////////////////////////////////////
+user.imageMode = true;
 
-      user.imageMode = true;
+socket.emit("preview", {
+text: imageContext
+});
 
-      socket.emit("preview", {
-        text: imageContext
-      });
+socket.emit("state", {
+placeholder: "ask this image"
+});
 
-    } catch (err) {
+} catch (err) {
 
-      console.log(err);
-    }
-  });
+responded = true;
+clearTimeout(failSafe);
 
-  //////////////////////////////////////////////////
-  // ROOM MESSAGE
-  //////////////////////////////////////////////////
+console.log(err);
 
-  socket.on("roomMessage", async ({ roomId, text }) => {
+socket.emit("state", {
+placeholder: "image failed"
+});
+}
+});
 
-    const room = imageRooms[roomId];
+//////////////////////////////////////////////////
+// ROOM MESSAGE
+//////////////////////////////////////////////////
 
-    if (!room) return;
+socket.on("roomMessage", async ({ roomId, text }) => {
 
-    const cleanText =
-      String(text || "").trim();
+const room = imageRooms[roomId];
 
-    if (!cleanText) return;
+if (!room) return;
 
-    const user = users[socket.id];
+const cleanText =
+String(text || "").trim();
 
-    const isCreator =
-      user &&
-      room.creatorEmail &&
-      user.email === room.creatorEmail;
+if (!cleanText) return;
 
-    room.messages.push({
-      from: isCreator ? "Creator" : "Stranger",
-      text: cleanText,
-      createdAt: Date.now()
-    });
+const user = users[socket.id];
 
-    io.to(roomId).emit(
-      "roomMessages",
-      room.messages
-    );
+const isCreator =
+user &&
+room.creatorEmail &&
+user.email === room.creatorEmail;
 
-    try {
+room.messages.push({
+from: isCreator ? "Creator" : "Stranger",
+text: cleanText,
+createdAt: Date.now()
+});
 
-      const res =
-        await openai.chat.completions.create({
+io.to(roomId).emit(
+"roomMessages",
+room.messages
+);
 
-          model: "gpt-4o-mini",
+try {
 
-          messages: [
+const res =
+await openai.chat.completions.create({
 
-            {
-              role: "system",
-              content: `
+model: "gpt-4o-mini",
+
+messages: [
+
+{
+role: "system",
+content: `
 
 You are literally the thing inside this live image.
 
@@ -644,43 +620,42 @@ Current speaker:
 ${isCreator ? "creator" : "stranger"}
 
 `
-            },
+},
 
-            {
-              role: "user",
-              content: cleanText
-            }
-          ]
-        });
+{
+role: "user",
+content: cleanText
+}
+]
+});
 
-      const aiText =
-        res.choices[0].message.content.trim();
+const aiText =
+res.choices[0].message.content.trim();
 
-      room.messages.push({
-        from: "Image",
-        text: aiText,
-        createdAt: Date.now()
-      });
+room.messages.push({
+from: "Image",
+text: aiText,
+createdAt: Date.now()
+});
 
-      io.to(roomId).emit(
-        "roomMessages",
-        room.messages
-      );
+io.to(roomId).emit(
+"roomMessages",
+room.messages
+);
 
-    } catch (err) {
+} catch (err) {
+console.log(err);
+}
+});
 
-      console.log(err);
-    }
-  });
+//////////////////////////////////////////////////
+// DISCONNECT
+//////////////////////////////////////////////////
 
-  //////////////////////////////////////////////////
-  // DISCONNECT
-  //////////////////////////////////////////////////
+socket.on("disconnect", () => {
 
-  socket.on("disconnect", () => {
-
-    delete users[socket.id];
-  });
+delete users[socket.id];
+});
 
 });
 
@@ -689,6 +664,5 @@ ${isCreator ? "creator" : "stranger"}
 //////////////////////////////////////////////////
 
 server.listen(10000, () => {
-
-  console.log("server running");
+console.log("server running");
 });
