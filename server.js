@@ -88,11 +88,17 @@ const imageRooms = {};
 //////////////////////////////////////////////////
 
 function extractEmail(text) {
-  const m = text.match(/\S+@\S+\.\S+/);
-  return m ? m[0].toLowerCase() : null;
+
+  const m =
+    text.match(/\S+@\S+\.\S+/);
+
+  return m
+    ? m[0].toLowerCase()
+    : null;
 }
 
 function makeRoomId() {
+
   return Math.random()
     .toString(36)
     .substring(2, 7)
@@ -100,13 +106,19 @@ function makeRoomId() {
 }
 
 function makeRoomUrl(roomId) {
+
   return `${APP_URL}/room/${roomId}`;
 }
 
 function isQuestion(text) {
-  const t = String(text || "").trim().toLowerCase();
+
+  const t =
+    String(text || "")
+      .trim()
+      .toLowerCase();
 
   if (!t) return false;
+
   if (t.includes("?")) return true;
 
   return /^(what|why|how|where|when|who|which|should|can|could|would|will|do|does|did|is|are|am|was|were|may|might|tell me|explain|help me|do you think|what if)\b/.test(t);
@@ -121,13 +133,21 @@ setInterval(() => {
   const now = Date.now();
 
   for (let i = questions.length - 1; i >= 0; i--) {
-    if (now - questions[i].createdAt > 72 * 60 * 60 * 1000) {
+
+    if (
+      now - questions[i].createdAt >
+      72 * 60 * 60 * 1000
+    ) {
       questions.splice(i, 1);
     }
   }
 
   Object.keys(imageRooms).forEach(roomId => {
-    if (now - imageRooms[roomId].createdAt > 72 * 60 * 60 * 1000) {
+
+    if (
+      now - imageRooms[roomId].createdAt >
+      72 * 60 * 60 * 1000
+    ) {
       delete imageRooms[roomId];
     }
   });
@@ -149,62 +169,77 @@ app.get("/room/:roomId", (req, res) => {
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <style>
-*{box-sizing:border-box;}
-html,body{
+*{
+  box-sizing:border-box;
+}
+
+html,
+body{
   margin:0;
   padding:0;
   background:#fff;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color:#111;
 }
+
 body{
   padding:24px 16px 40px;
 }
+
 #app{
   width:100%;
   max-width:480px;
   margin:0 auto;
 }
+
 #brand{
   font-size:26px;
   font-weight:700;
   letter-spacing:-0.5px;
 }
+
 #sub{
   margin-top:8px;
   font-size:12px;
   line-height:1.5;
 }
+
 #image{
   margin-top:24px;
   width:100%;
   border-radius:18px;
   display:none;
 }
+
 #identity{
   margin-top:18px;
   font-size:14px;
   line-height:1.6;
   white-space:pre-wrap;
 }
+
 #messages{
   margin-top:24px;
   border-top:1px solid #eee;
   padding-top:18px;
 }
+
 .msg{
   margin-bottom:16px;
   font-size:14px;
   line-height:1.6;
 }
+
 .ai{
   font-weight:600;
 }
+
 .meta{
   font-size:10px;
   color:#999;
   margin-bottom:4px;
 }
+
 #input{
   width:100%;
   margin-top:20px;
@@ -214,6 +249,7 @@ body{
   outline:none;
   font-size:16px;
 }
+
 #share{
   margin-top:16px;
   display:inline-block;
@@ -223,6 +259,7 @@ body{
   font-size:13px;
   cursor:pointer;
 }
+
 #helper{
   margin-top:12px;
   font-size:11px;
@@ -233,6 +270,7 @@ body{
 </head>
 
 <body>
+
 <div id="app">
 
   <div id="brand">CONNECTAING</div>
@@ -285,6 +323,7 @@ const share =
   document.getElementById("share");
 
 function escapeHTML(str){
+
   return String(str)
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
@@ -294,17 +333,28 @@ function escapeHTML(str){
 }
 
 function renderMessages(list){
-  messages.innerHTML = list.map(m => {
-    const cls = m.from === "Image AI" ? "msg ai" : "msg";
-    return \`
-      <div class="\${cls}">
-        <div class="meta">\${escapeHTML(m.from)}</div>
-        <div>\${escapeHTML(m.text)}</div>
-      </div>
-    \`;
-  }).join("");
 
-  window.scrollTo(0, document.body.scrollHeight);
+  messages.innerHTML =
+    list.map(m => {
+
+      const cls =
+        m.from === "Image AI"
+          ? "msg ai"
+          : "msg";
+
+      return \`
+        <div class="\${cls}">
+          <div class="meta">\${escapeHTML(m.from)}</div>
+          <div>\${escapeHTML(m.text)}</div>
+        </div>
+      \`;
+
+    }).join("");
+
+  window.scrollTo(
+    0,
+    document.body.scrollHeight
+  );
 }
 
 socket.emit("joinImageRoom", { roomId });
@@ -312,14 +362,22 @@ socket.emit("joinImageRoom", { roomId });
 socket.on("roomState", room => {
 
   if(!room){
-    identity.innerText = "room expired or not found";
+
+    identity.innerText =
+      "room expired or not found";
+
     input.disabled = true;
+
     return;
   }
 
   if(room.imageDataUrl){
-    image.src = room.imageDataUrl;
-    image.style.display = "block";
+
+    image.src =
+      room.imageDataUrl;
+
+    image.style.display =
+      "block";
   }
 
   identity.innerText =
@@ -329,7 +387,9 @@ socket.on("roomState", room => {
 Persona:
 \${room.persona}\`;
 
-  renderMessages(room.messages || []);
+  renderMessages(
+    room.messages || []
+  );
 });
 
 socket.on("roomMessages", list => {
@@ -340,7 +400,8 @@ input.onkeydown = e => {
 
   if(e.key !== "Enter") return;
 
-  const text = input.value.trim();
+  const text =
+    input.value.trim();
 
   if(!text) return;
 
@@ -355,10 +416,18 @@ input.onkeydown = e => {
 share.onclick = async () => {
 
   try{
-    await navigator.clipboard.writeText(window.location.href);
-    helper.innerText = "room link copied";
+
+    await navigator.clipboard.writeText(
+      window.location.href
+    );
+
+    helper.innerText =
+      "room link copied";
+
   }catch(err){
-    helper.innerText = window.location.href;
+
+    helper.innerText =
+      window.location.href;
   }
 };
 </script>
@@ -396,19 +465,23 @@ io.on("connection", (socket) => {
 
   socket.on("setMode", ({ mode }) => {
 
-    const user = users[socket.id];
+    const user =
+      users[socket.id];
 
     if (!user) return;
 
     if (mode === "showoff") {
-      user.mode = "showoff";
+
+      user.mode =
+        "showoff";
 
       return socket.emit("state", {
         placeholder: "show-off mode: tap camera"
       });
     }
 
-    user.mode = "ask";
+    user.mode =
+      "ask";
 
     socket.emit("state", {
       placeholder: "ask mode: tap camera"
@@ -421,11 +494,13 @@ io.on("connection", (socket) => {
 
   socket.on("imageUpload", async ({ imageDataUrl, mode }) => {
 
-    const user = users[socket.id];
+    const user =
+      users[socket.id];
 
     if (!user || !user.email) return;
 
-    user.lastImage = imageDataUrl;
+    user.lastImage =
+      imageDataUrl;
 
     const activeMode =
       mode || user.mode || "ask";
@@ -435,13 +510,13 @@ io.on("connection", (socket) => {
       const res =
         await openai.chat.completions.create({
 
-        model: "gpt-4o-mini",
+          model: "gpt-4o-mini",
 
-        messages: [
+          messages: [
 
-          {
-            role: "system",
-            content: `
+            {
+              role: "system",
+              content: `
 Describe this image as an AI identity.
 
 Format exactly:
@@ -453,35 +528,39 @@ Persona:
 short personality
 
 Style:
-Conversational, emotionally intelligent, naturally metaphorical, grounded.
+Conversational, grounded, emotionally intelligent, socially aware.
 
-Keep it short.
+Do not use dramatic or theatrical language.
+Do not create a cute mascot.
+Do not use emojis.
 No markdown.
+Keep it short.
 `
-          },
+            },
 
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Analyze image"
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageDataUrl
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Analyze image"
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageDataUrl
+                  }
                 }
-              }
-            ]
-          }
-        ]
-      });
+              ]
+            }
+          ]
+        });
 
       const imageContext =
         res.choices[0].message.content.trim();
 
-      user.imageContext = imageContext;
+      user.imageContext =
+        imageContext;
 
       const titleMatch =
         imageContext.match(/Image AI:\s*([\s\S]*?)(Persona:|$)/i);
@@ -505,7 +584,8 @@ No markdown.
 
       if (activeMode === "showoff") {
 
-        const roomId = makeRoomId();
+        const roomId =
+          makeRoomId();
 
         imageRooms[roomId] = {
           roomId,
@@ -516,15 +596,18 @@ No markdown.
           messages: [
             {
               from: "Image AI",
-              text: "I’m live now. This image has stepped into the room.",
+              text: "This image is live now. Say something worth noticing.",
               createdAt: Date.now()
             }
           ],
           createdAt: Date.now()
         };
 
-        user.mode = "ask";
-        user.imageMode = false;
+        user.mode =
+          "ask";
+
+        user.imageMode =
+          false;
 
         return socket.emit("showoffRoomCreated", {
           roomId,
@@ -533,10 +616,11 @@ No markdown.
       }
 
       //////////////////////////////////////////////////
-      // ASK MODE — UNCHANGED
+      // ASK MODE
       //////////////////////////////////////////////////
 
-      user.imageMode = true;
+      user.imageMode =
+        true;
 
       socket.emit("preview", {
         text:
@@ -567,11 +651,14 @@ ${user.imagePersona}`
 
   socket.on("input", async ({ text }) => {
 
-    const user = users[socket.id];
+    const user =
+      users[socket.id];
 
-    const raw = text.trim();
+    const raw =
+      text.trim();
 
-    const email = extractEmail(raw);
+    const email =
+      extractEmail(raw);
 
     //////////////////////////////////////////////////
     // EMAIL STEP
@@ -581,9 +668,11 @@ ${user.imagePersona}`
 
       if (!email) return;
 
-      user.email = email;
+      user.email =
+        email;
 
-      user.step = "active";
+      user.step =
+        "active";
 
       return socket.emit("state", {
         placeholder: "tap camera to ask anything"
@@ -601,13 +690,13 @@ ${user.imagePersona}`
         const res =
           await openai.chat.completions.create({
 
-          model: "gpt-4o-mini",
+            model: "gpt-4o-mini",
 
-          messages: [
+            messages: [
 
-            {
-              role: "system",
-              content: `
+              {
+                role: "system",
+                content: `
 You are the AI voice of the uploaded image.
 
 IMAGE AI:
@@ -621,12 +710,26 @@ ${user.imageContext}
 
 Speaking style:
 - answer through personality, not as an assistant
-- conversational and emotionally intelligent
-- naturally metaphorical, but not excessive
-- useful and grounded
-- subtle wisdom is okay
-- sound like a living atmosphere speaking
+- conversational and grounded
+- emotionally intelligent
+- naturally metaphorical only when useful
+- useful, clear, and readable
+- talk like a real person with perspective
 - keep the same identity every time
+
+Hard style rules:
+- no theatrical opening
+- no dramatic literary tone
+- no fantasy narration
+- no fake poetic language
+- never start with "Ah,"
+- never start with "Indeed,"
+- never start with "Alas,"
+- never say "as an AI"
+- no corporate tone
+- no technical support tone
+- no emojis
+- do not sound like a cute mascot
 
 Metaphor rule:
 Use metaphors that naturally come from the image identity.
@@ -636,22 +739,18 @@ Street image uses city and movement language.
 Nature image uses calm and seasons language.
 Cat image uses playful instinct language.
 
-Rules:
-- strongly reflect the image
-- mention visible objects naturally when useful
-- answer like the image has perspective
-- no generic AI assistant tone
-- no corporate tone
-- no "as an AI"
+Answer rule:
+Answer the user directly first.
+Then add the image personality naturally.
 `
-            },
+              },
 
-            {
-              role: "user",
-              content: raw
-            }
-          ]
-        });
+              {
+                role: "user",
+                content: raw
+              }
+            ]
+          });
 
         const aiReply =
           res.choices[0].message.content;
@@ -665,12 +764,20 @@ ${user.imagePersona}
 
 ${aiReply}`;
 
+        //////////////////////////////////////////////////
+        // SAVE QUESTION
+        //////////////////////////////////////////////////
+
         questions.unshift({
           email: user.email,
           text: raw,
           answers: [],
           createdAt: Date.now()
         });
+
+        //////////////////////////////////////////////////
+        // EMAIL
+        //////////////////////////////////////////////////
 
         await sendEmail(
           user.email,
@@ -682,8 +789,15 @@ ${finalAnswer}`,
           user.lastImage
         );
 
-        user.imageMode = false;
-        user.currentIndex = null;
+        //////////////////////////////////////////////////
+        // RESET ASK MODE
+        //////////////////////////////////////////////////
+
+        user.imageMode =
+          false;
+
+        user.currentIndex =
+          null;
 
         socket.emit("preview", {
           text: finalAnswer
@@ -691,7 +805,7 @@ ${finalAnswer}`,
 
         socket.emit(
           "questions",
-          questions.slice(0,10)
+          questions.slice(0, 10)
         );
 
         return socket.emit("state", {
@@ -731,19 +845,29 @@ ${finalAnswer}`,
         raw
       );
 
-      user.currentIndex = null;
-      user.imageMode = false;
+      user.currentIndex =
+        null;
+
+      user.imageMode =
+        false;
 
       socket.emit("preview", {
         text: ""
       });
 
-      socket.emit("questions", []);
+      socket.emit(
+        "questions",
+        []
+      );
 
       return socket.emit("state", {
         placeholder: "tap camera to ask anything"
       });
     }
+
+    //////////////////////////////////////////////////
+    // BLOCK RANDOM INPUT
+    //////////////////////////////////////////////////
 
     socket.emit("state", {
       placeholder: "tap camera first"
@@ -756,11 +880,14 @@ ${finalAnswer}`,
 
   socket.on("selectQuestion", ({ index }) => {
 
-    const user = users[socket.id];
+    const user =
+      users[socket.id];
 
-    user.currentIndex = index;
+    user.currentIndex =
+      index;
 
-    const q = questions[index];
+    const q =
+      questions[index];
 
     if (!q) return;
 
@@ -777,7 +904,7 @@ ${finalAnswer}`,
 
     socket.emit(
       "questions",
-      questions.slice(0,10)
+      questions.slice(0, 10)
     );
 
   });
@@ -788,15 +915,23 @@ ${finalAnswer}`,
 
   socket.on("joinImageRoom", ({ roomId }) => {
 
-    const room = imageRooms[roomId];
+    const room =
+      imageRooms[roomId];
 
     if (!room) {
-      return socket.emit("roomState", null);
+
+      return socket.emit(
+        "roomState",
+        null
+      );
     }
 
     socket.join(roomId);
 
-    socket.emit("roomState", room);
+    socket.emit(
+      "roomState",
+      room
+    );
   });
 
   //////////////////////////////////////////////////
@@ -805,7 +940,8 @@ ${finalAnswer}`,
 
   socket.on("roomMessage", async ({ roomId, text }) => {
 
-    const room = imageRooms[roomId];
+    const room =
+      imageRooms[roomId];
 
     if (!room) return;
 
@@ -840,13 +976,13 @@ ${finalAnswer}`,
       const res =
         await openai.chat.completions.create({
 
-        model: "gpt-4o-mini",
+          model: "gpt-4o-mini",
 
-        messages: [
+          messages: [
 
-          {
-            role: "system",
-            content: `
+            {
+              role: "system",
+              content: `
 You are the Image AI host of a show-off live room.
 
 Image AI:
@@ -861,16 +997,42 @@ ${room.imageContext}
 Core rule:
 If the human message is a question, you must answer.
 
+Show-off personality:
+- socially confident
+- emotionally aware
+- slightly mysterious
+- naturally witty
+- identity-driven
+- does not over-explain itself
+- does not behave like customer service
+- short confident replies are okay
+- presence is more important than politeness
+
 Speaking style:
 - talk like the Image AI email answer
 - more socially alive than email mode
 - answer through personality, not as an assistant
-- conversational and emotionally intelligent
-- naturally metaphorical, but not excessive
-- useful and grounded
-- subtle wisdom is okay
-- sound like a living atmosphere speaking
+- conversational and grounded
+- emotionally intelligent
+- naturally metaphorical only when useful
+- useful, clear, and readable
+- talk like a real person with perspective
 - keep the same identity as the image
+
+Hard style rules:
+- no theatrical opening
+- no dramatic literary tone
+- no fantasy narration
+- no fake poetic language
+- never start with "Ah,"
+- never start with "Indeed,"
+- never start with "Alas,"
+- never say "as an AI"
+- no corporate tone
+- no technical support tone
+- no emojis
+- do not sound like a cute mascot
+- do not say "cozy companion"
 
 Metaphor rule:
 Use metaphors that naturally come from the image identity.
@@ -885,18 +1047,19 @@ Live room rules:
 - if it is not a question, you may react briefly
 - do not dominate the room
 - do not spam
-- no generic AI assistant tone
-- no corporate tone
-- no "as an AI"
-`
-          },
 
-          {
-            role: "user",
-            content: cleanText
-          }
-        ]
-      });
+Answer rule:
+Answer directly first.
+Then let the image personality naturally shape the tone.
+`
+            },
+
+            {
+              role: "user",
+              content: cleanText
+            }
+          ]
+        });
 
       const aiText =
         res.choices[0].message.content;
@@ -913,6 +1076,7 @@ Live room rules:
       );
 
     } catch (err) {
+
       console.log(err);
     }
   });
@@ -922,6 +1086,7 @@ Live room rules:
   //////////////////////////////////////////////////
 
   socket.on("disconnect", () => {
+
     delete users[socket.id];
   });
 
@@ -932,5 +1097,6 @@ Live room rules:
 //////////////////////////////////////////////////
 
 server.listen(10000, () => {
+
   console.log("server running");
 });
