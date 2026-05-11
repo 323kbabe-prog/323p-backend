@@ -956,10 +956,8 @@ ${finalAnswer}`,
     const question =
       isQuestion(cleanText);
 
-    const shouldAIReply =
-      question ||
-      cleanText.toLowerCase().includes("image ai") ||
-      Math.random() < 0.25;
+const shouldAIReply =
+  cleanText.length > 0;
 
     if (!shouldAIReply) return;
 
