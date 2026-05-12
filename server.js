@@ -32,41 +32,70 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendEmail(to, subject, text, imageDataUrl) {
+async function sendEmail(
+  to,
+  subject,
+  text,
+  imageDataUrl
+){
 
   let attachments = [];
   let imgTag = "";
 
-  if (imageDataUrl) {
+  if(imageDataUrl){
 
     const base64Data =
-      imageDataUrl.split("base64,")[1];
+      imageDataUrl.split(
+        "base64,"
+      )[1];
 
     attachments.push({
-      filename: "image.jpg",
-      content: base64Data,
-      encoding: "base64",
-      cid: "image1"
+      filename:"image.jpg",
+      content:base64Data,
+      encoding:"base64",
+      cid:"image1"
     });
 
     imgTag =
-      `<img src="cid:image1" style="max-width:100%;border-radius:12px;" />`;
+      `<img src="cid:image1"
+      style="max-width:100%;
+      border-radius:12px;" />`;
   }
 
   await transporter.sendMail({
-    from: `"CONNECTAING.COM" <${process.env.EMAIL_USER}>`,
+
+    from:
+      `"CONNECTAING.COM"
+      <${process.env.EMAIL_USER}>`,
+
     to,
+
     subject,
+
     text,
-    html: `
-      <div style="font-family:system-ui;padding:20px;">
-        <div style="white-space:pre-wrap;line-height:1.6;">
+
+    html:`
+      <div
+      style="
+      font-family:system-ui;
+      padding:20px;
+      ">
+
+        <div
+        style="
+        white-space:pre-wrap;
+        line-height:1.6;
+        ">
           ${text}
         </div>
+
         <br>
+
         ${imgTag}
+
       </div>
     `,
+
     attachments
   });
 }
@@ -91,13 +120,18 @@ setInterval(() => {
   // QUESTION CLEANUP
   //////////////////////////////////////////////////
 
-  for (let i = questions.length - 1; i >= 0; i--) {
+  for(
+    let i = questions.length - 1;
+    i >= 0;
+    i--
+  ){
 
-    if (
+    if(
       now - questions[i].createdAt >
       72 * 60 * 60 * 1000
-    ) {
-      questions.splice(i, 1);
+    ){
+
+      questions.splice(i,1);
     }
   }
 
@@ -105,11 +139,16 @@ setInterval(() => {
   // ROOM CLEANUP
   //////////////////////////////////////////////////
 
-  for (const roomId in rooms) {
+  for(const roomId in rooms){
 
-    if (now > rooms[roomId].expiresAt) {
+    if(
+      now >
+      rooms[roomId].expiresAt
+    ){
 
-      io.to(roomId).emit("roomClosed");
+      io.to(roomId).emit(
+        "roomClosed"
+      );
 
       delete rooms[roomId];
     }
@@ -121,66 +160,78 @@ setInterval(() => {
 // HELPERS
 //////////////////////////////////////////////////
 
-function extractEmail(text) {
+function extractEmail(text){
 
-  const m = text.match(/\S+@\S+\.\S+/);
+  const m =
+    text.match(/\S+@\S+\.\S+/);
 
   return m
     ? m[0].toLowerCase()
     : null;
 }
 
-function createRoomId() {
-
-  return Math.random()
-    .toString(36)
-    .substring(2, 8);
-}
-
 //////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////
 
-io.on("connection", (socket) => {
+io.on("connection", socket => {
 
   users[socket.id] = {
-    step: "email",
-    email: null,
-    imageMode: false,
-    imageContext: null,
-    currentIndex: null,
-    lastImage: null,
-    currentRoom: null
+
+    step:"email",
+
+    email:null,
+
+    imageMode:false,
+
+    imageContext:null,
+
+    currentIndex:null,
+
+    lastImage:null,
+
+    currentRoom:null
   };
 
   socket.emit("state", {
-    placeholder: "enter your email to connect"
+
+    placeholder:
+      "enter your email to connect"
   });
 
   //////////////////////////////////////////////////
   // IMAGE UPLOAD
   //////////////////////////////////////////////////
 
-  socket.on("imageUpload", async ({ imageDataUrl }) => {
+  socket.on(
+    "imageUpload",
 
-    const user = users[socket.id];
+    async ({
+      imageDataUrl,
+      roomMode
+    }) => {
 
-    if (!user.email) return;
+    const user =
+      users[socket.id];
 
-    user.lastImage = imageDataUrl;
+    if(!user.email) return;
 
-    try {
+    user.lastImage =
+      imageDataUrl;
+
+    try{
 
       const res =
         await openai.chat.completions.create({
 
-        model: "gpt-4o-mini",
+        model:"gpt-4o-mini",
 
-        messages: [
+        messages:[
 
           {
-            role: "system",
-            content: `
+            role:"system",
+
+            content:`
 Describe this image as an AI identity.
 
 Format:
@@ -189,23 +240,27 @@ Environment
 Presence
 
 Rules:
+- short phrases
 - no markdown
 - no symbols
-- short phrases only
 `
           },
 
           {
-            role: "user",
-            content: [
+            role:"user",
+
+            content:[
+
               {
-                type: "text",
-                text: "Analyze image"
+                type:"text",
+                text:"Analyze image"
               },
+
               {
-                type: "image_url",
-                image_url: {
-                  url: imageDataUrl
+                type:"image_url",
+
+                image_url:{
+                  url:imageDataUrl
                 }
               }
             ]
@@ -214,29 +269,90 @@ Rules:
       });
 
       user.imageContext =
-        res.choices[0].message.content
-          .replace(/\*\*/g, "")
-          .replace(/Atmosphere:/gi, "Environment:")
-          .replace(/Emotional Tone:/gi, "Presence:");
+        res.choices[0]
+          .message
+          .content
+          .replace(/\*\*/g,"")
+          .replace(
+            /Atmosphere:/gi,
+            "Environment:"
+          )
+          .replace(
+            /Emotional Tone:/gi,
+            "Presence:"
+          );
+
+      //////////////////////////////////////////////////
+      // ROOM MODE
+      //////////////////////////////////////////////////
+
+      if(roomMode){
+
+        const roomId =
+          Math.random()
+            .toString(36)
+            .substring(2,8);
+
+        rooms[roomId] = {
+
+          id:roomId,
+
+          imageContext:
+            user.imageContext,
+
+          messages:[],
+
+          createdAt:Date.now(),
+
+          expiresAt:
+            Date.now() +
+            60 * 60 * 1000
+        };
+
+        socket.join(roomId);
+
+        user.currentRoom =
+          roomId;
+
+        socket.emit(
+          "roomCreated",
+          {
+            roomId,
+            imageContext:
+              user.imageContext
+          }
+        );
+
+        return;
+      }
+
+      //////////////////////////////////////////////////
+      // NORMAL V3 MODE
+      //////////////////////////////////////////////////
 
       user.imageMode = true;
 
       socket.emit("preview", {
+
         text:
 `Image AI:
 ${user.imageContext}`
       });
 
       socket.emit("state", {
-        placeholder: "ask this image"
+
+        placeholder:
+          "ask this image"
       });
 
-    } catch (err) {
+    }catch(err){
 
       console.log(err);
 
       socket.emit("state", {
-        placeholder: "image failed"
+
+        placeholder:
+          "image failed"
       });
     }
   });
@@ -245,49 +361,60 @@ ${user.imageContext}`
   // INPUT
   //////////////////////////////////////////////////
 
-  socket.on("input", async ({ text }) => {
+  socket.on(
+    "input",
 
-    const user = users[socket.id];
+    async ({ text }) => {
 
-    const raw = text.trim();
+    const user =
+      users[socket.id];
 
-    const email = extractEmail(raw);
+    const raw =
+      text.trim();
+
+    const email =
+      extractEmail(raw);
 
     //////////////////////////////////////////////////
     // EMAIL STEP
     //////////////////////////////////////////////////
 
-    if (user.step === "email") {
+    if(user.step === "email"){
 
-      if (!email) return;
+      if(!email) return;
 
       user.email = email;
 
       user.step = "active";
 
-      return socket.emit("state", {
-        placeholder: "tap camera to ask anything"
-      });
+      return socket.emit(
+        "state",
+        {
+          placeholder:
+            "tap camera to ask anything"
+        }
+      );
     }
 
     //////////////////////////////////////////////////
     // IMAGE AI QUESTION
     //////////////////////////////////////////////////
 
-    if (user.imageMode) {
+    if(user.imageMode){
 
-      try {
+      try{
 
         const res =
           await openai.chat.completions.create({
 
-          model: "gpt-4o-mini",
+          model:"gpt-4o-mini",
 
-          messages: [
+          messages:[
 
             {
-              role: "system",
-              content: `
+              role:"system",
+
+              content:`
 You are the image identity itself.
 
 Current year:
@@ -295,21 +422,22 @@ ${new Date().getFullYear()}
 
 Rules:
 - short replies
-- clean wording
 - emotionally aware
 - no markdown
 `
             },
 
             {
-              role: "user",
-              content: raw
+              role:"user",
+              content:raw
             }
           ]
         });
 
         const aiReply =
-          res.choices[0].message.content;
+          res.choices[0]
+            .message
+            .content;
 
         const finalAnswer =
 `Image AI:
@@ -318,47 +446,60 @@ ${user.imageContext}
 ${aiReply}`;
 
         questions.unshift({
-          email: user.email,
-          text: raw,
-          answers: [],
-          createdAt: Date.now()
+
+          email:user.email,
+
+          text:raw,
+
+          answers:[],
+
+          createdAt:Date.now()
         });
 
         await sendEmail(
+
           user.email,
+
           "Image AI Reply",
+
           `Q:
 ${raw}
 
 ${finalAnswer}`,
+
           user.lastImage
         );
 
         user.imageMode = false;
 
         socket.emit("preview", {
-          text: finalAnswer
+          text:finalAnswer
         });
 
-        socket.emit("questions",
+        socket.emit(
+          "questions",
           questions.slice(0,10)
         );
 
-        socket.emit("roomReady", {
-          imageContext: user.imageContext
-        });
+        return socket.emit(
+          "state",
+          {
+            placeholder:
+              "tap a question to answer"
+          }
+        );
 
-        return socket.emit("state", {
-          placeholder: "tap a question to answer"
-        });
-
-      } catch (err) {
+      }catch(err){
 
         console.log(err);
 
-        return socket.emit("state", {
-          placeholder: "AI failed"
-        });
+        return socket.emit(
+          "state",
+          {
+            placeholder:
+              "AI failed"
+          }
+        );
       }
     }
 
@@ -366,17 +507,20 @@ ${finalAnswer}`,
     // ANSWER MODE
     //////////////////////////////////////////////////
 
-    if (user.currentIndex !== null) {
+    if(user.currentIndex !== null){
 
       const q =
         questions[user.currentIndex];
 
-      if (!q) return;
+      if(!q) return;
 
       q.answers.push({
-        text: raw,
-        from: user.email,
-        createdAt: Date.now()
+
+        text:raw,
+
+        from:user.email,
+
+        createdAt:Date.now()
       });
 
       await sendEmail(
@@ -388,14 +532,21 @@ ${finalAnswer}`,
       user.currentIndex = null;
 
       socket.emit("preview", {
-        text: ""
+        text:""
       });
 
-      socket.emit("questions", []);
+      socket.emit(
+        "questions",
+        []
+      );
 
-      return socket.emit("state", {
-        placeholder: "tap camera to ask anything"
-      });
+      return socket.emit(
+        "state",
+        {
+          placeholder:
+            "tap camera to ask anything"
+        }
+      );
     }
 
   });
@@ -404,26 +555,39 @@ ${finalAnswer}`,
   // SELECT QUESTION
   //////////////////////////////////////////////////
 
-  socket.on("selectQuestion", ({ index }) => {
+  socket.on(
+    "selectQuestion",
 
-    const user = users[socket.id];
+    ({ index }) => {
 
-    user.currentIndex = index;
+    const user =
+      users[socket.id];
 
-    const q = questions[index];
+    user.currentIndex =
+      index;
 
-    if (!q) return;
+    const q =
+      questions[index];
 
-    socket.emit("state", {
-      placeholder: `answering: ${q.text}`
-    });
+    if(!q) return;
+
+    socket.emit(
+      "state",
+      {
+        placeholder:
+          `answering: ${q.text}`
+      }
+    );
   });
 
   //////////////////////////////////////////////////
   // REQUEST QUESTIONS
   //////////////////////////////////////////////////
 
-  socket.on("requestQuestions", () => {
+  socket.on(
+    "requestQuestions",
+
+    () => {
 
     socket.emit(
       "questions",
@@ -433,133 +597,67 @@ ${finalAnswer}`,
   });
 
   //////////////////////////////////////////////////
-  // CREATE ROOM
-  //////////////////////////////////////////////////
-
-  socket.on("createRoom", () => {
-
-    const user = users[socket.id];
-
-    if (!user.imageContext) return;
-
-    const roomId =
-      createRoomId();
-
-    rooms[roomId] = {
-
-      id: roomId,
-
-      creator: user.email,
-
-      imageContext:
-        user.imageContext,
-
-      messages: [],
-
-      createdAt: Date.now(),
-
-      expiresAt:
-        Date.now() +
-        60 * 60 * 1000
-    };
-
-    user.currentRoom = roomId;
-
-    socket.join(roomId);
-
-    socket.emit("roomCreated", {
-      roomId,
-      imageContext:
-        user.imageContext
-    });
-  });
-
-  //////////////////////////////////////////////////
-  // JOIN ROOM
-  //////////////////////////////////////////////////
-
-  socket.on("joinRoom", ({ roomId }) => {
-
-    const room = rooms[roomId];
-
-    if (!room) {
-
-      return socket.emit(
-        "roomClosed"
-      );
-    }
-
-    socket.join(roomId);
-
-    users[socket.id].currentRoom =
-      roomId;
-
-    socket.emit("roomData", room);
-  });
-
-  //////////////////////////////////////////////////
   // ROOM MESSAGE
   //////////////////////////////////////////////////
 
-  socket.on("roomMessage",
+  socket.on(
+    "roomMessage",
+
     async ({ text }) => {
 
     const user =
       users[socket.id];
 
-    const roomId =
-      user.currentRoom;
-
     const room =
-      rooms[roomId];
+      rooms[user.currentRoom];
 
-    if (!room) return;
+    if(!room) return;
 
-    const msg = {
-      from: user.email,
-      text,
-      createdAt: Date.now()
-    };
+    room.messages.push({
 
-    room.messages.push(msg);
+      from:user.email,
 
-    io.to(roomId).emit(
+      text
+    });
+
+    io.to(room.id).emit(
       "roomMessages",
       room.messages
     );
 
     //////////////////////////////////////////////////
-    // AI REACTION
+    // AI REPLY
     //////////////////////////////////////////////////
 
-    try {
+    try{
 
       const res =
         await openai.chat.completions.create({
 
-        model: "gpt-4o-mini",
+        model:"gpt-4o-mini",
 
-        messages: [
+        messages:[
 
           {
-            role: "system",
-            content: `
+            role:"system",
+
+            content:`
 You are the room itself.
 
 Image identity:
 ${room.imageContext}
 
 Rules:
-- short atmospheric reactions
-- socially aware
+- short replies
+- emotional awareness
+- socially reactive
 - no markdown
-- react naturally
 `
           },
 
           {
-            role: "user",
-            content: text
+            role:"user",
+            content:text
           }
         ]
       });
@@ -570,17 +668,18 @@ Rules:
           .content;
 
       room.messages.push({
-        from: "Image AI",
-        text: aiReply,
-        createdAt: Date.now()
+
+        from:"Image AI",
+
+        text:aiReply
       });
 
-      io.to(roomId).emit(
+      io.to(room.id).emit(
         "roomMessages",
         room.messages
       );
 
-    } catch(err) {
+    }catch(err){
 
       console.log(err);
     }
@@ -591,27 +690,28 @@ Rules:
   // AI SEARCH
   //////////////////////////////////////////////////
 
-  socket.on("aiSearch", async () => {
+  socket.on(
+    "aiSearch",
+
+    () => {
 
     const user =
       users[socket.id];
 
-    const roomId =
-      user.currentRoom;
-
     const room =
-      rooms[roomId];
+      rooms[user.currentRoom];
 
-    if (!room) return;
+    if(!room) return;
 
     room.messages.push({
-      from: "Reality",
+
+      from:"Image AI",
+
       text:
-        "People around this feeling are discussing similar things online right now.",
-      createdAt: Date.now()
+`People around this feeling are discussing similar things online right now.`
     });
 
-    io.to(roomId).emit(
+    io.to(room.id).emit(
       "roomMessages",
       room.messages
     );
@@ -622,7 +722,10 @@ Rules:
   // DISCONNECT
   //////////////////////////////////////////////////
 
-  socket.on("disconnect", () => {
+  socket.on(
+    "disconnect",
+
+    () => {
 
     delete users[socket.id];
   });
@@ -635,5 +738,7 @@ Rules:
 
 server.listen(10000, () => {
 
-  console.log("server running");
+  console.log(
+    "server running"
+  );
 });
