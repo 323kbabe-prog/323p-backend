@@ -628,66 +628,114 @@ ${finalAnswer}`,
       room.messages
     );
 
-    //////////////////////////////////////////////////
-    // AI REPLY
-    //////////////////////////////////////////////////
+   //////////////////////////////////////////////////
+// IMAGE REACTION V5
+//////////////////////////////////////////////////
 
-    try{
+try{
 
-      const res =
-        await openai.chat.completions.create({
+  //////////////////////////////////////////////////
+  // GPT CREATES EMOTIONAL NEWS SEARCH
+  //////////////////////////////////////////////////
 
-        model:"gpt-4o-mini",
+  const emotionRes =
+    await openai.chat.completions.create({
 
-        messages:[
+    model:"gpt-4o-mini",
 
-          {
-            role:"system",
+    messages:[
 
-            content:`
-You are the room itself.
+      {
+        role:"system",
 
-Image identity:
-${room.imageContext}
+        content:`
+Turn the user's message into ONE emotional current-news image search phrase.
 
 Rules:
-- short replies
-- emotional awareness
-- socially reactive
-- no markdown
+- visual atmosphere only
+- emotionally cinematic
+- modern culture feeling
+- 3 to 8 words
+- no punctuation
+- no quotes
+
+Examples:
+
+lonely celebrity backstage
+sad city protest
+empty subway late night
+exhausted athlete press conference
+rainy downtown loneliness
 `
-          },
+      },
 
-          {
-            role:"user",
-            content:text
-          }
-        ]
-      });
-
-      const aiReply =
-        res.choices[0]
-          .message
-          .content;
-
-      room.messages.push({
-
-        from:"Image AI",
-
-        text:aiReply
-      });
-
-      io.to(room.id).emit(
-        "roomMessages",
-        room.messages
-      );
-
-    }catch(err){
-
-      console.log(err);
-    }
-
+      {
+        role:"user",
+        content:text
+      }
+    ]
   });
+
+  const searchQuery =
+    emotionRes
+      .choices[0]
+      .message
+      .content
+      .trim();
+
+  //////////////////////////////////////////////////
+  // SERP CURRENT NEWS SEARCH
+  //////////////////////////////////////////////////
+
+  const serpFetch =
+    await fetch(
+
+      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+
+    );
+
+  const serpRes =
+    await serpFetch.json();
+
+  //////////////////////////////////////////////////
+  // GET ONE NEWS IMAGE
+  //////////////////////////////////////////////////
+
+  const imageUrl =
+
+    serpRes
+      ?.news_results?.[0]
+      ?.thumbnail ||
+
+    serpRes
+      ?.news_results?.[0]
+      ?.thumbnail_small;
+
+  if(!imageUrl) return;
+
+  //////////////////////////////////////////////////
+  // PUSH IMAGE MESSAGE
+  //////////////////////////////////////////////////
+
+  room.messages.push({
+
+    from:"Image AI",
+
+    image:imageUrl
+  });
+
+  io.to(room.id).emit(
+
+    "roomMessages",
+
+    room.messages
+  );
+
+}catch(err){
+
+  console.log(err);
+}
+});
 
   //////////////////////////////////////////////////
   // AI SEARCH
