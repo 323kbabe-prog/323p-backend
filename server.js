@@ -314,6 +314,55 @@ Rules:
         user.currentRoom =
           roomId;
 
+//////////////////////////////////////////////////
+// INITIAL ROOM QUESTION
+//////////////////////////////////////////////////
+
+const starterRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Create ONE short emotional curiosity question.
+
+Rules:
+- lowercase
+- no punctuation
+- emotionally tempting
+- 2 to 6 words
+- internet atmosphere feeling
+
+Examples:
+
+want to see loneliness
+see what people hide
+see public sadness
+want to see obsession
+`
+    }
+  ]
+});
+
+const starterQuestion =
+  starterRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+rooms[roomId].messages.push({
+
+  from:"Image AI",
+
+  ask:starterQuestion
+});
+        
      socket.emit(
   "roomCreated",
   {
@@ -323,7 +372,10 @@ Rules:
       user.imageContext,
 
     imageDataUrl:
-      user.lastImage
+      user.lastImage,
+
+    messages:
+      rooms[roomId].messages
   }
 );
         return;
@@ -775,13 +827,73 @@ const moodText =
 // PUSH IMAGE MESSAGE
 //////////////////////////////////////////////////
 
+//////////////////////////////////////////////////
+// NEXT QUESTION
+//////////////////////////////////////////////////
+
+const nextQuestionRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Create ONE short emotional curiosity question.
+
+Rules:
+- lowercase
+- no punctuation
+- emotionally tempting
+- 2 to 6 words
+- internet atmosphere feeling
+
+Examples:
+
+see hidden pressure
+want to see attention
+see emotional noise
+see fake happiness
+`
+    },
+
+    {
+      role:"user",
+
+      content:`
+User said:
+${text}
+
+Mood:
+${moodText}
+`
+    }
+  ]
+});
+
+const nextQuestion =
+  nextQuestionRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+//////////////////////////////////////////////////
+// PUSH IMAGE + LOOP
+//////////////////////////////////////////////////
+
 room.messages.push({
 
   from:"Image AI",
 
   image:imageUrl,
 
-  mood:moodText
+  mood:moodText,
+
+  ask:nextQuestion
 });
 
   io.to(room.id).emit(
