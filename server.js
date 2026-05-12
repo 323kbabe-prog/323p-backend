@@ -258,6 +258,8 @@ ${user.imageContext}`
              content: `
 Describe this image as an AI identity.
 
+Current year: ${new Date().getFullYear()} 
+
 Format:
 Objects
 Environment
@@ -269,6 +271,7 @@ Rules:
 - no **
 - clean plain text only
 - short natural phrases
+- always use the correct current year 
 `
             },
 
