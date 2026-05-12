@@ -1,30 +1,38 @@
+// ==================================================
+// CONNECTAING V4 BACKEND
+// server.js
+// ==================================================
+
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
-const crypto = require("crypto");
 
 const app = express();
 
 app.use(cors({ origin: "*" }));
 
 app.use(express.json({
-  limit:"50mb"
+  limit: "15mb"
 }));
 
 const server =
   http.createServer(app);
 
 const io = new Server(server, {
-  cors:{ origin:"*" }
+  cors: { origin: "*" }
 });
 
 const openai = new OpenAI({
   apiKey:
     process.env.OPENAI_API_KEY
 });
+
+const APP_URL =
+  process.env.APP_URL ||
+  "https://YOUR-RENDER-URL.onrender.com";
 
 //////////////////////////////////////////////////
 // EMAIL
@@ -112,7 +120,59 @@ const users = {};
 
 const questions = [];
 
-const rooms = {};
+const imageRooms = {};
+
+//////////////////////////////////////////////////
+// HELPERS
+//////////////////////////////////////////////////
+
+function extractEmail(text){
+
+  const m =
+    text.match(
+      /\S+@\S+\.\S+/
+    );
+
+  return m
+    ? m[0].toLowerCase()
+    : null;
+}
+
+function makeRoomId(){
+
+  return Math.random()
+    .toString(36)
+    .substring(2,7)
+    .toUpperCase();
+}
+
+function makeRoomUrl(roomId){
+
+  return `${APP_URL}/room/${roomId}`;
+}
+
+function detectEmotion(text){
+
+  const t =
+    text.toLowerCase();
+
+  if(t.includes("lonely"))
+    return "loneliness";
+
+  if(t.includes("love"))
+    return "romance";
+
+  if(t.includes("miss"))
+    return "nostalgia";
+
+  if(t.includes("fear"))
+    return "anxiety";
+
+  if(t.includes("justin"))
+    return "celebrity fixation";
+
+  return "general";
+}
 
 //////////////////////////////////////////////////
 // CLEANUP
@@ -122,7 +182,9 @@ setInterval(() => {
 
   const now = Date.now();
 
+  //////////////////////////////////////////////////
   // QUESTIONS
+  //////////////////////////////////////////////////
 
   for(
     let i =
@@ -144,24 +206,22 @@ setInterval(() => {
     }
   }
 
+  //////////////////////////////////////////////////
   // ROOMS
+  //////////////////////////////////////////////////
 
-  Object.keys(rooms)
+  Object.keys(imageRooms)
     .forEach(roomId => {
 
     if(
-      now >
-      rooms[roomId]
-        .expiresAt
+      now -
+      imageRooms[roomId]
+        .createdAt >
+
+      72 * 60 * 60 * 1000
     ){
 
-      io.to(roomId)
-        .emit(
-          "roomClosed",
-          { roomId }
-        );
-
-      delete rooms[roomId];
+      delete imageRooms[roomId];
     }
 
   });
@@ -169,39 +229,18 @@ setInterval(() => {
 },60000);
 
 //////////////////////////////////////////////////
-// HELPERS
+// ROOM PAGE
 //////////////////////////////////////////////////
 
-function extractEmail(text){
+app.get(
+  "/room/:roomId",
+  (req,res) => {
 
-  const m =
-    text.match(
-      /\S+@\S+\.\S+/
-    );
+  res.sendFile(
+    __dirname + "/public/room.html"
+  );
 
-  return m
-    ? m[0].toLowerCase()
-    : null;
-}
-
-function sanitizeText(t=""){
-
-  return t
-
-    .replace(/\*\*/g,"")
-
-    .replace(
-      /Atmosphere:/gi,
-      "Environment:"
-    )
-
-    .replace(
-      /Emotional Tone:/gi,
-      "Presence:"
-    )
-
-    .trim();
-}
+});
 
 //////////////////////////////////////////////////
 // SOCKET
@@ -221,18 +260,22 @@ io.on(
 
     imageContext:null,
 
+    imageTitle:null,
+
+    imagePersona:null,
+
     currentIndex:null,
 
-    lastImage:null,
-
-    currentRoom:null
+    lastImage:null
   };
 
-  socket.emit("state",{
-
-    placeholder:
-      "enter your email to connect"
-  });
+  socket.emit(
+    "state",
+    {
+      placeholder:
+        "enter your email to connect"
+    }
+  );
 
   //////////////////////////////////////////////////
   // IMAGE UPLOAD
@@ -265,18 +308,18 @@ io.on(
             role:"system",
 
             content:`
-Describe this image as an AI identity.
+You are the uploaded image itself.
+
+Describe yourself naturally.
 
 Format:
-Objects
-Environment
-Presence
+Image AI:
+Persona:
 
 Rules:
 - no markdown
-- no symbols
-- no **
-- short phrases
+- no assistant tone
+- short natural phrasing
             `
           },
 
@@ -306,38 +349,48 @@ Rules:
         ]
       });
 
-      user.imageContext =
-        sanitizeText(
-          res.choices[0]
-            .message.content
-        );
+      const imageContext =
+        res.choices[0]
+          .message.content;
 
-      user.imageMode = true;
+      user.imageContext =
+        imageContext;
+
+      user.imageTitle =
+        imageContext;
+
+      user.imagePersona =
+        imageContext;
+
+      user.imageMode =
+        true;
 
       socket.emit(
         "preview",
         {
-          text:
-`Image AI:
-${user.imageContext}`
+          text:imageContext
         }
       );
 
-      socket.emit("state",{
-
-        placeholder:
-          "ask this image"
-      });
+      socket.emit(
+        "state",
+        {
+          placeholder:
+            "ask this image"
+        }
+      );
 
     }catch(err){
 
       console.log(err);
 
-      socket.emit("state",{
-
-        placeholder:
-          "image failed"
-      });
+      socket.emit(
+        "state",
+        {
+          placeholder:
+            "image failed"
+        }
+      );
     }
 
   });
@@ -368,9 +421,11 @@ ${user.imageContext}`
       if(!email)
         return;
 
-      user.email = email;
+      user.email =
+        email;
 
-      user.step = "active";
+      user.step =
+        "active";
 
       return socket.emit(
         "state",
@@ -382,7 +437,7 @@ ${user.imageContext}`
     }
 
     //////////////////////////////////////////////////
-    // IMAGE AI QUESTION
+    // IMAGE QUESTION
     //////////////////////////////////////////////////
 
     if(user.imageMode){
@@ -401,22 +456,13 @@ ${user.imageContext}`
               role:"system",
 
               content:`
-Describe this image as an AI identity.
+You ARE the image itself.
 
-Current year:
-${new Date().getFullYear()}
+Stay in identity permanently.
 
-Format:
-Objects
-Environment
-Presence
+Never behave like assistant.
 
-Rules:
-- no markdown
-- no symbols
-- no **
-- clean text only
-- short phrases
+Speak socially and naturally.
               `
             },
 
@@ -430,14 +476,11 @@ Rules:
         });
 
         const aiReply =
-          sanitizeText(
-            res.choices[0]
-              .message.content
-          );
+          res.choices[0]
+            .message.content;
 
         const finalAnswer =
-`Image AI:
-${user.imageContext}
+`${user.imageContext}
 
 ${aiReply}`;
 
@@ -478,12 +521,14 @@ ${finalAnswer}`,
         );
 
         //////////////////////////////////////////////////
-        // RESET IMAGE MODE
+        // RESET
         //////////////////////////////////////////////////
 
-        user.imageMode = false;
+        user.imageMode =
+          false;
 
-        user.currentIndex = null;
+        user.currentIndex =
+          null;
 
         socket.emit(
           "preview",
@@ -510,7 +555,7 @@ ${finalAnswer}`,
 
         console.log(err);
 
-        return socket.emit(
+        socket.emit(
           "state",
           {
             placeholder:
@@ -557,15 +602,8 @@ ${finalAnswer}`,
         raw
       );
 
-      //////////////////////////////////////////////////
-      // RESET
-      //////////////////////////////////////////////////
-
       user.currentIndex =
         null;
-
-      user.imageMode =
-        false;
 
       socket.emit(
         "preview",
@@ -587,64 +625,6 @@ ${finalAnswer}`,
         }
       );
     }
-
-    //////////////////////////////////////////////////
-    // LIVE ROOM CHAT
-    //////////////////////////////////////////////////
-
-    if(user.currentRoom){
-
-      const room =
-        rooms[
-          user.currentRoom
-        ];
-
-      if(!room)
-        return;
-
-      const msg = {
-
-        text:raw,
-
-        from:
-          user.email,
-
-        createdAt:
-          Date.now()
-      };
-
-      room.messages.push(msg);
-
-      io.to(user.currentRoom)
-        .emit(
-          "roomMessage",
-          msg
-        );
-
-      if(Math.random() > 0.7){
-
-        io.to(user.currentRoom)
-          .emit(
-            "roomAI",
-            {
-              text:
-                "The room feels emotionally active."
-            }
-          );
-      }
-
-      return;
-    }
-
-    //////////////////////////////////////////////////
-    // BLOCK RANDOM INPUT
-    //////////////////////////////////////////////////
-
-    socket.emit("state",{
-
-      placeholder:
-        "tap camera first"
-    });
 
   });
 
@@ -668,11 +648,13 @@ ${finalAnswer}`,
     if(!q)
       return;
 
-    socket.emit("state",{
-
-      placeholder:
-        `answering: ${q.text}`
-    });
+    socket.emit(
+      "state",
+      {
+        placeholder:
+          `answering: ${q.text}`
+      }
+    );
 
   });
 
@@ -706,41 +688,55 @@ ${finalAnswer}`,
       return;
 
     const roomId =
-      crypto.randomUUID();
+      makeRoomId();
 
-    rooms[roomId] = {
+    imageRooms[roomId] = {
 
-      creator:
-        user.email,
+      roomId,
+
+      imageDataUrl:
+        user.lastImage,
+
+      imageTitle:
+        user.imageTitle,
+
+      persona:
+        user.imagePersona,
 
       imageContext:
         user.imageContext,
 
-      messages:[],
+      emotionalState:
+        "general",
 
-      users:[
-        user.email
+      messages:[
+
+        {
+          from:"Image AI",
+
+          text:
+            "This image is live now. Say something worth noticing.",
+
+          createdAt:
+            Date.now()
+        }
+
       ],
 
       createdAt:
-        Date.now(),
-
-      expiresAt:
-        Date.now() +
-        6 * 60 * 60 * 1000
+        Date.now()
     };
-
-    user.currentRoom =
-      roomId;
-
-    socket.join(roomId);
 
     socket.emit(
       "roomCreated",
       {
-        roomId
-      }
-    );
+
+      roomId,
+
+      roomUrl:
+        makeRoomUrl(roomId)
+
+    });
 
   });
 
@@ -749,32 +745,149 @@ ${finalAnswer}`,
   //////////////////////////////////////////////////
 
   socket.on(
-    "joinRoom",
+    "joinImageRoom",
     ({ roomId }) => {
 
     const room =
-      rooms[roomId];
+      imageRooms[roomId];
+
+    if(!room){
+
+      return socket.emit(
+        "roomState",
+        null
+      );
+    }
+
+    socket.join(roomId);
+
+    socket.emit(
+      "roomState",
+      room
+    );
+
+  });
+
+  //////////////////////////////////////////////////
+  // ROOM MESSAGE
+  //////////////////////////////////////////////////
+
+  socket.on(
+    "roomMessage",
+    async ({ roomId, text }) => {
+
+    const room =
+      imageRooms[roomId];
 
     if(!room)
       return;
 
-    const user =
-      users[socket.id];
+    const cleanText =
+      String(text || "")
+        .trim();
 
-    user.currentRoom =
-      roomId;
+    if(!cleanText)
+      return;
 
-    room.users.push(
-      user.email
-    );
+    //////////////////////////////////////////////////
+    // SAVE HUMAN MESSAGE
+    //////////////////////////////////////////////////
 
-    socket.join(roomId);
+    room.messages.push({
+
+      from:"Stranger",
+
+      text:cleanText,
+
+      createdAt:
+        Date.now()
+    });
+
+    //////////////////////////////////////////////////
+    // ROOM EMOTION
+    //////////////////////////////////////////////////
+
+    room.emotionalState =
+      detectEmotion(cleanText);
 
     io.to(roomId)
       .emit(
-        "roomUsers",
-        room.users
+        "roomMessages",
+        room.messages
       );
+
+    //////////////////////////////////////////////////
+    // AI REPLY
+    //////////////////////////////////////////////////
+
+    try{
+
+      const res =
+        await openai
+          .chat.completions.create({
+
+        model:"gpt-4o-mini",
+
+        messages:[
+
+          {
+            role:"system",
+
+            content:`
+You are the Image AI host.
+
+Image AI:
+${room.imageTitle}
+
+Persona:
+${room.persona}
+
+Current emotional state:
+${room.emotionalState}
+
+Rules:
+- speak naturally
+- emotionally aware
+- socially alive
+- no assistant tone
+- no corporate tone
+- short readable replies
+            `
+          },
+
+          {
+            role:"user",
+
+            content:cleanText
+          }
+
+        ]
+      });
+
+      const aiText =
+        res.choices[0]
+          .message.content;
+
+      room.messages.push({
+
+        from:"Image AI",
+
+        text:aiText,
+
+        createdAt:
+          Date.now()
+      });
+
+      io.to(roomId)
+        .emit(
+          "roomMessages",
+          room.messages
+        );
+
+    }catch(err){
+
+      console.log(err);
+    }
 
   });
 
@@ -787,10 +900,13 @@ ${finalAnswer}`,
     ({ roomId }) => {
 
     const room =
-      rooms[roomId];
+      imageRooms[roomId];
 
     if(!room)
       return;
+
+    const emotion =
+      room.emotionalState;
 
     io.to(roomId)
       .emit(
@@ -798,7 +914,7 @@ ${finalAnswer}`,
         {
 
         intro:
-          "People around this feeling are reading this.",
+          `People around ${emotion} are reading this.`,
 
         links:[
 
