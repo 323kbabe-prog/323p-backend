@@ -7,69 +7,30 @@ const OpenAI = require("openai");
 
 const app = express();
 
-app.use(cors({ origin:"*" }));
+app.use(cors({ origin: "*" }));
+app.use(express.json());
 
-app.use(express.json({
-  limit:"25mb"
-}));
+const server = http.createServer(app);
 
-const server =
-  http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
 
-server.keepAliveTimeout =
-  65000;
-
-server.headersTimeout =
-  66000;
-
-const io =
-  new Server(server,{
-
-    cors:{
-      origin:"*",
-      methods:[
-        "GET",
-        "POST"
-      ]
-    },
-
-    transports:[
-      "polling",
-      "websocket"
-    ],
-
-    pingTimeout:60000,
-
-    pingInterval:25000
-  });
-
-//////////////////////////////////////////////////
-// OPENAI
-//////////////////////////////////////////////////
-
-const openai =
-  new OpenAI({
-    apiKey:
-      process.env.OPENAI_API_KEY
-  });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 //////////////////////////////////////////////////
 // EMAIL
 //////////////////////////////////////////////////
 
-const transporter =
-  nodemailer.createTransport({
-
-    service:"gmail",
-
-    auth:{
-      user:
-        process.env.EMAIL_USER,
-
-      pass:
-        process.env.EMAIL_PASS
-    }
-  });
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 async function sendEmail(
   to,
@@ -83,46 +44,29 @@ async function sendEmail(
 
   if(imageDataUrl){
 
-    try{
+    const base64Data =
+      imageDataUrl.split(
+        "base64,"
+      )[1];
 
-      const base64Data =
-        imageDataUrl.split(
-          "base64,"
-        )[1];
+    attachments.push({
+      filename:"image.jpg",
+      content:base64Data,
+      encoding:"base64",
+      cid:"image1"
+    });
 
-      attachments.push({
-
-        filename:"image.jpg",
-
-        content:base64Data,
-
-        encoding:"base64",
-
-        cid:"image1"
-      });
-
-      imgTag =
-`
-<img
-src="cid:image1"
-style="
-max-width:100%;
-border-radius:12px;
-margin-top:20px;
-"
-/>
-`;
-
-    }catch(err){}
+    imgTag =
+      `<img src="cid:image1"
+      style="max-width:100%;
+      border-radius:12px;" />`;
   }
 
   await transporter.sendMail({
 
     from:
-`
-"CONNECTAING.COM"
-<${process.env.EMAIL_USER}>
-`,
+      `"CONNECTAING.COM"
+      <${process.env.EMAIL_USER}>`,
 
     to,
 
@@ -130,23 +74,27 @@ margin-top:20px;
 
     text,
 
-    html:
-`
-<div
-style="
-font-family:system-ui;
-padding:20px;
-line-height:1.6;
-white-space:pre-wrap;
-"
->
+    html:`
+      <div
+      style="
+      font-family:system-ui;
+      padding:20px;
+      ">
 
-${text}
+        <div
+        style="
+        white-space:pre-wrap;
+        line-height:1.6;
+        ">
+          ${text}
+        </div>
 
-${imgTag}
+        <br>
 
-</div>
-`,
+        ${imgTag}
+
+      </div>
+    `,
 
     attachments
   });
@@ -157,98 +105,45 @@ ${imgTag}
 //////////////////////////////////////////////////
 
 const users = {};
-
 const questions = [];
-
 const rooms = {};
-
-//////////////////////////////////////////////////
-// HELPERS
-//////////////////////////////////////////////////
-
-function extractEmail(text){
-
-  const m =
-    text.match(
-      /\S+@\S+\.\S+/
-    );
-
-  return m
-    ? m[0].toLowerCase()
-    : null;
-}
-
-function sanitizeText(t){
-
-  if(!t) return "";
-
-  return t
-
-    .replace(/\*\*/g,"")
-
-    .replace(
-      /Atmosphere:/gi,
-      "Environment:"
-    )
-
-    .replace(
-      /Emotional Tone:/gi,
-      "Presence:"
-    )
-
-    .trim();
-}
-
-function createRoomId(){
-
-  return Math.random()
-    .toString(36)
-    .substring(2,8);
-}
 
 //////////////////////////////////////////////////
 // CLEANUP
 //////////////////////////////////////////////////
 
-setInterval(()=>{
+setInterval(() => {
 
   const now = Date.now();
 
+  //////////////////////////////////////////////////
+  // QUESTION CLEANUP
+  //////////////////////////////////////////////////
+
   for(
-    let i =
-      questions.length - 1;
+    let i = questions.length - 1;
     i >= 0;
     i--
   ){
 
     if(
-
-      now -
-      questions[i].createdAt
-
-      >
-
-      72 *
-      60 *
-      60 *
-      1000
-
+      now - questions[i].createdAt >
+      72 * 60 * 60 * 1000
     ){
 
       questions.splice(i,1);
     }
   }
 
-  for(
-    const roomId in rooms
-  ){
+  //////////////////////////////////////////////////
+  // ROOM CLEANUP
+  //////////////////////////////////////////////////
 
-    const room =
-      rooms[roomId];
+  for(const roomId in rooms){
 
     if(
       now >
-      room.expiresAt
+      rooms[roomId].expiresAt
     ){
 
       io.to(roomId).emit(
@@ -259,68 +154,27 @@ setInterval(()=>{
     }
   }
 
-},60000);
+}, 60 * 1000);
 
 //////////////////////////////////////////////////
-// ROOT
+// HELPERS
 //////////////////////////////////////////////////
 
-app.get("/",(req,res)=>{
+function extractEmail(text){
 
-  res.send(
-    "CONNECTAING backend running"
-  );
-});
+  const m =
+    text.match(/\S+@\S+\.\S+/);
 
-//////////////////////////////////////////////////
-// ROOM ROUTE
-//////////////////////////////////////////////////
-
-app.get(
-  "/room/:roomId",
-  (req,res)=>{
-
-  const room =
-    rooms[
-      req.params.roomId
-    ];
-
-  if(!room){
-
-    return res.json({
-      error:
-        "room not found"
-    });
-  }
-
-  res.json({
-
-    roomId:
-      room.id,
-
-    imageContext:
-      room.imageContext,
-
-    imageDataUrl:
-      room.imageDataUrl,
-
-    messages:
-      room.messages
-  });
-});
+  return m
+    ? m[0].toLowerCase()
+    : null;
+}
 
 //////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////
 
-io.on(
-  "connection",
-  socket=>{
-
-  console.log(
-    "socket connected:",
-    socket.id
-  );
+io.on("connection", socket => {
 
   users[socket.id] = {
 
@@ -339,13 +193,11 @@ io.on(
     currentRoom:null
   };
 
-  socket.emit(
-    "state",
-    {
-      placeholder:
-        "enter your email to connect"
-    }
-  );
+  socket.emit("state", {
+
+    placeholder:
+      "enter your email to connect"
+  });
 
   //////////////////////////////////////////////////
   // IMAGE UPLOAD
@@ -357,12 +209,10 @@ io.on(
     async ({
       imageDataUrl,
       roomMode
-    })=>{
+    }) => {
 
     const user =
       users[socket.id];
-
-    if(!user) return;
 
     if(!user.email) return;
 
@@ -381,22 +231,18 @@ io.on(
           {
             role:"system",
 
-            content:
-`
-Describe this image
-as an AI identity.
+            content:`
+Describe this image as an AI identity.
 
 Format:
-
 Objects
 Environment
 Presence
 
 Rules:
-
-short phrases
-emotionally aware
-no markdown
+- short phrases
+- no markdown
+- no symbols
 `
           },
 
@@ -407,9 +253,7 @@ no markdown
 
               {
                 type:"text",
-
-                text:
-                  "Analyze image"
+                text:"Analyze image"
               },
 
               {
@@ -425,11 +269,18 @@ no markdown
       });
 
       user.imageContext =
-        sanitizeText(
-          res.choices[0]
+        res.choices[0]
           .message
           .content
-        );
+          .replace(/\*\*/g,"")
+          .replace(
+            /Atmosphere:/gi,
+            "Environment:"
+          )
+          .replace(
+            /Emotional Tone:/gi,
+            "Presence:"
+          );
 
       //////////////////////////////////////////////////
       // ROOM MODE
@@ -438,33 +289,24 @@ no markdown
       if(roomMode){
 
         const roomId =
-          createRoomId();
+          Math.random()
+            .toString(36)
+            .substring(2,8);
 
         rooms[roomId] = {
 
           id:roomId,
 
-          creatorEmail:
-            user.email,
-
           imageContext:
             user.imageContext,
 
-          imageDataUrl,
-
           messages:[],
 
-          createdAt:
-            Date.now(),
+          createdAt:Date.now(),
 
           expiresAt:
-            Date.now()
-            +
-            (
-              60 *
-              60 *
-              1000
-            )
+            Date.now() +
+            60 * 60 * 1000
         };
 
         socket.join(roomId);
@@ -472,112 +314,47 @@ no markdown
         user.currentRoom =
           roomId;
 
-        io.to(roomId).emit(
-          "roomMessages",
-          rooms[roomId].messages
-        );
-
         socket.emit(
           "roomCreated",
           {
-
-          roomId,
-
-          shareUrl:
-`
-https://connectaing.com/room/${roomId}
-`,
-
-          imageContext:
-            user.imageContext,
-
-          imageDataUrl
-        });
+            roomId,
+            imageContext:
+              user.imageContext
+          }
+        );
 
         return;
       }
 
       //////////////////////////////////////////////////
-      // IMAGE MODE
+      // NORMAL V3 MODE
       //////////////////////////////////////////////////
 
       user.imageMode = true;
 
-      socket.emit(
-        "preview",
-        {
-          text:
-`
-Image AI:
+      socket.emit("preview", {
 
-${user.imageContext}
-`
-        }
-      );
+        text:
+`Image AI:
+${user.imageContext}`
+      });
 
-      socket.emit(
-        "state",
-        {
-          placeholder:
-            "ask this image"
-        }
-      );
+      socket.emit("state", {
+
+        placeholder:
+          "ask this image"
+      });
 
     }catch(err){
 
       console.log(err);
 
-      socket.emit(
-        "state",
-        {
-          placeholder:
-            "image failed"
-        }
-      );
+      socket.emit("state", {
+
+        placeholder:
+          "image failed"
+      });
     }
-  });
-
-  //////////////////////////////////////////////////
-  // JOIN ROOM
-  //////////////////////////////////////////////////
-
-  socket.on(
-    "joinRoom",
-
-    ({ roomId })=>{
-
-    const room =
-      rooms[roomId];
-
-    if(!room) return;
-
-    socket.join(roomId);
-
-    users[socket.id]
-      .currentRoom =
-      roomId;
-
-    socket.emit(
-      "roomJoined",
-      {
-
-      roomId:
-        room.id,
-
-      imageContext:
-        room.imageContext,
-
-      imageDataUrl:
-        room.imageDataUrl,
-
-      messages:
-        room.messages,
-
-      shareUrl:
-`
-https://connectaing.com/room/${roomId}
-`
-    });
   });
 
   //////////////////////////////////////////////////
@@ -587,12 +364,10 @@ https://connectaing.com/room/${roomId}
   socket.on(
     "input",
 
-    async ({ text })=>{
+    async ({ text }) => {
 
     const user =
       users[socket.id];
-
-    if(!user) return;
 
     const raw =
       text.trim();
@@ -604,9 +379,7 @@ https://connectaing.com/room/${roomId}
     // EMAIL STEP
     //////////////////////////////////////////////////
 
-    if(
-      user.step === "email"
-    ){
+    if(user.step === "email"){
 
       if(!email) return;
 
@@ -618,13 +391,13 @@ https://connectaing.com/room/${roomId}
         "state",
         {
           placeholder:
-            "tap Ask Image AI or Open Live Room"
+            "tap camera to ask anything"
         }
       );
     }
 
     //////////////////////////////////////////////////
-    // IMAGE QUESTION
+    // IMAGE AI QUESTION
     //////////////////////////////////////////////////
 
     if(user.imageMode){
@@ -641,45 +414,36 @@ https://connectaing.com/room/${roomId}
             {
               role:"system",
 
-              content:
-`
-You are the image
-identity itself.
+              content:`
+You are the image identity itself.
 
 Current year:
 ${new Date().getFullYear()}
 
 Rules:
-
-short replies
-emotionally aware
-no markdown
+- short replies
+- emotionally aware
+- no markdown
 `
             },
 
             {
               role:"user",
-
               content:raw
             }
           ]
         });
 
         const aiReply =
-          sanitizeText(
-            res.choices[0]
+          res.choices[0]
             .message
-            .content
-          );
+            .content;
 
         const finalAnswer =
-`
-Image AI:
-
+`Image AI:
 ${user.imageContext}
 
-${aiReply}
-`;
+${aiReply}`;
 
         questions.unshift({
 
@@ -689,8 +453,7 @@ ${aiReply}
 
           answers:[],
 
-          createdAt:
-            Date.now()
+          createdAt:Date.now()
         });
 
         await sendEmail(
@@ -699,25 +462,19 @@ ${aiReply}
 
           "Image AI Reply",
 
-`
-Q:
-
+          `Q:
 ${raw}
 
-${finalAnswer}
-`,
+${finalAnswer}`,
 
           user.lastImage
         );
 
         user.imageMode = false;
 
-        socket.emit(
-          "preview",
-          {
-            text:finalAnswer
-          }
-        );
+        socket.emit("preview", {
+          text:finalAnswer
+        });
 
         socket.emit(
           "questions",
@@ -728,9 +485,10 @@ ${finalAnswer}
           "state",
           {
             placeholder:
-              "tap a question"
+              "tap a question to answer"
           }
         );
+
       }catch(err){
 
         console.log(err);
@@ -749,16 +507,10 @@ ${finalAnswer}
     // ANSWER MODE
     //////////////////////////////////////////////////
 
-    if(
-      user.currentIndex
-      !==
-      null
-    ){
+    if(user.currentIndex !== null){
 
       const q =
-        questions[
-          user.currentIndex
-        ];
+        questions[user.currentIndex];
 
       if(!q) return;
 
@@ -768,28 +520,20 @@ ${finalAnswer}
 
         from:user.email,
 
-        createdAt:
-          Date.now()
+        createdAt:Date.now()
       });
 
       await sendEmail(
-
         q.email,
-
         "New Answer",
-
         raw
       );
 
-      user.currentIndex =
-        null;
+      user.currentIndex = null;
 
-      socket.emit(
-        "preview",
-        {
-          text:""
-        }
-      );
+      socket.emit("preview", {
+        text:""
+      });
 
       socket.emit(
         "questions",
@@ -800,10 +544,11 @@ ${finalAnswer}
         "state",
         {
           placeholder:
-            "tap Ask Image AI or Open Live Room"
+            "tap camera to ask anything"
         }
       );
     }
+
   });
 
   //////////////////////////////////////////////////
@@ -813,7 +558,7 @@ ${finalAnswer}
   socket.on(
     "selectQuestion",
 
-    ({ index })=>{
+    ({ index }) => {
 
     const user =
       users[socket.id];
@@ -830,10 +575,7 @@ ${finalAnswer}
       "state",
       {
         placeholder:
-`
-answering:
-${q.text}
-`
+          `answering: ${q.text}`
       }
     );
   });
@@ -845,12 +587,13 @@ ${q.text}
   socket.on(
     "requestQuestions",
 
-    ()=>{
+    () => {
 
     socket.emit(
       "questions",
       questions.slice(0,10)
     );
+
   });
 
   //////////////////////////////////////////////////
@@ -860,38 +603,31 @@ ${q.text}
   socket.on(
     "roomMessage",
 
-    async ({ text })=>{
+    async ({ text }) => {
 
     const user =
       users[socket.id];
 
-    if(!user) return;
-
     const room =
-      rooms[
-        user.currentRoom
-      ];
+      rooms[user.currentRoom];
 
     if(!room) return;
 
-    const pair = {
+    room.messages.push({
 
       from:user.email,
 
-      userText:text,
-
-      aiText:"",
-
-      createdAt:
-        Date.now()
-    };
-
-    room.messages.push(pair);
+      text
+    });
 
     io.to(room.id).emit(
       "roomMessages",
       room.messages
     );
+
+    //////////////////////////////////////////////////
+    // AI REPLY
+    //////////////////////////////////////////////////
 
     try{
 
@@ -905,40 +641,38 @@ ${q.text}
           {
             role:"system",
 
-            content:
-`
+            content:`
 You are the room itself.
 
 Image identity:
 ${room.imageContext}
 
-Room creator:
-${room.creatorEmail}
-
 Rules:
-
-short replies
-emotionally aware
-socially reactive
-internet-aware
-no markdown
+- short replies
+- emotional awareness
+- socially reactive
+- no markdown
 `
           },
 
           {
             role:"user",
-
             content:text
           }
         ]
       });
 
-      pair.aiText =
-        sanitizeText(
-          res.choices[0]
+      const aiReply =
+        res.choices[0]
           .message
-          .content
-        );
+          .content;
+
+      room.messages.push({
+
+        from:"Image AI",
+
+        text:aiReply
+      });
 
       io.to(room.id).emit(
         "roomMessages",
@@ -949,31 +683,39 @@ no markdown
 
       console.log(err);
     }
+
   });
 
   //////////////////////////////////////////////////
-  // LEAVE ROOM
+  // AI SEARCH
   //////////////////////////////////////////////////
 
   socket.on(
-    "leaveRoom",
+    "aiSearch",
 
-    ()=>{
+    () => {
 
     const user =
       users[socket.id];
 
-    if(!user) return;
+    const room =
+      rooms[user.currentRoom];
 
-    if(user.currentRoom){
+    if(!room) return;
 
-      socket.leave(
-        user.currentRoom
-      );
-    }
+    room.messages.push({
 
-    user.currentRoom =
-      null;
+      from:"Image AI",
+
+      text:
+`People around this feeling are discussing similar things online right now.`
+    });
+
+    io.to(room.id).emit(
+      "roomMessages",
+      room.messages
+    );
+
   });
 
   //////////////////////////////////////////////////
@@ -983,12 +725,7 @@ no markdown
   socket.on(
     "disconnect",
 
-    ()=>{
-
-    console.log(
-      "socket disconnected:",
-      socket.id
-    );
+    () => {
 
     delete users[socket.id];
   });
@@ -999,17 +736,9 @@ no markdown
 // START
 //////////////////////////////////////////////////
 
-const PORT =
-  process.env.PORT
-  ||
-  10000;
-
-server.listen(PORT,()=>{
+server.listen(10000, () => {
 
   console.log(
-`
-CONNECTAING running
-on port ${PORT}
-`
+    "server running"
   );
 });
