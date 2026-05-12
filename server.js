@@ -181,8 +181,11 @@ Keep short.
         ]
       });
 
-      user.imageContext =
-        res.choices[0].message.content;
+user.imageContext =
+  res.choices[0].message.content
+    .replace(/\*\*/g, "")
+    .replace(/Atmosphere:/gi, "Environment:")
+    .replace(/Emotional Tone:/gi, "Presence:");
 
       user.imageMode = true;
 
