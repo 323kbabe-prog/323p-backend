@@ -406,6 +406,70 @@ const starterMood =
     .trim();
 
 //////////////////////////////////////////////////
+// FIRST NEWS IMAGE SEARCH
+//////////////////////////////////////////////////
+
+const starterSearchRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Turn this emotional question into a visual news image search phrase.
+
+Rules:
+- cinematic
+- emotional
+- modern culture atmosphere
+- 3 to 8 words
+- no punctuation
+`
+    },
+
+    {
+      role:"user",
+
+      content:starterQuestion
+    }
+  ]
+});
+
+const starterSearch =
+
+  starterSearchRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+const starterSerpFetch =
+  await fetch(
+
+    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
+
+  );
+
+const starterSerpRes =
+  await starterSerpFetch.json();
+
+const starterImage =
+
+  starterSerpRes
+    ?.news_results?.[0]
+    ?.thumbnail ||
+
+  starterSerpRes
+    ?.news_results?.[0]
+    ?.thumbnail_small ||
+
+  user.lastImage;
+        
+//////////////////////////////////////////////////
 // FIRST ROOM MESSAGE
 //////////////////////////////////////////////////
 
@@ -413,7 +477,7 @@ rooms[roomId].messages.push({
 
   from:"Image AI",
 
-  image:user.lastImage,
+  image:starterImage,
 
   mood:starterMood,
 
