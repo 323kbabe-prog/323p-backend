@@ -1,4 +1,3 @@
-```javascript
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -9,6 +8,7 @@ const OpenAI = require("openai");
 const app = express();
 
 app.use(cors({ origin:"*" }));
+
 app.use(express.json({
   limit:"25mb"
 }));
@@ -193,7 +193,7 @@ setInterval(()=>{
   const now = Date.now();
 
   //////////////////////////////////////////////////
-  // QUESTION CLEANUP
+  // QUESTIONS
   //////////////////////////////////////////////////
 
   for(
@@ -222,7 +222,7 @@ setInterval(()=>{
   }
 
   //////////////////////////////////////////////////
-  // ROOM CLEANUP
+  // ROOMS
   //////////////////////////////////////////////////
 
   for(
@@ -246,6 +246,17 @@ setInterval(()=>{
   }
 
 },60000);
+
+//////////////////////////////////////////////////
+// ROOT
+//////////////////////////////////////////////////
+
+app.get("/",(req,res)=>{
+
+  res.send(
+    "CONNECTAING backend running"
+  );
+});
 
 //////////////////////////////////////////////////
 // ROOM ROUTE
@@ -291,10 +302,6 @@ app.get(
 io.on(
   "connection",
   socket=>{
-
-  //////////////////////////////////////////////////
-  // USER STATE
-  //////////////////////////////////////////////////
 
   users[socket.id] = {
 
@@ -345,10 +352,6 @@ io.on(
 
     try{
 
-      //////////////////////////////////////////////////
-      // IMAGE ANALYSIS
-      //////////////////////////////////////////////////
-
       const res =
         await openai.chat.completions.create({
 
@@ -375,7 +378,6 @@ Rules:
 short phrases
 emotionally aware
 no markdown
-no bullet symbols
 `
           },
 
@@ -472,7 +474,7 @@ https://connectaing.com/room/${roomId}
       }
 
       //////////////////////////////////////////////////
-      // NORMAL IMAGE MODE
+      // IMAGE MODE
       //////////////////////////////////////////////////
 
       user.imageMode = true;
@@ -598,7 +600,7 @@ https://connectaing.com/room/${roomId}
     }
 
     //////////////////////////////////////////////////
-    // IMAGE AI QUESTION
+    // IMAGE QUESTION
     //////////////////////////////////////////////////
 
     if(user.imageMode){
@@ -655,10 +657,6 @@ ${user.imageContext}
 ${aiReply}
 `;
 
-        //////////////////////////////////////////////////
-        // SAVE QUESTION
-        //////////////////////////////////////////////////
-
         questions.unshift({
 
           email:user.email,
@@ -670,10 +668,6 @@ ${aiReply}
           createdAt:
             Date.now()
         });
-
-        //////////////////////////////////////////////////
-        // SEND EMAIL
-        //////////////////////////////////////////////////
 
         await sendEmail(
 
@@ -713,7 +707,6 @@ ${finalAnswer}
               "tap a question"
           }
         );
-
       }catch(err){
 
         console.log(err);
@@ -876,10 +869,6 @@ ${q.text}
       room.messages
     );
 
-    //////////////////////////////////////////////////
-    // AI ROOM REPLY
-    //////////////////////////////////////////////////
-
     try{
 
       const res =
@@ -975,17 +964,6 @@ no markdown
     delete users[socket.id];
   });
 
-});
-
-//////////////////////////////////////////////////
-// ROOT
-//////////////////////////////////////////////////
-
-app.get("/",(req,res)=>{
-
-  res.send(
-    "CONNECTAING backend running"
-  );
 });
 
 //////////////////////////////////////////////////
