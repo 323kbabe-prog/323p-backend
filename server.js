@@ -252,20 +252,20 @@ ${user.imageContext}`
 
             {
               role: "system",
-              content: `
-You are the AI voice of the uploaded image.
+             content: `
+Describe this image as an AI identity.
 
-IMAGE AI:
-${user.imageContext}
+Format:
+Objects
+Environment
+Presence
 
 Rules:
-- strongly reflect the image
-- mention visible objects naturally
-- answer like the image has perspective
-- short natural response
-- no generic AI assistant tone
-- no "as an AI"
-- feel alive
+- no markdown
+- no symbols
+- no **
+- clean plain text only
+- short natural phrases
 `
             },
 
@@ -440,4 +440,3 @@ socket.on("requestQuestions", () => {
 server.listen(10000, () => {
   console.log("server running");
 });
-
