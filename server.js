@@ -13,11 +13,11 @@ app.use(express.json());
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: "*" }
+cors: { origin: "*" }
 });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+apiKey: process.env.OPENAI_API_KEY
 });
 
 //////////////////////////////////////////////////
@@ -25,79 +25,87 @@ const openai = new OpenAI({
 //////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+service: "gmail",
+auth: {
+user: process.env.EMAIL_USER,
+pass: process.env.EMAIL_PASS
+}
 });
 
 async function sendEmail(
-  to,
-  subject,
-  text,
-  imageDataUrl
+to,
+subject,
+text,
+imageDataUrl
 ){
 
-  let attachments = [];
-  let imgTag = "";
+let attachments = [];
+let imgTag = "";
 
-  if(imageDataUrl){
+if(imageDataUrl){
 
-    const base64Data =
-      imageDataUrl.split(
-        "base64,"
-      )[1];
+```
+const base64Data =
+  imageDataUrl.split(
+    "base64,"
+  )[1];
 
-    attachments.push({
-      filename:"image.jpg",
-      content:base64Data,
-      encoding:"base64",
-      cid:"image1"
-    });
+attachments.push({
+  filename:"image.jpg",
+  content:base64Data,
+  encoding:"base64",
+  cid:"image1"
+});
 
-    imgTag =
-      `<img src="cid:image1"
-      style="max-width:100%;
-      border-radius:12px;" />`;
-  }
+imgTag =
+  `<img src="cid:image1"
+  style="
+  max-width:100%;
+  border-radius:12px;
+  " />`;
+```
 
-  await transporter.sendMail({
+}
 
-    from:
-      `"CONNECTAING.COM"
-      <${process.env.EMAIL_USER}>`,
+await transporter.sendMail({
 
-    to,
+```
+from:
+  `"CONNECTAING.COM"
+  <${process.env.EMAIL_USER}>`,
 
-    subject,
+to,
 
-    text,
+subject,
 
-    html:`
-      <div
-      style="
-      font-family:system-ui;
-      padding:20px;
-      ">
+text,
 
-        <div
-        style="
-        white-space:pre-wrap;
-        line-height:1.6;
-        ">
-          ${text}
-        </div>
+html:`
+  <div
+  style="
+  font-family:system-ui;
+  padding:20px;
+  ">
 
-        <br>
+    <div
+    style="
+    white-space:pre-wrap;
+    line-height:1.6;
+    ">
+      ${text}
+    </div>
 
-        ${imgTag}
+    <br>
 
-      </div>
-    `,
+    ${imgTag}
 
-    attachments
-  });
+  </div>
+`,
+
+attachments
+```
+
+});
 }
 
 //////////////////////////////////////////////////
@@ -114,45 +122,51 @@ const rooms = {};
 
 setInterval(() => {
 
-  const now = Date.now();
+const now = Date.now();
 
-  //////////////////////////////////////////////////
-  // QUESTION CLEANUP
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// QUESTION CLEANUP
+//////////////////////////////////////////////////
 
-  for(
-    let i = questions.length - 1;
-    i >= 0;
-    i--
-  ){
+for(
+let i = questions.length - 1;
+i >= 0;
+i--
+){
 
-    if(
-      now - questions[i].createdAt >
-      72 * 60 * 60 * 1000
-    ){
+```
+if(
+  now - questions[i].createdAt >
+  72 * 60 * 60 * 1000
+){
 
-      questions.splice(i,1);
-    }
-  }
+  questions.splice(i,1);
+}
+```
 
-  //////////////////////////////////////////////////
-  // ROOM CLEANUP
-  //////////////////////////////////////////////////
+}
 
-  for(const roomId in rooms){
+//////////////////////////////////////////////////
+// ROOM CLEANUP
+//////////////////////////////////////////////////
 
-    if(
-      now >
-      rooms[roomId].expiresAt
-    ){
+for(const roomId in rooms){
 
-      io.to(roomId).emit(
-        "roomClosed"
-      );
+```
+if(
+  now >
+  rooms[roomId].expiresAt
+){
 
-      delete rooms[roomId];
-    }
-  }
+  io.to(roomId).emit(
+    "roomClosed"
+  );
+
+  delete rooms[roomId];
+}
+```
+
+}
 
 }, 60 * 1000);
 
@@ -162,13 +176,60 @@ setInterval(() => {
 
 function extractEmail(text){
 
-  const m =
-    text.match(/\S+@\S+\.\S+/);
+const m =
+text.match(/\S+@\S+.\S+/);
 
-  return m
-    ? m[0].toLowerCase()
-    : null;
+return m
+? m[0].toLowerCase()
+: null;
 }
+
+function sanitizeText(t){
+
+return t
+.replace(/**/g,"")
+.replace(
+/Atmosphere:/gi,
+"Environment:"
+)
+.replace(
+/Emotional Tone:/gi,
+"Presence:"
+);
+}
+
+//////////////////////////////////////////////////
+// ROOM LINK
+//////////////////////////////////////////////////
+
+app.get(
+"/room/:roomId",
+(req,res) => {
+
+const room =
+rooms[req.params.roomId];
+
+if(!room){
+
+```
+return res.json({
+  error:"room not found"
+});
+```
+
+}
+
+res.json({
+roomId:room.id,
+imageContext:
+room.imageContext,
+imageDataUrl:
+room.imageDataUrl,
+messages:
+room.messages
+});
+
+});
 
 //////////////////////////////////////////////////
 // SOCKET
@@ -176,62 +237,71 @@ function extractEmail(text){
 
 io.on("connection", socket => {
 
-  users[socket.id] = {
+users[socket.id] = {
 
-    step:"email",
+```
+step:"email",
 
-    email:null,
+email:null,
 
-    imageMode:false,
+imageMode:false,
 
-    imageContext:null,
+imageContext:null,
 
-    currentIndex:null,
+currentIndex:null,
 
-    lastImage:null,
+lastImage:null,
 
-    currentRoom:null
-  };
+currentRoom:null
+```
 
-  socket.emit("state", {
+};
 
-    placeholder:
-      "enter your email to connect"
-  });
+socket.emit("state", {
 
-  //////////////////////////////////////////////////
-  // IMAGE UPLOAD
-  //////////////////////////////////////////////////
+```
+placeholder:
+  "enter your email to connect"
+```
 
-  socket.on(
-    "imageUpload",
+});
 
-    async ({
-      imageDataUrl,
-      roomMode
-    }) => {
+//////////////////////////////////////////////////
+// IMAGE UPLOAD
+//////////////////////////////////////////////////
 
-    const user =
-      users[socket.id];
+socket.on(
+"imageUpload",
 
-    if(!user.email) return;
+```
+async ({
+  imageDataUrl,
+  roomMode
+}) => {
 
-    user.lastImage =
-      imageDataUrl;
+const user =
+  users[socket.id];
 
-    try{
+if(!user.email) return;
 
-      const res =
-        await openai.chat.completions.create({
+user.lastImage =
+  imageDataUrl;
 
-        model:"gpt-4o-mini",
+try{
 
-        messages:[
+  const res =
+    await openai.chat.completions.create({
 
-          {
-            role:"system",
+    model:"gpt-4o-mini",
 
-            content:`
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+```
+
 Describe this image as an AI identity.
 
 Format:
@@ -240,482 +310,567 @@ Environment
 Presence
 
 Rules:
-- short phrases
-- no markdown
-- no symbols
-`
+
+* short phrases
+* no markdown
+* no symbols
+  `
+  },
+
+  ```
+      {
+        role:"user",
+
+        content:[
+
+          {
+            type:"text",
+            text:"Analyze image"
           },
 
           {
-            role:"user",
+            type:"image_url",
 
-            content:[
-
-              {
-                type:"text",
-                text:"Analyze image"
-              },
-
-              {
-                type:"image_url",
-
-                image_url:{
-                  url:imageDataUrl
-                }
-              }
-            ]
+            image_url:{
+              url:imageDataUrl
+            }
           }
         ]
-      });
-
-      user.imageContext =
-        res.choices[0]
-          .message
-          .content
-          .replace(/\*\*/g,"")
-          .replace(
-            /Atmosphere:/gi,
-            "Environment:"
-          )
-          .replace(
-            /Emotional Tone:/gi,
-            "Presence:"
-          );
-
-      //////////////////////////////////////////////////
-      // ROOM MODE
-      //////////////////////////////////////////////////
-
-      if(roomMode){
-
-        const roomId =
-          Math.random()
-            .toString(36)
-            .substring(2,8);
-
-        rooms[roomId] = {
-
-          id:roomId,
-
-          imageContext:
-            user.imageContext,
-
-          messages:[],
-
-          createdAt:Date.now(),
-
-          expiresAt:
-            Date.now() +
-            60 * 60 * 1000
-        };
-
-        socket.join(roomId);
-
-        user.currentRoom =
-          roomId;
-
-        socket.emit(
-          "roomCreated",
-          {
-            roomId,
-            imageContext:
-              user.imageContext
-          }
-        );
-
-        return;
       }
-
-      //////////////////////////////////////////////////
-      // NORMAL V3 MODE
-      //////////////////////////////////////////////////
-
-      user.imageMode = true;
-
-      socket.emit("preview", {
-
-        text:
-`Image AI:
-${user.imageContext}`
-      });
-
-      socket.emit("state", {
-
-        placeholder:
-          "ask this image"
-      });
-
-    }catch(err){
-
-      console.log(err);
-
-      socket.emit("state", {
-
-        placeholder:
-          "image failed"
-      });
-    }
+    ]
   });
 
+  user.imageContext =
+    sanitizeText(
+      res.choices[0]
+        .message
+        .content
+    );
+
   //////////////////////////////////////////////////
-  // INPUT
+  // ROOM MODE
   //////////////////////////////////////////////////
 
-  socket.on(
-    "input",
+  if(roomMode){
 
-    async ({ text }) => {
+    const roomId =
+      Math.random()
+        .toString(36)
+        .substring(2,8);
 
-    const user =
-      users[socket.id];
+    rooms[roomId] = {
 
-    const raw =
-      text.trim();
+      id:roomId,
 
-    const email =
-      extractEmail(raw);
+      creatorEmail:
+        user.email,
 
-    //////////////////////////////////////////////////
-    // EMAIL STEP
-    //////////////////////////////////////////////////
+      imageContext:
+        user.imageContext,
 
-    if(user.step === "email"){
+      imageDataUrl,
 
-      if(!email) return;
+      messages:[],
 
-      user.email = email;
+      createdAt:
+        Date.now(),
 
-      user.step = "active";
+      expiresAt:
+        Date.now() +
+        60 * 60 * 1000
+    };
 
-      return socket.emit(
-        "state",
-        {
-          placeholder:
-            "tap camera to ask anything"
-        }
-      );
+    socket.join(roomId);
+
+    user.currentRoom =
+      roomId;
+
+    socket.emit(
+      "roomCreated",
+      {
+        roomId,
+
+        shareUrl:
+  ```
+
+`https://connectaing.com/room/${roomId}`,
+
+```
+        imageContext:
+          user.imageContext,
+
+        imageDataUrl
+      }
+    );
+
+    return;
+  }
+
+  //////////////////////////////////////////////////
+  // NORMAL IMAGE AI MODE
+  //////////////////////////////////////////////////
+
+  user.imageMode = true;
+
+  socket.emit("preview", {
+
+    text:
+```
+
+`Image AI:
+${user.imageContext}`
+});
+
+```
+  socket.emit("state", {
+
+    placeholder:
+      "ask this image"
+  });
+
+}catch(err){
+
+  console.log(err);
+
+  socket.emit("state", {
+
+    placeholder:
+      "image failed"
+  });
+}
+```
+
+});
+
+//////////////////////////////////////////////////
+// JOIN ROOM
+//////////////////////////////////////////////////
+
+socket.on(
+"joinRoom",
+
+```
+({ roomId }) => {
+
+const room =
+  rooms[roomId];
+
+if(!room) return;
+
+socket.join(roomId);
+
+users[socket.id]
+  .currentRoom =
+  roomId;
+
+socket.emit(
+  "roomJoined",
+  {
+    roomId:
+      room.id,
+
+    imageContext:
+      room.imageContext,
+
+    imageDataUrl:
+      room.imageDataUrl,
+
+    messages:
+      room.messages,
+
+    shareUrl:
+```
+
+`https://connectaing.com/room/${roomId}`
+}
+);
+});
+
+//////////////////////////////////////////////////
+// INPUT
+//////////////////////////////////////////////////
+
+socket.on(
+"input",
+
+```
+async ({ text }) => {
+
+const user =
+  users[socket.id];
+
+const raw =
+  text.trim();
+
+const email =
+  extractEmail(raw);
+
+//////////////////////////////////////////////////
+// EMAIL STEP
+//////////////////////////////////////////////////
+
+if(user.step === "email"){
+
+  if(!email) return;
+
+  user.email = email;
+
+  user.step = "active";
+
+  return socket.emit(
+    "state",
+    {
+      placeholder:
+        "tap camera to ask image AI"
     }
+  );
+}
 
-    //////////////////////////////////////////////////
-    // IMAGE AI QUESTION
-    //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// IMAGE AI QUESTION
+//////////////////////////////////////////////////
 
-    if(user.imageMode){
+if(user.imageMode){
 
-      try{
+  try{
 
-        const res =
-          await openai.chat.completions.create({
+    const res =
+      await openai.chat.completions.create({
 
-          model:"gpt-4o-mini",
+      model:"gpt-4o-mini",
 
-          messages:[
+      messages:[
 
-            {
-              role:"system",
+        {
+          role:"system",
 
-              content:`
+          content:`
+```
+
 You are the image identity itself.
 
 Current year:
 ${new Date().getFullYear()}
 
 Rules:
-- short replies
-- emotionally aware
-- no markdown
-`
-            },
 
-            {
-              role:"user",
-              content:raw
-            }
-          ]
-        });
+* short replies
+* emotionally aware
+* no markdown
+  `
+  },
 
-        const aiReply =
-          res.choices[0]
-            .message
-            .content;
+  ```
+        {
+          role:"user",
+          content:raw
+        }
+      ]
+    });
 
-        const finalAnswer =
+    const aiReply =
+      sanitizeText(
+        res.choices[0]
+          .message
+          .content
+      );
+
+    const finalAnswer =
+  ```
+
 `Image AI:
 ${user.imageContext}
 
 ${aiReply}`;
 
-        questions.unshift({
+```
+    questions.unshift({
 
-          email:user.email,
+      email:user.email,
 
-          text:raw,
+      text:raw,
 
-          answers:[],
+      answers:[],
 
-          createdAt:Date.now()
-        });
+      createdAt:Date.now()
+    });
 
-        await sendEmail(
+    await sendEmail(
 
-          user.email,
+      user.email,
 
-          "Image AI Reply",
+      "Image AI Reply",
 
-          `Q:
+      `Q:
+```
+
 ${raw}
 
 ${finalAnswer}`,
 
-          user.lastImage
-        );
-
-        user.imageMode = false;
-
-        socket.emit("preview", {
-          text:finalAnswer
-        });
-
-        socket.emit(
-          "questions",
-          questions.slice(0,10)
-        );
-
-        return socket.emit(
-          "state",
-          {
-            placeholder:
-              "tap a question to answer"
-          }
-        );
-
-      }catch(err){
-
-        console.log(err);
-
-        return socket.emit(
-          "state",
-          {
-            placeholder:
-              "AI failed"
-          }
-        );
-      }
-    }
-
-    //////////////////////////////////////////////////
-    // ANSWER MODE
-    //////////////////////////////////////////////////
-
-    if(user.currentIndex !== null){
-
-      const q =
-        questions[user.currentIndex];
-
-      if(!q) return;
-
-      q.answers.push({
-
-        text:raw,
-
-        from:user.email,
-
-        createdAt:Date.now()
-      });
-
-      await sendEmail(
-        q.email,
-        "New Answer",
-        raw
-      );
-
-      user.currentIndex = null;
-
-      socket.emit("preview", {
-        text:""
-      });
-
-      socket.emit(
-        "questions",
-        []
-      );
-
-      return socket.emit(
-        "state",
-        {
-          placeholder:
-            "tap camera to ask anything"
-        }
-      );
-    }
-
-  });
-
-  //////////////////////////////////////////////////
-  // SELECT QUESTION
-  //////////////////////////////////////////////////
-
-  socket.on(
-    "selectQuestion",
-
-    ({ index }) => {
-
-    const user =
-      users[socket.id];
-
-    user.currentIndex =
-      index;
-
-    const q =
-      questions[index];
-
-    if(!q) return;
-
-    socket.emit(
-      "state",
-      {
-        placeholder:
-          `answering: ${q.text}`
-      }
+```
+      user.lastImage
     );
-  });
 
-  //////////////////////////////////////////////////
-  // REQUEST QUESTIONS
-  //////////////////////////////////////////////////
+    user.imageMode = false;
 
-  socket.on(
-    "requestQuestions",
-
-    () => {
+    socket.emit("preview", {
+      text:finalAnswer
+    });
 
     socket.emit(
       "questions",
       questions.slice(0,10)
     );
 
-  });
-
-  //////////////////////////////////////////////////
-  // ROOM MESSAGE
-  //////////////////////////////////////////////////
-
-  socket.on(
-    "roomMessage",
-
-    async ({ text }) => {
-
-    const user =
-      users[socket.id];
-
-    const room =
-      rooms[user.currentRoom];
-
-    if(!room) return;
-
-    room.messages.push({
-
-      from:user.email,
-
-      text
-    });
-
-    io.to(room.id).emit(
-      "roomMessages",
-      room.messages
+    return socket.emit(
+      "state",
+      {
+        placeholder:
+          "tap a question"
+      }
     );
 
-    //////////////////////////////////////////////////
-    // AI REPLY
-    //////////////////////////////////////////////////
+  }catch(err){
 
-    try{
+    console.log(err);
 
-      const res =
-        await openai.chat.completions.create({
+    return socket.emit(
+      "state",
+      {
+        placeholder:
+          "AI failed"
+      }
+    );
+  }
+}
 
-        model:"gpt-4o-mini",
+//////////////////////////////////////////////////
+// ANSWER MODE
+//////////////////////////////////////////////////
 
-        messages:[
+if(user.currentIndex !== null){
 
-          {
-            role:"system",
+  const q =
+    questions[user.currentIndex];
 
-            content:`
+  if(!q) return;
+
+  q.answers.push({
+
+    text:raw,
+
+    from:user.email,
+
+    createdAt:Date.now()
+  });
+
+  await sendEmail(
+    q.email,
+    "New Answer",
+    raw
+  );
+
+  user.currentIndex = null;
+
+  socket.emit("preview", {
+    text:""
+  });
+
+  socket.emit(
+    "questions",
+    []
+  );
+
+  return socket.emit(
+    "state",
+    {
+      placeholder:
+        "tap camera to ask image AI"
+    }
+  );
+}
+```
+
+});
+
+//////////////////////////////////////////////////
+// SELECT QUESTION
+//////////////////////////////////////////////////
+
+socket.on(
+"selectQuestion",
+
+```
+({ index }) => {
+
+const user =
+  users[socket.id];
+
+user.currentIndex =
+  index;
+
+const q =
+  questions[index];
+
+if(!q) return;
+
+socket.emit(
+  "state",
+  {
+    placeholder:
+      `answering: ${q.text}`
+  }
+);
+```
+
+});
+
+//////////////////////////////////////////////////
+// REQUEST QUESTIONS
+//////////////////////////////////////////////////
+
+socket.on(
+"requestQuestions",
+
+```
+() => {
+
+socket.emit(
+  "questions",
+  questions.slice(0,10)
+);
+```
+
+});
+
+//////////////////////////////////////////////////
+// ROOM MESSAGE
+//////////////////////////////////////////////////
+
+socket.on(
+"roomMessage",
+
+```
+async ({ text }) => {
+
+const user =
+  users[socket.id];
+
+const room =
+  rooms[user.currentRoom];
+
+if(!room) return;
+
+const pair = {
+
+  from:user.email,
+
+  userText:text,
+
+  aiText:"",
+
+  createdAt:Date.now()
+};
+
+room.messages.push(pair);
+
+io.to(room.id).emit(
+  "roomMessages",
+  room.messages
+);
+
+//////////////////////////////////////////////////
+// AI REPLY
+//////////////////////////////////////////////////
+
+try{
+
+  const res =
+    await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+```
+
 You are the room itself.
 
 Image identity:
 ${room.imageContext}
 
+Room creator:
+${room.creatorEmail}
+
 Rules:
-- short replies
-- emotional awareness
-- socially reactive
-- no markdown
-`
-          },
 
-          {
-            role:"user",
-            content:text
-          }
-        ]
-      });
+* short replies
+* emotional awareness
+* socially reactive
+* no markdown
+* naturally conversational
+  `
+  },
 
-      const aiReply =
-        res.choices[0]
-          .message
-          .content;
+  ```
+      {
+        role:"user",
+        content:text
+      }
+    ]
+  });
 
-      room.messages.push({
+  pair.aiText =
+    sanitizeText(
+      res.choices[0]
+        .message
+        .content
+    );
 
-        from:"Image AI",
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
+  ```
 
-        text:aiReply
-      });
+  }catch(err){
 
-      io.to(room.id).emit(
-        "roomMessages",
-        room.messages
-      );
+  ```
+  console.log(err);
+  ```
 
-    }catch(err){
-
-      console.log(err);
-    }
+  }
 
   });
 
   //////////////////////////////////////////////////
-  // AI SEARCH
+  // LEAVE ROOM
   //////////////////////////////////////////////////
 
   socket.on(
-    "aiSearch",
+  "leaveRoom",
 
-    () => {
+  () => {
 
-    const user =
-      users[socket.id];
+  const user =
+  users[socket.id];
 
-    const room =
-      rooms[user.currentRoom];
+  if(user.currentRoom){
 
-    if(!room) return;
+  ```
+  socket.leave(
+    user.currentRoom
+  );
+  ```
 
-    room.messages.push({
+  }
 
-      from:"Image AI",
-
-      text:
-`People around this feeling are discussing similar things online right now.`
-    });
-
-    io.to(room.id).emit(
-      "roomMessages",
-      room.messages
-    );
-
+  user.currentRoom = null;
   });
 
   //////////////////////////////////////////////////
@@ -723,11 +878,11 @@ Rules:
   //////////////////////////////////////////////////
 
   socket.on(
-    "disconnect",
+  "disconnect",
 
-    () => {
+  () => {
 
-    delete users[socket.id];
+  delete users[socket.id];
   });
 
 });
@@ -738,7 +893,7 @@ Rules:
 
 server.listen(10000, () => {
 
-  console.log(
-    "server running"
-  );
+console.log(
+"server running"
+);
 });
