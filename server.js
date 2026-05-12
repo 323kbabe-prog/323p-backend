@@ -16,9 +16,31 @@ app.use(express.json({
 const server =
   http.createServer(app);
 
+server.keepAliveTimeout =
+  65000;
+
+server.headersTimeout =
+  66000;
+
 const io =
   new Server(server,{
-    cors:{ origin:"*" }
+
+    cors:{
+      origin:"*",
+      methods:[
+        "GET",
+        "POST"
+      ]
+    },
+
+    transports:[
+      "polling",
+      "websocket"
+    ],
+
+    pingTimeout:60000,
+
+    pingInterval:25000
   });
 
 //////////////////////////////////////////////////
@@ -192,10 +214,6 @@ setInterval(()=>{
 
   const now = Date.now();
 
-  //////////////////////////////////////////////////
-  // QUESTIONS
-  //////////////////////////////////////////////////
-
   for(
     let i =
       questions.length - 1;
@@ -220,10 +238,6 @@ setInterval(()=>{
       questions.splice(i,1);
     }
   }
-
-  //////////////////////////////////////////////////
-  // ROOMS
-  //////////////////////////////////////////////////
 
   for(
     const roomId in rooms
@@ -302,6 +316,11 @@ app.get(
 io.on(
   "connection",
   socket=>{
+
+  console.log(
+    "socket connected:",
+    socket.id
+  );
 
   users[socket.id] = {
 
@@ -452,6 +471,11 @@ no markdown
 
         user.currentRoom =
           roomId;
+
+        io.to(roomId).emit(
+          "roomMessages",
+          rooms[roomId].messages
+        );
 
         socket.emit(
           "roomCreated",
@@ -960,6 +984,11 @@ no markdown
     "disconnect",
 
     ()=>{
+
+    console.log(
+      "socket disconnected:",
+      socket.id
+    );
 
     delete users[socket.id];
   });
