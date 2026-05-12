@@ -314,15 +314,18 @@ Rules:
         user.currentRoom =
           roomId;
 
-        socket.emit(
-          "roomCreated",
-          {
-            roomId,
-            imageContext:
-              user.imageContext
-          }
-        );
+     socket.emit(
+  "roomCreated",
+  {
+    roomId,
 
+    imageContext:
+      user.imageContext,
+
+    imageDataUrl:
+      user.lastImage
+  }
+);
         return;
       }
 
