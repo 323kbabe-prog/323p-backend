@@ -319,17 +319,48 @@ Rules:
 // INITIAL ROOM QUESTION
 //////////////////////////////////////////////////
 
-const starterRes =
-  await openai.chat.completions.create({
+//////////////////////////////////////////////////
+// OPEN ROOM IMMEDIATELY
+//////////////////////////////////////////////////
 
-  model:"gpt-4o-mini",
+socket.emit(
+  "roomCreated",
+  {
+    roomId,
 
-  messages:[
+    imageContext:
+      user.imageContext,
 
-    {
-      role:"system",
+    imageDataUrl:
+      user.lastImage,
 
-      content:`
+    messages:[]
+  }
+);
+
+//////////////////////////////////////////////////
+// GENERATE FIRST AI MESSAGE ASYNC
+//////////////////////////////////////////////////
+
+(async () => {
+
+try{
+
+  //////////////////////////////////////////////////
+  // STARTER QUESTION
+  //////////////////////////////////////////////////
+
+  const starterRes =
+    await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
 Create ONE short emotional curiosity question.
 
 Rules:
@@ -346,80 +377,84 @@ see what people hide
 see public sadness
 want to see obsession
 `
-    }
-  ]
-});
+      }
+    ]
+  });
 
-const starterQuestion =
-  starterRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  const starterQuestion =
 
-//////////////////////////////////////////////////
-// FIRST IMAGE MOOD
-//////////////////////////////////////////////////
+    starterRes
+      .choices[0]
+      .message
+      .content
+      .trim();
 
-const starterMoodRes =
-  await openai.chat.completions.create({
+  //////////////////////////////////////////////////
+  // STARTER MOOD
+  //////////////////////////////////////////////////
 
-  model:"gpt-4o-mini",
+  const starterMoodRes =
+    await openai.chat.completions.create({
 
-  messages:[
+    model:"gpt-4o-mini",
 
-    {
-      role:"system",
+    messages:[
 
-      content:`
+      {
+        role:"system",
+
+        content:`
 Create a 1 to 3 word emotional mood phrase.
 
 Rules:
 - lowercase only
 - no punctuation
 - emotionally cinematic
-- internet atmosphere feeling
 
 Examples:
 
 quiet heartbreak
 digital loneliness
 hidden pressure
-silent obsession
 `
-    },
+      },
 
-    {
-      role:"user",
+      {
+        role:"user",
 
-      content:starterQuestion
-    }
-  ]
-});
+        content:starterQuestion
+      }
+    ]
+  });
 
-const starterMood =
+  const starterMood =
 
-  starterMoodRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+    starterMoodRes
+      .choices[0]
+      .message
+      .content
+      .trim();
 
-//////////////////////////////////////////////////
-// FIRST NEWS IMAGE SEARCH
-//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // SAFE IMAGE
+  //////////////////////////////////////////////////
 
-const starterSearchRes =
-  await openai.chat.completions.create({
+  let starterImage =
+    user.lastImage;
 
-  model:"gpt-4o-mini",
+  try{
 
-  messages:[
+    const starterSearchRes =
+      await openai.chat.completions.create({
 
-    {
-      role:"system",
+      model:"gpt-4o-mini",
 
-      content:`
+      messages:[
+
+        {
+          role:"system",
+
+          content:`
 Turn this emotional question into a visual news image search phrase.
 
 Rules:
@@ -427,80 +462,94 @@ Rules:
 - emotional
 - modern culture atmosphere
 - 3 to 8 words
-- no punctuation
 `
-    },
+        },
 
-    {
-      role:"user",
+        {
+          role:"user",
 
-      content:starterQuestion
-    }
-  ]
-});
+          content:starterQuestion
+        }
+      ]
+    });
 
-const starterSearch =
+    const starterSearch =
 
-  starterSearchRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+      starterSearchRes
+        .choices[0]
+        .message
+        .content
+        .trim();
 
-const starterSerpFetch =
-  await fetch(
+    const starterSerpFetch =
+      await fetch(
 
-    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
+        `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
 
+      );
+
+    const starterSerpRes =
+      await starterSerpFetch.json();
+
+    starterImage =
+
+      starterSerpRes
+        ?.news_results?.[0]
+        ?.thumbnail ||
+
+      starterSerpRes
+        ?.news_results?.[0]
+        ?.thumbnail_small ||
+
+      user.lastImage;
+
+  }catch(err){
+
+    console.log(
+      "starter image failed",
+      err
+    );
+  }
+
+  //////////////////////////////////////////////////
+  // PUSH FIRST MESSAGE
+  //////////////////////////////////////////////////
+
+  rooms[roomId].messages.push({
+
+    from:"Image AI",
+
+    image:starterImage,
+
+    mood:starterMood,
+
+    ask:starterQuestion
+  });
+
+  //////////////////////////////////////////////////
+  // SEND TO ROOM
+  //////////////////////////////////////////////////
+
+  io.to(roomId).emit(
+
+    "roomMessages",
+
+    rooms[roomId].messages
   );
 
-const starterSerpRes =
-  await starterSerpFetch.json();
+}catch(err){
 
-const starterImage =
+  console.log(
+    "starter room AI failed",
+    err
+  );
+}
 
-  starterSerpRes
-    ?.news_results?.[0]
-    ?.thumbnail ||
+})();
 
-  starterSerpRes
-    ?.news_results?.[0]
-    ?.thumbnail_small ||
+return;
 
-  user.lastImage;
-        
-//////////////////////////////////////////////////
-// FIRST ROOM MESSAGE
-//////////////////////////////////////////////////
-
-rooms[roomId].messages.push({
-
-  from:"Image AI",
-
-  image:starterImage,
-
-  mood:starterMood,
-
-  ask:starterQuestion
-});
-        
-     socket.emit(
-  "roomCreated",
-  {
-    roomId,
-
-    imageContext:
-      user.imageContext,
-
-    imageDataUrl:
-      user.lastImage,
-
-    messages:
-      rooms[roomId].messages
-  }
-);
-        return;
-      }
+}
 
       //////////////////////////////////////////////////
       // NORMAL V3 MODE
