@@ -717,12 +717,72 @@ rainy downtown loneliness
   // PUSH IMAGE MESSAGE
   //////////////////////////////////////////////////
 
-  room.messages.push({
+  //////////////////////////////////////////////////
+// GPT CREATES 1-3 WORD MOOD
+//////////////////////////////////////////////////
 
-    from:"Image AI",
+const moodRes =
+  await openai.chat.completions.create({
 
-    image:imageUrl
-  });
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Create a 1 to 3 word emotional mood phrase.
+
+Rules:
+- lowercase only
+- no punctuation
+- emotionally modern
+- atmospheric
+- no explanation
+
+Examples:
+
+quiet pressure
+public loneliness
+digital exhaustion
+heavy silence
+`
+    },
+
+    {
+      role:"user",
+
+      content:`
+User message:
+${text}
+
+Search phrase:
+${searchQuery}
+`
+    }
+  ]
+});
+
+const moodText =
+  moodRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+//////////////////////////////////////////////////
+// PUSH IMAGE MESSAGE
+//////////////////////////////////////////////////
+
+room.messages.push({
+
+  from:"Image AI",
+
+  image:imageUrl,
+
+  mood:moodText
+});
 
   io.to(room.id).emit(
 
