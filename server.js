@@ -315,6 +315,7 @@ Rules:
           roomId;
 
 //////////////////////////////////////////////////
+//////////////////////////////////////////////////
 // INITIAL ROOM QUESTION
 //////////////////////////////////////////////////
 
@@ -356,9 +357,65 @@ const starterQuestion =
     .content
     .trim();
 
+//////////////////////////////////////////////////
+// FIRST IMAGE MOOD
+//////////////////////////////////////////////////
+
+const starterMoodRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Create a 1 to 3 word emotional mood phrase.
+
+Rules:
+- lowercase only
+- no punctuation
+- emotionally cinematic
+- internet atmosphere feeling
+
+Examples:
+
+quiet heartbreak
+digital loneliness
+hidden pressure
+silent obsession
+`
+    },
+
+    {
+      role:"user",
+
+      content:starterQuestion
+    }
+  ]
+});
+
+const starterMood =
+
+  starterMoodRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+//////////////////////////////////////////////////
+// FIRST ROOM MESSAGE
+//////////////////////////////////////////////////
+
 rooms[roomId].messages.push({
 
   from:"Image AI",
+
+  image:user.lastImage,
+
+  mood:starterMood,
 
   ask:starterQuestion
 });
