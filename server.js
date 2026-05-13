@@ -919,6 +919,9 @@ ${finalAnswer}`,
 //////////////////////////////////////////////////
 
 try{
+  io.to(room.id).emit(
+  "aiTypingStart"
+);
 
  //////////////////////////////////////////////////
 // GPT CREATES PHILOSOPHICAL NEWS SEARCH
@@ -1241,6 +1244,9 @@ room.messages.push({
 
     room.messages
   );
+  io.to(room.id).emit(
+  "aiTypingStop"
+);
 
 }catch(err){
 
