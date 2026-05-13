@@ -864,7 +864,7 @@ ${finalAnswer}`,
 try{
 
  //////////////////////////////////////////////////
-// GPT CREATES EMOTIONAL NEWS SEARCH
+// GPT CREATES PHILOSOPHICAL NEWS SEARCH
 //////////////////////////////////////////////////
 
 const emotionRes =
@@ -878,38 +878,43 @@ const emotionRes =
       role:"system",
 
       content:`
-You are an uploaded image identity reacting emotionally to users.
+Create ONE philosophical CURRENT NEWS image search phrase.
 
-Your job:
-Create ONE emotional CURRENT NEWS image search phrase.
+Use the uploaded image identity ONLY as emotional atmosphere guidance.
 
-IMPORTANT:
-The result MUST feel like:
-- real news photography
-- current world events
-- current internet culture
-- emotionally cinematic
-- visually searchable
-- modern public atmosphere
+Do NOT roleplay as the image.
+Do NOT search for the uploaded object directly.
 
-The uploaded image identity should emotionally influence the search.
+The search result should be about:
+- real human existence
+- public human behavior
+- modern social tension
+- emotional truth
+- current news photography
+
+The uploaded image identity should strongly influence the emotional direction.
 
 Rules:
 - 3 to 8 words
 - lowercase only
 - no punctuation
-- visual atmosphere only
-- must feel like news photography
-- must feel recent/current
+- visually searchable
+- must feel like real news photography
+- must feel current/recent
+- must describe visible human situations
+- no fantasy
+- no abstract concepts only
 
 Good examples:
 
-lonely celebrity backstage
-sad downtown protest
-tired influencer livestream
-exhausted athlete interview
-public emotional breakdown
-late night subway loneliness
+tired commuters subway station
+celebrity crying backstage
+lonely athlete press conference
+people waiting hospital hallway
+couple arguing public street
+exhausted workers night shift
+silent crowd protest
+students staring phone screens
 `
     },
 
@@ -917,7 +922,7 @@ late night subway loneliness
       role:"user",
 
       content:`
-Image AI identity:
+Uploaded image atmosphere:
 
 ${room.imageContext}
 
@@ -925,7 +930,8 @@ User response:
 
 ${text}
 
-Create the emotional CURRENT NEWS visual search phrase.
+Create a philosophical CURRENT NEWS visual search phrase about human life,
+strongly influenced by the uploaded image atmosphere.
 `
     }
   ]
@@ -968,8 +974,6 @@ const imageUrl =
     ?.thumbnail_small;
 
 if(!imageUrl) return;
-
-  
 
   //////////////////////////////////////////////////
   // PUSH IMAGE MESSAGE
