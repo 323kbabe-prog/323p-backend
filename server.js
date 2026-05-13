@@ -348,6 +348,9 @@ socket.emit(
 //////////////////////////////////////////////////
 // GENERATE FIRST AI MESSAGE ASYNC
 //////////////////////////////////////////////////
+io.to(roomId).emit(
+  "aiTypingStart"
+);
 
 (async () => {
 
@@ -485,7 +488,7 @@ hidden pressure
       .content
       .trim();
 
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
 // SAFE IMAGE
 //////////////////////////////////////////////////
 
@@ -543,6 +546,10 @@ Create a philosophical CURRENT NEWS visual search phrase.
       .content
       .trim();
 
+  //////////////////////////////////////////////////
+  // GOOGLE NEWS SEARCH
+  //////////////////////////////////////////////////
+
   const starterSerpFetch =
     await fetch(
 
@@ -552,6 +559,10 @@ Create a philosophical CURRENT NEWS visual search phrase.
 
   const starterSerpRes =
     await starterSerpFetch.json();
+
+  //////////////////////////////////////////////////
+  // GET NEWS IMAGE
+  //////////////////////////////////////////////////
 
   starterImage =
 
@@ -563,7 +574,52 @@ Create a philosophical CURRENT NEWS visual search phrase.
       ?.news_results?.[0]
       ?.thumbnail_small;
 
-  if(!starterImage) return;
+  //////////////////////////////////////////////////
+  // GOOGLE IMAGE FALLBACK
+  //////////////////////////////////////////////////
+
+  if(!starterImage){
+
+    try{
+
+      const imageFallbackFetch =
+        await fetch(
+
+          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
+
+        );
+
+      const imageFallbackRes =
+        await imageFallbackFetch.json();
+
+      starterImage =
+
+        imageFallbackRes
+          ?.images_results?.[0]
+          ?.original ||
+
+        imageFallbackRes
+          ?.images_results?.[0]
+          ?.thumbnail;
+
+    }catch(err){
+
+      console.log(
+        "google image fallback failed",
+        err
+      );
+    }
+  }
+
+  //////////////////////////////////////////////////
+  // FINAL FALLBACK
+  //////////////////////////////////////////////////
+
+  if(!starterImage){
+
+    starterImage =
+      user.lastImage;
+  }
 
 }catch(err){
 
@@ -572,7 +628,8 @@ Create a philosophical CURRENT NEWS visual search phrase.
     err
   );
 
-  return;
+  starterImage =
+    user.lastImage;
 }
 
   //////////////////////////////////////////////////
@@ -600,6 +657,9 @@ Create a philosophical CURRENT NEWS visual search phrase.
 
     rooms[roomId].messages
   );
+  io.to(roomId).emit(
+  "aiTypingStop"
+);
 
 }catch(err){
 
@@ -1048,7 +1108,11 @@ const serpRes =
 // GET ONE NEWS IMAGE
 //////////////////////////////////////////////////
 
-const imageUrl =
+//////////////////////////////////////////////////
+// GET NEWS IMAGE
+//////////////////////////////////////////////////
+
+let imageUrl =
 
   serpRes
     ?.news_results?.[0]
@@ -1058,7 +1122,52 @@ const imageUrl =
     ?.news_results?.[0]
     ?.thumbnail_small;
 
-if(!imageUrl) return;
+//////////////////////////////////////////////////
+// GOOGLE IMAGE FALLBACK
+//////////////////////////////////////////////////
+
+if(!imageUrl){
+
+  try{
+
+    const imageFallbackFetch =
+      await fetch(
+
+        `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+
+      );
+
+    const imageFallbackRes =
+      await imageFallbackFetch.json();
+
+    imageUrl =
+
+      imageFallbackRes
+        ?.images_results?.[0]
+        ?.original ||
+
+      imageFallbackRes
+        ?.images_results?.[0]
+        ?.thumbnail;
+
+  }catch(err){
+
+    console.log(
+      "google image fallback failed",
+      err
+    );
+  }
+}
+
+//////////////////////////////////////////////////
+// FINAL FALLBACK
+//////////////////////////////////////////////////
+
+if(!imageUrl){
+
+  imageUrl =
+    user.lastImage;
+}
 
   //////////////////////////////////////////////////
   // PUSH IMAGE MESSAGE
