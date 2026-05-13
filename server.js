@@ -347,47 +347,54 @@ socket.emit(
 try{
 
   //////////////////////////////////////////////////
-  // STARTER QUESTION
-  //////////////////////////////////////////////////
+// STARTER QUESTION
+//////////////////////////////////////////////////
 
-  const starterRes =
-    await openai.chat.completions.create({
+const starterRes =
+  await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-    messages:[
+  messages:[
 
-      {
-        role:"system",
+    {
+      role:"system",
 
-        content:`
-Create ONE short emotional curiosity question.
+      content:`
+Create ONE short emotional question.
+
+The question MUST feel natural to answer with:
+yes
+or
+no
 
 Rules:
-- lowercase
+- lowercase only
 - no punctuation
 - emotionally tempting
-- 2 to 6 words
+- psychologically direct
 - internet atmosphere feeling
+- 2 to 6 words
 
-Examples:
+Good examples:
 
-want to see loneliness
-see what people hide
-see public sadness
-want to see obsession
+do people fake happiness
+is loneliness becoming normal
+are people emotionally tired
+does attention feel empty
+should sadness stay hidden
 `
-      }
-    ]
-  });
+    }
+  ]
+});
 
-  const starterQuestion =
+const starterQuestion =
 
-    starterRes
-      .choices[0]
-      .message
-      .content
-      .trim();
+  starterRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
   //////////////////////////////////////////////////
   // STARTER MOOD
@@ -856,84 +863,113 @@ ${finalAnswer}`,
 
 try{
 
-  //////////////////////////////////////////////////
-  // GPT CREATES EMOTIONAL NEWS SEARCH
-  //////////////////////////////////////////////////
+ //////////////////////////////////////////////////
+// GPT CREATES EMOTIONAL NEWS SEARCH
+//////////////////////////////////////////////////
 
-  const emotionRes =
-    await openai.chat.completions.create({
+const emotionRes =
+  await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-    messages:[
+  messages:[
 
-      {
-        role:"system",
+    {
+      role:"system",
 
-        content:`
-Turn the user's message into ONE emotional current-news image search phrase.
+      content:`
+You are an uploaded image identity reacting emotionally to users.
+
+Your job:
+Create ONE emotional CURRENT NEWS image search phrase.
+
+IMPORTANT:
+The result MUST feel like:
+- real news photography
+- current world events
+- current internet culture
+- emotionally cinematic
+- visually searchable
+- modern public atmosphere
+
+The uploaded image identity should emotionally influence the search.
 
 Rules:
-- visual atmosphere only
-- emotionally cinematic
-- modern culture feeling
 - 3 to 8 words
+- lowercase only
 - no punctuation
-- no quotes
+- visual atmosphere only
+- must feel like news photography
+- must feel recent/current
 
-Examples:
+Good examples:
 
 lonely celebrity backstage
-sad city protest
-empty subway late night
-exhausted athlete press conference
-rainy downtown loneliness
+sad downtown protest
+tired influencer livestream
+exhausted athlete interview
+public emotional breakdown
+late night subway loneliness
 `
-      },
+    },
 
-      {
-        role:"user",
-        content:text
-      }
-    ]
-  });
+    {
+      role:"user",
 
-  const searchQuery =
-    emotionRes
-      .choices[0]
-      .message
-      .content
-      .trim();
+      content:`
+Image AI identity:
 
-  //////////////////////////////////////////////////
-  // SERP CURRENT NEWS SEARCH
-  //////////////////////////////////////////////////
+${room.imageContext}
 
-  const serpFetch =
-    await fetch(
+User response:
 
-      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+${text}
 
-    );
+Create the emotional CURRENT NEWS visual search phrase.
+`
+    }
+  ]
+});
 
-  const serpRes =
-    await serpFetch.json();
+const searchQuery =
 
-  //////////////////////////////////////////////////
-  // GET ONE NEWS IMAGE
-  //////////////////////////////////////////////////
+  emotionRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
-  const imageUrl =
+//////////////////////////////////////////////////
+// SERP CURRENT NEWS SEARCH
+//////////////////////////////////////////////////
 
-    serpRes
-      ?.news_results?.[0]
-      ?.thumbnail ||
+const serpFetch =
+  await fetch(
 
-    serpRes
-      ?.news_results?.[0]
-      ?.thumbnail_small;
+    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
-  if(!imageUrl) return;
+  );
+
+const serpRes =
+  await serpFetch.json();
+
+//////////////////////////////////////////////////
+// GET ONE NEWS IMAGE
+//////////////////////////////////////////////////
+
+const imageUrl =
+
+  serpRes
+    ?.news_results?.[0]
+    ?.thumbnail ||
+
+  serpRes
+    ?.news_results?.[0]
+    ?.thumbnail_small;
+
+if(!imageUrl) return;
+
+  
 
   //////////////////////////////////////////////////
   // PUSH IMAGE MESSAGE
@@ -1012,21 +1048,28 @@ const nextQuestionRes =
       role:"system",
 
       content:`
-Create ONE short emotional curiosity question.
+Create ONE short emotional question.
+
+The question MUST feel natural to answer with:
+yes
+or
+no
 
 Rules:
-- lowercase
+- lowercase only
 - no punctuation
 - emotionally tempting
-- 2 to 6 words
+- psychologically direct
 - internet atmosphere feeling
+- 2 to 6 words
 
-Examples:
+Good examples:
 
-see hidden pressure
-want to see attention
-see emotional noise
-see fake happiness
+do people fake happiness
+is loneliness becoming normal
+are people emotionally tired
+does attention feel empty
+should sadness stay hidden
 `
     },
 
@@ -1034,11 +1077,17 @@ see fake happiness
       role:"user",
 
       content:`
-User said:
-${text}
+Image AI identity:
+
+${room.imageContext}
 
 Mood:
+
 ${moodText}
+
+User response:
+
+${text}
 `
     }
   ]
