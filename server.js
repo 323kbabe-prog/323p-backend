@@ -443,80 +443,94 @@ hidden pressure
       .trim();
 
   //////////////////////////////////////////////////
-  // SAFE IMAGE
-  //////////////////////////////////////////////////
+// SAFE IMAGE
+//////////////////////////////////////////////////
 
-  let starterImage =
-    user.lastImage;
+let starterImage = null;
 
-  try{
+try{
 
-    const starterSearchRes =
-      await openai.chat.completions.create({
+  const starterSearchRes =
+    await openai.chat.completions.create({
 
-      model:"gpt-4o-mini",
+    model:"gpt-4o-mini",
 
-      messages:[
+    messages:[
 
-        {
-          role:"system",
+      {
+        role:"system",
 
-          content:`
-Turn this emotional question into a visual news image search phrase.
+        content:`
+Create ONE philosophical CURRENT NEWS image search phrase.
+
+The result should feel:
+- emotionally cinematic
+- human
+- socially reflective
+- current/recent
+- real news photography
 
 Rules:
-- cinematic
-- emotional
-- modern culture atmosphere
 - 3 to 8 words
+- lowercase only
+- no punctuation
+- visually searchable
 `
-        },
+      },
 
-        {
-          role:"user",
+      {
+        role:"user",
 
-          content:starterQuestion
-        }
-      ]
-    });
+        content:`
+Starter question:
 
-    const starterSearch =
+${starterQuestion}
 
-      starterSearchRes
-        .choices[0]
-        .message
-        .content
-        .trim();
+Create a philosophical CURRENT NEWS visual search phrase.
+`
+      }
+    ]
+  });
 
-    const starterSerpFetch =
-      await fetch(
+  const starterSearch =
 
-        `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
+    starterSearchRes
+      .choices[0]
+      .message
+      .content
+      .trim();
 
-      );
+  const starterSerpFetch =
+    await fetch(
 
-    const starterSerpRes =
-      await starterSerpFetch.json();
+      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
 
-    starterImage =
-
-      starterSerpRes
-        ?.news_results?.[0]
-        ?.thumbnail ||
-
-      starterSerpRes
-        ?.news_results?.[0]
-        ?.thumbnail_small ||
-
-      user.lastImage;
-
-  }catch(err){
-
-    console.log(
-      "starter image failed",
-      err
     );
-  }
+
+  const starterSerpRes =
+    await starterSerpFetch.json();
+
+  starterImage =
+
+    starterSerpRes
+      ?.news_results?.[0]
+      ?.thumbnail ||
+
+    starterSerpRes
+      ?.news_results?.[0]
+      ?.thumbnail_small;
+
+  if(!starterImage) return;
+
+}catch(err){
+
+  console.log(
+    "starter image failed",
+    err
+  );
+
+  return;
+}
 
   //////////////////////////////////////////////////
   // PUSH FIRST MESSAGE
