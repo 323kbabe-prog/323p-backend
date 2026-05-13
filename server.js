@@ -295,20 +295,27 @@ Rules:
 
         rooms[roomId] = {
 
-          id:roomId,
+  id:roomId,
 
-          imageContext:
-            user.imageContext,
+  imageContext:
+    user.imageContext,
 
-          messages:[],
+  messages:[],
 
-          createdAt:Date.now(),
+  usedSearches:[],
 
-          expiresAt:
-            Date.now() +
-            60 * 60 * 1000
-        };
+  usedMoods:[],
 
+  usedQuestions:[],
+
+  emotionalState:[],
+
+  createdAt:Date.now(),
+
+  expiresAt:
+    Date.now() +
+    60 * 60 * 1000
+};
         socket.join(roomId);
 
         user.currentRoom =
@@ -894,41 +901,46 @@ const emotionRes =
       content:`
 Create ONE philosophical CURRENT NEWS image search phrase.
 
-Use the uploaded image identity ONLY as emotional atmosphere guidance.
+The system should evolve emotionally over time.
 
-Do NOT roleplay as the image.
-Do NOT search for the uploaded object directly.
+NEVER repeat:
+- previous searches
+- previous moods
+- previous emotional situations
+- previous social atmospheres
 
-The search result should be about:
-- real human existence
-- public human behavior
-- modern social tension
-- emotional truth
-- current news photography
+The search result should feel:
+- human
+- socially reflective
+- emotionally cinematic
+- psychologically evolving
+- visually different over time
+- grounded in real current-news photography
 
-The uploaded image identity should strongly influence the emotional direction.
+Focus on:
+- public behavior
+- social pressure
+- relationships
+- loneliness
+- identity
+- attention
+- emotional fatigue
+- modern society
+- internet culture
+- human tension
 
 Rules:
 - 3 to 8 words
 - lowercase only
 - no punctuation
 - visually searchable
-- must feel like real news photography
-- must feel current/recent
 - must describe visible human situations
 - no fantasy
-- no abstract concepts only
+- no abstract-only concepts
+- no repeated emotional framing
 
-Good examples:
-
-tired commuters subway station
-celebrity crying backstage
-lonely athlete press conference
-people waiting hospital hallway
-couple arguing public street
-exhausted workers night shift
-silent crowd protest
-students staring phone screens
+Emotional progression matters.
+Avoid emotional loops.
 `
     },
 
@@ -940,12 +952,28 @@ Uploaded image atmosphere:
 
 ${room.imageContext}
 
-User response:
+Conversation emotional history:
+
+${room.emotionalState.join("\n")}
+
+Already used searches:
+
+${room.usedSearches.join("\n")}
+
+Already used moods:
+
+${room.usedMoods.join("\n")}
+
+Already used questions:
+
+${room.usedQuestions.join("\n")}
+
+Current user response:
 
 ${text}
 
-Create a philosophical CURRENT NEWS visual search phrase about human life,
-strongly influenced by the uploaded image atmosphere.
+Create a NEW philosophical CURRENT NEWS visual search phrase
+that emotionally evolves the room.
 `
     }
   ]
@@ -958,6 +986,10 @@ const searchQuery =
     .message
     .content
     .trim();
+
+room.usedSearches.push(
+  searchQuery
+);
 
 //////////////////////////////////////////////////
 // SERP CURRENT NEWS SEARCH
@@ -1008,21 +1040,22 @@ const moodRes =
       role:"system",
 
       content:`
-Create a 1 to 3 word emotional mood phrase.
+Create ONE emotionally evolving 1 to 3 word mood phrase.
+
+NEVER repeat previous moods.
+
+The mood should:
+- evolve emotionally
+- match the philosophical news image
+- reflect modern human tension
+- feel cinematic
+- feel psychologically alive
 
 Rules:
 - lowercase only
 - no punctuation
-- emotionally modern
-- atmospheric
-- no explanation
-
-Examples:
-
-quiet pressure
-public loneliness
-digital exhaustion
-heavy silence
+- 1 to 3 words only
+- no repetition
 `
     },
 
@@ -1030,11 +1063,21 @@ heavy silence
       role:"user",
 
       content:`
-User message:
-${text}
+Uploaded atmosphere:
+
+${room.imageContext}
+
+Used moods:
+
+${room.usedMoods.join("\n")}
 
 Search phrase:
+
 ${searchQuery}
+
+Current user response:
+
+${text}
 `
     }
   ]
@@ -1047,9 +1090,13 @@ const moodText =
     .content
     .trim();
 
-//////////////////////////////////////////////////
-// PUSH IMAGE MESSAGE
-//////////////////////////////////////////////////
+room.usedMoods.push(
+  moodText
+);
+
+room.emotionalState.push(
+  moodText
+);
 
 //////////////////////////////////////////////////
 // NEXT QUESTION
@@ -1066,28 +1113,29 @@ const nextQuestionRes =
       role:"system",
 
       content:`
-Create ONE short emotional question.
+Create ONE emotionally evolving yes/no question.
 
-The question MUST feel natural to answer with:
-yes
-or
-no
+NEVER repeat:
+- previous emotional framing
+- previous social tension
+- previous philosophical direction
+
+The room should psychologically evolve over time.
+
+The question should feel:
+- human
+- socially reflective
+- emotionally cinematic
+- psychologically direct
+- existential
+- internet-native
 
 Rules:
 - lowercase only
 - no punctuation
-- emotionally tempting
-- psychologically direct
-- internet atmosphere feeling
 - 2 to 6 words
-
-Good examples:
-
-do people fake happiness
-is loneliness becoming normal
-are people emotionally tired
-does attention feel empty
-should sadness stay hidden
+- natural yes/no response
+- no repetition
 `
     },
 
@@ -1095,17 +1143,31 @@ should sadness stay hidden
       role:"user",
 
       content:`
-Image AI identity:
+Uploaded atmosphere:
 
 ${room.imageContext}
+
+Used questions:
+
+${room.usedQuestions.join("\n")}
+
+Conversation emotional history:
+
+${room.emotionalState.join("\n")}
 
 Mood:
 
 ${moodText}
 
-User response:
+Search phrase:
+
+${searchQuery}
+
+Current user response:
 
 ${text}
+
+Create a NEW emotionally evolving yes/no question.
 `
     }
   ]
@@ -1117,6 +1179,10 @@ const nextQuestion =
     .message
     .content
     .trim();
+
+room.usedQuestions.push(
+  nextQuestion
+);
 
 //////////////////////////////////////////////////
 // PUSH IMAGE + LOOP
