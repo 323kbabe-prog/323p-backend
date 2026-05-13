@@ -579,6 +579,7 @@ try{
 
         content:`
 Create ONE philosophical CURRENT NEWS image search phrase.
+
 The room MUST remain inside the core philosophical category.
 Never drift outside the category.
 
@@ -604,6 +605,7 @@ Rules:
 Starter question:
 
 ${starterQuestion}
+
 Core philosophical category:
 
 ${room.coreTheme}
@@ -688,52 +690,90 @@ Create a philosophical CURRENT NEWS visual search phrase.
   }
 
   //////////////////////////////////////////////////
-  // FINAL FALLBACK
+  // FINAL INTERNET FALLBACK
+  //////////////////////////////////////////////////
+
+  if(!starterImage){
+
+    try{
+
+      const fallbackFetch =
+        await fetch(
+
+          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(room.coreTheme)}&api_key=${process.env.SERPAPI_KEY}`
+
+        );
+
+      const fallbackRes =
+        await fallbackFetch.json();
+
+      starterImage =
+
+        fallbackRes
+          ?.images_results?.[0]
+          ?.original ||
+
+        fallbackRes
+          ?.images_results?.[0]
+          ?.thumbnail;
+
+    }catch(err){
+
+      console.log(
+        "final internet fallback failed",
+        err
+      );
+    }
+  }
+
+  //////////////////////////////////////////////////
+  // ABSOLUTE FINAL SAFETY
   //////////////////////////////////////////////////
 
   if(!starterImage){
 
     starterImage =
-      user.lastImage;
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb";
   }
 
 }catch(err){
 
   console.log(
-    "starter image failed",
+    "starter room AI failed",
     err
   );
 
   starterImage =
-    user.lastImage;
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb";
 }
 
-  //////////////////////////////////////////////////
-  // PUSH FIRST MESSAGE
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// PUSH FIRST MESSAGE
+//////////////////////////////////////////////////
 
-  rooms[roomId].messages.push({
+rooms[roomId].messages.push({
 
-    from:"Image AI",
+  from:"Image AI",
 
-    image:starterImage,
+  image:starterImage,
 
-    mood:starterMood,
+  mood:starterMood,
 
-    ask:starterQuestion
-  });
+  ask:starterQuestion
+});
 
-  //////////////////////////////////////////////////
-  // SEND TO ROOM
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// SEND TO ROOM
+//////////////////////////////////////////////////
 
-  io.to(roomId).emit(
+io.to(roomId).emit(
 
-    "roomMessages",
+  "roomMessages",
 
-    rooms[roomId].messages
-  );
-  io.to(roomId).emit(
+  rooms[roomId].messages
+);
+
+io.to(roomId).emit(
   "aiTypingStop"
 );
 
