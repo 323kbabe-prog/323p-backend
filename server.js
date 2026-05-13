@@ -362,34 +362,70 @@ const starterRes =
 
   model:"gpt-4o-mini",
 
+  temperature:1.2,
+
   messages:[
 
     {
       role:"system",
 
       content:`
-Create ONE short emotional question.
+Create ONE emotionally unique yes/no question.
 
-The question MUST feel natural to answer with:
-yes
-or
-no
+IMPORTANT:
+Never generate generic relationship questions repeatedly.
+
+Avoid:
+- is love worth the pain
+- fake happiness
+- emotional exhaustion clichés
+
+The question should feel:
+- psychologically interesting
+- socially reflective
+- philosophically human
+- modern
+- emotionally diverse
+- internet-native
+
+Focus on different human themes:
+- loneliness
+- identity
+- public behavior
+- social media
+- ambition
+- religion
+- family
+- addiction
+- attention
+- performance
+- work
+- friendship
+- emotional numbness
+- memory
+- aging
+- technology
+- self-worth
 
 Rules:
 - lowercase only
 - no punctuation
-- emotionally tempting
-- psychologically direct
-- internet atmosphere feeling
+- yes/no friendly
 - 2 to 6 words
+- emotionally sharp
+- no repetition
+`
+    },
 
-Good examples:
+    {
+      role:"user",
 
-do people fake happiness
-is loneliness becoming normal
-are people emotionally tired
-does attention feel empty
-should sadness stay hidden
+      content:`
+Uploaded atmosphere:
+
+${user.imageContext}
+
+Create a completely fresh emotional starting question.
 `
     }
   ]
