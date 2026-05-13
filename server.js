@@ -268,54 +268,125 @@ Rules:
         ]
       });
 
-      user.imageContext =
-        res.choices[0]
-          .message
-          .content
-          .replace(/\*\*/g,"")
-          .replace(
-            /Atmosphere:/gi,
-            "Environment:"
-          )
-          .replace(
-            /Emotional Tone:/gi,
-            "Presence:"
-          );
+     //////////////////////////////////////////////////
+// IMAGE AI IDENTITY
+//////////////////////////////////////////////////
 
-      //////////////////////////////////////////////////
-      // ROOM MODE
-      //////////////////////////////////////////////////
+user.imageContext =
+  res.choices[0]
+    .message
+    .content
+    .replace(/\*\*/g,"")
+    .replace(
+      /Atmosphere:/gi,
+      "Environment:"
+    )
+    .replace(
+      /Emotional Tone:/gi,
+      "Presence:"
+    );
 
-      if(roomMode){
+//////////////////////////////////////////////////
+// DETECT CORE THEME
+//////////////////////////////////////////////////
 
-        const roomId =
-          Math.random()
-            .toString(36)
-            .substring(2,8);
+const themeRes =
+  await openai.chat.completions.create({
 
-        rooms[roomId] = {
+  model:"gpt-4o-mini",
 
-  id:roomId,
+  messages:[
 
-  imageContext:
-    user.imageContext,
+    {
+      role:"system",
 
-  messages:[],
+      content:`
+Detect the SINGLE dominant philosophical category.
 
-  usedSearches:[],
+Return ONLY one word.
 
-  usedMoods:[],
+Possible categories:
 
-  usedQuestions:[],
+religion
+technology
+celebrity
+fashion
+music
+politics
+family
+gaming
+loneliness
+internet
+violence
+performance
+work
+relationships
+identity
+spirituality
+culture
 
-  emotionalState:[],
+Rules:
+- lowercase only
+- one word only
+- no punctuation
+- no explanation
+`
+    },
 
-  createdAt:Date.now(),
+    {
+      role:"user",
 
-  expiresAt:
-    Date.now() +
-    60 * 60 * 1000
-};
+      content:user.imageContext
+    }
+  ]
+});
+
+const coreTheme =
+
+  themeRes
+    .choices[0]
+    .message
+    .content
+    .trim()
+    .toLowerCase();
+
+//////////////////////////////////////////////////
+// ROOM MODE
+//////////////////////////////////////////////////
+
+if(roomMode){
+
+  const roomId =
+    Math.random()
+      .toString(36)
+      .substring(2,8);
+
+  rooms[roomId] = {
+
+    id:roomId,
+
+    coreTheme:
+      coreTheme,
+
+    imageContext:
+      user.imageContext,
+
+    messages:[],
+
+    usedSearches:[],
+
+    usedMoods:[],
+
+    usedQuestions:[],
+
+    emotionalState:[],
+
+    createdAt:Date.now(),
+
+    expiresAt:
+      Date.now() +
+      60 * 60 * 1000
+  };
         socket.join(roomId);
 
         user.currentRoom =
@@ -508,6 +579,8 @@ try{
 
         content:`
 Create ONE philosophical CURRENT NEWS image search phrase.
+The room MUST remain inside the core philosophical category.
+Never drift outside the category.
 
 The result should feel:
 - emotionally cinematic
@@ -531,6 +604,9 @@ Rules:
 Starter question:
 
 ${starterQuestion}
+Core philosophical category:
+
+${room.coreTheme}
 
 Create a philosophical CURRENT NEWS visual search phrase.
 `
@@ -1050,6 +1126,10 @@ Avoid emotional loops.
 Uploaded image atmosphere:
 
 ${room.imageContext}
+
+Core philosophical category:
+
+${room.coreTheme}
 
 Conversation emotional history:
 
