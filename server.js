@@ -727,84 +727,24 @@ Create a philosophical CURRENT NEWS visual search phrase.
   }
 
   //////////////////////////////////////////////////
-// ABSOLUTE FINAL INTERNET SAFETY
-//////////////////////////////////////////////////
+  // ABSOLUTE FINAL SAFETY
+  //////////////////////////////////////////////////
 
-if(!starterImage){
-
-  try{
-
-    const randomThemes = [
-
-      room.coreTheme,
-
-      room.coreTheme + " people",
-
-      room.coreTheme + " emotional",
-
-      room.coreTheme + " modern life",
-
-      room.coreTheme + " atmosphere",
-
-      room.coreTheme + " photography",
-
-      room.coreTheme + " public",
-
-      room.coreTheme + " documentary"
-    ];
-
-    const randomQuery =
-
-      randomThemes[
-        Math.floor(
-          Math.random() *
-          randomThemes.length
-        )
-      ];
-
-    const safetyFetch =
-      await fetch(
-
-        `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(randomQuery)}&api_key=${process.env.SERPAPI_KEY}`
-
-      );
-
-    const safetyRes =
-      await safetyFetch.json();
+  if(!starterImage){
 
     starterImage =
-
-      safetyRes
-        ?.images_results?.[
-          Math.floor(
-            Math.random() * 5
-          )
-        ]
-        ?.original ||
-
-      safetyRes
-        ?.images_results?.[
-          Math.floor(
-            Math.random() * 5
-          )
-        ]
-        ?.thumbnail;
-
-  }catch(err){
-
-    console.log(
-      "absolute internet safety failed",
-      err
-    );
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb";
   }
-}
 
-  }catch(err){
+}catch(err){
 
   console.log(
-    "safe image failed",
+    "starter room AI failed",
     err
   );
+
+  starterImage =
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb";
 }
 
 //////////////////////////////////////////////////
@@ -842,10 +782,6 @@ io.to(roomId).emit(
   console.log(
     "starter room AI failed",
     err
-  );
-
-  io.to(roomId).emit(
-    "aiTypingStop"
   );
 }
 
