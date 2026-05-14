@@ -799,6 +799,14 @@ if(!starterImage){
   }
 }
 
+  }catch(err){
+
+  console.log(
+    "safe image failed",
+    err
+  );
+}
+
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
@@ -834,6 +842,10 @@ io.to(roomId).emit(
   console.log(
     "starter room AI failed",
     err
+  );
+
+  io.to(roomId).emit(
+    "aiTypingStop"
   );
 }
 
