@@ -214,7 +214,22 @@ io.on("connection", socket => {
     const user =
       users[socket.id];
 
-    if(!user.email) return;
+ if(!user.email){
+
+  socket.emit(
+    "state",
+    {
+      placeholder:
+        "enter your email to connect"
+    }
+  );
+
+  return;
+}
+      console.log(
+  "UPLOAD USER:",
+  user.email
+);
 
     user.lastImage =
       imageDataUrl;
