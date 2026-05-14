@@ -726,7 +726,7 @@ Create a philosophical CURRENT NEWS visual search phrase.
     }
   }
 
- //////////////////////////////////////////////////
+//////////////////////////////////////////////////
 // ABSOLUTE FINAL INTERNET SAFETY
 //////////////////////////////////////////////////
 
@@ -799,12 +799,27 @@ if(!starterImage){
   }
 }
 
+//////////////////////////////////////////////////
+// TRUE FINAL FALLBACK
+//////////////////////////////////////////////////
+
+if(!starterImage){
+
+  starterImage =
+    "https://picsum.photos/900/1200?random=" +
+    Math.floor(Math.random()*100000);
+}
+
 }catch(err){
 
   console.log(
     "starter room AI failed",
     err
   );
+
+  starterImage =
+    "https://picsum.photos/900/1200?random=" +
+    Math.floor(Math.random()*100000);
 }
 
 //////////////////////////////////////////////////
