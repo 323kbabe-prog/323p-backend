@@ -207,9 +207,10 @@ io.on("connection", socket => {
     "imageUpload",
 
     async ({
-      imageDataUrl,
-      roomMode
-    }) => {
+  imageDataUrl,
+  roomMode,
+  askMode
+}) => {
 
     const user =
       users[socket.id];
@@ -368,6 +369,32 @@ const coreTheme =
 // ROOM MODE
 //////////////////////////////////////////////////
 
+//////////////////////////////////////////////////
+// ASK AI MODE
+//////////////////////////////////////////////////
+
+if(askMode){
+
+  user.imageMode = true;
+
+user.currentRoom = null;
+
+  socket.emit("preview", {
+
+    text:
+`Image AI:
+${user.imageContext}`
+  });
+
+  socket.emit("state", {
+
+    placeholder:
+      "ask this image"
+  });
+
+  return;
+}
+
 if(roomMode){
 
   const roomId =
@@ -493,7 +520,7 @@ Rules:
       role:"user",
 
       content:`
-Uploaded atmosphere:
+Uploaded image AI personality:
 
 ${user.imageContext}
 
@@ -1530,7 +1557,7 @@ Rules:
       role:"user",
 
       content:`
-Uploaded atmosphere:
+Uploaded image AI personality:
 
 ${room.imageContext}
 
