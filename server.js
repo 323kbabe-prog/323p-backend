@@ -1774,7 +1774,25 @@ for(const item of newsResults){
 }
 
 //////////////////////////////////////////////////
-// PUSH IMAGE + REAL TITLE
+// SHAREABLE RESULT LINK
+//////////////////////////////////////////////////
+
+const resultLink =
+
+  newsResults?.[0]?.link ||
+
+  `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+
+//////////////////////////////////////////////////
+// FIXED ENGLISH AI MESSAGE
+//////////////////////////////////////////////////
+
+const fixedMessage =
+
+  "Latest internet result found.";
+
+//////////////////////////////////////////////////
+// PUSH IMAGE + SHARE LINK
 //////////////////////////////////////////////////
 
 room.messages.push({
@@ -1783,18 +1801,29 @@ room.messages.push({
 
   image:imageUrl,
 
-  mood:moodText,
+  mood:"live internet",
 
-  ask:newsTitle
+  ask:fixedMessage,
+
+  link:resultLink
 });
 
-  io.to(room.id).emit(
+//////////////////////////////////////////////////
+// SEND UPDATED ROOM
+//////////////////////////////////////////////////
 
-    "roomMessages",
+io.to(room.id).emit(
 
-    room.messages
-  );
-  io.to(room.id).emit(
+  "roomMessages",
+
+  room.messages
+);
+
+//////////////////////////////////////////////////
+// STOP AI TYPING
+//////////////////////////////////////////////////
+
+io.to(room.id).emit(
   "aiTypingStop"
 );
 
@@ -1802,7 +1831,6 @@ room.messages.push({
 
   console.log(err);
 }
-});
 
   //////////////////////////////////////////////////
   // AI SEARCH
