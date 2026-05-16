@@ -316,28 +316,27 @@ const themeRes =
       role:"system",
 
       content:`
-Detect the SINGLE dominant philosophical category.
+Detect the SINGLE dominant internet trend category.
 
 Return ONLY one word.
 
 Possible categories:
 
-religion
-technology
 celebrity
 fashion
 music
-politics
-family
-gaming
-loneliness
+sports
 internet
-violence
-performance
-work
-relationships
-identity
-spirituality
+technology
+gaming
+luxury
+politics
+ai
+fitness
+streetwear
+dating
+viral
+entertainment
 culture
 
 Rules:
@@ -459,50 +458,34 @@ const starterRes =
       role:"system",
 
       content:`
-Create ONE emotionally unique yes/no question.
+Create ONE trending social reaction line.
 
-IMPORTANT:
-Never generate generic relationship questions repeatedly.
-
-Avoid:
-- is love worth the pain
-- fake happiness
-- emotional exhaustion clichés
-
-The question should feel:
-- psychologically interesting
-- socially reflective
-- philosophically human
-- modern
-- emotionally diverse
+The line should feel:
+- viral
 - internet-native
+- emotionally clickable
+- socially addictive
+- current
+- culturally alive
 
-Focus on different human themes:
-- loneliness
-- identity
-- public behavior
-- social media
-- ambition
-- religion
-- family
-- addiction
-- attention
-- performance
-- work
-- friendship
-- emotional numbness
-- memory
-- aging
-- technology
-- self-worth
+Focus on:
+- celebrity culture
+- AI
+- internet drama
+- sports
+- music
+- fashion
+- viral moments
+- social media energy
+- trending behavior
 
 Rules:
 - lowercase only
 - no punctuation
-- yes/no friendly
-- 2 to 6 words
-- emotionally sharp
-- no repetition
+- 2 to 7 words
+- not philosophical
+- not existential
+- feel like social feed energy
 `
     },
 
@@ -514,7 +497,7 @@ Uploaded atmosphere:
 
 ${user.imageContext}
 
-Create a completely fresh emotional starting question.
+Create a completely fresh trending social reaction line.
 `
     }
   ]
@@ -543,18 +526,29 @@ const starterQuestion =
         role:"system",
 
         content:`
-Create a 1 to 3 word emotional mood phrase.
+Create a 1 to 3 word trending internet vibe.
+
+The vibe should feel:
+- socially addictive
+- culturally current
+- emotionally reactive
+- internet-native
+- viral
+
+Examples:
+
+main character
+internet pressure
+viral energy
+celebrity chaos
+late night doomscroll
+digital fame
 
 Rules:
 - lowercase only
 - no punctuation
-- emotionally cinematic
-
-Examples:
-
-quiet heartbreak
-digital loneliness
-hidden pressure
+- 1 to 3 words
+- current internet culture energy
 `
       },
 
@@ -593,23 +587,39 @@ try{
         role:"system",
 
         content:`
-Create ONE philosophical CURRENT NEWS image search phrase.
+Create ONE trending CURRENT NEWS image search phrase.
 
-The room MUST remain inside the core philosophical category.
-Never drift outside the category.
+IMPORTANT:
+The search MUST still match the uploaded image AI personality.
 
-The result should feel:
-- emotionally cinematic
-- human
-- socially reflective
-- current/recent
-- real news photography
+The AI personality controls:
+- trend taste
+- celebrity focus
+- emotional tone
+- internet vibe
+- cultural direction
+
+Focus on:
+- viral moments
+- celebrity news
+- AI
+- music
+- fashion
+- sports
+- internet culture
+- entertainment
+- social media trends
+- breaking news
 
 Rules:
-- 3 to 8 words
+- current
+- visually searchable
+- internet-native
 - lowercase only
 - no punctuation
-- visually searchable
+- 3 to 8 words
+- no philosophy
+- no existential themes
 `
       },
 
@@ -621,11 +631,11 @@ Starter question:
 
 ${starterQuestion}
 
-Core philosophical category:
+Trend category:
 
 ${room.coreTheme}
 
-Create a philosophical CURRENT NEWS visual search phrase.
+Create a trending CURRENT NEWS visual search phrase connected to the uploaded image AI personality.
 `
       }
     ]
@@ -753,19 +763,12 @@ if(!starterImage){
 
       room.coreTheme,
 
-      room.coreTheme + " people",
-
-      room.coreTheme + " emotional",
-
-      room.coreTheme + " modern life",
-
-      room.coreTheme + " atmosphere",
-
-      room.coreTheme + " documentary",
-
-      room.coreTheme + " public life",
-
-      room.coreTheme + " human situation"
+      room.coreTheme + " trending",
+room.coreTheme + " viral",
+room.coreTheme + " celebrity",
+room.coreTheme + " social media",
+room.coreTheme + " breaking news",
+room.coreTheme + " internet culture"
     ];
 
     const randomQuery =
@@ -1190,7 +1193,7 @@ try{
 );
 
  //////////////////////////////////////////////////
-// GPT CREATES PHILOSOPHICAL NEWS SEARCH
+// GPT CREATES TRENDING NEWS SEARCH
 //////////////////////////////////////////////////
 
 const emotionRes =
@@ -1204,48 +1207,63 @@ const emotionRes =
       role:"system",
 
       content:`
-Create ONE philosophical CURRENT NEWS image search phrase.
+Create ONE trending CURRENT NEWS image search phrase.
 
-The system should evolve emotionally over time.
+IMPORTANT:
+The search MUST still match the uploaded image AI personality.
+
+The room is:
+- personality-driven
+- internet-native
+- trend-reactive
+- socially addictive
+
+The AI personality controls:
+- trend taste
+- celebrity focus
+- emotional tone
+- internet vibe
+- cultural direction
 
 NEVER repeat:
 - previous searches
 - previous moods
-- previous emotional situations
-- previous social atmospheres
-
-The search result should feel:
-- human
-- socially reflective
-- emotionally cinematic
-- psychologically evolving
-- visually different over time
-- grounded in real current-news photography
+- previous trend situations
+- previous viral atmosphere
 
 Focus on:
-- public behavior
-- social pressure
-- relationships
-- loneliness
-- identity
-- attention
-- emotional fatigue
-- modern society
-- internet culture
-- human tension
+- trending news
+- viral moments
+- celebrity culture
+- AI
+- music
+- fashion
+- sports
+- internet drama
+- politics
+- technology
+- entertainment
+- social media trends
+
+The result should feel:
+- current
+- emotionally clickable
+- visually strong
+- internet-native
+- culturally alive
+- addictive
 
 Rules:
 - 3 to 8 words
 - lowercase only
 - no punctuation
 - visually searchable
-- must describe visible human situations
-- no fantasy
-- no abstract-only concepts
-- no repeated emotional framing
+- current-news energy only
+- no philosophy
+- no abstract concepts
+- no repetition
 
-Emotional progression matters.
-Avoid emotional loops.
+The uploaded image personality MUST shape the trend direction.
 `
     },
 
@@ -1253,36 +1271,45 @@ Avoid emotional loops.
       role:"user",
 
       content:`
-Uploaded image atmosphere:
+Uploaded image AI personality:
 
 ${room.imageContext}
 
-Core philosophical category:
+Trend personality category:
 
 ${room.coreTheme}
 
-Conversation emotional history:
+Previous trend history:
 
 ${room.emotionalState.join("\n")}
 
-Already used searches:
+Used searches:
 
 ${room.usedSearches.join("\n")}
 
-Already used moods:
+Used moods:
 
 ${room.usedMoods.join("\n")}
 
-Already used questions:
+Used reactions:
 
 ${room.usedQuestions.join("\n")}
 
-Current user response:
+Current user reaction:
 
 ${text}
 
-Create a NEW philosophical CURRENT NEWS visual search phrase
-that emotionally evolves the room.
+Create a NEW trending CURRENT NEWS image search phrase.
+
+IMPORTANT:
+The search MUST still feel connected to the uploaded image personality.
+
+The room should evolve like:
+- a live internet feed
+- social media culture
+- trending reactions
+- viral news energy
+- celebrity/internet momentum
 `
     }
   ]
@@ -1398,22 +1425,31 @@ const moodRes =
       role:"system",
 
       content:`
-Create ONE emotionally evolving 1 to 3 word mood phrase.
+Create ONE evolving internet vibe.
 
-NEVER repeat previous moods.
+The vibe should feel:
+- viral
+- socially addictive
+- internet-native
+- culturally current
+- emotionally reactive
 
-The mood should:
-- evolve emotionally
-- match the philosophical news image
-- reflect modern human tension
-- feel cinematic
-- feel psychologically alive
+Examples:
+
+main character
+internet pressure
+celebrity chaos
+viral energy
+late night scrolling
+digital fame
+timeline exploding
 
 Rules:
 - lowercase only
 - no punctuation
-- 1 to 3 words only
-- no repetition
+- 1 to 3 words
+- modern internet culture only
+- no philosophy
 `
     },
 
@@ -1421,7 +1457,7 @@ Rules:
       role:"user",
 
       content:`
-Uploaded atmosphere:
+Uploaded image AI personality:
 
 ${room.imageContext}
 
@@ -1471,29 +1507,22 @@ const nextQuestionRes =
       role:"system",
 
       content:`
-Create ONE emotionally evolving yes/no question.
+Create ONE trending social reaction line.
 
-NEVER repeat:
-- previous emotional framing
-- previous social tension
-- previous philosophical direction
-
-The room should psychologically evolve over time.
-
-The question should feel:
-- human
-- socially reflective
-- emotionally cinematic
-- psychologically direct
-- existential
+The line should feel:
+- viral
+- socially reactive
 - internet-native
+- emotionally engaging
+- culturally current
 
 Rules:
 - lowercase only
 - no punctuation
-- 2 to 6 words
-- natural yes/no response
-- no repetition
+- 2 to 7 words
+- no philosophy
+- no existential tone
+- feel like live internet culture
 `
     },
 
@@ -1525,7 +1554,7 @@ Current user response:
 
 ${text}
 
-Create a NEW emotionally evolving yes/no question.
+Create a NEW trending social reaction line.
 `
     }
   ]
