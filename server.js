@@ -691,18 +691,37 @@ Create a trending CURRENT NEWS visual search phrase connected to the uploaded im
     await starterSerpFetch.json();
 
   //////////////////////////////////////////////////
-  // GET NEWS IMAGE
-  //////////////////////////////////////////////////
+// 5.3 REAL STARTER NEWS PICKER
+//////////////////////////////////////////////////
 
-  starterImage =
+let starterNewsTitle = starterQuestion;
+let starterNewsItem = null;
 
-    starterSerpRes
-      ?.news_results?.[0]
-      ?.thumbnail ||
+const starterNewsResults =
+  starterSerpRes?.news_results || [];
 
-    starterSerpRes
-      ?.news_results?.[0]
-      ?.thumbnail_small;
+for(const item of starterNewsResults){
+
+  const possibleImage =
+    item.thumbnail ||
+    item.thumbnail_small;
+
+  if(
+    possibleImage &&
+    item.title &&
+    !possibleImage.includes("logo") &&
+    !possibleImage.includes("icon") &&
+    !possibleImage.includes("placeholder") &&
+    !possibleImage.includes("default")
+  ){
+
+    starterImage = possibleImage;
+    starterNewsTitle = item.title;
+    starterNewsItem = item;
+
+    break;
+  }
+}
 
   //////////////////////////////////////////////////
   // GOOGLE IMAGE FALLBACK
@@ -879,7 +898,7 @@ rooms[roomId].messages.push({
 
   mood:starterMood,
 
-  ask:starterQuestion
+  ask:starterNewsTitle
 });
 
 //////////////////////////////////////////////////
@@ -1369,22 +1388,37 @@ const serpRes =
   await serpFetch.json();
 
 //////////////////////////////////////////////////
-// GET ONE NEWS IMAGE
+// BETTER REAL NEWS IMAGE PICKER
 //////////////////////////////////////////////////
 
-//////////////////////////////////////////////////
-// GET NEWS IMAGE
-//////////////////////////////////////////////////
+let imageUrl = null;
 
-let imageUrl =
+const newsResults =
+  serpRes?.news_results || [];
 
-  serpRes
-    ?.news_results?.[0]
-    ?.thumbnail ||
+for(const item of newsResults){
 
-  serpRes
-    ?.news_results?.[0]
-    ?.thumbnail_small;
+  const possibleImage =
+
+    item.thumbnail ||
+    item.thumbnail_small;
+
+  if(
+
+    possibleImage &&
+
+    !possibleImage.includes("logo") &&
+    !possibleImage.includes("icon") &&
+    !possibleImage.includes("placeholder") &&
+    !possibleImage.includes("default")
+
+  ){
+
+    imageUrl = possibleImage;
+
+    break;
+  }
+}
 
 //////////////////////////////////////////////////
 // GOOGLE IMAGE FALLBACK
@@ -1603,16 +1637,27 @@ room.usedQuestions.push(
 //////////////////////////////////////////////////
 
 //////////////////////////////////////////////////
-// REAL NEWS TITLE
+// 5.3 REAL NEWS TITLE MATCHED TO IMAGE
 //////////////////////////////////////////////////
 
-const newsTitle =
+let newsTitle = nextQuestion;
 
-  serpRes
-    ?.news_results?.[0]
-    ?.title ||
+for(const item of newsResults){
 
-  nextQuestion;
+  const possibleImage =
+    item.thumbnail ||
+    item.thumbnail_small;
+
+  if(
+    possibleImage === imageUrl &&
+    item.title
+  ){
+
+    newsTitle = item.title;
+
+    break;
+  }
+}
 
 //////////////////////////////////////////////////
 // PUSH IMAGE + REAL TITLE
