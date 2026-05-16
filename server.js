@@ -967,6 +967,64 @@ if(!starterImage){
 }
 
 //////////////////////////////////////////////////
+// STARTER SHARE TEXT
+//////////////////////////////////////////////////
+
+const starterShareRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Create ONE short social-media-ready share caption.
+
+The caption should feel:
+- emotionally reactive
+- internet native
+- socially addictive
+- current
+- viral
+
+Rules:
+- 1 sentence only
+- lowercase preferred
+- no hashtags
+- no markdown
+- max 16 words
+- feel repostable
+`
+    },
+
+    {
+      role:"user",
+
+      content:`
+Mood:
+${starterMood}
+
+Trend:
+${starterNewsTitle}
+
+Image personality:
+${user.imageContext}
+`
+    }
+  ]
+});
+
+const starterShareText =
+  starterShareRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+//////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
 
@@ -979,6 +1037,8 @@ rooms[roomId].messages.push({
   mood:starterMood,
 
   ask:starterNewsTitle,
+
+  shareText:starterShareText,
 
   link:
     starterNewsItem?.link ||
