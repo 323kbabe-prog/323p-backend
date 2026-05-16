@@ -1774,25 +1774,7 @@ for(const item of newsResults){
 }
 
 //////////////////////////////////////////////////
-// SHAREABLE RESULT LINK
-//////////////////////////////////////////////////
-
-const resultLink =
-
-  newsResults?.[0]?.link ||
-
-  `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-
-//////////////////////////////////////////////////
-// FIXED ENGLISH AI MESSAGE
-//////////////////////////////////////////////////
-
-const fixedMessage =
-
-  "Latest internet result found.";
-
-//////////////////////////////////////////////////
-// PUSH IMAGE + SHARE LINK
+// PUSH IMAGE + REAL TITLE
 //////////////////////////////////////////////////
 
 room.messages.push({
@@ -1801,29 +1783,18 @@ room.messages.push({
 
   image:imageUrl,
 
-  mood:"live internet",
+  mood:moodText,
 
-  ask:fixedMessage,
-
-  link:resultLink
+  ask:newsTitle
 });
 
-//////////////////////////////////////////////////
-// SEND UPDATED ROOM
-//////////////////////////////////////////////////
+  io.to(room.id).emit(
 
-io.to(room.id).emit(
+    "roomMessages",
 
-  "roomMessages",
-
-  room.messages
-);
-
-//////////////////////////////////////////////////
-// STOP AI TYPING
-//////////////////////////////////////////////////
-
-io.to(room.id).emit(
+    room.messages
+  );
+  io.to(room.id).emit(
   "aiTypingStop"
 );
 
