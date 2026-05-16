@@ -4,6 +4,7 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
+const fetch = global.fetch;
 
 const app = express();
 
@@ -601,6 +602,12 @@ Rules:
 
 let starterImage = null;
 
+let starterNewsTitle =
+  starterQuestion;
+
+let starterNewsItem =
+  null;
+
 try{
 
   const starterSearchRes =
@@ -678,7 +685,7 @@ ${starterQuestion}
 
 Trend category:
 
-${room.coreTheme}
+${rooms[roomId].coreTheme}
 
 Create a trending CURRENT NEWS visual search phrase connected to the uploaded image AI personality.
 `
@@ -694,6 +701,11 @@ Create a trending CURRENT NEWS visual search phrase connected to the uploaded im
       .content
       .trim();
 
+  console.log(
+    "STARTER SEARCH:",
+    starterSearch
+  );
+
   //////////////////////////////////////////////////
   // GOOGLE NEWS SEARCH
   //////////////////////////////////////////////////
@@ -707,49 +719,46 @@ Create a trending CURRENT NEWS visual search phrase connected to the uploaded im
 
   const starterSerpRes =
     await starterSerpFetch.json();
-    
-    console.log(
-  "STARTER SEARCH:",
-  starterSearch
-);
 
-console.log(
-  "STARTER NEWS COUNT:",
-  starterSerpRes?.news_results?.length
-);
+  console.log(
+    "STARTER NEWS COUNT:",
+    starterSerpRes?.news_results?.length
+  );
 
   //////////////////////////////////////////////////
-// 5.3 REAL STARTER NEWS PICKER
-//////////////////////////////////////////////////
+  // REAL STARTER NEWS PICKER
+  //////////////////////////////////////////////////
 
-let starterNewsTitle = starterQuestion;
-let starterNewsItem = null;
+  const starterNewsResults =
+    starterSerpRes?.news_results || [];
 
-const starterNewsResults =
-  starterSerpRes?.news_results || [];
+  for(const item of starterNewsResults){
 
-for(const item of starterNewsResults){
+    const possibleImage =
+      item.thumbnail ||
+      item.thumbnail_small;
 
-  const possibleImage =
-    item.thumbnail ||
-    item.thumbnail_small;
+    if(
+      possibleImage &&
+      item.title &&
+      !possibleImage.includes("logo") &&
+      !possibleImage.includes("icon") &&
+      !possibleImage.includes("placeholder") &&
+      !possibleImage.includes("default")
+    ){
 
-  if(
-    possibleImage &&
-    item.title &&
-    !possibleImage.includes("logo") &&
-    !possibleImage.includes("icon") &&
-    !possibleImage.includes("placeholder") &&
-    !possibleImage.includes("default")
-  ){
+      starterImage =
+        possibleImage;
 
-    starterImage = possibleImage;
-    starterNewsTitle = item.title;
-    starterNewsItem = item;
+      starterNewsTitle =
+        item.title;
 
-    break;
+      starterNewsItem =
+        item;
+
+      break;
+    }
   }
-}
 
   //////////////////////////////////////////////////
   // GOOGLE IMAGE FALLBACK
@@ -796,15 +805,25 @@ for(const item of starterNewsResults){
 
     try{
 
+      console.log(
+        "FALLBACK THEME:",
+        rooms[roomId].coreTheme
+      );
+
       const fallbackFetch =
         await fetch(
 
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(room.coreTheme)}&api_key=${process.env.SERPAPI_KEY}`
+          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(rooms[roomId].coreTheme)}&api_key=${process.env.SERPAPI_KEY}`
 
         );
 
       const fallbackRes =
         await fallbackFetch.json();
+
+      console.log(
+        "FALLBACK IMAGE COUNT:",
+        fallbackRes?.images_results?.length
+      );
 
       starterImage =
 
@@ -825,82 +844,92 @@ for(const item of starterNewsResults){
     }
   }
 
-//////////////////////////////////////////////////
-// ABSOLUTE FINAL INTERNET SAFETY
-//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // ABSOLUTE FINAL INTERNET SAFETY
+  //////////////////////////////////////////////////
 
-if(!starterImage){
+  if(!starterImage){
 
-  try{
+    try{
 
-    const randomThemes = [
+      const randomThemes = [
 
-      room.coreTheme,
+        rooms[roomId].coreTheme,
 
-      room.coreTheme + " trending",
-room.coreTheme + " viral",
-room.coreTheme + " celebrity",
-room.coreTheme + " social media",
-room.coreTheme + " breaking news",
-room.coreTheme + " internet culture"
-    ];
+        rooms[roomId].coreTheme + " trending",
 
-    const randomQuery =
+        rooms[roomId].coreTheme + " viral",
 
-      randomThemes[
-        Math.floor(
-          Math.random() *
-          randomThemes.length
-        )
+        rooms[roomId].coreTheme + " celebrity",
+
+        rooms[roomId].coreTheme + " social media",
+
+        rooms[roomId].coreTheme + " breaking news",
+
+        rooms[roomId].coreTheme + " internet culture"
       ];
 
-    const safetyFetch =
-      await fetch(
+      const randomQuery =
 
-        `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(randomQuery)}&api_key=${process.env.SERPAPI_KEY}`
+        randomThemes[
+          Math.floor(
+            Math.random() *
+            randomThemes.length
+          )
+        ];
 
+      console.log(
+        "SAFETY QUERY:",
+        randomQuery
       );
 
-    const safetyRes =
-      await safetyFetch.json();
+      const safetyFetch =
+        await fetch(
 
-    starterImage =
+          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(randomQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
-      safetyRes
-        ?.images_results?.[
-          Math.floor(
-            Math.random() * 5
-          )
-        ]
-        ?.original ||
+        );
 
-      safetyRes
-        ?.images_results?.[
-          Math.floor(
-            Math.random() * 5
-          )
-        ]
-        ?.thumbnail;
+      const safetyRes =
+        await safetyFetch.json();
 
-  }catch(err){
+      console.log(
+        "SAFETY IMAGE COUNT:",
+        safetyRes?.images_results?.length
+      );
 
-    console.log(
-      "absolute internet safety failed",
-      err
-    );
+      starterImage =
+
+        safetyRes
+          ?.images_results?.[
+            Math.floor(
+              Math.min(
+                5,
+                safetyRes?.images_results?.length || 1
+              ) * Math.random()
+            )
+          ]
+          ?.original ||
+
+        safetyRes
+          ?.images_results?.[
+            Math.floor(
+              Math.min(
+                5,
+                safetyRes?.images_results?.length || 1
+              ) * Math.random()
+            )
+          ]
+          ?.thumbnail;
+
+    }catch(err){
+
+      console.log(
+        "absolute internet safety failed",
+        err
+      );
+    }
   }
-}
-
-//////////////////////////////////////////////////
-// TRUE FINAL FALLBACK
-//////////////////////////////////////////////////
-
-if(!starterImage){
-
-  starterImage =
-    "https://picsum.photos/900/1200?random=" +
-    Math.floor(Math.random()*100000);
-}
 
 }catch(err){
 
@@ -908,6 +937,13 @@ if(!starterImage){
     "starter room AI failed",
     err
   );
+}
+
+//////////////////////////////////////////////////
+// TRUE FINAL FALLBACK
+//////////////////////////////////////////////////
+
+if(!starterImage){
 
   starterImage =
     "https://picsum.photos/900/1200?random=" +
