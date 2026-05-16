@@ -496,17 +496,25 @@ The line should feel:
 - current
 - culturally alive
 
-Focus on:
-- celebrity culture
-- AI
-- internet drama
-- sports
-- music
-- fashion
-- viral moments
-- social media energy
-- trending behavior
+Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
 
+The search MUST visually and semantically match:
+- the objects
+- the environment
+- the emotional presence
+- the product category
+- the lifestyle category
+- the aesthetic direction
+
+If the image is:
+- fashion → search fashion trends
+- food → search food trends
+- books → search learning/book trends
+- fitness → search fitness trends
+- technology → search tech trends
+- sneakers → search sneaker trends
+
+NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
 Rules:
 - lowercase only
 - no punctuation
@@ -633,17 +641,25 @@ The AI personality controls:
 - internet vibe
 - cultural direction
 
-Focus on:
-- viral moments
-- celebrity news
-- AI
-- music
-- fashion
-- sports
-- internet culture
-- entertainment
-- social media trends
-- breaking news
+Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
+
+The search MUST visually and semantically match:
+- the objects
+- the environment
+- the emotional presence
+- the product category
+- the lifestyle category
+- the aesthetic direction
+
+If the image is:
+- fashion → search fashion trends
+- food → search food trends
+- books → search learning/book trends
+- fitness → search fitness trends
+- technology → search tech trends
+- sneakers → search sneaker trends
+
+NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
 
 IMPORTANT:
 Use REAL searchable public news entities.
@@ -1341,19 +1357,25 @@ NEVER repeat:
 - previous trend situations
 - previous viral atmosphere
 
-Focus on:
-- trending news
-- viral moments
-- celebrity culture
-- AI
-- music
-- fashion
-- sports
-- internet drama
-- politics
-- technology
-- entertainment
-- social media trends
+Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
+
+The search MUST visually and semantically match:
+- the objects
+- the environment
+- the emotional presence
+- the product category
+- the lifestyle category
+- the aesthetic direction
+
+If the image is:
+- fashion → search fashion trends
+- food → search food trends
+- books → search learning/book trends
+- fitness → search fitness trends
+- technology → search tech trends
+- sneakers → search sneaker trends
+
+NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
 
 The result should feel:
 - current
