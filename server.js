@@ -638,6 +638,24 @@ Focus on:
 - social media trends
 - breaking news
 
+IMPORTANT:
+Use REAL searchable public news entities.
+
+GOOD:
+taylor swift grammys
+elon musk tesla
+openai sora launch
+nike nba deal
+coachella crowd
+kanye west controversy
+met gala fashion
+apple vision pro
+
+BAD:
+internet loneliness
+digital pressure
+modern emotions
+
 Rules:
 - current
 - visually searchable
@@ -689,6 +707,16 @@ Create a trending CURRENT NEWS visual search phrase connected to the uploaded im
 
   const starterSerpRes =
     await starterSerpFetch.json();
+    
+    console.log(
+  "STARTER SEARCH:",
+  starterSearch
+);
+
+console.log(
+  "STARTER NEWS COUNT:",
+  starterSerpRes?.news_results?.length
+);
 
   //////////////////////////////////////////////////
 // 5.3 REAL STARTER NEWS PICKER
@@ -1299,6 +1327,24 @@ The result should feel:
 - culturally alive
 - addictive
 
+IMPORTANT:
+Use REAL searchable public news entities.
+
+GOOD:
+taylor swift grammys
+elon musk tesla
+openai sora launch
+nike nba deal
+coachella crowd
+kanye west controversy
+met gala fashion
+apple vision pro
+
+BAD:
+internet loneliness
+digital pressure
+modern emotions
+
 Rules:
 - 3 to 8 words
 - lowercase only
@@ -1386,6 +1432,16 @@ const serpFetch =
 
 const serpRes =
   await serpFetch.json();
+  
+  console.log(
+  "LOOP SEARCH:",
+  searchQuery
+);
+
+console.log(
+  "LOOP NEWS COUNT:",
+  serpRes?.news_results?.length
+);
 
 //////////////////////////////////////////////////
 // BETTER REAL NEWS IMAGE PICKER
@@ -1649,7 +1705,7 @@ for(const item of newsResults){
     item.thumbnail_small;
 
   if(
-    possibleImage === imageUrl &&
+    possibleImage &&
     item.title
   ){
 
