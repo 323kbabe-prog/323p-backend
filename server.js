@@ -972,13 +972,19 @@ if(!starterImage){
 
 rooms[roomId].messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:starterImage,
+  image:starterImage,
 
-  mood:starterMood,
+  mood:starterMood,
 
-  ask:starterNewsTitle
+  ask:starterNewsTitle,
+
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
+
 });
 
 //////////////////////////////////////////////////
@@ -1845,7 +1851,13 @@ room.messages.push({
 
   ask:newsTitle,
 
-  shareText
+  shareText,
+
+  link:
+    newsResults?.[0]?.link ||
+    newsResults?.[0]?.news_link ||
+    ""
+
 });
 
   io.to(room.id).emit(
