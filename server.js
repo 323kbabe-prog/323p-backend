@@ -1602,6 +1602,22 @@ room.usedQuestions.push(
 // PUSH IMAGE + LOOP
 //////////////////////////////////////////////////
 
+//////////////////////////////////////////////////
+// REAL NEWS TITLE
+//////////////////////////////////////////////////
+
+const newsTitle =
+
+  serpRes
+    ?.news_results?.[0]
+    ?.title ||
+
+  nextQuestion;
+
+//////////////////////////////////////////////////
+// PUSH IMAGE + REAL TITLE
+//////////////////////////////////////////////////
+
 room.messages.push({
 
   from:"Image AI",
@@ -1610,7 +1626,7 @@ room.messages.push({
 
   mood:moodText,
 
-  ask:nextQuestion
+  ask:newsTitle
 });
 
   io.to(room.id).emit(
