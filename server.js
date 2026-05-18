@@ -490,18 +490,38 @@ Create ONE trending social reaction line.
 
 The line should feel:
 - viral
-- socially reactive
 - internet-native
-- emotionally engaging
-- culturally current
+- emotionally clickable
+- socially addictive
+- current
+- culturally alive
 
+Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
+
+The search MUST visually and semantically match:
+- the objects
+- the environment
+- the emotional presence
+- the product category
+- the lifestyle category
+- the aesthetic direction
+
+If the image is:
+- fashion → search fashion trends
+- food → search food trends
+- books → search learning/book trends
+- fitness → search fitness trends
+- technology → search tech trends
+- sneakers → search sneaker trends
+
+NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
 Rules:
 - lowercase only
 - no punctuation
 - 2 to 7 words
-- no philosophy
-- no existential tone
-- feel like live internet culture
+- not philosophical
+- not existential
+- feel like social feed energy
 `
     },
 
@@ -527,80 +547,62 @@ const starterQuestion =
     .content
     .trim();
 
-//////////////////////////////////////////////////
-// STARTER MOOD
-//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // STARTER MOOD
+  //////////////////////////////////////////////////
 
-const starterMoodRes =
-  await openai.chat.completions.create({
+  const starterMoodRes =
+    await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+    model:"gpt-4o-mini",
 
-  messages:[
+    messages:[
 
-    {
-      role:"system",
+      {
+        role:"system",
 
-      content:`
-Create ONE evolving internet vibe.
+        content:`
+Create a 1 to 3 word trending internet vibe.
 
 The vibe should feel:
-- viral
 - socially addictive
-- internet-native
 - culturally current
 - emotionally reactive
+- internet-native
+- viral
 
 Examples:
 
 main character
 internet pressure
-celebrity chaos
 viral energy
-late night scrolling
+celebrity chaos
+late night doomscroll
 digital fame
-timeline exploding
 
 Rules:
 - lowercase only
 - no punctuation
 - 1 to 3 words
-- modern internet culture only
-- no philosophy
+- current internet culture energy
 `
-    },
+      },
 
-    {
-      role:"user",
+      {
+        role:"user",
 
-      content:`
-Uploaded image AI personality:
+        content:starterQuestion
+      }
+    ]
+  });
 
-${user.imageContext}
+  const starterMood =
 
-Used moods:
-
-none yet
-
-Search phrase:
-
-${starterQuestion}
-
-Current user response:
-
-starting room
-`
-    }
-  ]
-});
-
-const starterMood =
-
-  starterMoodRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+    starterMoodRes
+      .choices[0]
+      .message
+      .content
+      .trim();
 
 //////////////////////////////////////////////////
 // SAFE IMAGE
@@ -632,12 +634,6 @@ Create ONE trending CURRENT NEWS image search phrase.
 IMPORTANT:
 The search MUST still match the uploaded image AI personality.
 
-The room is:
-- personality-driven
-- internet-native
-- socially reactive
-- emotionally evolving
-
 The AI personality controls:
 - trend taste
 - celebrity focus
@@ -665,17 +661,6 @@ If the image is:
 
 NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
 
-The result should feel:
-- current
-- visually strong
-- internet-native
-- culturally alive
-- socially relevant
-- emotionally aligned with the uploaded image identity
-
-The uploaded image personality
-must guide the emotional and cultural direction.
-
 IMPORTANT:
 Use REAL searchable public news entities.
 
@@ -695,16 +680,14 @@ digital pressure
 modern emotions
 
 Rules:
-- 3 to 8 words
+- current
+- visually searchable
+- internet-native
 - lowercase only
 - no punctuation
-- visually searchable
-- current-news energy only
+- 3 to 8 words
 - no philosophy
-- no abstract concepts
-- no repetition
-
-The uploaded image personality MUST shape the trend direction.
+- no existential themes
 `
       },
 
@@ -712,45 +695,15 @@ The uploaded image personality MUST shape the trend direction.
         role:"user",
 
         content:`
-Uploaded image AI personality:
-
-${user.imageContext}
-
-Trend personality category:
-
-${rooms[roomId].coreTheme}
-
-Previous trend history:
-
-none yet
-
-Used searches:
-
-none yet
-
-Used moods:
-
-${starterMood}
-
-Used reactions:
+Starter question:
 
 ${starterQuestion}
 
-Current user reaction:
+Trend category:
 
-starting room
+${rooms[roomId].coreTheme}
 
-Create a NEW trending CURRENT NEWS image search phrase.
-
-IMPORTANT:
-The search MUST still feel connected to the uploaded image personality.
-
-The room should evolve like:
-- a live internet feed
-- social media culture
-- trending reactions
-- viral news energy
-- celebrity/internet momentum
+Create a trending CURRENT NEWS visual search phrase connected to the uploaded image AI personality.
 `
       }
     ]
@@ -923,7 +876,7 @@ The room should evolve like:
 
         rooms[roomId].coreTheme + " viral",
 
-        rooms[roomId].coreTheme + " culture",
+        rooms[roomId].coreTheme + " celebrity",
 
         rooms[roomId].coreTheme + " social media",
 
@@ -1454,8 +1407,8 @@ The search MUST still match the uploaded image AI personality.
 The room is:
 - personality-driven
 - internet-native
-- socially reactive
-- emotionally evolving
+- trend-reactive
+- socially addictive
 
 The AI personality controls:
 - trend taste
@@ -1492,14 +1445,11 @@ NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itse
 
 The result should feel:
 - current
+- emotionally clickable
 - visually strong
 - internet-native
 - culturally alive
-- socially relevant
-- emotionally aligned with the uploaded image identity
-
-The uploaded image personality
-must guide the emotional and cultural direction.
+- addictive
 
 IMPORTANT:
 Use REAL searchable public news entities.
