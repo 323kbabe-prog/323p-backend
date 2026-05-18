@@ -490,38 +490,18 @@ Create ONE trending social reaction line.
 
 The line should feel:
 - viral
+- socially reactive
 - internet-native
-- emotionally clickable
-- socially addictive
-- current
-- culturally alive
+- emotionally engaging
+- culturally current
 
-Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
-
-The search MUST visually and semantically match:
-- the objects
-- the environment
-- the emotional presence
-- the product category
-- the lifestyle category
-- the aesthetic direction
-
-If the image is:
-- fashion → search fashion trends
-- food → search food trends
-- books → search learning/book trends
-- fitness → search fitness trends
-- technology → search tech trends
-- sneakers → search sneaker trends
-
-NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
 Rules:
 - lowercase only
 - no punctuation
 - 2 to 7 words
-- not philosophical
-- not existential
-- feel like social feed energy
+- no philosophy
+- no existential tone
+- feel like live internet culture
 `
     },
 
@@ -547,62 +527,80 @@ const starterQuestion =
     .content
     .trim();
 
-  //////////////////////////////////////////////////
-  // STARTER MOOD
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// STARTER MOOD
+//////////////////////////////////////////////////
 
-  const starterMoodRes =
-    await openai.chat.completions.create({
+const starterMoodRes =
+  await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-    messages:[
+  messages:[
 
-      {
-        role:"system",
+    {
+      role:"system",
 
-        content:`
-Create a 1 to 3 word trending internet vibe.
+      content:`
+Create ONE evolving internet vibe.
 
 The vibe should feel:
+- viral
 - socially addictive
+- internet-native
 - culturally current
 - emotionally reactive
-- internet-native
-- viral
 
 Examples:
 
 main character
 internet pressure
-viral energy
 celebrity chaos
-late night doomscroll
+viral energy
+late night scrolling
 digital fame
+timeline exploding
 
 Rules:
 - lowercase only
 - no punctuation
 - 1 to 3 words
-- current internet culture energy
+- modern internet culture only
+- no philosophy
 `
-      },
+    },
 
-      {
-        role:"user",
+    {
+      role:"user",
 
-        content:starterQuestion
-      }
-    ]
-  });
+      content:`
+Uploaded image AI personality:
 
-  const starterMood =
+${user.imageContext}
 
-    starterMoodRes
-      .choices[0]
-      .message
-      .content
-      .trim();
+Used moods:
+
+none yet
+
+Search phrase:
+
+${starterQuestion}
+
+Current user response:
+
+starting room
+`
+    }
+  ]
+});
+
+const starterMood =
+
+  starterMoodRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // SAFE IMAGE
@@ -634,6 +632,12 @@ Create ONE trending CURRENT NEWS image search phrase.
 IMPORTANT:
 The search MUST still match the uploaded image AI personality.
 
+The room is:
+- personality-driven
+- internet-native
+- socially reactive
+- emotionally evolving
+
 The AI personality controls:
 - trend taste
 - celebrity focus
@@ -661,6 +665,17 @@ If the image is:
 
 NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
 
+The result should feel:
+- current
+- visually strong
+- internet-native
+- culturally alive
+- socially relevant
+- emotionally aligned with the uploaded image identity
+
+The uploaded image personality
+must guide the emotional and cultural direction.
+
 IMPORTANT:
 Use REAL searchable public news entities.
 
@@ -680,14 +695,16 @@ digital pressure
 modern emotions
 
 Rules:
-- current
-- visually searchable
-- internet-native
+- 3 to 8 words
 - lowercase only
 - no punctuation
-- 3 to 8 words
+- visually searchable
+- current-news energy only
 - no philosophy
-- no existential themes
+- no abstract concepts
+- no repetition
+
+The uploaded image personality MUST shape the trend direction.
 `
       },
 
@@ -695,15 +712,45 @@ Rules:
         role:"user",
 
         content:`
-Starter question:
+Uploaded image AI personality:
 
-${starterQuestion}
+${user.imageContext}
 
-Trend category:
+Trend personality category:
 
 ${rooms[roomId].coreTheme}
 
-Create a trending CURRENT NEWS visual search phrase connected to the uploaded image AI personality.
+Previous trend history:
+
+none yet
+
+Used searches:
+
+none yet
+
+Used moods:
+
+${starterMood}
+
+Used reactions:
+
+${starterQuestion}
+
+Current user reaction:
+
+starting room
+
+Create a NEW trending CURRENT NEWS image search phrase.
+
+IMPORTANT:
+The search MUST still feel connected to the uploaded image personality.
+
+The room should evolve like:
+- a live internet feed
+- social media culture
+- trending reactions
+- viral news energy
+- celebrity/internet momentum
 `
       }
     ]
@@ -876,7 +923,7 @@ Create a trending CURRENT NEWS visual search phrase connected to the uploaded im
 
         rooms[roomId].coreTheme + " viral",
 
-        rooms[roomId].coreTheme + " celebrity",
+        rooms[roomId].coreTheme + " culture",
 
         rooms[roomId].coreTheme + " social media",
 
@@ -971,16 +1018,16 @@ if(!starterImage){
 //////////////////////////////////////////////////
 
 const starterShareRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE short social-media-ready share caption.
 
 The caption should feel:
@@ -998,12 +1045,12 @@ Rules:
 - max 16 words
 - feel repostable
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Mood:
 ${starterMood}
 
@@ -1013,16 +1060,16 @@ ${starterNewsTitle}
 Image personality:
 ${user.imageContext}
 `
-    }
-  ]
+    }
+  ]
 });
 
 const starterShareText =
-  starterShareRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  starterShareRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
@@ -1030,20 +1077,20 @@ const starterShareText =
 
 rooms[roomId].messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:starterImage,
+  image:starterImage,
 
-  mood:starterMood,
+  mood:starterMood,
 
-  ask:starterNewsTitle,
+  ask:starterNewsTitle,
 
-  shareText:starterShareText,
+  shareText:starterShareText,
 
-  link:
-    starterNewsItem?.link ||
-    starterNewsItem?.news_link ||
-    ""
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
 
 });
 
@@ -1407,8 +1454,8 @@ The search MUST still match the uploaded image AI personality.
 The room is:
 - personality-driven
 - internet-native
-- trend-reactive
-- socially addictive
+- socially reactive
+- emotionally evolving
 
 The AI personality controls:
 - trend taste
@@ -1445,11 +1492,14 @@ NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itse
 
 The result should feel:
 - current
-- emotionally clickable
 - visually strong
 - internet-native
 - culturally alive
-- addictive
+- socially relevant
+- emotionally aligned with the uploaded image identity
+
+The uploaded image personality
+must guide the emotional and cultural direction.
 
 IMPORTANT:
 Use REAL searchable public news entities.
@@ -1824,19 +1874,19 @@ let newsTitle = nextQuestion;
 
 for(const item of newsResults){
 
-  const possibleImage =
-    item.thumbnail ||
-    item.thumbnail_small;
+  const possibleImage =
+    item.thumbnail ||
+    item.thumbnail_small;
 
-  if(
-    possibleImage &&
-    item.title
-  ){
+  if(
+    possibleImage &&
+    item.title
+  ){
 
-    newsTitle = item.title;
+    newsTitle = item.title;
 
-    break;
-  }
+    break;
+  }
 }
 
 //////////////////////////////////////////////////
@@ -1844,16 +1894,16 @@ for(const item of newsResults){
 //////////////////////////////////////////////////
 
 const shareRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE short social-media-ready share caption.
 
 The caption should feel:
@@ -1871,12 +1921,12 @@ Rules:
 - max 16 words
 - feel repostable
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Mood:
 ${moodText}
 
@@ -1886,16 +1936,16 @@ ${newsTitle}
 Image personality:
 ${room.imageContext}
 `
-    }
-  ]
+    }
+  ]
 });
 
 const shareText =
-  shareRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  shareRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // PUSH IMAGE + REAL TITLE
@@ -1903,20 +1953,20 @@ const shareText =
 
 room.messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:imageUrl,
+  image:imageUrl,
 
-  mood:moodText,
+  mood:moodText,
 
-  ask:newsTitle,
+  ask:newsTitle,
 
-  shareText,
+  shareText,
 
-  link:
-    newsResults?.[0]?.link ||
-    newsResults?.[0]?.news_link ||
-    ""
+  link:
+    newsResults?.[0]?.link ||
+    newsResults?.[0]?.news_link ||
+    ""
 
 });
 
