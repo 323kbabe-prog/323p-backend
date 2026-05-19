@@ -1200,6 +1200,10 @@ const starterShareText =
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
 
+let starterTitle =
+  starterNewsItem?.title ||
+  starterNewsTitle;
+
 rooms[roomId].messages.push({
 
   from:"Image AI",
@@ -1208,28 +1212,14 @@ rooms[roomId].messages.push({
 
   mood:starterMood,
 
-  ask:
-  starterNewsItem?.title ||
-  starterNewsTitle,
+  ask:starterTitle,
 
   shareText:starterShareText,
 
   link:
-  (
-    starterNewsItem &&
-    (
-      starterNewsItem.link ||
-      starterNewsItem.news_link
-    )
-  )
-  ?
-  (
-    starterNewsItem.link ||
-    starterNewsItem.news_link
-  )
-  :
-  "https://google.com/search?q=" +
-  encodeURIComponent(starterNewsTitle)
+  starterNewsItem?.link ||
+  starterNewsItem?.news_link ||
+  ""
 
 });
 
