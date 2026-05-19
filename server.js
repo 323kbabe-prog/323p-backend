@@ -722,11 +722,19 @@ The uploaded image personality MUST shape the trend direction.
         content:`
 Uploaded image AI personality:
 
-${user.imageContext}
+${room.imageContext}
+
+Current room emotional profile:
+
+${JSON.stringify(
+  room.emotionalProfile,
+  null,
+  2
+)}
 
 Trend personality category:
 
-${rooms[roomId].coreTheme}
+${room.coreTheme}
 
 Previous trend history:
 
@@ -1510,10 +1518,124 @@ ${finalAnswer}`,
       users[socket.id];
 
     const room =
-      rooms[user.currentRoom];
+  rooms[user.currentRoom];
 
-    if(!room) return;
+if(!room) return;
 
+//////////////////////////////////////////////////
+// V5.5 EMOTIONAL EVOLUTION
+//////////////////////////////////////////////////
+
+const lowerText =
+  text.toLowerCase();
+
+//////////////////////////////////////////////////
+// HYPE
+//////////////////////////////////////////////////
+
+if(
+
+  lowerText.includes("crazy") ||
+  lowerText.includes("viral") ||
+  lowerText.includes("fire") ||
+  lowerText.includes("insane")
+
+){
+
+  room.emotionalProfile.hype += 0.1;
+
+}
+
+//////////////////////////////////////////////////
+// ANXIETY
+//////////////////////////////////////////////////
+
+if(
+
+  lowerText.includes("scared") ||
+  lowerText.includes("stress") ||
+  lowerText.includes("worried") ||
+  lowerText.includes("anxiety")
+
+){
+
+  room.emotionalProfile.anxiety += 0.1;
+
+}
+
+//////////////////////////////////////////////////
+// LONELINESS
+//////////////////////////////////////////////////
+
+if(
+
+  lowerText.includes("alone") ||
+  lowerText.includes("lonely") ||
+  lowerText.includes("empty")
+
+){
+
+  room.emotionalProfile.loneliness += 0.1;
+
+}
+
+//////////////////////////////////////////////////
+// CONFIDENCE
+//////////////////////////////////////////////////
+
+if(
+
+  lowerText.includes("power") ||
+  lowerText.includes("winning") ||
+  lowerText.includes("confident")
+
+){
+
+  room.emotionalProfile.confidence += 0.1;
+
+}
+
+//////////////////////////////////////////////////
+// CELEBRITY FIXATION
+//////////////////////////////////////////////////
+
+if(
+
+  lowerText.includes("celebrity") ||
+  lowerText.includes("famous") ||
+  lowerText.includes("idol")
+
+){
+
+  room.emotionalProfile.celebrityFixation += 0.1;
+
+}
+
+//////////////////////////////////////////////////
+// CLAMP VALUES
+//////////////////////////////////////////////////
+
+Object.keys(
+  room.emotionalProfile
+).forEach(key => {
+
+  room.emotionalProfile[key] =
+    Math.max(
+      0,
+      Math.min(
+        1,
+        room.emotionalProfile[key]
+      )
+    );
+
+});
+
+console.log(
+  "ROOM EMOTIONS:",
+  room.emotionalProfile
+);
+
+    
     room.messages.push({
 
       from:user.email,
@@ -1654,6 +1776,14 @@ The uploaded image personality MUST shape the trend direction.
 Uploaded image AI personality:
 
 ${room.imageContext}
+
+Current room emotional profile:
+
+${JSON.stringify(
+  room.emotionalProfile,
+  null,
+  2
+)}
 
 Trend personality category:
 
@@ -1947,7 +2077,7 @@ if(!imageUrl){
   // PUSH IMAGE MESSAGE
   //////////////////////////////////////////////////
 
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
 // GPT CREATES 1-3 WORD MOOD
 //////////////////////////////////////////////////
 
@@ -1998,6 +2128,14 @@ Uploaded image AI personality:
 
 ${room.imageContext}
 
+Current emotional profile:
+
+${JSON.stringify(
+  room.emotionalProfile,
+  null,
+  2
+)}
+
 Used moods:
 
 ${room.usedMoods.join("\n")}
@@ -2009,6 +2147,23 @@ ${searchQuery}
 Current user response:
 
 ${text}
+
+Create ONE evolving internet vibe.
+
+The vibe should feel:
+- emotionally reactive
+- internet-native
+- socially addictive
+- culturally current
+- emotionally aligned with the room state
+
+The mood should evolve from:
+- the room emotional profile
+- the current internet atmosphere
+- the current user reaction
+- the current search direction
+
+Avoid repeating previous moods.
 `
     }
   ]
@@ -2070,6 +2225,14 @@ Rules:
 Uploaded image AI personality:
 
 ${room.imageContext}
+
+Current emotional profile:
+
+${JSON.stringify(
+  room.emotionalProfile,
+  null,
+  2
+)}
 
 Used questions:
 
@@ -2294,6 +2457,6 @@ if(room.messages.length > 30){
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V5.4.2 running"
+    "CONNECTAING V5.5 running"
   );
 });
