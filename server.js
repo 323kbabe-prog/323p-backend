@@ -892,26 +892,13 @@ ${validStarterNews.map(
         .trim();
 
     starterNewsItem =
-  validStarterNews.find(item => {
-
-    const a =
-      item.title
-        .toLowerCase()
-        .replace(/[^\w\s]/g,"")
-        .trim();
-
-    const b =
-      starterChosenTitle
-        .toLowerCase()
-        .replace(/[^\w\s]/g,"")
-        .trim();
-
-    return (
-      a.includes(b) ||
-      b.includes(a)
-    );
-
-  });
+      validStarterNews.find(item =>
+        item.title
+          .toLowerCase()
+          .includes(
+            starterChosenTitle.toLowerCase()
+          )
+      );
 
     if(!starterNewsItem){
 
@@ -1200,40 +1187,6 @@ const starterShareText =
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
 
-//////////////////////////////////////////////////
-// PUSH FIRST MESSAGE
-//////////////////////////////////////////////////
-
-let starterTitle =
-  starterNewsItem?.title ||
-  starterNewsTitle;
-
-if(
-  !starterNewsItem?.link &&
-  !starterNewsItem?.news_link
-){
-
-  starterNewsItem =
-    validStarterNews.find(item =>
-      item.link ||
-      item.news_link
-    );
-
-  if(!starterNewsItem){
-
-    starterNewsItem = {
-      title:starterNewsTitle,
-      link:"https://news.google.com"
-    };
-
-  }
-
-}
-
-let starterLink =
-  starterNewsItem?.link ||
-  starterNewsItem?.news_link;
-
 rooms[roomId].messages.push({
 
   from:"Image AI",
@@ -1242,11 +1195,14 @@ rooms[roomId].messages.push({
 
   mood:starterMood,
 
-  ask:starterTitle,
+  ask:starterNewsTitle,
 
   shareText:starterShareText,
 
-  link:starterLink
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
 
 });
 
