@@ -1208,20 +1208,22 @@ let starterTitle =
   starterNewsItem?.title ||
   starterNewsTitle;
 
+if(
+  !starterNewsItem?.link &&
+  !starterNewsItem?.news_link
+){
+
+  starterNewsItem =
+    validStarterNews.find(item =>
+      item.link ||
+      item.news_link
+    );
+
+}
+
 let starterLink =
   starterNewsItem?.link ||
   starterNewsItem?.news_link;
-
-if(
-  !starterLink ||
-  !starterLink.startsWith("http")
-){
-
-  starterLink =
-    "https://google.com/search?q=" +
-    encodeURIComponent(starterTitle);
-
-}
 
 rooms[roomId].messages.push({
 
