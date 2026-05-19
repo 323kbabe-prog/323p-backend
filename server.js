@@ -14,11 +14,11 @@ app.use(express.json());
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: "*" }
+  cors: { origin: "*" }
 });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 //////////////////////////////////////////////////
@@ -26,79 +26,79 @@ const openai = new OpenAI({
 //////////////////////////////////////////////////
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
 });
 
 async function sendEmail(
-  to,
-  subject,
-  text,
-  imageDataUrl
+  to,
+  subject,
+  text,
+  imageDataUrl
 ){
 
-  let attachments = [];
-  let imgTag = "";
+  let attachments = [];
+  let imgTag = "";
 
-  if(imageDataUrl){
+  if(imageDataUrl){
 
-    const base64Data =
-      imageDataUrl.split(
-        "base64,"
-      )[1];
+    const base64Data =
+      imageDataUrl.split(
+        "base64,"
+      )[1];
 
-    attachments.push({
-      filename:"image.jpg",
-      content:base64Data,
-      encoding:"base64",
-      cid:"image1"
-    });
+    attachments.push({
+      filename:"image.jpg",
+      content:base64Data,
+      encoding:"base64",
+      cid:"image1"
+    });
 
-    imgTag =
-      `<img src="cid:image1"
-      style="max-width:100%;
-      border-radius:12px;" />`;
-  }
+    imgTag =
+      `<img src="cid:image1"
+      style="max-width:100%;
+      border-radius:12px;" />`;
+  }
 
-  await transporter.sendMail({
+  await transporter.sendMail({
 
-    from:
-      `"CONNECTAING.COM"
-      <${process.env.EMAIL_USER}>`,
+    from:
+      `"CONNECTAING.COM"
+      <${process.env.EMAIL_USER}>`,
 
-    to,
+    to,
 
-    subject,
+    subject,
 
-    text,
+    text,
 
-    html:`
-      <div
-      style="
-      font-family:system-ui;
-      padding:20px;
-      ">
+    html:`
+      <div
+      style="
+      font-family:system-ui;
+      padding:20px;
+      ">
 
-        <div
-        style="
-        white-space:pre-wrap;
-        line-height:1.6;
-        ">
-          ${text}
-        </div>
+        <div
+        style="
+        white-space:pre-wrap;
+        line-height:1.6;
+        ">
+          ${text}
+        </div>
 
-        <br>
+        <br>
 
-        ${imgTag}
+        ${imgTag}
 
-      </div>
-    `,
+      </div>
+    `,
 
-    attachments
-  });
+    attachments
+  });
 }
 
 //////////////////////////////////////////////////
@@ -115,45 +115,45 @@ const rooms = {};
 
 setInterval(() => {
 
-  const now = Date.now();
+  const now = Date.now();
 
-  //////////////////////////////////////////////////
-  // QUESTION CLEANUP
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // QUESTION CLEANUP
+  //////////////////////////////////////////////////
 
-  for(
-    let i = questions.length - 1;
-    i >= 0;
-    i--
-  ){
+  for(
+    let i = questions.length - 1;
+    i >= 0;
+    i--
+  ){
 
-    if(
-      now - questions[i].createdAt >
-      72 * 60 * 60 * 1000
-    ){
+    if(
+      now - questions[i].createdAt >
+      72 * 60 * 60 * 1000
+    ){
 
-      questions.splice(i,1);
-    }
-  }
+      questions.splice(i,1);
+    }
+  }
 
-  //////////////////////////////////////////////////
-  // ROOM CLEANUP
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // ROOM CLEANUP
+  //////////////////////////////////////////////////
 
-  for(const roomId in rooms){
+  for(const roomId in rooms){
 
-    if(
-      now >
-      rooms[roomId].expiresAt
-    ){
+    if(
+      now >
+      rooms[roomId].expiresAt
+    ){
 
-      io.to(roomId).emit(
-        "roomClosed"
-      );
+      io.to(roomId).emit(
+        "roomClosed"
+      );
 
-      delete rooms[roomId];
-    }
-  }
+      delete rooms[roomId];
+    }
+  }
 
 }, 60 * 1000);
 
@@ -163,12 +163,12 @@ setInterval(() => {
 
 function extractEmail(text){
 
-  const m =
-    text.match(/\S+@\S+\.\S+/);
+  const m =
+    text.match(/\S+@\S+\.\S+/);
 
-  return m
-    ? m[0].toLowerCase()
-    : null;
+  return m
+    ? m[0].toLowerCase()
+    : null;
 }
 
 //////////////////////////////////////////////////
@@ -177,78 +177,78 @@ function extractEmail(text){
 
 io.on("connection", socket => {
 
-  users[socket.id] = {
+  users[socket.id] = {
 
-    step:"email",
+    step:"email",
 
-    email:null,
+    email:null,
 
-    imageMode:false,
+    imageMode:false,
 
-    imageContext:null,
+    imageContext:null,
 
-    currentIndex:null,
+    currentIndex:null,
 
-    lastImage:null,
+    lastImage:null,
 
-    currentRoom:null
-  };
+    currentRoom:null
+  };
 
-  socket.emit("state", {
+  socket.emit("state", {
 
-    placeholder:
-      "enter your email to connect"
-  });
+    placeholder:
+      "enter your email to connect"
+  });
 
-  //////////////////////////////////////////////////
-  // IMAGE UPLOAD
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // IMAGE UPLOAD
+  //////////////////////////////////////////////////
 
-  socket.on(
-    "imageUpload",
+  socket.on(
+    "imageUpload",
 
-    async ({
-  imageDataUrl,
-  roomMode,
-  askMode
+    async ({
+  imageDataUrl,
+  roomMode,
+  askMode
 }) => {
 
-    const user =
-      users[socket.id];
+    const user =
+      users[socket.id];
 
- if(!user.email){
+ if(!user.email){
 
-  socket.emit(
-    "state",
-    {
-      placeholder:
-        "enter your email to connect"
-    }
-  );
+  socket.emit(
+    "state",
+    {
+      placeholder:
+        "enter your email to connect"
+    }
+  );
 
-  return;
+  return;
 }
-      console.log(
-  "UPLOAD USER:",
-  user.email
+      console.log(
+  "UPLOAD USER:",
+  user.email
 );
 
-    user.lastImage =
-      imageDataUrl;
+    user.lastImage =
+      imageDataUrl;
 
-    try{
+    try{
 
-      const res =
-        await openai.chat.completions.create({
+      const res =
+        await openai.chat.completions.create({
 
-        model:"gpt-4o-mini",
+        model:"gpt-4o-mini",
 
-        messages:[
+        messages:[
 
-          {
-            role:"system",
+          {
+            role:"system",
 
-            content:`
+            content:`
 Describe this image as an AI identity.
 
 Format:
@@ -261,63 +261,63 @@ Rules:
 - no markdown
 - no symbols
 `
-          },
+          },
 
-          {
-            role:"user",
+          {
+            role:"user",
 
-            content:[
+            content:[
 
-              {
-                type:"text",
-                text:"Analyze image"
-              },
+              {
+                type:"text",
+                text:"Analyze image"
+              },
 
-              {
-                type:"image_url",
+              {
+                type:"image_url",
 
-                image_url:{
-                  url:imageDataUrl
-                }
-              }
-            ]
-          }
-        ]
-      });
+                image_url:{
+                  url:imageDataUrl
+                }
+              }
+            ]
+          }
+        ]
+      });
 
-     //////////////////////////////////////////////////
+     //////////////////////////////////////////////////
 // IMAGE AI IDENTITY
 //////////////////////////////////////////////////
 
 user.imageContext =
-  res.choices[0]
-    .message
-    .content
-    .replace(/\*\*/g,"")
-    .replace(
-      /Atmosphere:/gi,
-      "Environment:"
-    )
-    .replace(
-      /Emotional Tone:/gi,
-      "Presence:"
-    );
+  res.choices[0]
+    .message
+    .content
+    .replace(/\*\*/g,"")
+    .replace(
+      /Atmosphere:/gi,
+      "Environment:"
+    )
+    .replace(
+      /Emotional Tone:/gi,
+      "Presence:"
+    );
 
 //////////////////////////////////////////////////
 // DETECT CORE THEME
 //////////////////////////////////////////////////
 
 const themeRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Detect the SINGLE dominant internet trend category.
 
 Return ONLY one word.
@@ -347,24 +347,24 @@ Rules:
 - no punctuation
 - no explanation
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:user.imageContext
-    }
-  ]
+      content:user.imageContext
+    }
+  ]
 });
 
 const coreTheme =
 
-  themeRes
-    .choices[0]
-    .message
-    .content
-    .trim()
-    .toLowerCase();
+  themeRes
+    .choices[0]
+    .message
+    .content
+    .trim()
+    .toLowerCase();
 
 //////////////////////////////////////////////////
 // ROOM MODE
@@ -376,71 +376,71 @@ const coreTheme =
 
 if(askMode){
 
-  user.imageMode = true;
+  user.imageMode = true;
 
 user.currentRoom = null;
 
-  socket.emit("preview", {
+  socket.emit("preview", {
 
-    text:
+    text:
 `Image AI:
 ${user.imageContext}`
-  });
+  });
 
-  socket.emit("state", {
+  socket.emit("state", {
 
-    placeholder:
-      "ask this image"
-  });
+    placeholder:
+      "ask this image"
+  });
 
-  return;
+  return;
 }
 
 if(roomMode){
 
-  const roomId =
-    Math.random()
-      .toString(36)
-      .substring(2,8);
+  const roomId =
+    Math.random()
+      .toString(36)
+      .substring(2,8);
 
-  rooms[roomId] = {
+  rooms[roomId] = {
 
-    id:roomId,
+    id:roomId,
 
-    coreTheme:
-      coreTheme,
+    coreTheme:
+      coreTheme,
 
-    imageContext:
-      user.imageContext,
+    imageContext:
+      user.imageContext,
 
-    messages:[],
+    messages:[],
 
-    usedSearches:[],
+    usedSearches:[],
 
-    usedMoods:[],
+    usedMoods:[],
 
-    usedQuestions:[],
+    usedQuestions:[],
 
 emotionalProfile:{
-  hype:0.5,
-  anxiety:0.2,
-  loneliness:0.1,
-  confidence:0.6,
-  celebrityFixation:0.5
+  hype:0.5,
+  anxiety:0.2,
+  loneliness:0.1,
+  confidence:0.6,
+  celebrityFixation:0.5
 },
 
-    emotionalState:[],
+    emotionalState:[],
 
-    createdAt:Date.now(),
+    createdAt:Date.now(),
 
-    expiresAt:
-      Date.now() +
-      60 * 60 * 1000
-  };
-        socket.join(roomId);
+    expiresAt:
+      Date.now() +
+      60 * 60 * 1000
+  };
+        socket.join(roomId);
 
-        user.currentRoom =
-          roomId;
+        user.currentRoom =
+          roomId;
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////
@@ -452,48 +452,48 @@ emotionalProfile:{
 //////////////////////////////////////////////////
 
 socket.emit(
-  "roomCreated",
-  {
-    roomId,
+  "roomCreated",
+  {
+    roomId,
 
-    imageContext:
-      user.imageContext,
+    imageContext:
+      user.imageContext,
 
-    imageDataUrl:
-      user.lastImage,
+    imageDataUrl:
+      user.lastImage,
 
-    messages:[]
-  }
+    messages:[]
+  }
 );
 
 //////////////////////////////////////////////////
 // GENERATE FIRST AI MESSAGE ASYNC
 //////////////////////////////////////////////////
 io.to(roomId).emit(
-  "aiTypingStart"
+  "aiTypingStart"
 );
 
 (async () => {
 
 try{
 
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
 // STARTER QUESTION
 //////////////////////////////////////////////////
 
 const starterRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  temperature:0.8,
+  temperature:0.8,
 
 messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE trending social reaction line.
 
 The line should feel:
@@ -511,45 +511,45 @@ Rules:
 - no existential tone
 - feel like live internet culture
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Uploaded image AI personality:
 
 ${user.imageContext}
 
 Create a completely fresh trending social reaction line.
 `
-    }
-  ]
+    }
+  ]
 });
 
 const starterQuestion =
 
-  starterRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  starterRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // STARTER MOOD
 //////////////////////////////////////////////////
 
 const starterMoodRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE evolving internet vibe.
 
 The vibe should feel:
@@ -576,12 +576,12 @@ Rules:
 - modern internet culture only
 - no philosophy
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Uploaded image AI personality:
 
 ${user.imageContext}
@@ -598,17 +598,17 @@ Current user response:
 
 starting room
 `
-    }
-  ]
+    }
+  ]
 });
 
 const starterMood =
 
-  starterMoodRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  starterMoodRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // SAFE IMAGE
@@ -617,24 +617,24 @@ const starterMood =
 let starterImage = null;
 
 let starterNewsTitle =
-  starterQuestion;
+  starterQuestion;
 
 let starterNewsItem =
-  null;
+  null;
 
 try{
 
-  const starterSearchRes =
-    await openai.chat.completions.create({
+  const starterSearchRes =
+    await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
+    model:"gpt-4o-mini",
 
-    messages:[
+    messages:[
 
-      {
-        role:"system",
+      {
+        role:"system",
 
-        content:`
+        content:`
 Create ONE trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
@@ -714,27 +714,19 @@ Rules:
 
 The uploaded image personality MUST shape the trend direction.
 `
-      },
+      },
 
-      {
-        role:"user",
+      {
+        role:"user",
 
-        content:`
+        content:`
 Uploaded image AI personality:
 
-${room.imageContext}
-
-Current room emotional profile:
-
-${JSON.stringify(
-  room.emotionalProfile,
-  null,
-  2
-)}
+${user.imageContext}
 
 Trend personality category:
 
-${room.coreTheme}
+${rooms[roomId].coreTheme}
 
 Previous trend history:
 
@@ -768,91 +760,91 @@ The room should evolve like:
 - viral news energy
 - celebrity/internet momentum
 `
-      }
-    ]
-  });
+      }
+    ]
+  });
 
-  const starterSearch =
+  const starterSearch =
 
-    starterSearchRes
-      .choices[0]
-      .message
-      .content
-      .trim();
+    starterSearchRes
+      .choices[0]
+      .message
+      .content
+      .trim();
 
-  console.log(
-    "STARTER SEARCH:",
-    starterSearch
-  );
+  console.log(
+    "STARTER SEARCH:",
+    starterSearch
+  );
 
-  //////////////////////////////////////////////////
-  // GOOGLE NEWS SEARCH
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // GOOGLE NEWS SEARCH
+  //////////////////////////////////////////////////
 
-  const starterSerpFetch =
-    await fetch(
+  const starterSerpFetch =
+    await fetch(
 
-      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
+      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
 
-    );
+    );
 
-  const starterSerpRes =
-    await starterSerpFetch.json();
+  const starterSerpRes =
+    await starterSerpFetch.json();
 
-  console.log(
-    "STARTER NEWS COUNT:",
-    starterSerpRes?.news_results?.length
-  );
+  console.log(
+    "STARTER NEWS COUNT:",
+    starterSerpRes?.news_results?.length
+  );
 
-  //////////////////////////////////////////////////
-  // REAL STARTER NEWS PICKER
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // REAL STARTER NEWS PICKER
+  //////////////////////////////////////////////////
 
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
 // V5.4.2 STARTER INTERNET EVALUATION
 //////////////////////////////////////////////////
 
 const starterNewsResults =
-  starterSerpRes?.news_results || [];
+  starterSerpRes?.news_results || [];
 
 const validStarterNews =
-  starterNewsResults.filter(item => {
+  starterNewsResults.filter(item => {
 
-    const possibleImage =
-      item.thumbnail ||
-      item.thumbnail_small;
+    const possibleImage =
+      item.thumbnail ||
+      item.thumbnail_small;
 
-    return (
+    return (
 
-      possibleImage &&
+      possibleImage &&
 
-      item.title &&
+      item.title &&
 
-      !possibleImage.includes("logo") &&
-      !possibleImage.includes("icon") &&
-      !possibleImage.includes("placeholder") &&
-      !possibleImage.includes("default") &&
-      !possibleImage.includes("avatar")
+      !possibleImage.includes("logo") &&
+      !possibleImage.includes("icon") &&
+      !possibleImage.includes("placeholder") &&
+      !possibleImage.includes("default") &&
+      !possibleImage.includes("avatar")
 
-    );
+    );
 
-  });
+  });
 
 if(validStarterNews.length > 0){
 
-  try{
+  try{
 
-    const starterEvaluationRes =
-      await openai.chat.completions.create({
+    const starterEvaluationRes =
+      await openai.chat.completions.create({
 
-      model:"gpt-4o-mini",
+      model:"gpt-4o-mini",
 
-      temperature:0.7,
+      temperature:0.7,
 
-      messages:[
-        {
-          role:"system",
-          content:`
+      messages:[
+        {
+          role:"system",
+          content:`
 Choose the MOST emotionally powerful
 starter internet reaction.
 
@@ -865,10 +857,10 @@ Prioritize:
 
 Return ONLY the exact title.
 `
-        },
-        {
-          role:"user",
-          content:`
+        },
+        {
+          role:"user",
+          content:`
 Image personality:
 ${user.imageContext}
 
@@ -877,250 +869,241 @@ ${starterMood}
 
 Candidate reactions:
 ${validStarterNews.map(
-  n => n.title
+  n => n.title
 ).join("\n")}
 `
-        }
-      ]
-    });
+        }
+      ]
+    });
 
-    const starterChosenTitle =
-      starterEvaluationRes
-        .choices[0]
-        .message
-        .content
-        .trim();
+    const starterChosenTitle =
+      starterEvaluationRes
+        .choices[0]
+        .message
+        .content
+        .trim();
 
-    starterNewsItem =
-  validStarterNews.find(item =>
+    starterNewsItem =
+      validStarterNews.find(item =>
+        item.title
+          .toLowerCase()
+          .includes(
+            starterChosenTitle.toLowerCase()
+          )
+      );
 
-    item.title
-      .toLowerCase()
-      .includes(
-        starterChosenTitle.toLowerCase()
-      )
+    if(!starterNewsItem){
 
-    &&
+      starterNewsItem =
+        validStarterNews[0];
 
-    (
-      item.link ||
-      item.news_link
-    )
+    }
 
-  );
+    starterImage =
+      starterNewsItem.thumbnail ||
+      starterNewsItem.thumbnail_small;
 
-    if(!starterNewsItem){
+    starterNewsTitle =
+      starterNewsItem.title;
 
-      starterNewsItem =
-        validStarterNews[0];
+  }catch(err){
 
-    }
+    console.log(
+      "starter evaluation failed",
+      err
+    );
 
-    starterImage =
-      starterNewsItem.thumbnail ||
-      starterNewsItem.thumbnail_small;
+    starterNewsItem =
+      validStarterNews[0];
 
-    starterNewsTitle =
-      starterNewsItem.title;
+    starterImage =
+      starterNewsItem.thumbnail ||
+      starterNewsItem.thumbnail_small;
 
-  }catch(err){
+    starterNewsTitle =
+      starterNewsItem.title;
 
-    console.log(
-      "starter evaluation failed",
-      err
-    );
-
-    starterNewsItem =
-      validStarterNews[0];
-
-    starterImage =
-      starterNewsItem.thumbnail ||
-      starterNewsItem.thumbnail_small;
-
-    starterNewsTitle =
-      starterNewsItem.title;
-
-  }
+  }
 
 }
 
-  //////////////////////////////////////////////////
-  // GOOGLE IMAGE FALLBACK
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // GOOGLE IMAGE FALLBACK
+  //////////////////////////////////////////////////
 
-  if(!starterImage){
+  if(!starterImage){
 
-    try{
+    try{
 
-      const imageFallbackFetch =
-        await fetch(
+      const imageFallbackFetch =
+        await fetch(
 
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
+          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
 
-        );
+        );
 
-      const imageFallbackRes =
-        await imageFallbackFetch.json();
+      const imageFallbackRes =
+        await imageFallbackFetch.json();
 
-      starterImage =
+      starterImage =
 
-        imageFallbackRes
-          ?.images_results?.[0]
-          ?.original ||
+        imageFallbackRes
+          ?.images_results?.[0]
+          ?.original ||
 
-        imageFallbackRes
-          ?.images_results?.[0]
-          ?.thumbnail;
+        imageFallbackRes
+          ?.images_results?.[0]
+          ?.thumbnail;
 
-    }catch(err){
+    }catch(err){
 
-      console.log(
-        "google image fallback failed",
-        err
-      );
-    }
-  }
+      console.log(
+        "google image fallback failed",
+        err
+      );
+    }
+  }
 
-  //////////////////////////////////////////////////
-  // FINAL INTERNET FALLBACK
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // FINAL INTERNET FALLBACK
+  //////////////////////////////////////////////////
 
-  if(!starterImage){
+  if(!starterImage){
 
-    try{
+    try{
 
-      console.log(
-        "FALLBACK THEME:",
-        rooms[roomId].coreTheme
-      );
+      console.log(
+        "FALLBACK THEME:",
+        rooms[roomId].coreTheme
+      );
 
-      const fallbackFetch =
-        await fetch(
+      const fallbackFetch =
+        await fetch(
 
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(rooms[roomId].coreTheme)}&api_key=${process.env.SERPAPI_KEY}`
+          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(rooms[roomId].coreTheme)}&api_key=${process.env.SERPAPI_KEY}`
 
-        );
+        );
 
-      const fallbackRes =
-        await fallbackFetch.json();
+      const fallbackRes =
+        await fallbackFetch.json();
 
-      console.log(
-        "FALLBACK IMAGE COUNT:",
-        fallbackRes?.images_results?.length
-      );
+      console.log(
+        "FALLBACK IMAGE COUNT:",
+        fallbackRes?.images_results?.length
+      );
 
-      starterImage =
+      starterImage =
 
-        fallbackRes
-          ?.images_results?.[0]
-          ?.original ||
+        fallbackRes
+          ?.images_results?.[0]
+          ?.original ||
 
-        fallbackRes
-          ?.images_results?.[0]
-          ?.thumbnail;
+        fallbackRes
+          ?.images_results?.[0]
+          ?.thumbnail;
 
-    }catch(err){
+    }catch(err){
 
-      console.log(
-        "final internet fallback failed",
-        err
-      );
-    }
-  }
+      console.log(
+        "final internet fallback failed",
+        err
+      );
+    }
+  }
 
-  //////////////////////////////////////////////////
-  // ABSOLUTE FINAL INTERNET SAFETY
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // ABSOLUTE FINAL INTERNET SAFETY
+  //////////////////////////////////////////////////
 
-  if(!starterImage){
+  if(!starterImage){
 
-    try{
+    try{
 
-      const randomThemes = [
+      const randomThemes = [
 
-        rooms[roomId].coreTheme,
+        rooms[roomId].coreTheme,
 
-        rooms[roomId].coreTheme + " trending",
+        rooms[roomId].coreTheme + " trending",
 
-        rooms[roomId].coreTheme + " viral",
+        rooms[roomId].coreTheme + " viral",
 
-        rooms[roomId].coreTheme + " culture",
+        rooms[roomId].coreTheme + " culture",
 
-        rooms[roomId].coreTheme + " social media",
+        rooms[roomId].coreTheme + " social media",
 
-        rooms[roomId].coreTheme + " breaking news",
+        rooms[roomId].coreTheme + " breaking news",
 
-        rooms[roomId].coreTheme + " internet culture"
-      ];
+        rooms[roomId].coreTheme + " internet culture"
+      ];
 
-      const randomQuery =
+      const randomQuery =
 
-        randomThemes[
-          Math.floor(
-            Math.random() *
-            randomThemes.length
-          )
-        ];
+        randomThemes[
+          Math.floor(
+            Math.random() *
+            randomThemes.length
+          )
+        ];
 
-      console.log(
-        "SAFETY QUERY:",
-        randomQuery
-      );
+      console.log(
+        "SAFETY QUERY:",
+        randomQuery
+      );
 
-      const safetyFetch =
-        await fetch(
+      const safetyFetch =
+        await fetch(
 
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(randomQuery)}&api_key=${process.env.SERPAPI_KEY}`
+          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(randomQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
-        );
+        );
 
-      const safetyRes =
-        await safetyFetch.json();
+      const safetyRes =
+        await safetyFetch.json();
 
-      console.log(
-        "SAFETY IMAGE COUNT:",
-        safetyRes?.images_results?.length
-      );
+      console.log(
+        "SAFETY IMAGE COUNT:",
+        safetyRes?.images_results?.length
+      );
 
-      starterImage =
+      starterImage =
 
-        safetyRes
-          ?.images_results?.[
-            Math.floor(
-              Math.min(
-                5,
-                safetyRes?.images_results?.length || 1
-              ) * Math.random()
-            )
-          ]
-          ?.original ||
+        safetyRes
+          ?.images_results?.[
+            Math.floor(
+              Math.min(
+                5,
+                safetyRes?.images_results?.length || 1
+              ) * Math.random()
+            )
+          ]
+          ?.original ||
 
-        safetyRes
-          ?.images_results?.[
-            Math.floor(
-              Math.min(
-                5,
-                safetyRes?.images_results?.length || 1
-              ) * Math.random()
-            )
-          ]
-          ?.thumbnail;
+        safetyRes
+          ?.images_results?.[
+            Math.floor(
+              Math.min(
+                5,
+                safetyRes?.images_results?.length || 1
+              ) * Math.random()
+            )
+          ]
+          ?.thumbnail;
 
-    }catch(err){
+    }catch(err){
 
-      console.log(
-        "absolute internet safety failed",
-        err
-      );
-    }
-  }
+      console.log(
+        "absolute internet safety failed",
+        err
+      );
+    }
+  }
 
 }catch(err){
 
-  console.log(
-    "starter room AI failed",
-    err
-  );
+  console.log(
+    "starter room AI failed",
+    err
+  );
 }
 
 //////////////////////////////////////////////////
@@ -1129,9 +1112,9 @@ ${validStarterNews.map(
 
 if(!starterImage){
 
-  starterImage =
-    "https://picsum.photos/900/1200?random=" +
-    Math.floor(Math.random()*100000);
+  starterImage =
+    "https://picsum.photos/900/1200?random=" +
+    Math.floor(Math.random()*100000);
 }
 
 //////////////////////////////////////////////////
@@ -1139,16 +1122,16 @@ if(!starterImage){
 //////////////////////////////////////////////////
 
 const starterShareRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE short social-media-ready share caption.
 
 The caption should feel:
@@ -1166,12 +1149,12 @@ Rules:
 - max 16 words
 - feel repostable
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Mood:
 ${starterMood}
 
@@ -1181,16 +1164,16 @@ ${starterNewsTitle}
 Image personality:
 ${user.imageContext}
 `
-    }
-  ]
+    }
+  ]
 });
 
 const starterShareText =
-  starterShareRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  starterShareRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
@@ -1198,20 +1181,20 @@ const starterShareText =
 
 rooms[roomId].messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:starterImage,
+  image:starterImage,
 
-  mood:starterMood,
+  mood:starterMood,
 
-  ask:starterNewsTitle,
+  ask:starterNewsTitle,
 
-  shareText:starterShareText,
+  shareText:starterShareText,
 
-  link:
-    starterNewsItem?.link ||
-    starterNewsItem?.news_link ||
-    ""
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
 
 });
 
@@ -1221,21 +1204,21 @@ rooms[roomId].messages.push({
 
 io.to(roomId).emit(
 
-  "roomMessages",
+  "roomMessages",
 
-  rooms[roomId].messages
+  rooms[roomId].messages
 );
 
 io.to(roomId).emit(
-  "aiTypingStop"
+  "aiTypingStop"
 );
 
 }catch(err){
 
-  console.log(
-    "starter room AI failed",
-    err
-  );
+  console.log(
+    "starter room AI failed",
+    err
+  );
 }
 
 })();
@@ -1244,95 +1227,95 @@ return;
 
 }
 
-      //////////////////////////////////////////////////
-      // NORMAL V3 MODE
-      //////////////////////////////////////////////////
+      //////////////////////////////////////////////////
+      // NORMAL V3 MODE
+      //////////////////////////////////////////////////
 
-      user.imageMode = true;
+      user.imageMode = true;
 
-      socket.emit("preview", {
+      socket.emit("preview", {
 
-        text:
+        text:
 `Image AI:
 ${user.imageContext}`
-      });
+      });
 
-      socket.emit("state", {
+      socket.emit("state", {
 
-        placeholder:
-          "ask this image"
-      });
+        placeholder:
+          "ask this image"
+      });
 
-    }catch(err){
+    }catch(err){
 
-      console.log(err);
+      console.log(err);
 
-      socket.emit("state", {
+      socket.emit("state", {
 
-        placeholder:
-          "image failed"
-      });
-    }
-  });
+        placeholder:
+          "image failed"
+      });
+    }
+  });
 
-  //////////////////////////////////////////////////
-  // INPUT
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // INPUT
+  //////////////////////////////////////////////////
 
-  socket.on(
-    "input",
+  socket.on(
+    "input",
 
-    async ({ text }) => {
+    async ({ text }) => {
 
-    const user =
-      users[socket.id];
+    const user =
+      users[socket.id];
 
-    const raw =
-      text.trim();
+    const raw =
+      text.trim();
 
-    const email =
-      extractEmail(raw);
+    const email =
+      extractEmail(raw);
 
-    //////////////////////////////////////////////////
-    // EMAIL STEP
-    //////////////////////////////////////////////////
+    //////////////////////////////////////////////////
+    // EMAIL STEP
+    //////////////////////////////////////////////////
 
-    if(user.step === "email"){
+    if(user.step === "email"){
 
-      if(!email) return;
+      if(!email) return;
 
-      user.email = email;
+      user.email = email;
 
-      user.step = "active";
+      user.step = "active";
 
-      return socket.emit(
-        "state",
-        {
-          placeholder:
-            "tap camera to ask anything"
-        }
-      );
-    }
+      return socket.emit(
+        "state",
+        {
+          placeholder:
+            "tap camera to ask anything"
+        }
+      );
+    }
 
-    //////////////////////////////////////////////////
-    // IMAGE AI QUESTION
-    //////////////////////////////////////////////////
+    //////////////////////////////////////////////////
+    // IMAGE AI QUESTION
+    //////////////////////////////////////////////////
 
-    if(user.imageMode){
+    if(user.imageMode){
 
-      try{
+      try{
 
-        const res =
-          await openai.chat.completions.create({
+        const res =
+          await openai.chat.completions.create({
 
-          model:"gpt-4o-mini",
+          model:"gpt-4o-mini",
 
-          messages:[
+          messages:[
 
-            {
-              role:"system",
+            {
+              role:"system",
 
-              content:`
+              content:`
 You are the image identity itself.
 
 Current year:
@@ -1343,354 +1326,240 @@ Rules:
 - emotionally aware
 - no markdown
 `
-            },
+            },
 
-            {
-              role:"user",
-              content:raw
-            }
-          ]
-        });
+            {
+              role:"user",
+              content:raw
+            }
+          ]
+        });
 
-        const aiReply =
-          res.choices[0]
-            .message
-            .content;
+        const aiReply =
+          res.choices[0]
+            .message
+            .content;
 
-        const finalAnswer =
+        const finalAnswer =
 `Image AI:
 ${user.imageContext}
 
 ${aiReply}`;
 
-        questions.unshift({
+        questions.unshift({
 
-          email:user.email,
+          email:user.email,
 
-          text:raw,
+          text:raw,
 
-          answers:[],
+          answers:[],
 
-          createdAt:Date.now()
-        });
+          createdAt:Date.now()
+        });
 
-        await sendEmail(
+        await sendEmail(
 
-          user.email,
+          user.email,
 
-          "Image AI Reply",
+          "Image AI Reply",
 
-          `Q:
+          `Q:
 ${raw}
 
 ${finalAnswer}`,
 
-          user.lastImage
-        );
+          user.lastImage
+        );
 
-        user.imageMode = false;
+        user.imageMode = false;
 
-        socket.emit("preview", {
-          text:finalAnswer
-        });
+        socket.emit("preview", {
+          text:finalAnswer
+        });
 
-        socket.emit(
-          "questions",
-          questions.slice(0,10)
-        );
+        socket.emit(
+          "questions",
+          questions.slice(0,10)
+        );
 
-        return socket.emit(
-          "state",
-          {
-            placeholder:
-              "tap a question to answer"
-          }
-        );
+        return socket.emit(
+          "state",
+          {
+            placeholder:
+              "tap a question to answer"
+          }
+        );
 
-      }catch(err){
+      }catch(err){
 
-        console.log(err);
+        console.log(err);
 
-        return socket.emit(
-          "state",
-          {
-            placeholder:
-              "AI failed"
-          }
-        );
-      }
-    }
+        return socket.emit(
+          "state",
+          {
+            placeholder:
+              "AI failed"
+          }
+        );
+      }
+    }
 
-    //////////////////////////////////////////////////
-    // ANSWER MODE
-    //////////////////////////////////////////////////
+    //////////////////////////////////////////////////
+    // ANSWER MODE
+    //////////////////////////////////////////////////
 
-    if(user.currentIndex !== null){
+    if(user.currentIndex !== null){
 
-      const q =
-        questions[user.currentIndex];
+      const q =
+        questions[user.currentIndex];
 
-      if(!q) return;
+      if(!q) return;
 
-      q.answers.push({
+      q.answers.push({
 
-        text:raw,
+        text:raw,
 
-        from:user.email,
+        from:user.email,
 
-        createdAt:Date.now()
-      });
+        createdAt:Date.now()
+      });
 
-      await sendEmail(
-        q.email,
-        "New Answer",
-        raw
-      );
+      await sendEmail(
+        q.email,
+        "New Answer",
+        raw
+      );
 
-      user.currentIndex = null;
+      user.currentIndex = null;
 
-      socket.emit("preview", {
-        text:""
-      });
+      socket.emit("preview", {
+        text:""
+      });
 
-      socket.emit(
-        "questions",
-        []
-      );
+      socket.emit(
+        "questions",
+        []
+      );
 
-      return socket.emit(
-        "state",
-        {
-          placeholder:
-            "tap camera to ask anything"
-        }
-      );
-    }
+      return socket.emit(
+        "state",
+        {
+          placeholder:
+            "tap camera to ask anything"
+        }
+      );
+    }
 
-  });
+  });
 
-  //////////////////////////////////////////////////
-  // SELECT QUESTION
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // SELECT QUESTION
+  //////////////////////////////////////////////////
 
-  socket.on(
-    "selectQuestion",
+  socket.on(
+    "selectQuestion",
 
-    ({ index }) => {
+    ({ index }) => {
 
-    const user =
-      users[socket.id];
+    const user =
+      users[socket.id];
 
-    user.currentIndex =
-      index;
+    user.currentIndex =
+      index;
 
-    const q =
-      questions[index];
+    const q =
+      questions[index];
 
-    if(!q) return;
+    if(!q) return;
 
-    socket.emit(
-      "state",
-      {
-        placeholder:
-          `answering: ${q.text}`
-      }
-    );
-  });
+    socket.emit(
+      "state",
+      {
+        placeholder:
+          `answering: ${q.text}`
+      }
+    );
+  });
 
-  //////////////////////////////////////////////////
-  // REQUEST QUESTIONS
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // REQUEST QUESTIONS
+  //////////////////////////////////////////////////
 
-  socket.on(
-    "requestQuestions",
+  socket.on(
+    "requestQuestions",
 
-    () => {
+    () => {
 
-    socket.emit(
-      "questions",
-      questions.slice(0,10)
-    );
+    socket.emit(
+      "questions",
+      questions.slice(0,10)
+    );
 
-  });
+  });
 
-  //////////////////////////////////////////////////
-  // ROOM MESSAGE
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // ROOM MESSAGE
+  //////////////////////////////////////////////////
 
-  socket.on(
-    "roomMessage",
+  socket.on(
+    "roomMessage",
 
-    async ({ text }) => {
+    async ({ text }) => {
 
-    const user =
-      users[socket.id];
+    const user =
+      users[socket.id];
 
-    const room =
-  rooms[user.currentRoom];
+    const room =
+      rooms[user.currentRoom];
 
-if(!room) return;
+    if(!room) return;
 
-//////////////////////////////////////////////////
-// V5.5 EMOTIONAL EVOLUTION
-//////////////////////////////////////////////////
+    room.messages.push({
 
-const lowerText =
-  text.toLowerCase();
+      from:user.email,
 
-//////////////////////////////////////////////////
-// HYPE
-//////////////////////////////////////////////////
-
-if(
-
-  lowerText.includes("crazy") ||
-  lowerText.includes("viral") ||
-  lowerText.includes("fire") ||
-  lowerText.includes("insane")
-
-){
-
-  room.emotionalProfile.hype += 0.1;
-
-}
-
-//////////////////////////////////////////////////
-// ANXIETY
-//////////////////////////////////////////////////
-
-if(
-
-  lowerText.includes("scared") ||
-  lowerText.includes("stress") ||
-  lowerText.includes("worried") ||
-  lowerText.includes("anxiety")
-
-){
-
-  room.emotionalProfile.anxiety += 0.1;
-
-}
-
-//////////////////////////////////////////////////
-// LONELINESS
-//////////////////////////////////////////////////
-
-if(
-
-  lowerText.includes("alone") ||
-  lowerText.includes("lonely") ||
-  lowerText.includes("empty")
-
-){
-
-  room.emotionalProfile.loneliness += 0.1;
-
-}
-
-//////////////////////////////////////////////////
-// CONFIDENCE
-//////////////////////////////////////////////////
-
-if(
-
-  lowerText.includes("power") ||
-  lowerText.includes("winning") ||
-  lowerText.includes("confident")
-
-){
-
-  room.emotionalProfile.confidence += 0.1;
-
-}
-
-//////////////////////////////////////////////////
-// CELEBRITY FIXATION
-//////////////////////////////////////////////////
-
-if(
-
-  lowerText.includes("celebrity") ||
-  lowerText.includes("famous") ||
-  lowerText.includes("idol")
-
-){
-
-  room.emotionalProfile.celebrityFixation += 0.1;
-
-}
-
-//////////////////////////////////////////////////
-// CLAMP VALUES
-//////////////////////////////////////////////////
-
-Object.keys(
-  room.emotionalProfile
-).forEach(key => {
-
-  room.emotionalProfile[key] =
-    Math.max(
-      0,
-      Math.min(
-        1,
-        room.emotionalProfile[key]
-      )
-    );
-
-});
-
-console.log(
-  "ROOM EMOTIONS:",
-  room.emotionalProfile
-);
-
-    
-    room.messages.push({
-
-      from:user.email,
-
-      text
-    });
+      text
+    });
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
 //////////////////////////////////////////////////
 
 if(room.messages.length > 30){
 
-  room.messages =
-    room.messages.slice(-30);
+  room.messages =
+    room.messages.slice(-30);
 
 }
 
-    io.to(room.id).emit(
-      "roomMessages",
-      room.messages
-    );
+    io.to(room.id).emit(
+      "roomMessages",
+      room.messages
+    );
 
-   //////////////////////////////////////////////////
+   //////////////////////////////////////////////////
 // IMAGE REACTION V5
 //////////////////////////////////////////////////
 
 try{
-  io.to(room.id).emit(
-  "aiTypingStart"
+  io.to(room.id).emit(
+  "aiTypingStart"
 );
 
- //////////////////////////////////////////////////
+ //////////////////////////////////////////////////
 // GPT CREATES TRENDING NEWS SEARCH
 //////////////////////////////////////////////////
 
 const emotionRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
@@ -1776,23 +1645,15 @@ Rules:
 
 The uploaded image personality MUST shape the trend direction.
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Uploaded image AI personality:
 
 ${room.imageContext}
-
-Current room emotional profile:
-
-${JSON.stringify(
-  room.emotionalProfile,
-  null,
-  2
-)}
 
 Trend personality category:
 
@@ -1830,20 +1691,20 @@ The room should evolve like:
 - viral news energy
 - celebrity/internet momentum
 `
-    }
-  ]
+    }
+  ]
 });
 
 const searchQuery =
 
-  emotionRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  emotionRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 room.usedSearches.push(
-  searchQuery
+  searchQuery
 );
 
 //////////////////////////////////////////////////
@@ -1851,23 +1712,23 @@ room.usedSearches.push(
 //////////////////////////////////////////////////
 
 const serpFetch =
-  await fetch(
+  await fetch(
 
-    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
-  );
+  );
 
 const serpRes =
-  await serpFetch.json();
-  
-  console.log(
-  "LOOP SEARCH:",
-  searchQuery
+  await serpFetch.json();
+  
+  console.log(
+  "LOOP SEARCH:",
+  searchQuery
 );
 
 console.log(
-  "LOOP NEWS COUNT:",
-  serpRes?.news_results?.length
+  "LOOP NEWS COUNT:",
+  serpRes?.news_results?.length
 );
 
 //////////////////////////////////////////////////
@@ -1881,37 +1742,37 @@ console.log(
 let imageUrl = null;
 
 let selectedNews =
-  null;
+  null;
 
 const newsResults =
-  serpRes?.news_results || [];
+  serpRes?.news_results || [];
 
 //////////////////////////////////////////////////
 // FILTER VALID INTERNET REACTIONS
 //////////////////////////////////////////////////
 
 const validNews =
-  newsResults.filter(item => {
+  newsResults.filter(item => {
 
-    const possibleImage =
-      item.thumbnail ||
-      item.thumbnail_small;
+    const possibleImage =
+      item.thumbnail ||
+      item.thumbnail_small;
 
-    return (
+    return (
 
-      possibleImage &&
+      possibleImage &&
 
-      item.title &&
+      item.title &&
 
-      !possibleImage.includes("logo") &&
-      !possibleImage.includes("icon") &&
-      !possibleImage.includes("placeholder") &&
-      !possibleImage.includes("default") &&
-      !possibleImage.includes("avatar")
+      !possibleImage.includes("logo") &&
+      !possibleImage.includes("icon") &&
+      !possibleImage.includes("placeholder") &&
+      !possibleImage.includes("default") &&
+      !possibleImage.includes("avatar")
 
-    );
+    );
 
-  });
+  });
 
 //////////////////////////////////////////////////
 // AI EVALUATES INTERNET ENERGY
@@ -1919,19 +1780,19 @@ const validNews =
 
 if(validNews.length > 0){
 
-  try{
+  try{
 
-    const evaluationRes =
-      await openai.chat.completions.create({
+    const evaluationRes =
+      await openai.chat.completions.create({
 
-      model:"gpt-4o-mini",
+      model:"gpt-4o-mini",
 
-      temperature:0.7,
+      temperature:0.7,
 
-      messages:[
-        {
-          role:"system",
-          content:`
+      messages:[
+        {
+          role:"system",
+          content:`
 You are evaluating internet reactions.
 
 Choose the MOST emotionally powerful result.
@@ -1951,10 +1812,10 @@ The result MUST:
 
 Return ONLY the exact title.
 `
-        },
-        {
-          role:"user",
-          content:`
+        },
+        {
+          role:"user",
+          content:`
 Image personality:
 ${room.imageContext}
 
@@ -1966,62 +1827,72 @@ ${text}
 
 Candidate internet reactions:
 ${validNews.map(
-  n => n.title
+  n => n.title
 ).join("\n")}
 `
-        }
-      ]
-    });
+        }
+      ]
+    });
 
-    const chosenTitle =
-      evaluationRes
-        .choices[0]
-        .message
-        .content
-        .trim();
+    const chosenTitle =
+      evaluationRes
+        .choices[0]
+        .message
+        .content
+        .trim();
 
-    //////////////////////////////////////////////////
-    // MATCH CHOSEN RESULT
-    //////////////////////////////////////////////////
+    //////////////////////////////////////////////////
+    // MATCH CHOSEN RESULT
+    //////////////////////////////////////////////////
 
-    selectedNews =
-  validNews.find(item =>
+    selectedNews =
+      validNews.find(item =>
+        item.title
+          .toLowerCase()
+          .includes(
+            chosenTitle.toLowerCase()
+          )
+      );
 
-    (
-      item.link ||
-      item.news_link
-    )
+    //////////////////////////////////////////////////
+    // SAFETY FALLBACK
+    //////////////////////////////////////////////////
 
-  ) || validNews[0];
+    if(!selectedNews){
 
-    imageUrl =
-      selectedNews.thumbnail ||
-      selectedNews.thumbnail_small;
+      selectedNews =
+        validNews[0];
 
-    console.log(
-      "AI INTERNET CHOICE:",
-      selectedNews.title
-    );
+    }
 
-  }catch(err){
+    imageUrl =
+      selectedNews.thumbnail ||
+      selectedNews.thumbnail_small;
 
-    console.log(
-      "internet evaluation failed",
-      err
-    );
+    console.log(
+      "AI INTERNET CHOICE:",
+      selectedNews.title
+    );
 
-    //////////////////////////////////////////////////
-    // FALLBACK
-    //////////////////////////////////////////////////
+  }catch(err){
 
-    selectedNews =
-      validNews[0];
+    console.log(
+      "internet evaluation failed",
+      err
+    );
 
-    imageUrl =
-      selectedNews.thumbnail ||
-      selectedNews.thumbnail_small;
+    //////////////////////////////////////////////////
+    // FALLBACK
+    //////////////////////////////////////////////////
 
-  }
+    selectedNews =
+      validNews[0];
+
+    imageUrl =
+      selectedNews.thumbnail ||
+      selectedNews.thumbnail_small;
+
+  }
 
 }
 
@@ -2031,35 +1902,35 @@ ${validNews.map(
 
 if(!imageUrl){
 
-  try{
+  try{
 
-    const imageFallbackFetch =
-      await fetch(
+    const imageFallbackFetch =
+      await fetch(
 
-        `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+        `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
-      );
+      );
 
-    const imageFallbackRes =
-      await imageFallbackFetch.json();
+    const imageFallbackRes =
+      await imageFallbackFetch.json();
 
-    imageUrl =
+    imageUrl =
 
-      imageFallbackRes
-        ?.images_results?.[0]
-        ?.original ||
+      imageFallbackRes
+        ?.images_results?.[0]
+        ?.original ||
 
-      imageFallbackRes
-        ?.images_results?.[0]
-        ?.thumbnail;
+      imageFallbackRes
+        ?.images_results?.[0]
+        ?.thumbnail;
 
-  }catch(err){
+  }catch(err){
 
-    console.log(
-      "google image fallback failed",
-      err
-    );
-  }
+    console.log(
+      "google image fallback failed",
+      err
+    );
+  }
 }
 
 //////////////////////////////////////////////////
@@ -2068,29 +1939,29 @@ if(!imageUrl){
 
 if(!imageUrl){
 
-  imageUrl =
-    user.lastImage;
+  imageUrl =
+    user.lastImage;
 }
 
-  //////////////////////////////////////////////////
-  // PUSH IMAGE MESSAGE
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // PUSH IMAGE MESSAGE
+  //////////////////////////////////////////////////
 
-//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
 // GPT CREATES 1-3 WORD MOOD
 //////////////////////////////////////////////////
 
 const moodRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE evolving internet vibe.
 
 The vibe should feel:
@@ -2117,23 +1988,15 @@ Rules:
 - modern internet culture only
 - no philosophy
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Uploaded image AI personality:
 
 ${room.imageContext}
-
-Current emotional profile:
-
-${JSON.stringify(
-  room.emotionalProfile,
-  null,
-  2
-)}
 
 Used moods:
 
@@ -2146,41 +2009,24 @@ ${searchQuery}
 Current user response:
 
 ${text}
-
-Create ONE evolving internet vibe.
-
-The vibe should feel:
-- emotionally reactive
-- internet-native
-- socially addictive
-- culturally current
-- emotionally aligned with the room state
-
-The mood should evolve from:
-- the room emotional profile
-- the current internet atmosphere
-- the current user reaction
-- the current search direction
-
-Avoid repeating previous moods.
 `
-    }
-  ]
+    }
+  ]
 });
 
 const moodText =
-  moodRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  moodRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 room.usedMoods.push(
-  moodText
+  moodText
 );
 
 room.emotionalState.push(
-  moodText
+  moodText
 );
 
 //////////////////////////////////////////////////
@@ -2188,16 +2034,16 @@ room.emotionalState.push(
 //////////////////////////////////////////////////
 
 const nextQuestionRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE trending social reaction line.
 
 The line should feel:
@@ -2215,23 +2061,15 @@ Rules:
 - no existential tone
 - feel like live internet culture
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Uploaded image AI personality:
 
 ${room.imageContext}
-
-Current emotional profile:
-
-${JSON.stringify(
-  room.emotionalProfile,
-  null,
-  2
-)}
 
 Used questions:
 
@@ -2255,19 +2093,19 @@ ${text}
 
 Create a NEW trending social reaction line.
 `
-    }
-  ]
+    }
+  ]
 });
 
 const nextQuestion =
-  nextQuestionRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  nextQuestionRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 room.usedQuestions.push(
-  nextQuestion
+  nextQuestion
 );
 
 //////////////////////////////////////////////////
@@ -2282,24 +2120,24 @@ room.usedQuestions.push(
 //////////////////////////////////////////////////
 
 let newsTitle =
-  selectedNews?.title ||
-  nextQuestion;
+  selectedNews?.title ||
+  nextQuestion;
 
 //////////////////////////////////////////////////
 // SHARE TEXT
 //////////////////////////////////////////////////
 
 const shareRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE short social-media-ready share caption.
 
 The caption should feel:
@@ -2317,12 +2155,12 @@ Rules:
 - max 16 words
 - feel repostable
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Mood:
 ${moodText}
 
@@ -2332,16 +2170,16 @@ ${newsTitle}
 Image personality:
 ${room.imageContext}
 `
-    }
-  ]
+    }
+  ]
 });
 
 const shareText =
-  shareRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  shareRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // PUSH IMAGE + REAL TITLE
@@ -2349,20 +2187,20 @@ const shareText =
 
 room.messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:imageUrl,
+  image:imageUrl,
 
-  mood:moodText,
+  mood:moodText,
 
-  ask:newsTitle,
+  ask:newsTitle,
 
-  shareText,
+  shareText,
 
-  link:
-  selectedNews?.link ||
-  selectedNews?.news_link ||
-  ""
+  link:
+  selectedNews?.link ||
+  selectedNews?.news_link ||
+  ""
 
 });
 
@@ -2372,80 +2210,80 @@ room.messages.push({
 
 if(room.messages.length > 30){
 
-  room.messages =
-    room.messages.slice(-30);
+  room.messages =
+    room.messages.slice(-30);
 
 }
 
-  io.to(room.id).emit(
+  io.to(room.id).emit(
 
-    "roomMessages",
+    "roomMessages",
 
-    room.messages
-  );
-  io.to(room.id).emit(
-  "aiTypingStop"
+    room.messages
+  );
+  io.to(room.id).emit(
+  "aiTypingStop"
 );
 
 }catch(err){
 
-  console.log(err);
+  console.log(err);
 }
 });
 
-  //////////////////////////////////////////////////
-  // AI SEARCH
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // AI SEARCH
+  //////////////////////////////////////////////////
 
-  socket.on(
-    "aiSearch",
+  socket.on(
+    "aiSearch",
 
-    () => {
+    () => {
 
-    const user =
-      users[socket.id];
+    const user =
+      users[socket.id];
 
-    const room =
-      rooms[user.currentRoom];
+    const room =
+      rooms[user.currentRoom];
 
-    if(!room) return;
+    if(!room) return;
 
-    room.messages.push({
+    room.messages.push({
 
-      from:"Image AI",
+      from:"Image AI",
 
-      text:
+      text:
 `People around this feeling are discussing similar things online right now.`
-    });
+    });
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
 //////////////////////////////////////////////////
 
 if(room.messages.length > 30){
 
-  room.messages =
-    room.messages.slice(-30);
+  room.messages =
+    room.messages.slice(-30);
 
 }
 
-    io.to(room.id).emit(
-      "roomMessages",
-      room.messages
-    );
+    io.to(room.id).emit(
+      "roomMessages",
+      room.messages
+    );
 
-  });
+  });
 
-  //////////////////////////////////////////////////
-  // DISCONNECT
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // DISCONNECT
+  //////////////////////////////////////////////////
 
-  socket.on(
-    "disconnect",
+  socket.on(
+    "disconnect",
 
-    () => {
+    () => {
 
-    delete users[socket.id];
-  });
+    delete users[socket.id];
+  });
 
 });
 
@@ -2455,7 +2293,7 @@ if(room.messages.length > 30){
 
 server.listen(10000, () => {
 
-  console.log(
-    "CONNECTAING V5.5 running b"
-  );
+  console.log(
+    "CONNECTAING V5.4.2 running"
+  );
 });
