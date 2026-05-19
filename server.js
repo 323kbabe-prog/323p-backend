@@ -1200,9 +1200,21 @@ rooms[roomId].messages.push({
   shareText:starterShareText,
 
   link:
-    starterNewsItem?.link ||
-    starterNewsItem?.news_link ||
-    ""
+  (
+    starterNewsItem &&
+    (
+      starterNewsItem.link ||
+      starterNewsItem.news_link
+    )
+  )
+  ?
+  (
+    starterNewsItem.link ||
+    starterNewsItem.news_link
+  )
+  :
+  "https://google.com/search?q=" +
+  encodeURIComponent(starterNewsTitle)
 
 });
 
@@ -2457,6 +2469,6 @@ if(room.messages.length > 30){
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V5.5 running"
+    "CONNECTAING V5.5 LITE running"
   );
 });
