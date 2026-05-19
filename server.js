@@ -892,13 +892,26 @@ ${validStarterNews.map(
         .trim();
 
     starterNewsItem =
-      validStarterNews.find(item =>
-        item.title
-          .toLowerCase()
-          .includes(
-            starterChosenTitle.toLowerCase()
-          )
-      );
+  validStarterNews.find(item => {
+
+    const a =
+      item.title
+        .toLowerCase()
+        .replace(/[^\w\s]/g,"")
+        .trim();
+
+    const b =
+      starterChosenTitle
+        .toLowerCase()
+        .replace(/[^\w\s]/g,"")
+        .trim();
+
+    return (
+      a.includes(b) ||
+      b.includes(a)
+    );
+
+  });
 
     if(!starterNewsItem){
 
