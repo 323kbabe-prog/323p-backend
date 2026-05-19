@@ -1611,6 +1611,16 @@ const userIntent =
     .content
     .trim();
 
+room.userIntentHistory.push(
+  userIntent
+);
+
+if(room.userIntentHistory.length > 12){
+
+  room.userIntentHistory =
+    room.userIntentHistory.slice(-12);
+}
+
 const emotionRes =
   await openai.chat.completions.create({
 
