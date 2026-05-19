@@ -1219,6 +1219,15 @@ if(
       item.news_link
     );
 
+  if(!starterNewsItem){
+
+    starterNewsItem = {
+      title:starterNewsTitle,
+      link:"https://news.google.com"
+    };
+
+  }
+
 }
 
 let starterLink =
