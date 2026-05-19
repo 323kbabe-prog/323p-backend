@@ -1976,24 +1976,14 @@ ${validNews.map(
     //////////////////////////////////////////////////
 
     selectedNews =
-      validNews.find(item =>
-        item.title
-          .toLowerCase()
-          .includes(
-            chosenTitle.toLowerCase()
-          )
-      );
+  validNews.find(item =>
 
-    //////////////////////////////////////////////////
-    // SAFETY FALLBACK
-    //////////////////////////////////////////////////
+    (
+      item.link ||
+      item.news_link
+    )
 
-    if(!selectedNews){
-
-      selectedNews =
-        validNews[0];
-
-    }
+  ) || validNews[0];
 
     imageUrl =
       selectedNews.thumbnail ||
@@ -2457,6 +2447,6 @@ if(room.messages.length > 30){
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V5.5 running"
+    "CONNECTAING V5.5 running a"
   );
 });
