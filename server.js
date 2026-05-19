@@ -892,13 +892,22 @@ ${validStarterNews.map(
         .trim();
 
     starterNewsItem =
-      validStarterNews.find(item =>
-        item.title
-          .toLowerCase()
-          .includes(
-            starterChosenTitle.toLowerCase()
-          )
-      );
+  validStarterNews.find(item =>
+
+    item.title
+      .toLowerCase()
+      .includes(
+        starterChosenTitle.toLowerCase()
+      )
+
+    &&
+
+    (
+      item.link ||
+      item.news_link
+    )
+
+  );
 
     if(!starterNewsItem){
 
@@ -2447,6 +2456,6 @@ if(room.messages.length > 30){
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V5.5 running a"
+    "CONNECTAING V5.5 running b"
   );
 });
