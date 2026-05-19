@@ -1200,9 +1200,28 @@ const starterShareText =
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
 
+//////////////////////////////////////////////////
+// PUSH FIRST MESSAGE
+//////////////////////////////////////////////////
+
 let starterTitle =
   starterNewsItem?.title ||
   starterNewsTitle;
+
+let starterLink =
+  starterNewsItem?.link ||
+  starterNewsItem?.news_link;
+
+if(
+  !starterLink ||
+  !starterLink.startsWith("http")
+){
+
+  starterLink =
+    "https://google.com/search?q=" +
+    encodeURIComponent(starterTitle);
+
+}
 
 rooms[roomId].messages.push({
 
@@ -1216,10 +1235,7 @@ rooms[roomId].messages.push({
 
   shareText:starterShareText,
 
-  link:
-  starterNewsItem?.link ||
-  starterNewsItem?.news_link ||
-  ""
+  link:starterLink
 
 });
 
