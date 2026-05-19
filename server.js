@@ -1195,7 +1195,9 @@ rooms[roomId].messages.push({
 
   mood:starterMood,
 
-  ask:starterNewsTitle,
+  ask:
+  starterNewsItem?.title ||
+  starterNewsTitle,
 
   shareText:starterShareText,
 
@@ -2469,6 +2471,6 @@ if(room.messages.length > 30){
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V5.5 LITE running"
+    "CONNECTAING V5.5 running"
   );
 });
