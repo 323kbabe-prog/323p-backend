@@ -421,6 +421,14 @@ if(roomMode){
 
     usedQuestions:[],
 
+emotionalProfile:{
+  hype:0.5,
+  anxiety:0.2,
+  loneliness:0.1,
+  confidence:0.6,
+  celebrityFixation:0.5
+},
+
     emotionalState:[],
 
     createdAt:Date.now(),
@@ -478,9 +486,9 @@ const starterRes =
 
   model:"gpt-4o-mini",
 
-  temperature:1.2,
+  temperature:0.8,
 
-  messages:[
+messages:[
 
     {
       role:"system",
@@ -792,36 +800,132 @@ The room should evolve like:
   // REAL STARTER NEWS PICKER
   //////////////////////////////////////////////////
 
-  const starterNewsResults =
-    starterSerpRes?.news_results || [];
+  //////////////////////////////////////////////////
+// V5.4.2 STARTER INTERNET EVALUATION
+//////////////////////////////////////////////////
 
-  for(const item of starterNewsResults){
+const starterNewsResults =
+  starterSerpRes?.news_results || [];
+
+const validStarterNews =
+  starterNewsResults.filter(item => {
 
     const possibleImage =
       item.thumbnail ||
       item.thumbnail_small;
 
-    if(
+    return (
+
       possibleImage &&
+
       item.title &&
+
       !possibleImage.includes("logo") &&
       !possibleImage.includes("icon") &&
       !possibleImage.includes("placeholder") &&
-      !possibleImage.includes("default")
-    ){
+      !possibleImage.includes("default") &&
+      !possibleImage.includes("avatar")
 
-      starterImage =
-        possibleImage;
+    );
 
-      starterNewsTitle =
-        item.title;
+  });
+
+if(validStarterNews.length > 0){
+
+  try{
+
+    const starterEvaluationRes =
+      await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      temperature:0.7,
+
+      messages:[
+        {
+          role:"system",
+          content:`
+Choose the MOST emotionally powerful
+starter internet reaction.
+
+Prioritize:
+- internet virality
+- emotional energy
+- visual strength
+- cultural momentum
+- emotionally addictive feeling
+
+Return ONLY the exact title.
+`
+        },
+        {
+          role:"user",
+          content:`
+Image personality:
+${user.imageContext}
+
+Starter mood:
+${starterMood}
+
+Candidate reactions:
+${validStarterNews.map(
+  n => n.title
+).join("\n")}
+`
+        }
+      ]
+    });
+
+    const starterChosenTitle =
+      starterEvaluationRes
+        .choices[0]
+        .message
+        .content
+        .trim();
+
+    starterNewsItem =
+      validStarterNews.find(item =>
+        item.title
+          .toLowerCase()
+          .includes(
+            starterChosenTitle.toLowerCase()
+          )
+      );
+
+    if(!starterNewsItem){
 
       starterNewsItem =
-        item;
+        validStarterNews[0];
 
-      break;
     }
+
+    starterImage =
+      starterNewsItem.thumbnail ||
+      starterNewsItem.thumbnail_small;
+
+    starterNewsTitle =
+      starterNewsItem.title;
+
+  }catch(err){
+
+    console.log(
+      "starter evaluation failed",
+      err
+    );
+
+    starterNewsItem =
+      validStarterNews[0];
+
+    starterImage =
+      starterNewsItem.thumbnail ||
+      starterNewsItem.thumbnail_small;
+
+    starterNewsTitle =
+      starterNewsItem.title;
+
   }
+
+}
 
   //////////////////////////////////////////////////
   // GOOGLE IMAGE FALLBACK
@@ -1416,6 +1520,16 @@ ${finalAnswer}`,
 
       text
     });
+//////////////////////////////////////////////////
+// LIMIT FEED SIZE
+//////////////////////////////////////////////////
+
+if(room.messages.length > 30){
+
+  room.messages =
+    room.messages.slice(-30);
+
+}
 
     io.to(room.id).emit(
       "roomMessages",
@@ -1621,33 +1735,165 @@ console.log(
 // BETTER REAL NEWS IMAGE PICKER
 //////////////////////////////////////////////////
 
+//////////////////////////////////////////////////
+// V5.4.2 INTERNET REACTION EVALUATION
+//////////////////////////////////////////////////
+
 let imageUrl = null;
+
+let selectedNews =
+  null;
 
 const newsResults =
   serpRes?.news_results || [];
 
-for(const item of newsResults){
+//////////////////////////////////////////////////
+// FILTER VALID INTERNET REACTIONS
+//////////////////////////////////////////////////
 
-  const possibleImage =
+const validNews =
+  newsResults.filter(item => {
 
-    item.thumbnail ||
-    item.thumbnail_small;
+    const possibleImage =
+      item.thumbnail ||
+      item.thumbnail_small;
 
-  if(
+    return (
 
-    possibleImage &&
+      possibleImage &&
 
-    !possibleImage.includes("logo") &&
-    !possibleImage.includes("icon") &&
-    !possibleImage.includes("placeholder") &&
-    !possibleImage.includes("default")
+      item.title &&
 
-  ){
+      !possibleImage.includes("logo") &&
+      !possibleImage.includes("icon") &&
+      !possibleImage.includes("placeholder") &&
+      !possibleImage.includes("default") &&
+      !possibleImage.includes("avatar")
 
-    imageUrl = possibleImage;
+    );
 
-    break;
+  });
+
+//////////////////////////////////////////////////
+// AI EVALUATES INTERNET ENERGY
+//////////////////////////////////////////////////
+
+if(validNews.length > 0){
+
+  try{
+
+    const evaluationRes =
+      await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      temperature:0.7,
+
+      messages:[
+        {
+          role:"system",
+          content:`
+You are evaluating internet reactions.
+
+Choose the MOST emotionally powerful result.
+
+Prioritize:
+- emotional intensity
+- internet virality
+- visual energy
+- social momentum
+- emotional alignment
+- internet-native feeling
+
+The result MUST:
+- emotionally match the image personality
+- feel culturally alive
+- feel socially addictive
+
+Return ONLY the exact title.
+`
+        },
+        {
+          role:"user",
+          content:`
+Image personality:
+${room.imageContext}
+
+Current emotional state:
+${room.emotionalState.join("\n")}
+
+Current user reaction:
+${text}
+
+Candidate internet reactions:
+${validNews.map(
+  n => n.title
+).join("\n")}
+`
+        }
+      ]
+    });
+
+    const chosenTitle =
+      evaluationRes
+        .choices[0]
+        .message
+        .content
+        .trim();
+
+    //////////////////////////////////////////////////
+    // MATCH CHOSEN RESULT
+    //////////////////////////////////////////////////
+
+    selectedNews =
+      validNews.find(item =>
+        item.title
+          .toLowerCase()
+          .includes(
+            chosenTitle.toLowerCase()
+          )
+      );
+
+    //////////////////////////////////////////////////
+    // SAFETY FALLBACK
+    //////////////////////////////////////////////////
+
+    if(!selectedNews){
+
+      selectedNews =
+        validNews[0];
+
+    }
+
+    imageUrl =
+      selectedNews.thumbnail ||
+      selectedNews.thumbnail_small;
+
+    console.log(
+      "AI INTERNET CHOICE:",
+      selectedNews.title
+    );
+
+  }catch(err){
+
+    console.log(
+      "internet evaluation failed",
+      err
+    );
+
+    //////////////////////////////////////////////////
+    // FALLBACK
+    //////////////////////////////////////////////////
+
+    selectedNews =
+      validNews[0];
+
+    imageUrl =
+      selectedNews.thumbnail ||
+      selectedNews.thumbnail_small;
+
   }
+
 }
 
 //////////////////////////////////////////////////
@@ -1869,25 +2115,13 @@ room.usedQuestions.push(
 //////////////////////////////////////////////////
 // 5.3 REAL NEWS TITLE MATCHED TO IMAGE
 //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// V5.4.2 EMOTIONALLY CHOSEN TITLE
+//////////////////////////////////////////////////
 
-let newsTitle = nextQuestion;
-
-for(const item of newsResults){
-
-  const possibleImage =
-    item.thumbnail ||
-    item.thumbnail_small;
-
-  if(
-    possibleImage &&
-    item.title
-  ){
-
-    newsTitle = item.title;
-
-    break;
-  }
-}
+let newsTitle =
+  selectedNews?.title ||
+  nextQuestion;
 
 //////////////////////////////////////////////////
 // SHARE TEXT
@@ -1964,11 +2198,22 @@ room.messages.push({
   shareText,
 
   link:
-    newsResults?.[0]?.link ||
-    newsResults?.[0]?.news_link ||
-    ""
+  selectedNews?.link ||
+  selectedNews?.news_link ||
+  ""
 
 });
+
+//////////////////////////////////////////////////
+// LIMIT FEED SIZE
+//////////////////////////////////////////////////
+
+if(room.messages.length > 30){
+
+  room.messages =
+    room.messages.slice(-30);
+
+}
 
   io.to(room.id).emit(
 
@@ -2010,6 +2255,16 @@ room.messages.push({
       text:
 `People around this feeling are discussing similar things online right now.`
     });
+//////////////////////////////////////////////////
+// LIMIT FEED SIZE
+//////////////////////////////////////////////////
+
+if(room.messages.length > 30){
+
+  room.messages =
+    room.messages.slice(-30);
+
+}
 
     io.to(room.id).emit(
       "roomMessages",
@@ -2039,6 +2294,6 @@ room.messages.push({
 server.listen(10000, () => {
 
   console.log(
-    "server running"
+    "CONNECTAING V5.4.2 running"
   );
 });
