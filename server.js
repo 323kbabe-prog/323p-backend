@@ -2399,9 +2399,12 @@ if(room.messages.length > 30){
 // START
 //////////////////////////////////////////////////
 
-server.listen(10000, () => {
+//////////////////////////////////////////////////
+// START
+//////////////////////////////////////////////////
 
-  console.log(
-    "CONNECTAING V5.4.3 running (user emotion 60%) "
-  );
+server.listen(10000, () => {
+  console.log(
+    "CONNECTAING V5.4.3 running user emotion driven"
+  );
 });
