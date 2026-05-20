@@ -2402,6 +2402,6 @@ if(room.messages.length > 30){
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V5.4.3 running"
+    "CONNECTAING V5.4.3 running (user emotion 60%) "
   );
 });
