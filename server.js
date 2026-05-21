@@ -1434,7 +1434,12 @@ ${finalAnswer}`,
 
         text:raw,
 
-        from:user.email,
+        from:
+  user.currentRoom +
+  "-" +
+  Math.floor(
+    Math.random()*999
+  )
 
         createdAt:Date.now()
       });
@@ -2404,7 +2409,7 @@ if(room.messages.length > 30){
 //////////////////////////////////////////////////
 
 server.listen(10000, () => {
-  console.log(
-    "CONNECTAING V5.4.3 running user emotion driven"
-  );
+  console.log(
+    "CONNECTAING V5.4.3 running user emotion driven"
+  );
 });
