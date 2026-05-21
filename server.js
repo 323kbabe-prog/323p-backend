@@ -447,6 +447,8 @@ emotionalProfile:{
 
 user.displayName =
 
+  "#" +
+
   roomId +
 
   "-" +
