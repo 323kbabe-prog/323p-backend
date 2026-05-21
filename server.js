@@ -179,20 +179,22 @@ io.on("connection", socket => {
 
   users[socket.id] = {
 
-    step:"email",
+  step:"email",
 
-    email:null,
+  email:null,
 
-    imageMode:false,
+  displayName:null,
 
-    imageContext:null,
+  imageMode:false,
 
-    currentIndex:null,
+  imageContext:null,
 
-    lastImage:null,
+  currentIndex:null,
 
-    currentRoom:null
-  };
+  lastImage:null,
+
+  currentRoom:null
+};
 
   socket.emit("state", {
 
@@ -442,6 +444,16 @@ emotionalProfile:{
 
         user.currentRoom =
           roomId;
+
+user.displayName =
+
+  roomId +
+
+  "-" +
+
+  Math.floor(
+    100 + Math.random()*900
+  );
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////
@@ -1432,17 +1444,12 @@ ${finalAnswer}`,
 
       q.answers.push({
 
-        text:raw,
+  text:raw,
 
-        from:
-  user.currentRoom +
-  "-" +
-  Math.floor(
-    Math.random()*999
-  )
+  from:user.displayName,
 
-        createdAt:Date.now()
-      });
+  createdAt:Date.now()
+});
 
       await sendEmail(
         q.email,
@@ -1536,10 +1543,10 @@ ${finalAnswer}`,
 
     room.messages.push({
 
-      from:user.email,
+  from:user.displayName,
 
-      text
-    });
+  text
+});
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
 //////////////////////////////////////////////////
