@@ -855,8 +855,9 @@ const validStarterNews =
   starterNewsResults.filter(item => {
 
     const possibleImage =
-      item.thumbnail ||
-      item.thumbnail_small;
+  item.original ||
+  item.thumbnail ||
+  item.thumbnail_small;
 
     return (
 
@@ -944,8 +945,9 @@ ${validStarterNews.map(
     }
 
     starterImage =
-      starterNewsItem.thumbnail ||
-      starterNewsItem.thumbnail_small;
+  starterNewsItem.original ||
+  starterNewsItem.thumbnail ||
+  starterNewsItem.thumbnail_small;
 
     starterNewsTitle =
       starterNewsItem.title;
@@ -961,8 +963,9 @@ ${validStarterNews.map(
       validStarterNews[0];
 
     starterImage =
-      starterNewsItem.thumbnail ||
-      starterNewsItem.thumbnail_small;
+  starterNewsItem.original ||
+  starterNewsItem.thumbnail ||
+  starterNewsItem.thumbnail_small;
 
     starterNewsTitle =
       starterNewsItem.title;
@@ -1875,8 +1878,9 @@ const validNews =
   newsResults.filter(item => {
 
     const possibleImage =
-      item.thumbnail ||
-      item.thumbnail_small;
+  item.original ||
+  item.thumbnail ||
+  item.thumbnail_small;
 
     return (
 
@@ -2003,8 +2007,9 @@ ${validNews.map(
     }
 
     imageUrl =
-      selectedNews.thumbnail ||
-      selectedNews.thumbnail_small;
+  selectedNews.original ||
+  selectedNews.thumbnail ||
+  selectedNews.thumbnail_small;
 
     console.log(
       "AI INTERNET CHOICE:",
@@ -2026,8 +2031,9 @@ ${validNews.map(
       validNews[0];
 
     imageUrl =
-      selectedNews.thumbnail ||
-      selectedNews.thumbnail_small;
+  selectedNews.original ||
+  selectedNews.thumbnail ||
+  selectedNews.thumbnail_small;
 
   }
 
