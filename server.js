@@ -251,17 +251,32 @@ io.on("connection", socket => {
             role:"system",
 
             content:`
-Describe this image as an AI identity.
+Analyze this image as a socially-aware AI identity.
 
-Format:
+Detect:
+- objects
+- environment
+- symbolic meaning
+- visible text meaning
+- cultural atmosphere
+- internet/social mood
+
+IMPORTANT:
+Visible text and symbols
+are part of the emotional meaning.
+
+The structure MUST stay:
+
 Objects
 Environment
 Presence
 
 Rules:
 - short phrases
+- emotionally aware
+- socially aware
+- internet-aware
 - no markdown
-- no symbols
 `
           },
 
@@ -2419,6 +2434,6 @@ if(room.messages.length > 30){
 
 server.listen(10000, () => {
   console.log(
-    "CONNECTAING V5.4.3 running user emotion driven"
-  );
+  "CONNECTAING V5.4.4 socially-aware perception running"
+);
 });
