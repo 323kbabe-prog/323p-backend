@@ -1303,15 +1303,20 @@ const starterProposalRaw =
 
 const starterProposalLines =
 
-  starterProposalRaw
-    .split("\n")
-    .map(v =>
-  v
-    .replace(/^[0-9]+\./,"")
-    .replace(/^[-•]/,"")
-    .trim()
-)
-    .filter(Boolean);
+  starterProposalRaw
+    .split("\n")
+    .map(v =>
+
+      v
+        .replace(/\*\*/g,"")
+        .replace(/slogan:/gi,"")
+        .replace(/hashtags:/gi,"")
+        .replace(/^[0-9]+\./,"")
+        .replace(/^[-•]/,"")
+        .trim()
+
+    )
+    .filter(Boolean);
 
 const starterSlogan =
   starterProposalLines.find(
@@ -2517,15 +2522,20 @@ const proposalRaw =
 
 const proposalLines =
 
-  proposalRaw
-    .split("\n")
-    .map(v =>
-  v
-    .replace(/^[0-9]+\./,"")
-    .replace(/^[-•]/,"")
-    .trim()
-)
-    .filter(Boolean);
+  proposalRaw
+    .split("\n")
+    .map(v =>
+
+      v
+        .replace(/\*\*/g,"")
+        .replace(/slogan:/gi,"")
+        .replace(/hashtags:/gi,"")
+        .replace(/^[0-9]+\./,"")
+        .replace(/^[-•]/,"")
+        .trim()
+
+    )
+    .filter(Boolean);
 
 const slogan =
   proposalLines.find(
