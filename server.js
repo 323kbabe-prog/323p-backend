@@ -1223,6 +1223,101 @@ const starterShareText =
     .trim();
 
 //////////////////////////////////////////////////
+// PROPOSAL SYSTEM
+//////////////////////////////////////////////////
+
+const proposalRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Create:
+
+1 short slogan
+3 emotional internet hashtags
+
+The result should feel:
+- internet native
+- emotionally viral
+- culturally current
+- socially addictive
+
+Rules:
+
+Slogan:
+- short
+- emotionally memorable
+- repostable
+
+Hashtags:
+- lowercase only
+- no spaces
+- emotionally specific
+- internet-native
+
+BAD:
+#viral
+#fyp
+#trending
+
+GOOD:
+#internetpressure
+#latenightfeed
+#celebrityspiral
+`
+    },
+
+    {
+      role:"user",
+
+      content:`
+Mood:
+${moodText}
+
+Trend:
+${newsTitle}
+
+Image personality:
+${room.imageContext}
+
+User emotional direction:
+${userIntent}
+
+Share text:
+${shareText}
+`
+    }
+  ]
+});
+
+const proposalRaw =
+
+  proposalRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+const proposalLines =
+
+  proposalRaw
+    .split("\n")
+    .map(v => v.trim())
+    .filter(Boolean);
+
+const slogan =
+  proposalLines[0] || "";
+
+const hashtags =
+  proposalLines.slice(1,4);
+
+//////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
 
@@ -2329,22 +2424,18 @@ const shareText =
 //////////////////////////////////////////////////
 
 room.messages.push({
-
   from:"Image AI",
-
   image:imageUrl,
-
   mood:moodText,
-
   ask:newsTitle,
-
   shareText,
+  slogan,
+  hashtags,
 
   link:
   selectedNews?.link ||
   selectedNews?.news_link ||
   ""
-
 });
 
 //////////////////////////////////////////////////
