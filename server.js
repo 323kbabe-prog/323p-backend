@@ -1223,10 +1223,10 @@ const starterShareText =
     .trim();
 
 //////////////////////////////////////////////////
-// PROPOSAL SYSTEM
+// STARTER PROPOSAL SYSTEM
 //////////////////////////////////////////////////
 
-const proposalRes =
+const starterProposalRes =
   await openai.chat.completions.create({
 
   model:"gpt-4o-mini",
@@ -1278,44 +1278,54 @@ GOOD:
 
       content:`
 Mood:
-${moodText}
+${starterMood}
 
 Trend:
-${newsTitle}
+${starterNewsTitle}
 
 Image personality:
-${room.imageContext}
-
-User emotional direction:
-${userIntent}
+${user.imageContext}
 
 Share text:
-${shareText}
+${starterShareText}
 `
     }
   ]
 });
 
-const proposalRaw =
+const starterProposalRaw =
 
-  proposalRes
+  starterProposalRes
     .choices[0]
     .message
     .content
     .trim();
 
-const proposalLines =
+const starterProposalLines =
 
-  proposalRaw
+  starterProposalRaw
     .split("\n")
-    .map(v => v.trim())
+    .map(v =>
+  v
+    .replace(/^[0-9]+\./,"")
+    .replace(/^[-•]/,"")
+    .trim()
+)
     .filter(Boolean);
 
-const slogan =
-  proposalLines[0] || "";
+const starterSlogan =
+  starterProposalLines.find(
+    v => !v.startsWith("#")
+  ) || "";
 
-const hashtags =
-  proposalLines.slice(1,4);
+const starterHashtags =
+  starterProposalLines
+    .slice(1,4)
+    .map(tag =>
+      tag.startsWith("#")
+        ? tag
+        : "#" + tag
+    );
 
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
@@ -1332,6 +1342,10 @@ rooms[roomId].messages.push({
   ask:starterNewsTitle,
 
   shareText:starterShareText,
+
+  slogan:starterSlogan,
+
+  hashtags:starterHashtags,
 
   link:
     starterNewsItem?.link ||
@@ -2420,22 +2434,138 @@ const shareText =
     .trim();
 
 //////////////////////////////////////////////////
+// PROPOSAL SYSTEM
+//////////////////////////////////////////////////
+
+const proposalRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Create:
+
+1 short slogan
+3 emotional internet hashtags
+
+The result should feel:
+- internet native
+- emotionally viral
+- culturally current
+- socially addictive
+
+Rules:
+
+Slogan:
+- short
+- emotionally memorable
+- repostable
+
+Hashtags:
+- lowercase only
+- no spaces
+- emotionally specific
+- internet-native
+
+BAD:
+#viral
+#fyp
+#trending
+
+GOOD:
+#internetpressure
+#latenightfeed
+#celebrityspiral
+`
+    },
+
+    {
+      role:"user",
+
+      content:`
+Mood:
+${moodText}
+
+Trend:
+${newsTitle}
+
+Image personality:
+${room.imageContext}
+
+User emotional direction:
+${userIntent}
+
+Share text:
+${shareText}
+`
+    }
+  ]
+});
+
+const proposalRaw =
+
+  proposalRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+const proposalLines =
+
+  proposalRaw
+    .split("\n")
+    .map(v =>
+  v
+    .replace(/^[0-9]+\./,"")
+    .replace(/^[-•]/,"")
+    .trim()
+)
+    .filter(Boolean);
+
+const slogan =
+  proposalLines.find(
+    v => !v.startsWith("#")
+  ) || "";
+
+const hashtags =
+  proposalLines
+    .slice(1,4)
+    .map(tag =>
+      tag.startsWith("#")
+        ? tag
+        : "#" + tag
+    );
+
+//////////////////////////////////////////////////
 // PUSH IMAGE + REAL TITLE
 //////////////////////////////////////////////////
 
 room.messages.push({
+
   from:"Image AI",
+
   image:imageUrl,
+
   mood:moodText,
+
   ask:newsTitle,
+
   shareText,
+
   slogan,
+
   hashtags,
 
   link:
   selectedNews?.link ||
   selectedNews?.news_link ||
   ""
+
 });
 
 //////////////////////////////////////////////////
@@ -2525,12 +2655,10 @@ if(room.messages.length > 30){
 // START
 //////////////////////////////////////////////////
 
-//////////////////////////////////////////////////
-// START
-//////////////////////////////////////////////////
-
 server.listen(10000, () => {
-  console.log(
-  "CONNECTAING V5.4.4 socially-aware perception running"
-);
+
+  console.log(
+    "CONNECTAING V5.5 — QUICK SMART CAMERA — perceptual internet proposal engine running"
+  );
+
 });
