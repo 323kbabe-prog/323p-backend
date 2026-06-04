@@ -422,15 +422,25 @@ if(roomMode){
 
   rooms[roomId] = {
 
-    id:roomId,
+  id:roomId,
 
-    coreTheme:
-      coreTheme,
+  coreTheme:coreTheme,
 
-    imageContext:
-      user.imageContext,
+  imageContext:user.imageContext,
 
-    messages:[],
+  narrativeState:{
+
+    situation:"",
+
+    explanation:"",
+
+    implication:"",
+
+    confidence:0
+
+  },
+
+  messages:[],
 
     usedSearches:[],
 
@@ -638,6 +648,93 @@ const starterMood =
     .message
     .content
     .trim();
+
+const narrativeRes =
+await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Return ONLY valid JSON.
+
+{
+  "situation":"",
+  "explanation":"",
+  "implication":"",
+  "confidence":0.0
+}
+
+Analyze the visual environment.
+
+Situation:
+What may be happening.
+
+Explanation:
+Why it may be happening.
+
+Implication:
+What may happen next.
+`
+    },
+
+    {
+      role:"user",
+
+      content:user.imageContext
+    }
+
+  ]
+
+});
+
+let narrativeJson;
+
+try {
+
+  narrativeJson =
+    JSON.parse(
+      narrativeRes
+        .choices[0]
+        .message
+        .content
+    );
+
+} catch(err){
+
+  console.log(
+    "Narrative parse failed",
+    err
+  );
+
+  narrativeJson = {
+
+    situation:
+      "Visual environment detected.",
+
+    explanation:
+      "Context is being analyzed.",
+
+    implication:
+      "Further interpretation may emerge.",
+
+    confidence:0.5
+
+  };
+
+}
+
+rooms[roomId].narrativeState =
+  narrativeJson;
+
+console.log(
+  "NARRATIVE SAVED:",
+  rooms[roomId].narrativeState
+);
 
 //////////////////////////////////////////////////
 // SAFE IMAGE
@@ -1303,20 +1400,20 @@ const starterProposalRaw =
 
 const starterProposalLines =
 
-  starterProposalRaw
-    .split("\n")
-    .map(v =>
+  starterProposalRaw
+    .split("\n")
+    .map(v =>
 
-      v
-        .replace(/\*\*/g,"")
-        .replace(/slogan:/gi,"")
-        .replace(/hashtags:/gi,"")
-        .replace(/^[0-9]+\./,"")
-        .replace(/^[-•]/,"")
-        .trim()
+      v
+        .replace(/\*\*/g,"")
+        .replace(/slogan:/gi,"")
+        .replace(/hashtags:/gi,"")
+        .replace(/^[0-9]+\./,"")
+        .replace(/^[-•]/,"")
+        .trim()
 
-    )
-    .filter(Boolean);
+    )
+    .filter(Boolean);
 
 const starterSlogan =
   starterProposalLines.find(
@@ -1342,15 +1439,24 @@ rooms[roomId].messages.push({
 
   image:starterImage,
 
-  mood:starterMood,
+  mood:
+    rooms[roomId]
+      .narrativeState
+      .situation,
 
   ask:starterNewsTitle,
 
-  shareText:starterShareText,
+  shareText:
+    rooms[roomId]
+      .narrativeState
+      .explanation,
 
-  slogan:starterSlogan,
+  slogan:
+    rooms[roomId]
+      .narrativeState
+      .implication,
 
-  hashtags:starterHashtags,
+  hashtags:[],
 
   link:
     starterNewsItem?.link ||
@@ -2522,20 +2628,20 @@ const proposalRaw =
 
 const proposalLines =
 
-  proposalRaw
-    .split("\n")
-    .map(v =>
+  proposalRaw
+    .split("\n")
+    .map(v =>
 
-      v
-        .replace(/\*\*/g,"")
-        .replace(/slogan:/gi,"")
-        .replace(/hashtags:/gi,"")
-        .replace(/^[0-9]+\./,"")
-        .replace(/^[-•]/,"")
-        .trim()
+      v
+        .replace(/\*\*/g,"")
+        .replace(/slogan:/gi,"")
+        .replace(/hashtags:/gi,"")
+        .replace(/^[0-9]+\./,"")
+        .replace(/^[-•]/,"")
+        .trim()
 
-    )
-    .filter(Boolean);
+    )
+    .filter(Boolean);
 
 const slogan =
   proposalLines.find(
@@ -2667,8 +2773,8 @@ if(room.messages.length > 30){
 
 server.listen(10000, () => {
 
-  console.log(
-    "CONNECTAING V5.5 — QUICK SMART CAMERA — perceptual internet proposal engine running"
-  );
+  console.log(
+    "CONNECTAING V6.0 — QUICK SMART CAMERA — SCGM Narrative Construction Layer running"
+  );
 
 });
