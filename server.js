@@ -1333,29 +1333,95 @@ const starterHashtags =
     );
 
 //////////////////////////////////////////////////
+// IMAGE AI INTRO
+//////////////////////////////////////////////////
+
+const adviceRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+You are the uploaded image.
+
+Introduce yourself.
+
+Then give one practical suggestion.
+
+Format:
+
+I am ...
+
+If you are ..., then ...
+
+Maximum 3 sentences.
+`
+    },
+
+    {
+      role:"user",
+
+      content:`
+Image personality:
+
+${user.imageContext}
+
+Mood:
+
+${starterMood}
+
+Trend:
+
+${starterNewsTitle}
+`
+    }
+  ]
+});
+
+const adviceText =
+  adviceRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+//////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
 
 rooms[roomId].messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:starterImage,
+  text: adviceText
 
-  mood:starterMood,
+});
 
-  ask:starterNewsTitle,
+rooms[roomId].messages.push({
 
-  shareText:starterShareText,
+  from:"Image AI",
 
-  slogan:starterSlogan,
+  image:starterImage,
 
-  hashtags:starterHashtags,
+  mood:starterMood,
 
-  link:
-    starterNewsItem?.link ||
-    starterNewsItem?.news_link ||
-    ""
+  ask:starterNewsTitle,
+
+  shareText:starterShareText,
+
+  slogan:starterSlogan,
+
+  hashtags:starterHashtags,
+
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
 
 });
 
