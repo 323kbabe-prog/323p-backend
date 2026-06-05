@@ -1417,8 +1417,6 @@ Create ONE complete GPT-ready prompt.
 
 Format:
 
-IMAGE AI:
-
 Copy this to GPT:
 
 [action-oriented prompt]
