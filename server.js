@@ -2717,6 +2717,72 @@ const hashtags =
 // PUSH IMAGE + REAL TITLE
 //////////////////////////////////////////////////
 
+const imageAiPromptRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Create ONE complete GPT-ready prompt.
+
+Format:
+
+Copy this to GPT:
+
+[action-oriented prompt]
+
+Rules:
+- one sentence only
+- directly usable in GPT
+- specific
+- practical
+- self-contained
+- opportunity-focused
+- 15-30 words
+- no quotes
+- no explanation
+`
+    },
+
+    {
+      role:"user",
+
+      content:`
+Context Mapping:
+${room.imageContext}
+
+Social Signal:
+${shareText}
+
+Concept:
+${slogan}
+
+Create a GPT prompt that helps the user discover:
+- startup ideas
+- product ideas
+- service ideas
+- content ideas
+- marketing campaigns
+- business opportunities
+
+The prompt should be directly useful and actionable.
+`
+    }
+  ]
+});
+
+const imageAiPrompt =
+  imageAiPromptRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+    
 room.messages.push({
 
   from:"Image AI",
@@ -2752,14 +2818,45 @@ if(room.messages.length > 30){
 }
 
   io.to(room.id).emit(
-
-    "roomMessages",
-
-    room.messages
-  );
-  io.to(room.id).emit(
-  "aiTypingStop"
+  "roomMessages",
+  room.messages
 );
+
+io.to(room.id).emit(
+  "aiTypingStart"
+);
+
+setTimeout(() => {
+
+  io.to(room.id).emit(
+    "aiTypingStop"
+  );
+
+  room.messages.push({
+
+    from:"Image AI",
+
+    text:imageAiPrompt
+
+  });
+
+  //////////////////////////////////////////////////
+  // LIMIT FEED SIZE
+  //////////////////////////////////////////////////
+
+  if(room.messages.length > 30){
+
+    room.messages =
+      room.messages.slice(-30);
+
+  }
+
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
+
+}, 2000);
 
 }catch(err){
 
