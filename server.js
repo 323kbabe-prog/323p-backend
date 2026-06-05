@@ -1359,7 +1359,7 @@ Format:
 
 I am ...
 
-You can also search anything through my perspective, and I will connect it to what I see, feel, and understand about the world.
+You can also search anything through my perspective, and I will connect it to what I see and understand about the world.
 
 If you are ..., then ...
 
