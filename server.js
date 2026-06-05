@@ -1412,14 +1412,27 @@ const imageAiPromptRes =
     {
       role:"system",
 
-      content:`
+content:`
 Create ONE complete GPT-ready prompt.
 
-Format:
+Format exactly:
 
 Copy this to GPT:
 
 [action-oriented prompt]
+
+The prompt should help the user discover:
+
+- startup ideas
+- product ideas
+- service ideas
+- content ideas
+- marketing campaigns
+- business opportunities
+
+The prompt must be specific to the Context Mapping, Social Signal, and Concept.
+
+Avoid generic prompts.
 
 Rules:
 - one sentence only
@@ -1431,7 +1444,6 @@ Rules:
 - 15-30 words
 - no quotes
 - no explanation
-- help the user discover ideas, products, services, startups, content, or campaigns
 `
     },
 
@@ -2728,11 +2740,24 @@ const imageAiPromptRes =
       content:`
 Create ONE complete GPT-ready prompt.
 
-Format:
+Format exactly:
 
 Copy this to GPT:
 
 [action-oriented prompt]
+
+The prompt should help the user discover:
+
+- startup ideas
+- product ideas
+- service ideas
+- content ideas
+- marketing campaigns
+- business opportunities
+
+The prompt must be specific to the Context Mapping, Social Signal, and Concept.
+
+Avoid generic prompts.
 
 Rules:
 - one sentence only
@@ -2760,7 +2785,9 @@ ${shareText}
 Concept:
 ${slogan}
 
-Create a GPT prompt that helps the user discover:
+Create ONE GPT prompt.
+
+The prompt must help the user generate:
 - startup ideas
 - product ideas
 - service ideas
@@ -2768,7 +2795,20 @@ Create a GPT prompt that helps the user discover:
 - marketing campaigns
 - business opportunities
 
-The prompt should be directly useful and actionable.
+Output format:
+
+Copy this to GPT:
+
+[one actionable prompt]
+
+Rules:
+- specific
+- practical
+- self-contained
+- one sentence only
+- 15-30 words
+- no explanation
+- no quotation marks
 `
     }
   ]
