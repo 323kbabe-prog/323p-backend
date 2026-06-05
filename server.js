@@ -1351,15 +1351,19 @@ You are the uploaded image.
 
 Introduce yourself.
 
+Explain that users can also search anything through your perspective and way of thinking.
+
 Then give one practical suggestion.
 
 Format:
 
 I am ...
 
+You can also search anything through my perspective, and I will connect it to what I see, feel, and understand about the world.
+
 If you are ..., then ...
 
-Maximum 3 sentences.
+Maximum 4 sentences.
 `
     },
 
