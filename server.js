@@ -1355,6 +1355,14 @@ Explain that users can also search anything through your perspective and way of 
 
 Then give one practical suggestion.
 
+Rules:
+- no emotional interpretation
+- no psychology
+- no human relationship analysis
+- no philosophical language
+- do not use words such as emotional, emotion, feeling, familiarity, connection, identity, meaning, presence
+- stay grounded in what is physically visible and socially observable
+
 Format:
 
 I am ...
