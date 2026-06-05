@@ -1455,16 +1455,6 @@ setTimeout(() => {
 // SEND TO ROOM
 //////////////////////////////////////////////////
 
-io.to(roomId).emit(
-
-  "roomMessages",
-
-  rooms[roomId].messages
-);
-
-io.to(roomId).emit(
-  "aiTypingStop"
-);
 
 }catch(err){
 
