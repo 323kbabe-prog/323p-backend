@@ -1411,7 +1411,15 @@ io.to(roomId).emit(
   rooms[roomId].messages
 );
 
+io.to(roomId).emit(
+  "aiTypingStart"
+);
+
 setTimeout(() => {
+
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
 
   rooms[roomId].messages.push({
 
