@@ -1401,6 +1401,60 @@ const adviceText =
     .message
     .content
     .trim();
+    
+const imageAiPromptRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Using the Context Mapping, Social Signal, and Concept,
+
+generate ONE GPT-ready prompt.
+
+Format:
+
+[action-oriented prompt]
+
+Rules:
+- start with an action verb
+- directly usable in GPT
+- practical
+- opportunity-focused
+- 10-25 words
+- no quotes
+- no explanation
+`
+    },
+
+    {
+      role:"user",
+
+      content:`
+Context Mapping:
+${user.imageContext}
+
+Social Signal:
+${starterShareText}
+
+Concept:
+${starterSlogan}
+`
+    }
+  ]
+});
+
+const imageAiPrompt =
+  imageAiPromptRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
@@ -1411,6 +1465,14 @@ rooms[roomId].messages.push({
   from:"Image AI",
 
   text: adviceText
+
+});
+
+rooms[roomId].messages.push({
+
+  from:"Image AI",
+
+  text: imageAiPrompt
 
 });
 
@@ -1457,7 +1519,7 @@ setTimeout(() => {
     rooms[roomId].messages
   );
 
-}, 2000);
+}, 3000);
 
 //////////////////////////////////////////////////
 // SEND TO ROOM
