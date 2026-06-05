@@ -1468,14 +1468,6 @@ rooms[roomId].messages.push({
 
 });
 
-rooms[roomId].messages.push({
-
-  from:"Image AI",
-
-  text: imageAiPrompt
-
-});
-
 io.to(roomId).emit(
   "roomMessages",
   rooms[roomId].messages
@@ -1492,26 +1484,17 @@ setTimeout(() => {
   );
 
   rooms[roomId].messages.push({
-
     from:"Image AI",
-
     image:starterImage,
-
     mood:starterMood,
-
     ask:starterNewsTitle,
-
     shareText:starterShareText,
-
     slogan:starterSlogan,
-
     hashtags:starterHashtags,
-
     link:
       starterNewsItem?.link ||
       starterNewsItem?.news_link ||
       ""
-
   });
 
   io.to(roomId).emit(
@@ -1519,7 +1502,29 @@ setTimeout(() => {
     rooms[roomId].messages
   );
 
+  io.to(roomId).emit(
+    "aiTypingStart"
+  );
+
 }, 3000);
+
+setTimeout(() => {
+
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
+
+  rooms[roomId].messages.push({
+    from:"Image AI",
+    text:imageAiPrompt
+  });
+
+  io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+  );
+
+}, 5000);
 
 //////////////////////////////////////////////////
 // SEND TO ROOM
