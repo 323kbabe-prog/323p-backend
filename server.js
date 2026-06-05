@@ -1406,28 +1406,42 @@ rooms[roomId].messages.push({
 
 });
 
-rooms[roomId].messages.push({
+io.to(roomId).emit(
+  "roomMessages",
+  rooms[roomId].messages
+);
 
-  from:"Image AI",
+setTimeout(() => {
 
-  image:starterImage,
+  rooms[roomId].messages.push({
 
-  mood:starterMood,
+    from:"Image AI",
 
-  ask:starterNewsTitle,
+    image:starterImage,
 
-  shareText:starterShareText,
+    mood:starterMood,
 
-  slogan:starterSlogan,
+    ask:starterNewsTitle,
 
-  hashtags:starterHashtags,
+    shareText:starterShareText,
 
-  link:
-    starterNewsItem?.link ||
-    starterNewsItem?.news_link ||
-    ""
+    slogan:starterSlogan,
 
-});
+    hashtags:starterHashtags,
+
+    link:
+      starterNewsItem?.link ||
+      starterNewsItem?.news_link ||
+      ""
+
+  });
+
+  io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+  );
+
+}, 2000);
 
 //////////////////////////////////////////////////
 // SEND TO ROOM
