@@ -1413,22 +1413,27 @@ const imageAiPromptRes =
       role:"system",
 
       content:`
-Using the Context Mapping, Social Signal, and Concept,
-
-generate ONE GPT-ready prompt.
+Create ONE complete GPT-ready prompt.
 
 Format:
+
+IMAGE AI:
+
+Copy this to GPT:
 
 [action-oriented prompt]
 
 Rules:
-- start with an action verb
+- one sentence only
 - directly usable in GPT
+- specific
 - practical
+- self-contained
 - opportunity-focused
-- 10-25 words
+- 15-30 words
 - no quotes
 - no explanation
+- help the user discover ideas, products, services, startups, content, or campaigns
 `
     },
 
