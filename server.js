@@ -1499,18 +1499,29 @@ setTimeout(() => {
   );
 
   rooms[roomId].messages.push({
-    from:"Image AI",
-    image:starterImage,
-    mood:starterMood,
-    ask:starterNewsTitle,
-    shareText:starterShareText,
-    slogan:starterSlogan,
-    hashtags:starterHashtags,
-    link:
-      starterNewsItem?.link ||
-      starterNewsItem?.news_link ||
-      ""
-  });
+  from:"Image AI",
+
+  image:starterImage,
+
+  aiText:adviceText,
+
+  prompt:imageAiPrompt,
+
+  mood:starterMood,
+
+  ask:starterNewsTitle,
+
+  shareText:starterShareText,
+
+  slogan:starterSlogan,
+
+  hashtags:starterHashtags,
+
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
+});
 
   io.to(roomId).emit(
     "roomMessages",
@@ -2827,7 +2838,13 @@ room.messages.push({
 
   image:imageUrl,
 
-  aiText: adviceText,
+  aiText:
+`I see this environment through the uploaded image.
+
+People are reacting to it through current internet culture and social behavior.
+
+Opportunity:
+${slogan}`,
 
   prompt: imageAiPrompt,
 
