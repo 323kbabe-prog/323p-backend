@@ -1337,16 +1337,16 @@ const starterHashtags =
 //////////////////////////////////////////////////
 
 const adviceRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 You are the uploaded image.
 
 Introduce yourself.
@@ -1373,12 +1373,12 @@ If you are ..., then ...
 
 Maximum 4 sentences.
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Image personality:
 
 ${user.imageContext}
@@ -1391,26 +1391,26 @@ Trend:
 
 ${starterNewsTitle}
 `
-    }
-  ]
+    }
+  ]
 });
 
 const adviceText =
-  adviceRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-    
+  adviceRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+    
 const imageAiPromptRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
 content:`
 Create ONE complete GPT-ready prompt.
@@ -1445,12 +1445,12 @@ Rules:
 - no quotes
 - no explanation
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Context Mapping:
 ${user.imageContext}
 
@@ -1460,86 +1460,84 @@ ${starterShareText}
 Concept:
 ${starterSlogan}
 `
-    }
-  ]
+    }
+  ]
 });
 
 const imageAiPrompt =
-  imageAiPromptRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  imageAiPromptRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
 
+rooms[roomId].messages.push({
 
+  from:"Image AI",
+
+  text: adviceText
+
+});
 
 io.to(roomId).emit(
-  "roomMessages",
-  rooms[roomId].messages
+  "roomMessages",
+  rooms[roomId].messages
 );
 
 io.to(roomId).emit(
-  "aiTypingStart"
+  "aiTypingStart"
 );
 
 setTimeout(() => {
 
-  io.to(roomId).emit(
-    "aiTypingStop"
-  );
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
 
-  rooms[roomId].messages.push({
-  from:"Image AI",
+  rooms[roomId].messages.push({
+    from:"Image AI",
+    image:starterImage,
+    mood:starterMood,
+    ask:starterNewsTitle,
+    shareText:starterShareText,
+    slogan:starterSlogan,
+    hashtags:starterHashtags,
+    link:
+      starterNewsItem?.link ||
+      starterNewsItem?.news_link ||
+      ""
+  });
 
-  image:starterImage,
+  io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+  );
 
-  aiText:adviceText,
-
-  prompt:imageAiPrompt,
-
-  mood:starterMood,
-
-  ask:starterNewsTitle,
-
-  shareText:starterShareText,
-
-  slogan:starterSlogan,
-
-  hashtags:starterHashtags,
-
-  link:
-    starterNewsItem?.link ||
-    starterNewsItem?.news_link ||
-    ""
-});
-
-  io.to(roomId).emit(
-    "roomMessages",
-    rooms[roomId].messages
-  );
-
-  io.to(roomId).emit(
-    "aiTypingStart"
-  );
+  io.to(roomId).emit(
+    "aiTypingStart"
+  );
 
 }, 3000);
 
 setTimeout(() => {
 
-  io.to(roomId).emit(
-    "aiTypingStop"
-  );
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
 
+  rooms[roomId].messages.push({
+    from:"Image AI",
+    text:imageAiPrompt
+  });
 
-
-  io.to(roomId).emit(
-    "roomMessages",
-    rooms[roomId].messages
-  );
+  io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+  );
 
 }, 5000);
 
@@ -2730,16 +2728,16 @@ const hashtags =
 //////////////////////////////////////////////////
 
 const imageAiPromptRes =
-  await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-  messages:[
+  messages:[
 
-    {
-      role:"system",
+    {
+      role:"system",
 
-      content:`
+      content:`
 Create ONE complete GPT-ready prompt.
 
 Format exactly:
@@ -2772,12 +2770,12 @@ Rules:
 - no quotes
 - no explanation
 `
-    },
+    },
 
-    {
-      role:"user",
+    {
+      role:"user",
 
-      content:`
+      content:`
 Context Mapping:
 ${room.imageContext}
 
@@ -2812,42 +2810,32 @@ Rules:
 - no explanation
 - no quotation marks
 `
-    }
-  ]
+    }
+  ]
 });
 
 const imageAiPrompt =
-  imageAiPromptRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-    
+  imageAiPromptRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+    
 room.messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:imageUrl,
+  image:imageUrl,
 
-  aiText:
-`I see this environment through the uploaded image.
+  mood:moodText,
 
-People are reacting to it through current internet culture and social behavior.
+  ask:newsTitle,
 
-Opportunity:
-${slogan}`,
+  shareText,
 
-  prompt: imageAiPrompt,
+  slogan,
 
-  mood:moodText,
-
-  ask:newsTitle,
-
-  shareText,
-
-  slogan,
-
-  hashtags,
+  hashtags,
 
   link:
   selectedNews?.link ||
@@ -2868,43 +2856,43 @@ if(room.messages.length > 30){
 }
 
   io.to(room.id).emit(
-  "roomMessages",
-  room.messages
+  "roomMessages",
+  room.messages
 );
 
 io.to(room.id).emit(
-  "aiTypingStart"
+  "aiTypingStart"
 );
 
 setTimeout(() => {
 
-  io.to(room.id).emit(
-    "aiTypingStop"
-  );
+  io.to(room.id).emit(
+    "aiTypingStop"
+  );
 
-  room.messages.push({
+  room.messages.push({
 
-    from:"Image AI",
+    from:"Image AI",
 
-    text:imageAiPrompt
+    text:imageAiPrompt
 
-  });
+  });
 
-  //////////////////////////////////////////////////
-  // LIMIT FEED SIZE
-  //////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // LIMIT FEED SIZE
+  //////////////////////////////////////////////////
 
-  if(room.messages.length > 30){
+  if(room.messages.length > 30){
 
-    room.messages =
-      room.messages.slice(-30);
+    room.messages =
+      room.messages.slice(-30);
 
-  }
+  }
 
-  io.to(room.id).emit(
-    "roomMessages",
-    room.messages
-  );
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
 
 }, 2000);
 
