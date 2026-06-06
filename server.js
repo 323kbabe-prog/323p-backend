@@ -1504,11 +1504,11 @@ setTimeout(() => {
 
   image:starterImage,
 
-  aiText: whatISee,
+  aiText: adviceText,
 
-  suggestion: whatItSuggests,
+  suggestion: starterShareText,
 
-  opportunity: opportunity,
+  opportunity: starterSlogan,
 
   ask: starterNewsTitle,
 
@@ -2838,11 +2838,11 @@ room.messages.push({
 
   image:imageUrl,
 
-  aiText: whatISee,
+  aiText: adviceText,
 
-  suggestion: whatItSuggests,
+  suggestion: shareText,
 
-  opportunity: opportunity,
+  opportunity: slogan,
 
   ask: newsTitle,
 
