@@ -2823,19 +2823,23 @@ const imageAiPrompt =
     
 room.messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:imageUrl,
+  image:imageUrl,
 
-  mood:moodText,
+  aiText: adviceText,
 
-  ask:newsTitle,
+  prompt: imageAiPrompt,
 
-  shareText,
+  mood:moodText,
 
-  slogan,
+  ask:newsTitle,
 
-  hashtags,
+  shareText,
+
+  slogan,
+
+  hashtags,
 
   link:
   selectedNews?.link ||
