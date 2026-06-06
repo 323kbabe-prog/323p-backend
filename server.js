@@ -1499,18 +1499,29 @@ setTimeout(() => {
   );
 
   rooms[roomId].messages.push({
-    from:"Image AI",
-    image:starterImage,
-    mood:starterMood,
-    ask:starterNewsTitle,
-    shareText:starterShareText,
-    slogan:starterSlogan,
-    hashtags:starterHashtags,
-    link:
-      starterNewsItem?.link ||
-      starterNewsItem?.news_link ||
-      ""
-  });
+
+  from:"Image AI",
+
+  image:starterImage,
+
+  aiText: whatISee,
+
+  suggestion: whatItSuggests,
+
+  opportunity: opportunity,
+
+  ask: starterNewsTitle,
+
+  prompt: imageAiPrompt,
+
+  hashtags: starterHashtags,
+
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
+
+});
 
   io.to(roomId).emit(
     "roomMessages",
@@ -2823,24 +2834,26 @@ const imageAiPrompt =
     
 room.messages.push({
 
-  from:"Image AI",
+  from:"Image AI",
 
-  image:imageUrl,
+  image:imageUrl,
 
-  mood:moodText,
+  aiText: whatISee,
 
-  ask:newsTitle,
+  suggestion: whatItSuggests,
 
-  shareText,
+  opportunity: opportunity,
 
-  slogan,
+  ask: newsTitle,
 
-  hashtags,
+  prompt: imageAiPrompt,
 
-  link:
-  selectedNews?.link ||
-  selectedNews?.news_link ||
-  ""
+  hashtags,
+
+  link:
+    selectedNews?.link ||
+    selectedNews?.news_link ||
+    ""
 
 });
 
