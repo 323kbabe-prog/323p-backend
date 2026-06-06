@@ -1475,13 +1475,7 @@ const imageAiPrompt =
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
 
-rooms[roomId].messages.push({
 
-  from:"Image AI",
-
-  text: adviceText
-
-});
 
 io.to(roomId).emit(
   "roomMessages",
@@ -1540,10 +1534,7 @@ setTimeout(() => {
     "aiTypingStop"
   );
 
-  rooms[roomId].messages.push({
-    from:"Image AI",
-    text:imageAiPrompt
-  });
+
 
   io.to(roomId).emit(
     "roomMessages",
