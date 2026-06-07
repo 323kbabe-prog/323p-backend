@@ -183,6 +183,11 @@ function capitalizeFirst(text){
 
 async function generateFuture(roomId){
 
+  console.log(
+    "GENERATE FUTURE START",
+    roomId
+  );
+
   const room = rooms[roomId];
 
   io.to(roomId).emit("aiTypingStart");
