@@ -171,6 +171,16 @@ function extractEmail(text){
     : null;
 }
 
+function capitalizeFirst(text){
+
+  if(!text) return "";
+
+  return (
+    text.charAt(0).toUpperCase() +
+    text.slice(1)
+  );
+}
+
 //////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////
@@ -1516,18 +1526,18 @@ setTimeout(() => {
   );
 
   rooms[roomId].messages.push({
-    from:"Image AI",
-    image:starterImage,
-    mood:starterMood,
-    ask:starterNewsTitle,
-    shareText:starterShareText,
-    slogan:starterSlogan,
-    hashtags:starterHashtags,
-    link:
-      starterNewsItem?.link ||
-      starterNewsItem?.news_link ||
-      ""
-  });
+  from:"Image AI",
+  image:starterImage,
+  mood:capitalizeFirst(starterMood),
+  ask:starterNewsTitle,
+  shareText:capitalizeFirst(starterShareText),
+  slogan:capitalizeFirst(starterSlogan),
+  hashtags:starterHashtags,
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
+});
 
   io.to(roomId).emit(
     "roomMessages",
@@ -2852,26 +2862,17 @@ const imageAiPrompt =
     .trim();
     
 room.messages.push({
-
-  from:"Image AI",
-
-  image:imageUrl,
-
-  mood:moodText,
-
-  ask:newsTitle,
-
-  shareText,
-
-  slogan,
-
-  hashtags,
-
-  link:
-  selectedNews?.link ||
-  selectedNews?.news_link ||
-  ""
-
+  from:"Image AI",
+  image:imageUrl,
+  mood:capitalizeFirst(moodText),
+  ask:newsTitle,
+  shareText:capitalizeFirst(shareText),
+  slogan:capitalizeFirst(slogan),
+  hashtags,
+  link:
+    selectedNews?.link ||
+    selectedNews?.news_link ||
+    ""
 });
 
 //////////////////////////////////////////////////
