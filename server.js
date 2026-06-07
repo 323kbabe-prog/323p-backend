@@ -188,27 +188,27 @@ async function generateFuture(roomId){
   io.to(roomId).emit("aiTypingStart");
 
   const futureRes =
-    await openai.chat.completions.create({
+await openai.chat.completions.create({
 
-      model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-      response_format:{
-        type:"json_object"
-      },
+  response_format:{
+    type:"json_object"
+  },
 
-      messages:[{
-        role:"user",
-        content:`
-Create:
+  messages:[{
+    role:"user",
+    content:`
+Return JSON only.
 
 {
- "caption":"",
- "scene":"",
- "comments":[]
+  "caption":"",
+  "scene":"",
+  "comments":[]
 }
 `
-      }]
-    });
+  }]
+});
 
   const future =
     JSON.parse(
