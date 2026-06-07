@@ -238,16 +238,21 @@ console.log(
 
   "a casual tiktok style photo, normal people, smartphone snapshot, everyday life";
 
+console.log(
+  "IMAGE PROMPT USED:",
+  imagePrompt
+);
+
   const imageRes =
-    await openai.images.generate({
+await openai.images.generate({
 
-      model:"gpt-image-1",
+  model:"gpt-image-1",
 
-      prompt: future.scene,
+  prompt: imagePrompt,
 
-      size:"1024x1536"
+  size:"1024x1536"
 
-    });
+});
 
   const generatedImage =
     imageRes.data[0].b64_json
