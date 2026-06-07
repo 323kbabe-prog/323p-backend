@@ -219,6 +219,24 @@ Return JSON only.
     JSON.parse(
       futureRes.choices[0].message.content
     );
+    
+    console.log(
+  "FUTURE JSON:",
+  future
+);
+
+console.log(
+  "IMAGE PROMPT:",
+  future.scene
+);
+
+    const imagePrompt =
+
+  future.scene?.trim()
+
+  ||
+
+  "a casual tiktok style photo, normal people, smartphone snapshot, everyday life";
 
   const imageRes =
     await openai.images.generate({
