@@ -431,6 +431,7 @@ if(roomMode){
       .substring(2,8);
 
   rooms[roomId] = {
+    
 
     id:roomId,
 
@@ -441,6 +442,8 @@ if(roomMode){
       user.imageContext,
 
     messages:[],
+
+easterEggHistory:[],
 
     usedSearches:[],
 
@@ -2933,47 +2936,244 @@ setTimeout(() => {
 }
 });
 
-  //////////////////////////////////////////////////
-  // AI SEARCH
-  //////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// AI SEARCH
+//////////////////////////////////////////////////
 
-  socket.on(
-    "aiSearch",
+socket.on(
+  "aiSearch",
 
-    () => {
+() => {
 
-    const user =
-      users[socket.id];
+const user =
+  users[socket.id];
 
-    const room =
-      rooms[user.currentRoom];
+const room =
+  rooms[user.currentRoom];
 
-    if(!room) return;
+if(!room) return;
 
-    room.messages.push({
+room.messages.push({
 
-      from:"Image AI",
+  from:"Image AI",
 
-      text:
+  text:
 `People around this feeling are discussing similar things online right now.`
-    });
-//////////////////////////////////////////////////
-// LIMIT FEED SIZE
-//////////////////////////////////////////////////
+
+});
 
 if(room.messages.length > 30){
 
-  room.messages =
-    room.messages.slice(-30);
+  room.messages =
+    room.messages.slice(-30);
 
 }
 
-    io.to(room.id).emit(
-      "roomMessages",
-      room.messages
-    );
+io.to(room.id).emit(
+  "roomMessages",
+  room.messages
+);
 
-  });
+});
+
+//////////////////////////////////////////////////
+// MORE FUTURES
+//////////////////////////////////////////////////
+
+socket.on(
+  "moreFuture",
+
+  async () => {
+
+    const user =
+      users[socket.id];
+
+    const room =
+      rooms[user.currentRoom];
+
+    if(!room) return;
+
+    try{
+
+      io.to(room.id).emit(
+        "aiTypingStart"
+      );
+
+      const easterRes =
+      await openai.chat.completions.create({
+
+        model:"gpt-4o-mini",
+
+        response_format:{
+          type:"json_object"
+        },
+
+        messages:[
+
+          {
+            role:"system",
+
+            content:`
+Create a TikTok future snapshot.
+
+Return JSON:
+
+{
+  "caption":"",
+  "scene":"",
+  "comments":[]
+}
+
+Rules:
+
+Caption:
+- 3 to 8 words
+- lowercase
+- TikTok style
+
+GOOD:
+
+we were literally bored 😭
+
+bro what happened
+
+this got out of hand
+
+it started in a group chat
+
+wait people actually came
+
+Scene:
+- normal life
+- phone camera
+- ordinary lighting
+- slightly messy
+- casual moment
+- not cinematic
+- not professional photography
+- looks uploaded directly to TikTok
+
+Comments:
+- 5 comments
+- TikTok style
+- imply history
+- funny
+- casual
+
+GOOD:
+
+bro i thought this was a joke 💀
+
+day one people know 😭
+
+the lore is crazy
+
+wait this started here
+
+i still have the screenshot
+`
+          },
+
+          {
+            role:"user",
+
+            content:`
+Image:
+
+${room.imageContext}
+
+Previous futures:
+
+${room.easterEggHistory?.join("\n") || ""}
+`
+          }
+
+        ]
+
+      });
+
+      const future =
+      JSON.parse(
+        easterRes.choices[0].message.content
+      );
+
+      //////////////////////////////////////////////////
+      // SAVE HISTORY
+      //////////////////////////////////////////////////
+
+      room.easterEggHistory =
+        room.easterEggHistory || [];
+
+      room.easterEggHistory.push(
+        future.caption
+      );
+
+      if(
+        room.easterEggHistory.length > 20
+      ){
+
+        room.easterEggHistory =
+          room.easterEggHistory.slice(-20);
+
+      }
+
+      //////////////////////////////////////////////////
+      // PUSH FUTURE MESSAGE
+      //////////////////////////////////////////////////
+
+      room.messages.push({
+
+        from:"Future",
+
+        caption:
+          future.caption,
+
+        scene:
+          future.scene,
+
+        comments:
+          future.comments
+
+      });
+
+      //////////////////////////////////////////////////
+      // LIMIT FEED SIZE
+      //////////////////////////////////////////////////
+
+      if(room.messages.length > 30){
+
+        room.messages =
+          room.messages.slice(-30);
+
+      }
+
+      //////////////////////////////////////////////////
+      // SEND TO FRONTEND
+      //////////////////////////////////////////////////
+
+      io.to(room.id).emit(
+        "roomMessages",
+        room.messages
+      );
+
+      io.to(room.id).emit(
+        "aiTypingStop"
+      );
+
+    }catch(err){
+
+      console.log(
+        "moreFuture failed",
+        err
+      );
+
+      io.to(room.id).emit(
+        "aiTypingStop"
+      );
+
+    }
+
+});
 
   //////////////////////////////////////////////////
   // DISCONNECT
