@@ -1650,8 +1650,6 @@ setTimeout(async () => {
 
 }, 5000);
 
-generateFuture(roomId);
-
 //////////////////////////////////////////////////
 // SEND TO ROOM
 //////////////////////////////////////////////////
@@ -3177,6 +3175,8 @@ ${room.easterEggHistory?.join("\n") || ""}
       JSON.parse(
         easterRes.choices[0].message.content
       );
+      
+      console.log("GENERATING FUTURE IMAGE...");
     
     const imageRes =
 await openai.images.generate({
