@@ -3219,6 +3219,26 @@ Image:
 
 ${room.imageContext}
 
+Business Idea:
+
+${imageAiPrompt}
+
+Create a future TikTok post showing people actually using the idea.
+
+The image should visualize the outcome of the proposal.
+
+Show:
+- real people
+- using the product
+- using the service
+- experiencing the concept
+- smartphone photo
+- TikTok style
+- everyday life
+
+The future image should feel like:
+"the idea became real"
+
 Previous futures:
 
 ${room.easterEggHistory?.join("\n") || ""}
