@@ -181,138 +181,6 @@ function capitalizeFirst(text){
   );
 }
 
-async function generateFuture(roomId){
-
-  console.log(
-    "GENERATE FUTURE START",
-    roomId
-  );
-
-  const room = rooms[roomId];
-
-  io.to(roomId).emit("aiTypingStart");
-
-  const futureRes =
-await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  response_format:{
-    type:"json_object"
-  },
-
-  messages:[
-
-{
-  role:"system",
-
-  content:`
-Create a TikTok future snapshot.
-
-Return JSON:
-
-{
-  "caption":"",
-  "scene":"",
-  "comments":[]
-}
-
-Rules:
-
-caption:
-3-8 words
-
-scene:
-40-80 words describing a future moment
-
-comments:
-5 realistic social comments
-`
-},
-
-{
-  role:"user",
-
-  content:`
-Image personality:
-
-${room.imageContext}
-
-Create a future version of this trend.
-`
-}
-
-]
-});
-
-  const future =
-    JSON.parse(
-      futureRes.choices[0].message.content
-    );
-    
-    console.log(
-  "FUTURE JSON:",
-  future
-);
-
-console.log(
-  "IMAGE PROMPT:",
-  future.scene
-);
-
-    const imagePrompt =
-
-  future.scene?.trim()
-
-  ||
-
-  "a casual tiktok style photo, normal people, smartphone snapshot, everyday life";
-
-console.log(
-  "IMAGE PROMPT USED:",
-  imagePrompt
-);
-
-  const imageRes =
-await openai.images.generate({
-
-  model:"gpt-image-1",
-
-  prompt: imagePrompt,
-
-  size:"1024x1536"
-
-});
-
-  const generatedImage =
-    imageRes.data[0].b64_json
-      ? `data:image/png;base64,${imageRes.data[0].b64_json}`
-      : imageRes.data[0].url;
-
-  room.messages.push({
-
-    from:"Future",
-
-    image: generatedImage,
-
-    caption: future.caption,
-
-    scene: future.scene,
-
-    comments: future.comments
-
-  });
-
-  io.to(roomId).emit(
-    "roomMessages",
-    room.messages
-  );
-
-  io.to(roomId).emit(
-    "aiTypingStop"
-  );
-}
-
 //////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////
@@ -563,7 +431,6 @@ if(roomMode){
       .substring(2,8);
 
   rooms[roomId] = {
-    
 
     id:roomId,
 
@@ -574,8 +441,6 @@ if(roomMode){
       user.imageContext,
 
     messages:[],
-
-easterEggHistory:[],
 
     usedSearches:[],
 
@@ -1685,26 +1550,21 @@ setTimeout(() => {
 
 }, 3000);
 
-setTimeout(async () => {
+setTimeout(() => {
 
-  io.to(roomId).emit(
-    "aiTypingStop"
-  );
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
 
-  rooms[roomId].messages.push({
+  rooms[roomId].messages.push({
+    from:"Image AI",
+    text:imageAiPrompt
+  });
 
-    from:"Image AI",
-
-    text:imageAiPrompt
-
-  });
-
-  io.to(roomId).emit(
-    "roomMessages",
-    rooms[roomId].messages
-  );
-
-  await generateFuture(roomId);
+  io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+  );
 
 }, 5000);
 
@@ -3073,284 +2933,47 @@ setTimeout(() => {
 }
 });
 
-//////////////////////////////////////////////////
-// AI SEARCH
-//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // AI SEARCH
+  //////////////////////////////////////////////////
 
-socket.on(
-  "aiSearch",
+  socket.on(
+    "aiSearch",
 
-() => {
+    () => {
 
-const user =
-  users[socket.id];
+    const user =
+      users[socket.id];
 
-const room =
-  rooms[user.currentRoom];
+    const room =
+      rooms[user.currentRoom];
 
-if(!room) return;
+    if(!room) return;
 
-room.messages.push({
+    room.messages.push({
 
-  from:"Image AI",
+      from:"Image AI",
 
-  text:
+      text:
 `People around this feeling are discussing similar things online right now.`
-
-});
+    });
+//////////////////////////////////////////////////
+// LIMIT FEED SIZE
+//////////////////////////////////////////////////
 
 if(room.messages.length > 30){
 
-  room.messages =
-    room.messages.slice(-30);
+  room.messages =
+    room.messages.slice(-30);
 
 }
 
-io.to(room.id).emit(
-  "roomMessages",
-  room.messages
-);
-
-});
-
-//////////////////////////////////////////////////
-// MORE FUTURES
-//////////////////////////////////////////////////
-
-socket.on(
-  "moreFuture",
-
-  async () => {
-
-    const user =
-      users[socket.id];
-
-    const room =
-      rooms[user.currentRoom];
-
-    if(!room) return;
-
-    try{
-
-      io.to(room.id).emit(
-        "aiTypingStart"
-      );
-
-      const easterRes =
-      await openai.chat.completions.create({
-
-        model:"gpt-4o-mini",
-
-        response_format:{
-          type:"json_object"
-        },
-
-        messages:[
-
-          {
-            role:"system",
-
-            content:`
-Create a TikTok future snapshot.
-
-Return JSON:
-
-{
-  "caption":"",
-  "scene":"",
-  "comments":[]
-}
-
-Rules:
-
-Caption:
-- 3 to 8 words
-- lowercase
-- TikTok style
-
-GOOD:
-
-we were literally bored 😭
-
-bro what happened
-
-this got out of hand
-
-it started in a group chat
-
-wait people actually came
-
-Scene:
-- normal life
-- phone camera
-- ordinary lighting
-- slightly messy
-- casual moment
-- not cinematic
-- not professional photography
-- looks uploaded directly to TikTok
-
-Comments:
-- 5 comments
-- TikTok style
-- imply history
-- funny
-- casual
-
-GOOD:
-
-bro i thought this was a joke 💀
-
-day one people know 😭
-
-the lore is crazy
-
-wait this started here
-
-i still have the screenshot
-`
-          },
-
-          {
-            role:"user",
-
-            content:`
-Image:
-
-${room.imageContext}
-
-Business Idea:
-
-${imageAiPrompt}
-
-Create a future TikTok post showing people actually using the idea.
-
-The image should visualize the outcome of the proposal.
-
-Show:
-- real people
-- using the product
-- using the service
-- experiencing the concept
-- smartphone photo
-- TikTok style
-- everyday life
-
-The future image should feel like:
-"the idea became real"
-
-Previous futures:
-
-${room.easterEggHistory?.join("\n") || ""}
-`
-          }
-
-        ]
-
-      });
-
-      const future =
-      JSON.parse(
-        easterRes.choices[0].message.content
-      );
-      
-      console.log("GENERATING FUTURE IMAGE...");
-    
-    const imageRes =
-await openai.images.generate({
-
-  model:"gpt-image-1",
-
-  prompt: future.scene,
-
-  size:"1024x1536"
-
-});
-
-console.log(
-  JSON.stringify(imageRes, null, 2)
-);
-const generatedImage =
-  imageRes.data[0].b64_json
-    ? `data:image/png;base64,${imageRes.data[0].b64_json}`
-    : imageRes.data[0].url;
-
-      //////////////////////////////////////////////////
-      // SAVE HISTORY
-      //////////////////////////////////////////////////
-
-      room.easterEggHistory =
-        room.easterEggHistory || [];
-
-      room.easterEggHistory.push(
-        future.caption
-      );
-
-      if(
-        room.easterEggHistory.length > 20
-      ){
-
-        room.easterEggHistory =
-          room.easterEggHistory.slice(-20);
-
-      }
-
-      //////////////////////////////////////////////////
-      // PUSH FUTURE MESSAGE
-      //////////////////////////////////////////////////
-
-      room.messages.push({
-
-  from:"Future",
-
-  image: generatedImage,
-
-  caption: future.caption,
-
-  scene: future.scene,
-
-  comments: future.comments
-
-});
-
-      //////////////////////////////////////////////////
-      // LIMIT FEED SIZE
-      //////////////////////////////////////////////////
-
-      if(room.messages.length > 30){
-
-        room.messages =
-          room.messages.slice(-30);
-
-      }
-
-      //////////////////////////////////////////////////
-      // SEND TO FRONTEND
-      //////////////////////////////////////////////////
-
-      io.to(room.id).emit(
-        "roomMessages",
-        room.messages
-      );
-
-      io.to(room.id).emit(
-        "aiTypingStop"
-      );
-
-    }catch(err){
-
-      console.log(
-        "moreFuture failed",
-        err
-      );
-
-      io.to(room.id).emit(
-        "aiTypingStop"
-      );
-
-    }
-
-});
+    io.to(room.id).emit(
+      "roomMessages",
+      room.messages
+    );
+
+  });
 
   //////////////////////////////////////////////////
   // DISCONNECT
