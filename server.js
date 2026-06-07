@@ -181,6 +181,80 @@ function capitalizeFirst(text){
   );
 }
 
+async function generateFuture(roomId){
+
+  const room = rooms[roomId];
+
+  io.to(roomId).emit("aiTypingStart");
+
+  const futureRes =
+    await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      response_format:{
+        type:"json_object"
+      },
+
+      messages:[{
+        role:"user",
+        content:`
+Create:
+
+{
+ "caption":"",
+ "scene":"",
+ "comments":[]
+}
+`
+      }]
+    });
+
+  const future =
+    JSON.parse(
+      futureRes.choices[0].message.content
+    );
+
+  const imageRes =
+    await openai.images.generate({
+
+      model:"gpt-image-1",
+
+      prompt: future.scene,
+
+      size:"1024x1536"
+
+    });
+
+  const generatedImage =
+    imageRes.data[0].b64_json
+      ? `data:image/png;base64,${imageRes.data[0].b64_json}`
+      : imageRes.data[0].url;
+
+  room.messages.push({
+
+    from:"Future",
+
+    image: generatedImage,
+
+    caption: future.caption,
+
+    scene: future.scene,
+
+    comments: future.comments
+
+  });
+
+  io.to(roomId).emit(
+    "roomMessages",
+    room.messages
+  );
+
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
+}
+
 //////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////
@@ -1553,23 +1627,30 @@ setTimeout(() => {
 
 }, 3000);
 
-setTimeout(() => {
+setTimeout(async () => {
 
-  io.to(roomId).emit(
-    "aiTypingStop"
-  );
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
 
-  rooms[roomId].messages.push({
-    from:"Image AI",
-    text:imageAiPrompt
-  });
+  rooms[roomId].messages.push({
 
-  io.to(roomId).emit(
-    "roomMessages",
-    rooms[roomId].messages
-  );
+    from:"Image AI",
+
+    text:imageAiPrompt
+
+  });
+
+  io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+  );
+
+  await generateFuture(roomId);
 
 }, 5000);
+
+generateFuture(roomId);
 
 //////////////////////////////////////////////////
 // SEND TO ROOM
