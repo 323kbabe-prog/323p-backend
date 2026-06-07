@@ -3123,18 +3123,21 @@ ${room.easterEggHistory?.join("\n") || ""}
 
       room.messages.push({
 
-        from:"Future",
+  from:"Future",
 
-        caption:
-          future.caption,
+  image:
+    `https://picsum.photos/600/900?random=${Date.now()}`,
 
-        scene:
-          future.scene,
+  caption:
+    future.caption,
 
-        comments:
-          future.comments
+  scene:
+    future.scene,
 
-      });
+  comments:
+    future.comments
+
+});
 
       //////////////////////////////////////////////////
       // LIMIT FEED SIZE
