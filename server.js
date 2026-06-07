@@ -186,24 +186,46 @@ function capitalizeFirst(text){
 //////////////////////////////////////////////////
 
 io.on("connection", socket => {
+  
+  socket.on(
+  "setMode",
+  ({ mode }) => {
+
+    const user =
+      users[socket.id];
+
+    if(!user) return;
+
+    user.mode = mode;
+
+    console.log(
+      "MODE:",
+      user.email,
+      mode
+    );
+
+  }
+);
 
   users[socket.id] = {
 
-  step:"email",
+  step:"email",
 
-  email:null,
+  mode:"business",
 
-  displayName:null,
+  email:null,
 
-  imageMode:false,
+  displayName:null,
 
-  imageContext:null,
+  imageMode:false,
 
-  currentIndex:null,
+  imageContext:null,
 
-  lastImage:null,
+  currentIndex:null,
 
-  currentRoom:null
+  lastImage:null,
+
+  currentRoom:null
 };
 
   socket.emit("state", {
@@ -227,6 +249,116 @@ io.on("connection", socket => {
 
     const user =
       users[socket.id];
+
+user.lastImage =
+  imageDataUrl;
+
+console.log(
+  "CURRENT MODE:",
+  user.mode
+);
+
+//////////////////////////////////////////////////
+// SHOPPING MODE
+//////////////////////////////////////////////////
+
+if(user.mode === "shopping"){
+
+  const shoppingRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+You are Shopping Mate.
+
+Look at the image.
+
+Choose ONE product that best fits what is visible.
+
+Return exactly:
+
+product, price, lifestyle
+
+Examples:
+
+Nike Backpack, $69, happy boyfriend
+
+Stanley Tumbler, $35, office commuter
+
+Sony Headphones, $199, late night focus
+
+Kindle Paperwhite, $149, cozy reader
+
+Rules:
+
+- one line only
+- no labels
+- no markdown
+- lifestyle 1-5 words
+- realistic price
+- product must match image
+`
+    },
+
+    {
+      role:"user",
+
+      content:[
+        {
+          type:"text",
+          text:"Find best product"
+        },
+        {
+          type:"image_url",
+          image_url:{
+            url:imageDataUrl
+          }
+        }
+      ]
+    }
+  ]
+});
+
+const shoppingText =
+  shoppingRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+    
+socket.emit(
+  "roomCreated",
+  {
+    roomId:"shopping",
+    imageContext:"",
+    imageDataUrl:user.lastImage,
+    messages:[]
+  }
+);
+
+socket.emit(
+  "roomMessages",
+  [
+    {
+      from:"Shopping Mate",
+      image:imageDataUrl,
+      shopping:true,
+      text:shoppingText
+    }
+  ]
+);
+
+return;
+
+
+
+}
 
  if(!user.email){
 
