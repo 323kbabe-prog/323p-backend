@@ -173,12 +173,12 @@ function extractEmail(text){
 
 function capitalizeFirst(text){
 
-  if(!text) return "";
+  if(!text) return "";
 
-  return (
-    text.charAt(0).toUpperCase() +
-    text.slice(1)
-  );
+  return (
+    text.charAt(0).toUpperCase() +
+    text.slice(1)
+  );
 }
 
 //////////////////////////////////////////////////
@@ -186,46 +186,24 @@ function capitalizeFirst(text){
 //////////////////////////////////////////////////
 
 io.on("connection", socket => {
-  
-  socket.on(
-  "setMode",
-  ({ mode }) => {
-
-    const user =
-      users[socket.id];
-
-    if(!user) return;
-
-    user.mode = mode;
-
-    console.log(
-      "MODE:",
-      user.email,
-      mode
-    );
-
-  }
-);
 
   users[socket.id] = {
 
-  step:"email",
+  step:"email",
 
-  mode:"business",
+  email:null,
 
-  email:null,
+  displayName:null,
 
-  displayName:null,
+  imageMode:false,
 
-  imageMode:false,
+  imageContext:null,
 
-  imageContext:null,
+  currentIndex:null,
 
-  currentIndex:null,
+  lastImage:null,
 
-  lastImage:null,
-
-  currentRoom:null
+  currentRoom:null
 };
 
   socket.emit("state", {
@@ -249,116 +227,6 @@ io.on("connection", socket => {
 
     const user =
       users[socket.id];
-
-user.lastImage =
-  imageDataUrl;
-
-console.log(
-  "CURRENT MODE:",
-  user.mode
-);
-
-//////////////////////////////////////////////////
-// SHOPPING MODE
-//////////////////////////////////////////////////
-
-if(user.mode === "shopping"){
-
-  const shoppingRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-You are Shopping Mate.
-
-Look at the image.
-
-Choose ONE product that best fits what is visible.
-
-Return exactly:
-
-product, price, lifestyle
-
-Examples:
-
-Nike Backpack, $69, happy boyfriend
-
-Stanley Tumbler, $35, office commuter
-
-Sony Headphones, $199, late night focus
-
-Kindle Paperwhite, $149, cozy reader
-
-Rules:
-
-- one line only
-- no labels
-- no markdown
-- lifestyle 1-5 words
-- realistic price
-- product must match image
-`
-    },
-
-    {
-      role:"user",
-
-      content:[
-        {
-          type:"text",
-          text:"Find best product"
-        },
-        {
-          type:"image_url",
-          image_url:{
-            url:imageDataUrl
-          }
-        }
-      ]
-    }
-  ]
-});
-
-const shoppingText =
-  shoppingRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-    
-socket.emit(
-  "roomCreated",
-  {
-    roomId:"shopping",
-    imageContext:"",
-    imageDataUrl:user.lastImage,
-    messages:[]
-  }
-);
-
-socket.emit(
-  "roomMessages",
-  [
-    {
-      from:"Shopping Mate",
-      image:imageDataUrl,
-      shopping:true,
-      text:shoppingText
-    }
-  ]
-);
-
-return;
-
-
-
-}
 
  if(!user.email){
 
@@ -1575,15 +1443,15 @@ The prompt should help the user discover:
 The prompt MUST directly include and combine:
 
 1. Context Mapping
-   - what is physically observed
+   - what is physically observed
 
 2. Social Signal
-   - the social behavior
-   - cultural meaning
-   - emerging trend
+   - the social behavior
+   - cultural meaning
+   - emerging trend
 
 3. Proposal Concept
-   - the opportunity
+   - the opportunity
 
 The final prompt must visibly contain ideas from ALL THREE layers.
 
@@ -1658,17 +1526,17 @@ setTimeout(() => {
   );
 
   rooms[roomId].messages.push({
-  from:"Image AI",
-  image:starterImage,
-  mood:capitalizeFirst(starterMood),
-  ask:starterNewsTitle,
-  shareText:capitalizeFirst(starterShareText),
-  slogan:capitalizeFirst(starterSlogan),
-  hashtags:starterHashtags,
-  link:
-    starterNewsItem?.link ||
-    starterNewsItem?.news_link ||
-    ""
+  from:"Image AI",
+  image:starterImage,
+  mood:capitalizeFirst(starterMood),
+  ask:starterNewsTitle,
+  shareText:capitalizeFirst(starterShareText),
+  slogan:capitalizeFirst(starterSlogan),
+  hashtags:starterHashtags,
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
 });
 
   io.to(roomId).emit(
@@ -2994,17 +2862,17 @@ const imageAiPrompt =
     .trim();
     
 room.messages.push({
-  from:"Image AI",
-  image:imageUrl,
-  mood:capitalizeFirst(moodText),
-  ask:newsTitle,
-  shareText:capitalizeFirst(shareText),
-  slogan:capitalizeFirst(slogan),
-  hashtags,
-  link:
-    selectedNews?.link ||
-    selectedNews?.news_link ||
-    ""
+  from:"Image AI",
+  image:imageUrl,
+  mood:capitalizeFirst(moodText),
+  ask:newsTitle,
+  shareText:capitalizeFirst(shareText),
+  slogan:capitalizeFirst(slogan),
+  hashtags,
+  link:
+    selectedNews?.link ||
+    selectedNews?.news_link ||
+    ""
 });
 
 //////////////////////////////////////////////////
