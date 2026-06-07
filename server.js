@@ -1430,7 +1430,24 @@ The prompt should help the user discover:
 - marketing campaigns
 - business opportunities
 
-The prompt must be specific to the Context Mapping, Social Signal, and Concept.
+The prompt MUST directly include and combine:
+
+1. Context Mapping
+   - what is physically observed
+
+2. Social Signal
+   - the social behavior
+   - cultural meaning
+   - emerging trend
+
+3. Proposal Concept
+   - the opportunity
+
+The final prompt must visibly contain ideas from ALL THREE layers.
+
+Never focus only on the proposal concept.
+Never ignore the social signal.
+Never ignore the context mapping.
 
 Avoid generic prompts.
 
@@ -2759,6 +2776,15 @@ The prompt must be specific to the Context Mapping, Social Signal, and Concept.
 
 Avoid generic prompts.
 
+The Social Signal is the most important layer.
+
+Extract keywords from:
+- Context Mapping
+- Social Signal
+- Proposal Concept
+
+and naturally combine them into the final prompt.
+
 Rules:
 - one sentence only
 - directly usable in GPT
@@ -2799,7 +2825,11 @@ Output format:
 
 Copy this to GPT:
 
-[one actionable prompt]
+[one actionable prompt that clearly reflects]
+
+- Context Mapping
+- Social Signal
+- Proposal Concept
 
 Rules:
 - specific
