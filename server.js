@@ -201,18 +201,48 @@ await openai.chat.completions.create({
     type:"json_object"
   },
 
-  messages:[{
-    role:"user",
-    content:`
-Return JSON only.
+  messages:[
+
+{
+  role:"system",
+
+  content:`
+Create a TikTok future snapshot.
+
+Return JSON:
 
 {
   "caption":"",
   "scene":"",
   "comments":[]
 }
+
+Rules:
+
+caption:
+3-8 words
+
+scene:
+40-80 words describing a future moment
+
+comments:
+5 realistic social comments
 `
-  }]
+},
+
+{
+  role:"user",
+
+  content:`
+Image personality:
+
+${room.imageContext}
+
+Create a future version of this trend.
+`
+}
+
+]
 });
 
   const future =
