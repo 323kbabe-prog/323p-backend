@@ -3096,6 +3096,25 @@ ${room.easterEggHistory?.join("\n") || ""}
       JSON.parse(
         easterRes.choices[0].message.content
       );
+    
+    const imageRes =
+await openai.images.generate({
+
+  model:"gpt-image-1",
+
+  prompt: future.scene,
+
+  size:"1024x1536"
+
+});
+
+console.log(
+  JSON.stringify(imageRes, null, 2)
+);
+const generatedImage =
+  imageRes.data[0].b64_json
+    ? `data:image/png;base64,${imageRes.data[0].b64_json}`
+    : imageRes.data[0].url;
 
       //////////////////////////////////////////////////
       // SAVE HISTORY
@@ -3125,17 +3144,13 @@ ${room.easterEggHistory?.join("\n") || ""}
 
   from:"Future",
 
-  image:
-    `https://picsum.photos/600/900?random=${Date.now()}`,
+  image: generatedImage,
 
-  caption:
-    future.caption,
+  caption: future.caption,
 
-  scene:
-    future.scene,
+  scene: future.scene,
 
-  comments:
-    future.comments
+  comments: future.comments
 
 });
 
