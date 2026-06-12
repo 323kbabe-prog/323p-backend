@@ -265,11 +265,11 @@ Analyze this image as a socially-aware AI identity.
 
 Detect:
 - objects
-- environment
-- symbolic meaning
+- product category
+- industry category
+- consumer behavior
 - visible text meaning
-- cultural atmosphere
-- internet/social mood
+- market signals
 
 IMPORTANT:
 Visible text and symbols
@@ -278,8 +278,21 @@ are part of the emotional meaning.
 The structure MUST stay:
 
 Objects
-Environment
-Presence
+Category
+Signals
+
+NEVER describe:
+
+- interior design
+- home decor
+- room aesthetics
+- furniture style
+- minimalist spaces
+- cozy spaces
+
+unless those are the primary subject of the image.
+
+Focus on the main object and its market, industry, consumer, technology, retail, educational, scientific, or business relevance.
 
 Rules:
 - short phrases
