@@ -1373,7 +1373,7 @@ Format:
 
 I am ...
 
-Maximum 4 sentences.
+Maximum 2 sentences.
 `
     },
 
