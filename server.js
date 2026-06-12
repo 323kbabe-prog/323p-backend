@@ -502,9 +502,6 @@ socket.emit(
     imageDataUrl:
       user.lastImage,
 
-    imageAiIntro:
-      adviceText,
-
     messages:[]
   }
 );
@@ -1414,6 +1411,11 @@ const adviceText =
     .message
     .content
     .trim();
+
+io.to(roomId).emit(
+  "imageAiIntro",
+  adviceText
+);
     
 const imageAiPromptRes =
   await openai.chat.completions.create({
