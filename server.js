@@ -1999,9 +1999,31 @@ The search MUST visually and semantically match:
 - the objects
 - the environment
 - the emotional presence
+- the cultural atmosphere
 - the product category
-- the lifestyle category
-- the aesthetic direction
+- the technology category
+- the business category
+- the economic category
+- the political category
+- the food category
+- the sports category
+- the entertainment category
+
+The search may connect to:
+- technology
+- AI
+- business
+- startups
+- economics
+- politics
+- food
+- sports
+- entertainment
+- culture
+- internet trends
+- public events
+
+Avoid limiting the result to lifestyle or aesthetic interpretation.
 
 If the image is:
 - fashion → search fashion trends
