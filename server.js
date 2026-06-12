@@ -1178,169 +1178,9 @@ if(!starterImage){
 // STARTER SHARE TEXT
 //////////////////////////////////////////////////
 
-const starterShareRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create ONE short social-media-ready share caption.
-
-The caption should feel:
-- emotionally reactive
-- internet native
-- socially addictive
-- current
-- viral
-
-Rules:
-- 1 sentence only
-- lowercase preferred
-- no hashtags
-- no markdown
-- max 16 words
-- feel repostable
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Mood:
-${starterMood}
-
-Trend:
-${starterNewsTitle}
-
-Image personality:
-${user.imageContext}
-`
-    }
-  ]
-});
-
-const starterShareText =
-  starterShareRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
 //////////////////////////////////////////////////
 // STARTER PROPOSAL SYSTEM
 //////////////////////////////////////////////////
-
-const starterProposalRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create:
-
-1 short slogan
-3 emotional internet hashtags
-
-The result should feel:
-- internet native
-- emotionally viral
-- culturally current
-- socially addictive
-
-Rules:
-
-Slogan:
-- short
-- emotionally memorable
-- repostable
-
-Hashtags:
-- lowercase only
-- no spaces
-- emotionally specific
-- internet-native
-
-BAD:
-#viral
-#fyp
-#trending
-
-GOOD:
-#internetpressure
-#latenightfeed
-#celebrityspiral
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Mood:
-${starterMood}
-
-Trend:
-${starterNewsTitle}
-
-Image personality:
-${user.imageContext}
-
-Share text:
-${starterShareText}
-`
-    }
-  ]
-});
-
-const starterProposalRaw =
-
-  starterProposalRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-const starterProposalLines =
-
-  starterProposalRaw
-    .split("\n")
-    .map(v =>
-
-      v
-        .replace(/\*\*/g,"")
-        .replace(/slogan:/gi,"")
-        .replace(/hashtags:/gi,"")
-        .replace(/^[0-9]+\./,"")
-        .replace(/^[-•]/,"")
-        .trim()
-
-    )
-    .filter(Boolean);
-
-const starterSlogan =
-  starterProposalLines.find(
-    v => !v.startsWith("#")
-  ) || "";
-
-const starterHashtags =
-  starterProposalLines
-    .slice(1,4)
-    .map(tag =>
-      tag.startsWith("#")
-        ? tag
-        : "#" + tag
-    );
 
 //////////////////////////////////////////////////
 // IMAGE AI INTRO
@@ -1426,11 +1266,7 @@ setTimeout(() => {
   rooms[roomId].messages.push({
   from:"Image AI",
   image:starterImage,
-  mood:capitalizeFirst(starterMood),
   ask:starterNewsTitle,
-  shareText:capitalizeFirst(starterShareText),
-  slogan:capitalizeFirst(starterSlogan),
-  hashtags:starterHashtags,
   link:
     starterNewsItem?.link ||
     starterNewsItem?.news_link ||
@@ -2300,162 +2136,9 @@ if(!imageUrl){
 // GPT CREATES 1-3 WORD MOOD
 //////////////////////////////////////////////////
 
-const moodRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create ONE evolving internet vibe.
-
-The vibe should feel:
-- viral
-- socially addictive
-- internet-native
-- culturally current
-- emotionally reactive
-
-Examples:
-
-main character
-internet pressure
-celebrity chaos
-viral energy
-late night scrolling
-digital fame
-timeline exploding
-
-Rules:
-- lowercase only
-- no punctuation
-- 1 to 3 words
-- modern internet culture only
-- no philosophy
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Uploaded image AI personality:
-
-${room.imageContext}
-
-Used moods:
-
-${room.usedMoods.join("\n")}
-
-Search phrase:
-
-${searchQuery}
-
-Current user response:
-
-${text}
-`
-    }
-  ]
-});
-
-const moodText =
-  moodRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-room.usedMoods.push(
-  moodText
-);
-
-room.emotionalState.push(
-  moodText
-);
-
 //////////////////////////////////////////////////
 // NEXT QUESTION
 //////////////////////////////////////////////////
-
-const nextQuestionRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create ONE trending social reaction line.
-
-The line should feel:
-- viral
-- socially reactive
-- internet-native
-- emotionally engaging
-- culturally current
-
-Rules:
-- lowercase only
-- no punctuation
-- 2 to 7 words
-- no philosophy
-- no existential tone
-- feel like live internet culture
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Uploaded image AI personality:
-
-${room.imageContext}
-
-Used questions:
-
-${room.usedQuestions.join("\n")}
-
-Conversation emotional history:
-
-${room.emotionalState.join("\n")}
-
-Mood:
-
-${moodText}
-
-Search phrase:
-
-${searchQuery}
-
-Current user response:
-
-${text}
-
-Create a NEW trending social reaction line.
-`
-    }
-  ]
-});
-
-const nextQuestion =
-  nextQuestionRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-room.usedQuestions.push(
-  nextQuestion
-);
 
 //////////////////////////////////////////////////
 // PUSH IMAGE + LOOP
@@ -2470,7 +2153,17 @@ room.usedQuestions.push(
 
 let newsTitle =
   selectedNews?.title ||
-  nextQuestion;
+  searchQuery;
+  
+  room.messages.push({
+  from:"Image AI",
+  image:imageUrl,
+  ask:newsTitle,
+  link:
+    selectedNews?.link ||
+    selectedNews?.news_link ||
+    ""
+});
 
 //////////////////////////////////////////////////
 // SHARE TEXT
@@ -2483,121 +2176,6 @@ let newsTitle =
 //////////////////////////////////////////////////
 // PUSH IMAGE + REAL TITLE
 //////////////////////////////////////////////////
-
-const imageAiPromptRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create ONE complete GPT-ready prompt.
-
-Format exactly:
-
-Copy this to GPT:
-
-[action-oriented prompt]
-
-The prompt should help the user discover:
-
-- startup ideas
-- product ideas
-- service ideas
-- content ideas
-- marketing campaigns
-- business opportunities
-
-The prompt must be specific to the Context Mapping, Social Signal, and Concept.
-
-Avoid generic prompts.
-
-The Social Signal is the most important layer.
-
-Extract keywords from:
-- Context Mapping
-- Social Signal
-- Proposal Concept
-
-and naturally combine them into the final prompt.
-
-Rules:
-- one sentence only
-- directly usable in GPT
-- specific
-- practical
-- self-contained
-- opportunity-focused
-- 15-30 words
-- no quotes
-- no explanation
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Context Mapping:
-${room.imageContext}
-
-Create ONE GPT prompt.
-
-The prompt must help the user generate:
-- startup ideas
-- product ideas
-- service ideas
-- content ideas
-- marketing campaigns
-- business opportunities
-
-Output format:
-
-Copy this to GPT:
-
-[one actionable prompt that clearly reflects]
-
-- Context Mapping
-- Social Signal
-- Proposal Concept
-
-Rules:
-- specific
-- practical
-- self-contained
-- one sentence only
-- 15-30 words
-- no explanation
-- no quotation marks
-`
-    }
-  ]
-});
-
-const imageAiPrompt =
-  imageAiPromptRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-    
-room.messages.push({
-  from:"Image AI",
-  image:imageUrl,
-  mood:capitalizeFirst(moodText),
-  ask:newsTitle,
-  shareText:capitalizeFirst(shareText),
-  slogan:capitalizeFirst(slogan),
-  hashtags,
-  link:
-    selectedNews?.link ||
-    selectedNews?.news_link ||
-    ""
-});
 
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
