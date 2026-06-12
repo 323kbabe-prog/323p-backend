@@ -1408,92 +1408,6 @@ io.to(roomId).emit(
   "imageAiIntro",
   adviceText
 );
-    
-const imageAiPromptRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-content:`
-Create ONE complete GPT-ready prompt.
-
-Format exactly:
-
-Copy this to GPT:
-
-[action-oriented prompt]
-
-The prompt should help the user discover:
-
-- startup ideas
-- product ideas
-- service ideas
-- content ideas
-- marketing campaigns
-- business opportunities
-
-The prompt MUST directly include and combine:
-
-1. Context Mapping
-   - what is physically observed
-
-2. Social Signal
-   - the social behavior
-   - cultural meaning
-   - emerging trend
-
-3. Proposal Concept
-   - the opportunity
-
-The final prompt must visibly contain ideas from ALL THREE layers.
-
-Never focus only on the proposal concept.
-Never ignore the social signal.
-Never ignore the context mapping.
-
-Avoid generic prompts.
-
-Rules:
-- one sentence only
-- directly usable in GPT
-- specific
-- practical
-- self-contained
-- opportunity-focused
-- 15-30 words
-- no quotes
-- no explanation
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Context Mapping:
-${user.imageContext}
-
-Social Signal:
-${starterShareText}
-
-Concept:
-${starterSlogan}
-`
-    }
-  ]
-});
-
-const imageAiPrompt =
-  imageAiPromptRes
-    .choices[0]
-    .message
-    .content
-    .trim();
 
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
@@ -1539,11 +1453,6 @@ setTimeout(() => {
   io.to(roomId).emit(
     "aiTypingStop"
   );
-
-  rooms[roomId].messages.push({
-    from:"Image AI",
-    text:imageAiPrompt
-  });
 
   io.to(roomId).emit(
     "roomMessages",
@@ -2567,172 +2476,9 @@ let newsTitle =
 // SHARE TEXT
 //////////////////////////////////////////////////
 
-const shareRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create ONE short social-media-ready share caption.
-
-The caption should feel:
-- emotionally reactive
-- internet native
-- socially addictive
-- current
-- viral
-
-Rules:
-- 1 sentence only
-- lowercase preferred
-- no hashtags
-- no markdown
-- max 16 words
-- feel repostable
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Mood:
-${moodText}
-
-Trend:
-${newsTitle}
-
-Image personality:
-${room.imageContext}
-`
-    }
-  ]
-});
-
-const shareText =
-  shareRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
 //////////////////////////////////////////////////
 // PROPOSAL SYSTEM
 //////////////////////////////////////////////////
-
-const proposalRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create:
-
-1 short slogan
-3 emotional internet hashtags
-
-The result should feel:
-- internet native
-- emotionally viral
-- culturally current
-- socially addictive
-
-Rules:
-
-Slogan:
-- short
-- emotionally memorable
-- repostable
-
-Hashtags:
-- lowercase only
-- no spaces
-- emotionally specific
-- internet-native
-
-BAD:
-#viral
-#fyp
-#trending
-
-GOOD:
-#internetpressure
-#latenightfeed
-#celebrityspiral
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Mood:
-${moodText}
-
-Trend:
-${newsTitle}
-
-Image personality:
-${room.imageContext}
-
-User emotional direction:
-${userIntent}
-
-Share text:
-${shareText}
-`
-    }
-  ]
-});
-
-const proposalRaw =
-
-  proposalRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-const proposalLines =
-
-  proposalRaw
-    .split("\n")
-    .map(v =>
-
-      v
-        .replace(/\*\*/g,"")
-        .replace(/slogan:/gi,"")
-        .replace(/hashtags:/gi,"")
-        .replace(/^[0-9]+\./,"")
-        .replace(/^[-•]/,"")
-        .trim()
-
-    )
-    .filter(Boolean);
-
-const slogan =
-  proposalLines.find(
-    v => !v.startsWith("#")
-  ) || "";
-
-const hashtags =
-  proposalLines
-    .slice(1,4)
-    .map(tag =>
-      tag.startsWith("#")
-        ? tag
-        : "#" + tag
-    );
 
 //////////////////////////////////////////////////
 // PUSH IMAGE + REAL TITLE
@@ -2798,12 +2544,6 @@ Rules:
       content:`
 Context Mapping:
 ${room.imageContext}
-
-Social Signal:
-${shareText}
-
-Concept:
-${slogan}
 
 Create ONE GPT prompt.
 
@@ -2884,14 +2624,6 @@ setTimeout(() => {
   io.to(room.id).emit(
     "aiTypingStop"
   );
-
-  room.messages.push({
-
-    from:"Image AI",
-
-    text:imageAiPrompt
-
-  });
 
   //////////////////////////////////////////////////
   // LIMIT FEED SIZE
