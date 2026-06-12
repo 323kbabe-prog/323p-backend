@@ -492,18 +492,18 @@ user.displayName =
 //////////////////////////////////////////////////
 
 socket.emit(
-  "roomCreated",
-  {
-    roomId,
+  "roomCreated",
+  {
+    roomId,
 
-    imageContext:
-      user.imageContext,
+    imageContext:
+      user.imageContext,
 
-    imageDataUrl:
-      user.lastImage,
+    imageDataUrl:
+      user.lastImage,
 
-    messages:[]
-  }
+    messages:[]
+  }
 );
 
 //////////////////////////////////////////////////
@@ -695,55 +695,12 @@ The AI personality controls:
 Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
 
 The search MUST visually and semantically match:
-
 - the objects
 - the environment
 - the emotional presence
-- the cultural atmosphere
 - the product category
-- the industry category
-- the technology category
-- the business category
-- the economic category
-- the political category
-- the food category
-- the sports category
-- the entertainment category
-- the public-interest category
-
-The search should explore both:
-
-1. Human interpretation
-- emotional signals
-- cultural atmosphere
-- social behavior
-- internet culture
-- symbolic meaning
-
-and
-
-2. Real-world systems
-- technology
-- AI
-- business
-- startups
-- economics
-- politics
-- food
-- sports
-- entertainment
-- science
-- consumer products
-- public events
-- global trends
-
-Avoid becoming trapped in:
-- cozy aesthetics
-- home decor
-- comfort-focused lifestyle content
-- interior design themes
-
-The search should remain connected to the uploaded image while allowing a broad range of social, cultural, technological, economic, political, and industry-related directions.
+- the lifestyle category
+- the aesthetic direction
 
 If the image is:
 - fashion → search fashion trends
@@ -764,10 +721,7 @@ The result should feel:
 - emotionally aligned with the uploaded image identity
 
 The uploaded image personality
-must guide the emotional, cultural, technological,
-economic, political, industrial, and social direction.
-
-The image should act as a lens through which the AI explores the wider world rather than restricting the output to lifestyle interpretation.
+must guide the emotional and cultural direction.
 
 IMPORTANT:
 Use REAL searchable public news entities.
@@ -1299,28 +1253,10 @@ Create:
 3 emotional internet hashtags
 
 The result should feel:
-- current
-- visually strong
-- internet-native
-- culturally alive
-- socially relevant
-- emotionally relevant
-- economically relevant
-- technologically relevant
-- politically relevant
-- connected to real-world activity
-
-The image may connect to:
-- emotions
-- culture
-- technology
-- business
-- economics
-- politics
-- food
-- sports
-- entertainment
-- public events
+- internet native
+- emotionally viral
+- culturally current
+- socially addictive
 
 Rules:
 
@@ -1477,8 +1413,8 @@ const adviceText =
     .trim();
 
 io.to(roomId).emit(
-  "imageAiIntro",
-  adviceText
+  "imageAiIntro",
+  adviceText
 );
     
 const imageAiPromptRes =
