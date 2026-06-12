@@ -351,6 +351,8 @@ Return ONLY one word.
 
 Possible categories:
 
+Possible categories:
+
 celebrity
 fashion
 music
@@ -367,6 +369,16 @@ dating
 viral
 entertainment
 culture
+
+business
+economics
+food
+retail
+startup
+consumer
+manufacturing
+education
+science
 
 Rules:
 - lowercase only
@@ -695,12 +707,13 @@ The AI personality controls:
 Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
 
 The search MUST visually and semantically match:
+
 - the objects
-- the environment
-- the emotional presence
 - the product category
-- the lifestyle category
-- the aesthetic direction
+- the industry category
+- the consumer market
+- the business sector
+- the technology relevance
 
 If the image is:
 - fashion → search fashion trends
@@ -725,6 +738,19 @@ must guide the emotional and cultural direction.
 
 IMPORTANT:
 Use REAL searchable public news entities.
+
+NEVER generate searches about:
+
+- interior design
+- home decor
+- furniture
+- room styling
+- home aesthetics
+- living room design
+- cozy spaces
+- decoration trends
+
+unless those topics are the primary object in the image.
 
 GOOD:
 taylor swift grammys
@@ -760,11 +786,11 @@ PRIORITY RULES:
 - internet topic
 
 2. The uploaded image controls:
-- aesthetic
-- visual culture
-- atmosphere
-- style
-- identity flavor
+- product type
+- industry relevance
+- consumer behavior
+- market signals
+- technology signals
 
 The emotional intention of the user is MORE important than the uploaded image itself.
 `
@@ -1733,12 +1759,13 @@ NEVER repeat:
 Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
 
 The search MUST visually and semantically match:
+
 - the objects
-- the environment
-- the emotional presence
 - the product category
-- the lifestyle category
-- the aesthetic direction
+- the industry category
+- the consumer market
+- the business sector
+- the technology relevance
 
 If the image is:
 - fashion → search fashion trends
@@ -1763,6 +1790,19 @@ must guide the emotional and cultural direction.
 
 IMPORTANT:
 Use REAL searchable public news entities.
+
+NEVER generate searches about:
+
+- interior design
+- home decor
+- furniture
+- room styling
+- home aesthetics
+- living room design
+- cozy spaces
+- decoration trends
+
+unless those topics are the primary object in the image.
 
 GOOD:
 taylor swift grammys
