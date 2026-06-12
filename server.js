@@ -492,18 +492,21 @@ user.displayName =
 //////////////////////////////////////////////////
 
 socket.emit(
-  "roomCreated",
-  {
-    roomId,
+  "roomCreated",
+  {
+    roomId,
 
-    imageContext:
-      user.imageContext,
+    imageContext:
+      user.imageContext,
 
-    imageDataUrl:
-      user.lastImage,
+    imageDataUrl:
+      user.lastImage,
 
-    messages:[]
-  }
+    imageAiIntro:
+      adviceText,
+
+    messages:[]
+  }
 );
 
 //////////////////////////////////////////////////
@@ -1501,19 +1504,6 @@ const imageAiPrompt =
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
-
-rooms[roomId].messages.push({
-
-  from:"Image AI",
-
-  text: adviceText
-
-});
-
-io.to(roomId).emit(
-  "roomMessages",
-  rooms[roomId].messages
-);
 
 io.to(roomId).emit(
   "aiTypingStart"
