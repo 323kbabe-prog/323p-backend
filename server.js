@@ -228,10 +228,16 @@ socket.on(
       roomId;
 
     socket.emit(
-      "roomMessages",
-      room.messages
-    );
+  "roomCreated",
+  {
+    roomId: room.id
+  }
+);
 
+socket.emit(
+  "roomMessages",
+  room.messages
+);
   }
 );
 
