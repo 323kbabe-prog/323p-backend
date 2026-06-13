@@ -186,6 +186,28 @@ function capitalizeFirst(text){
 //////////////////////////////////////////////////
 
 io.on("connection", socket => {
+  
+  socket.on(
+  "rejoinRoom",
+  ({ roomId }) => {
+
+    const room =
+      rooms[roomId];
+
+    if(!room) return;
+
+    socket.join(roomId);
+
+    users[socket.id].currentRoom =
+      roomId;
+
+    socket.emit(
+      "roomMessages",
+      room.messages
+    );
+
+  }
+);
 
   users[socket.id] = {
 
