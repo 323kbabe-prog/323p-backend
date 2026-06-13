@@ -206,6 +206,35 @@ io.on("connection", socket => {
   currentRoom:null
 };
 
+socket.on(
+  "rejoinRoom",
+  ({ roomId }) => {
+
+    const room =
+      rooms[roomId];
+
+    if(!room){
+
+      socket.emit(
+        "roomClosed"
+      );
+
+      return;
+    }
+
+    socket.join(roomId);
+
+    users[socket.id].currentRoom =
+      roomId;
+
+    socket.emit(
+      "roomMessages",
+      room.messages
+    );
+
+  }
+);
+
   socket.emit("state", {
 
     placeholder:
@@ -1675,7 +1704,14 @@ ${finalAnswer}`,
     const room =
       rooms[user.currentRoom];
 
-    if(!room) return;
+    if(!room){
+
+  socket.emit(
+    "roomClosed"
+  );
+
+  return;
+}
 
     room.messages.push({
 
@@ -2332,7 +2368,14 @@ setTimeout(() => {
     const room =
       rooms[user.currentRoom];
 
-    if(!room) return;
+    if(!room){
+
+  socket.emit(
+    "roomClosed"
+  );
+
+  return;
+}
 
     room.messages.push({
 
@@ -2364,13 +2407,26 @@ if(room.messages.length > 30){
   //////////////////////////////////////////////////
 
   socket.on(
-    "disconnect",
+  "disconnect",
 
-    () => {
+  () => {
 
-    delete users[socket.id];
-  });
+    console.log(
+      "USER DISCONNECTED:",
+      socket.id
+    );
 
+    setTimeout(() => {
+
+      if(users[socket.id]){
+
+        delete users[socket.id];
+
+      }
+
+    }, 300000);
+
+  });
 });
 
 //////////////////////////////////////////////////
