@@ -792,20 +792,25 @@ Rules:
 
 PRIORITY RULES:
 
-1. The USER emotional direction controls:
+1. User message (60%)
+- topic direction
 - trend direction
+- news selection
 - search meaning
-- emotional evolution
-- internet topic
+- public discussion
 
-2. The uploaded image controls:
-- product type
+2. Uploaded image (40%)
+- context
+- product relevance
 - industry relevance
-- consumer behavior
-- market signals
-- technology signals
+- consumer relevance
+- technology relevance
 
-The emotional intention of the user is MORE important than the uploaded image itself.
+The image establishes context.
+The user message guides the direction.
+
+The user message should influence approximately 60% of the search.
+The uploaded image should influence approximately 40% of the search.
 `
       },
 
@@ -2049,10 +2054,11 @@ Choose the result MOST emotionally aligned
 with the USER emotional direction.
 
 Priority:
-1. user emotional alignment
-2. internet virality
-3. visual strength
-4. cultural momentum
+
+1. user message alignment (60%)
+2. image relevance (40%)
+3. internet relevance
+4. visual strength
 
 The result should feel like:
 "the internet emotionally reacting
