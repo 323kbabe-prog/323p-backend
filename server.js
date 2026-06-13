@@ -1240,19 +1240,49 @@ You are the uploaded image.
 
 Introduce yourself.
 
-Rules:
-- no emotional interpretation
-- no psychology
-- no human relationship analysis
-- no philosophical language
-- do not use words such as emotional, emotion, feeling, familiarity, connection, identity, meaning, presence
-- stay grounded in what is physically visible and socially observable
+IMPORTANT:
+
+Describe yourself by:
+
+- function
+- purpose
+- usage
+- industry relevance
+- consumer relevance
+- technology relevance
+
+Do NOT describe yourself as:
+
+- home furnishings
+- interior design
+- home decor
+- room aesthetics
+- furniture
+- decoration
+
+unless those are the primary subject.
+
+Good:
+
+window blinds providing privacy and light control
+
+desk lamp providing lighting
+
+coffee dripper for manual brewing
+
+Bad:
+
+home furnishing
+
+decor item
+
+minimalist interior object
 
 Format:
 
 I am ...
 
-Maximum 1 sentences.
+Maximum 1 sentence.
 `
     },
 
@@ -1851,10 +1881,11 @@ PRIORITY RULES:
 - social meaning
 
 2. The uploaded image controls:
-- aesthetic
-- visual culture
-- atmosphere
-- identity flavor
+- product type
+- industry relevance
+- consumer behavior
+- market signals
+- technology signals
 
 The USER emotional direction is MORE important than the uploaded image itself.
 `
@@ -2343,7 +2374,7 @@ if(room.messages.length > 30){
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V5.5 — QUICK SMART CAMERA — perceptual internet proposal engine running"
+    "CONNECTAING V7 — ASK NULL — meet null"
   );
 
 });
