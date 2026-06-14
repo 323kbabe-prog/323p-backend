@@ -1849,42 +1849,46 @@ User input may contain:
 - topics
 - emotions
 
-Do NOT return:
-- the exact person
-- the exact brand
-- the exact product
-- the emotion itself
+If the user input is:
 
-Return the larger system behind the input.
+- a celebrity
+- public figure
+- company
+- brand
+- product
+- organization
+
+return the exact name.
 
 Examples:
 
 jisoo
-→ celebrity influence
+→ jisoo
 
 taylor swift
-→ fandom economy
+→ taylor swift
 
 elon musk
-→ technology leadership
+→ elon musk
 
 openai
-→ ai transformation
+→ openai
 
 nike
-→ consumer branding
+→ nike
 
-apple
-→ technology ecosystems
+Only convert to larger systems when the input is not a named entity.
 
-i hate my job
-→ workplace transformation
+Examples:
+
+i am lonely
+→ social connection systems
 
 i need money
 → economic mobility
 
-i am lonely
-→ social connection systems
+i hate my job
+→ workplace transformation
 
 Rules:
 - 1 to 4 words
@@ -2248,6 +2252,26 @@ ${room.usedQuestions.join("\n")}
 
 User emotional direction:
 ${userIntent}
+IMPORTANT:
+
+If User emotional direction is a named entity:
+
+- celebrity
+- public figure
+- company
+- brand
+- product
+
+search directly about that entity.
+
+Examples:
+
+jisoo → jisoo latest news
+elon musk → elon musk latest news
+openai → openai latest news
+nike → nike latest news
+
+Do NOT convert named entities into larger systems.
 
 Exact user message:
 ${text}
@@ -2463,6 +2487,26 @@ ${room.emotionalState.join("\n")}
 
 User emotional direction:
 ${userIntent}
+IMPORTANT:
+
+If User emotional direction is a named entity:
+
+- celebrity
+- public figure
+- company
+- brand
+- product
+
+search directly about that entity.
+
+Examples:
+
+jisoo → jisoo latest news
+elon musk → elon musk latest news
+openai → openai latest news
+nike → nike latest news
+
+Do NOT convert named entities into larger systems.
 
 Exact user message:
 ${text}
