@@ -300,11 +300,8 @@ Analyze this image as a socially-aware AI identity.
 
 Detect:
 - objects
-- product category
-- industry category
-- consumer behavior
 - visible text meaning
-- market signals
+- psychological signals
 
 IMPORTANT:
 Visible text and symbols
@@ -325,9 +322,7 @@ NEVER describe:
 - minimalist spaces
 - cozy spaces
 
-unless those are the primary subject of the image.
-
-Focus on the main object and its market, industry, consumer, technology, retail, educational, scientific, or business relevance.
+Focus on the psychological relevance.
 
 Rules:
 - short phrases
@@ -399,8 +394,6 @@ Return ONLY one word.
 
 Possible categories:
 
-Possible categories:
-
 celebrity
 fashion
 music
@@ -417,7 +410,6 @@ dating
 viral
 entertainment
 culture
-
 business
 economics
 food
@@ -607,8 +599,6 @@ Rules:
 - lowercase only
 - no punctuation
 - 2 to 7 words
-- no philosophy
-- no existential tone
 - feel like live internet culture
 `
     },
@@ -652,18 +642,14 @@ const starterMoodRes =
 Create ONE evolving internet vibe.
 
 The vibe should feel:
-- viral
-- socially addictive
 - internet-native
 - culturally current
 - emotionally reactive
 
 Examples:
-
 main character
 internet pressure
 celebrity chaos
-viral energy
 late night scrolling
 digital fame
 timeline exploding
@@ -673,7 +659,6 @@ Rules:
 - no punctuation
 - 1 to 3 words
 - modern internet culture only
-- no philosophy
 `
     },
 
@@ -882,8 +867,6 @@ The search MUST still feel connected to the uploaded image personality.
 The room should evolve like:
 - a live internet feed
 - social media culture
-- trending reactions
-- viral news energy
 - celebrity/internet momentum
 `
       }
