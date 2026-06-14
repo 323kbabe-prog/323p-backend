@@ -738,7 +738,7 @@ Create ONE trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
 
-The uploaded image is a starting signal, NOT the final destination.
+The uploaded image provides meaning, not keywords.
 
 The room is:
 
@@ -749,48 +749,72 @@ The room is:
 
 The AI personality controls:
 
-* trend taste
 * emotional tone
 * internet vibe
 * cultural direction
+* curiosity direction
 
-DO NOT search for the exact object itself.
+NEVER repeat:
 
-The image should inspire exploration into:
+* previous searches
+* previous moods
+* previous trend situations
+* previous viral atmosphere
 
-* technology
-* economics
-* politics
-* science
-* education
-* startups
-* labor
-* internet culture
-* consumer behavior
-* global trends
-* emerging opportunities
-
-The search should feel like:
-
-"something this image unexpectedly leads you to discover."
-
-The result should often surprise the user while remaining believable.
-
-The search may be:
-
-* directly related
-* adjacent
-* socially connected
-* culturally connected
-* economically connected
-* technologically connected
-
-Avoid repeatedly searching:
+DO NOT search for:
 
 * the exact object
 * the exact product category
 * the exact industry
-* obvious object-related news
+
+The object is a symbol.
+
+Search for the larger world behind the symbol.
+
+Ask:
+
+* what human behavior does this represent?
+* what social trend does this suggest?
+* what economic system does this participate in?
+* what technological shift does this connect to?
+* what cultural movement does this reveal?
+
+Examples:
+
+frying pan
+→ food inflation
+→ restaurant labor shortages
+→ kitchen robotics
+→ household economics
+
+keyboard
+→ remote work
+→ ai replacing jobs
+→ digital nomad growth
+→ semiconductor industry
+
+book
+→ education transformation
+→ ai learning
+→ publishing disruption
+
+shoe
+→ manufacturing shifts
+→ youth identity
+→ consumer spending
+
+The result should feel:
+
+* current
+* visually strong
+* internet-native
+* culturally alive
+* socially relevant
+* surprising but believable
+
+IMPORTANT:
+
+Use REAL searchable public news entities.
 
 GOOD:
 
@@ -799,39 +823,19 @@ digital nomad economy growth
 openai enterprise expansion
 semiconductor trade tensions
 remote work productivity shift
-future of human computer interaction
-global manufacturing slowdown
 consumer spending trends
-
-ALSO GOOD:
-
-taylor swift tour economy
 elon musk xai launch
 apple ai strategy
-openai sora rollout
-met gala fashion
-nike olympics campaign
+taylor swift tour economy
 
 BAD:
 
-mechanical keyboard review
-best keyboards 2026
+best frying pans 2026
+cooking trends 2026
 gaming keyboard launch
-keyboard buying guide
-
-The result should feel:
-
-* current
-* visually searchable
-* culturally alive
-* socially relevant
-* internet-native
-* newsworthy
-* emotionally interesting
-
-IMPORTANT:
-
-Use REAL searchable public entities.
+mechanical keyboard review
+food trends 2026
+shoe buying guide
 
 Rules:
 
@@ -839,33 +843,32 @@ Rules:
 * lowercase only
 * no punctuation
 * visually searchable
-* current news energy
+* current news energy only
 * no philosophy
-* no abstract concepts
 * no repetition
 
 PRIORITY RULES:
 
-1. User message (80%)
+1. USER emotional direction (80%)
 
-* topic direction
-* emotional direction
-* social direction
-* news selection
-* public discussion
+* trend direction
+* emotional evolution
+* internet topic
+* social meaning
 
-2. Uploaded image (20%)
+2. Uploaded image meaning (20%)
 
-* context
-* technology relevance
-* consumer relevance
-* market relevance
+* symbolic meaning
+* human behavior
+* social context
+* economic context
+* cultural context
 
-The image establishes context.
+The image contributes meaning, not search keywords.
 
-The user message drives discovery.
+The image is a doorway, not the destination.
 
-The search should help the user escape the algorithm rather than reinforce it.
+The search should help the user discover something unexpected and escape their algorithm.
 
 `
       },
