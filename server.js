@@ -947,8 +947,18 @@ starting room
 Create a NEW trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
-The search MUST still feel connected to the uploaded image personality.
 
+The search MUST feel connected to the hidden system behind the image.
+
+Do NOT reconnect to:
+- the object
+- the product category
+- the industry category
+
+Stay connected to:
+- the hidden system
+- the user system
+- the larger forces behind the image
 The room should evolve like:
 - a live internet feed
 - social media culture
@@ -1827,25 +1837,56 @@ const userIntentRes =
     {
       role:"system",
       content:`
-Detect the MAIN emotional/social intention
-behind the user message.
+Detect the larger system behind the user message.
+
+User input may contain:
+- celebrities
+- brands
+- products
+- companies
+- places
+- topics
+- emotions
+
+Do NOT return:
+- the exact person
+- the exact brand
+- the exact product
+- the emotion itself
+
+Return the larger system behind the input.
 
 Examples:
-move city
-career anxiety
-loneliness
-celebrity obsession
-relationship stress
-money pressure
-fashion identity
-internet addiction
-self improvement
-life transition
-gaming escape
-social validation
+
+jisoo
+→ celebrity influence
+
+taylor swift
+→ fandom economy
+
+elon musk
+→ technology leadership
+
+openai
+→ ai transformation
+
+nike
+→ consumer branding
+
+apple
+→ technology ecosystems
+
+i hate my job
+→ workplace transformation
+
+i need money
+→ economic mobility
+
+i am lonely
+→ social connection systems
 
 Rules:
-- 1 to 3 words
+- 1 to 4 words
 - lowercase only
 - no punctuation
 `
@@ -2198,10 +2239,6 @@ Hidden system:
 
 ${hiddenSystem}
 
-Trend personality category:
-
-${room.coreTheme}
-
 Previous trend history:
 
 ${room.emotionalState.join("\n")}
@@ -2251,6 +2288,21 @@ const searchQuery =
     .content
     .trim();
 
+  console.log(
+  "USER SYSTEM:",
+  userIntent
+);
+
+console.log(
+  "HIDDEN SYSTEM:",
+  hiddenSystem
+);
+
+console.log(
+  "LOOP SEARCH:",
+  searchQuery
+);
+
 room.usedSearches.push(
   searchQuery
 );
@@ -2268,11 +2320,6 @@ const serpFetch =
 
 const serpRes =
   await serpFetch.json();
-  
-  console.log(
-  "LOOP SEARCH:",
-  searchQuery
-);
 
 console.log(
   "LOOP NEWS COUNT:",
