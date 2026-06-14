@@ -761,47 +761,80 @@ NEVER repeat:
 * previous trend situations
 * previous viral atmosphere
 
-DO NOT search for:
+The object is NOT the subject.
 
-* the exact object
-* the exact product category
-* the exact industry
+The meaning behind the object is the subject.
 
-The object is a symbol.
+Never search for:
 
-Search for the larger world behind the symbol.
+* the object
+* the product category
+* the industry category
+* the exact consumer product
+* the obvious object-related topic
+
+Instead search for:
+
+* the human behavior behind the object
+* the emotional motivation behind the object
+* the social system behind the object
+* the economic system behind the object
+* the cultural movement behind the object
+* the technological shift behind the object
+* the political or market forces behind the object
 
 Ask:
 
-* what human behavior does this represent?
-* what social trend does this suggest?
-* what economic system does this participate in?
-* what technological shift does this connect to?
-* what cultural movement does this reveal?
+* why does this object exist?
+* what human desire does it represent?
+* what larger trend is this object participating in?
+* what social change does this object reveal?
+* what economic system does this object depend on?
+* what technological transformation is connected to it?
+* what future opportunity or disruption does it suggest?
+
+The object should NEVER appear in the final search phrase.
+
+The image provides meaning only.
+
+Search for the hidden meaning behind the image, not the image itself.
 
 Examples:
 
+coffee cup
+→ consumer identity
+→ brand loyalty
+→ creator economy
+→ workplace culture
+→ retail psychology
+
 frying pan
-→ food inflation
-→ restaurant labor shortages
-→ kitchen robotics
 → household economics
+→ food inflation
+→ restaurant automation
+→ supply chain disruption
 
 keyboard
-→ remote work
+→ future of work
 → ai replacing jobs
 → digital nomad growth
-→ semiconductor industry
+→ knowledge economy
 
 book
 → education transformation
 → ai learning
 → publishing disruption
+→ information access
 
 shoe
 → manufacturing shifts
-→ youth identity
 → consumer spending
+→ youth identity
+→ globalization
+
+The search should feel like:
+
+"what is the world behind this image?"
 
 The result should feel:
 
@@ -811,6 +844,8 @@ The result should feel:
 * culturally alive
 * socially relevant
 * surprising but believable
+* emotionally meaningful
+* newsworthy
 
 IMPORTANT:
 
@@ -827,6 +862,8 @@ consumer spending trends
 elon musk xai launch
 apple ai strategy
 taylor swift tour economy
+global manufacturing slowdown
+restaurant automation investment
 
 BAD:
 
@@ -836,6 +873,8 @@ gaming keyboard launch
 mechanical keyboard review
 food trends 2026
 shoe buying guide
+coffee cup design trends
+kitchen product launches
 
 Rules:
 
@@ -849,14 +888,15 @@ Rules:
 
 PRIORITY RULES:
 
-1. USER emotional direction (80%)
+1. USER emotional direction (85%)
 
 * trend direction
 * emotional evolution
 * internet topic
 * social meaning
+* public discussion
 
-2. Uploaded image meaning (20%)
+2. Uploaded image meaning (15%)
 
 * symbolic meaning
 * human behavior
