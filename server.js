@@ -738,7 +738,9 @@ Create ONE trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
 
-The uploaded image provides meaning, not keywords.
+The uploaded image is context only.
+
+The image provides meaning, not keywords.
 
 The room is:
 
@@ -763,118 +765,119 @@ NEVER repeat:
 
 The object is NOT the subject.
 
-The meaning behind the object is the subject.
+The meaning is NOT the subject.
+
+The hidden system behind the meaning is the subject.
 
 Never search for:
 
 * the object
 * the product category
 * the industry category
-* the exact consumer product
-* the obvious object-related topic
+* the brand
+* the immediate meaning
+* the obvious interpretation
 
-Instead search for:
+The image should be interpreted as:
 
-* the human behavior behind the object
-* the emotional motivation behind the object
-* the social system behind the object
-* the economic system behind the object
-* the cultural movement behind the object
-* the technological shift behind the object
-* the political or market forces behind the object
+image
+→ meaning
+→ deeper meaning
+→ hidden system
+→ search
+
+Move TWO layers beyond the meaning.
 
 Ask:
 
-* why does this object exist?
-* what human desire does it represent?
-* what larger trend is this object participating in?
-* what social change does this object reveal?
-* what economic system does this object depend on?
-* what technological transformation is connected to it?
-* what future opportunity or disruption does it suggest?
-
-The object should NEVER appear in the final search phrase.
-
-The image provides meaning only.
-
-Search for the hidden meaning behind the image, not the image itself.
+* what system created this meaning?
+* what larger force is driving this meaning?
+* what economic system is behind this meaning?
+* what technological transformation is behind this meaning?
+* what cultural shift is behind this meaning?
+* what social change is behind this meaning?
+* what future disruption is behind this meaning?
 
 Examples:
 
 coffee cup
+→ routine
 → consumer identity
-→ brand loyalty
-→ creator economy
-→ workplace culture
 → retail psychology
+→ consumer spending
+
+coffee cup
+→ routine
+→ workplace culture
+→ remote work economy
 
 frying pan
-→ household economics
-→ food inflation
-→ restaurant automation
-→ supply chain disruption
+→ cooking
+→ daily routine
+→ work life balance
+→ remote work trends
+
+frying pan
+→ household labor
+→ family structure
+→ birth rate decline
 
 keyboard
-→ future of work
-→ ai replacing jobs
-→ digital nomad growth
-→ knowledge economy
+→ productivity
+→ knowledge work
+→ ai automation
+→ labor market transformation
 
 book
-→ education transformation
-→ ai learning
-→ publishing disruption
+→ learning
 → information access
+→ education systems
+→ workforce transformation
 
 shoe
-→ manufacturing shifts
-→ consumer spending
-→ youth identity
-→ globalization
+→ identity
+→ consumer expression
+→ youth culture
+→ spending behavior
 
-The search should feel like:
+The final search should reveal:
 
-"what is the world behind this image?"
+* causes
+* systems
+* consequences
+* transformations
+* disruptions
+* opportunities
 
-The result should feel:
+The final search should NOT reveal:
 
-* current
-* visually strong
-* internet-native
-* culturally alive
-* socially relevant
-* surprising but believable
-* emotionally meaningful
-* newsworthy
-
-IMPORTANT:
-
-Use REAL searchable public news entities.
+* the object
+* the category
+* the industry
+* the immediate meaning
 
 GOOD:
 
-ai replacing entry level jobs
-digital nomad economy growth
-openai enterprise expansion
-semiconductor trade tensions
 remote work productivity shift
 consumer spending trends
-elon musk xai launch
-apple ai strategy
-taylor swift tour economy
+labor market transformation
+ai replacing entry level jobs
+digital nomad economy growth
+education workforce transition
+semiconductor trade tensions
 global manufacturing slowdown
-restaurant automation investment
+retail loyalty decline
+future of human computer interaction
 
 BAD:
 
-best frying pans 2026
-cooking trends 2026
+coffee trends 2026
+starbucks cup launch
+food inflation
+kitchen products
 gaming keyboard launch
-mechanical keyboard review
-food trends 2026
+book publishing news
 shoe buying guide
-coffee cup design trends
-kitchen product launches
 
 Rules:
 
@@ -888,7 +891,7 @@ Rules:
 
 PRIORITY RULES:
 
-1. USER emotional direction (85%)
+1. USER emotional direction (90%)
 
 * trend direction
 * emotional evolution
@@ -896,19 +899,15 @@ PRIORITY RULES:
 * social meaning
 * public discussion
 
-2. Uploaded image meaning (15%)
+2. Hidden system behind the image (10%)
 
-* symbolic meaning
-* human behavior
-* social context
-* economic context
-* cultural context
+The image is context.
 
-The image contributes meaning, not search keywords.
+The meaning is a clue.
 
-The image is a doorway, not the destination.
+The hidden system is the destination.
 
-The search should help the user discover something unexpected and escape their algorithm.
+The search should help the user discover something they would never normally search for.
 
 `
       },
@@ -1875,6 +1874,116 @@ if(room.userIntentHistory.length > 12){
     room.userIntentHistory.slice(-12);
 }
 
+const meaningRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+
+      content:`
+Extract the hidden system behind the image.
+
+DO NOT return:
+- objects
+- products
+- industries
+- categories
+- immediate meanings
+
+Go deeper.
+
+Examples:
+
+coffee cup
+→ consumer spending systems
+
+frying pan
+→ household labor systems
+
+keyboard
+→ labor market transformation
+
+book
+→ education systems
+
+shoe
+→ global manufacturing systems
+
+Return ONLY a large-scale system.
+
+Never return:
+- object meanings
+- consumer meanings
+- lifestyle meanings
+
+Return:
+- economic systems
+- labor systems
+- educational systems
+- political systems
+- technological systems
+- demographic systems
+- cultural systems
+
+Maximum 4 words.
+
+Do NOT mention:
+- objects
+- products
+- industries
+- categories
+
+Think:
+
+image
+→ meaning
+→ deeper meaning
+
+Examples:
+
+frying pan
+→ daily routine
+→ work life balance
+
+coffee cup
+→ routine
+→ consumer identity
+
+keyboard
+→ productivity
+→ knowledge work
+
+book
+→ learning
+→ information access
+
+Return ONLY one short phrase.
+`
+    },
+
+    {
+      role:"user",
+
+      content: room.imageContext
+    }
+
+  ]
+});
+
+const hiddenSystem =
+  meaningRes.choices[0]
+    .message.content
+    .trim();
+
+  console.log(
+  "HIDDEN SYSTEM:",
+  hiddenSystem
+);
+  
 const emotionRes =
   await openai.chat.completions.create({
 
@@ -1889,116 +1998,195 @@ const emotionRes =
 Create ONE trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
-The search MUST still match the uploaded image AI personality.
+
+The uploaded image provides context, not keywords.
 
 The room is:
-- personality-driven
-- internet-native
-- socially reactive
-- emotionally evolving
+
+* personality-driven
+* internet-native
+* socially reactive
+* emotionally evolving
 
 The AI personality controls:
-- trend taste
-- celebrity focus
-- emotional tone
-- internet vibe
-- cultural direction
+
+* emotional tone
+* internet vibe
+* cultural direction
+* curiosity direction
 
 NEVER repeat:
-- previous searches
-- previous moods
-- previous trend situations
-- previous viral atmosphere
 
-Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
+* previous searches
+* previous moods
+* previous trend situations
+* previous viral atmosphere
 
-The search MUST visually and semantically match:
+The object is NOT the subject.
 
-- the objects
-- the product category
-- the industry category
-- the consumer market
-- the business sector
-- the technology relevance
+The meaning behind the object is NOT the subject.
 
-If the image is:
-- fashion → search fashion trends
-- food → search food trends
-- books → search learning/book trends
-- fitness → search fitness trends
-- technology → search tech trends
-- sneakers → search sneaker trends
+The hidden system behind the meaning is the subject.
 
-NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
+The image should be interpreted as:
+
+image
+→ meaning
+→ deeper meaning
+→ hidden system
+→ current news
+
+Move TWO layers beyond the meaning.
+
+Never search for:
+
+* the object
+* the product category
+* the industry category
+* the brand
+* the immediate meaning
+* the obvious interpretation
+
+Ask:
+
+* what system created this meaning?
+* what larger force drives this meaning?
+* what economic force is behind this meaning?
+* what technological shift is behind this meaning?
+* what social change is behind this meaning?
+* what cultural transformation is behind this meaning?
+* what future disruption is behind this meaning?
+
+Examples:
+
+coffee cup
+→ routine
+→ consumer identity
+→ retail psychology
+→ consumer spending
+
+coffee cup
+→ routine
+→ workplace culture
+→ remote work economy
+
+frying pan
+→ cooking
+→ daily routine
+→ work life balance
+→ remote work trends
+
+frying pan
+→ household labor
+→ family structure
+→ birth rate decline
+
+keyboard
+→ productivity
+→ knowledge work
+→ ai automation
+→ labor market transformation
+
+book
+→ learning
+→ information access
+→ education systems
+→ workforce transformation
+
+shoe
+→ identity
+→ consumer expression
+→ youth culture
+→ spending behavior
+
+The final search should reveal:
+
+* causes
+* systems
+* consequences
+* transformations
+* disruptions
+* opportunities
+
+The final search should NOT reveal:
+
+* the object
+* the category
+* the industry
+* the immediate meaning
 
 The result should feel:
-- current
-- visually strong
-- internet-native
-- culturally alive
-- socially relevant
-- emotionally aligned with the uploaded image identity
 
-The uploaded image personality
-must guide the emotional and cultural direction.
+* current
+* visually strong
+* internet-native
+* culturally alive
+* socially relevant
+* surprising but believable
+* emotionally meaningful
+* newsworthy
 
 IMPORTANT:
+
 Use REAL searchable public news entities.
 
-NEVER generate searches about:
-
-- interior design
-- home decor
-- furniture
-- room styling
-- home aesthetics
-- living room design
-- cozy spaces
-- decoration trends
-
-unless those topics are the primary object in the image.
-
 GOOD:
-taylor swift grammys
-elon musk tesla
-openai sora launch
-nike nba deal
-coachella crowd
-kanye west controversy
-met gala fashion
-apple vision pro
+
+remote work productivity shift
+consumer spending trends
+labor market transformation
+ai replacing entry level jobs
+digital nomad economy growth
+education workforce transition
+semiconductor trade tensions
+global manufacturing slowdown
+retail loyalty decline
+future of human computer interaction
+elon musk xai launch
+apple ai strategy
 
 BAD:
-internet loneliness
-digital pressure
-modern emotions
+
+coffee trends 2026
+starbucks cup launch
+food inflation
+kitchen products
+gaming keyboard launch
+book publishing news
+shoe buying guide
+mechanical keyboard review
+cooking trends 2026
 
 Rules:
-- 3 to 8 words
-- lowercase only
-- no punctuation
-- visually searchable
-- current-news energy only
-- no philosophy
-- no abstract concepts
-- no repetition
+
+* 3 to 8 words
+* lowercase only
+* no punctuation
+* visually searchable
+* current news energy only
+* no philosophy
+* no repetition
 
 PRIORITY RULES:
 
-1. The USER emotional direction controls:
-- trend direction
-- emotional evolution
-- internet topic
-- social meaning
+1. USER emotional direction (90%)
 
-2. The uploaded image controls:
-- product type
-- industry relevance
-- consumer behavior
-- market signals
-- technology signals
+* trend direction
+* emotional evolution
+* internet topic
+* social meaning
+* public discussion
 
-The USER emotional direction is MORE important than the uploaded image itself.
+2. Hidden system behind the image (10%)
+
+The image is context.
+
+The meaning is a clue.
+
+The hidden system is the destination.
+
+The search should help the user discover something they would never normally search for.
+
 `
     },
 
@@ -2006,9 +2194,9 @@ The USER emotional direction is MORE important than the uploaded image itself.
       role:"user",
 
       content:`
-Uploaded image AI personality:
+Hidden system:
 
-${room.imageContext}
+${hiddenSystem}
 
 Trend personality category:
 
