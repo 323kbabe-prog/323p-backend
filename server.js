@@ -228,22 +228,18 @@ socket.on(
       roomId;
 
     socket.emit(
-  "roomCreated",
-  {
-    roomId: room.id,
+      "roomCreated",
+      {
+        roomId: room.id,
+        displayName:
+          room.displayName
+      }
+    );
 
-    displayName:
-      users[socket.id]
-        ?.displayName ||
-
-      "#" + room.id
-  }
-);
-
-socket.emit(
-  "roomMessages",
-  room.messages
-);
+    socket.emit(
+      "roomMessages",
+      room.messages
+    );
   }
 );
 
@@ -491,15 +487,24 @@ ${user.imageContext}`
 
 if(roomMode){
 
-  const roomId =
-    Math.random()
-      .toString(36)
-      .substring(2,8);
+const roomId =
+  Math.random()
+    .toString(36)
+    .substring(2,8);
 
+user.displayName =
+  "#" +
+  roomId +
+  "-" +
+  Math.floor(
+    100 + Math.random()*900
+  );
   rooms[roomId] = {
 
     id:roomId,
-
+displayName:
+  user.displayName,
+    
     coreTheme:
       coreTheme,
 
@@ -535,17 +540,6 @@ emotionalProfile:{
         user.currentRoom =
           roomId;
 
-user.displayName =
-
-  "#" +
-
-  roomId +
-
-  "-" +
-
-  Math.floor(
-    100 + Math.random()*900
-  );
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////
