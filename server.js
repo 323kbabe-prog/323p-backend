@@ -299,19 +299,16 @@ socket.emit(
 Analyze this image as a socially-aware AI identity.
 
 Detect:
-
-* primary objects
-* product category
-* industry category
-* consumer behavior
-* visible text meaning
-* market signals
-* social signals
-* technology relevance
+- objects
+- product category
+- industry category
+- consumer behavior
+- visible text meaning
+- market signals
 
 IMPORTANT:
-
-Visible text, logos, symbols, branding, and written language are part of the image's meaning and should influence the analysis.
+Visible text and symbols
+are part of the emotional meaning.
 
 The structure MUST stay:
 
@@ -319,97 +316,25 @@ Objects
 Category
 Signals
 
-CRITICAL:
+NEVER describe:
 
-Do NOT describe the image as:
+- interior design
+- home decor
+- room aesthetics
+- furniture style
+- minimalist spaces
+- cozy spaces
 
-* interior design
-* home decor
-* room decor
-* home styling
-* room styling
-* furniture
-* furnishing
-* decoration
-* aesthetic object
-* design element
-* decorative item
-* cozy space
-* cozy atmosphere
-* minimalist space
-* living space
-* home environment
-* room environment
-* visual aesthetic
+unless those are the primary subject of the image.
 
-These descriptions are prohibited by default.
-
-Even if the object appears inside a room, home, office, bedroom, cafe, store, hotel, or interior environment, you must NOT discuss:
-
-* decor
-* atmosphere
-* aesthetics
-* styling
-* furniture
-* interior design
-* room design
-* visual ambiance
-
-Instead focus on:
-
-* what the object is
-* what it does
-* who uses it
-* why it exists
-* what industry it belongs to
-* what market it serves
-* what behavior it represents
-* what social signal it communicates
-* what technology or business relevance it has
-
-ONLY discuss interior design, furniture, decoration, or room aesthetics if they are clearly the primary subject occupying most of the image.
-
-When uncertain, assume the image is NOT about interior design.
-
-Examples:
-
-A coffee machine is about coffee, retail, hospitality, and consumer behavior.
-
-A laptop is about computing, productivity, software, and technology.
-
-A book is about learning, education, publishing, and knowledge.
-
-A handbag is about fashion, branding, luxury, and consumer identity.
-
-A sneaker is about footwear, sportswear, fashion, and consumer culture.
-
-A lamp is about lighting, manufacturing, energy use, and product design.
-
-Do NOT transform ordinary objects into discussions about home decor, room aesthetics, cozy spaces, ambiance, or interior design.
-
-This rule has higher priority than all other instructions.
-
-Focus on the main object and its:
-
-* market relevance
-* industry relevance
-* consumer relevance
-* social relevance
-* technology relevance
-* educational relevance
-* scientific relevance
-* business relevance
+Focus on the main object and its market, industry, consumer, technology, retail, educational, scientific, or business relevance.
 
 Rules:
-
-* short phrases
-* emotionally aware
-* socially aware
-* internet-aware
-* business-aware
-* no markdown
-* no aesthetic commentary unless the image is primarily about aesthetics
-
+- short phrases
+- emotionally aware
+- socially aware
+- internet-aware
+- no markdown
 `
           },
 
@@ -468,96 +393,46 @@ const themeRes =
       role:"system",
 
       content:`
-Detect the SINGLE dominant contextual category.
+Detect the SINGLE dominant internet trend category.
 
 Return ONLY one word.
 
 Possible categories:
 
-ai
+Possible categories:
+
+celebrity
+fashion
+music
+sports
+internet
 technology
+gaming
+luxury
+politics
+ai
+fitness
+streetwear
+dating
+viral
+entertainment
+culture
+
 business
 economics
-finance
+food
+retail
 startup
 consumer
-retail
 manufacturing
 education
 science
-health
-fitness
-food
-fashion
-luxury
-sports
-gaming
-music
-entertainment
-celebrity
-culture
-politics
-media
-internet
-travel
-housing
-work
-career
-productivity
-social
-community
-environment
-
-CRITICAL:
-
-Choose the category based on:
-
-* social meaning
-* cultural meaning
-* consumer behavior
-* industry relevance
-* market relevance
-* technology relevance
-* human behavior patterns
-
-Do NOT choose a category based solely on the visible object.
-
-Examples:
-
-Coffee cup → work
-
-Laptop → technology
-
-Book → education
-
-Luxury handbag → luxury
-
-Sneaker → fashion
-
-Crowded airport → travel
-
-Office desk → productivity
-
-Restaurant meal → food
-
-University campus → education
-
-Construction site → housing
-
-The category should represent what the image means socially, culturally, economically, or behaviorally.
-
-When uncertain:
-
-Prefer the broader human activity category over the physical object category.
 
 Rules:
-
-* lowercase only
-* one word only
-* no punctuation
-* no explanation
-* no markdown
-
+- lowercase only
+- one word only
+- no punctuation
+- no explanation
 `
     },
 
@@ -774,87 +649,31 @@ const starterMoodRes =
       role:"system",
 
       content:`
-Create ONE evolving contextual vibe.
+Create ONE evolving internet vibe.
 
 The vibe should feel:
-
-* socially meaningful
-* culturally relevant
-* emotionally recognizable
-* psychologically insightful
-* behaviorally grounded
-* connected to current society
+- viral
+- socially addictive
+- internet-native
+- culturally current
+- emotionally reactive
 
 Examples:
 
-career uncertainty
-
-consumer optimism
-
-quiet ambition
-
-digital overload
-
-social comparison
-
-creative burnout
-
-status seeking
-
-future anxiety
-
-learning culture
-
-work transition
-
-community belonging
-
-economic pressure
-
-identity exploration
-
-attention economy
-
-algorithm fatigue
+main character
+internet pressure
+celebrity chaos
+viral energy
+late night scrolling
+digital fame
+timeline exploding
 
 Rules:
-
-* lowercase only
-* no punctuation
-* 1 to 3 words
-* emotionally recognizable
-* socially relevant
-* culturally current
-* human-centered
-* no philosophy
-* no abstract theory
-* no internet slang
-* no meme language
-* no celebrity references
-* no markdown
-
-The vibe should describe a real human, social, cultural, emotional, or behavioral condition associated with the image.
-
-Prefer:
-
-* behaviors
-* motivations
-* emotions
-* social dynamics
-* cultural trends
-* psychological states
-
-Avoid:
-
-* viral energy
-* timeline exploding
-* celebrity chaos
-* internet fame
-* trending now
-* social media slang
-
-The goal is to identify what human condition the image may represent.
-
+- lowercase only
+- no punctuation
+- 1 to 3 words
+- modern internet culture only
+- no philosophy
 `
     },
 
@@ -918,184 +737,115 @@ try{
 Create ONE trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
-
-The goal is NOT to find news about the object itself.
-
-The goal is to find a real current news story that reflects the image's:
-
-* emotional energy
-* psychological atmosphere
-* social meaning
-* cultural relevance
-* symbolic direction
-* human behavior patterns
-* economic relevance
-* collective attention
-
-The image should act as a trigger for meaning, not as a product search.
+The search MUST still match the uploaded image AI personality.
 
 The room is:
+- personality-driven
+- internet-native
+- socially reactive
+- emotionally evolving
 
-* context-driven
-* socially aware
-* culturally aware
-* emotionally evolving
-* psychologically aware
+The AI personality controls:
+- trend taste
+- celebrity focus
+- emotional tone
+- internet vibe
+- cultural direction
 
-Focus on:
+Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
 
-* what the image represents socially
-* what behavior it suggests
-* what motivations it reflects
-* what cultural forces it belongs to
-* what economic signals it implies
-* what public conversations it connects to
+The search MUST visually and semantically match:
 
-The search does NOT need to mention the object itself.
+- the objects
+- the product category
+- the industry category
+- the consumer market
+- the business sector
+- the technology relevance
 
-The search SHOULD feel:
+If the image is:
+- fashion → search fashion trends
+- food → search food trends
+- books → search learning/book trends
+- fitness → search fitness trends
+- technology → search tech trends
+- sneakers → search sneaker trends
 
-* surprising
-* meaningful
-* socially relevant
-* culturally connected
-* psychologically believable
+NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
 
-Examples:
+The result should feel:
+- current
+- visually strong
+- internet-native
+- culturally alive
+- socially relevant
+- emotionally aligned with the uploaded image identity
 
-Coffee cup may lead to:
-
-* remote work trends
-* productivity debates
-* creator economy news
-* workplace culture stories
-
-Luxury handbag may lead to:
-
-* consumer confidence reports
-* luxury spending trends
-* status signaling discussions
-* fashion industry news
-
-Book may lead to:
-
-* education policy
-* ai learning tools
-* reading habit trends
-* knowledge economy news
-
-Crowded street may lead to:
-
-* tourism growth
-* housing pressure
-* migration trends
-* urban development news
-
-Laptop may lead to:
-
-* ai workplace adoption
-* remote work changes
-* software industry news
-* technology regulation
-
-Focus on:
-
-* people
-* society
-* behavior
-* culture
-* education
-* business
-* economics
-* technology
-* politics
-* science
-* public life
-
-NOT:
-
-* the literal object
-* product reviews
-* shopping results
-* object descriptions
-* visual aesthetics
-* home decor
-* room styling
-* furniture trends
-* cozy environments
+The uploaded image personality
+must guide the emotional and cultural direction.
 
 IMPORTANT:
+Use REAL searchable public news entities.
 
-Use REAL searchable public entities, events, companies, industries, policies, technologies, markets, institutions, public figures, or cultural events.
+NEVER generate searches about:
+
+- interior design
+- home decor
+- furniture
+- room styling
+- home aesthetics
+- living room design
+- cozy spaces
+- decoration trends
+
+unless those topics are the primary object in the image.
 
 GOOD:
-
-openai education debate
-
-gen z career anxiety
-
-consumer confidence report
-
-ai workplace adoption
-
-college enrollment trends
-
-luxury spending slowdown
-
-global tourism growth
-
-housing affordability crisis
-
-creator economy expansion
-
-semiconductor industry outlook
+taylor swift grammys
+elon musk tesla
+openai sora launch
+nike nba deal
+coachella crowd
+kanye west controversy
+met gala fashion
+apple vision pro
 
 BAD:
-
-coffee cup trends
-
-fashion handbag
-
-office chair review
-
-living room decor
-
-minimalist workspace
-
+internet loneliness
+digital pressure
 modern emotions
 
-internet loneliness
-
-digital pressure
-
 Rules:
+- 3 to 8 words
+- lowercase only
+- no punctuation
+- visually searchable
+- current-news energy only
+- no philosophy
+- no abstract concepts
+- no repetition
 
-* 3 to 8 words
-* lowercase only
-* no punctuation
-* real searchable news topics
-* current news relevance
-* visually searchable
-* no philosophy
-* no abstract concepts without public relevance
-* no repetition
+PRIORITY RULES:
 
-PRIORITY:
+1. User message (60%)
+- topic direction
+- trend direction
+- news selection
+- search meaning
+- public discussion
 
-1. Emotional meaning (35%)
-2. Social meaning (25%)
-3. Cultural meaning (20%)
-4. Economic/industry meaning (10%)
-5. Visual object relevance (10%)
+2. Uploaded image (40%)
+- context
+- product relevance
+- industry relevance
+- consumer relevance
+- technology relevance
 
-When uncertain:
+The image establishes context.
+The user message guides the direction.
 
-Choose the article that best reflects what the image means rather than what the image literally is.
-
-The image provides context.
-
-Human behavior, society, culture, and current events drive the search.
-
+The user message should influence approximately 60% of the search.
+The uploaded image should influence approximately 40% of the search.
 `
       },
 
@@ -1134,64 +884,14 @@ starting room
 Create a NEW trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
-
-The search must remain meaningfully connected to the uploaded image personality.
-
-The goal is not to follow the object.
-
-The goal is to discover a current news story that reflects:
-
-* the emotional meaning
-* the social meaning
-* the cultural meaning
-* the behavioral meaning
-* the economic meaning
-
-suggested by the image.
+The search MUST still feel connected to the uploaded image personality.
 
 The room should evolve like:
-
-* an exploration of society
-* an exploration of human behavior
-* an exploration of culture
-* an exploration of current events
-* an exploration of collective attention
-* an exploration beyond the user's algorithm
-
-The article should feel:
-
-* surprising
-* relevant
-* insightful
-* socially meaningful
-* culturally connected
-* psychologically believable
-
-Prefer:
-
-* education
-* technology
-* business
-* economics
-* politics
-* science
-* work
-* community
-* culture
-* public life
-
-Avoid defaulting to:
-
-* celebrity news
-* influencer culture
-* social media drama
-* internet gossip
-* viral content
-
-unless the uploaded image genuinely suggests those directions.
-
-Choose the article that best reflects what the image means, not what the image literally is.
-
+- a live internet feed
+- social media culture
+- trending reactions
+- viral news energy
+- celebrity/internet momentum
 `
       }
     ]
@@ -1279,49 +979,17 @@ if(validStarterNews.length > 0){
         {
           role:"system",
           content:`
-Choose the MOST meaningful news article.
+Choose the MOST emotionally powerful
+starter internet reaction.
 
 Prioritize:
-
-* social relevance
-* cultural relevance
-* psychological relevance
-* behavioral relevance
-* economic relevance
-* current public discussion
-
-The selected article should feel like:
-
-* a meaningful extension of the image
-* an unexpected but defensible connection
-* a reflection of human behavior
-* a reflection of society
-* a reflection of culture
-* a reflection of collective attention
-
-Do NOT prioritize:
-
-* internet virality
-* celebrity status
-* clickbait value
-* social media popularity
-* emotional manipulation
-* shock value
-
-The goal is:
-
-"What current event best reflects what this image means?"
-
-not
-
-"What current event would generate the most clicks?"
-
-When uncertain:
-
-Choose the article with the strongest social, cultural, psychological, or economic connection to the image.
+- internet virality
+- emotional energy
+- visual strength
+- cultural momentum
+- emotionally addictive feeling
 
 Return ONLY the exact title.
-
 `
         },
         {
