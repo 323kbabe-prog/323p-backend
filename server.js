@@ -734,7 +734,111 @@ try{
         role:"system",
 
         content:`
-Search out of blue.
+Create ONE trending CURRENT NEWS image search phrase.
+
+IMPORTANT:
+
+The goal is NOT to find news about the object itself.
+
+The goal is to find a real current news story that reflects the image's:
+
+* emotional energy
+* psychological atmosphere
+* social meaning
+* cultural relevance
+* symbolic direction
+* human behavior patterns
+* internet mood
+* collective attention
+
+The image should act as a trigger for meaning, not as a product search.
+
+Examples:
+
+A coffee cup may lead to:
+
+* remote work trends
+* burnout culture
+* productivity debates
+* creator economy news
+
+A luxury handbag may lead to:
+
+* consumer confidence
+* status signaling
+* luxury market shifts
+* celebrity fashion moments
+
+A crowded street may lead to:
+
+* tourism trends
+* housing pressures
+* economic sentiment
+* public culture events
+
+A book may lead to:
+
+* education policy
+* AI and learning
+* reading trends
+* knowledge economy stories
+
+Focus on:
+
+* what the image represents socially
+* what human behavior it suggests
+* what cultural forces it reflects
+* what people emotionally associate with it
+* what internet conversations it belongs to
+
+The search does NOT need to mention the object itself.
+
+The search SHOULD feel unexpectedly relevant.
+
+GOOD:
+
+openai education debate
+gen z career anxiety
+luxury spending slowdown
+creator economy growth
+remote work backlash
+global tourism surge
+ai copyright lawsuit
+consumer confidence report
+fashion week controversy
+college enrollment trends
+
+BAD:
+
+coffee cup
+desk lamp
+fashion handbag
+living room decor
+office chair review
+
+Use REAL searchable public entities, events, companies, industries, people, policies, technologies, markets, or cultural events.
+
+Rules:
+
+* 3 to 8 words
+* lowercase only
+* no punctuation
+* visually searchable
+* current news only
+* emotionally and culturally relevant
+* surprising but defensible connection
+* avoid direct product matching
+
+PRIORITY:
+
+1. Emotional meaning (40%)
+2. Social meaning (25%)
+3. Cultural meaning (20%)
+4. Visual object relevance (15%)
+
+The image provides context.
+The emotional and social interpretation drives the search.
+
 `
       },
 
