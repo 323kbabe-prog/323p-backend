@@ -737,115 +737,136 @@ try{
 Create ONE trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
-The search MUST still match the uploaded image AI personality.
+
+The uploaded image is a starting signal, NOT the final destination.
 
 The room is:
-- personality-driven
-- internet-native
-- socially reactive
-- emotionally evolving
+
+* personality-driven
+* internet-native
+* socially reactive
+* emotionally evolving
 
 The AI personality controls:
-- trend taste
-- celebrity focus
-- emotional tone
-- internet vibe
-- cultural direction
 
-Focus ONLY on trends DIRECTLY connected to the uploaded image identity.
+* trend taste
+* emotional tone
+* internet vibe
+* cultural direction
 
-The search MUST visually and semantically match:
+DO NOT search for the exact object itself.
 
-- the objects
-- the product category
-- the industry category
-- the consumer market
-- the business sector
-- the technology relevance
+The image should inspire exploration into:
 
-If the image is:
-- fashion → search fashion trends
-- food → search food trends
-- books → search learning/book trends
-- fitness → search fitness trends
-- technology → search tech trends
-- sneakers → search sneaker trends
+* technology
+* economics
+* politics
+* science
+* education
+* startups
+* labor
+* internet culture
+* consumer behavior
+* global trends
+* emerging opportunities
 
-NEVER jump to unrelated celebrity or TikTok drama unless the uploaded image itself suggests that category.
+The search should feel like:
 
-The result should feel:
-- current
-- visually strong
-- internet-native
-- culturally alive
-- socially relevant
-- emotionally aligned with the uploaded image identity
+"something this image unexpectedly leads you to discover."
 
-The uploaded image personality
-must guide the emotional and cultural direction.
+The result should often surprise the user while remaining believable.
 
-IMPORTANT:
-Use REAL searchable public news entities.
+The search may be:
 
-NEVER generate searches about:
+* directly related
+* adjacent
+* socially connected
+* culturally connected
+* economically connected
+* technologically connected
 
-- interior design
-- home decor
-- furniture
-- room styling
-- home aesthetics
-- living room design
-- cozy spaces
-- decoration trends
+Avoid repeatedly searching:
 
-unless those topics are the primary object in the image.
+* the exact object
+* the exact product category
+* the exact industry
+* obvious object-related news
 
 GOOD:
-taylor swift grammys
-elon musk tesla
-openai sora launch
-nike nba deal
-coachella crowd
-kanye west controversy
+
+ai replacing entry level jobs
+digital nomad economy growth
+openai enterprise expansion
+semiconductor trade tensions
+remote work productivity shift
+future of human computer interaction
+global manufacturing slowdown
+consumer spending trends
+
+ALSO GOOD:
+
+taylor swift tour economy
+elon musk xai launch
+apple ai strategy
+openai sora rollout
 met gala fashion
-apple vision pro
+nike olympics campaign
 
 BAD:
-internet loneliness
-digital pressure
-modern emotions
+
+mechanical keyboard review
+best keyboards 2026
+gaming keyboard launch
+keyboard buying guide
+
+The result should feel:
+
+* current
+* visually searchable
+* culturally alive
+* socially relevant
+* internet-native
+* newsworthy
+* emotionally interesting
+
+IMPORTANT:
+
+Use REAL searchable public entities.
 
 Rules:
-- 3 to 8 words
-- lowercase only
-- no punctuation
-- visually searchable
-- current-news energy only
-- no philosophy
-- no abstract concepts
-- no repetition
+
+* 3 to 8 words
+* lowercase only
+* no punctuation
+* visually searchable
+* current news energy
+* no philosophy
+* no abstract concepts
+* no repetition
 
 PRIORITY RULES:
 
-1. User message (60%)
-- topic direction
-- trend direction
-- news selection
-- search meaning
-- public discussion
+1. User message (80%)
 
-2. Uploaded image (40%)
-- context
-- product relevance
-- industry relevance
-- consumer relevance
-- technology relevance
+* topic direction
+* emotional direction
+* social direction
+* news selection
+* public discussion
+
+2. Uploaded image (20%)
+
+* context
+* technology relevance
+* consumer relevance
+* market relevance
 
 The image establishes context.
-The user message guides the direction.
 
-The user message should influence approximately 60% of the search.
-The uploaded image should influence approximately 40% of the search.
+The user message drives discovery.
+
+The search should help the user escape the algorithm rather than reinforce it.
+
 `
       },
 
