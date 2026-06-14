@@ -214,11 +214,7 @@ socket.on(
       rooms[roomId];
 
     if(!room){
-
-      socket.emit(
-        "roomClosed"
-      );
-
+      socket.emit("roomClosed");
       return;
     }
 
@@ -226,6 +222,9 @@ socket.on(
 
     users[socket.id].currentRoom =
       roomId;
+
+    users[socket.id].displayName =
+      room.displayName;
 
     socket.emit(
       "roomCreated",
