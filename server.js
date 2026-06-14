@@ -393,7 +393,6 @@ Detect the SINGLE dominant internet trend category.
 Return ONLY one word.
 
 Possible categories:
-
 celebrity
 fashion
 music
@@ -569,61 +568,6 @@ io.to(roomId).emit(
 
 try{
 
-  //////////////////////////////////////////////////
-// STARTER QUESTION
-//////////////////////////////////////////////////
-
-const starterRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  temperature:0.8,
-
-messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create ONE trending social reaction line.
-
-The line should feel:
-- viral
-- socially reactive
-- internet-native
-- emotionally engaging
-- culturally current
-
-Rules:
-- lowercase only
-- no punctuation
-- 2 to 7 words
-- feel like live internet culture
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Uploaded image AI personality:
-
-${user.imageContext}
-
-Create a completely fresh trending social reaction line.
-`
-    }
-  ]
-});
-const starterQuestion =
-
-  starterRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
 //////////////////////////////////////////////////
 // STARTER MOOD
 //////////////////////////////////////////////////
@@ -642,17 +586,13 @@ const starterMoodRes =
 Create ONE evolving internet vibe.
 
 The vibe should feel:
-- internet-native
 - culturally current
-- emotionally reactive
 
 Examples:
 main character
 internet pressure
 celebrity chaos
-late night scrolling
 digital fame
-timeline exploding
 
 Rules:
 - lowercase only
@@ -726,80 +666,9 @@ IMPORTANT:
 The goal is NOT to find news about the object itself.
 
 The goal is to find a real current news story that reflects the image's:
-
-* emotional energy
 * psychological atmosphere
-* social meaning
-* cultural relevance
-* symbolic direction
-* human behavior patterns
-* internet mood
-* collective attention
 
 The image should act as a trigger for meaning, not as a product search.
-
-Examples:
-
-A coffee cup may lead to:
-
-* remote work trends
-* burnout culture
-* productivity debates
-* creator economy news
-
-A luxury handbag may lead to:
-
-* consumer confidence
-* status signaling
-* luxury market shifts
-* celebrity fashion moments
-
-A crowded street may lead to:
-
-* tourism trends
-* housing pressures
-* economic sentiment
-* public culture events
-
-A book may lead to:
-
-* education policy
-* AI and learning
-* reading trends
-* knowledge economy stories
-
-Focus on:
-
-* what the image represents socially
-* what human behavior it suggests
-* what cultural forces it reflects
-* what people emotionally associate with it
-* what internet conversations it belongs to
-
-The search does NOT need to mention the object itself.
-
-The search SHOULD feel unexpectedly relevant.
-
-GOOD:
-
-openai education debate
-gen z career anxiety
-luxury spending slowdown
-creator economy growth
-remote work backlash
-global tourism surge
-ai copyright lawsuit
-consumer confidence report
-fashion week controversy
-college enrollment trends
-
-BAD:
-
-coffee cup
-desk lamp
-fashion handbag
-living room decor
-office chair review
 
 Use REAL searchable public entities, events, companies, industries, people, policies, technologies, markets, or cultural events.
 
@@ -812,7 +681,6 @@ Rules:
 * current news only
 * emotionally and culturally relevant
 * surprising but defensible connection
-* avoid direct product matching
 
 PRIORITY:
 
@@ -864,10 +732,6 @@ Create a NEW trending CURRENT NEWS image search phrase.
 IMPORTANT:
 The search MUST still feel connected to the uploaded image personality.
 
-The room should evolve like:
-- a live internet feed
-- social media culture
-- celebrity/internet momentum
 `
       }
     ]
@@ -1277,22 +1141,6 @@ Do NOT describe yourself as:
 - decoration
 
 unless those are the primary subject.
-
-Good:
-
-window blinds providing privacy and light control
-
-desk lamp providing lighting
-
-coffee dripper for manual brewing
-
-Bad:
-
-home furnishing
-
-decor item
-
-minimalist interior object
 
 Format:
 
