@@ -507,7 +507,6 @@ if(roomMode){
     usedMoods:[],
 
     usedQuestions:[],
-userIntentHistory:[],
 
 emotionalProfile:{
   hype:0.5,
@@ -1905,16 +1904,6 @@ const userIntent =
     .content
     .trim();
 
-room.userIntentHistory.push(
-  userIntent
-);
-
-if(room.userIntentHistory.length > 12){
-
-  room.userIntentHistory =
-    room.userIntentHistory.slice(-12);
-}
-
 const meaningRes =
   await openai.chat.completions.create({
 
@@ -2258,16 +2247,56 @@ ${room.usedQuestions.join("\n")}
 User emotional direction:
 ${userIntent}
 
-Long-term user emotional evolution:
-${room.userIntentHistory.join("\n")}
-
 Exact user message:
 ${text}
 
 Create a NEW trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
-The search MUST still feel connected to the uploaded image personality.
+
+The image provides context, not keywords.
+
+The search MUST feel connected to:
+
+* the hidden system behind the image
+* the larger forces behind the image
+* the user system (if one exists)
+
+Do NOT reconnect to:
+
+* the object itself
+* the product category
+* the industry category
+* the brand
+* the visible text
+* the original image identity
+
+The image is evidence.
+
+The hidden system is the subject.
+
+The search should evolve from:
+
+image
+→ hidden system
+→ current news
+
+NOT:
+
+image
+→ object
+→ category
+→ current news
+
+The final search should reveal:
+
+* causes
+* systems
+* transformations
+* disruptions
+* opportunities
+* emerging social change
+
 
 The room should evolve like:
 - a live internet feed
@@ -2432,9 +2461,6 @@ ${room.emotionalState.join("\n")}
 
 User emotional direction:
 ${userIntent}
-
-Long-term emotional evolution:
-${room.userIntentHistory.join("\n")}
 
 Exact user message:
 ${text}
