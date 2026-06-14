@@ -1910,6 +1910,19 @@ const userIntent =
     .content
     .trim();
 
+  const isNamedEntity =
+  userIntent &&
+  !userIntent.includes("systems") &&
+  !userIntent.includes("transformation") &&
+  !userIntent.includes("mobility") &&
+  !userIntent.includes("connection") &&
+  !userIntent.includes("workplace");
+
+const directNewsSearch =
+  isNamedEntity
+    ? userIntent + " latest news"
+    : null;
+
 const meaningRes =
   await openai.chat.completions.create({
 
@@ -2335,7 +2348,8 @@ The room should evolve like:
   ]
 });
 
-const searchQuery =
+  const searchQuery =
+  directNewsSearch ||
 
   emotionRes
     .choices[0]
