@@ -230,7 +230,13 @@ socket.on(
     socket.emit(
   "roomCreated",
   {
-    roomId: room.id
+    roomId: room.id,
+
+    displayName:
+      users[socket.id]
+        ?.displayName ||
+
+      "#" + room.id
   }
 );
 
@@ -554,6 +560,9 @@ socket.emit(
   "roomCreated",
   {
     roomId,
+
+    displayName:
+      user.displayName,
 
     imageContext:
       user.imageContext,
