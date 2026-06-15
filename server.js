@@ -1971,9 +1971,20 @@ const directLocationSearch =
   !userIntent.includes("connection") &&
   !userIntent.includes("workplace");
 
+const today =
+  new Date()
+    .toLocaleDateString(
+      "en-US",
+      {
+        month:"long",
+        day:"numeric",
+        year:"numeric"
+      }
+    );
+
 const directNewsSearch =
   isNamedEntity
-    ? userIntent + " news today"
+    ? `${userIntent} ${today}`
     : null;
 
 const meaningRes =
