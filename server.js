@@ -1910,58 +1910,53 @@ const userIntent =
     .content
     .trim();
 
-  const locationPurposeRes =
+  const cityRes =
   await openai.chat.completions.create({
+
     model:"gpt-4o-mini",
+
     messages:[
+
       {
         role:"system",
-        content:`
-Detect if the user is asking for a place in a location.
 
-Examples:
+        content:`
+Extract ONLY the city.
 
 new york coffee shop
-→ new york viral coffee shop latest news
+→ new york
+
+seattle bar
+→ seattle
 
 taipei ramen
-→ taipei viral ramen latest news
+→ taipei
 
-los angeles bookstore
-→ los angeles viral bookstore latest news
-
-paris hotel
-→ paris viral hotel latest news
-
-If the user is NOT asking for a location plus purpose,
-return only:
-
+If no city:
 none
-
-Rules:
-- lowercase only
-- no punctuation
-- return one search phrase only
 `
       },
+
       {
         role:"user",
         content:text
       }
-    ]
-  });
 
-const locationPurposeSearch =
-  locationPurposeRes
+    ]
+
+});
+
+const city =
+  cityRes
     .choices[0]
     .message
     .content
     .trim();
 
 const directLocationSearch =
-  locationPurposeSearch === "none"
+  city === "none"
     ? null
-    : locationPurposeSearch;
+    : city;
 
 let locationSearchCandidates = [];
 
@@ -1970,13 +1965,13 @@ if(directLocationSearch){
   locationSearchCandidates = [
 
     directLocationSearch +
-      " viral local news",
+      " biggest event",
 
     directLocationSearch +
-      " local news",
+      " breaking local news",
 
     directLocationSearch +
-      " trending local article"
+      " trending local news"
 
   ];
 
@@ -2568,44 +2563,30 @@ if(validNews.length > 0){
       temperature:0.7,
 
       messages:[
-        {
-          role:"system",
-          content:`
-You are evaluating internet reactions.
+{
+  role:"system",
+  content:`
+Choose the article that:
 
-Choose the result MOST emotionally aligned
-with the USER emotional direction.
-
-Priority:
-
-1. user message alignment (60%)
-2. image relevance (40%)
-3. internet relevance
-4. visual strength
-
-The result should feel like:
-"the internet emotionally reacting
-to the user's inner state."
+1. Represents the biggest local event
+2. Is occurring in the requested city
+3. Has the strongest public attention
+4. Matches the user's purpose when possible
 
 Prioritize:
-- emotional intensity
-- internet virality
-- visual energy
-- social momentum
-- emotional alignment
-- internet-native feeling
 
-The result MUST:
-- emotionally match the image personality
-- feel culturally alive
-- feel socially addictive
+- biggest event
+- local relevance
+- public discussion
+- news importance
 
 Return ONLY the exact title.
 `
-        },
-        {
-          role:"user",
-          content:`
+},   // ← ADD COMMA HERE
+
+{
+  role:"user",
+  content:`
 Image personality:
 ${room.imageContext}
 
@@ -2614,37 +2595,14 @@ ${room.emotionalState.join("\n")}
 
 User emotional direction:
 ${userIntent}
-IMPORTANT:
-
-If User emotional direction is a named entity:
-
-- celebrity
-- public figure
-- company
-- brand
-- product
-
-search directly about that entity.
-
-Examples:
-
-jisoo → jisoo latest news
-elon musk → elon musk latest news
-openai → openai latest news
-nike → nike latest news
-
-Do NOT convert named entities into larger systems.
-
-Exact user message:
-${text}
 
 Candidate internet reactions:
 ${validNews.map(
   n => n.title
 ).join("\n")}
 `
-        }
-      ]
+}
+]
     });
 
     const chosenTitle =
