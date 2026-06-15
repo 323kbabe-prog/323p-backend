@@ -1973,7 +1973,7 @@ const directLocationSearch =
 
 const directNewsSearch =
   isNamedEntity
-    ? userIntent + " latest news"
+    ? userIntent + " news today"
     : null;
 
 const meaningRes =
