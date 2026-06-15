@@ -2671,7 +2671,7 @@ if(
 
         `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
           directLocationSearch +
-" viral"
+" news today"
         )}&api_key=${process.env.SERPAPI_KEY}`
 
       );
