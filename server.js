@@ -1921,17 +1921,17 @@ Detect if the user is asking for a place in a location.
 
 Examples:
 
-new york coffee shop
-→ new york viral coffee shop latest news
+new york bar
+→ biggest viral bar news in new york today
 
 taipei ramen
-→ taipei viral ramen latest news
+→ biggest viral ramen news in taipei today
 
 los angeles bookstore
-→ los angeles viral bookstore latest news
+→ biggest viral bookstore news in los angeles today
 
 paris hotel
-→ paris viral hotel latest news
+→ biggest viral hotel news in paris today
 
 If the user is NOT asking for a location plus purpose,
 return only:
@@ -1973,7 +1973,7 @@ const directLocationSearch =
 
 const directNewsSearch =
   isNamedEntity
-    ? userIntent + " latest news"
+    ? userIntent + " latest images"
     : null;
 
 const meaningRes =
