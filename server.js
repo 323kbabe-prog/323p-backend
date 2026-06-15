@@ -1910,162 +1910,59 @@ const userIntent =
     .content
     .trim();
 
-  const cityRes =
+  const locationPurposeRes =
   await openai.chat.completions.create({
-
     model:"gpt-4o-mini",
-
     messages:[
-
       {
         role:"system",
-
         content:`
-Extract ONLY the city.
+Detect if the user is asking for a place in a location.
+
+Examples:
 
 new york coffee shop
-→ new york
-
-seattle bar
-→ seattle
+→ new york viral coffee shop latest news
 
 taipei ramen
-→ taipei
+→ taipei viral ramen latest news
 
-If no city:
-none
-`
-      },
-
-      {
-        role:"user",
-        content:text
-      }
-
-    ]
-
-});
-
-const city =
-  cityRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-  const purposeRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-
-        content:`
-Extract ONLY the purpose.
-
-new york coffee shop
-→ coffee shop
-
-seattle bar
-→ bar
-
-taipei ramen
-→ ramen
+los angeles bookstore
+→ los angeles viral bookstore latest news
 
 paris hotel
-→ hotel
+→ paris viral hotel latest news
 
-If none:
+If the user is NOT asking for a location plus purpose,
+return only:
+
 none
+
+Rules:
+- lowercase only
+- no punctuation
+- return one search phrase only
 `
       },
-
       {
         role:"user",
         content:text
       }
-
     ]
+  });
 
-});
-
-  const topicRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-
-        content:`
-Extract ONLY the topic.
-
-Seattle bar for fifa vibe
-→ fifa
-
-best coffee shop for remote work
-→ remote work
-
-ramen for anime fans
-→ anime
-
-hotel near world cup
-→ world cup
-
-If none:
-none
-`
-      },
-
-      {
-        role:"user",
-        content:text
-      }
-
-    ]
-
-});
-
-const topic =
-  topicRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-const purpose =
-  purposeRes
+const locationPurposeSearch =
+  locationPurposeRes
     .choices[0]
     .message
     .content
     .trim();
 
 const directLocationSearch =
-  city === "none"
+  locationPurposeSearch === "none"
     ? null
-    : city;
+    : locationPurposeSearch;
 
-let locationSearchCandidates = [];
-
-if(directLocationSearch){
-
-locationSearchCandidates = [
-
-  city + " " + purpose + " " + topic,
-
-  city + " " + purpose,
-
-  city + " " + topic
-
-];
-
-}
-  
   const isNamedEntity =
   userIntent &&
   !userIntent.includes("systems") &&
@@ -2504,7 +2401,8 @@ The room should evolve like:
   ]
 });
 
-let searchQuery =
+const searchQuery =
+  directLocationSearch ||
   directNewsSearch ||
 
   emotionRes
@@ -2536,61 +2434,15 @@ room.usedSearches.push(
 // SERP CURRENT NEWS SEARCH
 //////////////////////////////////////////////////
 
-let serpRes = null;
+const serpFetch =
+  await fetch(
 
-  if(locationSearchCandidates.length){
+    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
-  for(const q of locationSearchCandidates){
-
-    console.log(
-      "LOCATION SEARCH:",
-      q
-    );
-
-    const testFetch =
-      await fetch(
-
-        `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(q)}&api_key=${process.env.SERPAPI_KEY}`
-
-      );
-
-    const testRes =
-      await testFetch.json();
-
- if(
-  testRes?.news_results?.length >= 3
-){
-
-  console.log(
-    "LOCATION WINNER:",
-    q
   );
 
-  serpRes = testRes;
-
-  searchQuery = q;
-
-  break;
-
-}
-
-  }
-
-}
-
-  if(!serpRes){
-
-  const serpFetch =
-    await fetch(
-
-      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
-
-    );
-
-  serpRes =
-    await serpFetch.json();
-
-}
+const serpRes =
+  await serpFetch.json();
 
 console.log(
   "LOOP NEWS COUNT:",
@@ -2657,64 +2509,44 @@ if(validNews.length > 0){
       temperature:0.7,
 
       messages:[
-{
-  role:"system",
-content:`
-Choose ONE article.
+        {
+          role:"system",
+          content:`
+You are evaluating internet reactions.
 
-MOST IMPORTANT:
+Choose the result MOST emotionally aligned
+with the USER emotional direction.
 
-The article must be strongly related to:
+Priority:
 
-${purpose}
+1. user message alignment (60%)
+2. image relevance (40%)
+3. internet relevance
+4. visual strength
 
-Reject articles unrelated to:
+The result should feel like:
+"the internet emotionally reacting
+to the user's inner state."
 
-${purpose}
+Prioritize:
+- emotional intensity
+- internet virality
+- visual energy
+- social momentum
+- emotional alignment
+- internet-native feeling
 
-Examples:
-
-bar:
-- sports bars
-- nightlife
-- cocktails
-- beer
-- pub culture
-- bar events
-
-coffee shop:
-- cafes
-- coffee culture
-- remote work
-- local gathering places
-
-ramen:
-- restaurants
-- food culture
-- dining
-
-hotel:
-- travel
-- tourism
-- hospitality
-
-Ranking:
-
-1. purpose relevance (60%)
-2. city relevance (25%)
-3. local event importance (15%)
-
-City:
-
-${city}
+The result MUST:
+- emotionally match the image personality
+- feel culturally alive
+- feel socially addictive
 
 Return ONLY the exact title.
 `
-},   // ← ADD COMMA HERE
-
-{
-  role:"user",
-  content:`
+        },
+        {
+          role:"user",
+          content:`
 Image personality:
 ${room.imageContext}
 
@@ -2723,14 +2555,37 @@ ${room.emotionalState.join("\n")}
 
 User emotional direction:
 ${userIntent}
+IMPORTANT:
+
+If User emotional direction is a named entity:
+
+- celebrity
+- public figure
+- company
+- brand
+- product
+
+search directly about that entity.
+
+Examples:
+
+jisoo → jisoo latest news
+elon musk → elon musk latest news
+openai → openai latest news
+nike → nike latest news
+
+Do NOT convert named entities into larger systems.
+
+Exact user message:
+${text}
 
 Candidate internet reactions:
 ${validNews.map(
   n => n.title
 ).join("\n")}
 `
-}
-]
+        }
+      ]
     });
 
     const chosenTitle =
