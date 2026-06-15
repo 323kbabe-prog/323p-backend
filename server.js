@@ -2645,6 +2645,11 @@ Do NOT convert named entities into larger systems.
 Exact user message:
 ${text}
 
+Candidate dates:
+${validNews.map(
+  n => n.date
+).join("\n")}
+
 Candidate internet reactions:
 ${validNews.map(
   n => n.title
