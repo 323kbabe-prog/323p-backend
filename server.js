@@ -1922,7 +1922,7 @@ Detect if the user is asking for a place in a location.
 Examples:
 
 new york bar
-→ new york most viral bar news
+→ this bar for world cup
 
 If the user is NOT asking for a location plus purpose,
 return only:
