@@ -1953,6 +1953,52 @@ const city =
     .content
     .trim();
 
+  const purposeRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Extract ONLY the purpose.
+
+new york coffee shop
+→ coffee shop
+
+seattle bar
+→ bar
+
+taipei ramen
+→ ramen
+
+paris hotel
+→ hotel
+
+If none:
+none
+`
+      },
+
+      {
+        role:"user",
+        content:text
+      }
+
+    ]
+
+});
+
+const purpose =
+  purposeRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
 const directLocationSearch =
   city === "none"
     ? null
@@ -2468,17 +2514,22 @@ let serpRes = null;
     const testRes =
       await testFetch.json();
 
-    if(
-      testRes?.news_results?.length >= 3
-    ){
+ if(
+  testRes?.news_results?.length >= 3
+){
 
-      serpRes = testRes;
+  console.log(
+    "LOCATION WINNER:",
+    q
+  );
 
-      searchQuery = q;
+  serpRes = testRes;
 
-      break;
+  searchQuery = q;
 
-    }
+  break;
+
+}
 
   }
 
@@ -2571,7 +2622,11 @@ Choose the article that:
 1. Represents the biggest local event
 2. Is occurring in the requested city
 3. Has the strongest public attention
-4. Matches the user's purpose when possible
+4. Is most connected to:
+
+${purpose}
+
+Return ONLY the exact title.
 
 Prioritize:
 
