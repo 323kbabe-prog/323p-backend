@@ -2616,24 +2616,54 @@ if(validNews.length > 0){
       messages:[
 {
   role:"system",
-  content:`
-Choose the article that:
+content:`
+Choose ONE article.
 
-1. Represents the biggest local event
-2. Is occurring in the requested city
-3. Has the strongest public attention
-4. Is most connected to:
+MOST IMPORTANT:
+
+The article must be strongly related to:
 
 ${purpose}
 
-Return ONLY the exact title.
+Reject articles unrelated to:
 
-Prioritize:
+${purpose}
 
-- biggest event
-- local relevance
-- public discussion
-- news importance
+Examples:
+
+bar:
+- sports bars
+- nightlife
+- cocktails
+- beer
+- pub culture
+- bar events
+
+coffee shop:
+- cafes
+- coffee culture
+- remote work
+- local gathering places
+
+ramen:
+- restaurants
+- food culture
+- dining
+
+hotel:
+- travel
+- tourism
+- hospitality
+
+Ranking:
+
+1. purpose relevance (60%)
+2. city relevance (25%)
+3. local event importance (15%)
+
+City:
+
+${city}
 
 Return ONLY the exact title.
 `
