@@ -2671,7 +2671,7 @@ if(
 
         `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
           directLocationSearch +
-          " best guide article"
+" viral"
         )}&api_key=${process.env.SERPAPI_KEY}`
 
       );
