@@ -1910,6 +1910,59 @@ const userIntent =
     .content
     .trim();
 
+  const locationPurposeRes =
+  await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    messages:[
+      {
+        role:"system",
+        content:`
+Detect if the user is asking for a place in a location.
+
+Examples:
+
+new york coffee shop
+→ new york viral coffee shop latest news
+
+taipei ramen
+→ taipei viral ramen latest news
+
+los angeles bookstore
+→ los angeles viral bookstore latest news
+
+paris hotel
+→ paris viral hotel latest news
+
+If the user is NOT asking for a location plus purpose,
+return only:
+
+none
+
+Rules:
+- lowercase only
+- no punctuation
+- return one search phrase only
+`
+      },
+      {
+        role:"user",
+        content:text
+      }
+    ]
+  });
+
+const locationPurposeSearch =
+  locationPurposeRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+const directLocationSearch =
+  locationPurposeSearch === "none"
+    ? null
+    : locationPurposeSearch;
+
   const isNamedEntity =
   userIntent &&
   !userIntent.includes("systems") &&
@@ -2348,7 +2401,8 @@ The room should evolve like:
   ]
 });
 
-  const searchQuery =
+const searchQuery =
+  directLocationSearch ||
   directNewsSearch ||
 
   emotionRes
