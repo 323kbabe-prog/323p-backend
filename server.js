@@ -2493,6 +2493,9 @@ const validNews =
 
   });
 
+  const isLocationSearch =
+  !!directLocationSearch;
+
 //////////////////////////////////////////////////
 // AI EVALUATES INTERNET ENERGY
 //////////////////////////////////////////////////
@@ -2652,6 +2655,62 @@ ${validNews.map(
 
 }
 
+//////////////////////////////////////////////////
+// LOCATION ARTICLE FALLBACK
+//////////////////////////////////////////////////
+
+if(
+  isLocationSearch &&
+  !selectedNews
+){
+
+  try{
+
+    const articleFetch =
+      await fetch(
+
+        `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
+          directLocationSearch +
+          " best guide article"
+        )}&api_key=${process.env.SERPAPI_KEY}`
+
+      );
+
+    const articleRes =
+      await articleFetch.json();
+
+    const article =
+      articleRes
+        ?.organic_results
+        ?.find(item =>
+          item.title &&
+          item.link &&
+          !item.link.includes("google.com")
+        );
+
+    if(article){
+
+      selectedNews = {
+        title: article.title,
+        link: article.link,
+        thumbnail:
+          article.thumbnail
+      };
+
+      imageUrl =
+        article.thumbnail ||
+        null;
+    }
+
+  }catch(err){
+
+    console.log(
+      "location article fallback failed",
+      err
+    );
+  }
+}
+  
 //////////////////////////////////////////////////
 // GOOGLE IMAGE FALLBACK
 //////////////////////////////////////////////////
