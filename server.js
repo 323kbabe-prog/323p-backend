@@ -1992,6 +1992,52 @@ none
 
 });
 
+  const topicRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Extract ONLY the topic.
+
+Seattle bar for fifa vibe
+→ fifa
+
+best coffee shop for remote work
+→ remote work
+
+ramen for anime fans
+→ anime
+
+hotel near world cup
+→ world cup
+
+If none:
+none
+`
+      },
+
+      {
+        role:"user",
+        content:text
+      }
+
+    ]
+
+});
+
+const topic =
+  topicRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
 const purpose =
   purposeRes
     .choices[0]
@@ -2010,11 +2056,13 @@ if(directLocationSearch){
 
 locationSearchCandidates = [
 
-  city + " " + purpose + " biggest event",
+  city + " " + purpose + " " + topic,
 
-  city + " " + purpose + " local news",
+  city + " " + purpose,
 
-  city + " " + purpose + " trending"
+  city + " biggest event",
+
+  city + " breaking local news"
 
 ];
 
