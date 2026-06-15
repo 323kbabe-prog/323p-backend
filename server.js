@@ -1963,6 +1963,25 @@ const directLocationSearch =
     ? null
     : locationPurposeSearch;
 
+let locationSearchCandidates = [];
+
+if(directLocationSearch){
+
+  locationSearchCandidates = [
+
+    directLocationSearch +
+      " viral local news",
+
+    directLocationSearch +
+      " local news",
+
+    directLocationSearch +
+      " trending local article"
+
+  ];
+
+}
+  
   const isNamedEntity =
   userIntent &&
   !userIntent.includes("systems") &&
@@ -2401,8 +2420,7 @@ The room should evolve like:
   ]
 });
 
-const searchQuery =
-  directLocationSearch ||
+let searchQuery =
   directNewsSearch ||
 
   emotionRes
@@ -2434,15 +2452,56 @@ room.usedSearches.push(
 // SERP CURRENT NEWS SEARCH
 //////////////////////////////////////////////////
 
-const serpFetch =
-  await fetch(
+let serpRes = null;
 
-    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+  if(locationSearchCandidates.length){
 
-  );
+  for(const q of locationSearchCandidates){
 
-const serpRes =
-  await serpFetch.json();
+    console.log(
+      "LOCATION SEARCH:",
+      q
+    );
+
+    const testFetch =
+      await fetch(
+
+        `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(q)}&api_key=${process.env.SERPAPI_KEY}`
+
+      );
+
+    const testRes =
+      await testFetch.json();
+
+    if(
+      testRes?.news_results?.length >= 3
+    ){
+
+      serpRes = testRes;
+
+      searchQuery = q;
+
+      break;
+
+    }
+
+  }
+
+}
+
+  if(!serpRes){
+
+  const serpFetch =
+    await fetch(
+
+      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+
+    );
+
+  serpRes =
+    await serpFetch.json();
+
+}
 
 console.log(
   "LOOP NEWS COUNT:",
