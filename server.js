@@ -1922,16 +1922,16 @@ Detect if the user is asking for a place in a location.
 Examples:
 
 new york coffee shop
-→ new york coffee shop
-
-seattle bar
-→ seattle bar
+→ new york viral coffee shop latest news
 
 taipei ramen
-→ taipei ramen
+→ taipei viral ramen latest news
+
+los angeles bookstore
+→ los angeles viral bookstore latest news
 
 paris hotel
-→ paris hotel
+→ paris viral hotel latest news
 
 If the user is NOT asking for a location plus purpose,
 return only:
@@ -1971,20 +1971,9 @@ const directLocationSearch =
   !userIntent.includes("connection") &&
   !userIntent.includes("workplace");
 
-const today =
-  new Date()
-    .toLocaleDateString(
-      "en-US",
-      {
-        month:"long",
-        day:"numeric",
-        year:"numeric"
-      }
-    );
-  
 const directNewsSearch =
   isNamedEntity
-    ? `${userIntent} news ${today}`
+    ? userIntent + " latest news"
     : null;
 
 const meaningRes =
@@ -2480,7 +2469,7 @@ const newsResults =
 // FILTER VALID INTERNET REACTIONS
 //////////////////////////////////////////////////
 
-let validNews =
+const validNews =
   newsResults.filter(item => {
 
     const possibleImage =
@@ -2504,66 +2493,11 @@ let validNews =
 
   });
 
-  const isLocationSearch =
-  !!directLocationSearch;
-
 //////////////////////////////////////////////////
 // AI EVALUATES INTERNET ENERGY
 //////////////////////////////////////////////////
 
 if(validNews.length > 0){
-
-if(
-  isLocationSearch &&
-  validNews.length < 3
-){
-
-  const viralFetch =
-    await fetch(
-
-      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(
-        directLocationSearch +
-        " viral today"
-      )}&api_key=${process.env.SERPAPI_KEY}`
-
-    );
-
-  const viralRes =
-    await viralFetch.json();
-
-  const viralNews =
-    viralRes?.news_results || [];
-
-  if(
-    viralNews.length >
-    validNews.length
-  ){
-
-    validNews =
-  viralNews.filter(item => {
-
-    const possibleImage =
-      item.original ||
-      item.thumbnail ||
-      item.thumbnail_small;
-
-    return (
-
-      possibleImage &&
-
-      item.title &&
-
-      !possibleImage.includes("logo") &&
-      !possibleImage.includes("icon") &&
-      !possibleImage.includes("placeholder") &&
-      !possibleImage.includes("default") &&
-      !possibleImage.includes("avatar")
-
-    );
-
-  });
-  }
-}  
 
   try{
 
@@ -2644,11 +2578,6 @@ Do NOT convert named entities into larger systems.
 
 Exact user message:
 ${text}
-
-Candidate dates:
-${validNews.map(
-  n => n.date
-).join("\n")}
 
 Candidate internet reactions:
 ${validNews.map(
