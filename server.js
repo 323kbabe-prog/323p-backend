@@ -1918,11 +1918,7 @@ const userIntent =
         role:"system",
         content:`
 Detect if the user is asking for a place in a location.
-
-Examples:
-
-new york bar
-→ this bar for world cup
+Provide one place according to viral local news.
 
 If the user is NOT asking for a location plus purpose,
 return only:
