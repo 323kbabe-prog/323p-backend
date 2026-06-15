@@ -1918,7 +1918,20 @@ const userIntent =
         role:"system",
         content:`
 Detect if the user is asking for a place in a location.
-Provide one place according to viral local news.
+
+Examples:
+
+new york coffee shop
+→ new york viral coffee shop latest news
+
+taipei ramen
+→ taipei viral ramen latest news
+
+los angeles bookstore
+→ los angeles viral bookstore latest news
+
+paris hotel
+→ paris viral hotel latest news
 
 If the user is NOT asking for a location plus purpose,
 return only:
