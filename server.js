@@ -2060,9 +2060,7 @@ locationSearchCandidates = [
 
   city + " " + purpose,
 
-  city + " biggest event",
-
-  city + " breaking local news"
+  city + " " + topic
 
 ];
 
