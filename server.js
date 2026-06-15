@@ -2008,18 +2008,15 @@ let locationSearchCandidates = [];
 
 if(directLocationSearch){
 
-  locationSearchCandidates = [
+locationSearchCandidates = [
 
-    directLocationSearch +
-      " biggest event",
+  city + " " + purpose + " biggest event",
 
-    directLocationSearch +
-      " breaking local news",
+  city + " " + purpose + " local news",
 
-    directLocationSearch +
-      " trending local news"
+  city + " " + purpose + " trending"
 
-  ];
+];
 
 }
   
