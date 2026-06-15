@@ -1922,16 +1922,16 @@ Detect if the user is asking for a place in a location.
 Examples:
 
 new york coffee shop
-→ new york viral coffee shop latest news
+→ new york coffee shop
+
+seattle bar
+→ seattle bar
 
 taipei ramen
-→ taipei viral ramen latest news
-
-los angeles bookstore
-→ los angeles viral bookstore latest news
+→ taipei ramen
 
 paris hotel
-→ paris viral hotel latest news
+→ paris hotel
 
 If the user is NOT asking for a location plus purpose,
 return only:
@@ -2502,6 +2502,36 @@ const validNews =
 
 if(validNews.length > 0){
 
+if(
+  isLocationSearch &&
+  validNews.length < 3
+){
+
+  const viralFetch =
+    await fetch(
+
+      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(
+        directLocationSearch +
+        " viral today"
+      )}&api_key=${process.env.SERPAPI_KEY}`
+
+    );
+
+  const viralRes =
+    await viralFetch.json();
+
+  const viralNews =
+    viralRes?.news_results || [];
+
+  if(
+    viralNews.length >
+    validNews.length
+  ){
+
+    // use viralNews instead
+  }
+}  
+
   try{
 
     const evaluationRes =
@@ -2655,62 +2685,6 @@ ${validNews.map(
 
 }
 
-//////////////////////////////////////////////////
-// LOCATION ARTICLE FALLBACK
-//////////////////////////////////////////////////
-
-if(
-  isLocationSearch &&
-  !selectedNews
-){
-
-  try{
-
-    const articleFetch =
-      await fetch(
-
-        `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(
-          directLocationSearch +
-" news today"
-        )}&api_key=${process.env.SERPAPI_KEY}`
-
-      );
-
-    const articleRes =
-      await articleFetch.json();
-
-    const article =
-      articleRes
-        ?.organic_results
-        ?.find(item =>
-          item.title &&
-          item.link &&
-          !item.link.includes("google.com")
-        );
-
-    if(article){
-
-      selectedNews = {
-        title: article.title,
-        link: article.link,
-        thumbnail:
-          article.thumbnail
-      };
-
-      imageUrl =
-        article.thumbnail ||
-        null;
-    }
-
-  }catch(err){
-
-    console.log(
-      "location article fallback failed",
-      err
-    );
-  }
-}
-  
 //////////////////////////////////////////////////
 // GOOGLE IMAGE FALLBACK
 //////////////////////////////////////////////////
