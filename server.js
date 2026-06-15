@@ -1971,6 +1971,17 @@ const directLocationSearch =
   !userIntent.includes("connection") &&
   !userIntent.includes("workplace");
 
+const today =
+  new Date()
+    .toLocaleDateString(
+      "en-US",
+      {
+        month:"long",
+        day:"numeric",
+        year:"numeric"
+      }
+    );
+  
 const directNewsSearch =
   isNamedEntity
     ? `${userIntent} news ${today}`
@@ -2469,7 +2480,7 @@ const newsResults =
 // FILTER VALID INTERNET REACTIONS
 //////////////////////////////////////////////////
 
-const validNews =
+let validNews =
   newsResults.filter(item => {
 
     const possibleImage =
@@ -2528,7 +2539,29 @@ if(
     validNews.length
   ){
 
-    // use viralNews instead
+    validNews =
+  viralNews.filter(item => {
+
+    const possibleImage =
+      item.original ||
+      item.thumbnail ||
+      item.thumbnail_small;
+
+    return (
+
+      possibleImage &&
+
+      item.title &&
+
+      !possibleImage.includes("logo") &&
+      !possibleImage.includes("icon") &&
+      !possibleImage.includes("placeholder") &&
+      !possibleImage.includes("default") &&
+      !possibleImage.includes("avatar")
+
+    );
+
+  });
   }
 }  
 
