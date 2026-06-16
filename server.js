@@ -1936,7 +1936,10 @@ Rules:
 * return one search phrase only
 * keep the original location
 * keep the original place type
-* do not add words
+* this query will later be used to find ONE place only
+* never generate guides
+* never generate lists
+* never generate recommendations
 
 `
 
@@ -1949,16 +1952,27 @@ Rules:
   });
 
 const locationPurposeSearch =
-  locationPurposeRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+locationPurposeRes
+.choices[0]
+.message
+.content
+.trim();
 
-const directLocationSearch =
-  locationPurposeSearch === "none"
-    ? null
-    : locationPurposeSearch;
+let directLocationSearch = null;
+
+if(locationPurposeSearch !== "none"){
+
+const parts =
+locationPurposeSearch.split(" ");
+
+parts.pop();
+
+const location =
+parts.join(" ");
+
+directLocationSearch =
+location + " biggest news today";
+}
 
   const isNamedEntity =
   userIntent &&
