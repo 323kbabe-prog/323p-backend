@@ -2836,15 +2836,20 @@ let newsTitle =
   
 room.messages.push({
   from:"Image AI",
+
   image:imageUrl,
-  ask: placeName || searchQuery,
+
+  ask:
+    placeName
+      ? `${placeName}\n\n${selectedNews?.title || ""}`
+      : selectedNews?.title || searchQuery,
+
   link:
     placeLink ||
     selectedNews?.link ||
     selectedNews?.news_link ||
     ""
 });
-
 //////////////////////////////////////////////////
 // SHARE TEXT
 //////////////////////////////////////////////////
