@@ -2824,10 +2824,10 @@ let newsTitle =
  room.messages.push({
   from:"Image AI",
   image:imageUrl,
-  ask:
-    placeName ||
-    selectedNews?.title ||
-    searchQuery,
+ ask:
+  placeName
+    ? `${placeName} • ${selectedNews?.title}`
+    : selectedNews?.title || searchQuery,
   link:
     selectedNews?.link ||
     selectedNews?.news_link ||
