@@ -1916,7 +1916,8 @@ const userIntent =
     messages:[
       {
         role:"system",
-       Detect if the user is asking for a place in a location.
+       content:`
+Detect if the user is asking for a place in a location.
 
 Example:
 
@@ -1936,6 +1937,8 @@ Rules:
 * keep the original location
 * keep the original place type
 * do not add words
+
+`
 
       },
       {
