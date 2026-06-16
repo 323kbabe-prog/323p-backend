@@ -1916,24 +1916,27 @@ const userIntent =
     messages:[
       {
         role:"system",
-        content:`
-Detect if the user is asking for a place in a location.
+       Detect if the user is asking for a place in a location.
 
-Examples:
+Example:
 
-new york coffee shop
-→ one new york coffee shop
+new york bar
+→ new york bar
 
-If the user is NOT asking for a location plus purpose,
+If the user is NOT asking for a location plus place,
 return only:
 
 none
 
 Rules:
-- lowercase only
-- no punctuation
-- return one search phrase only
-`
+
+* lowercase only
+* no punctuation
+* return one search phrase only
+* keep the original location
+* keep the original place type
+* do not add words
+
       },
       {
         role:"user",
