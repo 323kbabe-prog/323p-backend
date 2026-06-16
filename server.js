@@ -2693,6 +2693,24 @@ const placeSearchFetch =
   const placeSearchRes =
     await placeSearchFetch.json();
 
+  console.log(
+  "PLACE RESULT:",
+  JSON.stringify(
+    placeSearchRes?.local_results?.[0],
+    null,
+    2
+  )
+);
+
+console.log(
+  "PLACE RESULT 2:",
+  JSON.stringify(
+    placeSearchRes?.places_results?.[0],
+    null,
+    2
+  )
+);
+
 placeLink =
   placeSearchRes?.local_results?.[0]?.website ||
 
