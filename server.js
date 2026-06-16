@@ -1936,10 +1936,12 @@ Rules:
 * return one search phrase only
 * keep the original location
 * keep the original place type
-* this query will later be used to find ONE place only
-* never generate guides
-* never generate lists
-* never generate recommendations
+* the result will later be used to find ONE real place related to the biggest current news or event in that location
+* do not generate news
+* do not generate guides
+* do not generate lists
+* do not generate recommendations
+* return only the original location and place type
 
 `
 
@@ -2470,8 +2472,9 @@ console.log(
 
 let imageUrl = null;
 
-let selectedNews =
-  null;
+let selectedNews = null;
+
+let placeName = null;
 
 const newsResults =
   serpRes?.news_results || [];
@@ -2523,36 +2526,35 @@ if(validNews.length > 0){
         {
           role:"system",
           content:`
-You are evaluating internet reactions.
+You are evaluating news results.
 
-Choose the result MOST emotionally aligned
-with the USER emotional direction.
+If the user searched for a location and place type:
+
+Examples:
+
+new york coffee shop
+seattle bar
+taipei ramen
 
 Priority:
 
-1. user message alignment (60%)
-2. image relevance (40%)
-3. internet relevance
-4. visual strength
+1. identify the biggest local news or event
+2. identify which result best represents that event
+3. identify ONE real place that could be connected to that event
 
-The result should feel like:
-"the internet emotionally reacting
-to the user's inner state."
+Never prioritize:
 
-Prioritize:
-- emotional intensity
-- internet virality
-- visual energy
-- social momentum
-- emotional alignment
-- internet-native feeling
+* coffee shop news
+* bar news
+* restaurant news
+* rankings
+* top 10 lists
+* guides
 
-The result MUST:
-- emotionally match the image personality
-- feel culturally alive
-- feel socially addictive
+Choose the result most useful for finding ONE real place related to the biggest current local event.
 
 Return ONLY the exact title.
+
 `
         },
         {
@@ -2619,6 +2621,58 @@ ${validNews.map(
           )
       );
 
+    const placeRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+        content:`
+Given:
+
+- a city
+- a place type
+- the biggest local news/event
+
+Return ONE real place only.
+
+Examples:
+
+new york + coffee shop + world cup
+→ one coffee shop
+
+new york + bar + world cup
+→ one sports bar
+
+seattle + coffee shop + tech conference
+→ one coffee shop
+
+Return ONLY the place name.
+`
+      },
+
+      {
+        role:"user",
+        content:`
+Original search:
+${locationPurposeSearch}
+
+News:
+${selectedNews?.title}
+`
+      }
+    ]
+  });
+
+placeName =
+  placeRes.choices[0]
+    .message
+    .content
+    .trim();
+    
     //////////////////////////////////////////////////
     // SAFETY FALLBACK
     //////////////////////////////////////////////////
@@ -2737,10 +2791,13 @@ let newsTitle =
   selectedNews?.title ||
   searchQuery;
   
-  room.messages.push({
+ room.messages.push({
   from:"Image AI",
   image:imageUrl,
-  ask:newsTitle,
+  ask:
+    placeName ||
+    selectedNews?.title ||
+    searchQuery,
   link:
     selectedNews?.link ||
     selectedNews?.news_link ||
