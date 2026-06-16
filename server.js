@@ -2621,57 +2621,40 @@ ${validNews.map(
           )
       );
 
-    const placeRes =
-  await openai.chat.completions.create({
+if(locationPurposeSearch !== "none"){
 
-    model:"gpt-4o-mini",
+console.log(
+  "PLACE SEARCH:",
+  locationPurposeSearch +
+  " " +
+  (selectedNews?.title || "")
+);
+  
+const placeSearchFetch =
+  await fetch(
 
-    messages:[
+`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(
+  locationPurposeSearch +
+  " " +
+  (selectedNews?.title || "")
+)}&api_key=${process.env.SERPAPI_KEY}`
 
-      {
-        role:"system",
-        content:`
-Given:
+  );
 
-- a city
-- a place type
-- the biggest local news/event
+  const placeSearchRes =
+    await placeSearchFetch.json();
 
-Return ONE real place only.
+  placeName =
+    placeSearchRes
+      ?.local_results?.[0]
+      ?.title ||
 
-Examples:
+    placeSearchRes
+      ?.places_results?.[0]
+      ?.title ||
 
-new york + coffee shop + world cup
-→ one coffee shop
-
-new york + bar + world cup
-→ one sports bar
-
-seattle + coffee shop + tech conference
-→ one coffee shop
-
-Return ONLY the place name.
-`
-      },
-
-      {
-        role:"user",
-        content:`
-Original search:
-${locationPurposeSearch}
-
-News:
-${selectedNews?.title}
-`
-      }
-    ]
-  });
-
-placeName =
-  placeRes.choices[0]
-    .message
-    .content
-    .trim();
+    null;
+}
     
     //////////////////////////////////////////////////
     // SAFETY FALLBACK
