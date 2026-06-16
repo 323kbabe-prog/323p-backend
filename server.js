@@ -2476,6 +2476,8 @@ let selectedNews = null;
 
 let placeName = null;
 
+let placeLink = null;
+
 const newsResults =
   serpRes?.news_results || [];
 
@@ -2691,6 +2693,21 @@ const placeSearchFetch =
   const placeSearchRes =
     await placeSearchFetch.json();
 
+  placeLink =
+  placeSearchRes
+    ?.local_results?.[0]
+    ?.website ||
+
+  placeSearchRes
+    ?.local_results?.[0]
+    ?.link ||
+
+  placeSearchRes
+    ?.places_results?.[0]
+    ?.website ||
+
+  "";
+
   placeName =
     placeSearchRes
       ?.local_results?.[0]
@@ -2821,14 +2838,12 @@ let newsTitle =
   selectedNews?.title ||
   searchQuery;
   
- room.messages.push({
+room.messages.push({
   from:"Image AI",
   image:imageUrl,
- ask:
-  placeName
-    ? `${placeName} • ${selectedNews?.title}`
-    : selectedNews?.title || searchQuery,
+  ask: placeName || searchQuery,
   link:
+    placeLink ||
     selectedNews?.link ||
     selectedNews?.news_link ||
     ""
