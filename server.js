@@ -2623,21 +2623,68 @@ ${validNews.map(
 
 if(locationPurposeSearch !== "none"){
 
+const placeQueryRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+        content:`
+Given:
+
+- a place type
+- a city
+- a local news event
+
+Create a Google local search query
+for ONE place connected to that event.
+
+Examples:
+
+new york coffee shop
+knicks parade
+→ coffee shop near knicks parade route
+
+new york bar
+world cup
+→ sports bar showing world cup
+
+Return ONLY the search query.
+`
+      },
+
+      {
+        role:"user",
+        content:`
+Search:
+${locationPurposeSearch}
+
+News:
+${selectedNews?.title}
+`
+      }
+    ]
+  });
+
+const placeQuery =
+  placeQueryRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
 console.log(
-  "PLACE SEARCH:",
-  locationPurposeSearch +
-  " " +
-  (selectedNews?.title || "")
+  "PLACE QUERY:",
+  placeQuery
 );
-  
+
 const placeSearchFetch =
   await fetch(
 
-`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(
-  locationPurposeSearch +
-  " " +
-  (selectedNews?.title || "")
-)}&api_key=${process.env.SERPAPI_KEY}`
+`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(placeQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
   );
 
