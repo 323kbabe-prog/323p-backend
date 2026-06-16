@@ -2711,6 +2711,13 @@ console.log(
   )
 );
 
+placeName =
+  placeSearchRes?.local_results?.[0]?.title ||
+
+  placeSearchRes?.places_results?.[0]?.title ||
+
+  null;
+
 placeLink =
   placeSearchRes?.local_results?.[0]?.website ||
 
@@ -2726,22 +2733,11 @@ placeLink =
         encodeURIComponent(placeName)
       : ""
   );
+
 console.log(
   "PLACE LINK:",
   placeLink
 );
-
-  placeName =
-    placeSearchRes
-      ?.local_results?.[0]
-      ?.title ||
-
-    placeSearchRes
-      ?.places_results?.[0]
-      ?.title ||
-
-    null;
-}
     
     //////////////////////////////////////////////////
     // SAFETY FALLBACK
