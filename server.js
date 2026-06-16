@@ -2712,8 +2712,6 @@ console.log(
 );
 
 placeLink =
-  placeSearchRes?.local_results?.[0]?.place_id_search ||
-
   placeSearchRes?.local_results?.[0]?.website ||
 
   placeSearchRes?.local_results?.[0]?.link ||
@@ -2722,8 +2720,12 @@ placeLink =
 
   placeSearchRes?.places_results?.[0]?.link ||
 
-  "";
-
+  (
+    placeName
+      ? "https://www.google.com/maps/search/" +
+        encodeURIComponent(placeName)
+      : ""
+  );
 console.log(
   "PLACE LINK:",
   placeLink
