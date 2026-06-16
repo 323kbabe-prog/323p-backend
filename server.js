@@ -2693,18 +2693,14 @@ const placeSearchFetch =
   const placeSearchRes =
     await placeSearchFetch.json();
 
-  placeLink =
-  placeSearchRes
-    ?.local_results?.[0]
-    ?.website ||
+placeLink =
+  placeSearchRes?.local_results?.[0]?.website ||
 
-  placeSearchRes
-    ?.local_results?.[0]
-    ?.link ||
+  placeSearchRes?.local_results?.[0]?.link ||
 
-  placeSearchRes
-    ?.places_results?.[0]
-    ?.website ||
+  placeSearchRes?.places_results?.[0]?.website ||
+
+  placeSearchRes?.places_results?.[0]?.link ||
 
   "";
 
