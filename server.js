@@ -2712,6 +2712,8 @@ console.log(
 );
 
 placeLink =
+  placeSearchRes?.local_results?.[0]?.place_id_search ||
+
   placeSearchRes?.local_results?.[0]?.website ||
 
   placeSearchRes?.local_results?.[0]?.link ||
@@ -2721,6 +2723,11 @@ placeLink =
   placeSearchRes?.places_results?.[0]?.link ||
 
   "";
+
+console.log(
+  "PLACE LINK:",
+  placeLink
+);
 
   placeName =
     placeSearchRes
