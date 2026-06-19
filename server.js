@@ -58,6 +58,47 @@ app.get("/test-openai", async (req,res) => {
 
 });
 
+app.get("/test-fetch", async (req,res) => {
+
+  try{
+
+    const r = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method:"POST",
+        headers:{
+          "Authorization":
+            `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type":
+            "application/json"
+        },
+        body:JSON.stringify({
+          model:"gpt-4o-mini",
+          messages:[
+            {
+              role:"user",
+              content:"hello"
+            }
+          ]
+        })
+      }
+    );
+
+    const data =
+      await r.text();
+
+    res.send(data);
+
+  }catch(err){
+
+    res.status(500).send(
+      JSON.stringify(err)
+    );
+  }
+
+});
+
+
 
 //////////////////////////////////////////////////
 // EMAIL
@@ -3089,3 +3130,5 @@ server.listen(10000, () => {
   );
 
 });
+
+
