@@ -112,6 +112,22 @@ const users = {};
 const questions = [];
 const rooms = {};
 
+const dailyNullCategories = [
+  "AI",
+  "Technology",
+  "Business",
+  "Economics",
+  "Politics",
+  "Culture",
+  "Music",
+  "Celebrity",
+  "Sports",
+  "Internet"
+];
+
+let dailyNulls = [];
+let dailyNullsUpdatedAt = null;
+
 //////////////////////////////////////////////////
 // CLEANUP
 //////////////////////////////////////////////////
@@ -187,6 +203,127 @@ function capitalizeFirst(text){
 //////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////
+async function generateDailyNulls(){
+
+  const cards = [];
+
+  for(const category of dailyNullCategories){
+
+    try{
+
+      const identityRes =
+        await openai.chat.completions.create({
+          model:"gpt-4o-mini",
+          messages:[
+            {
+              role:"system",
+              content:`
+Create one Ask Null identity for this category.
+
+Return JSON only:
+{
+  "identity":"",
+  "intro":""
+}
+
+Rules:
+- identity: 2 to 4 words
+- intro: 1 sentence
+- mysterious
+- internet-native
+- emotionally engaging
+- no markdown
+`
+            },
+            {
+              role:"user",
+              content:category
+            }
+          ]
+        });
+
+     let identityData = {
+  identity: category,
+  intro: "Exploring today's signals."
+};
+
+try{
+  identityData =
+    JSON.parse(
+      identityRes.choices[0].message.content
+    );
+}catch(err){
+  console.log(
+    "daily null json failed",
+    err
+  );
+}
+
+      const searchQuery =
+        category.toLowerCase() +
+        " biggest news today";
+
+      const newsFetch =
+        await fetch(
+          `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+        );
+
+      const newsRes =
+        await newsFetch.json();
+
+      const newsItem =
+        newsRes?.news_results?.find(item =>
+          item.title &&
+          (
+            item.original ||
+            item.thumbnail ||
+            item.thumbnail_small
+          )
+        );
+
+      if(newsItem){
+
+        cards.push({
+          category,
+          identity:identityData.identity,
+          intro:identityData.intro,
+          title:newsItem.title,
+          image:
+            newsItem.original ||
+            newsItem.thumbnail ||
+            newsItem.thumbnail_small,
+          link:
+            newsItem.link ||
+            newsItem.news_link ||
+            ""
+        });
+
+      }
+
+    }catch(err){
+
+      console.log(
+        "daily null failed:",
+        category,
+        err
+      );
+
+    }
+  }
+
+  dailyNulls = cards;
+  console.log(
+  "Daily Null Categories:",
+  cards.map(x => x.category)
+);
+  dailyNullsUpdatedAt =
+    new Date().toISOString();
+
+  console.log(
+    "DAILY NULLS UPDATED:",
+    dailyNulls.length
+  );
+}
 
 io.on("connection", socket => {
 
@@ -3008,6 +3145,18 @@ if(room.messages.length > 30){
 //////////////////////////////////////////////////
 // START
 //////////////////////////////////////////////////
+app.get("/daily-nulls", (req,res) => {
+  res.json({
+    updatedAt:dailyNullsUpdatedAt,
+    cards:dailyNulls
+  });
+});
+
+generateDailyNulls();
+
+setInterval(() => {
+  generateDailyNulls();
+}, 60 * 60 * 1000);
 
 server.listen(10000, () => {
 
