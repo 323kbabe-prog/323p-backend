@@ -286,13 +286,9 @@ socket.on(
 
     try{
 
-console.log("IMAGE ANALYSIS START");
-      
       const res =
         await openai.chat.completions.create({
 
-
-          
         model:"gpt-4o-mini",
 
         messages:[
@@ -346,12 +342,24 @@ Rules:
           {
             role:"user",
 
-        content:"hello"
+            content:[
+
+              {
+                type:"text",
+                text:"Analyze image"
+              },
+
+              {
+                type:"image_url",
+
+                image_url:{
+                  url:imageDataUrl
+                }
+              }
+            ]
           }
         ]
       });
-
-      console.log("IMAGE ANALYSIS DONE");
 
      //////////////////////////////////////////////////
 // IMAGE AI IDENTITY
