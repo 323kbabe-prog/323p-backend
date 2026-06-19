@@ -286,6 +286,11 @@ socket.on(
 
     try{
 
+console.log(
+  "IMAGE LENGTH:",
+  imageDataUrl.length
+);
+
       const res =
         await openai.chat.completions.create({
 
@@ -1600,12 +1605,6 @@ ${user.imageContext}`
     if(user.imageMode){
 
       try{
-
-console.log(
-  "IMAGE LENGTH:",
-  imageDataUrl.length
-);
-
 
         const res =
           await openai.chat.completions.create({
