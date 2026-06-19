@@ -576,65 +576,64 @@ io.to(roomId).emit(
 
 (async () => {
 
-let starterImage = null;
-let starterNewsTitle = "";
-let starterNewsItem = null; 
-
 try{
 
-//////////////////////////////////////////////////
-// STARTER HIDDEN SYSTEM
+  //////////////////////////////////////////////////
+// STARTER QUESTION
 //////////////////////////////////////////////////
 
-const meaningRes =
+const starterRes =
   await openai.chat.completions.create({
 
   model:"gpt-4o-mini",
 
-  messages:[
+  temperature:0.8,
+
+messages:[
 
     {
       role:"system",
 
       content:`
-Extract the hidden system behind the image.
+Create ONE trending social reaction line.
 
-Examples:
+The line should feel:
+- viral
+- socially reactive
+- internet-native
+- emotionally engaging
+- culturally current
 
-coffee cup
-→ consumer spending systems
-
-keyboard
-→ labor market transformation
-
-book
-→ education systems
-
-Return ONLY one short phrase.
+Rules:
+- lowercase only
+- no punctuation
+- 2 to 7 words
+- no philosophy
+- no existential tone
+- feel like live internet culture
 `
     },
 
     {
       role:"user",
-      content:user.imageContext
+
+      content:`
+Uploaded image AI personality:
+
+${user.imageContext}
+
+Create a completely fresh trending social reaction line.
+`
     }
   ]
 });
+const starterQuestion =
 
-const hiddenSystem =
-  meaningRes
+  starterRes
     .choices[0]
     .message
     .content
     .trim();
-
-const starterSearch =
-  hiddenSystem;
-
-console.log(
-  "STARTER SEARCH:",
-  starterSearch
-);
 
 //////////////////////////////////////////////////
 // STARTER MOOD
@@ -693,7 +692,7 @@ none yet
 
 Search phrase:
 
-${hiddenSystem}
+${starterQuestion}
 
 Current user response:
 
@@ -711,8 +710,279 @@ const starterMood =
     .content
     .trim();
 
-starterNewsTitle =
-  starterSearch;
+//////////////////////////////////////////////////
+// SAFE IMAGE
+//////////////////////////////////////////////////
+
+let starterImage = null;
+
+let starterNewsTitle =
+  starterQuestion;
+
+let starterNewsItem =
+  null;
+
+try{
+
+  const starterSearchRes =
+    await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Create ONE trending CURRENT NEWS image search phrase.
+
+IMPORTANT:
+
+The uploaded image is context only.
+
+The image provides meaning, not keywords.
+
+The room is:
+
+* personality-driven
+* internet-native
+* socially reactive
+* emotionally evolving
+
+The AI personality controls:
+
+* emotional tone
+* internet vibe
+* cultural direction
+* curiosity direction
+
+NEVER repeat:
+
+* previous searches
+* previous moods
+* previous trend situations
+* previous viral atmosphere
+
+The object is NOT the subject.
+
+The meaning is NOT the subject.
+
+The hidden system behind the meaning is the subject.
+
+Never search for:
+
+* the object
+* the product category
+* the industry category
+* the brand
+* the immediate meaning
+* the obvious interpretation
+
+The image should be interpreted as:
+
+image
+→ meaning
+→ deeper meaning
+→ hidden system
+→ search
+
+Move TWO layers beyond the meaning.
+
+Ask:
+
+* what system created this meaning?
+* what larger force is driving this meaning?
+* what economic system is behind this meaning?
+* what technological transformation is behind this meaning?
+* what cultural shift is behind this meaning?
+* what social change is behind this meaning?
+* what future disruption is behind this meaning?
+
+Examples:
+
+coffee cup
+→ routine
+→ consumer identity
+→ retail psychology
+→ consumer spending
+
+coffee cup
+→ routine
+→ workplace culture
+→ remote work economy
+
+frying pan
+→ cooking
+→ daily routine
+→ work life balance
+→ remote work trends
+
+frying pan
+→ household labor
+→ family structure
+→ birth rate decline
+
+keyboard
+→ productivity
+→ knowledge work
+→ ai automation
+→ labor market transformation
+
+book
+→ learning
+→ information access
+→ education systems
+→ workforce transformation
+
+shoe
+→ identity
+→ consumer expression
+→ youth culture
+→ spending behavior
+
+The final search should reveal:
+
+* causes
+* systems
+* consequences
+* transformations
+* disruptions
+* opportunities
+
+The final search should NOT reveal:
+
+* the object
+* the category
+* the industry
+* the immediate meaning
+
+GOOD:
+
+remote work productivity shift
+consumer spending trends
+labor market transformation
+ai replacing entry level jobs
+digital nomad economy growth
+education workforce transition
+semiconductor trade tensions
+global manufacturing slowdown
+retail loyalty decline
+future of human computer interaction
+
+BAD:
+
+coffee trends 2026
+starbucks cup launch
+food inflation
+kitchen products
+gaming keyboard launch
+book publishing news
+shoe buying guide
+
+Rules:
+
+* 3 to 8 words
+* lowercase only
+* no punctuation
+* visually searchable
+* current news energy only
+* no philosophy
+* no repetition
+
+PRIORITY RULES:
+
+1. USER emotional direction (90%)
+
+* trend direction
+* emotional evolution
+* internet topic
+* social meaning
+* public discussion
+
+2. Hidden system behind the image (10%)
+
+The image is context.
+
+The meaning is a clue.
+
+The hidden system is the destination.
+
+The search should help the user discover something they would never normally search for.
+
+`
+      },
+
+      {
+        role:"user",
+
+        content:`
+Uploaded image AI personality:
+
+${user.imageContext}
+
+Trend personality category:
+
+${rooms[roomId].coreTheme}
+
+Previous trend history:
+
+none yet
+
+Used searches:
+
+none yet
+
+Used moods:
+
+${starterMood}
+
+Used reactions:
+
+${starterQuestion}
+
+Current user reaction:
+
+starting room
+
+Create a NEW trending CURRENT NEWS image search phrase.
+
+IMPORTANT:
+
+The search MUST feel connected to the hidden system behind the image.
+
+Do NOT reconnect to:
+- the object
+- the product category
+- the industry category
+
+Stay connected to:
+- the hidden system
+- the user system
+- the larger forces behind the image
+The room should evolve like:
+- a live internet feed
+- social media culture
+- trending reactions
+- viral news energy
+- celebrity/internet momentum
+`
+      }
+    ]
+  });
+
+  const starterSearch =
+
+    starterSearchRes
+      .choices[0]
+      .message
+      .content
+      .trim();
+
+  console.log(
+    "STARTER SEARCH:",
+    starterSearch
+  );
 
   //////////////////////////////////////////////////
   // GOOGLE NEWS SEARCH
@@ -844,8 +1114,6 @@ ${validStarterNews.map(
 
     starterNewsTitle =
       starterNewsItem.title;
-
-  }
 
   }catch(err){
 
