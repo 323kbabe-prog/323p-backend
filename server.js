@@ -627,6 +627,7 @@ Create a completely fresh trending social reaction line.
     }
   ]
 });
+
 const hiddenSystemRes =
   await openai.chat.completions.create({
 
@@ -656,6 +657,7 @@ const starterQuestion =
     .message
     .content
     .trim();
+
 
 //////////////////////////////////////////////////
 // STARTER MOOD
