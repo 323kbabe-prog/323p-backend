@@ -346,21 +346,7 @@ Rules:
           {
             role:"user",
 
-            content:[
-
-              {
-                type:"text",
-                text:"Analyze image"
-              },
-
-              {
-                type:"image_url",
-
-                image_url:{
-                  url:imageDataUrl
-                }
-              }
-            ]
+        content:"hello"
           }
         ]
       });
