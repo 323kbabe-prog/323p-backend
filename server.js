@@ -17,9 +17,47 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
+
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+app.get("/test-openai", async (req,res) => {
+
+  try{
+
+    const r =
+      await openai.chat.completions.create({
+
+        model:"gpt-4o-mini",
+
+        messages:[
+          {
+            role:"user",
+            content:"hello"
+          }
+        ]
+      });
+
+    res.send(
+      r.choices[0].message.content
+    );
+
+  }catch(err){
+
+    console.log(
+      "TEST OPENAI ERROR:",
+      err
+    );
+
+    res.status(500).send(
+      JSON.stringify(err)
+    );
+  }
+
+});
+
 
 //////////////////////////////////////////////////
 // EMAIL
