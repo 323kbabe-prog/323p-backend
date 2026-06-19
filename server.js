@@ -845,6 +845,8 @@ ${validStarterNews.map(
     starterNewsTitle =
       starterNewsItem.title;
 
+  }
+
   }catch(err){
 
     console.log(
