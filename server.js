@@ -883,11 +883,24 @@ PRIORITY RULES:
 
 2. Hidden system behind the image (10%)
 
-The image is context.
+The image is NOT the subject.
 
-The meaning is a clue.
+The hidden system is the subject.
 
-The hidden system is the destination.
+Ignore the object completely.
+
+Search one level beyond the hidden system.
+
+BAD:
+smart home gadgets
+air purifier technology
+sleep gadgets
+
+GOOD:
+digital communication trends
+consumer behavior shifts
+technology adoption patterns
+future home automation economy
 
 The search should help the user discover something they would never normally search for.
 
