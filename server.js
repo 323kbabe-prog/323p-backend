@@ -576,6 +576,10 @@ io.to(roomId).emit(
 
 (async () => {
 
+let starterImage = null;
+let starterNewsTitle = "";
+let starterNewsItem = null; 
+
 try{
 
 //////////////////////////////////////////////////
@@ -707,13 +711,8 @@ const starterMood =
     .content
     .trim();
 
-let starterImage = null;
-
-let starterNewsTitle =
+starterNewsTitle =
   starterSearch;
-
-let starterNewsItem =
-  null;
 
   //////////////////////////////////////////////////
   // GOOGLE NEWS SEARCH
