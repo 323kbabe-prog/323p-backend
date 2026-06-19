@@ -20,8 +20,10 @@ const io = new Server(server, {
 
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
+  fetch: fetch
 });
+
 
 app.get("/test-openai", async (req,res) => {
 
@@ -3130,5 +3132,3 @@ server.listen(10000, () => {
   );
 
 });
-
-
