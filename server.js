@@ -582,39 +582,58 @@ try{
 // STARTER QUESTION
 //////////////////////////////////////////////////
 
-const hiddenSystemRes =
+const starterRes =
   await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-    messages:[
+  temperature:0.8,
 
-      {
-        role:"system",
-        content:`
-Extract the hidden system behind the image.
+messages:[
 
-Return ONLY one short phrase.
+    {
+      role:"system",
+
+      content:`
+Create ONE trending social reaction line.
+
+The line should feel:
+- viral
+- socially reactive
+- internet-native
+- emotionally engaging
+- culturally current
+
+Rules:
+- lowercase only
+- no punctuation
+- 2 to 7 words
+- no philosophy
+- no existential tone
+- feel like live internet culture
 `
-      },
+    },
 
-      {
-        role:"user",
-        content:user.imageContext
-      }
-    ]
-  });
+    {
+      role:"user",
 
-const hiddenSystem =
-  hiddenSystemRes
+      content:`
+Uploaded image AI personality:
+
+${user.imageContext}
+
+Create a completely fresh trending social reaction line.
+`
+    }
+  ]
+});
+const starterQuestion =
+
+  starterRes
     .choices[0]
     .message
     .content
     .trim();
-
-const starterQuestion =
-  hiddenSystem;
-
 
 //////////////////////////////////////////////////
 // STARTER MOOD
