@@ -627,37 +627,13 @@ Create a completely fresh trending social reaction line.
     }
   ]
 });
-
-const hiddenSystemRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-        content:`
-Extract the hidden system behind the image.
-
-Return ONLY one short phrase.
-`
-      },
-
-      {
-        role:"user",
-        content:user.imageContext
-      }
-    ]
-  });
-
 const starterQuestion =
-  hiddenSystemRes
+
+  starterRes
     .choices[0]
     .message
     .content
     .trim();
-
 
 //////////////////////////////////////////////////
 // STARTER MOOD
