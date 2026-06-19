@@ -585,52 +585,6 @@ try{
 // STARTER QUESTION
 //////////////////////////////////////////////////
 
-const starterRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  temperature:0.8,
-
-messages:[
-
-    {
-      role:"system",
-
-      content:`
-Create ONE trending social reaction line.
-
-The line should feel:
-- viral
-- socially reactive
-- internet-native
-- emotionally engaging
-- culturally current
-
-Rules:
-- lowercase only
-- no punctuation
-- 2 to 7 words
-- no philosophy
-- no existential tone
-- feel like live internet culture
-`
-    },
-
-    {
-      role:"user",
-
-      content:`
-Uploaded image AI personality:
-
-${user.imageContext}
-
-Create a completely fresh trending social reaction line.
-`
-    }
-  ]
-});
-
 const hiddenSystemRes =
   await openai.chat.completions.create({
 
