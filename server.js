@@ -266,9 +266,72 @@ try{
   );
 }
 
-      const searchQuery =
-        category.toLowerCase() +
-        " biggest news today";
+const searchRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Create ONE surprising current news search.
+
+The search should feel:
+
+- unexpected
+- internet-native
+- emotionally engaging
+- culturally current
+- newsworthy
+
+Rules:
+
+- 3 to 6 words
+- lowercase only
+- no punctuation
+- real searchable news topics
+`
+      },
+
+      {
+        role:"user",
+
+        content:`
+
+Category:
+${category}
+
+Null Identity:
+${identityData.identity}
+
+Intro:
+${identityData.intro}
+
+Create ONE search phrase.
+
+`
+      }
+
+    ]
+
+  });
+
+const searchQuery =
+
+  searchRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+console.log(
+  "DAILY NULL SEARCH:",
+  category,
+  searchQuery
+);
 
       const newsFetch =
         await fetch(
