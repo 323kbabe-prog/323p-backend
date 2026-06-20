@@ -203,7 +203,14 @@ function capitalizeFirst(text){
 //////////////////////////////////////////////////
 // SOCKET
 //////////////////////////////////////////////////
+
+
 async function generateDailyNulls(){
+
+    console.log(
+    "GENERATING DAILY NULLS:",
+    new Date().toISOString()
+  );
 
   const cards = [];
 
