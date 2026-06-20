@@ -333,10 +333,10 @@ console.log(
   searchQuery
 );
 
-      const newsFetch =
-        await fetch(
-          `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
-        );
+const newsFetch =
+  await fetch(
+    `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+  );
 
       const newsRes =
         await newsFetch.json();
