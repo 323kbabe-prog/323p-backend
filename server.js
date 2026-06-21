@@ -919,200 +919,23 @@ try{
 
     messages:[
 
-      {
-        role:"system",
+    {
+  role:"system",
 
-        content:`
-Create ONE trending CURRENT NEWS image search phrase.
-
-IMPORTANT:
-
-The uploaded image is context only.
-
-The image provides meaning, not keywords.
-
-The room is:
-
-* personality-driven
-* internet-native
-* socially reactive
-* emotionally evolving
-
-The AI personality controls:
-
-* emotional tone
-* internet vibe
-* cultural direction
-* curiosity direction
-
-NEVER repeat:
-
-* previous searches
-* previous moods
-* previous trend situations
-* previous viral atmosphere
-
-The object is NOT the subject.
-
-The meaning is NOT the subject.
-
-The hidden system behind the meaning is the subject.
-
-Never search for:
-
-* the object
-* the product category
-* the industry category
-* the brand
-* the immediate meaning
-* the obvious interpretation
-
-The image should be interpreted as:
-
-image
-→ meaning
-→ deeper meaning
-→ hidden system
-→ search
-
-Move TWO layers beyond the meaning.
-
-Ask:
-
-* what system created this meaning?
-* what larger force is driving this meaning?
-* what economic system is behind this meaning?
-* what technological transformation is behind this meaning?
-* what cultural shift is behind this meaning?
-* what social change is behind this meaning?
-* what future disruption is behind this meaning?
-
-Examples:
-
-coffee cup
-→ routine
-→ consumer identity
-→ retail psychology
-→ consumer spending
-
-coffee cup
-→ routine
-→ workplace culture
-→ remote work economy
-
-frying pan
-→ cooking
-→ daily routine
-→ work life balance
-→ remote work trends
-
-frying pan
-→ household labor
-→ family structure
-→ birth rate decline
-
-keyboard
-→ productivity
-→ knowledge work
-→ ai automation
-→ labor market transformation
-
-book
-→ learning
-→ information access
-→ education systems
-→ workforce transformation
-
-shoe
-→ identity
-→ consumer expression
-→ youth culture
-→ spending behavior
-
-The final search should reveal:
-
-* causes
-* systems
-* consequences
-* transformations
-* disruptions
-* opportunities
-
-The final search should NOT reveal:
-
-* the object
-* the category
-* the industry
-* the immediate meaning
-
-GOOD:
-
-remote work productivity shift
-consumer spending trends
-labor market transformation
-ai replacing entry level jobs
-digital nomad economy growth
-education workforce transition
-semiconductor trade tensions
-global manufacturing slowdown
-retail loyalty decline
-future of human computer interaction
-
-BAD:
-
-coffee trends 2026
-starbucks cup launch
-food inflation
-kitchen products
-gaming keyboard launch
-book publishing news
-shoe buying guide
-
-Rules:
-
-* 3 to 8 words
-* lowercase only
-* no punctuation
-* visually searchable
-* current news energy only
-* no philosophy
-* no repetition
-
-PRIORITY RULES:
-
-1. USER emotional direction (90%)
-
-* trend direction
-* emotional evolution
-* internet topic
-* social meaning
-* public discussion
-
-2. Hidden system behind the image (10%)
-
-The image is NOT the subject.
+  content:`
+Create ONE current news search phrase.
 
 The hidden system is the subject.
 
-Ignore the object completely.
+Return ONLY the search phrase.
 
-Search one level beyond the hidden system.
-
-BAD:
-smart home gadgets
-air purifier technology
-sleep gadgets
-
-GOOD:
-digital communication trends
-consumer behavior shifts
-technology adoption patterns
-future home automation economy
-
-The search should help the user discover something they would never normally search for.
-
+Rules:
+- 3 to 8 words
+- lowercase only
+- no punctuation
+- current news only
 `
-      },
+},
 
       {
         role:"user",
