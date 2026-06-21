@@ -2993,24 +2993,19 @@ room.messages.push({
 
   image:imageUrl,
 
-  searchType:
-    text.trim().toLowerCase() === "next"
-      ? "null"
-      : "tien",
+  ask:
 
-ask:
+`CONTEXT MAPPING:
 
-"\n" +
+${hiddenSystem}
 
-(
-  placeStory ||
-  selectedNews?.title ||
-  searchQuery
-)
+SOCIAL, BRAINSTORM:
 
-+
+${searchQuery}
 
-"\n",
+REFERENCE ARTICLE:
+
+${selectedNews?.title || ""}`,
 
   link:
     placeLink ||
