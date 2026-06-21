@@ -351,24 +351,31 @@ const newsFetch =
           )
         );
 
-      if(newsItem){
+    cards.push({
 
-        cards.push({
-          category,
-          identity:identityData.identity,
-          intro:identityData.intro,
-          title:newsItem.title,
-          image:
-            newsItem.original ||
-            newsItem.thumbnail ||
-            newsItem.thumbnail_small,
-          link:
-            newsItem.link ||
-            newsItem.news_link ||
-            ""
-        });
+  category,
 
-      }
+  identity:identityData.identity,
+
+  intro:identityData.intro,
+
+  title:
+    newsItem?.title ||
+    searchQuery,
+
+  image:
+    newsItem?.original ||
+    newsItem?.thumbnail ||
+    newsItem?.thumbnail_small ||
+    "https://picsum.photos/600/800?random=" +
+      Math.floor(Math.random()*100000),
+
+  link:
+    newsItem?.link ||
+    newsItem?.news_link ||
+    ""
+
+});
 
     }catch(err){
 
