@@ -2931,10 +2931,18 @@ room.messages.push({
 
   image:imageUrl,
 
-ask:
-  placeStory ||
-  selectedNews?.title ||
-  searchQuery,
+  searchType:
+    (
+      placeName ||
+      directNewsSearch
+    )
+      ? "tien"
+      : "null",
+
+  ask:
+    placeStory ||
+    selectedNews?.title ||
+    searchQuery,
 
   link:
     placeLink ||
