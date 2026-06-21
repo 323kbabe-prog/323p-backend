@@ -919,79 +919,57 @@ try{
 
     messages:[
 
-    {
-  role:"system",
+   {
+role:"system",
 
-  content:`
+content:`
 Create ONE current news search phrase.
 
-The hidden system is the subject.
+The hidden system behind the image is the subject.
+
+Ignore:
+
+* the object
+* the product
+* the category
+* the industry
+* visible text
+* brands
+
+Think:
+
+image
+→ meaning
+→ deeper meaning
+→ hidden system
+→ current news
+
+Search ONLY from the hidden system.
 
 Return ONLY the search phrase.
 
 Rules:
-- 3 to 8 words
-- lowercase only
-- no punctuation
-- current news only
-`
+
+* 3 to 8 words
+* lowercase only
+* no punctuation
+* current news only
+* no object names
+* no product names
+* no brand names
+  `
 },
 
-      {
-        role:"user",
 
-        content:`
-Uploaded image AI personality:
+     {
+  role:"user",
 
-${user.imageContext}
-
-Trend personality category:
-
-${rooms[roomId].coreTheme}
-
-Previous trend history:
-
-none yet
-
-Used searches:
-
-none yet
-
-Used moods:
-
-${starterMood}
-
-Used reactions:
+  content:`
+Hidden system:
 
 ${starterQuestion}
-
-Current user reaction:
-
-starting room
-
-Create a NEW trending CURRENT NEWS image search phrase.
-
-IMPORTANT:
-
-The search MUST feel connected to the hidden system behind the image.
-
-Do NOT reconnect to:
-- the object
-- the product category
-- the industry category
-
-Stay connected to:
-- the hidden system
-- the user system
-- the larger forces behind the image
-The room should evolve like:
-- a live internet feed
-- social media culture
-- trending reactions
-- viral news energy
-- celebrity/internet momentum
 `
-      }
+}
     ]
   });
 
