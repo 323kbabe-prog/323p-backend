@@ -236,7 +236,8 @@ Return JSON only:
 Rules:
 - identity: 2 to 4 words
 - intro: 1 sentence
-- mysterious
+- hook
+- shocking
 - internet-native
 - emotionally engaging
 
@@ -371,7 +372,7 @@ const newsFetch =
       const newsRes =
         await newsFetch.json();
 
-const newsItem =
+let newsItem =
   newsRes?.news_results?.find(item =>
     item.title &&
     (
@@ -379,6 +380,30 @@ const newsItem =
       item.news_link
     )
   );
+
+if(!newsItem){
+
+  const fallbackSearch = category + " news";
+
+  const fallbackFetch =
+    await fetch(
+      `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(fallbackSearch)}&api_key=${process.env.SERPAPI_KEY}`
+    );
+
+  const fallbackRes =
+    await fallbackFetch.json();
+
+  newsItem =
+    fallbackRes?.news_results?.find(
+      item =>
+        item.title &&
+        (
+          item.link ||
+          item.news_link
+        )
+    );
+
+}
 
       if(!newsItem){
   continue;
