@@ -239,6 +239,7 @@ Rules:
 - mysterious
 - internet-native
 - emotionally engaging
+- every identity must feel unique and not repeat previous identities
 - no markdown
 `
             },
