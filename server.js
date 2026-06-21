@@ -1455,10 +1455,15 @@ setTimeout(() => {
     "aiTypingStop"
   );
 
-  rooms[roomId].messages.push({
+rooms[roomId].messages.push({
   from:"Image AI",
+
+  searchType:"null",
+
   image:starterImage,
+
   ask:starterNewsTitle,
+
   link:
     starterNewsItem?.link ||
     starterNewsItem?.news_link ||
@@ -2932,12 +2937,9 @@ room.messages.push({
   image:imageUrl,
 
   searchType:
-    (
-      placeName ||
-      directNewsSearch
-    )
-      ? "tien"
-      : "null",
+    text.trim().toLowerCase() === "next"
+      ? "null"
+      : "tien",
 
   ask:
     placeStory ||
