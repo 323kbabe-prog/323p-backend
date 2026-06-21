@@ -2998,10 +2998,19 @@ room.messages.push({
       ? "null"
       : "tien",
 
-  ask:
-    placeStory ||
-    selectedNews?.title ||
-    searchQuery,
+ask:
+
+"\n" +
+
+(
+  placeStory ||
+  selectedNews?.title ||
+  searchQuery
+)
+
++
+
+"\n",
 
   link:
     placeLink ||
