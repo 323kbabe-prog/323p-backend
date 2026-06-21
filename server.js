@@ -213,7 +213,7 @@ async function generateDailyNulls(){
   );
 
   const cards = [];
-
+const usedIdentities = [];
   for(const category of dailyNullCategories){
 
     try{
@@ -222,9 +222,9 @@ async function generateDailyNulls(){
         await openai.chat.completions.create({
           model:"gpt-4o-mini",
           messages:[
-            {
-              role:"system",
-              content:`
+           {
+  role:"system",
+  content:`
 Create one Ask Null identity for this category.
 
 Return JSON only:
@@ -239,14 +239,38 @@ Rules:
 - mysterious
 - internet-native
 - emotionally engaging
-- every identity must feel unique and not repeat previous identities
+
+IMPORTANT:
+
+Already used identities are forbidden.
+
+Do not repeat:
+- words
+- themes
+- metaphors
+- emotional tones
+- concepts
+
+Every identity must feel like a completely different internet phenomenon.
+
 - no markdown
 `
-            },
-            {
-              role:"user",
-              content:category
-            }
+},
+           {
+  role:"user",
+  content:`
+
+Category:
+${category}
+
+Already used identities:
+
+${usedIdentities.join("\n")}
+
+Create ONE identity that is clearly different from all identities above.
+
+`
+}
           ]
         });
 
@@ -260,6 +284,11 @@ try{
     JSON.parse(
       identityRes.choices[0].message.content
     );
+
+usedIdentities.push(
+  identityData.identity
+);
+  
 }catch(err){
   console.log(
     "daily null json failed",
