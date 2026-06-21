@@ -3057,16 +3057,76 @@ if(!imageUrl){
 let newsTitle =
   selectedNews?.title ||
   searchQuery;
+
+  let placeStory = null;
+
+if(placeName){
+
+  try{
+
+    const placeStoryRes =
+      await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      messages:[
+
+        {
+          role:"system",
+          content:`
+You are Ask Null.
+
+Explain why you picked this place.
+
+Rules:
+- first person
+- start with I picked
+- include the place name
+- include the news event
+- one sentence only
+`
+        },
+
+        {
+          role:"user",
+          content:`
+Place:
+${placeName}
+
+News:
+${selectedNews?.title || ""}
+`
+        }
+
+      ]
+
+    });
+
+    placeStory =
+      placeStoryRes
+        .choices[0]
+        .message
+        .content
+        .trim();
+
+  }catch(err){
+
+    placeStory =
+      `I picked ${placeName} because it connects to one of the biggest stories unfolding in this location right now.`;
+
+  }
+
+}
   
 room.messages.push({
   from:"Image AI",
 
   image:imageUrl,
 
-  ask:
-    placeName
-      ? `${placeName}\n\n${selectedNews?.title || ""}`
-      : selectedNews?.title || searchQuery,
+ask:
+  placeStory ||
+  selectedNews?.title ||
+  searchQuery,
 
   link:
     placeLink ||
@@ -3160,6 +3220,8 @@ setTimeout(() => {
   return;
 }
 
+
+      
     room.messages.push({
 
       from:"Image AI",
