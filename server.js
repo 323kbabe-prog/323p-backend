@@ -371,15 +371,18 @@ const newsFetch =
       const newsRes =
         await newsFetch.json();
 
-      const newsItem =
-        newsRes?.news_results?.find(item =>
-          item.title &&
-          (
-            item.original ||
-            item.thumbnail ||
-            item.thumbnail_small
-          )
-        );
+const newsItem =
+  newsRes?.news_results?.find(item =>
+    item.title &&
+    (
+      item.link ||
+      item.news_link
+    )
+  );
+
+      if(!newsItem){
+  continue;
+}
 
     cards.push({
 
@@ -389,21 +392,18 @@ const newsFetch =
 
   intro:identityData.intro,
 
-  title:
-    newsItem?.title ||
-    searchQuery,
+title:
+  newsItem.title,
 
-  image:
-    newsItem?.original ||
-    newsItem?.thumbnail ||
-    newsItem?.thumbnail_small ||
-    "https://picsum.photos/600/800?random=" +
-      Math.floor(Math.random()*100000),
+image:
+  newsItem.original ||
+  newsItem.thumbnail ||
+  newsItem.thumbnail_small ||
+  null,
 
-  link:
-    newsItem?.link ||
-    newsItem?.news_link ||
-    ""
+link:
+  newsItem.link ||
+  newsItem.news_link
 
 });
 
