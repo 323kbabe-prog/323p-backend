@@ -235,7 +235,9 @@ Return JSON only:
 
 Rules:
 - identity: 2 to 4 words
-- intro: 1 sentence
+- intro: exactly 1 short sentence
+- intro should explain why this signal matters
+- 8 to 15 words
 - hook
 - shocking
 - internet-native
