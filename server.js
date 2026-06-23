@@ -1696,7 +1696,7 @@ if(
   text.trim().toLowerCase() !== "next"
 ){
 
-  room.memory.push(text);
+ 
 
   if(room.memory.length > 10){
 
@@ -1744,7 +1744,78 @@ try{
 //////////////////////////////////////////////////
 // USER EMOTIONAL INTENT
 //////////////////////////////////////////////////
+const combinedIntentRes =
+  await openai.chat.completions.create({
 
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+        content:`
+Combine the conversation memory
+and current message.
+
+Return the user's complete intent.
+
+Examples:
+
+Memory:
+I want the best coffee shop
+
+Current:
+In New York
+
+Return:
+best coffee shop in new york
+
+Memory:
+I want ramen
+
+Current:
+In Shibuya
+
+Return:
+best ramen in shibuya
+
+Memory:
+I want a cool bar
+
+Current:
+Tonight
+
+Return:
+cool bar tonight
+`
+      },
+
+      {
+        role:"user",
+        content:`
+
+Memory:
+
+${room.memory.join("\n")}
+
+Current:
+
+${text}
+
+`
+      }
+
+    ]
+
+});
+
+const combinedIntent =
+  combinedIntentRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+  
 const userIntentRes =
   await openai.chat.completions.create({
   model:"gpt-4o-mini",
@@ -1812,17 +1883,7 @@ Rules:
     },
     {
       role:"user",
-      content:`
-
-Conversation Memory:
-
-${room.memory.join("\n")}
-
-Current Message:
-
-${text}
-
-`
+     content: combinedIntent
     }
   ]
 });
@@ -1834,6 +1895,13 @@ const userIntent =
     .content
     .trim();
 
+  
+
+console.log(
+  "COMBINED INTENT:",
+  combinedIntent
+);
+  
   const locationPurposeRes =
   await openai.chat.completions.create({
     model:"gpt-4o-mini",
@@ -1901,27 +1969,18 @@ no punctuation
       },
       {
         role:"user",
-        content:`
-
-Conversation Memory:
-
-${room.memory.join("\n")}
-
-Current Message:
-
-${text}
-
-`
+        content: combinedIntent
       }
     ]
   });
 
 const locationPurposeSearch =
-locationPurposeRes
-.choices[0]
-.message
-.content
-.trim();
+
+  locationPurposeRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 let directLocationSearch = null;
 
@@ -2962,6 +3021,21 @@ if(room.messages.length > 30){
 
 }
 
+if(
+  text.trim().toLowerCase() !== "next"
+){
+
+  room.memory.push(text);
+
+  if(room.memory.length > 10){
+
+    room.memory =
+      room.memory.slice(-10);
+
+  }
+
+}
+  
   io.to(room.id).emit(
   "roomMessages",
   room.messages
