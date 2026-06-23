@@ -968,8 +968,7 @@ const starterMood =
 
 let starterImage = null;
 
-let starterNewsTitle =
-  starterQuestion;
+let starterNewsTitle = "";
 
 let starterNewsItem =
   null;
@@ -1203,194 +1202,8 @@ ${validStarterNews.map(
 
 }
 
-  //////////////////////////////////////////////////
-  // GOOGLE IMAGE FALLBACK
-  //////////////////////////////////////////////////
-
-  if(!starterImage){
-
-    try{
-
-      const imageFallbackFetch =
-        await fetch(
-
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
-
-        );
-
-      const imageFallbackRes =
-        await imageFallbackFetch.json();
-
-      starterImage =
-
-        imageFallbackRes
-          ?.images_results?.[0]
-          ?.original ||
-
-        imageFallbackRes
-          ?.images_results?.[0]
-          ?.thumbnail;
-
-    }catch(err){
-
-      console.log(
-        "google image fallback failed",
-        err
-      );
-    }
-  }
-
-  //////////////////////////////////////////////////
-  // FINAL INTERNET FALLBACK
-  //////////////////////////////////////////////////
-
-  if(!starterImage){
-
-    try{
-
-      console.log(
-        "FALLBACK THEME:",
-        rooms[roomId].coreTheme
-      );
-
-      const fallbackFetch =
-        await fetch(
-
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(rooms[roomId].coreTheme)}&api_key=${process.env.SERPAPI_KEY}`
-
-        );
-
-      const fallbackRes =
-        await fallbackFetch.json();
-
-      console.log(
-        "FALLBACK IMAGE COUNT:",
-        fallbackRes?.images_results?.length
-      );
-
-      starterImage =
-
-        fallbackRes
-          ?.images_results?.[0]
-          ?.original ||
-
-        fallbackRes
-          ?.images_results?.[0]
-          ?.thumbnail;
-
-    }catch(err){
-
-      console.log(
-        "final internet fallback failed",
-        err
-      );
-    }
-  }
-
-  //////////////////////////////////////////////////
-  // ABSOLUTE FINAL INTERNET SAFETY
-  //////////////////////////////////////////////////
-
-  if(!starterImage){
-
-    try{
-
-      const randomThemes = [
-
-        rooms[roomId].coreTheme,
-
-        rooms[roomId].coreTheme + " trending",
-
-        rooms[roomId].coreTheme + " viral",
-
-        rooms[roomId].coreTheme + " culture",
-
-        rooms[roomId].coreTheme + " social media",
-
-        rooms[roomId].coreTheme + " breaking news",
-
-        rooms[roomId].coreTheme + " internet culture"
-      ];
-
-      const randomQuery =
-
-        randomThemes[
-          Math.floor(
-            Math.random() *
-            randomThemes.length
-          )
-        ];
-
-      console.log(
-        "SAFETY QUERY:",
-        randomQuery
-      );
-
-      const safetyFetch =
-        await fetch(
-
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(randomQuery)}&api_key=${process.env.SERPAPI_KEY}`
-
-        );
-
-      const safetyRes =
-        await safetyFetch.json();
-
-      console.log(
-        "SAFETY IMAGE COUNT:",
-        safetyRes?.images_results?.length
-      );
-
-      starterImage =
-
-        safetyRes
-          ?.images_results?.[
-            Math.floor(
-              Math.min(
-                5,
-                safetyRes?.images_results?.length || 1
-              ) * Math.random()
-            )
-          ]
-          ?.original ||
-
-        safetyRes
-          ?.images_results?.[
-            Math.floor(
-              Math.min(
-                5,
-                safetyRes?.images_results?.length || 1
-              ) * Math.random()
-            )
-          ]
-          ?.thumbnail;
-
-    }catch(err){
-
-      console.log(
-        "absolute internet safety failed",
-        err
-      );
-    }
-  }
-
-}catch(err){
-
-  console.log(
-    "starter room AI failed",
-    err
-  );
-}
-
-//////////////////////////////////////////////////
-// TRUE FINAL FALLBACK
-//////////////////////////////////////////////////
-
-if(!starterImage){
-
-  starterImage =
-    "https://picsum.photos/900/1200?random=" +
-    Math.floor(Math.random()*100000);
+  if(validStarterNews.length === 0){
+  return;
 }
 
 //////////////////////////////////////////////////
@@ -2854,53 +2667,6 @@ console.log(
 
 }
 
-//////////////////////////////////////////////////
-// GOOGLE IMAGE FALLBACK
-//////////////////////////////////////////////////
-
-if(!imageUrl){
-
-  try{
-
-    const imageFallbackFetch =
-      await fetch(
-
-        `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
-
-      );
-
-    const imageFallbackRes =
-      await imageFallbackFetch.json();
-
-    imageUrl =
-
-      imageFallbackRes
-        ?.images_results?.[0]
-        ?.original ||
-
-      imageFallbackRes
-        ?.images_results?.[0]
-        ?.thumbnail;
-
-  }catch(err){
-
-    console.log(
-      "google image fallback failed",
-      err
-    );
-  }
-}
-
-//////////////////////////////////////////////////
-// FINAL FALLBACK
-//////////////////////////////////////////////////
-
-if(!imageUrl){
-
-  imageUrl =
-    user.lastImage;
-}
-
   //////////////////////////////////////////////////
   // PUSH IMAGE MESSAGE
   //////////////////////////////////////////////////
@@ -2924,9 +2690,12 @@ if(!imageUrl){
 // V5.4.2 EMOTIONALLY CHOSEN TITLE
 //////////////////////////////////////////////////
 
+if(!selectedNews?.title){
+  return;
+}
+
 let newsTitle =
-  selectedNews?.title ||
-  searchQuery;
+  selectedNews.title;
 
   let placeStory = null;
 
@@ -2987,6 +2756,17 @@ ${selectedNews?.title || ""}
   }
 
 }
+
+if(
+  !selectedNews ||
+  !selectedNews.title ||
+  !(
+    selectedNews.link ||
+    selectedNews.news_link
+  )
+){
+  return;
+}
   
 room.messages.push({
   from:"Image AI",
@@ -2998,10 +2778,9 @@ room.messages.push({
       ? "null"
       : "tien",
 
-  ask:
-    placeStory ||
-    selectedNews?.title ||
-    searchQuery,
+ask:
+  placeStory ||
+  selectedNews.title,
 
   link:
     placeLink ||
