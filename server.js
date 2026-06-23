@@ -778,7 +778,7 @@ user.displayName =
 
     memory:[],
     
-    usedPlaces:[],
+    usedPlaceTopic:null,
       
 displayName:
   user.displayName,
@@ -2781,19 +2781,16 @@ let newsTitle =
 
   let repeatedPlace = false;
 
+  const currentTopic =
+  selectedNews?.title || "";
+  
 if(
-  placeName &&
-  room.usedPlaces &&
-  room.usedPlaces.includes(placeName)
+  room.usedPlaceTopic === currentTopic
 ){
   repeatedPlace = true;
-}
-
-  if(
-  placeName &&
-  !repeatedPlace
-){
-  room.usedPlaces.push(placeName);
+}else{
+  room.usedPlaceTopic =
+    currentTopic;
 }
   
 if(placeName){
