@@ -777,6 +777,8 @@ user.displayName =
     id:roomId,
 
     memory:[],
+    
+    usedPlaces:[],
       
 displayName:
   user.displayName,
@@ -2777,6 +2779,23 @@ let newsTitle =
 
   let placeStory = null;
 
+  let repeatedPlace = false;
+
+if(
+  placeName &&
+  room.usedPlaces &&
+  room.usedPlaces.includes(placeName)
+){
+  repeatedPlace = true;
+}
+
+  if(
+  placeName &&
+  !repeatedPlace
+){
+  room.usedPlaces.push(placeName);
+}
+  
 if(placeName){
 
   try{
@@ -2857,8 +2876,14 @@ room.messages.push({
       : "tien",
 
   ask:
-    placeStory ||
-    selectedNews.title,
+  repeatedPlace
+    ? `That is still my best answer right now.
+
+Try it, then ask me tomorrow.`
+    : (
+        placeStory ||
+        selectedNews.title
+      ),
 
   link:
     placeLink ||
