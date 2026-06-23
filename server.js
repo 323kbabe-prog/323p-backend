@@ -866,9 +866,30 @@ const hiddenSystemRes =
       {
         role:"system",
         content:`
-Extract the hidden system behind the image.
+Analyze the image as a human personality signal.
 
-Return ONLY one short phrase.
+Do NOT describe:
+- objects
+- products
+- brands
+- industries
+- categories
+
+Instead detect:
+- motivations
+- desires
+- fears
+- emotional needs
+- social behavior
+- identity patterns
+- psychological drivers
+
+Return ONLY one short personality psychology phrase.
+
+Rules:
+- 2 to 4 words
+- lowercase only
+- no punctuation
 `
       },
 
@@ -876,7 +897,9 @@ Return ONLY one short phrase.
         role:"user",
         content:user.imageContext
       }
+
     ]
+
   });
 
 const starterQuestion =
@@ -977,73 +1000,69 @@ let starterNewsItem =
 try{
 
   const starterSearchRes =
-    await openai.chat.completions.create({
+  await openai.chat.completions.create({
 
     model:"gpt-4o-mini",
 
     messages:[
 
-   {
-role:"system",
+      {
+        role:"system",
 
-content:`
-Create ONE current news search phrase.
+        content:`
+Create ONE current news search phrase from the personality psychology.
 
-The hidden system behind the image is the subject.
+Examples:
 
-Ignore:
+social belonging
+→ loneliness epidemic
 
-* the object
-* the product
-* the category
-* the industry
-* visible text
-* brands
+status validation
+→ luxury spending trends
 
-Think:
+fear of missing out
+→ tiktok shopping growth
 
-image
-→ meaning
-→ deeper meaning
-→ hidden system
-→ current news
+achievement pressure
+→ workplace burnout
 
-Search ONLY from the hidden system.
+digital attention
+→ social media regulation
+
+future curiosity
+→ ai adoption growth
 
 Return ONLY the search phrase.
 
 Rules:
+- 3 to 8 words
+- lowercase only
+- no punctuation
+- current news only
+- real searchable news topics
+`
+      },
 
-* 3 to 8 words
-* lowercase only
-* no punctuation
-* current news only
-* no object names
-* no product names
-* no brand names
-  `
-},
+      {
+        role:"user",
 
-
-     {
-  role:"user",
-
-  content:`
-Hidden system:
+        content:`
+Personality psychology:
 
 ${starterQuestion}
 `
-}
+      }
+
     ]
+
   });
 
-  const starterSearch =
-
-    starterSearchRes
-      .choices[0]
-      .message
-      .content
-      .trim();
+const starterSearch =
+  starterSearchRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
   console.log(
     "STARTER SEARCH:",
