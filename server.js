@@ -2789,8 +2789,9 @@ room.messages.push({
       ? "null"
       : "tien",
 
-ask:
-  selectedNews.title,
+  ask:
+    placeStory ||
+    selectedNews.title,
 
   link:
     placeLink ||
