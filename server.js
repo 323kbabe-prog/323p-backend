@@ -17,8 +17,6 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   fetch: fetch
@@ -1335,9 +1333,13 @@ setTimeout(() => {
   );
 
 rooms[roomId].messages.push({
-  from:"Image AI",
 
-  searchType:"null",
+  from:"NULL",
+
+  aiBeing:true,
+
+  searchLabel:
+    "”NULL” Search",
 
   image:starterImage,
 
@@ -1347,6 +1349,7 @@ rooms[roomId].messages.push({
     starterNewsItem?.link ||
     starterNewsItem?.news_link ||
     ""
+
 });
 
   io.to(roomId).emit(
@@ -2866,7 +2869,7 @@ if(repeatedPlace){
 
 room.messages.push({
 
-  from:"CHANG, TIEN",
+  from:"CHANG, TIEN (AI Being)",
 
   aiBeing:true,
 
@@ -2878,26 +2881,28 @@ Try it, then ask me tomorrow.`
 
 }else{
 
-  room.messages.push({
-    from:"Image AI",
+ room.messages.push({
 
-    image:imageUrl,
+  from:"CHANG, TIEN",
 
-    searchType:
-      text.trim().toLowerCase() === "next"
-        ? "null"
-        : "tien",
+  aiBeing:true,
 
-    ask:
-      placeStory ||
-      selectedNews.title,
+  searchLabel:
+    "”CHANG, TIEN” (AI BEING) Search",
 
-    link:
-      placeLink ||
-      selectedNews?.link ||
-      selectedNews?.news_link ||
-      ""
-  });
+  image:imageUrl,
+
+  ask:
+    placeStory ||
+    selectedNews.title,
+
+  link:
+    placeLink ||
+    selectedNews?.link ||
+    selectedNews?.news_link ||
+    ""
+
+});
 
 }
 //////////////////////////////////////////////////
@@ -3059,7 +3064,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V7 — ASK NULL — meet null"
+    "CONNECTAING V8 — ASK NULL — meet null"
   );
 
 });
