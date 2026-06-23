@@ -2907,14 +2907,22 @@ Try it, then ask me tomorrow.`
 
 }else{
 
- room.messages.push({
+room.messages.push({
 
-  from:"CHANG, TIEN",
+  from:
+    isNextSearch
+      ? "NULL"
+      : "CHANG, TIEN",
 
   aiBeing:true,
 
   searchLabel:
-    "”CHANG, TIEN” (AI BEING) Search",
+
+    isNextSearch
+
+      ? "”NULL” Search"
+
+      : "”CHANG, TIEN” (AI BEING) Search",
 
   image:imageUrl,
 
