@@ -2981,7 +2981,7 @@ room.messages.push({
 
       ? "”NULL” Search"
 
-      : "”CHANG, TIEN” (AI BEING) Search",
+      : "”CHANG, TIEN” (AGI BEING) Search",
 
   image:imageUrl,
 
