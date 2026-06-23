@@ -775,6 +775,9 @@ user.displayName =
   rooms[roomId] = {
 
     id:roomId,
+
+    memory:[],
+      
 displayName:
   user.displayName,
     
@@ -1670,15 +1673,30 @@ ${finalAnswer}`,
       users[socket.id];
 
     const room =
-      rooms[user.currentRoom];
+  rooms[user.currentRoom];
 
-    if(!room){
+if(!room){
 
   socket.emit(
     "roomClosed"
   );
 
   return;
+}
+
+if(
+  text.trim().toLowerCase() !== "next"
+){
+
+  room.memory.push(text);
+
+  if(room.memory.length > 10){
+
+    room.memory =
+      room.memory.slice(-10);
+
+  }
+
 }
 
     room.messages.push({
@@ -1786,7 +1804,17 @@ Rules:
     },
     {
       role:"user",
-      content:text
+      content:`
+
+Conversation Memory:
+
+${room.memory.join("\n")}
+
+Current Message:
+
+${text}
+
+`
     }
   ]
 });
@@ -1805,38 +1833,77 @@ const userIntent =
       {
         role:"system",
        content:`
-Detect if the user is asking for a place in a location.
+Detect whether the user wants a real place recommendation.
 
-Example:
+Examples:
 
 new york bar
 → new york bar
 
-If the user is NOT asking for a location plus place,
-return only:
+best ramen in shibuya
+→ shibuya ramen
 
-none
+where should i go in tokyo
+→ tokyo place
+
+i am in tokyo and want something unique
+→ tokyo place
+
+show me something very japanese in shibuya
+→ shibuya place
+
+i want to explore taipei tonight
+→ taipei place
 
 Rules:
 
-* lowercase only
-* no punctuation
-* return one search phrase only
-* keep the original location
-* keep the original place type
-* the result will later be used to find ONE real place related to the biggest current news or event in that location
-* do not generate news
-* do not generate guides
-* do not generate lists
-* do not generate recommendations
-* return only the original location and place type
+If user wants:
+- somewhere to go
+- somewhere to visit
+- somewhere to explore
+- something new
+- something local
+- something unique
+- something authentic
+
+return:
+
+location place
+
+If user already specifies type:
+
+shibuya ramen
+taipei coffee shop
+new york bar
+
+keep the type.
+
+Return only:
+location place
+
+or
+
+none
+
+lowercase only
+no punctuation
 
 `
 
       },
       {
         role:"user",
-        content:text
+        content:`
+
+Conversation Memory:
+
+${room.memory.join("\n")}
+
+Current Message:
+
+${text}
+
+`
       }
     ]
   });
@@ -1861,7 +1928,7 @@ const location =
 parts.join(" ");
 
 directLocationSearch =
-location + " biggest news today";
+  location + " local news";
 }
 
   const isNamedEntity =
