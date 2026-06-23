@@ -2864,12 +2864,17 @@ if(
   
 if(repeatedPlace){
 
-  room.messages.push({
-    from:"Image AI",
-    text:`That is still my best answer right now.
+room.messages.push({
+
+  from:"CHANG, TIEN",
+
+  aiBeing:true,
+
+  text:`That is still my best answer right now.
 
 Try it, then ask me tomorrow.`
-  });
+
+});
 
 }else{
 
