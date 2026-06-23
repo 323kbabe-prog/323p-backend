@@ -1680,6 +1680,9 @@ ${finalAnswer}`,
     const room =
   rooms[user.currentRoom];
 
+      const isNextSearch =
+  text.trim().toLowerCase() === "next";
+
 if(!room){
 
   socket.emit(
@@ -1922,7 +1925,10 @@ locationPurposeRes
 
 let directLocationSearch = null;
 
-if(locationPurposeSearch !== "none"){
+if(
+  !isNextSearch &&
+  locationPurposeSearch !== "none"
+){
 
 const parts =
 locationPurposeSearch.split(" ");
@@ -1945,8 +1951,11 @@ directLocationSearch =
   !userIntent.includes("workplace");
 
 const directNewsSearch =
-  isNamedEntity
+
+  !isNextSearch && isNamedEntity
+
     ? userIntent + " latest news"
+
     : null;
 
 const meaningRes =
@@ -2373,16 +2382,30 @@ The room should evolve like:
     }
   ]
 });
-
+  
 const searchQuery =
-  directLocationSearch ||
-  directNewsSearch ||
 
-  emotionRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  isNextSearch
+
+  ? emotionRes
+      .choices[0]
+      .message
+      .content
+      .trim()
+
+  : (
+
+      directLocationSearch ||
+
+      directNewsSearch ||
+
+      emotionRes
+        .choices[0]
+        .message
+        .content
+        .trim()
+
+    );
 
   console.log(
   "USER SYSTEM:",
@@ -2583,7 +2606,10 @@ ${validNews.map(
           )
       );
 
-if(locationPurposeSearch !== "none"){
+if(
+  !isNextSearch &&
+  locationPurposeSearch !== "none"
+){
 
 const placeQueryRes =
   await openai.chat.completions.create({
@@ -2982,6 +3008,7 @@ setTimeout(() => {
     const room =
       rooms[user.currentRoom];
 
+     
     if(!room){
 
   socket.emit(
