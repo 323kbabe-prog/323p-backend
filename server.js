@@ -2895,13 +2895,13 @@ if(repeatedPlace){
 
 room.messages.push({
 
-  from:"CHANG, TIEN (AI BEING)",
+  from:"CHANG, TIEN",
 
   aiBeing:true,
 
-  text:`That is still my best answer right now.
+  showNextButton:true,
 
-Try it, then ask me tomorrow.`
+  text:`That is still my best answer right now.`
 
 });
 
