@@ -2862,32 +2862,39 @@ if(
   return;
 }
   
-room.messages.push({
-  from:"Image AI",
+if(repeatedPlace){
 
-  image:imageUrl,
-
-  searchType:
-    text.trim().toLowerCase() === "next"
-      ? "null"
-      : "tien",
-
-  ask:
-  repeatedPlace
-    ? `That is still my best answer right now.
+  room.messages.push({
+    from:"Image AI",
+    text:`That is still my best answer right now.
 
 Try it, then ask me tomorrow.`
-    : (
-        placeStory ||
-        selectedNews.title
-      ),
+  });
 
-  link:
-    placeLink ||
-    selectedNews?.link ||
-    selectedNews?.news_link ||
-    ""
-});
+}else{
+
+  room.messages.push({
+    from:"Image AI",
+
+    image:imageUrl,
+
+    searchType:
+      text.trim().toLowerCase() === "next"
+        ? "null"
+        : "tien",
+
+    ask:
+      placeStory ||
+      selectedNews.title,
+
+    link:
+      placeLink ||
+      selectedNews?.link ||
+      selectedNews?.news_link ||
+      ""
+  });
+
+}
 //////////////////////////////////////////////////
 // SHARE TEXT
 //////////////////////////////////////////////////
