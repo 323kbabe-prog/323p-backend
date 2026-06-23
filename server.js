@@ -2869,7 +2869,7 @@ if(repeatedPlace){
 
 room.messages.push({
 
-  from:"CHANG, TIEN (AI Being)",
+  from:"CHANG, TIEN (AI BEING)",
 
   aiBeing:true,
 
