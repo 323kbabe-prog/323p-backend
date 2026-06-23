@@ -17,8 +17,6 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   fetch: fetch
@@ -775,6 +773,11 @@ user.displayName =
   rooms[roomId] = {
 
     id:roomId,
+
+    memory:[],
+    
+    usedPlaceTopic:null,
+      
 displayName:
   user.displayName,
     
@@ -968,8 +971,7 @@ const starterMood =
 
 let starterImage = null;
 
-let starterNewsTitle =
-  starterQuestion;
+let starterNewsTitle = "";
 
 let starterNewsItem =
   null;
@@ -1104,6 +1106,10 @@ const validStarterNews =
 
   });
 
+  if(validStarterNews.length === 0){
+  return;
+}
+
 if(validStarterNews.length > 0){
 
   try{
@@ -1203,178 +1209,7 @@ ${validStarterNews.map(
 
 }
 
-  //////////////////////////////////////////////////
-  // GOOGLE IMAGE FALLBACK
-  //////////////////////////////////////////////////
-
-  if(!starterImage){
-
-    try{
-
-      const imageFallbackFetch =
-        await fetch(
-
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
-
-        );
-
-      const imageFallbackRes =
-        await imageFallbackFetch.json();
-
-      starterImage =
-
-        imageFallbackRes
-          ?.images_results?.[0]
-          ?.original ||
-
-        imageFallbackRes
-          ?.images_results?.[0]
-          ?.thumbnail;
-
-    }catch(err){
-
-      console.log(
-        "google image fallback failed",
-        err
-      );
-    }
-  }
-
-  //////////////////////////////////////////////////
-  // FINAL INTERNET FALLBACK
-  //////////////////////////////////////////////////
-
-  if(!starterImage){
-
-    try{
-
-      console.log(
-        "FALLBACK THEME:",
-        rooms[roomId].coreTheme
-      );
-
-      const fallbackFetch =
-        await fetch(
-
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(rooms[roomId].coreTheme)}&api_key=${process.env.SERPAPI_KEY}`
-
-        );
-
-      const fallbackRes =
-        await fallbackFetch.json();
-
-      console.log(
-        "FALLBACK IMAGE COUNT:",
-        fallbackRes?.images_results?.length
-      );
-
-      starterImage =
-
-        fallbackRes
-          ?.images_results?.[0]
-          ?.original ||
-
-        fallbackRes
-          ?.images_results?.[0]
-          ?.thumbnail;
-
-    }catch(err){
-
-      console.log(
-        "final internet fallback failed",
-        err
-      );
-    }
-  }
-
-  //////////////////////////////////////////////////
-  // ABSOLUTE FINAL INTERNET SAFETY
-  //////////////////////////////////////////////////
-
-  if(!starterImage){
-
-    try{
-
-      const randomThemes = [
-
-        rooms[roomId].coreTheme,
-
-        rooms[roomId].coreTheme + " trending",
-
-        rooms[roomId].coreTheme + " viral",
-
-        rooms[roomId].coreTheme + " culture",
-
-        rooms[roomId].coreTheme + " social media",
-
-        rooms[roomId].coreTheme + " breaking news",
-
-        rooms[roomId].coreTheme + " internet culture"
-      ];
-
-      const randomQuery =
-
-        randomThemes[
-          Math.floor(
-            Math.random() *
-            randomThemes.length
-          )
-        ];
-
-      console.log(
-        "SAFETY QUERY:",
-        randomQuery
-      );
-
-      const safetyFetch =
-        await fetch(
-
-          `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(randomQuery)}&api_key=${process.env.SERPAPI_KEY}`
-
-        );
-
-      const safetyRes =
-        await safetyFetch.json();
-
-      console.log(
-        "SAFETY IMAGE COUNT:",
-        safetyRes?.images_results?.length
-      );
-
-      starterImage =
-
-        safetyRes
-          ?.images_results?.[
-            Math.floor(
-              Math.min(
-                5,
-                safetyRes?.images_results?.length || 1
-              ) * Math.random()
-            )
-          ]
-          ?.original ||
-
-        safetyRes
-          ?.images_results?.[
-            Math.floor(
-              Math.min(
-                5,
-                safetyRes?.images_results?.length || 1
-              ) * Math.random()
-            )
-          ]
-          ?.thumbnail;
-
-    }catch(err){
-
-      console.log(
-        "absolute internet safety failed",
-        err
-      );
-    }
-  }
-
-}catch(err){
+  }catch(err){
 
   console.log(
     "starter room AI failed",
@@ -1383,22 +1218,7 @@ ${validStarterNews.map(
 }
 
 //////////////////////////////////////////////////
-// TRUE FINAL FALLBACK
-//////////////////////////////////////////////////
-
-if(!starterImage){
-
-  starterImage =
-    "https://picsum.photos/900/1200?random=" +
-    Math.floor(Math.random()*100000);
-}
-
-//////////////////////////////////////////////////
 // STARTER SHARE TEXT
-//////////////////////////////////////////////////
-
-//////////////////////////////////////////////////
-// STARTER PROPOSAL SYSTEM
 //////////////////////////////////////////////////
 
 //////////////////////////////////////////////////
@@ -1513,9 +1333,13 @@ setTimeout(() => {
   );
 
 rooms[roomId].messages.push({
-  from:"Image AI",
 
-  searchType:"null",
+  from:"NULL",
+
+  aiBeing:true,
+
+  searchLabel:
+    "”NULL” Search",
 
   image:starterImage,
 
@@ -1525,6 +1349,7 @@ rooms[roomId].messages.push({
     starterNewsItem?.link ||
     starterNewsItem?.news_link ||
     ""
+
 });
 
   io.to(roomId).emit(
@@ -1853,15 +1678,33 @@ ${finalAnswer}`,
       users[socket.id];
 
     const room =
-      rooms[user.currentRoom];
+  rooms[user.currentRoom];
 
-    if(!room){
+      const isNextSearch =
+  text.trim().toLowerCase() === "next";
+
+if(!room){
 
   socket.emit(
     "roomClosed"
   );
 
   return;
+}
+
+if(
+  text.trim().toLowerCase() !== "next"
+){
+
+ 
+
+  if(room.memory.length > 10){
+
+    room.memory =
+      room.memory.slice(-10);
+
+  }
+
 }
 
     room.messages.push({
@@ -1901,7 +1744,78 @@ try{
 //////////////////////////////////////////////////
 // USER EMOTIONAL INTENT
 //////////////////////////////////////////////////
+const combinedIntentRes =
+  await openai.chat.completions.create({
 
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+        content:`
+Combine the conversation memory
+and current message.
+
+Return the user's complete intent.
+
+Examples:
+
+Memory:
+I want the best coffee shop
+
+Current:
+In New York
+
+Return:
+best coffee shop in new york
+
+Memory:
+I want ramen
+
+Current:
+In Shibuya
+
+Return:
+best ramen in shibuya
+
+Memory:
+I want a cool bar
+
+Current:
+Tonight
+
+Return:
+cool bar tonight
+`
+      },
+
+      {
+        role:"user",
+        content:`
+
+Memory:
+
+${room.memory.join("\n")}
+
+Current:
+
+${text}
+
+`
+      }
+
+    ]
+
+});
+
+const combinedIntent =
+  combinedIntentRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+  
 const userIntentRes =
   await openai.chat.completions.create({
   model:"gpt-4o-mini",
@@ -1969,7 +1883,7 @@ Rules:
     },
     {
       role:"user",
-      content:text
+     content: combinedIntent
     }
   ]
 });
@@ -1981,6 +1895,13 @@ const userIntent =
     .content
     .trim();
 
+  
+
+console.log(
+  "COMBINED INTENT:",
+  combinedIntent
+);
+  
   const locationPurposeRes =
   await openai.chat.completions.create({
     model:"gpt-4o-mini",
@@ -1988,52 +1909,85 @@ const userIntent =
       {
         role:"system",
        content:`
-Detect if the user is asking for a place in a location.
+Detect whether the user wants a real place recommendation.
 
-Example:
+Examples:
 
 new york bar
 → new york bar
 
-If the user is NOT asking for a location plus place,
-return only:
+best ramen in shibuya
+→ shibuya ramen
 
-none
+where should i go in tokyo
+→ tokyo place
+
+i am in tokyo and want something unique
+→ tokyo place
+
+show me something very japanese in shibuya
+→ shibuya place
+
+i want to explore taipei tonight
+→ taipei place
 
 Rules:
 
-* lowercase only
-* no punctuation
-* return one search phrase only
-* keep the original location
-* keep the original place type
-* the result will later be used to find ONE real place related to the biggest current news or event in that location
-* do not generate news
-* do not generate guides
-* do not generate lists
-* do not generate recommendations
-* return only the original location and place type
+If user wants:
+- somewhere to go
+- somewhere to visit
+- somewhere to explore
+- something new
+- something local
+- something unique
+- something authentic
+
+return:
+
+location place
+
+If user already specifies type:
+
+shibuya ramen
+taipei coffee shop
+new york bar
+
+keep the type.
+
+Return only:
+location place
+
+or
+
+none
+
+lowercase only
+no punctuation
 
 `
 
       },
       {
         role:"user",
-        content:text
+        content: combinedIntent
       }
     ]
   });
 
 const locationPurposeSearch =
-locationPurposeRes
-.choices[0]
-.message
-.content
-.trim();
+
+  locationPurposeRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
 let directLocationSearch = null;
 
-if(locationPurposeSearch !== "none"){
+if(
+  !isNextSearch &&
+  locationPurposeSearch !== "none"
+){
 
 const parts =
 locationPurposeSearch.split(" ");
@@ -2044,7 +1998,7 @@ const location =
 parts.join(" ");
 
 directLocationSearch =
-location + " biggest news today";
+  location + " local news";
 }
 
   const isNamedEntity =
@@ -2056,8 +2010,11 @@ location + " biggest news today";
   !userIntent.includes("workplace");
 
 const directNewsSearch =
-  isNamedEntity
+
+  !isNextSearch && isNamedEntity
+
     ? userIntent + " latest news"
+
     : null;
 
 const meaningRes =
@@ -2484,16 +2441,30 @@ The room should evolve like:
     }
   ]
 });
-
+  
 const searchQuery =
-  directLocationSearch ||
-  directNewsSearch ||
 
-  emotionRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  isNextSearch
+
+  ? emotionRes
+      .choices[0]
+      .message
+      .content
+      .trim()
+
+  : (
+
+      directLocationSearch ||
+
+      directNewsSearch ||
+
+      emotionRes
+        .choices[0]
+        .message
+        .content
+        .trim()
+
+    );
 
   console.log(
   "USER SYSTEM:",
@@ -2694,7 +2665,10 @@ ${validNews.map(
           )
       );
 
-if(locationPurposeSearch !== "none"){
+if(
+  !isNextSearch &&
+  locationPurposeSearch !== "none"
+){
 
 const placeQueryRes =
   await openai.chat.completions.create({
@@ -2853,52 +2827,12 @@ console.log(
   }
 
 }
-
-//////////////////////////////////////////////////
-// GOOGLE IMAGE FALLBACK
-//////////////////////////////////////////////////
-
-if(!imageUrl){
-
-  try{
-
-    const imageFallbackFetch =
-      await fetch(
-
-        `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
-
-      );
-
-    const imageFallbackRes =
-      await imageFallbackFetch.json();
-
-    imageUrl =
-
-      imageFallbackRes
-        ?.images_results?.[0]
-        ?.original ||
-
-      imageFallbackRes
-        ?.images_results?.[0]
-        ?.thumbnail;
-
-  }catch(err){
-
-    console.log(
-      "google image fallback failed",
-      err
-    );
-  }
-}
-
+  
 //////////////////////////////////////////////////
 // FINAL FALLBACK
 //////////////////////////////////////////////////
-
 if(!imageUrl){
-
-  imageUrl =
-    user.lastImage;
+  imageUrl = null;
 }
 
   //////////////////////////////////////////////////
@@ -2924,12 +2858,29 @@ if(!imageUrl){
 // V5.4.2 EMOTIONALLY CHOSEN TITLE
 //////////////////////////////////////////////////
 
+if(!selectedNews?.title){
+  return;
+}
+
 let newsTitle =
-  selectedNews?.title ||
-  searchQuery;
+  selectedNews.title;
 
   let placeStory = null;
 
+  let repeatedPlace = false;
+
+  const currentTopic =
+  selectedNews?.title || "";
+  
+if(
+  room.usedPlaceTopic === currentTopic
+){
+  repeatedPlace = true;
+}else{
+  room.usedPlaceTopic =
+    currentTopic;
+}
+  
 if(placeName){
 
   try{
@@ -2987,28 +2938,66 @@ ${selectedNews?.title || ""}
   }
 
 }
+
+if(
+  !selectedNews ||
+  !selectedNews.title ||
+  !(
+    selectedNews.link ||
+    selectedNews.news_link
+  )
+){
+  return;
+}
   
+if(repeatedPlace){
+
 room.messages.push({
-  from:"Image AI",
+
+  from:"CHANG, TIEN",
+
+  aiBeing:true,
+
+  showNextButton:true,
+
+  text:`That is still my best answer right now.`
+
+});
+
+}else{
+
+room.messages.push({
+
+  from:
+    isNextSearch
+      ? "NULL"
+      : "CHANG, TIEN",
+
+  aiBeing:true,
+
+  searchLabel:
+
+    isNextSearch
+
+      ? "”NULL” Search"
+
+      : "”CHANG, TIEN” (AI BEING) Search",
 
   image:imageUrl,
 
-  searchType:
-    text.trim().toLowerCase() === "next"
-      ? "null"
-      : "tien",
-
   ask:
     placeStory ||
-    selectedNews?.title ||
-    searchQuery,
+    selectedNews.title,
 
   link:
     placeLink ||
     selectedNews?.link ||
     selectedNews?.news_link ||
     ""
+
 });
+
+}
 //////////////////////////////////////////////////
 // SHARE TEXT
 //////////////////////////////////////////////////
@@ -3032,6 +3021,21 @@ if(room.messages.length > 30){
 
 }
 
+if(
+  text.trim().toLowerCase() !== "next"
+){
+
+  room.memory.push(text);
+
+  if(room.memory.length > 10){
+
+    room.memory =
+      room.memory.slice(-10);
+
+  }
+
+}
+  
   io.to(room.id).emit(
   "roomMessages",
   room.messages
@@ -3086,6 +3090,7 @@ setTimeout(() => {
     const room =
       rooms[user.currentRoom];
 
+     
     if(!room){
 
   socket.emit(
@@ -3168,7 +3173,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V7 — ASK NULL — meet null"
+    "CONNECTAING V8 — ASK NULL — meet null"
   );
 
 });
