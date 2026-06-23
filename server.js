@@ -2779,7 +2779,6 @@ room.messages.push({
       : "tien",
 
 ask:
-  placeStory ||
   selectedNews.title,
 
   link:
