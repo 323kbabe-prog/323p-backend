@@ -2979,9 +2979,9 @@ room.messages.push({
 
     isNextSearch
 
-      ? "@NULL Search"
+      ? ""NULL Search""
 
-      : "@CHANG, TIEN (AGI BEING) Search",
+      : ""CHANG, TIEN" (AGI BEING) Search",
 
   image:imageUrl,
 
