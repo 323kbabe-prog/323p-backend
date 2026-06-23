@@ -866,30 +866,9 @@ const hiddenSystemRes =
       {
         role:"system",
         content:`
-Analyze the image as a human personality signal.
+Extract the hidden system behind the image.
 
-Do NOT describe:
-- objects
-- products
-- brands
-- industries
-- categories
-
-Instead detect:
-- motivations
-- desires
-- fears
-- emotional needs
-- social behavior
-- identity patterns
-- psychological drivers
-
-Return ONLY one short personality psychology phrase.
-
-Rules:
-- 2 to 4 words
-- lowercase only
-- no punctuation
+Return ONLY one short phrase.
 `
       },
 
@@ -897,9 +876,7 @@ Rules:
         role:"user",
         content:user.imageContext
       }
-
     ]
-
   });
 
 const starterQuestion =
@@ -1000,69 +977,73 @@ let starterNewsItem =
 try{
 
   const starterSearchRes =
-  await openai.chat.completions.create({
+    await openai.chat.completions.create({
 
     model:"gpt-4o-mini",
 
     messages:[
 
-      {
-        role:"system",
+   {
+role:"system",
 
-        content:`
-Create ONE current news search phrase from the personality psychology.
+content:`
+Create ONE current news search phrase.
 
-Examples:
+The hidden system behind the image is the subject.
 
-social belonging
-→ loneliness epidemic
+Ignore:
 
-status validation
-→ luxury spending trends
+* the object
+* the product
+* the category
+* the industry
+* visible text
+* brands
 
-fear of missing out
-→ tiktok shopping growth
+Think:
 
-achievement pressure
-→ workplace burnout
+image
+→ meaning
+→ deeper meaning
+→ hidden system
+→ current news
 
-digital attention
-→ social media regulation
-
-future curiosity
-→ ai adoption growth
+Search ONLY from the hidden system.
 
 Return ONLY the search phrase.
 
 Rules:
-- 3 to 8 words
-- lowercase only
-- no punctuation
-- current news only
-- real searchable news topics
-`
-      },
 
-      {
-        role:"user",
+* 3 to 8 words
+* lowercase only
+* no punctuation
+* current news only
+* no object names
+* no product names
+* no brand names
+  `
+},
 
-        content:`
-Personality psychology:
+
+     {
+  role:"user",
+
+  content:`
+Hidden system:
 
 ${starterQuestion}
 `
-      }
-
+}
     ]
-
   });
 
-const starterSearch =
-  starterSearchRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  const starterSearch =
+
+    starterSearchRes
+      .choices[0]
+      .message
+      .content
+      .trim();
 
   console.log(
     "STARTER SEARCH:",
