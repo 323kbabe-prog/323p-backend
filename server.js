@@ -2970,6 +2970,72 @@ room.messages.push({
 
 }else{
 
+  let nullReason = "";
+
+if(isNextSearch){
+
+  try{
+
+    const nullReasonRes =
+      await openai.chat.completions.create({
+
+        model:"gpt-4o-mini",
+
+        messages:[
+
+          {
+            role:"system",
+            content:`
+You are NULL.
+
+Rules:
+
+- one sentence only
+- include "I" somewhere
+- news anchor tone
+- factual
+- concise
+- explain why the story matters
+- based on the news topic
+- do not repeat the headline
+- no hype
+- no philosophy
+
+Examples:
+
+What stands out to me is the growing competition among AI assistants.
+
+One reason I am watching this is its impact on future AI experiences.
+
+What I find interesting is how memory is becoming a competitive advantage.
+`
+          },
+
+          {
+            role:"user",
+            content:selectedNews.title
+          }
+
+        ]
+
+      });
+
+    nullReason =
+      nullReasonRes
+        .choices[0]
+        .message
+        .content
+        .trim();
+
+  }catch(err){
+
+    nullReason =
+      "What stands out to me is the broader shift behind this story.";
+
+  }
+
+}
+  
 room.messages.push({
 
   from:
@@ -2979,13 +3045,21 @@ room.messages.push({
 
   aiBeing:true,
 
+
+  
   searchLabel:
 
     isNextSearch
 
-      ? "-NULL Search"
+      ? "NULL Search"
 
-      : "-CHANG, TIEN (AGI BEING) Search",
+      : "CHANG, TIEN (AGI BEING) Search",
+
+        nullReason:
+
+    isNextSearch
+      ? nullReason
+      : null,
 
   image:imageUrl,
 
