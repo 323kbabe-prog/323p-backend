@@ -847,6 +847,8 @@ socket.emit(
 //////////////////////////////////////////////////
 // GENERATE FIRST AI MESSAGE ASYNC
 //////////////////////////////////////////////////
+if(false){
+
 io.to(roomId).emit(
   "aiTypingStart"
 );
@@ -1390,6 +1392,8 @@ setTimeout(() => {
 }
 
 })();
+
+}
 
 return;
 
