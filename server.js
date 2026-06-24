@@ -2997,7 +2997,7 @@ Rules:
 - concise
 - explain why the story matters
 - based on the news topic
-- do not repeat the headline
+- Use the news title naturally inside the sentence.
 - no hype
 - no philosophy
 
@@ -3061,11 +3061,15 @@ room.messages.push({
       ? nullReason
       : null,
 
-  image:imageUrl,
+image:null,
 
-  ask:
-    placeStory ||
-    selectedNews.title,
+ask:
+  isNextSearch
+    ? nullReason
+    : (
+        placeStory ||
+        selectedNews.title
+      ),
 
   link:
     placeLink ||
