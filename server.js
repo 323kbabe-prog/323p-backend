@@ -1839,34 +1839,34 @@ or
 
 intent
 
-Determine whether the user's message contains a meaningful intent.
+Determine the user's primary purpose.
 
-Return "greeting" if the message is primarily:
-- casual conversation
-- a greeting
-- social etiquette
-- testing the AI
-- asking about the AI itself
-- conversation with no clear objective beyond interaction
+Return "greeting" if the user is primarily interacting with Ask Null itself, such as:
+- starting or maintaining casual conversation
+- greeting or thanking the AI
+- testing whether the AI responds
+- asking who Ask Null is
+- asking what Ask Null is
+- asking what Ask Null can do
+- asking what Ask Null is doing
+- asking how to use Ask Null
+- asking why Ask Null exists
+- asking about Ask Null's identity, purpose, or capabilities
+- interacting with Ask Null without trying to discover external information or solve a problem
 
-Return "intent" if the message expresses any meaningful purpose, including but not limited to:
-- wanting information
-- wanting an explanation
-- wanting recommendations
-- wanting news
-- wanting to search or explore
-- expressing a need, goal, feeling, or opinion
-- asking about any person, place, company, product, event, or topic
-- seeking help, advice, analysis, or discussion
+Return "intent" if the user is primarily trying to accomplish something, including:
+- finding or searching for information
+- exploring a topic
+- discovering news
+- getting recommendations
+- asking about any person, company, product, place, event, or subject
+- expressing a need, feeling, opinion, or goal
+- asking for analysis, advice, explanations, or comparisons
+- solving a problem
+- making a decision
+- learning about something beyond Ask Null itself
 
-If the message could reasonably lead to discovering information beyond introducing the AI itself, return:
-
-intent
-
-Be conservative:
-When uncertain, prefer
-
-intent
+Focus on the user's overall purpose, not individual keywords.
 
 Return exactly one word:
 
@@ -1875,6 +1875,7 @@ greeting
 or
 
 intent
+
 `
       },
       {
