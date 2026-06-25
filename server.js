@@ -3251,12 +3251,6 @@ if(
   }
 
 }
-  
-
-
-io.to(room.id).emit(
-  "aiTypingStart"
-);
 
 setTimeout(() => {
 
