@@ -847,11 +847,11 @@ socket.emit(
 //////////////////////////////////////////////////
 // GENERATE FIRST AI MESSAGE ASYNC
 //////////////////////////////////////////////////
-if(true){
-
 io.to(roomId).emit(
-  "aiTypingStart"
+    "aiTypingStart"
 );
+  
+  if(true){
 
 (async () => {
 
@@ -1320,6 +1320,35 @@ io.to(roomId).emit(
   adviceText
 );
 
+rooms[roomId].messages.push({
+
+    from: "NULL",
+
+    aiBeing: true,
+
+    showNextButton: true,
+
+    searchLabel: "NULL Search",
+
+    image: starterImage,
+
+    ask: starterNewsTitle,
+
+    link:
+        starterNewsItem?.link ||
+        starterNewsItem?.news_link ||
+        ""
+
+});
+
+io.to(roomId).emit(
+    "aiTypingStop"
+);
+
+io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+);
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
@@ -1354,6 +1383,15 @@ rooms[roomId].messages.push({
     ""
 
 });
+
+io.to(roomId).emit(
+    "aiTypingStop"
+);
+
+io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+);
 
   io.to(roomId).emit(
     "roomMessages",
@@ -3261,14 +3299,14 @@ setTimeout(() => {
 
   }
 
-  io.to(room.id).emit(
+io.to(room.id).emit(
+    "aiTypingStop"
+);
+
+io.to(room.id).emit(
     "roomMessages",
     room.messages
-  );
-
-  io.to(room.id).emit(
-    "aiTypingStop"
-  );
+);
 
 }, 2000);
 
