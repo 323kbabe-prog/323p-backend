@@ -507,10 +507,14 @@ socket.on(
       }
     );
 
-    socket.emit(
-      "roomMessages",
-      room.messages
-    );
+io.to(room.id).emit(
+  "roomMessages",
+  room.messages
+);
+
+setTimeout(() => {
+  io.to(room.id).emit("aiTypingStop");
+}, 50);
   }
 );
 
