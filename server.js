@@ -1688,6 +1688,14 @@ ${finalAnswer}`,
       const isNextSearch =
   text.trim().toLowerCase() === "null feed";
 
+      if (isNextSearch) {
+
+  room.messages.forEach(m => {
+    m.showNextButton = false;
+  });
+
+}
+      
 if(!room){
 
   socket.emit(
@@ -3051,8 +3059,8 @@ room.messages.push({
 
   aiBeing:true,
 
+  showNextButton:true,
 
-  
   searchLabel:
 
     isNextSearch
@@ -3061,21 +3069,21 @@ room.messages.push({
 
       : "Null (AGI NETWORK) Feed",
 
-        nullReason:
+  nullReason:
 
     isNextSearch
       ? nullReason
       : null,
 
-image:null,
+  image:null,
 
-ask:
-  isNextSearch
-    ? nullReason
-    : (
-        placeStory ||
-        selectedNews.title
-      ),
+  ask:
+    isNextSearch
+      ? nullReason
+      : (
+          placeStory ||
+          selectedNews.title
+        ),
 
   link:
     placeLink ||
@@ -3084,6 +3092,7 @@ ask:
     ""
 
 });
+
 
 }
 //////////////////////////////////////////////////
