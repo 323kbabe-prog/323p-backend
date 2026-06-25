@@ -1341,7 +1341,7 @@ rooms[roomId].messages.push({
   aiBeing:true,
 
   searchLabel:
-    "-NULL Search",
+    "NULL Search",
 
   image:starterImage,
 
@@ -3056,9 +3056,9 @@ room.messages.push({
 
     isNextSearch
 
-      ? "NULL Search"
+      ? "NULL Feed"
 
-      : "CHANG, TIEN (AGI BEING) Search",
+      : "Null (AGI NETWORK) Feed",
 
         nullReason:
 
