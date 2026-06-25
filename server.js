@@ -3074,7 +3074,7 @@ if(repeatedPlace){
 
 room.messages.push({
 
-  from:"CHANG, TIEN",
+  from:"Null (AGI NETWORK)",
 
   aiBeing:true,
 
