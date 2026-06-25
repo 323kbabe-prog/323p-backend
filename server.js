@@ -1720,17 +1720,7 @@ if(
 
 }
 
-if(!isNextSearch){
 
-  room.messages.push({
-
-    from:user.displayName,
-
-    text
-
-  });
-
-}
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
 //////////////////////////////////////////////////
@@ -1742,10 +1732,6 @@ if(room.messages.length > 30){
 
 }
 
-    io.to(room.id).emit(
-      "roomMessages",
-      room.messages
-    );
 
    //////////////////////////////////////////////////
 // IMAGE REACTION V5
@@ -1887,6 +1873,10 @@ const inputType =
   console.log("GREETING TYPE:", inputType);
 
   if (inputType === "greeting") {
+    room.messages.push({
+  from: user.displayName,
+  text
+});
 
 room.messages.push({
   from: "NULL",
@@ -1907,6 +1897,23 @@ room.messages.push({
 
   return;
 }
+
+  if(!isNextSearch){
+
+  room.messages.push({
+
+    from:user.displayName,
+
+    text
+
+  });
+
+}
+
+io.to(room.id).emit(
+  "roomMessages",
+  room.messages
+);
   
 const userIntentRes =
   await openai.chat.completions.create({
@@ -3207,10 +3214,7 @@ if(
 
 }
   
-  io.to(room.id).emit(
-  "roomMessages",
-  room.messages
-);
+
 
 io.to(room.id).emit(
   "aiTypingStart"
