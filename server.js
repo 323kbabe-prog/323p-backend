@@ -1339,6 +1339,7 @@ rooms[roomId].messages.push({
   from:"NULL",
 
   aiBeing:true,
+  showNextButton: true,
 
   searchLabel:
     "NULL Search",
