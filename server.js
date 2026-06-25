@@ -1833,6 +1833,74 @@ const combinedIntent =
     .message
     .content
     .trim();
+
+  const greetingRes =
+  await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `
+Return ONLY one word:
+
+greeting
+
+or
+
+intent
+
+Greeting includes:
+- hi
+- hello
+- hey
+- good morning
+- good afternoon
+- good evening
+- thanks
+- thank you
+- ok
+- okay
+- test
+
+Anything requesting information, explanations, opinions, recommendations, searches, or discussion is intent.
+
+Return exactly one word:
+greeting
+or
+intent
+`
+      },
+      {
+        role: "user",
+        content: combinedIntent
+      }
+    ]
+  });
+
+const inputType =
+  greetingRes.choices[0].message.content.trim();
+
+  if (inputType === "greeting") {
+
+room.messages.push({
+  from: "NULL",
+  aiBeing: true,
+  showNextButton: true,
+  searchLabel: "About Ask Null",
+  text: "Ask Null is an experimental AGI contextual AI powered by the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
+});
+
+  io.to(room.id).emit(
+    "aiTypingStop"
+  );
+
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
+
+  return;
+}
   
 const userIntentRes =
   await openai.chat.completions.create({
