@@ -1697,7 +1697,7 @@ if(!room){
 }
 
 if(
-  text.trim().toLowerCase() !== "next"
+  text.trim().toLowerCase() !== "null feed"
 ){
 
  
@@ -1711,12 +1711,17 @@ if(
 
 }
 
-    room.messages.push({
+if(!isNextSearch){
 
-  from:user.displayName,
+  room.messages.push({
 
-  text
-});
+    from:user.displayName,
+
+    text
+
+  });
+
+}
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
 //////////////////////////////////////////////////
@@ -3104,7 +3109,7 @@ if(room.messages.length > 30){
 }
 
 if(
-  text.trim().toLowerCase() !== "next"
+  !isNextSearch
 ){
 
   room.memory.push(text);
