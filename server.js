@@ -847,11 +847,11 @@ socket.emit(
 //////////////////////////////////////////////////
 // GENERATE FIRST AI MESSAGE ASYNC
 //////////////////////////////////////////////////
+if(true){
+
 io.to(roomId).emit(
-    "aiTypingStart"
+  "aiTypingStart"
 );
-  
-  if(true){
 
 (async () => {
 
@@ -1320,35 +1320,6 @@ io.to(roomId).emit(
   adviceText
 );
 
-rooms[roomId].messages.push({
-
-    from: "NULL",
-
-    aiBeing: true,
-
-    showNextButton: true,
-
-    searchLabel: "NULL Search",
-
-    image: starterImage,
-
-    ask: starterNewsTitle,
-
-    link:
-        starterNewsItem?.link ||
-        starterNewsItem?.news_link ||
-        ""
-
-});
-
-io.to(roomId).emit(
-    "aiTypingStop"
-);
-
-io.to(roomId).emit(
-    "roomMessages",
-    rooms[roomId].messages
-);
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
@@ -1383,15 +1354,6 @@ rooms[roomId].messages.push({
     ""
 
 });
-
-io.to(roomId).emit(
-    "aiTypingStop"
-);
-
-io.to(roomId).emit(
-    "roomMessages",
-    rooms[roomId].messages
-);
 
   io.to(roomId).emit(
     "roomMessages",
@@ -1726,12 +1688,10 @@ ${finalAnswer}`,
       const isNextSearch =
   text.trim().toLowerCase() === "null feed";
 
-if (isNextSearch) {
+      if (isNextSearch) {
 
   room.messages.forEach(m => {
-
     m.showNextButton = false;
-
   });
 
 }
@@ -1896,10 +1856,10 @@ or
 intent
 `
       },
-{
-  role: "user",
-  content: text
-}
+      {
+        role: "user",
+        content: combinedIntent
+      }
     ]
   });
 
@@ -1930,36 +1890,10 @@ room.messages.push({
     "aiTypingStop"
   );
 
-    room.messages.forEach(m => {
-  if (m.aiBeing) {
-    m.showNextButton = false;
-  }
-});
-
-const last = room.messages[room.messages.length - 1];
-
-last.showNextButton = true;
-last.searchLabel = "About Ask Null";
-    
-setTimeout(() => {
-
   io.to(room.id).emit(
     "roomMessages",
     room.messages
   );
-
-}, 50);
-
-    if (!isNextSearch) {
-
-  room.memory.push(text);
-
-  if (room.memory.length > 10) {
-    room.memory = room.memory.slice(-10);
-  }
-
-}
-
 
   return;
 }
@@ -3196,17 +3130,7 @@ What I find interesting is how memory is becoming a competitive advantage.
   }
 
 }
-
-
-  if (isNextSearch) {
-
-  room.messages.forEach(m => {
-
-    m.showNextButton = false;
-
-  });
-
-}
+  
 room.messages.push({
 
   from:
@@ -3289,8 +3213,22 @@ if(
   }
 
 }
+  
+
+
+io.to(room.id).emit(
+  "aiTypingStart"
+);
 
 setTimeout(() => {
+
+  io.to(room.id).emit(
+    "aiTypingStop"
+  );
+
+  //////////////////////////////////////////////////
+  // LIMIT FEED SIZE
+  //////////////////////////////////////////////////
 
   if(room.messages.length > 30){
 
@@ -3299,14 +3237,10 @@ setTimeout(() => {
 
   }
 
-io.to(room.id).emit(
-    "aiTypingStop"
-);
-
-io.to(room.id).emit(
+  io.to(room.id).emit(
     "roomMessages",
     room.messages
-);
+  );
 
 }, 2000);
 
