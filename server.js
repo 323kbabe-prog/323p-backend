@@ -1685,7 +1685,7 @@ ${finalAnswer}`,
   rooms[user.currentRoom];
 
       const isNextSearch =
-  text.trim().toLowerCase() === "Null Feed";
+  text.trim().toLowerCase() === "next";
 
 if(!room){
 
