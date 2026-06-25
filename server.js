@@ -1839,40 +1839,34 @@ or
 
 intent
 
-Return "greeting" ONLY if the user's message is simple conversation with no clear request, need, emotion, opinion, or topic.
+Determine whether the user's message contains a meaningful intent.
 
-Greeting includes:
-- hi
-- hello
-- hey
-- good morning
-- good afternoon
-- good evening
-- thanks
-- thank you
-- ok
-- okay
-- test
-- what are you doing
-- who are you
-- what can you do
-- tell me about yourself
-- introduce yourself
-- how do you work
-- what is ask null
-- help
+Return "greeting" if the message is primarily:
+- casual conversation
+- a greeting
+- social etiquette
+- testing the AI
+- asking about the AI itself
+- conversation with no clear objective beyond interaction
 
-Return "intent" if the user:
-- asks a question
-- requests information
-- expresses a need
-- expresses a feeling or emotion
-- asks for recommendations
-- wants news
-- wants explanations
-- wants discussion
-- mentions a person, company, brand, product, place, or topic
-- wants to search, discover, or explore something
+Return "intent" if the message expresses any meaningful purpose, including but not limited to:
+- wanting information
+- wanting an explanation
+- wanting recommendations
+- wanting news
+- wanting to search or explore
+- expressing a need, goal, feeling, or opinion
+- asking about any person, place, company, product, event, or topic
+- seeking help, advice, analysis, or discussion
+
+If the message could reasonably lead to discovering information beyond introducing the AI itself, return:
+
+intent
+
+Be conservative:
+When uncertain, prefer
+
+intent
 
 Return exactly one word:
 
