@@ -1688,10 +1688,12 @@ ${finalAnswer}`,
       const isNextSearch =
   text.trim().toLowerCase() === "null feed";
 
-      if (isNextSearch) {
+if (isNextSearch) {
 
   room.messages.forEach(m => {
+
     m.showNextButton = false;
+
   });
 
 }
@@ -1890,10 +1892,36 @@ room.messages.push({
     "aiTypingStop"
   );
 
+    room.messages.forEach(m => {
+  if (m.aiBeing) {
+    m.showNextButton = false;
+  }
+});
+
+const last = room.messages[room.messages.length - 1];
+
+last.showNextButton = true;
+last.searchLabel = "About Ask Null";
+    
+setTimeout(() => {
+
   io.to(room.id).emit(
     "roomMessages",
     room.messages
   );
+
+}, 50);
+
+    if (!isNextSearch) {
+
+  room.memory.push(text);
+
+  if (room.memory.length > 10) {
+    room.memory = room.memory.slice(-10);
+  }
+
+}
+
 
   return;
 }
@@ -3130,7 +3158,17 @@ What I find interesting is how memory is becoming a competitive advantage.
   }
 
 }
-  
+
+
+  if (isNextSearch) {
+
+  room.messages.forEach(m => {
+
+    m.showNextButton = false;
+
+  });
+
+}
 room.messages.push({
 
   from:
