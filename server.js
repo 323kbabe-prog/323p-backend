@@ -1839,6 +1839,8 @@ or
 
 intent
 
+Return "greeting" ONLY if the user's message is simple conversation with no clear request, need, emotion, opinion, or topic.
+
 Greeting includes:
 - hi
 - hello
@@ -1851,12 +1853,33 @@ Greeting includes:
 - ok
 - okay
 - test
+- what are you doing
+- who are you
+- what can you do
+- tell me about yourself
+- introduce yourself
+- how do you work
+- what is ask null
+- help
 
-Anything requesting information, explanations, opinions, recommendations, searches, or discussion is intent.
+Return "intent" if the user:
+- asks a question
+- requests information
+- expresses a need
+- expresses a feeling or emotion
+- asks for recommendations
+- wants news
+- wants explanations
+- wants discussion
+- mentions a person, company, brand, product, place, or topic
+- wants to search, discover, or explore something
 
 Return exactly one word:
+
 greeting
+
 or
+
 intent
 `
       },
