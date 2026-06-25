@@ -3254,14 +3254,6 @@ if(
 
 setTimeout(() => {
 
-  io.to(room.id).emit(
-    "aiTypingStop"
-  );
-
-  //////////////////////////////////////////////////
-  // LIMIT FEED SIZE
-  //////////////////////////////////////////////////
-
   if(room.messages.length > 30){
 
     room.messages =
@@ -3272,6 +3264,10 @@ setTimeout(() => {
   io.to(room.id).emit(
     "roomMessages",
     room.messages
+  );
+
+  io.to(room.id).emit(
+    "aiTypingStop"
   );
 
 }, 2000);
