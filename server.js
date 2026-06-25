@@ -1856,10 +1856,10 @@ or
 intent
 `
       },
-      {
-        role: "user",
-        content: combinedIntent
-      }
+{
+  role: "user",
+  content: text
+}
     ]
   });
 
