@@ -1878,7 +1878,13 @@ intent
   });
 
 const inputType =
-  greetingRes.choices[0].message.content.trim();
+  greetingRes.choices[0]
+    .message
+    .content
+    .trim()
+    .toLowerCase();
+
+  console.log("GREETING TYPE:", inputType);
 
   if (inputType === "greeting") {
 
