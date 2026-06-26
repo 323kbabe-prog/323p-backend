@@ -1839,6 +1839,15 @@ or
 
 intent
 
+IMPORTANT:
+
+If the user message is:
+- null feed
+
+Always return:
+
+intent
+
 Determine the user's primary purpose.
 
 Return "greeting" if the user is primarily interacting with Ask Null itself, such as:
