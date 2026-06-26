@@ -459,11 +459,9 @@ link:
 
 io.on("connection", socket => {
 
-  users[socket.id] = {
+users[socket.id] = {
 
-  step:"email",
-
-  email:null,
+  step:"active",
 
   displayName:null,
 
@@ -518,11 +516,6 @@ setTimeout(() => {
   }
 );
 
-  socket.emit("state", {
-
-    placeholder:
-      "enter your email to connect"
-  });
 
   //////////////////////////////////////////////////
   // IMAGE UPLOAD
@@ -540,22 +533,7 @@ setTimeout(() => {
     const user =
       users[socket.id];
 
- if(!user.email){
 
-  socket.emit(
-    "state",
-    {
-      placeholder:
-        "enter your email to connect"
-    }
-  );
-
-  return;
-}
-      console.log(
-  "UPLOAD USER:",
-  user.email
-);
 
     user.lastImage =
       imageDataUrl;
@@ -1457,22 +1435,7 @@ ${user.imageContext}`
     // EMAIL STEP
     //////////////////////////////////////////////////
 
-    if(user.step === "email"){
-
-      if(!email) return;
-
-      user.email = email;
-
-      user.step = "active";
-
-      return socket.emit(
-        "state",
-        {
-          placeholder:
-            "tap camera to ask anything"
-        }
-      );
-    }
+   
 
     //////////////////////////////////////////////////
     // IMAGE AI QUESTION
