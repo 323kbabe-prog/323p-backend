@@ -1486,49 +1486,19 @@ ${user.imageContext}
 
 ${aiReply}`;
 
-        questions.unshift({
-
-          email:user.email,
-
-          text:raw,
-
-          answers:[],
-
-          createdAt:Date.now()
-        });
-
-        await sendEmail(
-
-          user.email,
-
-          "Image AI Reply",
-
-          `Q:
-${raw}
-
-${finalAnswer}`,
-
-          user.lastImage
-        );
 
         user.imageMode = false;
 
-        socket.emit("preview", {
-          text:finalAnswer
-        });
+socket.emit("preview", {
+  text: finalAnswer
+});
 
-        socket.emit(
-          "questions",
-          questions.slice(0,10)
-        );
-
-        return socket.emit(
-          "state",
-          {
-            placeholder:
-              "tap a question to answer"
-          }
-        );
+return socket.emit(
+  "state",
+  {
+    placeholder: "tap camera to ask anything"
+  }
+);
 
       }catch(err){
 
