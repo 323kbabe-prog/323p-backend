@@ -1914,7 +1914,7 @@ room.messages.push({
   aiBeing: true,
   showNextButton: true,
   searchLabel: "About Ask Null",
-  text: "Ask Null is an experimental AGI contextual AI powered by the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
+  text: "Ask Null is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
 });
 
   io.to(room.id).emit(
