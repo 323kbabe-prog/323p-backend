@@ -2092,17 +2092,10 @@ if(
   locationPurposeSearch !== "none"
 ){
 
-const parts =
-locationPurposeSearch.split(" ");
-
-parts.pop();
-
-const location =
-parts.join(" ");
-
 directLocationSearch =
-  location + " local news";
-}
+  locationPurposeSearch +
+  " local news";
+
 
   const isNamedEntity =
   userIntent &&
@@ -3287,7 +3280,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 20:42 2026/06/28"
+    "CONNECTAING V9 — ASK NULL — meet null — 21:13 2026/06/28"
   );
 
 });
