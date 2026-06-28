@@ -3361,10 +3361,18 @@ room.messages.push({
       ),
 
   link:
-    placeLink ||
-    selectedNews?.link ||
-    selectedNews?.news_link ||
-    ""
+  placeName
+    ? (
+        placeLink ||
+        selectedNews?.link ||
+        selectedNews?.news_link ||
+        ""
+      )
+    : (
+        selectedNews?.link ||
+        selectedNews?.news_link ||
+        ""
+      )
 
 });
 
@@ -3542,7 +3550,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 16:39 2026/06/28"
+    "CONNECTAING V9 — ASK NULL — meet null — 17:31 2026/06/28"
   );
 
 });
