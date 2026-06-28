@@ -2120,6 +2120,10 @@ const directNewsSearch =
 
     : null;
 
+const skipPlaceFlow =
+  directNewsSearch !== null;
+
+
 const hiddenSystem =
   room.hiddenSystem;
 
@@ -2128,8 +2132,13 @@ const hiddenSystem =
   hiddenSystem
 );
   
-const emotionRes =
-  await openai.chat.completions.create({
+let emotionRes = null;
+
+if (!directNewsSearch) {
+
+  emotionRes =
+    await openai.chat.completions.create({
+
 
   model:"gpt-4o-mini",
 
@@ -2442,30 +2451,29 @@ The room should evolve like:
     }
   ]
 });
+}
   
+const emotionSearch =
+  emotionRes
+    ? emotionRes.choices[0].message.content.trim()
+    : "";
+
 const searchQuery =
 
   isNextSearch
 
-  ? emotionRes
-      .choices[0]
-      .message
-      .content
-      .trim()
+    ? emotionSearch
 
-  : (
+    : (
 
-      directLocationSearch ||
+        directLocationSearch ||
 
-      directNewsSearch ||
+        directNewsSearch ||
 
-      emotionRes
-        .choices[0]
-        .message
-        .content
-        .trim()
+        emotionSearch
 
-    );
+      );
+
 
   console.log(
   "USER SYSTEM:",
@@ -2667,6 +2675,7 @@ ${validNews.map(
       );
 
 if(
+  !skipPlaceFlow &&
   !isNextSearch &&
   locationPurposeSearch !== "none"
 ){
@@ -2882,7 +2891,11 @@ if(
     currentTopic;
 }
   
-if(placeName){
+if(
+  !skipPlaceFlow &&
+  placeName
+){
+
 
   try{
 
@@ -3274,7 +3287,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 19:57 2026/06/28"
+    "CONNECTAING V9 — ASK NULL — meet null — 20:42 2026/06/28"
   );
 
 });
