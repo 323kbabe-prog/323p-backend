@@ -2095,6 +2095,7 @@ if(
 directLocationSearch =
   locationPurposeSearch +
   " local news";
+}
 
 
   const isNamedEntity =
