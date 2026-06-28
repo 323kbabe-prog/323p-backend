@@ -205,256 +205,214 @@ function capitalizeFirst(text){
 
 async function generateDailyNulls(){
 
-    console.log(
+  console.log(
     "GENERATING DAILY NULLS:",
     new Date().toISOString()
   );
 
   const cards = [];
-const usedIdentities = [];
-  for(const category of dailyNullCategories){
 
-    try{
+  await Promise.all(
 
-      const identityRes =
-        await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          messages:[
-           {
-  role:"system",
-  content:`
-Create one Ask Null identity for this category.
+    dailyNullCategories.map(async (category) => {
 
-Return JSON only:
+      try{
+
+        //////////////////////////////////////////////////
+        // IDENTITY
+        //////////////////////////////////////////////////
+
+        let identityData = {
+          identity: category,
+          intro: "Exploring today's signals."
+        };
+
+        let searchQuery =
+          category + " news";
+
+        try{
+
+          const identityRes =
+            await openai.chat.completions.create({
+
+              model:"gpt-4o-mini",
+
+              messages:[
+
+                {
+                  role:"system",
+                  content:`
+Return JSON only.
+
 {
   "identity":"",
-  "intro":""
+  "intro":"",
+  "search":""
 }
 
 Rules:
-- identity: 2 to 4 words
-- intro: exactly 1 short sentence
-- intro should explain why this signal matters
-- 8 to 15 words
-- hook
-- shocking
-- internet-native
-- emotionally engaging
 
-IMPORTANT:
+identity:
+2 to 4 words
 
-Already used identities are forbidden.
+intro:
+1 sentence
 
-Do not repeat:
-- words
-- themes
-- metaphors
-- emotional tones
-- concepts
+search:
+3 to 6 lowercase words
 
-Every identity must feel like a completely different internet phenomenon.
+Identity should be unique.
 
-- no markdown
+Search should be current news.
 `
-},
-           {
-  role:"user",
-  content:`
+                },
 
+                {
+                  role:"user",
+                  content:`
 Category:
+
 ${category}
-
-Already used identities:
-
-${usedIdentities.join("\n")}
-
-Create ONE identity that is clearly different from all identities above.
-
 `
-}
-          ]
+                }
+
+              ]
+
+            });
+
+          const data =
+            JSON.parse(
+              identityRes.choices[0].message.content
+            );
+
+          identityData = {
+            identity:data.identity,
+            intro:data.intro
+          };
+
+          searchQuery =
+            data.search;
+
+        }catch(err){
+
+          console.log(
+            "identity failed",
+            err
+          );
+
+        }
+
+        console.log(
+          "DAILY NULL SEARCH:",
+          category,
+          searchQuery
+        );
+
+        //////////////////////////////////////////////////
+        // NEWS
+        //////////////////////////////////////////////////
+
+        const newsFetch =
+          await fetch(
+
+`https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+
+          );
+
+        const newsRes =
+          await newsFetch.json();
+
+        let newsItem =
+          newsRes?.news_results?.find(item =>
+            item.title &&
+            (item.link || item.news_link)
+          );
+
+        //////////////////////////////////////////////////
+        // FALLBACK
+        //////////////////////////////////////////////////
+
+        if(!newsItem){
+
+          const fallbackFetch =
+            await fetch(
+
+`https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(category + " news")}&api_key=${process.env.SERPAPI_KEY}`
+
+            );
+
+          const fallbackRes =
+            await fallbackFetch.json();
+
+          newsItem =
+            fallbackRes?.news_results?.find(item =>
+              item.title &&
+              (item.link || item.news_link)
+            );
+
+        }
+
+        if(!newsItem){
+          return;
+        }
+
+        //////////////////////////////////////////////////
+        // CARD
+        //////////////////////////////////////////////////
+
+        cards.push({
+
+          category,
+
+          identity:
+            identityData.identity,
+
+          intro:
+            identityData.intro,
+
+          title:
+            newsItem.title,
+
+          image:
+            newsItem.original ||
+            newsItem.thumbnail ||
+            newsItem.thumbnail_small ||
+            null,
+
+          link:
+            newsItem.link ||
+            newsItem.news_link
+
         });
 
-     let identityData = {
-  identity: category,
-  intro: "Exploring today's signals."
-};
+      }catch(err){
 
-try{
-  identityData =
-    JSON.parse(
-      identityRes.choices[0].message.content
-    );
+        console.log(
+          "daily null failed:",
+          category,
+          err
+        );
 
-usedIdentities.push(
-  identityData.identity
-);
-  
-}catch(err){
-  console.log(
-    "daily null json failed",
-    err
-  );
-}
-
-const searchRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-
-        content:`
-Create ONE surprising current news search.
-
-The search should feel:
-
-- unexpected
-- internet-native
-- emotionally engaging
-- culturally current
-- newsworthy
-
-Rules:
-
-- 3 to 6 words
-- lowercase only
-- no punctuation
-- real searchable news topics
-`
-      },
-
-      {
-        role:"user",
-
-        content:`
-
-Category:
-${category}
-
-Null Identity:
-${identityData.identity}
-
-Intro:
-${identityData.intro}
-
-Create ONE search phrase.
-
-`
       }
 
-    ]
+    })
 
-  });
-
-const searchQuery =
-
-  searchRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-console.log(
-  "DAILY NULL SEARCH:",
-  category,
-  searchQuery
-);
-
-const newsFetch =
-  await fetch(
-    `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
   );
 
-      const newsRes =
-        await newsFetch.json();
-
-let newsItem =
-  newsRes?.news_results?.find(item =>
-    item.title &&
-    (
-      item.link ||
-      item.news_link
-    )
-  );
-
-if(!newsItem){
-
-  const fallbackSearch = category + " news";
-
-  const fallbackFetch =
-    await fetch(
-      `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(fallbackSearch)}&api_key=${process.env.SERPAPI_KEY}`
-    );
-
-  const fallbackRes =
-    await fallbackFetch.json();
-
-  newsItem =
-    fallbackRes?.news_results?.find(
-      item =>
-        item.title &&
-        (
-          item.link ||
-          item.news_link
-        )
-    );
-
-}
-
-      if(!newsItem){
-  continue;
-}
-
-    cards.push({
-
-  category,
-
-  identity:identityData.identity,
-
-  intro:identityData.intro,
-
-title:
-  newsItem.title,
-
-image:
-  newsItem.original ||
-  newsItem.thumbnail ||
-  newsItem.thumbnail_small ||
-  null,
-
-link:
-  newsItem.link ||
-  newsItem.news_link
-
-});
-
-    }catch(err){
-
-      console.log(
-        "daily null failed:",
-        category,
-        err
-      );
-
-    }
-  }
+  //////////////////////////////////////////////////
+  // FINISH
+  //////////////////////////////////////////////////
 
   dailyNulls = cards;
-  console.log(
-  "Daily Null Categories:",
-  cards.map(x => x.category)
-);
+
   dailyNullsUpdatedAt =
     new Date().toISOString();
 
   console.log(
     "DAILY NULLS UPDATED:",
-    dailyNulls.length
+    cards.length
   );
+
 }
 
 io.on("connection", socket => {
@@ -3550,9 +3508,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 17:31 2026/06/28"
+    "CONNECTAING V9 — ASK NULL — meet null — 18:09 2026/06/28"
   );
 
 });
-
-
