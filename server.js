@@ -2996,7 +2996,11 @@ room.messages.push({
 
   let nullReason = "";
 
-if(isNextSearch){
+if(
+  isNextSearch ||
+  isPersonalIntent
+){
+
 
   try{
 
@@ -3307,3 +3311,4 @@ server.listen(10000, () => {
   );
 
 });
+
