@@ -205,256 +205,226 @@ function capitalizeFirst(text){
 
 async function generateDailyNulls(){
 
-    console.log(
+  console.log(
     "GENERATING DAILY NULLS:",
     new Date().toISOString()
   );
 
   const cards = [];
-const usedIdentities = [];
-  for(const category of dailyNullCategories){
 
-    try{
+  await Promise.all(
 
-      const identityRes =
-        await openai.chat.completions.create({
-          model:"gpt-4o-mini",
-          messages:[
-           {
-  role:"system",
-  content:`
-Create one Ask Null identity for this category.
+    dailyNullCategories.map(async (category) => {
 
-Return JSON only:
+      try{
+
+        //////////////////////////////////////////////////
+        // IDENTITY
+        //////////////////////////////////////////////////
+
+        let identityData = {
+          identity: category,
+          intro: "Exploring today's signals."
+        };
+
+        let searchQuery =
+          category + " news";
+
+        try{
+
+          const identityRes =
+            await openai.chat.completions.create({
+
+              model:"gpt-4o-mini",
+
+              messages:[
+
+                {
+                  role:"system",
+                  content:`
+Return JSON only.
+
 {
   "identity":"",
-  "intro":""
+  "intro":"",
+  "search":""
 }
 
 Rules:
-- identity: 2 to 4 words
-- intro: exactly 1 short sentence
-- intro should explain why this signal matters
-- 8 to 15 words
-- hook
-- shocking
-- internet-native
-- emotionally engaging
 
-IMPORTANT:
+identity:
+2 to 4 words
 
-Already used identities are forbidden.
+intro:
+1 sentence
 
-Do not repeat:
-- words
-- themes
-- metaphors
-- emotional tones
-- concepts
+search:
+3 to 6 lowercase words
 
-Every identity must feel like a completely different internet phenomenon.
+Identity should be unique.
 
-- no markdown
+Search should be current news.
 `
-},
-           {
-  role:"user",
-  content:`
+                },
 
+                {
+                  role:"user",
+                  content:`
 Category:
+
 ${category}
-
-Already used identities:
-
-${usedIdentities.join("\n")}
-
-Create ONE identity that is clearly different from all identities above.
-
 `
-}
-          ]
-        });
+                }
 
-     let identityData = {
-  identity: category,
-  intro: "Exploring today's signals."
-};
+              ]
 
-try{
-  identityData =
-    JSON.parse(
-      identityRes.choices[0].message.content
-    );
+            });
 
-usedIdentities.push(
-  identityData.identity
-);
-  
-}catch(err){
-  console.log(
-    "daily null json failed",
-    err
-  );
-}
-
-const searchRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-
-        content:`
-Create ONE surprising current news search.
-
-The search should feel:
-
-- unexpected
-- internet-native
-- emotionally engaging
-- culturally current
-- newsworthy
-
-Rules:
-
-- 3 to 6 words
-- lowercase only
-- no punctuation
-- real searchable news topics
-`
-      },
-
-      {
-        role:"user",
-
-        content:`
-
-Category:
-${category}
-
-Null Identity:
-${identityData.identity}
-
-Intro:
-${identityData.intro}
-
-Create ONE search phrase.
-
-`
-      }
-
-    ]
-
-  });
-
-const searchQuery =
-
-  searchRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+          const raw =
+  identityRes.choices[0].message.content;
 
 console.log(
-  "DAILY NULL SEARCH:",
-  category,
-  searchQuery
+  "RAW DAILY JSON:",
+  raw
 );
 
-const newsFetch =
-  await fetch(
-    `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+const clean =
+  raw
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+const data =
+  JSON.parse(clean);
+
+          identityData = {
+            identity:data.identity,
+            intro:data.intro
+          };
+
+          searchQuery =
+            data.search;
+
+        }catch(err){
+
+          console.log(
+            "identity failed",
+            err
+          );
+
+        }
+
+        console.log(
+          "DAILY NULL SEARCH:",
+          category,
+          searchQuery
+        );
+
+        //////////////////////////////////////////////////
+        // NEWS
+        //////////////////////////////////////////////////
+
+        const newsFetch =
+          await fetch(
+
+`https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+
+          );
+
+        const newsRes =
+          await newsFetch.json();
+
+        let newsItem =
+          newsRes?.news_results?.find(item =>
+            item.title &&
+            (item.link || item.news_link)
+          );
+
+        //////////////////////////////////////////////////
+        // FALLBACK
+        //////////////////////////////////////////////////
+
+        if(!newsItem){
+
+          const fallbackFetch =
+            await fetch(
+
+`https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(category + " news")}&api_key=${process.env.SERPAPI_KEY}`
+
+            );
+
+          const fallbackRes =
+            await fallbackFetch.json();
+
+          newsItem =
+            fallbackRes?.news_results?.find(item =>
+              item.title &&
+              (item.link || item.news_link)
+            );
+
+        }
+
+        if(!newsItem){
+          return;
+        }
+
+        //////////////////////////////////////////////////
+        // CARD
+        //////////////////////////////////////////////////
+
+        cards.push({
+
+          category,
+
+          identity:
+            identityData.identity,
+
+          intro:
+            identityData.intro,
+
+          title:
+            newsItem.title,
+
+          image:
+            newsItem.original ||
+            newsItem.thumbnail ||
+            newsItem.thumbnail_small ||
+            null,
+
+          link:
+            newsItem.link ||
+            newsItem.news_link
+
+        });
+
+      }catch(err){
+
+        console.log(
+          "daily null failed:",
+          category,
+          err
+        );
+
+      }
+
+    })
+
   );
 
-      const newsRes =
-        await newsFetch.json();
-
-let newsItem =
-  newsRes?.news_results?.find(item =>
-    item.title &&
-    (
-      item.link ||
-      item.news_link
-    )
-  );
-
-if(!newsItem){
-
-  const fallbackSearch = category + " news";
-
-  const fallbackFetch =
-    await fetch(
-      `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(fallbackSearch)}&api_key=${process.env.SERPAPI_KEY}`
-    );
-
-  const fallbackRes =
-    await fallbackFetch.json();
-
-  newsItem =
-    fallbackRes?.news_results?.find(
-      item =>
-        item.title &&
-        (
-          item.link ||
-          item.news_link
-        )
-    );
-
-}
-
-      if(!newsItem){
-  continue;
-}
-
-    cards.push({
-
-  category,
-
-  identity:identityData.identity,
-
-  intro:identityData.intro,
-
-title:
-  newsItem.title,
-
-image:
-  newsItem.original ||
-  newsItem.thumbnail ||
-  newsItem.thumbnail_small ||
-  null,
-
-link:
-  newsItem.link ||
-  newsItem.news_link
-
-});
-
-    }catch(err){
-
-      console.log(
-        "daily null failed:",
-        category,
-        err
-      );
-
-    }
-  }
+  //////////////////////////////////////////////////
+  // FINISH
+  //////////////////////////////////////////////////
 
   dailyNulls = cards;
-  console.log(
-  "Daily Null Categories:",
-  cards.map(x => x.category)
-);
+
   dailyNullsUpdatedAt =
     new Date().toISOString();
 
   console.log(
     "DAILY NULLS UPDATED:",
-    dailyNulls.length
+    cards.length
   );
+
 }
 
 io.on("connection", socket => {
@@ -759,6 +729,11 @@ user.displayName =
     memory:[],
     
     usedPlaceTopic:null,
+
+currentMode:null,
+currentEntity:null,
+currentPlaceName:null,
+currentPlaceLink:null,
       
 displayName:
   user.displayName,
@@ -1757,6 +1732,111 @@ const combinedIntent =
     .content
     .trim();
 
+//////////////////////////////////////////////////
+// PERSONAL NULL DETECTOR
+//////////////////////////////////////////////////
+
+const personalIntentRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Determine whether the user is expressing a personal need.
+
+Return ONLY one word:
+
+personal
+
+or
+
+other
+
+Return personal if the user is:
+
+- asking for advice
+- asking for help
+- expressing emotions
+- expressing personal goals
+- expressing personal problems
+- making life decisions
+- creating something
+- asking for a slogan
+- asking for ideas
+- asking for recommendations for themselves
+
+Examples:
+
+i am lonely
+→ personal
+
+i need money
+→ personal
+
+i hate my job
+→ personal
+
+i have relationship problems
+→ personal
+
+i need a slogan
+→ personal
+
+i feel lost
+→ personal
+
+openai
+→ other
+
+elon musk
+→ other
+
+jisoo
+→ other
+
+nike
+→ other
+
+new york bar
+→ other
+
+taipei ramen
+→ other
+
+latest ai news
+→ other
+
+Return only one word.
+`
+      },
+
+      {
+        role:"user",
+        content:combinedIntent
+      }
+
+    ]
+
+  });
+
+const personalType =
+  personalIntentRes
+    .choices[0]
+    .message
+    .content
+    .trim()
+    .toLowerCase();
+
+console.log(
+  "PERSONAL TYPE:",
+  personalType
+);
+
   const greetingRes =
   await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -2044,6 +2124,16 @@ const locationPurposeSearch =
     .message
     .content
     .trim();
+
+if(!isNextSearch){
+  if(locationPurposeSearch === "none"){
+    room.currentMode = null;
+    room.currentEntity = null;
+    room.currentPlaceName = null;
+    room.currentPlaceLink = null;
+    room.usedPlaceTopic = null;
+  }
+}
 
 let directLocationSearch = null;
 
@@ -2506,28 +2596,23 @@ The room should evolve like:
 });
   
 const searchQuery =
-
-  isNextSearch
-
-  ? emotionRes
-      .choices[0]
-      .message
-      .content
-      .trim()
-
-  : (
-
-      directLocationSearch ||
-
-      directNewsSearch ||
-
-      emotionRes
-        .choices[0]
-        .message
-        .content
-        .trim()
-
-    );
+  isNextSearch && room.currentEntity
+    ? room.currentEntity + " latest news"
+    : isNextSearch
+      ? emotionRes
+          .choices[0]
+          .message
+          .content
+          .trim()
+      : (
+          directLocationSearch ||
+          directNewsSearch ||
+          emotionRes
+            .choices[0]
+            .message
+            .content
+            .trim()
+        );
 
   console.log(
   "USER SYSTEM:",
@@ -2826,6 +2911,7 @@ placeName =
 
   null;
 
+
 placeLink =
   placeSearchRes?.local_results?.[0]?.website ||
 
@@ -2841,6 +2927,14 @@ placeLink =
         encodeURIComponent(placeName)
       : ""
   );
+
+if(placeName){
+  room.currentMode = "entity";
+  room.currentEntity = placeName;
+  room.currentPlaceName = placeName;
+  room.currentPlaceLink = placeLink;
+}
+
 
 console.log(
   "PLACE LINK:",
@@ -2925,6 +3019,98 @@ if(!selectedNews?.title){
   return;
 }
 
+//////////////////////////////////////////////////
+// PERSONAL NULL TEACHING
+//////////////////////////////////////////////////
+
+let teachingSentence = null;
+
+if(personalType === "personal"){
+
+  try{
+
+    const personalTeachingRes =
+      await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      messages:[
+
+        {
+          role:"system",
+
+          content:`
+You are Null.
+
+The user is asking about a personal need.
+
+Create ONE teaching sentence.
+
+IMPORTANT:
+
+The selected news is hidden inspiration only.
+
+Never mention:
+
+- the news title
+- people
+- companies
+- brands
+- places
+- events
+
+Instead:
+
+- teach something useful
+- respond to the user's personal need
+- make the sentence practical
+- one sentence only
+- 12 to 25 words
+- no markdown
+- no quotation marks
+- no lists
+`
+        },
+
+        {
+          role:"user",
+
+          content:`
+
+User:
+
+${combinedIntent}
+
+Hidden News:
+
+${selectedNews.title}
+
+`
+
+        }
+
+      ]
+
+    });
+
+    teachingSentence =
+      personalTeachingRes
+        .choices[0]
+        .message
+        .content
+        .trim();
+
+  }catch(err){
+
+    console.log(
+      "personal teaching failed",
+      err
+    );
+
+  }
+
+}
+
 let newsTitle =
   selectedNews.title;
 
@@ -2934,14 +3120,14 @@ let newsTitle =
 
   const currentTopic =
   selectedNews?.title || "";
-  
+
 if(
+  !isNextSearch &&
   room.usedPlaceTopic === currentTopic
 ){
   repeatedPlace = true;
-}else{
-  room.usedPlaceTopic =
-    currentTopic;
+}else if(!isNextSearch){
+  room.usedPlaceTopic = currentTopic;
 }
   
 if(placeName){
@@ -3123,18 +3309,40 @@ room.messages.push({
   image:null,
 
   ask:
-    isNextSearch
-      ? nullReason
-      : (
-          placeStory ||
-          selectedNews.title
-        ),
+
+  isNextSearch
+
+    ? nullReason
+
+    : (
+
+        personalType === "personal"
+
+          ? teachingSentence
+
+          : (
+
+              placeStory ||
+
+              selectedNews.title
+
+            )
+
+      ),
 
   link:
-    placeLink ||
-    selectedNews?.link ||
-    selectedNews?.news_link ||
-    ""
+  placeName
+    ? (
+        placeLink ||
+        selectedNews?.link ||
+        selectedNews?.news_link ||
+        ""
+      )
+    : (
+        selectedNews?.link ||
+        selectedNews?.news_link ||
+        ""
+      )
 
 });
 
@@ -3312,7 +3520,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V8 — ASK NULL — meet null — 10:30 2026/06/26"
+    "CONNECTAING V9 — ASK NULL — meet null — 18:35 2026/06/28"
   );
 
 });
