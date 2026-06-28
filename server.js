@@ -1913,11 +1913,45 @@ const userIntent =
     .content
     .trim();
 
-const isPersonalIntent =
-  userIntent === text.toLowerCase().trim() ||
-  text.toLowerCase().includes(userIntent);
-  
+const personalIntentRes =
+  await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `
+Return ONLY one word:
 
+personal
+
+or
+
+other
+
+Return personal only if the user is:
+- asking for advice
+- expressing emotions
+- describing a personal situation
+- asking for relationship advice
+- asking for life advice
+- asking for mental health advice
+
+Everything else is:
+
+other
+`
+      },
+      {
+        role: "user",
+        content: text
+      }
+    ]
+  });
+
+const isPersonalIntent =
+  personalIntentRes.choices[0].message.content
+    .trim()
+    .toLowerCase() === "personal";
 
   
   const locationPurposeRes =
