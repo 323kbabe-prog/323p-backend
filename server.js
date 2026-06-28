@@ -2115,7 +2115,8 @@ const directNewsSearch =
     : null;
 
 const skipPlaceFlow =
-  directNewsSearch !== null;
+  directNewsSearch !== null &&
+  locationPurposeSearch === "none";
 
 
 const hiddenSystem =
@@ -3300,7 +3301,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 21:13 2026/06/28"
+    "CONNECTAING V9 — ASK NULL — meet null — 20:28 2026/06/28"
   );
 
 });
