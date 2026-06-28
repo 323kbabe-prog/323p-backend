@@ -3111,13 +3111,15 @@ room.messages.push({
 
   image:null,
 
-  ask:
-    isNextSearch
-      ? nullReason
-      : (
-          placeStory ||
-          selectedNews.title
-        ),
+ask:
+
+placeStory ||
+
+(
+isPersonalIntent
+? nullReason
+: selectedNews.title
+),
 
   link:
     placeLink ||
