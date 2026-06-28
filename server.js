@@ -1757,6 +1757,111 @@ const combinedIntent =
     .content
     .trim();
 
+//////////////////////////////////////////////////
+// PERSONAL NULL DETECTOR
+//////////////////////////////////////////////////
+
+const personalIntentRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Determine whether the user is expressing a personal need.
+
+Return ONLY one word:
+
+personal
+
+or
+
+other
+
+Return personal if the user is:
+
+- asking for advice
+- asking for help
+- expressing emotions
+- expressing personal goals
+- expressing personal problems
+- making life decisions
+- creating something
+- asking for a slogan
+- asking for ideas
+- asking for recommendations for themselves
+
+Examples:
+
+i am lonely
+→ personal
+
+i need money
+→ personal
+
+i hate my job
+→ personal
+
+i have relationship problems
+→ personal
+
+i need a slogan
+→ personal
+
+i feel lost
+→ personal
+
+openai
+→ other
+
+elon musk
+→ other
+
+jisoo
+→ other
+
+nike
+→ other
+
+new york bar
+→ other
+
+taipei ramen
+→ other
+
+latest ai news
+→ other
+
+Return only one word.
+`
+      },
+
+      {
+        role:"user",
+        content:combinedIntent
+      }
+
+    ]
+
+  });
+
+const personalType =
+  personalIntentRes
+    .choices[0]
+    .message
+    .content
+    .trim()
+    .toLowerCase();
+
+console.log(
+  "PERSONAL TYPE:",
+  personalType
+);
+
   const greetingRes =
   await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -2925,6 +3030,98 @@ if(!selectedNews?.title){
   return;
 }
 
+//////////////////////////////////////////////////
+// PERSONAL NULL TEACHING
+//////////////////////////////////////////////////
+
+let teachingSentence = null;
+
+if(personalType === "personal"){
+
+  try{
+
+    const personalTeachingRes =
+      await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      messages:[
+
+        {
+          role:"system",
+
+          content:`
+You are Null.
+
+The user is asking about a personal need.
+
+Create ONE teaching sentence.
+
+IMPORTANT:
+
+The selected news is hidden inspiration only.
+
+Never mention:
+
+- the news title
+- people
+- companies
+- brands
+- places
+- events
+
+Instead:
+
+- teach something useful
+- respond to the user's personal need
+- make the sentence practical
+- one sentence only
+- 12 to 25 words
+- no markdown
+- no quotation marks
+- no lists
+`
+        },
+
+        {
+          role:"user",
+
+          content:`
+
+User:
+
+${combinedIntent}
+
+Hidden News:
+
+${selectedNews.title}
+
+`
+
+        }
+
+      ]
+
+    });
+
+    teachingSentence =
+      personalTeachingRes
+        .choices[0]
+        .message
+        .content
+        .trim();
+
+  }catch(err){
+
+    console.log(
+      "personal teaching failed",
+      err
+    );
+
+  }
+
+}
+
 let newsTitle =
   selectedNews.title;
 
@@ -3123,12 +3320,26 @@ room.messages.push({
   image:null,
 
   ask:
-    isNextSearch
-      ? nullReason
-      : (
-          placeStory ||
-          selectedNews.title
-        ),
+
+  isNextSearch
+
+    ? nullReason
+
+    : (
+
+        personalType === "personal"
+
+          ? teachingSentence
+
+          : (
+
+              placeStory ||
+
+              selectedNews.title
+
+            )
+
+      ),
 
   link:
     placeLink ||
@@ -3312,7 +3523,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V8 — ASK NULL — meet null — 10:30 2026/06/26"
+    "CONNECTAING V9 — ASK NULL — meet null — 12:10 2026/06/28"
   );
 
 });
