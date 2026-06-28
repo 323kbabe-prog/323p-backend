@@ -2679,6 +2679,13 @@ ${validNews.map(
           )
       );
 
+console.log("PLACE FLOW", {
+  skipPlaceFlow,
+  isNextSearch,
+  locationPurposeSearch
+});
+
+
 if(
   !skipPlaceFlow &&
   !isNextSearch &&
