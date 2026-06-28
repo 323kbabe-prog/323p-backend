@@ -1929,14 +1929,45 @@ Only convert to larger systems when the input is not a named entity.
 
 Examples:
 
-i am lonely
-→ social connection systems
+Named entities:
+
+jisoo
+→ jisoo
+
+openai
+→ openai
+
+Non-emotional systems:
 
 i need money
 → economic mobility
 
 i hate my job
 → workplace transformation
+
+EMOTION MODE
+
+If the user is expressing an emotion, asking for personal advice, or describing a personal situation, return the user's own words instead of converting to a larger system.
+
+Examples:
+
+i need relationship advice
+→ relationship advice
+
+i feel lonely
+→ lonely
+
+i miss my ex
+→ miss my ex
+
+i feel anxious
+→ anxious
+
+i am depressed
+→ depressed
+
+Use the user's own wording whenever possible.
+
 
 Rules:
 - 1 to 4 words
@@ -1958,6 +1989,9 @@ const userIntent =
     .content
     .trim();
 
+const isPersonalIntent =
+  userIntent === text.toLowerCase().trim() ||
+  text.toLowerCase().includes(userIntent);
   
 
 console.log(
@@ -2030,10 +2064,12 @@ no punctuation
 `
 
       },
-      {
-        role:"user",
-        content: combinedIntent
-      }
+{
+  role:"user",
+  content: combinedIntent
+}
+
+
     ]
   });
 
@@ -3047,18 +3083,27 @@ if(isNextSearch){
             content:`
 You are NULL.
 
-Rules:
+If Mode is "personal":
 
-- one sentence only
-- include "I" somewhere
-- news anchor tone
-- factual
-- concise
-- explain why the story matters
-- based on the news topic
-- Use the news title naturally inside the sentence.
-- no hype
-- no philosophy
+- Read the news title.
+- Understand the meaning behind the news.
+- Reply directly to the user's situation.
+- Use "I".
+- Never mention the news title.
+- Never quote the headline.
+- Never say "this article" or "this news".
+- Write one short paragraph.
+- Keep it factual.
+
+If Mode is "news":
+
+- One sentence only.
+- Use "I".
+- News anchor tone.
+- Factual.
+- Concise.
+- Explain why the story matters.
+- Use the news title naturally.
 
 Examples:
 
@@ -3067,13 +3112,28 @@ What stands out to me is the growing competition among AI assistants.
 One reason I am watching this is its impact on future AI experiences.
 
 What I find interesting is how memory is becoming a competitive advantage.
+
 `
           },
 
-          {
-            role:"user",
-            content:selectedNews.title
-          }
+{
+  role:"user",
+  content:`
+Mode:
+${isPersonalIntent ? "personal" : "news"}
+
+User:
+${text}
+
+Intent:
+${userIntent}
+
+News:
+${selectedNews.title}
+`
+}
+
+
 
         ]
 
