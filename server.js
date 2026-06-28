@@ -756,7 +756,7 @@ user.displayName =
 
     id:roomId,
 
-    memory:[],
+
     
     usedPlaceTopic:null,
       
@@ -1646,20 +1646,6 @@ if(!room){
   return;
 }
 
-if(
-  text.trim().toLowerCase() !== "null feed"
-){
-
- 
-
-  if(room.memory.length > 10){
-
-    room.memory =
-      room.memory.slice(-10);
-
-  }
-
-}
 
 
 //////////////////////////////////////////////////
@@ -1689,77 +1675,11 @@ try{
 //////////////////////////////////////////////////
 // USER EMOTIONAL INTENT
 //////////////////////////////////////////////////
-const combinedIntentRes =
-  await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
 
-    messages:[
+ const combinedIntent =
+  text.trim();
 
-      {
-        role:"system",
-        content:`
-Combine the conversation memory
-and current message.
-
-Return the user's complete intent.
-
-Examples:
-
-Memory:
-I want the best coffee shop
-
-Current:
-In New York
-
-Return:
-best coffee shop in new york
-
-Memory:
-I want ramen
-
-Current:
-In Shibuya
-
-Return:
-best ramen in shibuya
-
-Memory:
-I want a cool bar
-
-Current:
-Tonight
-
-Return:
-cool bar tonight
-`
-      },
-
-      {
-        role:"user",
-        content:`
-
-Memory:
-
-${room.memory.join("\n")}
-
-Current:
-
-${text}
-
-`
-      }
-
-    ]
-
-});
-
-const combinedIntent =
-  combinedIntentRes
-    .choices[0]
-    .message
-    .content
-    .trim();
 
   const greetingRes =
   await openai.chat.completions.create({
@@ -1998,10 +1918,7 @@ const isPersonalIntent =
   text.toLowerCase().includes(userIntent);
   
 
-console.log(
-  "COMBINED INTENT:",
-  combinedIntent
-);
+
   
   const locationPurposeRes =
   await openai.chat.completions.create({
@@ -3162,23 +3079,6 @@ if(room.messages.length > 30){
     room.messages.slice(-30);
 
 }
-
-if(
-  !isNextSearch
-){
-
-  room.memory.push(text);
-
-  if(room.memory.length > 10){
-
-    room.memory =
-      room.memory.slice(-10);
-
-  }
-
-}
-  
-
 
 io.to(room.id).emit(
   "aiTypingStart"
