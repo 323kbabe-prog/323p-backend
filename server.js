@@ -2468,6 +2468,11 @@ const searchQuery =
 
       );
 
+const isLocationRequest =
+  locationPurposeSearch !== "none";
+
+
+
 
   console.log(
   "USER SYSTEM:",
@@ -2491,6 +2496,12 @@ room.usedSearches.push(
 //////////////////////////////////////////////////
 // SERP CURRENT NEWS SEARCH
 //////////////////////////////////////////////////
+if (isLocationRequest) {
+
+  // skip AI news evaluation
+
+}
+
 
 const serpFetch =
   await fetch(
@@ -2674,58 +2685,11 @@ if(
   locationPurposeSearch !== "none"
 ){
 
-const placeQueryRes =
-  await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-        content:`
-Given:
-
-- a place type
-- a city
-- a local news event
-
-Create a Google local search query
-for ONE place connected to that event.
-
-Examples:
-
-new york coffee shop
-knicks parade
-→ coffee shop near knicks parade route
-
-new york bar
-world cup
-→ sports bar showing world cup
-
-Return ONLY the search query.
-`
-      },
-
-      {
-        role:"user",
-        content:`
-Search:
-${locationPurposeSearch}
-
-News:
-${selectedNews?.title}
-`
-      }
-    ]
-  });
 
 const placeQuery =
-  placeQueryRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+  locationPurposeSearch;
+
 
 console.log(
   "PLACE QUERY:",
