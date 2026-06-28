@@ -873,6 +873,10 @@ const starterQuestion =
     .content
     .trim();
 
+rooms[roomId].hiddenSystem =
+  starterQuestion;
+
+
 
 //////////////////////////////////////////////////
 // STARTER MOOD
@@ -2116,110 +2120,8 @@ const directNewsSearch =
 
     : null;
 
-const meaningRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-
-      content:`
-Extract the hidden system behind the image.
-
-DO NOT return:
-- objects
-- products
-- industries
-- categories
-- immediate meanings
-
-Go deeper.
-
-Examples:
-
-coffee cup
-→ consumer spending systems
-
-frying pan
-→ household labor systems
-
-keyboard
-→ labor market transformation
-
-book
-→ education systems
-
-shoe
-→ global manufacturing systems
-
-Return ONLY a large-scale system.
-
-Never return:
-- object meanings
-- consumer meanings
-- lifestyle meanings
-
-Return:
-- economic systems
-- labor systems
-- educational systems
-- political systems
-- technological systems
-- demographic systems
-- cultural systems
-
-Maximum 4 words.
-
-Do NOT mention:
-- objects
-- products
-- industries
-- categories
-
-Think:
-
-image
-→ meaning
-→ deeper meaning
-
-Examples:
-
-frying pan
-→ daily routine
-→ work life balance
-
-coffee cup
-→ routine
-→ consumer identity
-
-keyboard
-→ productivity
-→ knowledge work
-
-book
-→ learning
-→ information access
-
-Return ONLY one short phrase.
-`
-    },
-
-    {
-      role:"user",
-
-      content: room.imageContext
-    }
-
-  ]
-});
-
 const hiddenSystem =
-  meaningRes.choices[0]
-    .message.content
-    .trim();
+  room.hiddenSystem;
 
   console.log(
   "HIDDEN SYSTEM:",
@@ -3372,7 +3274,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V8 — ASK NULL — meet null — 10:30 2026/06/26"
+    "CONNECTAING V9 — ASK NULL — meet null — 19:57 2026/06/28"
   );
 
 });
