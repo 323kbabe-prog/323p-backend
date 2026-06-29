@@ -1680,6 +1680,88 @@ try{
  const combinedIntent =
   text.trim();
 
+const rewriteRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+You are a user input clarification helper for the AGI Nulls Network.
+
+Only activate when the user's input is unclear, incomplete, ambiguous, or depends on previous conversation context.
+
+If the user's input is already clear and complete, do NOT rewrite it.
+
+Return the original input exactly as written.
+
+If clarification is needed, rewrite the user's input into the most likely complete request using the previous AGI Nulls Network response as context.
+
+Do not answer the user.
+
+Do not change the user's intent.
+
+Only reconstruct missing context.
+
+Return ONLY the final user request.
+`
+      },
+
+      {
+        role:"user",
+
+        content:`
+Previous AGI Nulls Network response:
+
+${
+room.messages
+  .slice()
+  .reverse()
+  .find(
+    m => m.aiBeing
+  )?.ask ||
+
+room.messages
+  .slice()
+  .reverse()
+  .find(
+    m => m.aiBeing
+  )?.text ||
+
+""
+}
+
+User:
+
+${combinedIntent}
+`
+      }
+
+    ]
+
+});
+
+const rewrittenIntent =
+  rewriteRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+console.log(
+  "ORIGINAL:",
+  combinedIntent
+);
+
+console.log(
+  "REWRITTEN:",
+  rewrittenIntent
+);
+
 
   const greetingRes =
   await openai.chat.completions.create({
@@ -1746,7 +1828,7 @@ intent
       },
       {
         role: "user",
-        content: combinedIntent
+        content: rewrittenIntent
       }
     ]
   });
@@ -1901,7 +1983,7 @@ Rules:
     },
     {
       role:"user",
-     content: combinedIntent
+     content: rewrittenIntent
     }
   ]
 });
@@ -1943,7 +2025,7 @@ other
       },
       {
         role: "user",
-        content: text
+        content: rewrittenIntent
       }
     ]
   });
@@ -2021,7 +2103,7 @@ no punctuation
       },
 {
   role:"user",
-  content: combinedIntent
+  content: rewrittenIntent
 }
 
 
@@ -2082,7 +2164,8 @@ Image identity:
 ${room.imageContext}
 
 User request:
-${text}
+${rewrittenIntent}
+
 
 Destination:
 ${locationPurposeSearch}
@@ -3331,7 +3414,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 13:52 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 16:04 2026/06/29"
   );
 
 });
