@@ -1970,17 +1970,27 @@ or
 
 other
 
-Return personal only if the user is:
-- asking for advice
+Return personal only if the user wants guidance, recommendations, or advice.
+
+This includes:
+
 - expressing emotions
 - describing a personal situation
-- asking for relationship advice
-- asking for life advice
-- asking for mental health advice
+- asking for advice
+- asking what to do
+- asking what to build
+- asking what to create
+- asking what to learn
+- asking for an example
+- asking me to choose
+- asking for a recommendation
+- asking how to start
+- asking which direction to take
 
 Everything else is:
 
 other
+
 `
       },
       {
@@ -3486,8 +3496,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 21:38 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 23:44 2026/06/29"
   );
 
 });
-
