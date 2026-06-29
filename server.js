@@ -2036,6 +2036,9 @@ const locationPurposeSearch =
     .content
     .trim();
 
+const hiddenSystem =
+  room.hiddenSystem;
+
 let directLocationSearch = null;
 
 if(
@@ -2043,10 +2046,61 @@ if(
   locationPurposeSearch !== "none"
 ){
 
-directLocationSearch =
-  locationPurposeSearch +
-  " local news";
+  const locationNewsRes =
+    await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      messages:[
+
+        {
+          role:"system",
+          content:`
+Create ONE Google News search.
+
+The hidden system is the subject.
+
+The location only limits where.
+
+Return ONLY the search.
+
+Rules:
+- 3 to 8 words
+- lowercase
+- no punctuation
+- current news
+`
+        },
+
+        {
+          role:"user",
+         content:`
+Hidden system:
+${hiddenSystem}
+
+Image identity:
+${room.imageContext}
+
+User request:
+${text}
+
+Destination:
+${locationPurposeSearch}
+`
+
+        }
+
+      ]
+
+    });
+
+  directLocationSearch =
+    locationNewsRes.choices[0]
+      .message.content
+      .trim();
+
 }
+
 
 
   const isNamedEntity =
@@ -2070,8 +2124,7 @@ const skipPlaceFlow =
   locationPurposeSearch === "none";
 
 
-const hiddenSystem =
-  room.hiddenSystem;
+
 
   console.log(
   "HIDDEN SYSTEM:",
@@ -2656,39 +2709,44 @@ const placeQueryRes =
         content:`
 Given:
 
+- the hidden system behind the uploaded image
 - a place type
 - a city
-- a local news event
+- the current local news event
 
-Create a Google local search query
-for ONE place connected to that event.
+Create ONE Google local search query.
 
-Examples:
+The hidden system determines WHICH place to choose.
 
-new york coffee shop
-knicks parade
-→ coffee shop near knicks parade route
+Do NOT choose a generic place.
 
-new york bar
-world cup
-→ sports bar showing world cup
+Choose a place whose purpose, location, customers, history, or surrounding area naturally connects to the hidden system and the news event.
 
-Return ONLY the search query.
+Return ONLY the Google local search query.
+
 `
       },
 
       {
         role:"user",
-        content:`
+       content:`
+Hidden system:
+${hiddenSystem}
+
 Search:
 ${locationPurposeSearch}
 
 News:
 ${selectedNews?.title}
 `
+
       }
     ]
   });
+
+console.log("HIDDEN SYSTEM:", hiddenSystem);
+console.log("PLACE SEARCH:", locationPurposeSearch);
+console.log("NEWS:", selectedNews?.title);
 
 const placeQuery =
   placeQueryRes
@@ -3246,8 +3304,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 23:17 2026/06/28"
+    "CONNECTAING V9 — ASK NULL — meet null — 13:26 2026/06/29"
   );
 
 });
-
