@@ -1692,9 +1692,9 @@ Return ONLY one word:
 
 greeting
 
-or
-
 intent
+
+unclear
 
 IMPORTANT:
 
@@ -1720,6 +1720,22 @@ Return "greeting" if the user is primarily interacting with Ask Null itself, suc
 - asking about Ask Null's identity, purpose, or capabilities
 - interacting with Ask Null without trying to discover external information or solve a problem
 
+Return "unclear" if the user's message does not contain enough information to determine what they want.
+
+Examples:
+
+huh
+what
+???
+...
+asdf
+bbgd
+i did bbgd
+idk
+hmm
+
+Return "unclear" only when the user's intent cannot reasonably be determined.
+
 Return "intent" if the user is primarily trying to accomplish something, including:
 - finding or searching for information
 - exploring a topic
@@ -1738,9 +1754,9 @@ Return exactly one word:
 
 greeting
 
-or
-
 intent
+
+unclear
 
 `
       },
@@ -1757,6 +1773,34 @@ const inputType =
     .content
     .trim()
     .toLowerCase();
+
+if(inputType === "unclear"){
+
+  room.messages.push({
+
+    from:"NULL",
+
+    aiBeing:true,
+
+    showNextButton:true,
+
+    text:
+      "I couldn't understand your request. Could you rephrase it or add a little more detail?"
+
+  });
+
+  io.to(room.id).emit(
+    "aiTypingStop"
+  );
+
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
+
+  return;
+
+}
 
   console.log("GREETING TYPE:", inputType);
 
@@ -3331,7 +3375,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 13:52 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 18:16 2026/06/29"
   );
 
 });
