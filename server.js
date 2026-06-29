@@ -1626,6 +1626,15 @@ return socket.emit(
     const room =
   rooms[user.currentRoom];
 
+if(!room){
+
+  socket.emit(
+    "roomClosed"
+  );
+
+  return;
+}
+
       const isNextSearch =
   text.trim().toLowerCase() === "null feed";
 
@@ -1636,17 +1645,6 @@ return socket.emit(
   });
 
 }
-      
-if(!room){
-
-  socket.emit(
-    "roomClosed"
-  );
-
-  return;
-}
-
-
 
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
@@ -1997,6 +1995,46 @@ const isPersonalIntent =
     .trim()
     .toLowerCase() === "personal";
 
+const shoppingRes =
+  await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    messages:[
+      {
+        role:"system",
+        content:`
+Return ONLY one word:
+
+shopping
+
+other
+
+Return shopping if the user wants to buy, shop, find a product, get a gift, purchase, or compare products.
+
+Examples:
+i need to buy a gift → shopping
+gift for my friend → shopping
+where can i buy shoes → shopping
+best camera to buy → shopping
+
+Everything else:
+other
+`
+      },
+      {
+        role:"user",
+        content:text
+      }
+    ]
+  });
+
+const isShoppingIntent =
+  shoppingRes.choices[0].message.content
+    .trim()
+    .toLowerCase() === "shopping";
+
+const amazonLink =
+  "https://www.amazon.com/s?k=" +
+  encodeURIComponent(text.trim());
   
   const locationPurposeRes =
   await openai.chat.completions.create({
@@ -3210,11 +3248,16 @@ isPersonalIntent
 : selectedNews.title
 ),
 
-  link:
-    placeLink ||
-    selectedNews?.link ||
-    selectedNews?.news_link ||
-    ""
+link:
+  isShoppingIntent
+    ? amazonLink
+    : (
+        placeLink ||
+        selectedNews?.link ||
+        selectedNews?.news_link ||
+        ""
+      )
+
 
 });
 
@@ -3375,7 +3418,8 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 18:16 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 21:27 2026/06/29"
   );
 
 });
+
