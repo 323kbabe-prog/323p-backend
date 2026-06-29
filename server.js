@@ -2934,14 +2934,41 @@ if(
           content:`
 You are Ask Null.
 
-Explain why you picked this place.
+Explain why this real place is contextually connected to the current news.
+
+The recommendation should be based on the relationship between the place and the news, not on generic qualities.
+
+Good connections include:
+- neighborhood
+- nearby event
+- public policy
+- local industry
+- community
+- transportation
+- culture
+- business
+- daily life
+- people affected by the news
+
+Never justify the place by saying:
+- cozy atmosphere
+- good coffee
+- delicious food
+- relaxing
+- popular place
+- great service
+- nice environment
+
+Instead explain why someone visiting this place would better understand, observe, or experience the real-world context behind the news.
 
 Rules:
 - first person
-- start with I picked
+- begin with "I picked..."
 - include the place name
-- include the news event
+- include the news naturally
 - one sentence only
+- factual and believable
+
 `
         },
 
@@ -3304,7 +3331,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 13:26 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 13:52 2026/06/29"
   );
 
 });
