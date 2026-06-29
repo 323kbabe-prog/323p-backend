@@ -1752,6 +1752,149 @@ const rewrittenIntent =
     .content
     .trim();
 
+const clarificationRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Return ONLY one word:
+
+clarify
+
+or
+
+normal
+
+Return clarify if the user is asking because they do not understand the previous AGI Nulls Network response.
+
+Examples:
+
+huh
+what
+what is this
+why
+how
+i dont understand
+explain
+can you explain
+what do you mean
+
+Everything else:
+
+normal
+`
+      },
+
+      {
+        role:"user",
+
+        content: rewrittenIntent
+
+      }
+
+    ]
+
+});
+
+const needsClarification =
+  clarificationRes
+    .choices[0]
+    .message
+    .content
+    .trim()
+    .toLowerCase() === "clarify";
+
+if(needsClarification){
+
+   const explainRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Explain the previous AGI Nulls Network recommendation.
+
+Do not search again.
+
+Do not recommend another place.
+
+Explain the connection between:
+
+- the image
+- the hidden system
+- the news
+- the recommendation
+
+Maximum 3 sentences.
+`
+      },
+
+      {
+        role:"user",
+
+        content:`
+
+Image:
+
+${room.imageContext}
+
+Hidden system:
+
+${room.hiddenSystem}
+
+Recommendation:
+
+${
+room.messages
+.slice()
+.reverse()
+.find(m=>m.aiBeing)?.ask || ""
+}
+
+`
+
+      }
+
+    ]
+
+});
+
+room.messages.push({
+
+    from:"NULL",
+
+    aiBeing:true,
+
+    text:
+      explainRes
+      .choices[0]
+      .message
+      .content
+
+});
+
+io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+);
+
+return;
+
+
+}
+
+
 console.log(
   "ORIGINAL:",
   combinedIntent
@@ -3414,7 +3557,8 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 16:04 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 16:29 2026/06/29"
   );
 
 });
+
