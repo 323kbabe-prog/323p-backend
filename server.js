@@ -2123,6 +2123,66 @@ const hiddenSystem =
 
 let directLocationSearch = null;
 
+let directShoppingSearch = null;
+
+if (
+  !isNextSearch &&
+  isShoppingIntent
+) {
+
+  const shoppingQueryRes =
+    await openai.chat.completions.create({
+
+      model: "gpt-4o-mini",
+
+      messages: [
+
+        {
+          role: "system",
+          content: `
+Create ONE Amazon shopping search.
+
+The hidden system is the subject.
+
+The user's request determines the product.
+
+Return ONLY the search.
+
+Rules:
+- 2 to 6 words
+- lowercase
+- no punctuation
+`
+        },
+
+        {
+          role: "user",
+          content: `
+Hidden system:
+${hiddenSystem}
+
+Image identity:
+${room.imageContext}
+
+User request:
+${text}
+`
+        }
+
+      ]
+
+    });
+
+  directShoppingSearch =
+    shoppingQueryRes
+      .choices[0]
+      .message
+      .content
+      .trim();
+
+}
+
+
 if(
   !isNextSearch &&
   locationPurposeSearch !== "none"
@@ -2549,11 +2609,14 @@ const searchQuery =
 
         directLocationSearch ||
 
+        directShoppingSearch ||
+
         directNewsSearch ||
 
         emotionSearch
 
       );
+
 
 const isLocationRequest =
   locationPurposeSearch !== "none";
@@ -3418,7 +3481,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 21:27 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 21:38 2026/06/29"
   );
 
 });
