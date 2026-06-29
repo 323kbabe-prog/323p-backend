@@ -1680,290 +1680,6 @@ try{
  const combinedIntent =
   text.trim();
 
-const rewriteRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-
-        content:`
-You are a user input clarification helper for the AGI Nulls Network.
-
-Only activate when the user's input is unclear, incomplete, ambiguous, or depends on previous conversation context.
-
-If the user's input is already clear and complete, do NOT rewrite it.
-
-Return the original input exactly as written.
-
-If clarification is needed, rewrite the user's input into the most likely complete request using the previous AGI Nulls Network response as context.
-
-Do not answer the user.
-
-Do not change the user's intent.
-
-Only reconstruct missing context.
-
-Return ONLY the final user request.
-`
-      },
-
-      {
-        role:"user",
-
-        content:`
-Previous AGI Nulls Network response:
-
-${
-room.messages
-  .slice()
-  .reverse()
-  .find(
-    m => m.aiBeing
-  )?.ask ||
-
-room.messages
-  .slice()
-  .reverse()
-  .find(
-    m => m.aiBeing
-  )?.text ||
-
-""
-}
-
-User:
-
-${combinedIntent}
-`
-      }
-
-    ]
-
-});
-
-const rewrittenIntent =
-  rewriteRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-const clarificationRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-
-        content:`
-Return ONLY one word:
-
-normal
-
-clarify
-
-incomplete
-
-Definitions:
-
-normal
-- the user is making a clear request
-- enough information exists to continue
-
-clarify
-- the user wants an explanation of the previous AGI Nulls Network response
-
-Examples:
-
-huh
-what
-what is this
-why
-how
-i dont understand
-explain
-what do you mean
-
-incomplete
-- the input has no clear meaning
-- random letters
-- obvious typo
-- incomplete sentence
-- cannot determine user intent
-
-Examples:
-
-bbgd
-asdf
-???
-idk
-...
-i did bbgd
-
-Return ONLY one word.
-
-Return clarify if the user is asking because they do not understand the previous AGI Nulls Network response.
-
-Examples:
-
-huh
-what
-what is this
-why
-how
-i dont understand
-explain
-can you explain
-what do you mean
-
-Everything else:
-
-normal
-`
-      },
-
-      {
-        role:"user",
-
-        content: rewrittenIntent
-
-      }
-
-    ]
-
-});
-
-const clarificationType =
-  clarificationRes
-    .choices[0]
-    .message
-    .content
-    .trim()
-    .toLowerCase();
-
-if(clarificationType === "clarify"){
-
-if(clarificationType === "incomplete"){
-
-  room.messages.push({
-
-    from:"NULL",
-
-    aiBeing:true,
-
-    text:
-      "I couldn't understand your request. Could you rephrase it or add a little more detail?"
-
-  });
-
-  io.to(room.id).emit(
-    "roomMessages",
-    room.messages
-  );
-
-  return;
-
-}
-   const explainRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-
-        content:`
-Explain the previous AGI Nulls Network recommendation.
-
-Do not search again.
-
-Do not recommend another place.
-
-Explain the connection between:
-
-- the image
-- the hidden system
-- the news
-- the recommendation
-
-Maximum 3 sentences.
-`
-      },
-
-      {
-        role:"user",
-
-        content:`
-
-Image:
-
-${room.imageContext}
-
-Hidden system:
-
-${room.hiddenSystem}
-
-Recommendation:
-
-${
-room.messages
-.slice()
-.reverse()
-.find(m=>m.aiBeing)?.ask || ""
-}
-
-`
-
-      }
-
-    ]
-
-});
-
-room.messages.push({
-
-    from:"NULL",
-
-    aiBeing:true,
-
-    text:
-      explainRes
-      .choices[0]
-      .message
-      .content
-
-});
-
-io.to(room.id).emit(
-    "roomMessages",
-    room.messages
-);
-
-return;
-
-
-}
-
-
-console.log(
-  "ORIGINAL:",
-  combinedIntent
-);
-
-console.log(
-  "REWRITTEN:",
-  rewrittenIntent
-);
-
 
   const greetingRes =
   await openai.chat.completions.create({
@@ -2030,7 +1746,7 @@ intent
       },
       {
         role: "user",
-        content: rewrittenIntent
+        content: combinedIntent
       }
     ]
   });
@@ -2185,7 +1901,7 @@ Rules:
     },
     {
       role:"user",
-     content: rewrittenIntent
+     content: combinedIntent
     }
   ]
 });
@@ -2227,7 +1943,7 @@ other
       },
       {
         role: "user",
-        content: rewrittenIntent
+        content: text
       }
     ]
   });
@@ -2305,7 +2021,7 @@ no punctuation
       },
 {
   role:"user",
-  content: rewrittenIntent
+  content: combinedIntent
 }
 
 
@@ -2366,8 +2082,7 @@ Image identity:
 ${room.imageContext}
 
 User request:
-${rewrittenIntent}
-
+${text}
 
 Destination:
 ${locationPurposeSearch}
@@ -3616,7 +3331,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 17:17 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 13:52 2026/06/29"
   );
 
 });
