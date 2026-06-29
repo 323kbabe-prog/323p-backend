@@ -2033,8 +2033,11 @@ const isShoppingIntent =
     .toLowerCase() === "shopping";
 
 const amazonLink =
-  "https://www.amazon.com/s?k=" +
-  encodeURIComponent(text.trim());
+  directShoppingSearch
+    ? "https://www.amazon.com/s?k=" +
+      encodeURIComponent(directShoppingSearch)
+    : "";
+
   
   const locationPurposeRes =
   await openai.chat.completions.create({
@@ -3485,4 +3488,3 @@ server.listen(10000, () => {
   );
 
 });
-
