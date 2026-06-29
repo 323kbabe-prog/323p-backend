@@ -1765,11 +1765,49 @@ const clarificationRes =
         content:`
 Return ONLY one word:
 
+normal
+
 clarify
 
-or
+incomplete
+
+Definitions:
 
 normal
+- the user is making a clear request
+- enough information exists to continue
+
+clarify
+- the user wants an explanation of the previous AGI Nulls Network response
+
+Examples:
+
+huh
+what
+what is this
+why
+how
+i dont understand
+explain
+what do you mean
+
+incomplete
+- the input has no clear meaning
+- random letters
+- obvious typo
+- incomplete sentence
+- cannot determine user intent
+
+Examples:
+
+bbgd
+asdf
+???
+idk
+...
+i did bbgd
+
+Return ONLY one word.
 
 Return clarify if the user is asking because they do not understand the previous AGI Nulls Network response.
 
@@ -1802,16 +1840,37 @@ normal
 
 });
 
-const needsClarification =
+const clarificationType =
   clarificationRes
     .choices[0]
     .message
     .content
     .trim()
-    .toLowerCase() === "clarify";
+    .toLowerCase();
 
-if(needsClarification){
+if(clarificationType === "clarify"){
 
+if(clarificationType === "incomplete"){
+
+  room.messages.push({
+
+    from:"NULL",
+
+    aiBeing:true,
+
+    text:
+      "I couldn't understand your request. Could you rephrase it or add a little more detail?"
+
+  });
+
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
+
+  return;
+
+}
    const explainRes =
   await openai.chat.completions.create({
 
@@ -3557,8 +3616,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 16:29 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 17:17 2026/06/29"
   );
 
 });
-
