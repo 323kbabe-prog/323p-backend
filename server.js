@@ -2032,11 +2032,7 @@ const isShoppingIntent =
     .trim()
     .toLowerCase() === "shopping";
 
-const amazonLink =
-  directShoppingSearch
-    ? "https://www.amazon.com/s?k=" +
-      encodeURIComponent(directShoppingSearch)
-    : "";
+
 
   
   const locationPurposeRes =
@@ -2184,6 +2180,12 @@ ${text}
       .trim();
 
 }
+
+const amazonLink =
+  directShoppingSearch
+    ? "https://www.amazon.com/s?k=" +
+      encodeURIComponent(directShoppingSearch)
+    : "";
 
 
 if(
@@ -3488,3 +3490,4 @@ server.listen(10000, () => {
   );
 
 });
+
