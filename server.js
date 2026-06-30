@@ -853,9 +853,63 @@ const hiddenSystemRes =
       {
         role:"system",
         content:`
-Extract the hidden system behind the image.
+Extract the invisible human system behind the image.
 
-Return ONLY one short phrase.
+Ignore:
+- the object
+- the product
+- the category
+- the industry
+- the function
+
+Think instead:
+
+object
+→ people
+→ behavior
+→ lifestyle
+→ culture
+→ economics
+→ psychology
+→ hidden system
+
+Ask:
+
+Who uses this?
+
+Why?
+
+What lifestyle does it represent?
+
+What larger social change is happening?
+
+Examples
+
+coffee cup
+→ work life balance
+
+mahjong
+→ women's social rituals
+
+mahjong
+→ aging consumer culture
+
+makeup
+→ beauty identity
+
+laptop
+→ remote work
+
+gym
+→ self improvement culture
+
+Return ONLY
+
+2–4 words
+
+lowercase
+
+no punctuation
 `
       },
 
@@ -979,7 +1033,31 @@ role:"system",
 content:`
 Create ONE current news search phrase.
 
-The hidden system behind the image is the subject.
+Create ONE current news search.
+
+The hidden system is only the starting point.
+
+Search for today's biggest real-world trend connected to that system.
+
+Think:
+
+hidden system
+↓
+
+people
+
+↓
+
+behavior
+
+↓
+
+today's news
+
+Do not search the hidden system literally.
+
+Search what is happening because of it.
+
 
 Ignore:
 
@@ -2130,6 +2208,51 @@ const locationPurposeSearch =
 const hiddenSystem =
   room.hiddenSystem;
 
+const customerIdentityRes =
+  await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `
+Given a hidden system, identify the most likely consumer.
+
+Return ONLY one short phrase.
+
+Examples
+
+women's social rituals
+→ middle aged women
+
+remote work
+→ office professionals
+
+luxury identity
+→ luxury shoppers
+
+student pressure
+→ college students
+
+fitness culture
+→ gym beginners
+`
+      },
+      {
+        role: "user",
+        content: hiddenSystem
+      }
+    ]
+  });
+
+const customerIdentity =
+  customerIdentityRes.choices[0].message.content.trim();
+
+console.log(
+  "CUSTOMER:",
+  customerIdentity
+);
+
+
 let directLocationSearch = null;
 
 let directShoppingSearch = null;
@@ -2149,11 +2272,86 @@ if (
         {
           role: "system",
           content: `
-Create ONE Amazon shopping search.
+Create ONE shopping search.
 
-The hidden system is the subject.
+The user's request is the destination.
 
-The user's request determines the product.
+The hidden system provides the customer identity.
+
+Reason like this:
+
+Hidden system
+↓
+
+who is the customer
+
+↓
+
+why they want this product
+
+↓
+
+current trend
+
+↓
+
+shopping search
+
+Do NOT search generic product launches.
+
+Do NOT search company announcements.
+
+Do NOT search press releases.
+
+Prefer searches about:
+
+- beauty trends
+- consumer behavior
+- fashion trends
+- lifestyle trends
+- cultural trends
+- viral products
+- social media trends
+
+Examples
+
+Hidden system:
+${hiddenSystem}
+
+Customer:
+${customerIdentity}
+
+Image identity:
+${room.imageContext}
+
+User request:
+${text}
+
+
+
+User:
+I need eyeliner
+
+Good
+
+mature beauty trends
+
+asian beauty trends
+
+viral eyeliner trend
+
+beauty consumer trends
+
+Bad
+
+cosmetics product launch
+
+new product announcement
+
+company expands beauty line
+
+Return ONLY 3–6 lowercase words.
+
 
 Return ONLY the search.
 
@@ -2671,7 +2869,7 @@ if (isLocationRequest) {
 const serpFetch =
   await fetch(
 
-    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+    `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d7&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
   );
 
@@ -3314,7 +3512,7 @@ room.messages.push({
       ? nullReason
       : null,
 
-  image:null,
+  image: imageUrl,
 
 ask:
 
@@ -3496,7 +3694,8 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 23:44 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 17:52 2026/06/30"
   );
 
 });
+
