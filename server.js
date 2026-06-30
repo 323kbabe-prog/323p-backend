@@ -2151,56 +2151,92 @@ if (
           content: `
 Create ONE Amazon shopping search.
 
-Read the user's request.
+The user's request is ALWAYS the product category.
 
-Read the hidden system behind the image.
+First determine exactly what the user wants to buy.
 
-Read the current news direction implied by the hidden system.
+If the uploaded image is clearly related to the user's shopping request, use the image identity to choose a better brand, style, or version.
 
-Create ONE shopping search that naturally connects all three.
+If the uploaded image is NOT related to the user's shopping request, completely ignore the image.
 
-The search should feel like something a real person would search after reading today's news.
+When the image is unrelated,
+recommend the most popular or trending product available today.
 
-Prefer:
-- trending products
-- popular brands
-- current consumer behavior
-- viral products
+Prefer products that:
+- are highly rated
+- are currently popular
+- are widely recommended
+- fit the user's request
 
-Do not search:
-- company press releases
-- product launch announcements
-- generic industry news
+Do not invent products.
 
-Examples
+Prefer real brands and real products.
 
-Hidden system:
-women's social rituals
+Never replace the user's requested product with something related to the image.
+
+Image:
+remote control
 
 User:
 I need eyeliner
 
-Good:
-korean waterproof eyeliner
+Product category:
+eyeliner
 
-viral liquid eyeliner
+Image relevance:
+unrelated
 
-asian beauty eyeliner
+Search:
+heroine make waterproof eyeliner
+
+NOT:
+universal remote
+
+
+Reason in this order:
+
+1. User request (80%)
+Determine exactly what product the user wants.
+
+2. Hidden system (20%)
+Use it only to choose a better product or brand.
+
+Never let the hidden system change the product category.
+
+Examples
+
+Image:
+remote control
 
 Hidden system:
-fitness culture
+home entertainment
 
 User:
-I need protein
+I need eyeliner
 
-Good:
-best whey protein
+Search:
+heroine make waterproof eyeliner
 
-popular protein powder
+NOT:
+universal remote
 
-high protein snacks
+Image:
+coffee cup
 
-Return ONLY 2–6 lowercase words.
+Hidden system:
+morning routine
+
+User:
+I need headphones
+
+Search:
+sony wh1000xm6
+
+NOT:
+coffee maker
+
+Return ONLY the Amazon search.
+
 
 `
         },
