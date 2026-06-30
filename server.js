@@ -2813,6 +2813,17 @@ const validNews =
 
 if(validNews.length > 0){
 
+if (validNews.length <= 2) {
+
+  selectedNews = validNews[0];
+
+  imageUrl =
+    selectedNews.original ||
+    selectedNews.thumbnail ||
+    selectedNews.thumbnail_small;
+
+} else {
+
   try{
 
     const evaluationRes =
@@ -3094,7 +3105,9 @@ console.log(
   selectedNews.thumbnail ||
   selectedNews.thumbnail_small;
 
-  }
+}
+
+}
 
 }
   
@@ -3577,5 +3590,3 @@ server.listen(10000, () => {
   );
 
 });
-
-
