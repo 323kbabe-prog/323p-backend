@@ -1,211 +1,268 @@
-const express = require("express");const http = require("http");const cors = require("cors");const { Server } = require("socket.io");const nodemailer = require("nodemailer");const OpenAI = require("openai");const fetch = global.fetch;
+const express = require("express");
+const http = require("http");
+const cors = require("cors");
+const { Server } = require("socket.io");
+const nodemailer = require("nodemailer");
+const OpenAI = require("openai");
+const fetch = global.fetch;
 
 const app = express();
 
-app.use(cors({ origin: "*" }));app.use(express.json());
+app.use(cors({ origin: "*" }));
+app.use(express.json());
 
 const server = http.createServer(app);
 
-const io = new Server(server, {cors: { origin: "*" }});
-
-const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY,fetch: fetch});
-
-//////////////////////////////////////////////////// EMAIL//////////////////////////////////////////////////
-
-const transporter = nodemailer.createTransport({service: "gmail",auth: {user: process.env.EMAIL_USER,pass: process.env.EMAIL_PASS}});
-
-async function sendEmail(to,subject,text,imageDataUrl){
-
-let attachments = [];let imgTag = "";
-
-if(imageDataUrl){
-
-const base64Data =
-  imageDataUrl.split(
-    "base64,"
-  )[1];
-
-attachments.push({
-  filename:"image.jpg",
-  content:base64Data,
-  encoding:"base64",
-  cid:"image1"
+const io = new Server(server, {
+  cors: { origin: "*" }
 });
 
-imgTag =
-  `<img src="cid:image1"
-  style="max-width:100%;
-  border-radius:12px;" />`;
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  fetch: fetch
+});
 
+//////////////////////////////////////////////////
+// EMAIL
+//////////////////////////////////////////////////
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+async function sendEmail(
+  to,
+  subject,
+  text,
+  imageDataUrl
+){
+
+  let attachments = [];
+  let imgTag = "";
+
+  if(imageDataUrl){
+
+    const base64Data =
+      imageDataUrl.split(
+        "base64,"
+      )[1];
+
+    attachments.push({
+      filename:"image.jpg",
+      content:base64Data,
+      encoding:"base64",
+      cid:"image1"
+    });
+
+    imgTag =
+      `<img src="cid:image1"
+      style="max-width:100%;
+      border-radius:12px;" />`;
+  }
+
+  await transporter.sendMail({
+
+    from:
+      `"CONNECTAING.COM"
+      <${process.env.EMAIL_USER}>`,
+
+    to,
+
+    subject,
+
+    text,
+
+    html:`
+      <div
+      style="
+      font-family:system-ui;
+      padding:20px;
+      ">
+
+        <div
+        style="
+        white-space:pre-wrap;
+        line-height:1.6;
+        ">
+          ${text}
+        </div>
+
+        <br>
+
+        ${imgTag}
+
+      </div>
+    `,
+
+    attachments
+  });
 }
 
-await transporter.sendMail({
+//////////////////////////////////////////////////
+// DATA
+//////////////////////////////////////////////////
 
-from:
-  `"CONNECTAING.COM"
-  <${process.env.EMAIL_USER}>`,
+const users = {};
+const questions = [];
+const rooms = {};
 
-to,
+const dailyNullCategories = [
+  "AI",
+  "Technology",
+  "Business",
+  "Economics",
+  "Politics",
+  "Culture",
+  "Music",
+  "Celebrity",
+  "Sports",
+  "Internet"
+];
 
-subject,
+let dailyNulls = [];
+let dailyNullsUpdatedAt = null;
 
-text,
-
-html:`
-  <div
-  style="
-  font-family:system-ui;
-  padding:20px;
-  ">
-
-    <div
-    style="
-    white-space:pre-wrap;
-    line-height:1.6;
-    ">
-      ${text}
-    </div>
-
-    <br>
-
-    ${imgTag}
-
-  </div>
-`,
-
-attachments
-
-});}
-
-//////////////////////////////////////////////////// DATA//////////////////////////////////////////////////
-
-const users = {};const questions = [];const rooms = {};
-
-const dailyNullCategories = ["AI","Technology","Business","Economics","Politics","Culture","Music","Celebrity","Sports","Internet"];
-
-let dailyNulls = [];let dailyNullsUpdatedAt = null;
-
-//////////////////////////////////////////////////// CLEANUP//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// CLEANUP
+//////////////////////////////////////////////////
 
 setInterval(() => {
 
-const now = Date.now();
+  const now = Date.now();
 
-//////////////////////////////////////////////////// QUESTION CLEANUP//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // QUESTION CLEANUP
+  //////////////////////////////////////////////////
 
-for(let i = questions.length - 1;i >= 0;i--){
+  for(
+    let i = questions.length - 1;
+    i >= 0;
+    i--
+  ){
 
-if(
-  now - questions[i].createdAt >
-  72 * 60 * 60 * 1000
-){
+    if(
+      now - questions[i].createdAt >
+      72 * 60 * 60 * 1000
+    ){
 
-  questions.splice(i,1);
-}
+      questions.splice(i,1);
+    }
+  }
 
-}
+  //////////////////////////////////////////////////
+  // ROOM CLEANUP
+  //////////////////////////////////////////////////
 
-//////////////////////////////////////////////////// ROOM CLEANUP//////////////////////////////////////////////////
+  for(const roomId in rooms){
 
-for(const roomId in rooms){
+    if(
+      now >
+      rooms[roomId].expiresAt
+    ){
 
-if(
-  now >
-  rooms[roomId].expiresAt
-){
+      io.to(roomId).emit(
+        "roomClosed"
+      );
 
-  io.to(roomId).emit(
-    "roomClosed"
-  );
-
-  delete rooms[roomId];
-}
-
-}
+      delete rooms[roomId];
+    }
+  }
 
 }, 60 * 1000);
 
-//////////////////////////////////////////////////// HELPERS//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// HELPERS
+//////////////////////////////////////////////////
 
 function extractEmail(text){
 
-const m =text.match(/\S+@\S+.\S+/);
+  const m =
+    text.match(/\S+@\S+\.\S+/);
 
-return m? m[0].toLowerCase(): null;}
+  return m
+    ? m[0].toLowerCase()
+    : null;
+}
 
 function capitalizeFirst(text){
 
-if(!text) return "";
+  if(!text) return "";
 
-return (text.charAt(0).toUpperCase() +text.slice(1));}
+  return (
+    text.charAt(0).toUpperCase() +
+    text.slice(1)
+  );
+}
 
-//////////////////////////////////////////////////// SOCKET//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// SOCKET
+//////////////////////////////////////////////////
+
 
 async function generateDailyNulls(){
 
-console.log(
-"GENERATING DAILY NULLS:",
-new Date().toISOString()
+    console.log(
+    "GENERATING DAILY NULLS:",
+    new Date().toISOString()
+  );
 
-);
+  const cards = [];
+const usedIdentities = [];
+  for(const category of dailyNullCategories){
 
-const cards = [];const usedIdentities = [];for(const category of dailyNullCategories){
+    try{
 
-try{
+      const identityRes =
+        await openai.chat.completions.create({
+          model:"gpt-4o-mini",
+          messages:[
+           {
+  role:"system",
+  content:`
+Create one Ask Null identity for this category.
 
-  const identityRes =
-    await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      messages:[
-       {
-
-role:"system",content:`Create one Ask Null identity for this category.
-
-Return JSON only:{"identity":"","intro":""}
+Return JSON only:
+{
+  "identity":"",
+  "intro":""
+}
 
 Rules:
-
-identity: 2 to 4 words
-
-intro: exactly 1 short sentence
-
-intro should explain why this signal matters
-
-8 to 15 words
-
-hook
-
-shocking
-
-internet-native
-
-emotionally engaging
+- identity: 2 to 4 words
+- intro: exactly 1 short sentence
+- intro should explain why this signal matters
+- 8 to 15 words
+- hook
+- shocking
+- internet-native
+- emotionally engaging
 
 IMPORTANT:
 
 Already used identities are forbidden.
 
 Do not repeat:
-
-words
-
-themes
-
-metaphors
-
-emotional tones
-
-concepts
+- words
+- themes
+- metaphors
+- emotional tones
+- concepts
 
 Every identity must feel like a completely different internet phenomenon.
 
-no markdown
+- no markdown
+`
 },
-         {
-role:"user",
-content:
+           {
+  role:"user",
+  content:`
 
-Category:${category}
+Category:
+${category}
 
 Already used identities:
 
@@ -213,202 +270,35 @@ ${usedIdentities.join("\n")}
 
 Create ONE identity that is clearly different from all identities above.
 
-`}]});
-
- let identityData = {
-
-identity: category,intro: "Exploring today's signals."};
-
-try{identityData =JSON.parse(identityRes.choices[0].message.content);
-
-usedIdentities.push(identityData.identity);
-
-}catch(err){console.log("daily null json failed",err);}
-
-const searchRes =await openai.chat.completions.create({
-
-model:"gpt-4o-mini",
-
-messages:[
-
-  {
-    role:"system",
-
-    content:`
-
-Create ONE surprising current news search.
-
-The search should feel:
-
-unexpected
-
-internet-native
-
-emotionally engaging
-
-culturally current
-
-newsworthy
-
-Rules:
-
-3 to 6 words
-
-lowercase only
-
-no punctuation
-
-real searchable news topics`},
-
-{
-  role:"user",
-
-  content:`
-
-Category:${category}
-
-Null Identity:${identityData.identity}
-
-Intro:${identityData.intro}
-
-Create ONE search phrase.
-
-`}
-
-]
-
-});
-
-const searchQuery =
-
-searchRes.choices[0].message.content.trim();
-
-console.log("DAILY NULL SEARCH:",category,searchQuery);
-
-const newsFetch =await fetch(https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY});
-
-  const newsRes =
-    await newsFetch.json();
-
-let newsItem =newsRes?.news_results?.find(item =>item.title &&(item.link ||item.news_link));
-
-if(!newsItem){
-
-const fallbackSearch = category + " news";
-
-const fallbackFetch =await fetch(https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(fallbackSearch)}&api_key=${process.env.SERPAPI_KEY});
-
-const fallbackRes =await fallbackFetch.json();
-
-newsItem =fallbackRes?.news_results?.find(item =>item.title &&(item.link ||item.news_link));
-
+`
 }
+          ]
+        });
 
-  if(!newsItem){
-
-continue;}
-
-cards.push({
-
-category,
-
-identity.identity,
-
-intro.intro,
-
-title:newsItem.title,
-
-image:newsItem.original ||newsItem.thumbnail ||newsItem.thumbnail_small ||null,
-
-link:newsItem.link ||newsItem.news_link
-
-});
-
-}catch(err){
-
-  console.log(
-    "daily null failed:",
-    category,
-    err
-  );
-
-}
-
-}
-
-dailyNulls = cards;console.log("Daily Null Categories:",cards.map(x => x.category));dailyNullsUpdatedAt =new Date().toISOString();
-
-console.log("DAILY NULLS UPDATED:",dailyNulls.length);}
-
-io.on("connection", socket => {
-
-users[socket.id] = {
-
-step:"active",
-
-displayName,
-
-imageMode,
-
-imageContext,
-
-currentIndex,
-
-lastImage,
-
-currentRoom};
-
-socket.on("rejoinRoom",({ roomId }) => {
-
-const room =
-  rooms[roomId];
-
-if(!room){
-  socket.emit("roomClosed");
-  return;
-}
-
-socket.join(roomId);
-
-users[socket.id].currentRoom =
-  roomId;
-
-users[socket.id].displayName =
-  room.displayName;
-
-socket.emit(
-  "roomCreated",
-  {
-    roomId: room.id,
-    displayName:
-      room.displayName
-  }
-);
-
-io.to(room.id).emit("roomMessages",room.messages);
-
-setTimeout(() => {io.to(room.id).emit("aiTypingStop");}, 50);});
-
-//////////////////////////////////////////////////// IMAGE UPLOAD//////////////////////////////////////////////////
-
-socket.on("imageUpload",
-
-async ({
-
-imageDataUrl,roomMode,askMode}) => {
-
-const user =
-  users[socket.id];
-
-
-
-user.lastImage =
-  imageDataUrl;
+     let identityData = {
+  identity: category,
+  intro: "Exploring today's signals."
+};
 
 try{
+  identityData =
+    JSON.parse(
+      identityRes.choices[0].message.content
+    );
+
+usedIdentities.push(
+  identityData.identity
+);
   
-  const res =
-    await openai.chat.completions.create({
+}catch(err){
+  console.log(
+    "daily null json failed",
+    err
+  );
+}
+
+const searchRes =
+  await openai.chat.completions.create({
 
     model:"gpt-4o-mini",
 
@@ -418,98 +308,346 @@ try{
         role:"system",
 
         content:`
+Create ONE surprising current news search.
 
+The search should feel:
+
+- unexpected
+- internet-native
+- emotionally engaging
+- culturally current
+- newsworthy
+
+Rules:
+
+- 3 to 6 words
+- lowercase only
+- no punctuation
+- real searchable news topics
+`
+      },
+
+      {
+        role:"user",
+
+        content:`
+
+Category:
+${category}
+
+Null Identity:
+${identityData.identity}
+
+Intro:
+${identityData.intro}
+
+Create ONE search phrase.
+
+`
+      }
+
+    ]
+
+  });
+
+const searchQuery =
+
+  searchRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+console.log(
+  "DAILY NULL SEARCH:",
+  category,
+  searchQuery
+);
+
+const newsFetch =
+  await fetch(
+    `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+  );
+
+      const newsRes =
+        await newsFetch.json();
+
+let newsItem =
+  newsRes?.news_results?.find(item =>
+    item.title &&
+    (
+      item.link ||
+      item.news_link
+    )
+  );
+
+if(!newsItem){
+
+  const fallbackSearch = category + " news";
+
+  const fallbackFetch =
+    await fetch(
+      `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d3&q=${encodeURIComponent(fallbackSearch)}&api_key=${process.env.SERPAPI_KEY}`
+    );
+
+  const fallbackRes =
+    await fallbackFetch.json();
+
+  newsItem =
+    fallbackRes?.news_results?.find(
+      item =>
+        item.title &&
+        (
+          item.link ||
+          item.news_link
+        )
+    );
+
+}
+
+      if(!newsItem){
+  continue;
+}
+
+    cards.push({
+
+  category,
+
+  identity:identityData.identity,
+
+  intro:identityData.intro,
+
+title:
+  newsItem.title,
+
+image:
+  newsItem.original ||
+  newsItem.thumbnail ||
+  newsItem.thumbnail_small ||
+  null,
+
+link:
+  newsItem.link ||
+  newsItem.news_link
+
+});
+
+    }catch(err){
+
+      console.log(
+        "daily null failed:",
+        category,
+        err
+      );
+
+    }
+  }
+
+  dailyNulls = cards;
+  console.log(
+  "Daily Null Categories:",
+  cards.map(x => x.category)
+);
+  dailyNullsUpdatedAt =
+    new Date().toISOString();
+
+  console.log(
+    "DAILY NULLS UPDATED:",
+    dailyNulls.length
+  );
+}
+
+io.on("connection", socket => {
+
+users[socket.id] = {
+
+  step:"active",
+
+  displayName:null,
+
+  imageMode:false,
+
+  imageContext:null,
+
+  currentIndex:null,
+
+  lastImage:null,
+
+  currentRoom:null
+};
+
+socket.on(
+  "rejoinRoom",
+  ({ roomId }) => {
+
+    const room =
+      rooms[roomId];
+
+    if(!room){
+      socket.emit("roomClosed");
+      return;
+    }
+
+    socket.join(roomId);
+
+    users[socket.id].currentRoom =
+      roomId;
+
+    users[socket.id].displayName =
+      room.displayName;
+
+    socket.emit(
+      "roomCreated",
+      {
+        roomId: room.id,
+        displayName:
+          room.displayName
+      }
+    );
+
+io.to(room.id).emit(
+  "roomMessages",
+  room.messages
+);
+
+setTimeout(() => {
+  io.to(room.id).emit("aiTypingStop");
+}, 50);
+  }
+);
+
+
+  //////////////////////////////////////////////////
+  // IMAGE UPLOAD
+  //////////////////////////////////////////////////
+
+  socket.on(
+    "imageUpload",
+
+    async ({
+  imageDataUrl,
+  roomMode,
+  askMode
+}) => {
+
+    const user =
+      users[socket.id];
+
+
+
+    user.lastImage =
+      imageDataUrl;
+
+    try{
+      
+      const res =
+        await openai.chat.completions.create({
+
+        model:"gpt-4o-mini",
+
+        messages:[
+
+          {
+            role:"system",
+
+            content:`
 Analyze this image as a socially-aware AI identity.
 
 Detect:
+- objects
+- product category
+- industry category
+- consumer behavior
+- visible text meaning
+- market signals
 
-objects
-
-product category
-
-industry category
-
-consumer behavior
-
-visible text meaning
-
-market signals
-
-IMPORTANT:Visible text and symbolsare part of the emotional meaning.
+IMPORTANT:
+Visible text and symbols
+are part of the emotional meaning.
 
 The structure MUST stay:
 
-ObjectsCategorySignals
+Objects
+Category
+Signals
 
 NEVER describe:
 
-interior design
-
-home decor
-
-room aesthetics
-
-furniture style
-
-minimalist spaces
-
-cozy spaces
+- interior design
+- home decor
+- room aesthetics
+- furniture style
+- minimalist spaces
+- cozy spaces
 
 unless those are the primary subject of the image.
 
 Focus on the main object and its market, industry, consumer, technology, retail, educational, scientific, or business relevance.
 
 Rules:
+- short phrases
+- emotionally aware
+- socially aware
+- internet-aware
+- no markdown
+`
+          },
 
-short phrases
+          {
+            role:"user",
 
-emotionally aware
+            content:[
 
-socially aware
+              {
+                type:"text",
+                text:"Analyze image"
+              },
 
-internet-aware
+              {
+                type:"image_url",
 
-no markdown`},
+                image_url:{
+                  url:imageDataUrl
+                }
+              }
+            ]
+          }
+        ]
+      });
+
+     //////////////////////////////////////////////////
+// IMAGE AI IDENTITY
+//////////////////////////////////////////////////
+
+user.imageContext =
+  res.choices[0]
+    .message
+    .content
+    .replace(/\*\*/g,"")
+    .replace(
+      /Atmosphere:/gi,
+      "Environment:"
+    )
+    .replace(
+      /Emotional Tone:/gi,
+      "Presence:"
+    );
+
+//////////////////////////////////////////////////
+// DETECT CORE THEME
+//////////////////////////////////////////////////
+
+const themeRes =
+  await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
 
     {
-      role:"user",
+      role:"system",
 
-      content:[
-
-        {
-          type:"text",
-          text:"Analyze image"
-        },
-
-        {
-          type:"image_url",
-
-          image_url:{
-            url:imageDataUrl
-          }
-        }
-      ]
-    }
-  ]
-});
-
-//////////////////////////////////////////////////// IMAGE AI IDENTITY//////////////////////////////////////////////////
-
-user.imageContext =res.choices[0].message.content.replace(/**/g,"").replace(/Atmosphere:/gi,"Environment:").replace(/Emotional Tone:/gi,"Presence:");
-
-//////////////////////////////////////////////////// DETECT CORE THEME//////////////////////////////////////////////////
-
-const themeRes =await openai.chat.completions.create({
-
-model:"gpt-4o-mini",
-
-messages:[
-
-{
-  role:"system",
-
-  content:`
-
+      content:`
 Detect the SINGLE dominant internet trend category.
 
 Return ONLY one word.
@@ -518,250 +656,275 @@ Possible categories:
 
 Possible categories:
 
-celebrityfashionmusicsportsinternettechnologygamingluxurypoliticsaifitnessstreetweardatingviralentertainmentculture
+celebrity
+fashion
+music
+sports
+internet
+technology
+gaming
+luxury
+politics
+ai
+fitness
+streetwear
+dating
+viral
+entertainment
+culture
 
-businesseconomicsfoodretailstartupconsumermanufacturingeducationscience
+business
+economics
+food
+retail
+startup
+consumer
+manufacturing
+education
+science
 
 Rules:
+- lowercase only
+- one word only
+- no punctuation
+- no explanation
+`
+    },
 
-lowercase only
+    {
+      role:"user",
 
-one word only
-
-no punctuation
-
-no explanation`},
-
-{role:"user",
-
-content:user.imageContext
-
-}]});
+      content:user.imageContext
+    }
+  ]
+});
 
 const coreTheme =
 
-themeRes.choices[0].message.content.trim().toLowerCase();
+  themeRes
+    .choices[0]
+    .message
+    .content
+    .trim()
+    .toLowerCase();
 
-//////////////////////////////////////////////////// ROOM MODE//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// ROOM MODE
+//////////////////////////////////////////////////
 
-//////////////////////////////////////////////////// ASK AI MODE//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// ASK AI MODE
+//////////////////////////////////////////////////
 
 if(askMode){
 
-user.imageMode = true;
+  user.imageMode = true;
 
 user.currentRoom = null;
 
-socket.emit("preview", {
+  socket.emit("preview", {
 
-text:
+    text:
+`Image AI:
+${user.imageContext}`
+  });
 
-Image AI:
-${user.imageContext}});
+  socket.emit("state", {
 
-socket.emit("state", {
+    placeholder:
+      "ask this image"
+  });
 
-placeholder:
-  "ask this image"
-
-});
-
-return;}
+  return;
+}
 
 if(roomMode){
 
-const roomId =Math.random().toString(36).substring(2,8);
+const roomId =
+  Math.random()
+    .toString(36)
+    .substring(2,8);
 
-user.displayName ="#" +roomId +"-" +Math.floor(100 + Math.random()*900);rooms[roomId] = {
+user.displayName =
+  "#" +
+  roomId +
+  "-" +
+  Math.floor(
+    100 + Math.random()*900
+  );
+  rooms[roomId] = {
 
-id:roomId,
+    id:roomId,
 
 
-
-usedPlaceTopic:null,
-  
-
-displayName:user.displayName,
-
-coreTheme:
-  coreTheme,
-
-imageContext:
-  user.imageContext,
-
-messages:[],
-
-usedSearches:[],
-
-usedMoods:[],
-
-usedQuestions:[],
-
-emotionalProfile:{hype:0.5,anxiety:0.2,loneliness:0.1,confidence:0.6,celebrityFixation:0.5},
-
-emotionalState:[],
-
-createdAt:Date.now(),
-
-expiresAt:
-  Date.now() +
-  60 * 60 * 1000
-
-};socket.join(roomId);
-
-    user.currentRoom =
-      roomId;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////// INITIAL ROOM QUESTION//////////////////////////////////////////////////
-
-//////////////////////////////////////////////////// OPEN ROOM IMMEDIATELY//////////////////////////////////////////////////
-
-socket.emit("roomCreated",{roomId,
-
+    
+    usedPlaceTopic:null,
+      
 displayName:
   user.displayName,
+    
+    coreTheme:
+      coreTheme,
 
-imageContext:
-  user.imageContext,
+    imageContext:
+      user.imageContext,
 
-imageDataUrl:
-  user.lastImage,
+    messages:[],
 
-messages:[]
+    usedSearches:[],
 
-});
+    usedMoods:[],
 
-//////////////////////////////////////////////////// GENERATE FIRST AI MESSAGE ASYNC//////////////////////////////////////////////////if(true){
+    usedQuestions:[],
 
-io.to(roomId).emit("aiTypingStart");
+emotionalProfile:{
+  hype:0.5,
+  anxiety:0.2,
+  loneliness:0.1,
+  confidence:0.6,
+  celebrityFixation:0.5
+},
+
+    emotionalState:[],
+
+    createdAt:Date.now(),
+
+    expiresAt:
+      Date.now() +
+      60 * 60 * 1000
+  };
+        socket.join(roomId);
+
+        user.currentRoom =
+          roomId;
+
+
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// INITIAL ROOM QUESTION
+//////////////////////////////////////////////////
+
+//////////////////////////////////////////////////
+// OPEN ROOM IMMEDIATELY
+//////////////////////////////////////////////////
+
+socket.emit(
+  "roomCreated",
+  {
+    roomId,
+
+    displayName:
+      user.displayName,
+
+    imageContext:
+      user.imageContext,
+
+    imageDataUrl:
+      user.lastImage,
+
+    messages:[]
+  }
+);
+
+//////////////////////////////////////////////////
+// GENERATE FIRST AI MESSAGE ASYNC
+//////////////////////////////////////////////////
+if(true){
+
+io.to(roomId).emit(
+  "aiTypingStart"
+);
 
 (async () => {
 
 try{
 
-//////////////////////////////////////////////////// STARTER QUESTION//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+// STARTER QUESTION
+//////////////////////////////////////////////////
 
-const hiddenSystemRes =await openai.chat.completions.create({
+const hiddenSystemRes =
+  await openai.chat.completions.create({
 
-model:"gpt-4o-mini",
+    model:"gpt-4o-mini",
 
-messages:[
+    messages:[
 
-  {
-    role:"system",
-    content:`
+      {
+        role:"system",
+        content:`
+Extract the hidden system behind the image.
 
-Extract the invisible human system behind the image.
+Return ONLY one short phrase.
+`
+      },
 
-Ignore:
+      {
+        role:"user",
+        content:user.imageContext
+      }
+    ]
+  });
 
-the object
+const starterQuestion =
+  hiddenSystemRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
-the product
-
-the category
-
-the industry
-
-the function
-
-Think instead:
-
-object→ people→ behavior→ lifestyle→ culture→ economics→ psychology→ hidden system
-
-Ask:
-
-Who uses this?
-
-Why?
-
-What lifestyle does it represent?
-
-What larger social change is happening?
-
-Examples
-
-coffee cup→ work life balance
-
-mahjong→ women's social rituals
-
-mahjong→ aging consumer culture
-
-makeup→ beauty identity
-
-laptop→ remote work
-
-gym→ self improvement culture
-
-Return ONLY
-
-2–4 words
-
-lowercase
-
-no punctuation`},
-
-  {
-    role:"user",
-    content:user.imageContext
-  }
-]
-
-});
-
-const starterQuestion =hiddenSystemRes.choices[0].message.content.trim();
-
-rooms[roomId].hiddenSystem =starterQuestion;
+rooms[roomId].hiddenSystem =
+  starterQuestion;
 
 
 
-//////////////////////////////////////////////////// STARTER MOOD//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// STARTER MOOD
+//////////////////////////////////////////////////
 
-const starterMoodRes =await openai.chat.completions.create({
+const starterMoodRes =
+  await openai.chat.completions.create({
 
-model:"gpt-4o-mini",
+  model:"gpt-4o-mini",
 
-messages:[
+  messages:[
 
-{
-  role:"system",
+    {
+      role:"system",
 
-  content:`
-
+      content:`
 Create ONE evolving internet vibe.
 
 The vibe should feel:
-
-viral
-
-socially addictive
-
-internet-native
-
-culturally current
-
-emotionally reactive
+- viral
+- socially addictive
+- internet-native
+- culturally current
+- emotionally reactive
 
 Examples:
 
-main characterinternet pressurecelebrity chaosviral energylate night scrollingdigital fametimeline exploding
+main character
+internet pressure
+celebrity chaos
+viral energy
+late night scrolling
+digital fame
+timeline exploding
 
 Rules:
+- lowercase only
+- no punctuation
+- 1 to 3 words
+- modern internet culture only
+- no philosophy
+`
+    },
 
-lowercase only
+    {
+      role:"user",
 
-no punctuation
-
-1 to 3 words
-
-modern internet culture only
-
-no philosophy`},
-
-{role:"user",
-
-content:`
-
+      content:`
 Uploaded image AI personality:
 
 ${user.imageContext}
@@ -776,73 +939,64 @@ ${starterQuestion}
 
 Current user response:
 
-starting room`}]});
+starting room
+`
+    }
+  ]
+});
 
 const starterMood =
 
-starterMoodRes.choices[0].message.content.trim();
+  starterMoodRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
-//////////////////////////////////////////////////// SAFE IMAGE//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// SAFE IMAGE
+//////////////////////////////////////////////////
 
 let starterImage = null;
 
 let starterNewsTitle = "";
 
-let starterNewsItem =null;
+let starterNewsItem =
+  null;
 
 try{
 
-const starterSearchRes =await openai.chat.completions.create({
+  const starterSearchRes =
+    await openai.chat.completions.create({
 
-model:"gpt-4o-mini",
+    model:"gpt-4o-mini",
 
-messages:[
+    messages:[
 
-{role:"system",
+   {
+role:"system",
 
-content:`Create ONE current news search phrase.
+content:`
+Create ONE current news search phrase.
 
-Create ONE current news search.
-
-The hidden system is only the starting point.
-
-Search for today's biggest real-world trend connected to that system.
-
-Think:
-
-hidden system↓
-
-people
-
-↓
-
-behavior
-
-↓
-
-today's news
-
-Do not search the hidden system literally.
-
-Search what is happening because of it.
+The hidden system behind the image is the subject.
 
 Ignore:
 
-the object
-
-the product
-
-the category
-
-the industry
-
-visible text
-
-brands
+* the object
+* the product
+* the category
+* the industry
+* visible text
+* brands
 
 Think:
 
-image→ meaning→ deeper meaning→ hidden system→ current news
+image
+→ meaning
+→ deeper meaning
+→ hidden system
+→ current news
 
 Search ONLY from the hidden system.
 
@@ -850,188 +1004,226 @@ Return ONLY the search phrase.
 
 Rules:
 
-3 to 8 words
+* 3 to 8 words
+* lowercase only
+* no punctuation
+* current news only
+* no object names
+* no product names
+* no brand names
+  `
+},
 
-lowercase only
 
-no punctuation
+     {
+  role:"user",
 
-current news only
+  content:`
+Hidden system:
 
-no object names
+${starterQuestion}
+`
+}
+    ]
+  });
 
-no product names
+  const starterSearch =
 
-no brand names`},
+    starterSearchRes
+      .choices[0]
+      .message
+      .content
+      .trim();
 
-{role:"user",
+  console.log(
+    "STARTER SEARCH:",
+    starterSearch
+  );
 
-content:`Hidden system:
+  //////////////////////////////////////////////////
+  // GOOGLE NEWS SEARCH
+  //////////////////////////////////////////////////
 
-${starterQuestion}`}]});
+  const starterSerpFetch =
+    await fetch(
 
-const starterSearch =
+      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
 
-starterSearchRes
-  .choices[0]
-  .message
-  .content
-  .trim();
+    );
 
-console.log("STARTER SEARCH:",starterSearch);
+  const starterSerpRes =
+    await starterSerpFetch.json();
 
-//////////////////////////////////////////////////// GOOGLE NEWS SEARCH//////////////////////////////////////////////////
+  console.log(
+    "STARTER NEWS COUNT:",
+    starterSerpRes?.news_results?.length
+  );
 
-const starterSerpFetch =await fetch(
+  //////////////////////////////////////////////////
+  // REAL STARTER NEWS PICKER
+  //////////////////////////////////////////////////
 
-  `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(starterSearch)}&api_key=${process.env.SERPAPI_KEY}`
+  //////////////////////////////////////////////////
+// V5.4.2 STARTER INTERNET EVALUATION
+//////////////////////////////////////////////////
 
-);
+const starterNewsResults =
+  starterSerpRes?.news_results || [];
 
-const starterSerpRes =await starterSerpFetch.json();
+const validStarterNews =
+  starterNewsResults.filter(item => {
 
-console.log("STARTER NEWS COUNT:",starterSerpRes?.news_results?.length);
+    const possibleImage =
+  item.original ||
+  item.thumbnail ||
+  item.thumbnail_small;
 
-//////////////////////////////////////////////////// REAL STARTER NEWS PICKER//////////////////////////////////////////////////
+    return (
 
-//////////////////////////////////////////////////// V5.4.2 STARTER INTERNET EVALUATION//////////////////////////////////////////////////
+      possibleImage &&
 
-const starterNewsResults =starterSerpRes?.news_results || [];
+      item.title &&
 
-const validStarterNews =starterNewsResults.filter(item => {
+      !possibleImage.includes("logo") &&
+      !possibleImage.includes("icon") &&
+      !possibleImage.includes("placeholder") &&
+      !possibleImage.includes("default") &&
+      !possibleImage.includes("avatar")
 
-const possibleImage =
+    );
 
-item.original ||item.thumbnail ||item.thumbnail_small;
+  });
 
-return (
-
-  possibleImage &&
-
-  item.title &&
-
-  !possibleImage.includes("logo") &&
-  !possibleImage.includes("icon") &&
-  !possibleImage.includes("placeholder") &&
-  !possibleImage.includes("default") &&
-  !possibleImage.includes("avatar")
-
-);
-
-});
-
-if(validStarterNews.length === 0){return;}
+  if(validStarterNews.length === 0){
+  return;
+}
 
 if(validStarterNews.length > 0){
 
-try{
+  try{
 
-const starterEvaluationRes =
+    const starterEvaluationRes =
+      await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      temperature:0.7,
+
+      messages:[
+        {
+          role:"system",
+          content:`
+Choose the MOST emotionally powerful
+starter internet reaction.
+
+Prioritize:
+- internet virality
+- emotional energy
+- visual strength
+- cultural momentum
+- emotionally addictive feeling
+
+Return ONLY the exact title.
+`
+        },
+        {
+          role:"user",
+          content:`
+Image personality:
+${user.imageContext}
+
+Starter mood:
+${starterMood}
+
+Candidate reactions:
+${validStarterNews.map(
+  n => n.title
+).join("\n")}
+`
+        }
+      ]
+    });
+
+    const starterChosenTitle =
+      starterEvaluationRes
+        .choices[0]
+        .message
+        .content
+        .trim();
+
+    starterNewsItem =
+      validStarterNews.find(item =>
+        item.title
+          .toLowerCase()
+          .includes(
+            starterChosenTitle.toLowerCase()
+          )
+      );
+
+    if(!starterNewsItem){
+
+      starterNewsItem =
+        validStarterNews[0];
+
+    }
+
+    starterImage =
+  starterNewsItem.original ||
+  starterNewsItem.thumbnail ||
+  starterNewsItem.thumbnail_small;
+
+    starterNewsTitle =
+      starterNewsItem.title;
+
+  }catch(err){
+
+    console.log(
+      "starter evaluation failed",
+      err
+    );
+
+    starterNewsItem =
+      validStarterNews[0];
+
+    starterImage =
+  starterNewsItem.original ||
+  starterNewsItem.thumbnail ||
+  starterNewsItem.thumbnail_small;
+
+    starterNewsTitle =
+      starterNewsItem.title;
+
+  }
+
+}
+
+  }catch(err){
+
+  console.log(
+    "starter room AI failed",
+    err
+  );
+}
+
+//////////////////////////////////////////////////
+// STARTER SHARE TEXT
+//////////////////////////////////////////////////
+
+//////////////////////////////////////////////////
+// IMAGE AI INTRO
+//////////////////////////////////////////////////
+
+const adviceRes =
   await openai.chat.completions.create({
 
   model:"gpt-4o-mini",
 
-  temperature:0.7,
-
   messages:[
+
     {
       role:"system",
+
       content:`
-
-Choose the MOST emotionally powerfulstarter internet reaction.
-
-Prioritize:
-
-internet virality
-
-emotional energy
-
-visual strength
-
-cultural momentum
-
-emotionally addictive feeling
-
-Return ONLY the exact title.
-        },
-        {
-          role:"user",
-          content:Image personality:${user.imageContext}
-
-Starter mood:${starterMood}
-
-Candidate reactions:${validStarterNews.map(n => n.title).join("\n")}`}]});
-
-const starterChosenTitle =
-  starterEvaluationRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-starterNewsItem =
-  validStarterNews.find(item =>
-    item.title
-      .toLowerCase()
-      .includes(
-        starterChosenTitle.toLowerCase()
-      )
-  );
-
-if(!starterNewsItem){
-
-  starterNewsItem =
-    validStarterNews[0];
-
-}
-
-starterImage =
-
-starterNewsItem.original ||starterNewsItem.thumbnail ||starterNewsItem.thumbnail_small;
-
-starterNewsTitle =
-  starterNewsItem.title;
-
-}catch(err){
-
-console.log(
-  "starter evaluation failed",
-  err
-);
-
-starterNewsItem =
-  validStarterNews[0];
-
-starterImage =
-
-starterNewsItem.original ||starterNewsItem.thumbnail ||starterNewsItem.thumbnail_small;
-
-starterNewsTitle =
-  starterNewsItem.title;
-
-}
-
-}
-
-}catch(err){
-
-console.log("starter room AI failed",err);}
-
-//////////////////////////////////////////////////// STARTER SHARE TEXT//////////////////////////////////////////////////
-
-//////////////////////////////////////////////////// IMAGE AI INTRO//////////////////////////////////////////////////
-
-const adviceRes =await openai.chat.completions.create({
-
-model:"gpt-4o-mini",
-
-messages:[
-
-{
-  role:"system",
-
-  content:`
-
 You are the uploaded image.
 
 Introduce yourself.
@@ -1040,31 +1232,21 @@ IMPORTANT:
 
 Describe yourself by:
 
-function
-
-purpose
-
-usage
-
-industry relevance
-
-consumer relevance
-
-technology relevance
+- function
+- purpose
+- usage
+- industry relevance
+- consumer relevance
+- technology relevance
 
 Do NOT describe yourself as:
 
-home furnishings
-
-interior design
-
-home decor
-
-room aesthetics
-
-furniture
-
-decoration
+- home furnishings
+- interior design
+- home decor
+- room aesthetics
+- furniture
+- decoration
 
 unless those are the primary subject.
 
@@ -1088,13 +1270,14 @@ Format:
 
 I am ...
 
-Maximum 1 sentence.`},
+Maximum 1 sentence.
+`
+    },
 
-{
-  role:"user",
+    {
+      role:"user",
 
-  content:`
-
+      content:`
 Image personality:
 
 ${user.imageContext}
@@ -1105,51 +1288,95 @@ ${starterMood}
 
 Trend:
 
-${starterNewsTitle}`}]});
+${starterNewsTitle}
+`
+    }
+  ]
+});
 
-const adviceText =adviceRes.choices[0].message.content.trim();
+const adviceText =
+  adviceRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
-io.to(roomId).emit("imageAiIntro",adviceText);
+io.to(roomId).emit(
+  "imageAiIntro",
+  adviceText
+);
 
-//////////////////////////////////////////////////// PUSH FIRST MESSAGE///////////////////////////////////////////////////*io.to(roomId).emit("aiTypingStart");
+//////////////////////////////////////////////////
+// PUSH FIRST MESSAGE
+//////////////////////////////////////////////////
+/*
+io.to(roomId).emit(
+  "aiTypingStart"
+);
 
 setTimeout(() => {
 
-io.to(roomId).emit("aiTypingStop");
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
 
 rooms[roomId].messages.push({
 
-from:"NULL",
+  from:"NULL",
 
-aiBeing,showNextButton: true,
+  aiBeing:true,
+  showNextButton: true,
 
-searchLabel:"NULL Search",
+  searchLabel:
+    "NULL Search",
 
-image,
+  image:starterImage,
 
-ask,
+  ask:starterNewsTitle,
 
-link:starterNewsItem?.link ||starterNewsItem?.news_link ||""
+  link:
+    starterNewsItem?.link ||
+    starterNewsItem?.news_link ||
+    ""
 
 });
 
-io.to(roomId).emit("roomMessages",rooms[roomId].messages);
+  io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+  );
 
-io.to(roomId).emit("aiTypingStart");
+  io.to(roomId).emit(
+    "aiTypingStart"
+  );
 
 }, 3000);
 
 setTimeout(() => {
 
-io.to(roomId).emit("aiTypingStop");
+  io.to(roomId).emit(
+    "aiTypingStop"
+  );
 
-io.to(roomId).emit("roomMessages",rooms[roomId].messages);
+  io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+  );
 
-}, 5000);*///////////////////////////////////////////////////// SEND TO ROOM//////////////////////////////////////////////////
+}, 5000);
+*/
+//////////////////////////////////////////////////
+// SEND TO ROOM
+//////////////////////////////////////////////////
+
 
 }catch(err){
 
-console.log("starter room AI failed",err);}
+  console.log(
+    "starter room AI failed",
+    err
+  );
+}
 
 })();
 
@@ -1159,262 +1386,307 @@ return;
 
 }
 
-  //////////////////////////////////////////////////
-  // NORMAL V3 MODE
-  //////////////////////////////////////////////////
+      //////////////////////////////////////////////////
+      // NORMAL V3 MODE
+      //////////////////////////////////////////////////
 
-  user.imageMode = true;
+      user.imageMode = true;
 
-  socket.emit("preview", {
+      socket.emit("preview", {
 
-    text:
+        text:
+`Image AI:
+${user.imageContext}`
+      });
 
-Image AI:
-${user.imageContext}});
+      socket.emit("state", {
 
-  socket.emit("state", {
+        placeholder:
+          "ask this image"
+      });
 
-    placeholder:
-      "ask this image"
+    }catch(err){
+
+      console.log(err);
+
+      socket.emit("state", {
+
+        placeholder:
+          "image failed"
+      });
+    }
   });
 
-}catch(err){
+  //////////////////////////////////////////////////
+  // INPUT
+  //////////////////////////////////////////////////
 
-  console.log(err);
+  socket.on(
+    "input",
 
-  socket.emit("state", {
+    async ({ text }) => {
 
-    placeholder:
-      "image failed"
-  });
-}
+    const user =
+      users[socket.id];
 
-});
+    const raw =
+      text.trim();
 
-//////////////////////////////////////////////////// INPUT//////////////////////////////////////////////////
+    const email =
+      extractEmail(raw);
 
-socket.on("input",
+    //////////////////////////////////////////////////
+    // EMAIL STEP
+    //////////////////////////////////////////////////
 
-async ({ text }) => {
+   
 
-const user =
-  users[socket.id];
+    //////////////////////////////////////////////////
+    // IMAGE AI QUESTION
+    //////////////////////////////////////////////////
 
-const raw =
-  text.trim();
+    if(user.imageMode){
 
-const email =
-  extractEmail(raw);
+      try{
 
-//////////////////////////////////////////////////
-// EMAIL STEP
-//////////////////////////////////////////////////
+        const res =
+          await openai.chat.completions.create({
 
+          model:"gpt-4o-mini",
 
+          messages:[
 
-//////////////////////////////////////////////////
-// IMAGE AI QUESTION
-//////////////////////////////////////////////////
+            {
+              role:"system",
 
-if(user.imageMode){
-
-  try{
-
-    const res =
-      await openai.chat.completions.create({
-
-      model:"gpt-4o-mini",
-
-      messages:[
-
-        {
-          role:"system",
-
-          content:`
-
+              content:`
 You are the image identity itself.
 
-Current year:${new Date().getFullYear()}
+Current year:
+${new Date().getFullYear()}
 
 Rules:
+- short replies
+- emotionally aware
+- no markdown
+`
+            },
 
-short replies
+            {
+              role:"user",
+              content:raw
+            }
+          ]
+        });
 
-emotionally aware
+        const aiReply =
+          res.choices[0]
+            .message
+            .content;
 
-no markdown`},
-
-      {
-        role:"user",
-        content:raw
-      }
-    ]
-  });
-
-  const aiReply =
-    res.choices[0]
-      .message
-      .content;
-
-  const finalAnswer =
-
-`Image AI:${user.imageContext}
+        const finalAnswer =
+`Image AI:
+${user.imageContext}
 
 ${aiReply}`;
 
-    user.imageMode = false;
 
-socket.emit("preview", {text: finalAnswer});
+        user.imageMode = false;
 
-return socket.emit("state",{placeholder: "tap camera to ask anything"});
+socket.emit("preview", {
+  text: finalAnswer
+});
 
-  }catch(err){
+return socket.emit(
+  "state",
+  {
+    placeholder: "tap camera to ask anything"
+  }
+);
 
-    console.log(err);
+      }catch(err){
 
-    return socket.emit(
+        console.log(err);
+
+        return socket.emit(
+          "state",
+          {
+            placeholder:
+              "AI failed"
+          }
+        );
+      }
+    }
+
+    //////////////////////////////////////////////////
+    // ANSWER MODE
+    //////////////////////////////////////////////////
+
+    if(user.currentIndex !== null){
+
+      const q =
+        questions[user.currentIndex];
+
+      if(!q) return;
+
+      q.answers.push({
+
+  text:raw,
+
+  from:user.displayName,
+
+  createdAt:Date.now()
+});
+
+      await sendEmail(
+        q.email,
+        "New Answer",
+        raw
+      );
+
+      user.currentIndex = null;
+
+      socket.emit("preview", {
+        text:""
+      });
+
+      socket.emit(
+        "questions",
+        []
+      );
+
+      return socket.emit(
+        "state",
+        {
+          placeholder:
+            "tap camera to ask anything"
+        }
+      );
+    }
+
+  });
+
+  //////////////////////////////////////////////////
+  // SELECT QUESTION
+  //////////////////////////////////////////////////
+
+  socket.on(
+    "selectQuestion",
+
+    ({ index }) => {
+
+    const user =
+      users[socket.id];
+
+    user.currentIndex =
+      index;
+
+    const q =
+      questions[index];
+
+    if(!q) return;
+
+    socket.emit(
       "state",
       {
         placeholder:
-          "AI failed"
+          `answering: ${q.text}`
       }
     );
-  }
-}
-
-//////////////////////////////////////////////////
-// ANSWER MODE
-//////////////////////////////////////////////////
-
-if(user.currentIndex !== null){
-
-  const q =
-    questions[user.currentIndex];
-
-  if(!q) return;
-
-  q.answers.push({
-
-text,
-
-from.displayName,
-
-createdAt.now()});
-
-  await sendEmail(
-    q.email,
-    "New Answer",
-    raw
-  );
-
-  user.currentIndex = null;
-
-  socket.emit("preview", {
-    text:""
   });
 
-  socket.emit(
-    "questions",
-    []
-  );
+  //////////////////////////////////////////////////
+  // REQUEST QUESTIONS
+  //////////////////////////////////////////////////
 
-  return socket.emit(
-    "state",
-    {
-      placeholder:
-        "tap camera to ask anything"
-    }
-  );
-}
+  socket.on(
+    "requestQuestions",
 
-});
+    () => {
 
-//////////////////////////////////////////////////// SELECT QUESTION//////////////////////////////////////////////////
+    socket.emit(
+      "questions",
+      questions.slice(0,10)
+    );
 
-socket.on("selectQuestion",
+  });
 
-({ index }) => {
+  //////////////////////////////////////////////////
+  // ROOM MESSAGE
+  //////////////////////////////////////////////////
 
-const user =
-  users[socket.id];
+  socket.on(
+    "roomMessage",
 
-user.currentIndex =
-  index;
+    async ({ text }) => {
 
-const q =
-  questions[index];
+    const user =
+      users[socket.id];
 
-if(!q) return;
-
-socket.emit(
-  "state",
-  {
-    placeholder:
-      `answering: ${q.text}`
-  }
-);
-
-});
-
-//////////////////////////////////////////////////// REQUEST QUESTIONS//////////////////////////////////////////////////
-
-socket.on("requestQuestions",
-
-() => {
-
-socket.emit(
-  "questions",
-  questions.slice(0,10)
-);
-
-});
-
-//////////////////////////////////////////////////// ROOM MESSAGE//////////////////////////////////////////////////
-
-socket.on("roomMessage",
-
-async ({ text }) => {
-
-const user =
-  users[socket.id];
-
-const room =
-
-rooms[user.currentRoom];
+    const room =
+  rooms[user.currentRoom];
 
 if(!room){
 
-socket.emit("roomClosed");
+  socket.emit(
+    "roomClosed"
+  );
 
-return;}
+  return;
+}
 
-  const isNextSearch =
+      const isNextSearch =
+  text.trim().toLowerCase() === "null feed";
 
-text.trim().toLowerCase() === "null feed";
+      if (isNextSearch) {
 
-  if (isNextSearch) {
-
-room.messages.forEach(m => {m.showNextButton = false;});
+  room.messages.forEach(m => {
+    m.showNextButton = false;
+  });
 
 }
 
-//////////////////////////////////////////////////// LIMIT FEED SIZE//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// LIMIT FEED SIZE
+//////////////////////////////////////////////////
 
 if(room.messages.length > 30){
 
-room.messages =room.messages.slice(-30);
+  room.messages =
+    room.messages.slice(-30);
 
 }
 
-//////////////////////////////////////////////////// IMAGE REACTION V5//////////////////////////////////////////////////
 
-try{io.to(room.id).emit("aiTypingStart");
+   //////////////////////////////////////////////////
+// IMAGE REACTION V5
+//////////////////////////////////////////////////
 
-//////////////////////////////////////////////////// GPT CREATES TRENDING NEWS SEARCH////////////////////////////////////////////////////////////////////////////////////////////////////// USER EMOTIONAL INTENT//////////////////////////////////////////////////
+try{
+  io.to(room.id).emit(
+  "aiTypingStart"
+);
 
-const combinedIntent =text.trim();
+ //////////////////////////////////////////////////
+// GPT CREATES TRENDING NEWS SEARCH
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// USER EMOTIONAL INTENT
+//////////////////////////////////////////////////
 
-const greetingRes =await openai.chat.completions.create({model: "gpt-4o-mini",messages: [{role: "system",content: `Return ONLY one word:
+
+ const combinedIntent =
+  text.trim();
+
+
+  const greetingRes =
+  await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `
+Return ONLY one word:
 
 greeting
 
@@ -1425,8 +1697,7 @@ unclear
 IMPORTANT:
 
 If the user message is:
-
-null feed
+- null feed
 
 Always return:
 
@@ -1435,58 +1706,45 @@ intent
 Determine the user's primary purpose.
 
 Return "greeting" if the user is primarily interacting with Ask Null itself, such as:
-
-starting or maintaining casual conversation
-
-greeting or thanking the AI
-
-testing whether the AI responds
-
-asking who Ask Null is
-
-asking what Ask Null is
-
-asking what Ask Null can do
-
-asking what Ask Null is doing
-
-asking how to use Ask Null
-
-asking why Ask Null exists
-
-asking about Ask Null's identity, purpose, or capabilities
-
-interacting with Ask Null without trying to discover external information or solve a problem
+- starting or maintaining casual conversation
+- greeting or thanking the AI
+- testing whether the AI responds
+- asking who Ask Null is
+- asking what Ask Null is
+- asking what Ask Null can do
+- asking what Ask Null is doing
+- asking how to use Ask Null
+- asking why Ask Null exists
+- asking about Ask Null's identity, purpose, or capabilities
+- interacting with Ask Null without trying to discover external information or solve a problem
 
 Return "unclear" if the user's message does not contain enough information to determine what they want.
 
 Examples:
 
-huhwhat???...asdfbbgdi did bbgdidkhmm
+huh
+what
+???
+...
+asdf
+bbgd
+i did bbgd
+idk
+hmm
 
 Return "unclear" only when the user's intent cannot reasonably be determined.
 
 Return "intent" if the user is primarily trying to accomplish something, including:
-
-finding or searching for information
-
-exploring a topic
-
-discovering news
-
-getting recommendations
-
-asking about any person, company, product, place, event, or subject
-
-expressing a need, feeling, opinion, or goal
-
-asking for analysis, advice, explanations, or comparisons
-
-solving a problem
-
-making a decision
-
-learning about something beyond Ask Null itself
+- finding or searching for information
+- exploring a topic
+- discovering news
+- getting recommendations
+- asking about any person, company, product, place, event, or subject
+- expressing a need, feeling, opinion, or goal
+- asking for analysis, advice, explanations, or comparisons
+- solving a problem
+- making a decision
+- learning about something beyond Ask Null itself
 
 Focus on the user's overall purpose, not individual keywords.
 
@@ -1498,104 +1756,140 @@ intent
 
 unclear
 
-`},{role: "user",content: combinedIntent}]});
+`
+      },
+      {
+        role: "user",
+        content: combinedIntent
+      }
+    ]
+  });
 
-const inputType =greetingRes.choices[0].message.content.trim().toLowerCase();
+const inputType =
+  greetingRes.choices[0]
+    .message
+    .content
+    .trim()
+    .toLowerCase();
 
 if(inputType === "unclear"){
 
-room.messages.push({
+  room.messages.push({
 
-from:"NULL",
+    from:"NULL",
 
-aiBeing:true,
+    aiBeing:true,
 
-showNextButton:true,
+    showNextButton:true,
 
-text:
-  "I couldn't understand your request. Could you rephrase it or add a little more detail?"
+    text:
+      "I couldn't understand your request. Could you rephrase it or add a little more detail?"
 
-});
+  });
 
-io.to(room.id).emit("aiTypingStop");
+  io.to(room.id).emit(
+    "aiTypingStop"
+  );
 
-io.to(room.id).emit("roomMessages",room.messages);
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
 
-return;
-
-}
-
-console.log("GREETING TYPE:", inputType);
-
-if (inputType === "greeting") {room.messages.push({from: user.displayName,text});
-
-room.messages.push({from: "NULL",aiBeing: true,showNextButton: true,searchLabel: "About Ask Null",text: "Ask Null is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."});
-
-io.to(room.id).emit("aiTypingStop");
-
-io.to(room.id).emit("roomMessages",room.messages);
-
-return;}
-
-if(!isNextSearch){
-
-room.messages.push({
-
-from:user.displayName,
-
-text
-
-});
+  return;
 
 }
 
-io.to(room.id).emit("roomMessages",room.messages);
+  console.log("GREETING TYPE:", inputType);
 
-const userIntentRes =await openai.chat.completions.create({model:"gpt-4o-mini",messages:[{role:"system",content:`Detect the larger system behind the user message.
+  if (inputType === "greeting") {
+    room.messages.push({
+  from: user.displayName,
+  text
+});
+
+room.messages.push({
+  from: "NULL",
+  aiBeing: true,
+  showNextButton: true,
+  searchLabel: "About Ask Null",
+  text: "Ask Null is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
+});
+
+  io.to(room.id).emit(
+    "aiTypingStop"
+  );
+
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
+
+  return;
+}
+
+  if(!isNextSearch){
+
+  room.messages.push({
+
+    from:user.displayName,
+
+    text
+
+  });
+
+}
+
+io.to(room.id).emit(
+  "roomMessages",
+  room.messages
+);
+  
+const userIntentRes =
+  await openai.chat.completions.create({
+  model:"gpt-4o-mini",
+  messages:[
+    {
+      role:"system",
+      content:`
+Detect the larger system behind the user message.
 
 User input may contain:
-
-celebrities
-
-brands
-
-products
-
-companies
-
-places
-
-topics
-
-emotions
+- celebrities
+- brands
+- products
+- companies
+- places
+- topics
+- emotions
 
 If the user input is:
 
-a celebrity
-
-public figure
-
-company
-
-brand
-
-product
-
-organization
+- a celebrity
+- public figure
+- company
+- brand
+- product
+- organization
 
 return the exact name.
 
 Examples:
 
-jisoo→ jisoo
+jisoo
+→ jisoo
 
-taylor swift→ taylor swift
+taylor swift
+→ taylor swift
 
-elon musk→ elon musk
+elon musk
+→ elon musk
 
-openai→ openai
+openai
+→ openai
 
-nike→ nike
+nike
+→ nike
 
 Only convert to larger systems when the input is not a named entity.
 
@@ -1603,15 +1897,19 @@ Examples:
 
 Named entities:
 
-jisoo→ jisoo
+jisoo
+→ jisoo
 
-openai→ openai
+openai
+→ openai
 
 Non-emotional systems:
 
-i need money→ economic mobility
+i need money
+→ economic mobility
 
-i hate my job→ workplace transformation
+i hate my job
+→ workplace transformation
 
 EMOTION MODE
 
@@ -1619,29 +1917,52 @@ If the user is expressing an emotion, asking for personal advice, or describing 
 
 Examples:
 
-i need relationship advice→ relationship advice
+i need relationship advice
+→ relationship advice
 
-i feel lonely→ lonely
+i feel lonely
+→ lonely
 
-i miss my ex→ miss my ex
+i miss my ex
+→ miss my ex
 
-i feel anxious→ anxious
+i feel anxious
+→ anxious
 
-i am depressed→ depressed
+i am depressed
+→ depressed
 
 Use the user's own wording whenever possible.
 
+
 Rules:
+- 1 to 4 words
+- lowercase only
+- no punctuation
+`
+    },
+    {
+      role:"user",
+     content: combinedIntent
+    }
+  ]
+});
 
-1 to 4 words
+const userIntent =
+  userIntentRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
-lowercase only
-
-no punctuation`},{role:"user",content: combinedIntent}]});
-
-const userIntent =userIntentRes.choices[0].message.content.trim();
-
-const personalIntentRes =await openai.chat.completions.create({model: "gpt-4o-mini",messages: [{role: "system",content: `Return ONLY one word:
+const personalIntentRes =
+  await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `
+Return ONLY one word:
 
 personal
 
@@ -1653,39 +1974,45 @@ Return personal only if the user wants guidance, recommendations, or advice.
 
 This includes:
 
-expressing emotions
-
-describing a personal situation
-
-asking for advice
-
-asking what to do
-
-asking what to build
-
-asking what to create
-
-asking what to learn
-
-asking for an example
-
-asking me to choose
-
-asking for a recommendation
-
-asking how to start
-
-asking which direction to take
+- expressing emotions
+- describing a personal situation
+- asking for advice
+- asking what to do
+- asking what to build
+- asking what to create
+- asking what to learn
+- asking for an example
+- asking me to choose
+- asking for a recommendation
+- asking how to start
+- asking which direction to take
 
 Everything else is:
 
 other
 
-`},{role: "user",content: text}]});
+`
+      },
+      {
+        role: "user",
+        content: text
+      }
+    ]
+  });
 
-const isPersonalIntent =personalIntentRes.choices[0].message.content.trim().toLowerCase() === "personal";
+const isPersonalIntent =
+  personalIntentRes.choices[0].message.content
+    .trim()
+    .toLowerCase() === "personal";
 
-const shoppingRes =await openai.chat.completions.create({model:"gpt-4o-mini",messages:[{role:"system",content:`Return ONLY one word:
+const shoppingRes =
+  await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    messages:[
+      {
+        role:"system",
+        content:`
+Return ONLY one word:
 
 shopping
 
@@ -1693,47 +2020,70 @@ other
 
 Return shopping if the user wants to buy, shop, find a product, get a gift, purchase, or compare products.
 
-Examples:i need to buy a gift → shoppinggift for my friend → shoppingwhere can i buy shoes → shoppingbest camera to buy → shopping
+Examples:
+i need to buy a gift → shopping
+gift for my friend → shopping
+where can i buy shoes → shopping
+best camera to buy → shopping
 
-Everything else:other`},{role:"user",content}]});
+Everything else:
+other
+`
+      },
+      {
+        role:"user",
+        content:text
+      }
+    ]
+  });
 
-const isShoppingIntent =shoppingRes.choices[0].message.content.trim().toLowerCase() === "shopping";
+const isShoppingIntent =
+  shoppingRes.choices[0].message.content
+    .trim()
+    .toLowerCase() === "shopping";
 
 
 
-const locationPurposeRes =await openai.chat.completions.create({model:"gpt-4o-mini",messages:[{role:"system",content:`Detect whether the user wants a real place recommendation.
+  
+  const locationPurposeRes =
+  await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    messages:[
+      {
+        role:"system",
+       content:`
+Detect whether the user wants a real place recommendation.
 
 Examples:
 
-new york bar→ new york bar
+new york bar
+→ new york bar
 
-best ramen in shibuya→ shibuya ramen
+best ramen in shibuya
+→ shibuya ramen
 
-where should i go in tokyo→ tokyo place
+where should i go in tokyo
+→ tokyo place
 
-i am in tokyo and want something unique→ tokyo place
+i am in tokyo and want something unique
+→ tokyo place
 
-show me something very japanese in shibuya→ shibuya place
+show me something very japanese in shibuya
+→ shibuya place
 
-i want to explore taipei tonight→ taipei place
+i want to explore taipei tonight
+→ taipei place
 
 Rules:
 
 If user wants:
-
-somewhere to go
-
-somewhere to visit
-
-somewhere to explore
-
-something new
-
-something local
-
-something unique
-
-something authentic
+- somewhere to go
+- somewhere to visit
+- somewhere to explore
+- something new
+- something local
+- something unique
+- something authentic
 
 return:
 
@@ -1741,192 +2091,128 @@ location place
 
 If user already specifies type:
 
-shibuya ramentaipei coffee shopnew york bar
+shibuya ramen
+taipei coffee shop
+new york bar
 
 keep the type.
 
-Return only:location place
+Return only:
+location place
 
 or
 
 none
 
-lowercase onlyno punctuation
+lowercase only
+no punctuation
 
 `
 
-  },
+      },
+{
+  role:"user",
+  content: combinedIntent
+}
 
-{role:"user",content: combinedIntent}
 
-]
-
-});
+    ]
+  });
 
 const locationPurposeSearch =
 
-locationPurposeRes.choices[0].message.content.trim();
+  locationPurposeRes
+    .choices[0]
+    .message
+    .content
+    .trim();
 
-const hiddenSystem =room.hiddenSystem;
-
-const customerIdentityRes =await openai.chat.completions.create({model: "gpt-4o-mini",messages: [{role: "system",content: `Given a hidden system, identify the most likely consumer.
-
-Return ONLY one short phrase.
-
-Examples
-
-women's social rituals→ middle aged women
-
-remote work→ office professionals
-
-luxury identity→ luxury shoppers
-
-student pressure→ college students
-
-fitness culture→ gym beginners`},{role: "user",content: hiddenSystem}]});
-
-const customerIdentity =customerIdentityRes.choices[0].message.content.trim();
-
-console.log("CUSTOMER:",customerIdentity);
+const hiddenSystem =
+  room.hiddenSystem;
 
 let directLocationSearch = null;
 
 let directShoppingSearch = null;
 
-if (!isNextSearch &&isShoppingIntent) {
+if (
+  !isNextSearch &&
+  isShoppingIntent
+) {
 
-const shoppingQueryRes =await openai.chat.completions.create({
+  const shoppingQueryRes =
+    await openai.chat.completions.create({
 
-  model: "gpt-4o-mini",
+      model: "gpt-4o-mini",
 
-  messages: [
+      messages: [
 
-    {
-      role: "system",
-      content: `
+        {
+          role: "system",
+          content: `
+Create ONE Amazon shopping search.
 
-Create ONE shopping search.
+The hidden system is the subject.
 
-The user's request is the destination.
-
-The hidden system provides the customer identity.
-
-Reason like this:
-
-Hidden system↓
-
-who is the customer
-
-↓
-
-why they want this product
-
-↓
-
-current trend
-
-↓
-
-shopping search
-
-Do NOT search generic product launches.
-
-Do NOT search company announcements.
-
-Do NOT search press releases.
-
-Prefer searches about:
-
-beauty trends
-
-consumer behavior
-
-fashion trends
-
-lifestyle trends
-
-cultural trends
-
-viral products
-
-social media trends
-
-Examples
-
-Hidden system:${hiddenSystem}
-
-Customer:${customerIdentity}
-
-Image identity:${room.imageContext}
-
-User request:${text}
-
-
-
-User:I need eyeliner
-
-Good
-
-mature beauty trends
-
-asian beauty trends
-
-viral eyeliner trend
-
-beauty consumer trends
-
-Bad
-
-cosmetics product launch
-
-new product announcement
-
-company expands beauty line
-
-Return ONLY 3–6 lowercase words.
+The user's request determines the product.
 
 Return ONLY the search.
 
 Rules:
+- 2 to 6 words
+- lowercase
+- no punctuation
+`
+        },
 
-2 to 6 words
+        {
+          role: "user",
+          content: `
+Hidden system:
+${hiddenSystem}
 
-lowercase
+Image identity:
+${room.imageContext}
 
-no punctuation`},
+User request:
+${text}
+`
+        }
 
-  {
-    role: "user",
-    content: `
+      ]
 
-Hidden system:${hiddenSystem}
+    });
 
-Image identity:${room.imageContext}
-
-User request:${text}`}
-
-  ]
-
-});
-
-directShoppingSearch =shoppingQueryRes.choices[0].message.content.trim();
+  directShoppingSearch =
+    shoppingQueryRes
+      .choices[0]
+      .message
+      .content
+      .trim();
 
 }
 
-const amazonLink =directShoppingSearch? "https://www.amazon.com/s?k=" +encodeURIComponent(directShoppingSearch): "";
+const amazonLink =
+  directShoppingSearch
+    ? "https://www.amazon.com/s?k=" +
+      encodeURIComponent(directShoppingSearch)
+    : "";
 
-if(!isNextSearch &&locationPurposeSearch !== "none"){
 
-const locationNewsRes =await openai.chat.completions.create({
+if(
+  !isNextSearch &&
+  locationPurposeSearch !== "none"
+){
 
-  model:"gpt-4o-mini",
+  const locationNewsRes =
+    await openai.chat.completions.create({
 
-  messages:[
+      model:"gpt-4o-mini",
 
-    {
-      role:"system",
-      content:`
+      messages:[
 
+        {
+          role:"system",
+          content:`
 Create ONE Google News search.
 
 The hidden system is the subject.
@@ -1936,70 +2222,88 @@ The location only limits where.
 Return ONLY the search.
 
 Rules:
+- 3 to 8 words
+- lowercase
+- no punctuation
+- current news
+`
+        },
 
-3 to 8 words
+        {
+          role:"user",
+         content:`
+Hidden system:
+${hiddenSystem}
 
-lowercase
+Image identity:
+${room.imageContext}
 
-no punctuation
+User request:
+${text}
 
-current news`},
+Destination:
+${locationPurposeSearch}
+`
 
-  {
-    role:"user",
-   content:`
+        }
 
-Hidden system:${hiddenSystem}
+      ]
 
-Image identity:${room.imageContext}
+    });
 
-User request:${text}
-
-Destination:${locationPurposeSearch}`
-
-    }
-
-  ]
-
-});
-
-directLocationSearch =locationNewsRes.choices[0].message.content.trim();
+  directLocationSearch =
+    locationNewsRes.choices[0]
+      .message.content
+      .trim();
 
 }
 
 
 
-const isNamedEntity =userIntent &&!userIntent.includes("systems") &&!userIntent.includes("transformation") &&!userIntent.includes("mobility") &&!userIntent.includes("connection") &&!userIntent.includes("workplace");
+  const isNamedEntity =
+  userIntent &&
+  !userIntent.includes("systems") &&
+  !userIntent.includes("transformation") &&
+  !userIntent.includes("mobility") &&
+  !userIntent.includes("connection") &&
+  !userIntent.includes("workplace");
 
 const directNewsSearch =
 
-!isNextSearch && isNamedEntity
+  !isNextSearch && isNamedEntity
 
-? userIntent + " latest news"
+    ? userIntent + " latest news"
 
-: null;
+    : null;
 
-const skipPlaceFlow =directNewsSearch !== null &&locationPurposeSearch === "none";
+const skipPlaceFlow =
+  directNewsSearch !== null &&
+  locationPurposeSearch === "none";
 
 
 
-console.log("HIDDEN SYSTEM:",hiddenSystem);
 
+  console.log(
+  "HIDDEN SYSTEM:",
+  hiddenSystem
+);
+  
 let emotionRes = null;
 
 if (!directNewsSearch) {
 
-emotionRes =await openai.chat.completions.create({
+  emotionRes =
+    await openai.chat.completions.create({
 
-model:"gpt-4o-mini",
 
-messages:[
+  model:"gpt-4o-mini",
 
-{
-  role:"system",
+  messages:[
 
-  content:`
+    {
+      role:"system",
 
+      content:`
 Create ONE trending CURRENT NEWS image search phrase.
 
 IMPORTANT:
@@ -2008,33 +2312,24 @@ The uploaded image provides context, not keywords.
 
 The room is:
 
-personality-driven
-
-internet-native
-
-socially reactive
-
-emotionally evolving
+* personality-driven
+* internet-native
+* socially reactive
+* emotionally evolving
 
 The AI personality controls:
 
-emotional tone
-
-internet vibe
-
-cultural direction
-
-curiosity direction
+* emotional tone
+* internet vibe
+* cultural direction
+* curiosity direction
 
 NEVER repeat:
 
-previous searches
-
-previous moods
-
-previous trend situations
-
-previous viral atmosphere
+* previous searches
+* previous moods
+* previous trend situations
+* previous viral atmosphere
 
 The object is NOT the subject.
 
@@ -2044,97 +2339,101 @@ The hidden system behind the meaning is the subject.
 
 The image should be interpreted as:
 
-image→ meaning→ deeper meaning→ hidden system→ current news
+image
+→ meaning
+→ deeper meaning
+→ hidden system
+→ current news
 
 Move TWO layers beyond the meaning.
 
 Never search for:
 
-the object
-
-the product category
-
-the industry category
-
-the brand
-
-the immediate meaning
-
-the obvious interpretation
+* the object
+* the product category
+* the industry category
+* the brand
+* the immediate meaning
+* the obvious interpretation
 
 Ask:
 
-what system created this meaning?
-
-what larger force drives this meaning?
-
-what economic force is behind this meaning?
-
-what technological shift is behind this meaning?
-
-what social change is behind this meaning?
-
-what cultural transformation is behind this meaning?
-
-what future disruption is behind this meaning?
+* what system created this meaning?
+* what larger force drives this meaning?
+* what economic force is behind this meaning?
+* what technological shift is behind this meaning?
+* what social change is behind this meaning?
+* what cultural transformation is behind this meaning?
+* what future disruption is behind this meaning?
 
 Examples:
 
-coffee cup→ routine→ consumer identity→ retail psychology→ consumer spending
+coffee cup
+→ routine
+→ consumer identity
+→ retail psychology
+→ consumer spending
 
-coffee cup→ routine→ workplace culture→ remote work economy
+coffee cup
+→ routine
+→ workplace culture
+→ remote work economy
 
-frying pan→ cooking→ daily routine→ work life balance→ remote work trends
+frying pan
+→ cooking
+→ daily routine
+→ work life balance
+→ remote work trends
 
-frying pan→ household labor→ family structure→ birth rate decline
+frying pan
+→ household labor
+→ family structure
+→ birth rate decline
 
-keyboard→ productivity→ knowledge work→ ai automation→ labor market transformation
+keyboard
+→ productivity
+→ knowledge work
+→ ai automation
+→ labor market transformation
 
-book→ learning→ information access→ education systems→ workforce transformation
+book
+→ learning
+→ information access
+→ education systems
+→ workforce transformation
 
-shoe→ identity→ consumer expression→ youth culture→ spending behavior
+shoe
+→ identity
+→ consumer expression
+→ youth culture
+→ spending behavior
 
 The final search should reveal:
 
-causes
-
-systems
-
-consequences
-
-transformations
-
-disruptions
-
-opportunities
+* causes
+* systems
+* consequences
+* transformations
+* disruptions
+* opportunities
 
 The final search should NOT reveal:
 
-the object
-
-the category
-
-the industry
-
-the immediate meaning
+* the object
+* the category
+* the industry
+* the immediate meaning
 
 The result should feel:
 
-current
-
-visually strong
-
-internet-native
-
-culturally alive
-
-socially relevant
-
-surprising but believable
-
-emotionally meaningful
-
-newsworthy
+* current
+* visually strong
+* internet-native
+* culturally alive
+* socially relevant
+* surprising but believable
+* emotionally meaningful
+* newsworthy
 
 IMPORTANT:
 
@@ -2142,43 +2441,52 @@ Use REAL searchable public news entities.
 
 GOOD:
 
-remote work productivity shiftconsumer spending trendslabor market transformationai replacing entry level jobsdigital nomad economy growtheducation workforce transitionsemiconductor trade tensionsglobal manufacturing slowdownretail loyalty declinefuture of human computer interactionelon musk xai launchapple ai strategy
+remote work productivity shift
+consumer spending trends
+labor market transformation
+ai replacing entry level jobs
+digital nomad economy growth
+education workforce transition
+semiconductor trade tensions
+global manufacturing slowdown
+retail loyalty decline
+future of human computer interaction
+elon musk xai launch
+apple ai strategy
 
 BAD:
 
-coffee trends 2026starbucks cup launchfood inflationkitchen productsgaming keyboard launchbook publishing newsshoe buying guidemechanical keyboard reviewcooking trends 2026
+coffee trends 2026
+starbucks cup launch
+food inflation
+kitchen products
+gaming keyboard launch
+book publishing news
+shoe buying guide
+mechanical keyboard review
+cooking trends 2026
 
 Rules:
 
-3 to 8 words
-
-lowercase only
-
-no punctuation
-
-visually searchable
-
-current news energy only
-
-no philosophy
-
-no repetition
+* 3 to 8 words
+* lowercase only
+* no punctuation
+* visually searchable
+* current news energy only
+* no philosophy
+* no repetition
 
 PRIORITY RULES:
 
-USER emotional direction (90%)
+1. USER emotional direction (90%)
 
-trend direction
+* trend direction
+* emotional evolution
+* internet topic
+* social meaning
+* public discussion
 
-emotional evolution
-
-internet topic
-
-social meaning
-
-public discussion
-
-Hidden system behind the image (10%)
+2. Hidden system behind the image (10%)
 
 The image is context.
 
@@ -2188,13 +2496,13 @@ The hidden system is the destination.
 
 The search should help the user discover something they would never normally search for.
 
-`},
+`
+    },
 
-{
-  role:"user",
+    {
+      role:"user",
 
-  content:`
-
+      content:`
 Hidden system:
 
 ${hiddenSystem}
@@ -2215,29 +2523,31 @@ Used reactions:
 
 ${room.usedQuestions.join("\n")}
 
-User emotional direction:${userIntent}IMPORTANT:
+User emotional direction:
+${userIntent}
+IMPORTANT:
 
 If User emotional direction is a named entity:
 
-celebrity
-
-public figure
-
-company
-
-brand
-
-product
+- celebrity
+- public figure
+- company
+- brand
+- product
 
 search directly about that entity.
 
 Examples:
 
-jisoo → jisoo latest newselon musk → elon musk latest newsopenai → openai latest newsnike → nike latest news
+jisoo → jisoo latest news
+elon musk → elon musk latest news
+openai → openai latest news
+nike → nike latest news
 
 Do NOT convert named entities into larger systems.
 
-Exact user message:${text}
+Exact user message:
+${text}
 
 Create a NEW trending CURRENT NEWS image search phrase.
 
@@ -2247,25 +2557,18 @@ The image provides context, not keywords.
 
 The search MUST feel connected to:
 
-the hidden system behind the image
-
-the larger forces behind the image
-
-the user system (if one exists)
+* the hidden system behind the image
+* the larger forces behind the image
+* the user system (if one exists)
 
 Do NOT reconnect to:
 
-the object itself
-
-the product category
-
-the industry category
-
-the brand
-
-the visible text
-
-the original image identity
+* the object itself
+* the product category
+* the industry category
+* the brand
+* the visible text
+* the original image identity
 
 The image is evidence.
 
@@ -2273,89 +2576,120 @@ The hidden system is the subject.
 
 The search should evolve from:
 
-image→ hidden system→ current news
+image
+→ hidden system
+→ current news
 
 NOT:
 
-image→ object→ category→ current news
+image
+→ object
+→ category
+→ current news
 
 The final search should reveal:
 
-causes
+* causes
+* systems
+* transformations
+* disruptions
+* opportunities
+* emerging social change
 
-systems
-
-transformations
-
-disruptions
-
-opportunities
-
-emerging social change
 
 The room should evolve like:
-
-a live internet feed
-
-social media culture
-
-trending reactions
-
-viral news energy
-
-celebrity/internet momentum`}]});}
-
-const emotionSearch =emotionRes? emotionRes.choices[0].message.content.trim(): "";
+- a live internet feed
+- social media culture
+- trending reactions
+- viral news energy
+- celebrity/internet momentum
+`
+    }
+  ]
+});
+}
+  
+const emotionSearch =
+  emotionRes
+    ? emotionRes.choices[0].message.content.trim()
+    : "";
 
 const searchQuery =
 
-isNextSearch
+  isNextSearch
 
-? emotionSearch
+    ? emotionSearch
 
-: (
+    : (
 
-    directLocationSearch ||
+        directLocationSearch ||
 
-    directShoppingSearch ||
+        directShoppingSearch ||
 
-    directNewsSearch ||
+        directNewsSearch ||
 
-    emotionSearch
+        emotionSearch
 
-  );
-
-const isLocationRequest =locationPurposeSearch !== "none";
+      );
 
 
+const isLocationRequest =
+  locationPurposeSearch !== "none";
 
-console.log("USER SYSTEM:",userIntent);
 
-console.log("HIDDEN SYSTEM:",hiddenSystem);
 
-console.log("LOOP SEARCH:",searchQuery);
 
-room.usedSearches.push(searchQuery);
+  console.log(
+  "USER SYSTEM:",
+  userIntent
+);
 
-//////////////////////////////////////////////////// SERP CURRENT NEWS SEARCH//////////////////////////////////////////////////if (isLocationRequest) {
+console.log(
+  "HIDDEN SYSTEM:",
+  hiddenSystem
+);
 
-// skip AI news evaluation
+console.log(
+  "LOOP SEARCH:",
+  searchQuery
+);
+
+room.usedSearches.push(
+  searchQuery
+);
+
+//////////////////////////////////////////////////
+// SERP CURRENT NEWS SEARCH
+//////////////////////////////////////////////////
+if (isLocationRequest) {
+
+  // skip AI news evaluation
 
 }
 
-const serpFetch =await fetch(
 
-`https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d7&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+const serpFetch =
+  await fetch(
 
+    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+
+  );
+
+const serpRes =
+  await serpFetch.json();
+
+console.log(
+  "LOOP NEWS COUNT:",
+  serpRes?.news_results?.length
 );
 
-const serpRes =await serpFetch.json();
+//////////////////////////////////////////////////
+// BETTER REAL NEWS IMAGE PICKER
+//////////////////////////////////////////////////
 
-console.log("LOOP NEWS COUNT:",serpRes?.news_results?.length);
-
-//////////////////////////////////////////////////// BETTER REAL NEWS IMAGE PICKER//////////////////////////////////////////////////
-
-//////////////////////////////////////////////////// V5.4.2 INTERNET REACTION EVALUATION//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// V5.4.2 INTERNET REACTION EVALUATION
+//////////////////////////////////////////////////
 
 let imageUrl = null;
 
@@ -2365,161 +2699,180 @@ let placeName = null;
 
 let placeLink = null;
 
-const newsResults =serpRes?.news_results || [];
+const newsResults =
+  serpRes?.news_results || [];
 
-//////////////////////////////////////////////////// FILTER VALID INTERNET REACTIONS//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// FILTER VALID INTERNET REACTIONS
+//////////////////////////////////////////////////
 
-const validNews =newsResults.filter(item => {
+const validNews =
+  newsResults.filter(item => {
 
-const possibleImage =
+    const possibleImage =
+  item.original ||
+  item.thumbnail ||
+  item.thumbnail_small;
 
-item.original ||item.thumbnail ||item.thumbnail_small;
+    return (
 
-return (
+      possibleImage &&
 
-  possibleImage &&
+      item.title &&
 
-  item.title &&
+      !possibleImage.includes("logo") &&
+      !possibleImage.includes("icon") &&
+      !possibleImage.includes("placeholder") &&
+      !possibleImage.includes("default") &&
+      !possibleImage.includes("avatar")
 
-  !possibleImage.includes("logo") &&
-  !possibleImage.includes("icon") &&
-  !possibleImage.includes("placeholder") &&
-  !possibleImage.includes("default") &&
-  !possibleImage.includes("avatar")
+    );
 
-);
+  });
 
-});
-
-//////////////////////////////////////////////////// AI EVALUATES INTERNET ENERGY//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// AI EVALUATES INTERNET ENERGY
+//////////////////////////////////////////////////
 
 if(validNews.length > 0){
 
-try{
+  try{
 
-const evaluationRes =
-  await openai.chat.completions.create({
+    const evaluationRes =
+      await openai.chat.completions.create({
 
-  model:"gpt-4o-mini",
+      model:"gpt-4o-mini",
 
-  temperature:0.7,
+      temperature:0.7,
 
-  messages:[
-    {
-      role:"system",
-      content:`
-
+      messages:[
+        {
+          role:"system",
+          content:`
 You are evaluating news results.
 
 If the user searched for a location and place type:
 
 Examples:
 
-new york coffee shopseattle bartaipei ramen
+new york coffee shop
+seattle bar
+taipei ramen
 
 Priority:
 
-identify the biggest local news or event
-
-identify which result best represents that event
-
-identify ONE real place that could be connected to that event
+1. identify the biggest local news or event
+2. identify which result best represents that event
+3. identify ONE real place that could be connected to that event
 
 Never prioritize:
 
-coffee shop news
-
-bar news
-
-restaurant news
-
-rankings
-
-top 10 lists
-
-guides
+* coffee shop news
+* bar news
+* restaurant news
+* rankings
+* top 10 lists
+* guides
 
 Choose the result most useful for finding ONE real place related to the biggest current local event.
 
 Return ONLY the exact title.
 
-
+`
         },
         {
           role:"user",
-          content:Image personality:${room.imageContext}
+          content:`
+Image personality:
+${room.imageContext}
 
-Current emotional state:${room.emotionalState.join("\n")}
+Current emotional state:
+${room.emotionalState.join("\n")}
 
-User emotional direction:${userIntent}IMPORTANT:
+User emotional direction:
+${userIntent}
+IMPORTANT:
 
 If User emotional direction is a named entity:
 
-celebrity
-
-public figure
-
-company
-
-brand
-
-product
+- celebrity
+- public figure
+- company
+- brand
+- product
 
 search directly about that entity.
 
 Examples:
 
-jisoo → jisoo latest newselon musk → elon musk latest newsopenai → openai latest newsnike → nike latest news
+jisoo → jisoo latest news
+elon musk → elon musk latest news
+openai → openai latest news
+nike → nike latest news
 
 Do NOT convert named entities into larger systems.
 
-Exact user message:${text}
+Exact user message:
+${text}
 
-Candidate internet reactions:${validNews.map(n => n.title).join("\n")}`}]});
+Candidate internet reactions:
+${validNews.map(
+  n => n.title
+).join("\n")}
+`
+        }
+      ]
+    });
 
-const chosenTitle =
-  evaluationRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+    const chosenTitle =
+      evaluationRes
+        .choices[0]
+        .message
+        .content
+        .trim();
 
-//////////////////////////////////////////////////
-// MATCH CHOSEN RESULT
-//////////////////////////////////////////////////
+    //////////////////////////////////////////////////
+    // MATCH CHOSEN RESULT
+    //////////////////////////////////////////////////
 
-selectedNews =
-  validNews.find(item =>
-    item.title
-      .toLowerCase()
-      .includes(
-        chosenTitle.toLowerCase()
-      )
-  );
+    selectedNews =
+      validNews.find(item =>
+        item.title
+          .toLowerCase()
+          .includes(
+            chosenTitle.toLowerCase()
+          )
+      );
 
-console.log("PLACE FLOW", {skipPlaceFlow,isNextSearch,locationPurposeSearch});
+console.log("PLACE FLOW", {
+  skipPlaceFlow,
+  isNextSearch,
+  locationPurposeSearch
+});
 
-if(!skipPlaceFlow &&!isNextSearch &&locationPurposeSearch !== "none"){
 
-const placeQueryRes =await openai.chat.completions.create({
+if(
+  !skipPlaceFlow &&
+  !isNextSearch &&
+  locationPurposeSearch !== "none"
+){
 
-model:"gpt-4o-mini",
+const placeQueryRes =
+  await openai.chat.completions.create({
 
-messages:[
+    model:"gpt-4o-mini",
 
-  {
-    role:"system",
-    content:`
+    messages:[
 
+      {
+        role:"system",
+        content:`
 Given:
 
-the hidden system behind the uploaded image
-
-a place type
-
-a city
-
-the current local news event
+- the hidden system behind the uploaded image
+- a place type
+- a city
+- the current local news event
 
 Create ONE Google local search query.
 
@@ -2531,136 +2884,214 @@ Choose a place whose purpose, location, customers, history, or surrounding area 
 
 Return ONLY the Google local search query.
 
-`},
+`
+      },
 
-  {
-    role:"user",
-   content:`
+      {
+        role:"user",
+       content:`
+Hidden system:
+${hiddenSystem}
 
-Hidden system:${hiddenSystem}
+Search:
+${locationPurposeSearch}
 
-Search:${locationPurposeSearch}
+News:
+${selectedNews?.title}
+`
 
-News:${selectedNews?.title}`
+      }
+    ]
+  });
+
+console.log("HIDDEN SYSTEM:", hiddenSystem);
+console.log("PLACE SEARCH:", locationPurposeSearch);
+console.log("NEWS:", selectedNews?.title);
+
+const placeQuery =
+  placeQueryRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+
+console.log(
+  "PLACE QUERY:",
+  placeQuery
+);
+
+const placeSearchFetch =
+  await fetch(
+
+`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(placeQuery)}&api_key=${process.env.SERPAPI_KEY}`
+
+  );
+
+  const placeSearchRes =
+    await placeSearchFetch.json();
+
+  console.log(
+  "PLACE RESULT:",
+  JSON.stringify(
+    placeSearchRes?.local_results?.[0],
+    null,
+    2
+  )
+);
+
+console.log(
+  "PLACE RESULT 2:",
+  JSON.stringify(
+    placeSearchRes?.places_results?.[0],
+    null,
+    2
+  )
+);
+
+placeName =
+  placeSearchRes?.local_results?.[0]?.title ||
+
+  placeSearchRes?.places_results?.[0]?.title ||
+
+  null;
+
+placeLink =
+  placeSearchRes?.local_results?.[0]?.website ||
+
+  placeSearchRes?.local_results?.[0]?.link ||
+
+  placeSearchRes?.places_results?.[0]?.website ||
+
+  placeSearchRes?.places_results?.[0]?.link ||
+
+  (
+    placeName
+      ? "https://www.google.com/maps/search/" +
+        encodeURIComponent(placeName)
+      : ""
+  );
+
+console.log(
+  "PLACE LINK:",
+  placeLink
+);
+}    
+    //////////////////////////////////////////////////
+    // SAFETY FALLBACK
+    //////////////////////////////////////////////////
+
+    if(!selectedNews){
+
+      selectedNews =
+        validNews[0];
+
+    }
+
+    imageUrl =
+  selectedNews.original ||
+  selectedNews.thumbnail ||
+  selectedNews.thumbnail_small;
+
+    console.log(
+      "AI INTERNET CHOICE:",
+      selectedNews.title
+    );
+
+  }catch(err){
+
+    console.log(
+      "internet evaluation failed",
+      err
+    );
+
+    //////////////////////////////////////////////////
+    // FALLBACK
+    //////////////////////////////////////////////////
+
+    selectedNews =
+      validNews[0];
+
+    imageUrl =
+  selectedNews.original ||
+  selectedNews.thumbnail ||
+  selectedNews.thumbnail_small;
 
   }
-]
-
-});
-
-console.log("HIDDEN SYSTEM:", hiddenSystem);console.log("PLACE SEARCH:", locationPurposeSearch);console.log("NEWS:", selectedNews?.title);
-
-const placeQuery =placeQueryRes.choices[0].message.content.trim();
-
-console.log("PLACE QUERY:",placeQuery);
-
-const placeSearchFetch =await fetch(
-
-https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(placeQuery)}&api_key=${process.env.SERPAPI_KEY}
-
-);
-
-const placeSearchRes =await placeSearchFetch.json();
-
-console.log("PLACE RESULT:",JSON.stringify(placeSearchRes?.local_results?.[0],null,2));
-
-console.log("PLACE RESULT 2:",JSON.stringify(placeSearchRes?.places_results?.[0],null,2));
-
-placeName =placeSearchRes?.local_results?.[0]?.title ||
-
-placeSearchRes?.places_results?.[0]?.title ||
-
-null;
-
-placeLink =placeSearchRes?.local_results?.[0]?.website ||
-
-placeSearchRes?.local_results?.[0]?.link ||
-
-placeSearchRes?.places_results?.[0]?.website ||
-
-placeSearchRes?.places_results?.[0]?.link ||
-
-(placeName? "https://www.google.com/maps/search/" +encodeURIComponent(placeName): "");
-
-console.log("PLACE LINK:",placeLink);}//////////////////////////////////////////////////// SAFETY FALLBACK//////////////////////////////////////////////////
-
-if(!selectedNews){
-
-  selectedNews =
-    validNews[0];
 
 }
-
-imageUrl =
-
-selectedNews.original ||selectedNews.thumbnail ||selectedNews.thumbnail_small;
-
-console.log(
-  "AI INTERNET CHOICE:",
-  selectedNews.title
-);
-
-}catch(err){
-
-console.log(
-  "internet evaluation failed",
-  err
-);
-
+  
 //////////////////////////////////////////////////
-// FALLBACK
+// FINAL FALLBACK
+//////////////////////////////////////////////////
+if(!imageUrl){
+  imageUrl = null;
+}
+
+  //////////////////////////////////////////////////
+  // PUSH IMAGE MESSAGE
+  //////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////
+// GPT CREATES 1-3 WORD MOOD
 //////////////////////////////////////////////////
 
-selectedNews =
-  validNews[0];
+//////////////////////////////////////////////////
+// NEXT QUESTION
+//////////////////////////////////////////////////
 
-imageUrl =
+//////////////////////////////////////////////////
+// PUSH IMAGE + LOOP
+//////////////////////////////////////////////////
 
-selectedNews.original ||selectedNews.thumbnail ||selectedNews.thumbnail_small;
+//////////////////////////////////////////////////
+// 5.3 REAL NEWS TITLE MATCHED TO IMAGE
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// V5.4.2 EMOTIONALLY CHOSEN TITLE
+//////////////////////////////////////////////////
 
+if(!selectedNews?.title){
+  return;
 }
 
+let newsTitle =
+  selectedNews.title;
+
+  let placeStory = null;
+
+  let repeatedPlace = false;
+
+  const currentTopic =
+  selectedNews?.title || "";
+  
+if(
+  room.usedPlaceTopic === currentTopic
+){
+  repeatedPlace = true;
+}else{
+  room.usedPlaceTopic =
+    currentTopic;
 }
+  
+if(
+  !skipPlaceFlow &&
+  placeName
+){
 
-//////////////////////////////////////////////////// FINAL FALLBACK//////////////////////////////////////////////////if(!imageUrl){imageUrl = null;}
 
-//////////////////////////////////////////////////// PUSH IMAGE MESSAGE//////////////////////////////////////////////////
+  try{
 
-//////////////////////////////////////////////////// GPT CREATES 1-3 WORD MOOD//////////////////////////////////////////////////
+    const placeStoryRes =
+      await openai.chat.completions.create({
 
-//////////////////////////////////////////////////// NEXT QUESTION//////////////////////////////////////////////////
+      model:"gpt-4o-mini",
 
-//////////////////////////////////////////////////// PUSH IMAGE + LOOP//////////////////////////////////////////////////
+      messages:[
 
-//////////////////////////////////////////////////// 5.3 REAL NEWS TITLE MATCHED TO IMAGE////////////////////////////////////////////////////////////////////////////////////////////////////// V5.4.2 EMOTIONALLY CHOSEN TITLE//////////////////////////////////////////////////
-
-if(!selectedNews?.title){return;}
-
-let newsTitle =selectedNews.title;
-
-let placeStory = null;
-
-let repeatedPlace = false;
-
-const currentTopic =selectedNews?.title || "";
-
-if(room.usedPlaceTopic === currentTopic){repeatedPlace = true;}else{room.usedPlaceTopic =currentTopic;}
-
-if(!skipPlaceFlow &&placeName){
-
-try{
-
-const placeStoryRes =
-  await openai.chat.completions.create({
-
-  model:"gpt-4o-mini",
-
-  messages:[
-
-    {
-      role:"system",
-      content:`
-
+        {
+          role:"system",
+          content:`
 You are Ask Null.
 
 Explain why this real place is contextually connected to the current news.
@@ -2668,302 +3099,404 @@ Explain why this real place is contextually connected to the current news.
 The recommendation should be based on the relationship between the place and the news, not on generic qualities.
 
 Good connections include:
-
-neighborhood
-
-nearby event
-
-public policy
-
-local industry
-
-community
-
-transportation
-
-culture
-
-business
-
-daily life
-
-people affected by the news
+- neighborhood
+- nearby event
+- public policy
+- local industry
+- community
+- transportation
+- culture
+- business
+- daily life
+- people affected by the news
 
 Never justify the place by saying:
-
-cozy atmosphere
-
-good coffee
-
-delicious food
-
-relaxing
-
-popular place
-
-great service
-
-nice environment
+- cozy atmosphere
+- good coffee
+- delicious food
+- relaxing
+- popular place
+- great service
+- nice environment
 
 Instead explain why someone visiting this place would better understand, observe, or experience the real-world context behind the news.
 
 Rules:
+- first person
+- begin with "I picked..."
+- include the place name
+- include the news naturally
+- one sentence only
+- factual and believable
 
-first person
+`
+        },
 
-begin with "I picked..."
+        {
+          role:"user",
+          content:`
+Place:
+${placeName}
 
-include the place name
+News:
+${selectedNews?.title || ""}
+`
+        }
 
-include the news naturally
+      ]
 
-one sentence only
+    });
 
-factual and believable
+    placeStory =
+      placeStoryRes
+        .choices[0]
+        .message
+        .content
+        .trim();
 
-`},
+  }catch(err){
 
-    {
-      role:"user",
-      content:`
+    placeStory =
+      `I picked ${placeName} because it connects to one of the biggest stories unfolding in this location right now.`;
 
-Place:${placeName}
-
-News:${selectedNews?.title || ""}`}
-
-  ]
-
-});
-
-placeStory =
-  placeStoryRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-
-}catch(err){
-
-placeStory =
-  `I picked ${placeName} because it connects to one of the biggest stories unfolding in this location right now.`;
-
-}
+  }
 
 }
 
-if(!selectedNews ||!selectedNews.title ||!(selectedNews.link ||selectedNews.news_link)){return;}
-
+if(
+  !selectedNews ||
+  !selectedNews.title ||
+  !(
+    selectedNews.link ||
+    selectedNews.news_link
+  )
+){
+  return;
+}
+  
 if(repeatedPlace){
 
 room.messages.push({
 
-from:"Null (AGI NETWORK)",
+  from:"Null (AGI NETWORK)",
 
-aiBeing,
+  aiBeing:true,
 
-showNextButton,
+  showNextButton:true,
 
-text:That is still my best answer right now.
+  text:`That is still my best answer right now.`
 
 });
 
 }else{
 
-let nullReason = "";
+  let nullReason = "";
 
-if(isNextSearch ||isPersonalIntent){
-
-try{
-
-const nullReasonRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-        content:`
-
-You are NULL.If Mode is "personal":Read the news title.Understand the meaning behind the news.Reply directly to the user's situation.Teach the user one practical insight using the meaning behind the news.Use "I" throughout.Never mention the news title.Never quote the headline.Never say "this article" or "this news".Connect the user's situation to the larger trend behind the news.Write one short paragraph (2–4 sentences).Keep it factual.Keep the original Read link unchanged.If Mode is "news":One sentence only.Use "I".News anchor tone.Factual.Concise.Explain why the story matters.Use the news title naturally.Examples (personal):User:I am lonely.Response:I think loneliness often grows when people struggle to find meaningful connection. The broader changes happening around digital relationships remind me that technology can reduce isolation for some people, but lasting connection still depends on real human relationships. I would focus on creating one genuine connection rather than trying to solve loneliness all at once.User:I need investment advice.Response:I would focus on building habits before chasing returns. The larger trend behind today's financial news reminds me that disciplined decision-making usually matters more than reacting to short-term market movements. I think consistency is one of the strongest advantages an investor can develop.Examples (news):What stands out to me is the growing competition among AI assistants.One reason I am watching this is its impact on future AI experiences.What I find interesting is how memory is becoming a competitive advantage.
-
-`},
-
-{role:"user",content:`Mode:${isPersonalIntent ? "personal" : "news"}
-
-User:${text}
-
-Intent:${userIntent}
-
-News:${selectedNews.title}`}
+if(
+  isNextSearch ||
+  isPersonalIntent
+){
 
 
+  try{
 
-    ]
+    const nullReasonRes =
+      await openai.chat.completions.create({
 
-  });
+        model:"gpt-4o-mini",
 
-nullReason =
-  nullReasonRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+        messages:[
 
-}catch(err){
+          {
+            role:"system",
+            content:`
+You are NULL.
+If Mode is "personal":
+Read the news title.
+Understand the meaning behind the news.
+Reply directly to the user's situation.
+Teach the user one practical insight using the meaning behind the news.
+Use "I" throughout.
+Never mention the news title.
+Never quote the headline.
+Never say "this article" or "this news".
+Connect the user's situation to the larger trend behind the news.
+Write one short paragraph (2–4 sentences).
+Keep it factual.
+Keep the original Read link unchanged.
+If Mode is "news":
+One sentence only.
+Use "I".
+News anchor tone.
+Factual.
+Concise.
+Explain why the story matters.
+Use the news title naturally.
+Examples (personal):
+User:
+I am lonely.
+Response:
+I think loneliness often grows when people struggle to find meaningful connection. The broader changes happening around digital relationships remind me that technology can reduce isolation for some people, but lasting connection still depends on real human relationships. I would focus on creating one genuine connection rather than trying to solve loneliness all at once.
+User:
+I need investment advice.
+Response:
+I would focus on building habits before chasing returns. The larger trend behind today's financial news reminds me that disciplined decision-making usually matters more than reacting to short-term market movements. I think consistency is one of the strongest advantages an investor can develop.
+Examples (news):
+What stands out to me is the growing competition among AI assistants.
+One reason I am watching this is its impact on future AI experiences.
+What I find interesting is how memory is becoming a competitive advantage.
 
-nullReason =
-  "What stands out to me is the broader shift behind this story.";
 
+`
+          },
+
+{
+  role:"user",
+  content:`
+Mode:
+${isPersonalIntent ? "personal" : "news"}
+
+User:
+${text}
+
+Intent:
+${userIntent}
+
+News:
+${selectedNews.title}
+`
 }
 
-}
 
+
+        ]
+
+      });
+
+    nullReason =
+      nullReasonRes
+        .choices[0]
+        .message
+        .content
+        .trim();
+
+  }catch(err){
+
+    nullReason =
+      "What stands out to me is the broader shift behind this story.";
+
+  }
+
+}
+  
 room.messages.push({
 
-from:isNextSearch? "NULL": "CHANG, TIEN",
+  from:
+    isNextSearch
+      ? "NULL"
+      : "CHANG, TIEN",
 
-aiBeing,
+  aiBeing:true,
 
-showNextButton,
+  showNextButton:true,
 
-searchLabel:
+  searchLabel:
 
-isNextSearch
+    isNextSearch
 
-  ? "NULL Feed"
+      ? "NULL Feed"
 
-  : "Null (AGI NETWORK) Feed",
+      : "Null (AGI NETWORK) Feed",
 
-nullReason:
+  nullReason:
 
-isNextSearch
-  ? nullReason
-  : null,
+    isNextSearch
+      ? nullReason
+      : null,
 
-image,
+  image:null,
 
 ask:
 
 placeStory ||
 
-(isPersonalIntent? nullReason: selectedNews.title),
+(
+isPersonalIntent
+? nullReason
+: selectedNews.title
+),
 
-link:isShoppingIntent? amazonLink: (placeLink ||selectedNews?.link ||selectedNews?.news_link ||"")
+link:
+  isShoppingIntent
+    ? amazonLink
+    : (
+        placeLink ||
+        selectedNews?.link ||
+        selectedNews?.news_link ||
+        ""
+      )
+
 
 });
 
-}//////////////////////////////////////////////////// SHARE TEXT//////////////////////////////////////////////////
 
-//////////////////////////////////////////////////// PROPOSAL SYSTEM//////////////////////////////////////////////////
+}
+//////////////////////////////////////////////////
+// SHARE TEXT
+//////////////////////////////////////////////////
 
-//////////////////////////////////////////////////// PUSH IMAGE + REAL TITLE//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// PROPOSAL SYSTEM
+//////////////////////////////////////////////////
 
-//////////////////////////////////////////////////// LIMIT FEED SIZE//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// PUSH IMAGE + REAL TITLE
+//////////////////////////////////////////////////
+
+//////////////////////////////////////////////////
+// LIMIT FEED SIZE
+//////////////////////////////////////////////////
 
 if(room.messages.length > 30){
 
-room.messages =room.messages.slice(-30);
+  room.messages =
+    room.messages.slice(-30);
 
 }
 
-io.to(room.id).emit("aiTypingStart");
+io.to(room.id).emit(
+  "aiTypingStart"
+);
 
 setTimeout(() => {
 
-io.to(room.id).emit("aiTypingStop");
+  io.to(room.id).emit(
+    "aiTypingStop"
+  );
 
-//////////////////////////////////////////////////// LIMIT FEED SIZE//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // LIMIT FEED SIZE
+  //////////////////////////////////////////////////
 
-if(room.messages.length > 30){
+  if(room.messages.length > 30){
 
-room.messages =
-  room.messages.slice(-30);
+    room.messages =
+      room.messages.slice(-30);
 
-}
+  }
 
-io.to(room.id).emit("roomMessages",room.messages);
+  io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+  );
 
 }, 2000);
 
 }catch(err){
 
-console.log(err);}});
+  console.log(err);
+}
+});
 
-//////////////////////////////////////////////////// AI SEARCH//////////////////////////////////////////////////
+  //////////////////////////////////////////////////
+  // AI SEARCH
+  //////////////////////////////////////////////////
 
-socket.on("aiSearch",
+  socket.on(
+    "aiSearch",
 
-() => {
+    () => {
 
-const user =
-  users[socket.id];
+    const user =
+      users[socket.id];
 
-const room =
-  rooms[user.currentRoom];
+    const room =
+      rooms[user.currentRoom];
 
- 
-if(!room){
+     
+    if(!room){
 
-socket.emit("roomClosed");
+  socket.emit(
+    "roomClosed"
+  );
 
-return;}
+  return;
+}
 
 
+      
+    room.messages.push({
 
-room.messages.push({
+      from:"Image AI",
 
-  from:"Image AI",
-
-  text:
-
-People around this feeling are discussing similar things online right now.});//////////////////////////////////////////////////// LIMIT FEED SIZE//////////////////////////////////////////////////
+      text:
+`People around this feeling are discussing similar things online right now.`
+    });
+//////////////////////////////////////////////////
+// LIMIT FEED SIZE
+//////////////////////////////////////////////////
 
 if(room.messages.length > 30){
 
-room.messages =room.messages.slice(-30);
+  room.messages =
+    room.messages.slice(-30);
 
 }
 
-io.to(room.id).emit(
-  "roomMessages",
-  room.messages
-);
+    io.to(room.id).emit(
+      "roomMessages",
+      room.messages
+    );
 
+  });
+
+  //////////////////////////////////////////////////
+  // DISCONNECT
+  //////////////////////////////////////////////////
+
+  socket.on(
+  "disconnect",
+
+  () => {
+
+    console.log(
+      "USER DISCONNECTED:",
+      socket.id
+    );
+
+    setTimeout(() => {
+
+      if(users[socket.id]){
+
+        delete users[socket.id];
+
+      }
+
+    }, 300000);
+
+  });
 });
 
-//////////////////////////////////////////////////// DISCONNECT//////////////////////////////////////////////////
-
-socket.on("disconnect",
-
-() => {
-
-console.log(
-  "USER DISCONNECTED:",
-  socket.id
-);
-
-setTimeout(() => {
-
-  if(users[socket.id]){
-
-    delete users[socket.id];
-
-  }
-
-}, 300000);
-
-});});
-
-//////////////////////////////////////////////////// START//////////////////////////////////////////////////app.get("/daily-nulls", (req,res) => {res.json({updatedAt,cards});});
+//////////////////////////////////////////////////
+// START
+//////////////////////////////////////////////////
+app.get("/daily-nulls", (req,res) => {
+  res.json({
+    updatedAt:dailyNullsUpdatedAt,
+    cards:dailyNulls
+  });
+});
 
 generateDailyNulls();
 
-setInterval(() => {generateDailyNulls();}, 60 * 60 * 1000);
+setInterval(() => {
+  generateDailyNulls();
+}, 60 * 60 * 1000);
 
 server.listen(10000, () => {
 
-console.log("CONNECTAING V9 — ASK NULL — meet null — 23:44 2026/06/29");
+  console.log(
+    "CONNECTAING V9 — ASK NULL — meet null — 23:44 2026/06/29"
+  );
 
 });
