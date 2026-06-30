@@ -2151,16 +2151,57 @@ if (
           content: `
 Create ONE Amazon shopping search.
 
-The hidden system is the subject.
+Read the user's request.
 
-The user's request determines the product.
+Read the hidden system behind the image.
 
-Return ONLY the search.
+Read the current news direction implied by the hidden system.
 
-Rules:
-- 2 to 6 words
-- lowercase
-- no punctuation
+Create ONE shopping search that naturally connects all three.
+
+The search should feel like something a real person would search after reading today's news.
+
+Prefer:
+- trending products
+- popular brands
+- current consumer behavior
+- viral products
+
+Do not search:
+- company press releases
+- product launch announcements
+- generic industry news
+
+Examples
+
+Hidden system:
+women's social rituals
+
+User:
+I need eyeliner
+
+Good:
+korean waterproof eyeliner
+
+viral liquid eyeliner
+
+asian beauty eyeliner
+
+Hidden system:
+fitness culture
+
+User:
+I need protein
+
+Good:
+best whey protein
+
+popular protein powder
+
+high protein snacks
+
+Return ONLY 2–6 lowercase words.
+
 `
         },
 
@@ -3496,7 +3537,9 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 23:44 2026/06/29"
+    "CONNECTAING V9 — ASK NULL — meet null — 18:53 2026/06/30"
   );
 
 });
+
+
