@@ -3419,8 +3419,17 @@ Never mention the news title.
 Never quote the headline.
 Never say "this article" or "this news".
 Connect the user's situation to the larger trend behind the news.
-Write one short paragraph (2–4 sentences).
+
+Write 2–3 short paragraphs.
+
+Each paragraph should contain 1–2 sentences.
+
+Insert ONE blank line between paragraphs.
+
 Keep it factual.
+
+Keep each paragraph concise and easy to read.
+
 Keep the original Read link unchanged.
 If Mode is "news":
 One sentence only.
