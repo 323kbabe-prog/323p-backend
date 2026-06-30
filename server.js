@@ -3374,8 +3374,8 @@ room.messages.push({
       : "CHANG, TIEN",
 
   aiBeing:true,
-
   showNextButton:true,
+  showRead: !isPersonalIntent,
 
   searchLabel:
 
