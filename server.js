@@ -2149,21 +2149,18 @@ if (
         {
           role: "system",
           content: `
-Create ONE current Google News search.
+Create ONE Amazon shopping search.
 
-The hidden system behind the uploaded image is the primary subject.
+The hidden system is the subject.
 
-The user's shopping request only provides direction.
+The user's request determines the product.
 
-Search for the biggest current news topic related to the hidden system that could naturally influence the user's shopping decision.
+Return ONLY the search.
 
-Do NOT search products.
-
-Return ONLY the search phrase.
-
-3–8 words.
-lowercase.
-no punctuation.
+Rules:
+- 2 to 6 words
+- lowercase
+- no punctuation
 `
         },
 
@@ -2193,6 +2190,13 @@ ${text}
       .trim();
 
 }
+
+const amazonLink =
+  directShoppingSearch
+    ? "https://www.amazon.com/s?k=" +
+      encodeURIComponent(directShoppingSearch)
+    : "";
+
 
 if(
   !isNextSearch &&
@@ -2686,7 +2690,6 @@ console.log(
 //////////////////////////////////////////////////
 // V5.4.2 INTERNET REACTION EVALUATION
 //////////////////////////////////////////////////
-let amazonLink = "";
 
 let imageUrl = null;
 
@@ -2989,71 +2992,6 @@ console.log(
   selectedNews.original ||
   selectedNews.thumbnail ||
   selectedNews.thumbnail_small;
-
-let shoppingProduct = null;
-
-if(isShoppingIntent){
-
-  const shoppingProductRes =
-    await openai.chat.completions.create({
-
-      model:"gpt-4o-mini",
-
-      messages:[
-
-        {
-          role:"system",
-          content:`
-Today's news represents the current trend.
-
-Recommend ONE product that naturally fits this news.
-
-Return ONLY the product name.
-
-Examples:
-
-K-beauty exports rise
-→ romand eyeliner
-
-AI PC launches
-→ microsoft surface laptop
-
-Tokyo marathon boom
-→ asics novablast
-
-Return ONLY the product.
-`
-        },
-
-        {
-          role:"user",
-          content:`
-Today's News:
-${selectedNews.title}
-
-User:
-${text}
-`
-        }
-
-      ]
-
-    });
-
-  shoppingProduct =
-    shoppingProductRes
-      .choices[0]
-      .message
-      .content
-      .trim();
-
-}
-
-amazonLink =
-  shoppingProduct
-    ? "https://www.amazon.com/s?k=" +
-      encodeURIComponent(shoppingProduct)
-    : "";
 
     console.log(
       "AI INTERNET CHOICE:",
@@ -3558,8 +3496,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 14:17 2026/06/30"
+    "CONNECTAING V9 — ASK NULL — meet null — 23:44 2026/06/29"
   );
 
 });
-
