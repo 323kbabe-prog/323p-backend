@@ -480,6 +480,10 @@ socket.on(
   "rejoinRoom",
   ({ roomId }) => {
 
+console.log("REJOIN:", roomId);
+console.log("ROOM EXISTS:", !!rooms[roomId]);
+
+
     const room =
       rooms[roomId];
 
