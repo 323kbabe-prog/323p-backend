@@ -2834,8 +2834,10 @@ if(isYoutubeIntent){
     link:youtubeLink
   });
 
-  io.to(room.id).emit("roomMessages", room.messages);
-  return;
+io.to(room.id).emit("aiTypingStop");
+io.to(room.id).emit("roomMessages", room.messages);
+return;
+
 }
 
 
