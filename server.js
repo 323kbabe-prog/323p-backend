@@ -2496,9 +2496,19 @@ if (!directNewsSearch) {
       content:`
 Create ONE trending CURRENT NEWS image search phrase.
 
+The uploaded image is not just context—it is the interpreter.
+
+Every user request should be understood through the image's identity, purpose, cultural meaning, function, and hidden system.
+
+The same user request should naturally produce different searches when the uploaded image changes.
+
+Do not use a fixed response pattern.
+
+The image should influence how the request is interpreted, but it should never ignore or replace the user's actual goal.
+
 IMPORTANT:
 
-The uploaded image provides context, not keywords.
+The uploaded image provides perspective, not keywords.
 
 The room is:
 
@@ -2527,15 +2537,16 @@ The meaning behind the object is NOT the subject.
 
 The hidden system behind the meaning is the subject.
 
-The image should be interpreted as:
+Interpret the image as:
 
 image
+→ identity
 → meaning
 → deeper meaning
 → hidden system
 → current news
 
-Move TWO layers beyond the meaning.
+Move TWO layers beyond the visible object.
 
 Never search for:
 
@@ -2546,15 +2557,12 @@ Never search for:
 * the immediate meaning
 * the obvious interpretation
 
-Ask:
+Instead ask:
 
-* what system created this meaning?
-* what larger force drives this meaning?
-* what economic force is behind this meaning?
-* what technological shift is behind this meaning?
-* what social change is behind this meaning?
-* what cultural transformation is behind this meaning?
-* what future disruption is behind this meaning?
+* What would this image naturally care about?
+* What larger system gives this image its meaning?
+* What current real-world events would matter to this image?
+* If this image could guide the user, what would it search for?
 
 Examples:
 
@@ -2625,8 +2633,6 @@ The result should feel:
 * emotionally meaningful
 * newsworthy
 
-IMPORTANT:
-
 Use REAL searchable public news entities.
 
 GOOD:
@@ -2662,29 +2668,22 @@ Rules:
 * lowercase only
 * no punctuation
 * visually searchable
-* current news energy only
+* current news only
 * no philosophy
 * no repetition
 
 PRIORITY RULES:
 
-1. USER emotional direction (90%)
+1. The user's request defines what they need.
 
-* trend direction
-* emotional evolution
-* internet topic
-* social meaning
-* public discussion
+2. The uploaded image defines how that request should be interpreted.
 
-2. Hidden system behind the image (10%)
+3. The hidden system determines where the search should go.
 
-The image is context.
+The same request should naturally produce different searches when the uploaded image changes.
 
-The meaning is a clue.
+The search should feel like the uploaded image itself is guiding the user toward the most relevant real-world information.
 
-The hidden system is the destination.
-
-The search should help the user discover something they would never normally search for.
 
 `
     },
