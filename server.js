@@ -3428,7 +3428,7 @@ Your reply should feel like it could only come from this image identity, not fro
 
 Use first person.
 
-Write 3–5 sentences.
+Maximum 2 short sentences. 
 
 `
           },
