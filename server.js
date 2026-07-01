@@ -2872,9 +2872,89 @@ return;
 
 if (isJobSearch) {
 
-  const serpFetch = await fetch(
-    `https://serpapi.com/search.json?engine=google_jobs&q=${encodeURIComponent(text)}&api_key=${process.env.SERPAPI_KEY}`
-  );
+const jobSearchRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+
+        content:`
+Create ONE Google Jobs search.
+
+Understand what career the user is actually looking for.
+
+The uploaded image and hidden system provide context only.
+
+Prioritize:
+- user's career goal (90%)
+- hidden system (10%)
+
+Examples:
+
+i love ai
+→ machine learning engineer
+
+i want to work at openai
+→ openai software engineer
+
+i like design and ai
+→ ai ux designer
+
+i like cameras
+→ computer vision engineer
+
+i want to build robots
+→ robotics engineer
+
+Rules:
+
+- 2 to 6 words
+- lowercase only
+- no punctuation
+- real Google Jobs search
+`
+      },
+
+      {
+        role:"user",
+
+        content:`
+Hidden system:
+${hiddenSystem}
+
+Image identity:
+${room.imageContext}
+
+User:
+${text}
+`
+      }
+
+    ]
+
+});
+
+const jobSearch =
+  jobSearchRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
+console.log(
+  "JOB SEARCH:",
+  jobSearch
+);
+
+
+const serpFetch = await fetch(
+  `https://serpapi.com/search.json?engine=google_jobs&q=${encodeURIComponent(jobSearch)}&api_key=${process.env.SERPAPI_KEY}`
+);
+
 
   const serpRes = await serpFetch.json();
 
@@ -2896,8 +2976,9 @@ if (!job) {
 
 const jobsUrl =
   "https://www.google.com/search?q=" +
-  encodeURIComponent(text) +
+  encodeURIComponent(jobSearch) +
   "&ibp=htl;jobs";
+
 
 room.messages.push({
 
