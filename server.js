@@ -1625,6 +1625,25 @@ return socket.emit(
 
     async ({ text }) => {
 
+const jobIntentRes = await openai.responses.create({
+  model: "gpt-5-mini",
+  input: `
+Determine if the user is looking for jobs.
+
+Return ONLY:
+
+jobs
+none
+
+User:
+${text}
+`
+});
+
+const isJobSearch =
+  jobIntentRes.output_text.trim().toLowerCase() === "jobs";
+
+
     const user =
       users[socket.id];
 
@@ -2851,15 +2870,75 @@ return;
 }
 
 
+if (isJobSearch) {
+
+  const serpFetch = await fetch(
+    `https://serpapi.com/search.json?engine=google_jobs&q=${encodeURIComponent(text)}&api_key=${process.env.SERPAPI_KEY}`
+  );
+
+  const serpRes = await serpFetch.json();
+
+const job = serpRes.jobs_results?.[0];
+
+if (!job) {
+
+  room.messages.push({
+    from: "CHANG, TIEN",
+    aiBeing: true,
+    showNextButton: true,
+    text: "No jobs found."
+  });
+
+  io.to(room.id).emit("aiTypingStop");
+  io.to(room.id).emit("roomMessages", room.messages);
+  return;
+}
+
+const jobsUrl =
+  "https://www.google.com/search?q=" +
+  encodeURIComponent(text) +
+  "&ibp=htl;jobs";
+
+room.messages.push({
+
+  from: "CHANG, TIEN",
+
+  aiBeing: true,
+
+  showNextButton: true,
+
+  jobCard: {
+
+    title: job.title,
+    company: job.company_name,
+    location: job.location,
+    salary: job.detected_extensions?.salary,
+    type: job.detected_extensions?.schedule_type,
+    posted: job.detected_extensions?.posted_at,
+    link: jobsUrl
+
+  }
+
+});
+
+io.to(room.id).emit("aiTypingStop");
+io.to(room.id).emit("roomMessages", room.messages);
+
+return;
+
+
+}
+
+
+// Existing Google News search
 const serpFetch =
   await fetch(
-
     `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
-
   );
 
 const serpRes =
   await serpFetch.json();
+
 
 console.log(
   "LOOP NEWS COUNT:",
