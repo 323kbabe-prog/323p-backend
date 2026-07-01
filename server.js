@@ -2042,8 +2042,44 @@ const isShoppingIntent =
     .trim()
     .toLowerCase() === "shopping";
 
+const youtubeRes =
+  await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    messages:[
+      {
+        role:"system",
+        content:`
+Return ONLY one word:
+youtube
+other
 
+Return youtube if the user wants music, video, BGM, podcast, sermon, worship song, trailer, documentary, funny video, or something to watch/listen to.
 
+Examples:
+i need bgm -> youtube
+driving music -> youtube
+study music -> youtube
+lofi -> youtube
+worship songs -> youtube
+sermon about faith -> youtube
+podcast about ai -> youtube
+movie trailer -> youtube
+
+Everything else:
+other
+`
+      },
+      {
+        role:"user",
+        content:text
+      }
+    ]
+  });
+
+const isYoutubeIntent =
+  youtubeRes.choices[0].message.content
+    .trim()
+    .toLowerCase() === "youtube";
   
   const locationPurposeRes =
   await openai.chat.completions.create({
@@ -2272,6 +2308,54 @@ const amazonLink =
   directShoppingSearch
     ? "https://www.amazon.com/s?k=" +
       encodeURIComponent(directShoppingSearch)
+    : "";
+
+let directYoutubeSearch = null;
+
+if(
+  !isNextSearch &&
+  isYoutubeIntent
+){
+  const youtubeQueryRes =
+    await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      messages:[
+        {
+          role:"system",
+          content:`
+Create ONE YouTube search query.
+The user's request is the main subject.
+Return ONLY the search.
+Rules:
+- 2 to 8 words
+- natural YouTube search
+- no punctuation
+`
+        },
+        {
+          role:"user",
+          content:`
+User request:
+${text}
+
+Image identity:
+${room.imageContext}
+
+Hidden system:
+${hiddenSystem}
+`
+        }
+      ]
+    });
+
+  directYoutubeSearch =
+    youtubeQueryRes.choices[0].message.content.trim();
+}
+
+const youtubeLink =
+  directYoutubeSearch
+    ? "https://www.youtube.com/results?search_query=" +
+      encodeURIComponent(directYoutubeSearch)
     : "";
 
 
@@ -2692,22 +2776,16 @@ const emotionSearch =
     : "";
 
 const searchQuery =
-
   isNextSearch
-
     ? emotionSearch
-
     : (
-
         directLocationSearch ||
-
+        directYoutubeSearch ||
         directShoppingSearch ||
-
         directNewsSearch ||
-
         emotionSearch
-
       );
+
 
 
 const isLocationRequest =
@@ -2742,6 +2820,22 @@ if (isLocationRequest) {
 
   // skip AI news evaluation
 
+}
+
+if(isYoutubeIntent){
+
+  room.messages.push({
+    from:"CHANG, TIEN",
+    aiBeing:true,
+    showNextButton:true,
+    showRead:true,
+    searchLabel:"NULL (AGI NETWORK) Feed",
+    ask:directYoutubeSearch,
+    link:youtubeLink
+  });
+
+  io.to(room.id).emit("roomMessages", room.messages);
+  return;
 }
 
 
@@ -3417,14 +3511,17 @@ isPersonalIntent
 ),
 
 link:
-  isShoppingIntent
-    ? amazonLink
-    : (
-        placeLink ||
-        selectedNews?.link ||
-        selectedNews?.news_link ||
-        ""
-      )
+  isYoutubeIntent
+    ? youtubeLink
+    : isShoppingIntent
+      ? amazonLink
+      : (
+          placeLink ||
+          selectedNews?.link ||
+          selectedNews?.news_link ||
+          ""
+        )
+
 
 
 });
@@ -3586,7 +3683,7 @@ setInterval(() => {
 server.listen(10000, () => {
 
   console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 18:53 2026/06/30"
+    "CONNECTAING V9 — ASK NULL — meet null — 08:04 2026/07/01"
   );
 
 });
