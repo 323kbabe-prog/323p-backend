@@ -482,7 +482,7 @@ socket.on(
 
 console.log("REJOIN:", roomId);
 console.log("ROOM EXISTS:", !!rooms[roomId]);
-
+console.log("ROOMS:", Object.keys(rooms));
 
     const room =
       rooms[roomId];
@@ -797,6 +797,11 @@ emotionalProfile:{
       Date.now() +
       60 * 60 * 1000
   };
+
+console.log("ROOM CREATED:", roomId);
+console.log("ROOM COUNT:", Object.keys(rooms).length);
+console.log(Object.keys(rooms));
+
         socket.join(roomId);
 
         user.currentRoom =
