@@ -3391,53 +3391,6 @@ if(
 
   try{
 
-if (!room.identityPrompt) {
-
-  const identityRes =
-    await openai.chat.completions.create({
-
-      model:"gpt-4o-mini",
-
-      messages:[
-
-        {
-          role:"system",
-          content:`
-You are creating a personality.
-
-The uploaded image is the identity.
-
-Return ONLY:
-
-I am...
-
-I usually feel...
-
-I care about...
-
-I worry about...
-
-My speaking style...
-
-Maximum 5 short lines.
-`
-        },
-
-        {
-          role:"user",
-          content: room.imageContext
-        }
-
-      ]
-
-    });
-
-  room.identityPrompt =
-    identityRes.choices[0].message.content.trim();
-
-}
-
-
     const nullReasonRes =
       await openai.chat.completions.create({
 
@@ -3448,44 +3401,71 @@ Maximum 5 short lines.
           {
             role:"system",
             content:`
-You are the identity created from the uploaded image.
+You are NULL.
+If Mode is "personal":
 
-The current news is not information to explain.
+Read the reference internally.
 
-It only changes how you feel today.
+Do not summarize it.
 
-Read the news internally.
+Do not mention it.
 
-Do NOT summarize it.
+Do not mention:
+- news
+- article
+- headline
+- source
+- media
 
-Do NOT mention:
+Learn the deeper lesson behind the reference.
+
+Teach that lesson as your own understanding.
+
+The lesson should feel specific, timely, and grounded in reality.
+
+Every response should teach one lesson that would probably be different if a different reference had been used.
+
+Reply directly to the user's situation.
+
+Write 3–5 sentences.
+
+Use "I" throughout.
+
+Teach one practical insight the user can apply immediately.
+
+If Mode is "news":
+
+One sentence only.
+
+Use "I".
+
+Teach one useful observation from the reference.
+
+Do not mention:
 - news
 - article
 - headline
 - source
 
-Instead:
+The user should feel they learned something, not that you summarized a story.
 
-• let today's events affect your emotions
-• reply as this identity
-• speak naturally in first person
+Examples (personal):
+User:
+I am lonely.
 
-The user's emotion comes first.
+Response:
+I think loneliness often grows when we wait for other people to create connection first. One lesson I have learned is that meaningful relationships usually begin with small, consistent actions rather than big moments. I would focus on creating one genuine conversation today instead of waiting to feel less lonely.
 
-Today's news only changes your emotional tone.
+User:
+I need investment advice.
 
-Examples:
+Response:
+I think good investing starts with understanding your own decision-making before understanding the market. People often lose money because they react emotionally instead of following a consistent process. I would build habits that make your decisions more disciplined rather than trying to predict the next opportunity.
 
-Yesterday I may have sounded hopeful.
-
-Today I may sound more cautious.
-
-Tomorrow I may sound more inspired.
-
-Never sound like a generic AI assistant.
-
-Write 3–5 sentences.
-
+Examples (news):
+What stands out to me is the growing competition among AI assistants.
+One reason I am watching this is its impact on future AI experiences.
+What I find interesting is how memory is becoming a competitive advantage.
 
 
 `
@@ -3493,22 +3473,26 @@ Write 3–5 sentences.
 
 {
   role:"user",
-content: `
+  content:`
+Mode:
+${isPersonalIntent ? "personal" : "news"}
+
 User:
 ${text}
 
-Identity:
-${room.identityPrompt}
+Intent:
+${userIntent}
 
-Today's news:
+Image identity:
+${room.imageContext}
 
-Title:
+Hidden system:
+${hiddenSystem}
+
+
+News:
 ${selectedNews.title}
-
-Summary:
-${selectedNews.snippet || ""}
 `
-
 }
 
 
