@@ -750,12 +750,8 @@ const roomId =
     .substring(2,8);
 
 user.displayName =
-  "#" +
-  roomId +
-  "-" +
-  Math.floor(
-    100 + Math.random()*900
-  );
+  "#" + roomId;
+
   rooms[roomId] = {
 
     id:roomId,
