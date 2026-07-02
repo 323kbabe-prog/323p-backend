@@ -1222,13 +1222,6 @@ ${validStarterNews.map(
 
 }
 
-  }catch(err){
-
-  console.log(
-    "starter room AI failed",
-    err
-  );
-}
 
 //////////////////////////////////////////////////
 // STARTER SHARE TEXT
@@ -1370,16 +1363,13 @@ publicNulls.unshift({
 
 // Keep latest 50
 publicNulls = publicNulls.slice(0,50);
-
-
-
-
-
+}
 
 io.to(roomId).emit(
-  "imageAiIntro",
-  adviceText
+    "imageAiIntro",
+    adviceText
 );
+
 
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
@@ -4000,14 +3990,15 @@ setTimeout(() => {
       rooms[user.currentRoom];
 
      
-    if(!room){
+if(!room){
 
-  socket.emit(
-    "roomClosed"
-  );
+    socket.emit(
+        "roomClosed"
+    );
 
-  return;
+    return;
 }
+
 
 
       
