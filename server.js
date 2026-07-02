@@ -511,6 +511,16 @@ console.log("ROOMS:", Object.keys(rooms));
       }
     );
 
+if (room.imageIntro) {
+
+  socket.emit(
+    "imageAiIntro",
+    room.imageIntro
+  );
+
+}
+
+
 io.to(room.id).emit(
   "roomMessages",
   room.messages
@@ -1307,6 +1317,10 @@ const adviceText =
     .message
     .content
     .trim();
+
+rooms[roomId].imageIntro =
+  adviceText;
+
 
 publicNulls.unshift({
   id: Date.now().toString(),
