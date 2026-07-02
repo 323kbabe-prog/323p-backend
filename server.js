@@ -546,6 +546,12 @@ setTimeout(() => {
   askMode
 }) => {
 
+console.log(
+    "PUBLIC NULL IMAGE:",
+    imageDataUrl.substring(0,40)
+);
+
+
     const user =
       users[socket.id];
 
@@ -1323,11 +1329,13 @@ rooms[roomId].imageIntro =
 
 
 publicNulls.unshift({
+    id: Date.now().toString(),
     image: imageDataUrl,
     identity: user.imageContext,
     intro: adviceText,
     createdAt: Date.now()
 });
+
 
 
 publicNulls = publicNulls.slice(0, 50);
