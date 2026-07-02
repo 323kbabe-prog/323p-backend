@@ -4048,6 +4048,25 @@ app.get("/public-nulls", (req, res) => {
   res.json(publicNulls);
 });
 
+app.delete("/public-nulls/:id", (req, res) => {
+
+    if(req.query.password !== "AskNull2026"){
+        return res.status(403).json({
+            error: "Wrong password"
+        });
+    }
+
+    publicNulls = publicNulls.filter(
+        item => item.id !== req.params.id
+    );
+
+    res.json({
+        success: true
+    });
+
+});
+
+
 
 generateDailyNulls();
 
@@ -4062,3 +4081,4 @@ server.listen(10000, () => {
   );
 
 });
+
