@@ -1323,12 +1323,12 @@ rooms[roomId].imageIntro =
 
 
 publicNulls.unshift({
-  id: Date.now().toString(),
-  image: starterImage,
-  identity: user.imageContext,
-  intro: adviceText,
-  createdAt: Date.now()
+    image: imageDataUrl,
+    identity: user.imageContext,
+    intro: adviceText,
+    createdAt: Date.now()
 });
+
 
 publicNulls = publicNulls.slice(0, 50);
 
