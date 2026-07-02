@@ -540,11 +540,13 @@ setTimeout(() => {
   socket.on(
     "imageUpload",
 
-    async ({
-  imageDataUrl,
-  roomMode,
-  askMode
+async ({
+    imageDataUrl,
+    roomMode,
+    askMode,
+    publishMode
 }) => {
+
 
 console.log(
     "PUBLIC NULL IMAGE:",
@@ -1328,22 +1330,35 @@ rooms[roomId].imageIntro =
   adviceText;
 
 
-// Remove duplicates (same image)
-publicNulls = publicNulls.filter(
-    item => item.image !== imageDataUrl
-);
+if (publishMode === "public") {
 
-// Add newest to the top
-publicNulls.unshift({
-    id: Date.now().toString(),
-    image: imageDataUrl,
-    identity: user.imageContext,
-    intro: adviceText,
-    createdAt: Date.now()
-});
+    // Remove duplicate images
+    publicNulls = publicNulls.filter(
+        item => item.image !== imageDataUrl
+    );
 
-// Keep only latest 50
-publicNulls = publicNulls.slice(0, 50);
+    publicNulls.unshift({
+        id: Date.now().toString(),
+        image: imageDataUrl,
+        identity: user.imageContext,
+        intro: adviceText,
+        createdAt: Date.now()
+    });
+
+} else {
+
+    publicNulls.unshift({
+        id: Date.now().toString(),
+        image: null,
+        identity: user.imageContext,
+        intro: adviceText,
+        createdAt: Date.now()
+    });
+
+}
+
+publicNulls = publicNulls.slice(0,50);
+
 
 
 
@@ -4081,4 +4096,3 @@ server.listen(10000, () => {
   );
 
 });
-
