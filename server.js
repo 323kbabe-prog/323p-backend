@@ -537,14 +537,15 @@ setTimeout(() => {
   // IMAGE UPLOAD
   //////////////////////////////////////////////////
 
-  socket.on(
+socket.on(
     "imageUpload",
-
     async ({
-  imageDataUrl,
-  roomMode,
-  askMode
-}) => {
+        imageDataUrl,
+        roomMode,
+        askMode,
+        publishMode
+    }) => {
+
 
 console.log(
     "PUBLIC NULL IMAGE:",
@@ -1328,10 +1329,35 @@ rooms[roomId].imageIntro =
   adviceText;
 
 
-// Remove duplicates (same image)
-publicNulls = publicNulls.filter(
-    item => item.image !== imageDataUrl
-);
+// Remove duplicates
+publicNulls = publicNulls.filter(item => {
+
+    // Same image
+    if (
+        item.image &&
+        item.image === imageDataUrl
+    ) {
+        return false;
+    }
+
+    // Same identity
+    if (
+        item.identity === user.imageContext
+    ) {
+        return false;
+    }
+
+    // Same intro
+    if (
+        item.intro === adviceText
+    ) {
+        return false;
+    }
+
+    return true;
+
+});
+
 
 // Add newest to the top
 publicNulls.unshift({
@@ -4081,4 +4107,5 @@ server.listen(10000, () => {
   );
 
 });
+
 
