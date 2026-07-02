@@ -110,6 +110,8 @@ const users = {};
 const questions = [];
 const rooms = {};
 
+let publicNulls = [];
+
 const dailyNullCategories = [
   "AI",
   "Technology",
@@ -1305,6 +1307,17 @@ const adviceText =
     .message
     .content
     .trim();
+
+publicNulls.unshift({
+  id: Date.now().toString(),
+  image: starterImage,
+  identity: user.imageContext,
+  intro: adviceText,
+  createdAt: Date.now()
+});
+
+publicNulls = publicNulls.slice(0, 50);
+
 
 io.to(roomId).emit(
   "imageAiIntro",
@@ -4002,6 +4015,11 @@ app.get("/daily-nulls", (req,res) => {
     cards:dailyNulls
   });
 });
+
+app.get("/public-nulls", (req, res) => {
+  res.json(publicNulls);
+});
+
 
 generateDailyNulls();
 
