@@ -1328,6 +1328,12 @@ rooms[roomId].imageIntro =
   adviceText;
 
 
+// Remove duplicates (same image)
+publicNulls = publicNulls.filter(
+    item => item.image !== imageDataUrl
+);
+
+// Add newest to the top
 publicNulls.unshift({
     id: Date.now().toString(),
     image: imageDataUrl,
@@ -1336,9 +1342,9 @@ publicNulls.unshift({
     createdAt: Date.now()
 });
 
-
-
+// Keep only latest 50
 publicNulls = publicNulls.slice(0, 50);
+
 
 
 io.to(roomId).emit(
