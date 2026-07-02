@@ -1332,32 +1332,46 @@ rooms[roomId].imageIntro =
 
 if (publishMode === "public") {
 
-    // Remove duplicate images
-    publicNulls = publicNulls.filter(
-        item => item.image !== imageDataUrl
-    );
+// Remove duplicates
+publicNulls = publicNulls.filter(item => {
 
-    publicNulls.unshift({
-        id: Date.now().toString(),
-        image: imageDataUrl,
-        identity: user.imageContext,
-        intro: adviceText,
-        createdAt: Date.now()
-    });
+    // Same AI Null
+    if(
+        item.identity === user.imageContext &&
+        item.intro === adviceText
+    ){
+        return false;
+    }
 
-} else {
+    // Same image
+    if(
+        item.image &&
+        imageDataUrl &&
+        item.image === imageDataUrl
+    ){
+        return false;
+    }
 
-    publicNulls.unshift({
-        id: Date.now().toString(),
-        image: null,
-        identity: user.imageContext,
-        intro: adviceText,
-        createdAt: Date.now()
-    });
+    return true;
 
-}
+});
 
+// Save newest
+publicNulls.unshift({
+    id: Date.now().toString(),
+    image:
+        publishMode === "public"
+            ? imageDataUrl
+            : null,
+    identity: user.imageContext,
+    intro: adviceText,
+    createdAt: Date.now()
+});
+
+// Keep latest 50
 publicNulls = publicNulls.slice(0,50);
+
+
 
 
 
