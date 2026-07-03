@@ -530,14 +530,18 @@ socket.emit("roomReady");
     users[socket.id].displayName =
       room.displayName;
 
-    socket.emit(
-      "roomCreated",
-      {
-        roomId: room.id,
-        displayName:
-          room.displayName
-      }
-    );
+socket.emit(
+  "roomCreated",
+  {
+    roomId,
+    displayName:user.displayName,
+    imageContext:user.imageContext,
+    imageDataUrl:user.lastImage,
+    messages:[],
+    expiresAt: rooms[roomId].expiresAt
+  }
+);
+
 
 if (room.imageIntro) {
 
@@ -921,9 +925,13 @@ socket.emit(
     imageDataUrl:
       user.lastImage,
 
-    messages:[]
+    messages:[],
+
+    expiresAt:
+      rooms[roomId].expiresAt
   }
 );
+
 
 //////////////////////////////////////////////////
 // GENERATE FIRST AI MESSAGE ASYNC
@@ -4236,3 +4244,7 @@ console.log(publicNulls);
     });
 
 })();
+
+
+
+
