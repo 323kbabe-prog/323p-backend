@@ -1452,71 +1452,73 @@ rooms[roomId].imageIntro =
   adviceText;
 
 
-if (publishMode === "public") {
+// Remove duplicates
+publicNulls = publicNulls.filter(item => {
 
-  // Remove duplicates
-  publicNulls = publicNulls.filter(item => {
+  // Same image (only for public uploads)
+  if (
+    publishMode === "public" &&
+    item.image &&
+    item.image === imageDataUrl
+  ) {
+    return false;
+  }
 
-    // Same image
-    if (
-      item.image &&
-      item.image === imageDataUrl
-    ) {
-      return false;
-    }
+  // Same identity
+  if (
+    item.identity === user.imageContext
+  ) {
+    return false;
+  }
 
-    // Same identity
-    if (
-      item.identity === user.imageContext
-    ) {
-      return false;
-    }
+  // Same intro
+  if (
+    item.intro === adviceText
+  ) {
+    return false;
+  }
 
-    // Same intro
-    if (
-      item.intro === adviceText
-    ) {
-      return false;
-    }
+  return true;
 
-    return true;
+});
 
-  });
+const publicNullId =
+  Date.now().toString();
 
-  const publicNullId =
-    Date.now().toString();
+const createdAt =
+  Date.now();
 
-  const createdAt =
-    Date.now();
+const image =
+  publishMode === "public"
+    ? imageDataUrl
+    : null;
 
-  // Add newest to the top
-  publicNulls.unshift({
+// Add newest to the top
+publicNulls.unshift({
+  id: publicNullId,
+  image,
+  identity: user.imageContext,
+  intro: adviceText,
+  createdAt
+});
+
+// Keep only latest 50
+publicNulls = publicNulls.slice(0, 50);
+
+const { error } = await supabase
+  .from("public_nulls")
+  .upsert({
     id: publicNullId,
-    image: imageDataUrl,
+    image,
     identity: user.imageContext,
     intro: adviceText,
-    createdAt
+    created_at: createdAt
   });
 
-  // Keep only latest 50
-  publicNulls = publicNulls.slice(0, 50);
-
-  const { error } = await supabase
-    .from("public_nulls")
-    .upsert({
-      id: publicNullId,
-      image: imageDataUrl,
-      identity: user.imageContext,
-      intro: adviceText,
-      created_at: createdAt
-    });
-
-  console.log(
-    "SUPABASE SAVE ERROR:",
-    error
-  );
-
-}
+console.log(
+  "SUPABASE SAVE ERROR:",
+  error
+);
 
 io.to(roomId).emit(
   "imageAiIntro",
@@ -4289,5 +4291,4 @@ console.log(publicNulls);
     });
 
 })();
-
 
