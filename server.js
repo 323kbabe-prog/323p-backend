@@ -109,6 +109,7 @@ async function sendEmail(
 const users = {};
 const questions = [];
 const rooms = {};
+const deviceRooms = {};
 
 let publicNulls = [];
 
@@ -169,6 +170,16 @@ setInterval(() => {
       io.to(roomId).emit(
         "roomClosed"
       );
+
+for(const id in deviceRooms){
+
+    if(deviceRooms[id] === roomId){
+
+        delete deviceRooms[id];
+
+    }
+
+}
 
       delete rooms[roomId];
     }
@@ -500,6 +511,8 @@ console.log("ROOMS:", Object.keys(rooms));
     users[socket.id].currentRoom =
       roomId;
 
+socket.emit("roomReady");
+
     users[socket.id].displayName =
       room.displayName;
 
@@ -538,15 +551,14 @@ setTimeout(() => {
   // IMAGE UPLOAD
   //////////////////////////////////////////////////
 
-socket.on(
-  "imageUpload",
-  async ({
-      imageDataUrl,
-      roomMode,
-      askMode,
-      publishMode,
-      roomId: savedRoomId
-  }) => {
+async ({
+deviceId,
+    imageDataUrl,
+    roomMode,
+    askMode,
+    publishMode
+}) => {
+
 
 
 
@@ -771,13 +783,7 @@ ${user.imageContext}`
 if(roomMode){
 
 let roomId =
-    user.currentRoom ||
-    savedRoomId;
-
-console.log(
-    "ROOM FROM LOCAL:",
-    savedRoomId
-);
+    deviceRooms[deviceId];
 
 console.log(
     "ROOM FROM USER:",
@@ -787,6 +793,16 @@ console.log(
 console.log(
     "FINAL ROOM:",
     roomId
+);
+
+console.log(
+    "ROOM EXISTS:",
+    !!rooms[roomId]
+);
+
+console.log(
+    "ALL ROOMS:",
+    Object.keys(rooms)
 );
 
 
@@ -836,6 +852,7 @@ if (!roomId || !rooms[roomId]) {
 
     socket.join(roomId);
     user.currentRoom = roomId;
+deviceRooms[deviceId] = roomId;
 
 } else {
 
@@ -844,6 +861,7 @@ if (!roomId || !rooms[roomId]) {
     socket.join(roomId);
 
     user.currentRoom = roomId;
+deviceRooms[deviceId] = roomId;
 
     user.displayName = room.displayName;
 
@@ -4076,13 +4094,14 @@ if(room.messages.length > 30){
   //////////////////////////////////////////////////
   // DISCONNECT
   //////////////////////////////////////////////////
-
-  socket.on(
+socket.on(
   "disconnect",
-
   () => {
 
-console.log("DISCONNECTED:", socket.id);
+    console.log(
+      "DISCONNECTED:",
+      socket.id
+    );
 
     setTimeout(() => {
 
@@ -4092,10 +4111,10 @@ console.log("DISCONNECTED:", socket.id);
 
       }
 
-    }, 300000);
+    },300000);
 
-  });
-});
+  }
+);
 
 //////////////////////////////////////////////////
 // START
