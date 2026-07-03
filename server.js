@@ -1452,24 +1452,17 @@ publicNulls.unshift({
 // Keep only latest 50
 publicNulls = publicNulls.slice(0, 50);
 
-await supabase
-
-.from("public_nulls")
-
-.upsert({
-
-    id: publicNullId, 
-
+const { error } = await supabase
+  .from("public_nulls")
+  .upsert({
+    id: publicNullId,
     image: imageDataUrl,
-
     identity: user.imageContext,
-
     intro: adviceText,
+    created_at: createdAt
+  });
 
-    created_at: createdAt 
-
-});
-
+console.log("SUPABASE SAVE ERROR:", error);
 
 
 io.to(roomId).emit(
