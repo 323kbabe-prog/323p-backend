@@ -460,6 +460,7 @@ link:
 }
 
 io.on("connection", socket => {
+console.log("CONNECTED:", socket.id);
 
 users[socket.id] = {
 
@@ -555,6 +556,10 @@ console.log(
 
     const user =
       users[socket.id];
+
+console.log("SOCKET:", socket.id);
+console.log("CURRENT ROOM:", user.currentRoom);
+
 
 
 
@@ -4050,10 +4055,7 @@ if(room.messages.length > 30){
 
   () => {
 
-    console.log(
-      "USER DISCONNECTED:",
-      socket.id
-    );
+console.log("DISCONNECTED:", socket.id);
 
     setTimeout(() => {
 
@@ -4115,4 +4117,3 @@ server.listen(10000, () => {
   );
 
 });
-
