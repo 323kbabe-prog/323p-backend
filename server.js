@@ -539,13 +539,15 @@ setTimeout(() => {
   //////////////////////////////////////////////////
 
 socket.on(
-    "imageUpload",
-    async ({
-        imageDataUrl,
-        roomMode,
-        askMode,
-        publishMode
-    }) => {
+  "imageUpload",
+  async ({
+      imageDataUrl,
+      roomMode,
+      askMode,
+      publishMode,
+      roomId: savedRoomId
+  }) => {
+
 
 
 console.log(
@@ -768,7 +770,25 @@ ${user.imageContext}`
 
 if(roomMode){
 
-let roomId = user.currentRoom;
+let roomId =
+    user.currentRoom ||
+    savedRoomId;
+
+console.log(
+    "ROOM FROM LOCAL:",
+    savedRoomId
+);
+
+console.log(
+    "ROOM FROM USER:",
+    user.currentRoom
+);
+
+console.log(
+    "FINAL ROOM:",
+    roomId
+);
+
 
 if (!roomId || !rooms[roomId]) {
 
@@ -821,6 +841,12 @@ if (!roomId || !rooms[roomId]) {
 
     const room = rooms[roomId];
 
+    socket.join(roomId);
+
+    user.currentRoom = roomId;
+
+    user.displayName = room.displayName;
+
     room.expiresAt =
         Date.now() + 60 * 60 * 1000;
 
@@ -831,6 +857,7 @@ if (!roomId || !rooms[roomId]) {
         coreTheme;
 
 }
+
 
 console.log("ROOM CREATED:", roomId);
 console.log("ROOM COUNT:", Object.keys(rooms).length);
