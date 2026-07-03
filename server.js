@@ -5,7 +5,7 @@ const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
 const fetch = global.fetch;
-const fs = require("fs");
+
 
 const app = express();
 
@@ -22,6 +22,18 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   fetch: fetch
 });
+
+const { createClient } =
+require("@supabase/supabase-js");
+
+const supabase = createClient(
+
+  process.env.SUPABASE_URL,
+
+  process.env.SUPABASE_KEY
+
+);
+
 
 //////////////////////////////////////////////////
 // EMAIL
@@ -113,21 +125,6 @@ const rooms = {};
 const deviceRooms = {};
 
 let publicNulls = [];
-
-try{
-
-    publicNulls = JSON.parse(
-        fs.readFileSync(
-            "./public-nulls.json",
-            "utf8"
-        )
-    );
-
-}catch{
-
-    publicNulls = [];
-
-}
 
 
 const dailyNullCategories = [
@@ -1436,30 +1433,43 @@ publicNulls = publicNulls.filter(item => {
 
 });
 
+const publicNullId =
+    Date.now().toString();
+
+const createdAt =
+    Date.now();
+
 
 // Add newest to the top
 publicNulls.unshift({
-    id: Date.now().toString(),
+  id: publicNullId,
     image: imageDataUrl,
     identity: user.imageContext,
     intro: adviceText,
-    createdAt: Date.now()
+    createdAt: createdAt
 });
 
 // Keep only latest 50
 publicNulls = publicNulls.slice(0, 50);
 
-fs.writeFileSync(
+await supabase
 
-    "./public-nulls.json",
+.from("public_nulls")
 
-    JSON.stringify(
-        publicNulls,
-        null,
-        2
-    )
+.upsert({
 
-);
+    id: publicNullId, 
+
+    image: imageDataUrl,
+
+    identity: user.imageContext,
+
+    intro: adviceText,
+
+    created_at: createdAt 
+
+});
+
 
 
 io.to(roomId).emit(
@@ -4161,7 +4171,7 @@ app.get("/public-nulls", (req, res) => {
   res.json(publicNulls);
 });
 
-app.delete("/public-nulls/:id", (req, res) => {
+app.delete("/public-nulls/:id", async (req, res) => {
 
     if(req.query.password !== "AskNull2026"){
         return res.status(403).json({
@@ -4169,21 +4179,18 @@ app.delete("/public-nulls/:id", (req, res) => {
         });
     }
 
-    publicNulls = publicNulls.filter(
-        item => item.id !== req.params.id
-    );
+  await supabase
 
-fs.writeFileSync(
+.from("public_nulls")
 
-    "./public-nulls.json",
+.delete()
 
-    JSON.stringify(
-        publicNulls,
-        null,
-        2
-    )
+.eq("id", req.params.id);
 
+publicNulls = publicNulls.filter(
+    item => item.id !== req.params.id
 );
+
 
 
     res.json({
@@ -4192,18 +4199,38 @@ fs.writeFileSync(
 
 });
 
+(async () => {
 
+    const { data, error } = await supabase
+        .from("public_nulls")
+        .select("*")
+        .order("created_at", {
+            ascending: false
+        })
+        .limit(50);
 
-generateDailyNulls();
+    if(error){
 
-setInterval(() => {
-  generateDailyNulls();
-}, 60 * 60 * 1000);
+        console.log(error);
 
-server.listen(10000, () => {
+    }else{
 
-  console.log(
-    "CONNECTAING V9 — ASK NULL — meet null — 08:04 2026/07/01"
-  );
+        publicNulls = data || [];
 
-});
+    }
+
+    generateDailyNulls();
+
+    setInterval(() => {
+        generateDailyNulls();
+    }, 60 * 60 * 1000);
+
+    server.listen(10000, () => {
+
+        console.log(
+            "CONNECTAING V9 — ASK NULL"
+        );
+
+    });
+
+})();
