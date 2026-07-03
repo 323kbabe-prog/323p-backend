@@ -540,13 +540,14 @@ socket.emit(
   "roomCreated",
   {
     roomId,
-    displayName:user.displayName,
-    imageContext:user.imageContext,
-    imageDataUrl:user.lastImage,
-    messages:[],
-    expiresAt: rooms[roomId].expiresAt
+    displayName: room.displayName,
+    imageContext: room.imageContext,
+    imageDataUrl: null,
+    messages: [],
+    expiresAt: room.expiresAt
   }
 );
+
 
 
 if (room.imageIntro) {
