@@ -4208,12 +4208,15 @@ publicNulls = publicNulls.filter(
 
     }else{
 
-        publicNulls = data || [];
+publicNulls = data || [];
 
 console.log(
   "LOADED PUBLIC NULLS:",
   publicNulls.length
 );
+
+console.log(publicNulls);
+
 
 
     }
