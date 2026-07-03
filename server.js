@@ -933,9 +933,6 @@ deviceRooms[deviceId] = roomId;
 
     user.displayName = room.displayName;
 
-    room.expiresAt =
-        Date.now() + 60 * 60 * 1000;
-
     room.imageContext =
         user.imageContext;
 
