@@ -506,7 +506,11 @@ users[socket.id] = {
 
 socket.on(
   "rejoinRoom",
-  ({ roomId }) => {
+  ({
+      roomId,
+      deviceId
+  }) => {
+
 
 console.log("REJOIN:", roomId);
 console.log("ROOM EXISTS:", !!rooms[roomId]);
@@ -524,6 +528,8 @@ console.log("ROOMS:", Object.keys(rooms));
 
     users[socket.id].currentRoom =
       roomId;
+
+deviceRooms[deviceId] = roomId;
 
 socket.emit("roomReady");
 
@@ -4244,7 +4250,4 @@ console.log(publicNulls);
     });
 
 })();
-
-
-
 
