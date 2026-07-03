@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
 const fetch = global.fetch;
+const fs = require("fs");
 
 const app = express();
 
@@ -112,6 +113,22 @@ const rooms = {};
 const deviceRooms = {};
 
 let publicNulls = [];
+
+try{
+
+    publicNulls = JSON.parse(
+        fs.readFileSync(
+            "./public-nulls.json",
+            "utf8"
+        )
+    );
+
+}catch{
+
+    publicNulls = [];
+
+}
+
 
 const dailyNullCategories = [
   "AI",
@@ -1432,6 +1449,17 @@ publicNulls.unshift({
 // Keep only latest 50
 publicNulls = publicNulls.slice(0, 50);
 
+fs.writeFileSync(
+
+    "./public-nulls.json",
+
+    JSON.stringify(
+        publicNulls,
+        null,
+        2
+    )
+
+);
 
 
 io.to(roomId).emit(
@@ -4076,7 +4104,6 @@ setTimeout(() => {
       text:
 `People around this feeling are discussing similar things online right now.`
     });
-      
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
 //////////////////////////////////////////////////
@@ -4119,7 +4146,6 @@ socket.on(
 
   }
 );
-  });
 
 //////////////////////////////////////////////////
 // START
@@ -4147,6 +4173,19 @@ app.delete("/public-nulls/:id", (req, res) => {
         item => item.id !== req.params.id
     );
 
+fs.writeFileSync(
+
+    "./public-nulls.json",
+
+    JSON.stringify(
+        publicNulls,
+        null,
+        2
+    )
+
+);
+
+
     res.json({
         success: true
     });
@@ -4168,3 +4207,5 @@ server.listen(10000, () => {
   );
 
 });
+
+
