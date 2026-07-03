@@ -532,6 +532,10 @@ console.log("ROOMS:", Object.keys(rooms));
     const room =
       rooms[roomId];
 
+const isOwner =
+    deviceRooms[deviceId] === roomId;
+
+
     if(!room){
       socket.emit("roomClosed");
       return;
@@ -549,17 +553,18 @@ socket.emit("roomReady");
     users[socket.id].displayName =
       room.displayName;
 
-socket.emit(
-  "roomCreated",
-  {
+socket.emit("roomCreated", {
     roomId,
     displayName: room.displayName,
     imageContext: room.imageContext,
     imageDataUrl: null,
     messages: [],
-    expiresAt: room.expiresAt
-  }
-);
+    expiresAt: room.expiresAt,
+    isOwner
+});
+
+
+
 
 io.to(roomId).emit(
   "roomMessages",
@@ -834,6 +839,10 @@ if(roomMode){
 let roomId =
     deviceRooms[deviceId];
 
+let isOwner = true;
+
+
+
 console.log(
     "ROOM FROM USER:",
     user.currentRoom
@@ -907,6 +916,11 @@ deviceRooms[deviceId] = roomId;
 
 const room = rooms[roomId];
 
+isOwner =
+    deviceRooms[deviceId] === roomId;
+
+
+
 if (user.currentRoom && user.currentRoom !== roomId) {
     socket.leave(user.currentRoom);
 }
@@ -944,26 +958,16 @@ console.log(Object.keys(rooms));
 // OPEN ROOM IMMEDIATELY
 //////////////////////////////////////////////////
 
-socket.emit(
-  "roomCreated",
-  {
+socket.emit("roomCreated", {
     roomId,
+    displayName: user.displayName,
+    imageContext: user.imageContext,
+    imageDataUrl: user.lastImage,
+    messages: [],
+    expiresAt: rooms[roomId].expiresAt,
+    isOwner
+});
 
-    displayName:
-      user.displayName,
-
-    imageContext:
-      user.imageContext,
-
-    imageDataUrl:
-      user.lastImage,
-
-    messages:[],
-
-    expiresAt:
-      rooms[roomId].expiresAt
-  }
-);
 
 io.to(roomId).emit(
   "roomMessages",
