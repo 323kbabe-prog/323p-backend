@@ -551,6 +551,9 @@ setTimeout(() => {
   // IMAGE UPLOAD
   //////////////////////////////////////////////////
 
+socket.on(
+"imageUpload", 
+
 async ({
 deviceId,
     imageDataUrl,
