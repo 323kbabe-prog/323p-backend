@@ -4210,6 +4210,12 @@ publicNulls = publicNulls.filter(
 
         publicNulls = data || [];
 
+console.log(
+  "LOADED PUBLIC NULLS:",
+  publicNulls.length
+);
+
+
     }
 
     generateDailyNulls();
