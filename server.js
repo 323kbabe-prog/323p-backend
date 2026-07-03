@@ -4076,6 +4076,7 @@ setTimeout(() => {
       text:
 `People around this feeling are discussing similar things online right now.`
     });
+      
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
 //////////////////////////////////////////////////
@@ -4118,6 +4119,7 @@ socket.on(
 
   }
 );
+  });
 
 //////////////////////////////////////////////////
 // START
