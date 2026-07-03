@@ -763,65 +763,73 @@ ${user.imageContext}`
 
 if(roomMode){
 
-const roomId =
-  Math.random()
-    .toString(36)
-    .substring(2,8);
+let roomId = user.currentRoom;
 
-user.displayName =
-  "#" + roomId;
+if (!roomId || !rooms[roomId]) {
 
-  rooms[roomId] = {
+    roomId = Math.random()
+        .toString(36)
+        .substring(2,8);
 
-    id:roomId,
+    user.displayName = "#" + roomId;
 
+    rooms[roomId] = {
 
-    
-    usedPlaceTopic:null,
-      
-displayName:
-  user.displayName,
-    
-    coreTheme:
-      coreTheme,
+        id: roomId,
 
-    imageContext:
-      user.imageContext,
+        usedPlaceTopic: null,
 
-    messages:[],
+        displayName: user.displayName,
 
-    usedSearches:[],
+        coreTheme: coreTheme,
 
-    usedMoods:[],
+        imageContext: user.imageContext,
 
-    usedQuestions:[],
+        messages: [],
 
-emotionalProfile:{
-  hype:0.5,
-  anxiety:0.2,
-  loneliness:0.1,
-  confidence:0.6,
-  celebrityFixation:0.5
-},
+        usedSearches: [],
 
-    emotionalState:[],
+        usedMoods: [],
 
-    createdAt:Date.now(),
+        usedQuestions: [],
 
-    expiresAt:
-      Date.now() +
-      60 * 60 * 1000
-  };
+        emotionalProfile: {
+            hype: 0.5,
+            anxiety: 0.2,
+            loneliness: 0.1,
+            confidence: 0.6,
+            celebrityFixation: 0.5
+        },
+
+        emotionalState: [],
+
+        createdAt: Date.now(),
+
+        expiresAt:
+            Date.now() + 60 * 60 * 1000
+    };
+
+    socket.join(roomId);
+    user.currentRoom = roomId;
+
+} else {
+
+    const room = rooms[roomId];
+
+    room.expiresAt =
+        Date.now() + 60 * 60 * 1000;
+
+    room.imageContext =
+        user.imageContext;
+
+    room.coreTheme =
+        coreTheme;
+
+}
 
 console.log("ROOM CREATED:", roomId);
 console.log("ROOM COUNT:", Object.keys(rooms).length);
 console.log(Object.keys(rooms));
-
-        socket.join(roomId);
-
-        user.currentRoom =
-          roomId;
-
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////
@@ -4107,5 +4115,4 @@ server.listen(10000, () => {
   );
 
 });
-
 
