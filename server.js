@@ -433,7 +433,14 @@ if(!newsItem){
 }
 
       if(!newsItem){
-  continue;
+console.log(
+  "FAILED:",
+  category,
+  searchQuery,
+  newsRes
+);
+  
+continue;
 }
 
     cards.push({
@@ -471,6 +478,12 @@ link:
   }
 
   dailyNulls = cards;
+console.log("Daily Nulls:", cards.length);
+
+cards.forEach(card => {
+  console.log(card.category, card.title);
+});
+
   console.log(
   "Daily Null Categories:",
   cards.map(x => x.category)
