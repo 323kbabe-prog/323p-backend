@@ -561,6 +561,14 @@ socket.emit(
   }
 );
 
+io.to(roomId).emit(
+  "roomMessages",
+  rooms[roomId].messages
+);
+
+
+
+
 
 
 if (room.imageIntro) {
@@ -897,11 +905,16 @@ deviceRooms[deviceId] = roomId;
 
 } else {
 
-    const room = rooms[roomId];
+const room = rooms[roomId];
 
-    socket.join(roomId);
+if (user.currentRoom && user.currentRoom !== roomId) {
+    socket.leave(user.currentRoom);
+}
 
-    user.currentRoom = roomId;
+socket.join(roomId);
+
+user.currentRoom = roomId;
+
 deviceRooms[deviceId] = roomId;
 
     user.displayName = room.displayName;
@@ -951,6 +964,12 @@ socket.emit(
       rooms[roomId].expiresAt
   }
 );
+
+io.to(roomId).emit(
+  "roomMessages",
+  rooms[roomId].messages
+);
+
 
 
 //////////////////////////////////////////////////
@@ -4264,4 +4283,5 @@ console.log(publicNulls);
     });
 
 })();
+
 
