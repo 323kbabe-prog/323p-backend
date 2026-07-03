@@ -1452,73 +1452,71 @@ rooms[roomId].imageIntro =
   adviceText;
 
 
-// Remove duplicates
-publicNulls = publicNulls.filter(item => {
+if (publishMode === "public") {
 
-  // Same image (only for public uploads)
-  if (
-    publishMode === "public" &&
-    item.image &&
-    item.image === imageDataUrl
-  ) {
-    return false;
-  }
+  // Remove duplicates
+  publicNulls = publicNulls.filter(item => {
 
-  // Same identity
-  if (
-    item.identity === user.imageContext
-  ) {
-    return false;
-  }
+    // Same image
+    if (
+      item.image &&
+      item.image === imageDataUrl
+    ) {
+      return false;
+    }
 
-  // Same intro
-  if (
-    item.intro === adviceText
-  ) {
-    return false;
-  }
+    // Same identity
+    if (
+      item.identity === user.imageContext
+    ) {
+      return false;
+    }
 
-  return true;
+    // Same intro
+    if (
+      item.intro === adviceText
+    ) {
+      return false;
+    }
 
-});
+    return true;
 
-const publicNullId =
-  Date.now().toString();
-
-const createdAt =
-  Date.now();
-
-const image =
-  publishMode === "public"
-    ? imageDataUrl
-    : null;
-
-// Add newest to the top
-publicNulls.unshift({
-  id: publicNullId,
-  image,
-  identity: user.imageContext,
-  intro: adviceText,
-  createdAt
-});
-
-// Keep only latest 50
-publicNulls = publicNulls.slice(0, 50);
-
-const { error } = await supabase
-  .from("public_nulls")
-  .upsert({
-    id: publicNullId,
-    image,
-    identity: user.imageContext,
-    intro: adviceText,
-    created_at: createdAt
   });
 
-console.log(
-  "SUPABASE SAVE ERROR:",
-  error
-);
+  const publicNullId =
+    Date.now().toString();
+
+  const createdAt =
+    Date.now();
+
+  // Add newest to the top
+  publicNulls.unshift({
+    id: publicNullId,
+    image: imageDataUrl,
+    identity: user.imageContext,
+    intro: adviceText,
+    createdAt
+  });
+
+  // Keep only latest 50
+  publicNulls = publicNulls.slice(0, 50);
+
+  const { error } = await supabase
+    .from("public_nulls")
+    .upsert({
+      id: publicNullId,
+      image: imageDataUrl,
+      identity: user.imageContext,
+      intro: adviceText,
+      created_at: createdAt
+    });
+
+  console.log(
+    "SUPABASE SAVE ERROR:",
+    error
+  );
+
+}
 
 io.to(roomId).emit(
   "imageAiIntro",
@@ -4291,4 +4289,3 @@ console.log(publicNulls);
     });
 
 })();
-
