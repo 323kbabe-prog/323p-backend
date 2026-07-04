@@ -1473,10 +1473,20 @@ rooms[roomId].nullCard = {
 
 };
 
-io.to(roomId).emit(
-    "roomNullCard",
-    rooms[roomId].nullCard
-);
+rooms[roomId].messages.push({
+
+    type: "nullCard",
+
+    image: imageDataUrl,
+
+    identity: user.imageContext,
+
+    intro: adviceText
+
+});
+
+
+
 
 
 io.to(roomId).emit(
