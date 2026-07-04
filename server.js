@@ -576,14 +576,10 @@ socket.emit("roomCreated", {
 
 
 
-
 io.to(roomId).emit(
   "roomMessages",
   rooms[roomId].messages
 );
-
-
-
 
 
 
@@ -596,11 +592,6 @@ if (room.imageIntro) {
 
 }
 
-
-io.to(room.id).emit(
-  "roomMessages",
-  room.messages
-);
 
 setTimeout(() => {
   io.to(room.id).emit("aiTypingStop");
@@ -966,33 +957,32 @@ console.log(Object.keys(rooms));
 //////////////////////////////////////////////////
 // OPEN ROOM IMMEDIATELY
 //////////////////////////////////////////////////
-
 socket.emit("roomCreated", {
 
     roomId,
 
-    displayName: room.displayName,
+    displayName: rooms[roomId].displayName,
 
-    imageContext: room.imageContext,
+    imageContext: rooms[roomId].imageContext,
 
     imageDataUrl: null,
 
     messages: [],
 
-    expiresAt: room.expiresAt,
+    expiresAt: rooms[roomId].expiresAt,
 
     isOwner,
 
-    nullCard: room.nullCard
+    nullCard: null
 
 });
 
-
-
 io.to(roomId).emit(
-  "roomMessages",
-  rooms[roomId].messages
+    "roomMessages",
+    rooms[roomId].messages
 );
+
+
 
 
 
@@ -1487,6 +1477,13 @@ io.to(roomId).emit(
     "roomNullCard",
     rooms[roomId].nullCard
 );
+
+
+io.to(roomId).emit(
+    "roomMessages",
+    rooms[roomId].messages
+);
+
 
 
 if (publishMode === "public") {
