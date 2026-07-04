@@ -554,14 +554,25 @@ socket.emit("roomReady");
       room.displayName;
 
 socket.emit("roomCreated", {
+
     roomId,
+
     displayName: room.displayName,
+
     imageContext: room.imageContext,
+
     imageDataUrl: null,
+
     messages: [],
+
     expiresAt: room.expiresAt,
-    isOwner
+
+    isOwner,
+
+    nullCard: room.nullCard
+
 });
+
 
 
 
@@ -883,6 +894,7 @@ if (!roomId || !rooms[roomId]) {
         coreTheme: coreTheme,
 
         imageContext: user.imageContext,
+nullCard: null,
 
         messages: [],
 
@@ -956,14 +968,25 @@ console.log(Object.keys(rooms));
 //////////////////////////////////////////////////
 
 socket.emit("roomCreated", {
+
     roomId,
-    displayName: user.displayName,
-    imageContext: user.imageContext,
-    imageDataUrl: user.lastImage,
+
+    displayName: room.displayName,
+
+    imageContext: room.imageContext,
+
+    imageDataUrl: null,
+
     messages: [],
-    expiresAt: rooms[roomId].expiresAt,
-    isOwner
+
+    expiresAt: room.expiresAt,
+
+    isOwner,
+
+    nullCard: room.nullCard
+
 });
+
 
 
 io.to(roomId).emit(
@@ -1450,6 +1473,20 @@ const adviceText =
 
 rooms[roomId].imageIntro =
   adviceText;
+rooms[roomId].nullCard = {
+
+    image: imageDataUrl,
+
+    identity: user.imageContext,
+
+    intro: adviceText
+
+};
+
+io.to(roomId).emit(
+    "roomNullCard",
+    rooms[roomId].nullCard
+);
 
 
 if (publishMode === "public") {
@@ -4283,9 +4320,11 @@ console.log(publicNulls);
     server.listen(10000, () => {
 
         console.log(
-            "CONNECTAING V9 — ASK NULL"
+            "CONNECTAING V9 — ASK NULL — meet null — 21:16 2026/07/04"
         );
 
     });
 
 })();
+
+
