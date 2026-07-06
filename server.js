@@ -548,12 +548,16 @@ users[socket.id] = {
   currentRoom:null
 };
 
+
+
 socket.on(
     "savePushSubscription",
     async ({
         deviceId,
         subscription
     }) => {
+
+        console.log("Push subscription received");
 
         const { error } = await supabase
             .from("devices")
@@ -575,7 +579,6 @@ socket.on(
 
     }
 );
-
 
 socket.on(
   "rejoinRoom",
