@@ -1742,7 +1742,9 @@ socket.on(
 
 socket.on("roomCreated", data => {
 
-clearTimeout(rejoinTimeout);
+
+
+    clearTimeout(rejoinTimeout);
 
 window.isRoomOwner = data.isOwner;
 
@@ -1818,6 +1820,13 @@ document.getElementById(
 //////////////////////////////////////////////////
 
 socket.on("roomMessages",messages => {
+
+      if (
+        document.getElementById("publishDialog").style.display === "flex"
+    ) {
+        return;
+    }
+  
 roomOverlay.style.display = "flex";
 
 roomInput.style.display = "block";
@@ -3373,14 +3382,8 @@ async function createRoomFromPublicNull(imageDataUrl){
 
 
 
-socket.emit("imageUpload",{
-deviceId,
-    imageDataUrl,
-    roomMode: true,
-    askMode: false,
-    publishMode: "private",
-    roomId: localStorage.getItem("roomId")
-});
+pendingImageDataUrl = imageDataUrl;
+showPublishDialog();
 
 
 }
