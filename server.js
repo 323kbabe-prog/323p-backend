@@ -4862,9 +4862,28 @@ if(!devices?.length){
 
 try {
 
+   const device = devices[0];
+
+if (
+    device.notification_type === "sms" &&
+    device.phone
+) {
+
+    await sendSMS(
+        device.phone,
+        reminder.body
+    );
+
+    console.log(
+        "SMS sent:",
+        reminder.request
+    );
+
+} else {
+
     await webpush.sendNotification(
 
-        devices[0].push_subscription,
+        device.push_subscription,
 
         JSON.stringify({
 
@@ -4875,6 +4894,8 @@ try {
         })
 
     );
+
+}
 
 await supabase
     .from("reminders")
