@@ -1614,29 +1614,27 @@ roomInput.onkeydown = e => {
   if(!text) return;
 gtag('event', 'send_room_message');
 
-if(confirm("Ask Null remember this for 7 days?")){
+const remember =
+const remember =
+    confirm("Ask Null remember this for 7 days?");
 
-    socket.emit(
-        "createReminder",
-        {
+showAITyping();
 
-            deviceId,
+if (remember) {
 
-            text
-
-        }
-    );
+    socket.emit("createReminder", {
+        deviceId,
+        text
+    });
 
 }
 
-  socket.emit(
-    "roomMessage",
-    { text }
-  );
+socket.emit("roomMessage", {
+    text
+});
 
-  showAITyping();
+roomInput.value = "";
 
-  roomInput.value = "";
 };
 
 socket.on(
