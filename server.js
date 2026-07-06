@@ -654,6 +654,22 @@ news
                     .content
             );
 
+let reminderTime =
+    new Date(reminder.reminder_time);
+
+if (
+    isNaN(reminderTime.getTime()) ||
+    reminderTime < new Date()
+) {
+
+    reminderTime =
+        new Date(
+            Date.now() + 60 * 1000
+        );
+
+}
+
+
         await supabase
             .from("reminders")
             .insert({
@@ -674,8 +690,9 @@ news
                 body:
                     reminder.body,
 
-                reminder_time:
-                    reminder.reminder_time,
+reminder_time:
+    reminderTime.toISOString(),
+
 
                 expires_at:
                     new Date(
