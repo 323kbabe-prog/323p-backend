@@ -1433,6 +1433,8 @@ showPublishDialog();
 
 function showPublishDialog(){
 
+    helper.style.display = "none";   // <-- add this
+
     document.getElementById(
         "publishDialog"
     ).style.display = "flex";
@@ -1449,7 +1451,6 @@ if (!roomReady) {
 
 }
 
-
     publishMode =
         document.querySelector(
             'input[name="publishMode"]:checked'
@@ -1459,20 +1460,18 @@ if (!roomReady) {
         "publishDialog"
     ).style.display = "none";
 
-socket.emit("imageUpload",{
-deviceId,
-    imageDataUrl: pendingImageDataUrl,
-    roomMode: true,
-    askMode: false,
-    publishMode,
-    roomId: localStorage.getItem("roomId")
-});
+    helper.style.display = "flex";   // <-- ADD THIS LINE
 
+    socket.emit("imageUpload",{
+        deviceId,
+        imageDataUrl: pendingImageDataUrl,
+        roomMode: true,
+        askMode: false,
+        publishMode,
+        roomId: localStorage.getItem("roomId")
+    });
 
 }
-
-
-
 
 async function captureImage(){
 
