@@ -1390,35 +1390,7 @@ uploadImage.onchange = e => {
         0.6
       );
 
-    helper.innerHTML = `
-<div
-style="
-display:flex;
-align-items:center;
-gap:10px;
-"
->
-
-<span>
-CREATING AI LIVE ROOM
-</span>
-
-<div
-style="
-display:flex;
-gap:4px;
-margin-top:2px;
-"
->
-
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-
-</div>
-
-</div>
-`;
+   
 
 pendingImageDataUrl = imageDataUrl;
 showPublishDialog();
@@ -1458,6 +1430,17 @@ if (!roomReady) {
     document.getElementById(
         "publishDialog"
     ).style.display = "none";
+
+  helper.innerHTML = `
+<div style="display:flex;align-items:center;gap:10px;">
+<span>CREATING AI LIVE ROOM...</span>
+<div style="display:flex;gap:4px;">
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+</div>
+</div>
+`;
 
 socket.emit("imageUpload",{
 deviceId,
@@ -1526,35 +1509,7 @@ CAMERA STILL LOADING
       return;
     }
 
-    helper.innerHTML = `
-<div
-style="
-display:flex;
-align-items:center;
-gap:10px;
-"
->
-
-<span>
-CREATING AI LIVE ROOM
-</span>
-
-<div
-style="
-display:flex;
-gap:4px;
-margin-top:2px;
-"
->
-
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-
-</div>
-
-</div>
-`;
+    
 
     const canvas =
       document.createElement("canvas");
@@ -1595,6 +1550,7 @@ capturePreview.style.display =
 
 pendingImageDataUrl = imageDataUrl;
 showPublishDialog();
+return;
 
 
   }catch(err){
