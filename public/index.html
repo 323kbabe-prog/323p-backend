@@ -1459,22 +1459,6 @@ if (!roomReady) {
         "publishDialog"
     ).style.display = "none";
 
-helper.style.display = "flex";
-
-helper.innerHTML = `
-<div style="display:flex;align-items:center;gap:10px;">
-<span>CREATING AI LIVE ROOM...</span>
-<div style="display:flex;gap:4px;">
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-</div>
-</div>
-`;
-
-cameraWrap.style.display = "block";
-capturePreview.style.display = "block";
-  
 socket.emit("imageUpload",{
 deviceId,
     imageDataUrl: pendingImageDataUrl,
@@ -4019,3 +4003,4 @@ REFRESH CAMERA
 
 </body>
 </html>
+
