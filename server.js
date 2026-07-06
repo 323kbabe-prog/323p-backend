@@ -166,7 +166,7 @@ async function sendEmail(
 }
 
 async function sendSMS(to, body){
-
+console.log("Sending SMS to:", to);
     await smsClient.messages.create({
 
         from: process.env.TWILIO_PHONE_NUMBER,
@@ -4863,6 +4863,11 @@ if(!devices?.length){
 try {
 
    const device = devices[0];
+console.log("DEVICE:", device);
+
+console.log("PHONE:", device.phone);
+
+console.log("TYPE:", device.notification_type);
 
 if (
     device.notification_type === "sms" &&
