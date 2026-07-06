@@ -955,6 +955,10 @@ border:1px solid #111;
 NULL Feed
 </button>
 
+<button id="memoryBtn">
+    7-Day NOtifycation
+</button>
+  
 </div>
 
   <input
@@ -1614,9 +1618,24 @@ roomInput.onkeydown = e => {
 
     gtag('event', 'send_room_message');
 
+if (memoryMode) {
+
+    socket.emit("createReminder", {
+        deviceId,
+        text
+    });
+
+    memoryMode = false;
+
+    roomInput.placeholder = "Ask";
+
+} else {
+
     socket.emit("roomMessage", {
         text
     });
+
+}
 
     roomInput.value = "";
 
