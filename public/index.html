@@ -923,6 +923,7 @@ box-shadow:
 style="
 display:flex;
 justify-content:center;
+gap:10px;
 margin-bottom:12px;
 "
 >
@@ -938,9 +939,7 @@ socket.emit(
 'roomMessage',
 { text:'Null Feed' }
 );
-
-
-" 
+"
 style="
 cursor:pointer;
 font-size:13px;
@@ -956,11 +955,23 @@ NULL Feed
 </button>
 
 <button
-    id="memoryBtn"
-    onclick="startMemoryMode()"
+id="memoryBtn"
+onclick="startMemoryMode()"
+style="
+cursor:pointer;
+font-size:13px;
+font-weight:700;
+padding:8px 12px;
+border-radius:999px;
+background:#000;
+color:#fff;
+border:1px solid #111;
+"
 >
-    7-Day Notification
+7-Day Notification
 </button>
+
+</div>
   
 </div>
 
@@ -1639,10 +1650,6 @@ if (memoryMode) {
         text
     });
 
-    memoryMode = false;
-
-    roomInput.placeholder = "Ask";
-
 } else {
 
     socket.emit("roomMessage", {
@@ -1651,7 +1658,8 @@ if (memoryMode) {
 
 }
 
-    roomInput.value = "";
+roomInput.value = "";
+
 
 };
 
@@ -2955,7 +2963,21 @@ socket.on("aiTypingStop", () => {
 
     });
 
+    
+
   });
+
+});
+
+  socket.on("reminderSaved", () => {
+
+    memoryMode = false;
+
+    roomInput.value = "";
+
+    roomInput.placeholder = "Ask";
+
+    roomInput.focus();
 
 });
 
