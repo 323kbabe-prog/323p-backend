@@ -2064,32 +2064,6 @@ margin-bottom:16px;
 "
 >
 
-<button
-onclick="
-nextClicked = true;
-
-socket.emit(
-  'roomMessage',
-  { text:'Null Feed' }
-);
-
-"
-
-
-style="
-cursor:pointer;
-font-size:13px;
-font-weight:900;
-padding:8px 12px;
-border-radius:999px;
-background:#000;
-color:#fff;
-border:1px solid #111;
-"
->
-NULL Feed
-</button>
-
 </div>
 
 `
@@ -2300,33 +2274,7 @@ share
 
 ${messages.filter(x => x.image).slice(-1)[0] === m && !nextClicked ? `
 
-<button
-onclick="
-nextClicked = true;
 
-socket.emit(
-  'roomMessage',
-  { text:'Null Feed' }
-);
-
-
-"
-
-
-style="
-cursor:pointer;
-font-size:13px;
-font-weight:700;
-padding:8px 12px;
-border-radius:999px;
-background:#000;
-color:#fff;
-border:1px solid #111;
-margin-left:4px;
-"
->
-NULL Feed
-</button>
 
 ` : ""}
 
@@ -2682,33 +2630,7 @@ margin-bottom:16px;
 "
 >
 
-<button
-onclick="
-nextClicked = true;
 
-
-socket.emit(
-  'roomMessage',
-  { text:'Null Feed' }
-);
-
-
-"
-
-
-style="
-cursor:pointer;
-font-size:13px;
-font-weight:700;
-padding:8px 12px;
-border-radius:999px;
-background:#000;
-color:#fff;
-border:1px solid #111;
-"
->
-NULL Feed
-</button>
 
 </div>
 
