@@ -609,13 +609,161 @@ if (!room) {
 
 console.log("createReminder received:", deviceId, text);
 
-        console.log(
-            "Creating reminder:",
-            text
-        );
+  console.log(
+    "Creating reminder:",
+    text
+);
 
-        const reminderRes =
-            await openai.chat.completions.create({
+// CHECK IF USER PROVIDED BOTH
+// A TOPIC AND A TIME
+
+const reminderCheckRes =
+    await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+        {
+            role:"system",
+            content:`
+Return JSON only.
+
+
+{
+  "topic":"",
+  "time":""
+}
+
+Rules:
+
+Rules:
+
+- topic = what should be remembered or done.
+- time = a future date, time, or time expression.
+
+Return an empty string if either is missing.
+
+Examples:
+
+Call John tomorrow at 9.
+→
+{
+  "topic":"Call John",
+  "time":"tomorrow at 9"
+}
+
+Take medicine every day at 8am.
+→
+{
+  "topic":"Take medicine",
+  "time":"every day at 8am"
+}
+
+Remind me next Friday.
+→
+{
+  "topic":"",
+  "time":"next Friday"
+}
+
+Buy milk.
+→
+{
+  "topic":"Buy milk",
+  "time":""
+}
+- If missing, return an empty string.
+
+Examples:
+
+Call John tomorrow at 9.
+
+{
+  "topic":"Call John",
+  "time":"tomorrow at 9"
+}
+
+Call John.
+
+{
+  "topic":"Call John",
+  "time":""
+}
+
+Tomorrow at 9.
+
+{
+  "topic":"",
+  "time":"tomorrow at 9"
+}
+A topic means what to remind.
+
+A time means when to remind.
+`
+        },
+
+        {
+            role:"user",
+            content:text
+        }
+
+    ]
+
+});
+
+const reminderCheck =
+    JSON.parse(
+        reminderCheckRes
+            .choices[0]
+            .message
+            .content
+    );
+
+if(!reminderCheck.topic){
+
+    room.messages.push({
+
+        from:"NULL",
+
+        aiBeing:true,
+
+        text:"What would you like me to remind you about?"
+
+    });
+
+    io.to(room.id).emit(
+        "roomMessages",
+        room.messages
+    );
+
+    return;
+
+}
+
+if(!reminderCheck.time){
+
+    room.messages.push({
+
+        from:"NULL",
+
+        aiBeing:true,
+
+        text:"When would you like me to remind you?"
+
+    });
+
+    io.to(room.id).emit(
+        "roomMessages",
+        room.messages
+    );
+
+    return;
+
+}
+
+const reminderRes =
+    await openai.chat.completions.create({
 
                 model:"gpt-4o-mini",
 
