@@ -1407,13 +1407,13 @@ function showPublishDialog(){
 
     const dialog = document.getElementById("publishDialog");
 
-    alert(dialog);
-
-    if (!dialog) {
-        return;
-    }
-
     dialog.style.display = "flex";
+    dialog.style.position = "fixed";
+    dialog.style.inset = "0";
+    dialog.style.zIndex = "999999999";
+    dialog.style.background = "red";
+
+    alert(getComputedStyle(dialog).display);
 }
   
 function continueCreateRoom(){
