@@ -581,6 +581,108 @@ socket.on(
 );
 
 socket.on(
+    "createReminder",
+    async ({
+        deviceId,
+        text
+    }) => {
+
+        console.log(
+            "Creating reminder:",
+            text
+        );
+
+        const reminderRes =
+            await openai.chat.completions.create({
+
+                model:"gpt-4o-mini",
+
+                messages:[
+
+                    {
+                        role:"system",
+
+                        content:`
+Return JSON only.
+
+{
+"type":"",
+"entity":"",
+"title":"",
+"body":"",
+"reminder_time":""
+}
+
+type:
+
+reminder
+
+or
+
+news
+`
+                    },
+
+                    {
+                        role:"user",
+                        content:text
+                    }
+
+                ]
+
+            });
+
+        const reminder =
+            JSON.parse(
+                reminderRes
+                    .choices[0]
+                    .message
+                    .content
+            );
+
+        await supabase
+            .from("reminders")
+            .insert({
+
+                device_id:deviceId,
+
+                request:text,
+
+                reminder_type:
+                    reminder.type,
+
+                entity:
+                    reminder.entity,
+
+                title:
+                    reminder.title,
+
+                body:
+                    reminder.body,
+
+                reminder_time:
+                    reminder.reminder_time,
+
+                expires_at:
+                    new Date(
+                        Date.now() +
+                        7 * 24 * 60 * 60 * 1000
+                    ),
+
+                sent:false
+
+            });
+
+        console.log(
+            "Reminder saved."
+        );
+
+    }
+);
+
+
+
+socket.on(
   "rejoinRoom",
   ({
       roomId,
