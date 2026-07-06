@@ -4825,6 +4825,10 @@ const now =
 
 for(const reminder of data || []){
 
+    console.log("================================");
+console.log("REMINDER ID:", reminder.id);
+console.log("DEVICE ID:", reminder.device_id);
+
 console.log(
     "NOW:",
     now
@@ -4854,6 +4858,8 @@ const { data: devices } =
             reminder.device_id
         );
 
+    console.log("DEVICES FOUND:", devices);
+
 if(!devices?.length){
 
     continue;
@@ -4863,6 +4869,8 @@ if(!devices?.length){
 try {
 
    const device = devices[0];
+    console.log("PHONE:", device?.phone);
+console.log("TYPE:", device?.notification_type);
 console.log("DEVICE:", device);
 
 console.log("PHONE:", device.phone);
