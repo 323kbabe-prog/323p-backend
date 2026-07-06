@@ -955,8 +955,11 @@ border:1px solid #111;
 NULL Feed
 </button>
 
-<button id="memoryBtn">
-    7-Day NOtifycation
+<button
+    id="memoryBtn"
+    onclick="startMemoryMode()"
+>
+    7-Day Notification
 </button>
   
 </div>
@@ -1065,6 +1068,7 @@ let captureLock = false;
 let lastCaptureTime = 0;
 let aiTyping = false;
 let nextClicked = false;
+let memoryMode = false;
 let imageIntroText = "";
 let roomNullCard = null;
 
@@ -1157,7 +1161,17 @@ async function shareRoom(){
 
 }
 
+function startMemoryMode(){
 
+    memoryMode = true;
+
+    roomInput.placeholder =
+        "What would you like to be notified about?";
+
+    roomInput.focus();
+
+}
+  
 async function startCamera(){
 
   try{
