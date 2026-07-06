@@ -972,16 +972,12 @@ border:1px solid #111;
 </button>
 
 </div>
-  
-</div>
 
   <input
     id="roomInput"
     placeholder="Ask"
     autocomplete="off"
   />
-
-</div>
 
 <script>
 const cameraWrap =
@@ -1677,7 +1673,11 @@ hideAITyping();
 roomInput.style.display = "block";
 
 document.getElementById(
-  "firstNextBtn"
+    "firstNextBtn"
+).style.display = "block";
+
+document.getElementById(
+    "memoryBtn"
 ).style.display = "block";
 
     localStorage.setItem(
@@ -1800,6 +1800,9 @@ if(messages.length > 0){
 
 const btn =
   document.getElementById("firstNextBtn");
+  document.getElementById(
+    "memoryBtn"
+).style.display = "block";
 
 const hasFeed =
   messages.some(
