@@ -4678,44 +4678,58 @@ if(!devices?.length){
 
 }
 
-await webpush.sendNotification(
+try {
 
-    devices[0].push_subscription,
+    await webpush.sendNotification(
 
-    JSON.stringify({
+        devices[0].push_subscription,
 
-        title:
-            reminder.title,
+        JSON.stringify({
 
-        body:
-            reminder.body
+            title: reminder.title,
 
-    })
+            body: reminder.body
 
-);
-
-await supabase
-
-    .from("reminders")
-
-    .update({
-
-        sent:true
-
-    })
-
-    .eq(
-
-        "id",
-
-        reminder.id
+        })
 
     );
+
+await supabase
+    .from("reminders")
+    .update({
+        sent: true
+    })
+    .eq("id", reminder.id);
 
 console.log(
     "Push sent:",
     reminder.request
 );
+
+
+  
+
+} catch (err) {
+
+    console.log(
+        "Push failed:",
+        err.message
+    );
+
+    // Optional: mark invalid subscriptions as sent
+    if (err.statusCode === 403 || err.statusCode === 410) {
+
+        await supabase
+            .from("reminders")
+            .update({
+                sent: true
+            })
+            .eq("id", reminder.id);
+
+    }
+
+}
+
 
 
 }
