@@ -726,7 +726,7 @@ setTimeout(() => {
 
         aiBeing: true,
 
-        text: "Okay. I'll remind you.",
+        text: "Okay.",
 
         showNextButton: true
 
