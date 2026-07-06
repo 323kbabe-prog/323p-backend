@@ -594,9 +594,17 @@ socket.on(
 socket.on(
     "createReminder",
     async ({
+        
         deviceId,
         text
     }) => {
+        const user = users[socket.id];
+
+const room = rooms[user.currentRoom];
+
+if (!room) {
+    return;
+}
 
 
 console.log("createReminder received:", deviceId, text);
@@ -708,6 +716,26 @@ reminder_time:
             "Reminder saved."
         );
 
+        room.messages.push({
+
+    from: "NULL",
+
+    aiBeing: true,
+
+    text: "Okay. I'll remind you.",
+
+    showNextButton: true
+
+});
+
+io.to(room.id).emit(
+    "roomMessages",
+    room.messages
+);
+
+io.to(room.id).emit(
+    "aiTypingStop"
+);
 socket.emit("reminderSaved");
 
     }
@@ -4740,3 +4768,5 @@ console.log(
 
 
 }, 60 * 1000);
+
+
