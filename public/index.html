@@ -956,7 +956,7 @@ NULL Feed
 
 <button
 id="memoryBtn"
-onclick="startMemoryMode()"
+onclick="startSMSMode()"
 style="
 cursor:pointer;
 font-size:13px;
@@ -1076,6 +1076,7 @@ let lastCaptureTime = 0;
 let aiTyping = false;
 let nextClicked = false;
 let memoryMode = false;
+let notificationMode = null;
 let imageIntroText = "";
 let roomNullCard = null;
 
@@ -1174,6 +1175,19 @@ function startMemoryMode(){
 
     roomInput.placeholder =
         "What would you like to be notified about? Click 7-Day Notification again.";
+
+    roomInput.focus();
+
+}
+
+function startSMSMode(){
+
+    notificationMode = "sms";
+
+    memoryMode = true;
+
+    roomInput.placeholder =
+        "What phone number should I text?";
 
     roomInput.focus();
 
@@ -1641,10 +1655,23 @@ roomInput.onkeydown = e => {
 
 if (memoryMode) {
 
-    socket.emit("createReminder", {
-        deviceId,
-        text
-    });
+    if (notificationMode === "sms") {
+
+        socket.emit("savePhoneNumber", {
+            deviceId,
+            phone: text
+        });
+
+        notificationMode = null;
+
+    } else {
+
+        socket.emit("createReminder", {
+            deviceId,
+            text
+        });
+
+    }
 
 } else {
 
@@ -2924,7 +2951,18 @@ socket.on("aiTypingStop", () => {
 
 });
 
+socket.on("phoneSaved", () => {
 
+    roomInput.value = "";
+
+    roomInput.placeholder =
+        "What would you like me to remind you about?";
+
+    memoryMode = true;
+
+    roomInput.focus();
+
+});
 
 //////////////////////////////////////////////////
 // SOCKET RECONNECT
