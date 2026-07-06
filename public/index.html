@@ -3850,12 +3850,20 @@ async function enableNotifications() {
 
         });
 
-    socket.emit("savePushSubscription", {
-        deviceId,
-        subscription
+   socket.emit("savePushSubscription", {
+    deviceId,
+    subscription
+});
+
+return new Promise(resolve => {
+
+    socket.once("pushSubscriptionSaved", () => {
+
+        resolve(true);
+
     });
 
-    return true;
+});
 
 }
 
