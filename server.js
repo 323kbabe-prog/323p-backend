@@ -167,15 +167,15 @@ async function sendEmail(
 
 async function sendSMS(to, body){
 console.log("Sending SMS to:", to);
-    await smsClient.messages.create({
+await smsClient.messages.create({
 
-        from: process.env.TWILIO_PHONE_NUMBER,
+    from: process.env.TWILIO_PHONE_NUMBER,
 
-        to,
+    to,
 
-        body
+    body: `I am Null: ${body}`
 
-    });
+});
 
 }
 
