@@ -2062,6 +2062,89 @@ return socket.emit(
 
     async ({ text }) => {
 
+ const user =
+      users[socket.id];
+
+    const room =
+  rooms[user.currentRoom];
+
+if(!room){
+
+  socket.emit(
+    "roomClosed"
+  );
+
+  return;
+}
+
+const reminderIntentRes =
+await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+        {
+            role:"system",
+
+            content:`
+Return only:
+
+reminder
+
+other
+
+Return reminder if the user wants to be reminded later.
+`
+        },
+
+        {
+            role:"user",
+
+            content:text
+
+        }
+
+    ]
+
+});
+
+const isReminder =
+    reminderIntentRes
+        .choices[0]
+        .message
+        .content
+        .trim() === "reminder";
+
+if(isReminder){
+
+    room.pendingReminder = text;
+
+    room.messages.push({
+
+        from:"NULL",
+
+        aiBeing:true,
+
+        reminderCard:true,
+
+        title:"7-Day Memory",
+
+        text:"I can remember this for the next 7 days."
+
+    });
+
+    io.to(room.id).emit(
+        "roomMessages",
+        room.messages
+    );
+
+    return;
+
+}
+
+
+
 const jobIntentRes = await openai.responses.create({
   model: "gpt-5-mini",
   input: `
@@ -2081,20 +2164,7 @@ const isJobSearch =
   jobIntentRes.output_text.trim().toLowerCase() === "jobs";
 
 
-    const user =
-      users[socket.id];
-
-    const room =
-  rooms[user.currentRoom];
-
-if(!room){
-
-  socket.emit(
-    "roomClosed"
-  );
-
-  return;
-}
+   
 
       const isNextSearch =
   text.trim().toLowerCase() === "null feed";
@@ -4550,6 +4620,16 @@ const now =
 
 for(const reminder of data || []){
 
+console.log(
+    "NOW:",
+    now
+);
+
+console.log(
+    "REMINDER:",
+    reminder.reminder_time
+);
+
     if(
         new Date(
             reminder.reminder_time
@@ -4557,6 +4637,8 @@ for(const reminder of data || []){
     ){
         continue;
     }
+
+
 
 const { data: devices } =
     await supabase
