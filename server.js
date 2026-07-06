@@ -708,6 +708,8 @@ reminder_time:
             "Reminder saved."
         );
 
+socket.emit("reminderSaved");
+
     }
 );
 
@@ -2161,6 +2163,8 @@ room.messages.push({
         "roomMessages",
         room.messages
     );
+
+io.to(room.id).emit("aiTypingStop");
 
     return;
 
