@@ -490,6 +490,9 @@ margin-right:auto;
 </head>
 
 <body>
+
+  
+  
 <h1 style="
 position:absolute;
 left:-9999px;
@@ -979,7 +982,7 @@ border:1px solid #111;
     placeholder="Ask"
     autocomplete="off"
   />
-
+</div>
 <script>
 const cameraWrap =
   document.getElementById(
@@ -1405,15 +1408,8 @@ showPublishDialog();
 
 function showPublishDialog(){
 
-    const dialog = document.getElementById("publishDialog");
+    document.getElementById("publishDialog").style.display = "flex";
 
-    dialog.style.display = "flex";
-    dialog.style.position = "fixed";
-    dialog.style.inset = "0";
-    dialog.style.zIndex = "999999999";
-    dialog.style.background = "red";
-
-    alert(getComputedStyle(dialog).display);
 }
   
 function continueCreateRoom(){
@@ -3808,30 +3804,31 @@ return new Promise(resolve => {
 }
 
 </script>
-
 <div id="publishDialog"
 style="
 display:none;
 position:fixed;
-inset:0;
+top:0;
+left:0;
+width:100vw;
+height:100vh;
 background:rgba(0,0,0,.65);
-z-index:999999;
+z-index:2147483647;
+display:none;
 align-items:center;
 justify-content:center;
 ">
 
-<div
-style="
+<div style="
 background:#fff;
 color:#111;
 width:340px;
 border-radius:24px;
-padding:16px 16px 8px;
+padding:16px;
 box-sizing:border-box;
 ">
 
-<div
-style="
+<div style="
 font-size:22px;
 font-weight:900;
 margin-bottom:6px;
@@ -3840,76 +3837,27 @@ text-align:center;
 Create AI Live Room
 </div>
 
-<div
-style="
+<div style="
 font-size:13px;
 font-weight:700;
 line-height:1.5;
 text-align:center;
 opacity:.7;
-color:#000;
 margin-bottom:10px;
 ">
 How would you like to publish your Null?
 </div>
 
-<label
-style="
-display:flex;
-flex-direction:column;
-align-items:center;
-text-align:center;
-margin-bottom:12px;
-cursor:pointer;
-">
-
-<input
-type="radio"
-name="publishMode"
-value="public"
-checked
-style="
-width:22px;
-height:22px;
-margin:0 0 8px;
-accent-color:#000;
-">
-
+<label style="display:flex;flex-direction:column;align-items:center;margin-bottom:12px;">
+<input type="radio" name="publishMode" value="public" checked>
 <b>Public</b>
-
-<div style="margin-top:2px;">
-Image + AI Null
-</div>
-
+<div>Image + AI Null</div>
 </label>
 
-<label
-style="
-display:flex;
-flex-direction:column;
-align-items:center;
-text-align:center;
-margin-bottom:14px;
-cursor:pointer;
-">
-
-<input
-type="radio"
-name="publishMode"
-value="private"
-style="
-width:22px;
-height:22px;
-margin:0 0 8px;
-accent-color:#000;
-">
-
+<label style="display:flex;flex-direction:column;align-items:center;margin-bottom:14px;">
+<input type="radio" name="publishMode" value="private">
 <b>Private</b>
-
-<div style="margin-top:2px;">
-AI Null only
-</div>
-
+<div>AI Null only</div>
 </label>
 
 <button
@@ -3921,45 +3869,16 @@ border:none;
 border-radius:999px;
 background:#111;
 color:#fff;
-font-size:15px;
-font-weight:600;
 cursor:pointer;
 ">
 Continue
 </button>
 
-<div
-style="
-display:flex;
-justify-content:center;
-margin-top:6px;
-">
-
-<button
-onclick="
-event.preventDefault();
-event.stopPropagation();
-window.location.reload();
-return false;
-"
-style="
-padding:6px 14px;
-border:none;
-border-radius:999px;
-background:#000;
-color:#fff;
-font-size:11px;
-font-weight:700;
-cursor:pointer;
-">
-REFRESH CAMERA
-</button>
-
+</div>
 </div>
 
-</div>
 
-</div>
+
 
 
 </body>
