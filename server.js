@@ -582,11 +582,17 @@ socket.on(
 
             });
 
-        if (error) {
-            console.log(error);
-        } else {
-            console.log("Push subscription saved.");
-        }
+      if (error) {
+
+    console.log(error);
+
+} else {
+
+    console.log("Push subscription saved.");
+
+    socket.emit("pushSubscriptionSaved");
+
+}
 
     }
 );
