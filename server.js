@@ -1,4 +1,5 @@
 const express = require("express");
+throw new Error("THIS IS MY SERVER");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
