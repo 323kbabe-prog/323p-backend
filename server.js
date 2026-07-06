@@ -7,6 +7,7 @@ const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
 const fetch = global.fetch;
 const webpush = require("web-push");
+const twilio = require("twilio");
 
 const app = express();
 
@@ -75,6 +76,11 @@ webpush.setVapidDetails(
 
 );
 
+const smsClient = twilio(
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN
+);
+
 
 
 //////////////////////////////////////////////////
@@ -119,6 +125,8 @@ async function sendEmail(
       border-radius:12px;" />`;
   }
 
+    
+
   await transporter.sendMail({
 
     from:
@@ -156,6 +164,21 @@ async function sendEmail(
     attachments
   });
 }
+
+async function sendSMS(to, body){
+
+    await smsClient.messages.create({
+
+        from: process.env.TWILIO_PHONE_NUMBER,
+
+        to,
+
+        body
+
+    });
+
+}
+
 
 //////////////////////////////////////////////////
 // DATA
