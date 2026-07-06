@@ -1433,15 +1433,20 @@ showPublishDialog();
 
 function showPublishDialog(){
 
-    alert("showPublishDialog");
+    document.getElementById(
+        "publishDialog"
+    ).style.display = "flex";
 
-    const dialog = document.getElementById("publishDialog");
+}
 
-    console.log(dialog);
+function continueCreateRoom(){
 
-    dialog.style.display = "flex";
+if (!roomReady) {
 
-    dialog.style.zIndex = "9999999";
+    alert("Reconnecting...");
+
+    return;
+
 }
 
 
@@ -1471,8 +1476,6 @@ deviceId,
 
 async function captureImage(){
 
-  console.log("captureImage");
-alert("capture");
   const now = Date.now();
 
   if(
