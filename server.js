@@ -877,6 +877,15 @@ room.messages.forEach(m => {
     }
 
 });
+
+    room.messages.push({
+
+    from: user.displayName,
+
+    text
+
+});
+    
     room.messages.push({
 
         from: "NULL",
