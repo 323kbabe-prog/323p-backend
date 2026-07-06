@@ -1433,20 +1433,15 @@ showPublishDialog();
 
 function showPublishDialog(){
 
-    document.getElementById(
-        "publishDialog"
-    ).style.display = "flex";
+    alert("showPublishDialog");
 
-}
+    const dialog = document.getElementById("publishDialog");
 
-function continueCreateRoom(){
+    console.log(dialog);
 
-if (!roomReady) {
+    dialog.style.display = "flex";
 
-    alert("Reconnecting...");
-
-    return;
-
+    dialog.style.zIndex = "9999999";
 }
 
 
