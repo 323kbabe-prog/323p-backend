@@ -6,7 +6,7 @@ const { Server } = require("socket.io");
 const nodemailer = require("nodemailer");
 const OpenAI = require("openai");
 const fetch = global.fetch;
-
+const webpush = require("web-push");
 
 const app = express();
 
@@ -64,6 +64,17 @@ const supabase = createClient(
   process.env.SUPABASE_KEY
 
 );
+
+webpush.setVapidDetails(
+
+    "mailto:a078bc@gmail.com",
+
+    process.env.VAPID_PUBLIC_KEY,
+
+    process.env.VAPID_PRIVATE_KEY
+
+);
+
 
 
 //////////////////////////////////////////////////
@@ -4516,3 +4527,93 @@ console.log(publicNulls);
     });
 
 })();
+
+//////////////////////////////////////////////////
+// REMINDER CHECKER
+//////////////////////////////////////////////////
+
+setInterval(async () => {
+
+const { data } =
+    await supabase
+        .from("reminders")
+        .select("*")
+        .eq("sent", false);
+
+console.log(
+    "Checking reminders:",
+    data?.length
+);
+
+const now =
+    new Date();
+
+for(const reminder of data || []){
+
+    if(
+        new Date(
+            reminder.reminder_time
+        ) > now
+    ){
+        continue;
+    }
+
+const { data: devices } =
+    await supabase
+        .from("devices")
+        .select("*")
+        .eq(
+            "device_id",
+            reminder.device_id
+        );
+
+if(!devices?.length){
+
+    continue;
+
+}
+
+await webpush.sendNotification(
+
+    devices[0].push_subscription,
+
+    JSON.stringify({
+
+        title:
+            reminder.title,
+
+        body:
+            reminder.body
+
+    })
+
+);
+
+await supabase
+
+    .from("reminders")
+
+    .update({
+
+        sent:true
+
+    })
+
+    .eq(
+
+        "id",
+
+        reminder.id
+
+    );
+
+console.log(
+    "Push sent:",
+    reminder.request
+);
+
+
+}
+
+
+}, 60 * 1000);
