@@ -598,6 +598,9 @@ socket.on(
         text
     }) => {
 
+
+console.log("createReminder received:", deviceId, text);
+
         console.log(
             "Creating reminder:",
             text
