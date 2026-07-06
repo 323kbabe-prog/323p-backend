@@ -1902,16 +1902,23 @@ ${m.text}
 <button
 onclick="
 (async () => {
+this.disabled = true;
+this.innerText = "Enabling...";
 
-    await enableNotifications();
+const ok = await enableNotifications();
 
-    socket.emit('createReminder', {
+if (!ok) {
 
-        deviceId,
+    this.disabled = false;
+    this.innerText = "Enable Notifications";
+    return;
 
-        text: '${m.reminder}'
+}
 
-    });
+socket.emit('createReminder', {
+    deviceId,
+    text: '${m.reminder}'
+});
 
     
 
@@ -3752,48 +3759,47 @@ function urlBase64ToUint8Array(base64String){
 
 }
 
-async function enableNotifications(){
+async function enableNotifications() {
 
-    if(!("Notification" in window)){
+    if (!("Notification" in window)) {
+
         alert("Notifications not supported.");
-        return;
+        return false;
+
     }
 
     const permission =
         await Notification.requestPermission();
 
-    if(permission !== "granted"){
-        return;
+    if (permission !== "granted") {
+
+        return false;
+
     }
 
     const registration =
         await navigator.serviceWorker.register("/sw.js");
-await navigator.serviceWorker.ready;
+
+    await navigator.serviceWorker.ready;
 
     const subscription =
-    await registration.pushManager.subscribe({
+        await registration.pushManager.subscribe({
 
-        userVisibleOnly: true,
+            userVisibleOnly: true,
 
-       applicationServerKey:
-    urlBase64ToUint8Array(
-        "BLND3eNNIc3hqylTIBiOnu9ilqR79Vilf8R1A1OxyWF6S43-r-XUXSx1os3bS4U_n2H_UhBq4PBdYHKrl_bv38g"
-    )
+            applicationServerKey:
+                urlBase64ToUint8Array("...")
 
+        });
 
-    });
-
-socket.emit(
-    "savePushSubscription",
-    {
+    socket.emit("savePushSubscription", {
         deviceId,
         subscription
-    }
-);
+    });
 
-console.log("Push sent.");
+    return true;
+
 }
-
 
 </script>
 
