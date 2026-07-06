@@ -809,6 +809,7 @@ style="
 display:flex;
 align-items:center;
 gap:8px;
+margin-top:10px;
 "
 >
 
@@ -868,7 +869,7 @@ font-weight:300;
 color:#111;
 line-height:1;
 letter-spacing:-0.3px;
-margin-top:-15px;
+margin-top:0px;
 padding:6px 10px;
 "
 >
@@ -923,6 +924,7 @@ box-shadow:
 style="
 display:flex;
 justify-content:center;
+gap:10px;
 margin-bottom:12px;
 "
 >
@@ -938,9 +940,7 @@ socket.emit(
 'roomMessage',
 { text:'Null Feed' }
 );
-
-showAITyping();
-" 
+"
 style="
 cursor:pointer;
 font-size:13px;
@@ -955,6 +955,23 @@ border:1px solid #111;
 NULL Feed
 </button>
 
+<button
+id="memoryBtn"
+onclick="startSMSMode()"
+style="
+cursor:pointer;
+font-size:13px;
+font-weight:700;
+padding:8px 12px;
+border-radius:999px;
+background:#000;
+color:#fff;
+border:1px solid #111;
+"
+>
+7-Day Notification
+</button>
+
 </div>
 
   <input
@@ -962,8 +979,6 @@ NULL Feed
     placeholder="Ask"
     autocomplete="off"
   />
-
-</div>
 
 <script>
 const cameraWrap =
@@ -983,8 +998,10 @@ const roomIdText =
     "roomIdText"
   );
 
-const socket =
-  io("https://three23p-backend.onrender.com");
+const socket = io(
+    window.location.origin
+);
+
 
 let deviceId =
     localStorage.getItem("deviceId");
@@ -1059,6 +1076,8 @@ let captureLock = false;
 let lastCaptureTime = 0;
 let aiTyping = false;
 let nextClicked = false;
+let memoryMode = false;
+let notificationMode = null;
 let imageIntroText = "";
 let roomNullCard = null;
 
@@ -1151,7 +1170,30 @@ async function shareRoom(){
 
 }
 
+function startMemoryMode(){
 
+    memoryMode = true;
+
+    roomInput.placeholder =
+        "What would you like to be notified about? Click 7-Day Notification again.";
+
+    roomInput.focus();
+
+}
+
+function startSMSMode(){
+
+    notificationMode = "sms";
+
+    memoryMode = true;
+
+    roomInput.placeholder =
+        "What phone number should I text?";
+
+    roomInput.focus();
+
+}
+  
 async function startCamera(){
 
   try{
@@ -1604,21 +1646,45 @@ closeRoom.onclick = () => {
 
 roomInput.onkeydown = e => {
 
-  if(e.key !== "Enter") return;
+    if (e.key !== "Enter") return;
 
-  const text =
-    roomInput.value.trim();
+    const text = roomInput.value.trim();
 
-  if(!text) return;
-gtag('event', 'send_room_message');
-  socket.emit(
-    "roomMessage",
-    { text }
-  );
+    if (!text) return;
 
-  showAITyping();
+    gtag('event', 'send_room_message');
 
-  roomInput.value = "";
+if (memoryMode) {
+
+    if (notificationMode === "sms") {
+
+        socket.emit("savePhoneNumber", {
+            deviceId,
+            phone: text
+        });
+
+        notificationMode = null;
+
+    } else {
+
+        socket.emit("createReminder", {
+            deviceId,
+            text
+        });
+
+    }
+
+} else {
+
+    socket.emit("roomMessage", {
+        text
+    });
+
+}
+
+roomInput.value = "";
+
+
 };
 
 socket.on(
@@ -1635,7 +1701,11 @@ hideAITyping();
 roomInput.style.display = "block";
 
 document.getElementById(
-  "firstNextBtn"
+    "firstNextBtn"
+).style.display = "block";
+
+document.getElementById(
+    "memoryBtn"
 ).style.display = "block";
 
     localStorage.setItem(
@@ -1737,6 +1807,10 @@ document.getElementById(
   "firstNextBtn"
 ).style.display = "none";
 
+document.getElementById(
+    "memoryBtn"
+).style.display = "none";
+
 
 });
 
@@ -1758,6 +1832,9 @@ if(messages.length > 0){
 
 const btn =
   document.getElementById("firstNextBtn");
+  document.getElementById(
+    "memoryBtn"
+).style.display = "block";
 
 const hasFeed =
   messages.some(
@@ -1766,10 +1843,19 @@ const hasFeed =
 
 if(btn){
 
-btn.style.display =
-  nextClicked || hasFeed
-    ? "none"
-    : "block";
+if (btn) {
+
+    if (nextClicked) {
+
+        btn.style.display = "none";
+
+    } else {
+
+        btn.style.display = "block";
+
+    }
+
+}
 
 
 }
@@ -1810,6 +1896,11 @@ if (
   latestCard.showNextButton
 ){
   nextClicked = false;
+
+  document.getElementById(
+    "firstNextBtn"
+).style.display = "block";
+  
 }
 
 
@@ -1859,6 +1950,92 @@ ${m.intro}
 
 }
 
+if(m.reminderCard && !m.hidden){
+
+return `
+
+<div
+style="
+width:100%;
+display:flex;
+justify-content:center;
+margin-bottom:14px;
+">
+
+<div
+style="
+max-width:340px;
+background:#fff;
+color:#111;
+border-radius:22px;
+padding:16px;
+">
+
+<div
+style="
+font-size:16px;
+font-weight:900;
+margin-bottom:8px;
+">
+${m.title}
+</div>
+
+<div
+style="
+font-size:14px;
+line-height:1.5;
+margin-bottom:14px;
+">
+${m.text}
+</div>
+
+<button
+onclick="
+(async () => {
+this.disabled = true;
+this.innerText = "Enabling...";
+
+const ok = await enableNotifications();
+
+if (!ok) {
+
+    this.disabled = false;
+    this.innerText = "Enable Notifications";
+    return;
+
+}
+
+socket.emit('createReminder', {
+    deviceId,
+    text: '${m.reminder}'
+});
+
+    
+
+})();
+"
+style="
+width:100%;
+height:42px;
+border:none;
+border-radius:999px;
+background:#000;
+color:#fff;
+font-weight:700;
+cursor:pointer;
+"
+>
+Enable Notifications
+</button>
+
+
+</div>
+
+</div>
+
+`;
+
+}
 
 
 if(
@@ -1932,33 +2109,6 @@ margin-top:-4px;
 margin-bottom:16px;
 "
 >
-
-<button
-onclick="
-nextClicked = true;
-
-socket.emit(
-  'roomMessage',
-  { text:'Null Feed' }
-);
-
-showAITyping();
-"
-
-
-style="
-cursor:pointer;
-font-size:13px;
-font-weight:900;
-padding:8px 12px;
-border-radius:999px;
-background:#000;
-color:#fff;
-border:1px solid #111;
-"
->
-NULL Feed
-</button>
 
 </div>
 
@@ -2170,33 +2320,7 @@ share
 
 ${messages.filter(x => x.image).slice(-1)[0] === m && !nextClicked ? `
 
-<button
-onclick="
-nextClicked = true;
 
-socket.emit(
-  'roomMessage',
-  { text:'Null Feed' }
-);
-
-showAITyping();
-"
-
-
-style="
-cursor:pointer;
-font-size:13px;
-font-weight:700;
-padding:8px 12px;
-border-radius:999px;
-background:#000;
-color:#fff;
-border:1px solid #111;
-margin-left:4px;
-"
->
-NULL Feed
-</button>
 
 ` : ""}
 
@@ -2552,33 +2676,7 @@ margin-bottom:16px;
 "
 >
 
-<button
-onclick="
-nextClicked = true;
 
-
-socket.emit(
-  'roomMessage',
-  { text:'Null Feed' }
-);
-
-showAITyping();
-"
-
-
-style="
-cursor:pointer;
-font-size:13px;
-font-weight:700;
-padding:8px 12px;
-border-radius:999px;
-background:#000;
-color:#fff;
-border:1px solid #111;
-"
->
-NULL Feed
-</button>
 
 </div>
 
@@ -2817,12 +2915,16 @@ socket.on(
   "aiTypingStart",
   () => {
 
+    console.log("START");
+
     showAITyping();
 
   }
 );
 
 socket.on("aiTypingStop", () => {
+
+  console.log("STOP");
 
   requestAnimationFrame(() => {
 
@@ -2832,10 +2934,36 @@ socket.on("aiTypingStop", () => {
 
     });
 
+    
+
   });
 
 });
 
+  socket.on("reminderSaved", () => {
+
+    memoryMode = false;
+
+    roomInput.value = "";
+
+    roomInput.placeholder = "Ask";
+
+    roomInput.focus();
+
+});
+
+socket.on("phoneSaved", () => {
+
+    roomInput.value = "";
+
+    roomInput.placeholder =
+        "What would you like me to remind you about?";
+
+    memoryMode = true;
+
+    roomInput.focus();
+
+});
 
 //////////////////////////////////////////////////
 // SOCKET RECONNECT
@@ -3642,6 +3770,80 @@ await navigator.clipboard.writeText(
 
     console.log(err);
   }
+}
+
+function urlBase64ToUint8Array(base64String){
+
+    const padding =
+        "=".repeat((4 - base64String.length % 4) % 4);
+
+    const base64 =
+        (base64String + padding)
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+
+    const rawData = atob(base64);
+
+    const output = new Uint8Array(rawData.length);
+
+    for(let i = 0; i < rawData.length; i++){
+
+        output[i] = rawData.charCodeAt(i);
+
+    }
+
+    return output;
+
+}
+
+async function enableNotifications() {
+
+    if (!("Notification" in window)) {
+
+        alert("Notifications not supported.");
+        return false;
+
+    }
+
+    const permission =
+        await Notification.requestPermission();
+
+    if (permission !== "granted") {
+
+        return false;
+
+    }
+
+    const registration =
+        await navigator.serviceWorker.register("/sw.js");
+
+    await navigator.serviceWorker.ready;
+
+    const subscription =
+        await registration.pushManager.subscribe({
+
+            userVisibleOnly: true,
+
+            applicationServerKey:
+                urlBase64ToUint8Array("BLND3eNNIc3hqylTIBiOnu9ilqR79Vilf8R1A1OxyWF6S43-r-XUXSx1os3bS4U_n2H_UhBq4PBdYHKrl_bv38g")
+
+        });
+
+   socket.emit("savePushSubscription", {
+    deviceId,
+    subscription
+});
+
+return new Promise(resolve => {
+
+    socket.once("pushSubscriptionSaved", () => {
+
+        resolve(true);
+
+    });
+
+});
+
 }
 
 </script>
