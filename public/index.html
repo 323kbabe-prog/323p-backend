@@ -3644,6 +3644,30 @@ await navigator.clipboard.writeText(
   }
 }
 
+function urlBase64ToUint8Array(base64String){
+
+    const padding =
+        "=".repeat((4 - base64String.length % 4) % 4);
+
+    const base64 =
+        (base64String + padding)
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+
+    const rawData = atob(base64);
+
+    const output = new Uint8Array(rawData.length);
+
+    for(let i = 0; i < rawData.length; i++){
+
+        output[i] = rawData.charCodeAt(i);
+
+    }
+
+    return output;
+
+}
+
 async function enableNotifications(){
 
     if(!("Notification" in window)){
@@ -3667,8 +3691,11 @@ await navigator.serviceWorker.ready;
 
         userVisibleOnly: true,
 
-        applicationServerKey:
-            "BHscTcjLHfpFsCS8H_R-C8s_5qST3F7C8UXTsICUb6xeRqJVJhX4PRmSqOvXLoBewJsiX23CX97RdLAZ_7cw4PQ"
+       applicationServerKey:
+    urlBase64ToUint8Array(
+        "BHscTcjLHfpFsCS8H_R-C8s_5qST3F7C8UXTsICUb6xeRqJVJhX4PRmSqOvXLoBewJsiX23CX97RdLAZ_7cw4PQ"
+    )
+
 
     });
 
@@ -3680,7 +3707,7 @@ socket.emit(
     }
 );
 
-
+console.log("Push sent.");
 }
 
 
