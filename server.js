@@ -716,32 +716,33 @@ reminder_time:
             "Reminder saved."
         );
 
-        room.messages.push({
+      io.to(room.id).emit("aiTypingStart");
 
-    from: "NULL",
+setTimeout(() => {
 
-    aiBeing: true,
+    room.messages.push({
 
-    text: "Okay. I'll remind you.",
+        from: "NULL",
 
-    showNextButton: true
+        aiBeing: true,
 
-});
+        text: "Okay. I'll remind you.",
 
-io.to(room.id).emit(
-    "roomMessages",
-    room.messages
-);
+        showNextButton: true
 
-io.to(room.id).emit(
-    "aiTypingStop"
-);
+    });
+
+    io.to(room.id).emit("aiTypingStop");
+
+    io.to(room.id).emit(
+        "roomMessages",
+        room.messages
+    );
+
+}, 800);
+
 socket.emit("reminderSaved");
-
-    }
-);
-
-
+});
 
 socket.on(
   "rejoinRoom",
