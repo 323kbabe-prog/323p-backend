@@ -939,7 +939,7 @@ socket.emit(
 { text:'Null Feed' }
 );
 
-showAITyping();
+
 " 
 style="
 cursor:pointer;
@@ -1614,10 +1614,9 @@ roomInput.onkeydown = e => {
   if(!text) return;
 gtag('event', 'send_room_message');
 
+
 const remember =
     confirm("Ask Null remember this for 7 days?");
-
-showAITyping();
 
 if (remember) {
 
@@ -2036,7 +2035,6 @@ socket.emit(
   { text:'Null Feed' }
 );
 
-showAITyping();
 "
 
 
@@ -2273,7 +2271,7 @@ socket.emit(
   { text:'Null Feed' }
 );
 
-showAITyping();
+
 "
 
 
@@ -2656,7 +2654,7 @@ socket.emit(
   { text:'Null Feed' }
 );
 
-showAITyping();
+
 "
 
 
@@ -2911,12 +2909,16 @@ socket.on(
   "aiTypingStart",
   () => {
 
+    console.log("START");
+
     showAITyping();
 
   }
 );
 
 socket.on("aiTypingStop", () => {
+
+  console.log("STOP");
 
   requestAnimationFrame(() => {
 
@@ -2929,6 +2931,7 @@ socket.on("aiTypingStop", () => {
   });
 
 });
+
 
 
 //////////////////////////////////////////////////
