@@ -628,19 +628,13 @@ socket.on(
 
 }) => {
 
-    await supabase
-
-        .from("devices")
-
-        .update({
-
-            phone,
-
-            notification_type: "sms"
-
-        })
-
-        .eq("device_id", deviceId);
+ await supabase
+    .from("devices")
+    .upsert({
+        device_id: deviceId,
+        phone,
+        notification_type: "sms"
+    });
 
     socket.emit("phoneSaved");
 
