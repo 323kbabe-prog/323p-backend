@@ -4838,10 +4838,11 @@ console.log(
 
 } catch (err) {
 
-    console.log(
-        "Push failed:",
-        err.message
-    );
+   console.log("Push failed");
+console.log("Status:", err.statusCode);
+console.log("Message:", err.message);
+console.log("Body:", err.body);
+console.log(err);
 
     // Optional: mark invalid subscriptions as sent
     if (err.statusCode === 403 || err.statusCode === 410) {
