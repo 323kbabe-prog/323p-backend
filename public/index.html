@@ -1,0 +1,3843 @@
+<!DOCTYPE html>
+<!-- CONNECTAING V8 — ASK NULL — meet null — 21:16 2026/07/04 -->
+<html lang="en">
+<head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-FB5FLT606Z"></script>
+
+<script>
+window.dataLayer = window.dataLayer || [];
+
+function gtag(){
+  dataLayer.push(arguments);
+}
+
+gtag('js', new Date());
+
+gtag('config', 'G-FB5FLT606Z', {
+  page_path: window.location.pathname
+});
+
+</script>
+
+<link
+rel="icon"
+type="image/png"
+href="https://images.squarespace-cdn.com/content/v1/6784e2cf16887b12d499fa90/0e3a143e-d11f-4b3e-af68-9725286ded1b/quick+smart+camera_20260526_074737_0000_Original.jpeg?format=750w"
+/>
+
+<meta charset="UTF-8" />
+
+<title>
+Ask Null | AI Camera Search, Visual Search & Contextual Intelligence
+</title>
+
+<meta
+name="description"
+content="Ask Null is an AI camera search engine that transforms photos into contextual intelligence using real-world search, news, trends, and AI reasoning."
+/>
+
+<meta
+name="keywords"
+content="
+Ask Null,
+AI Camera,
+Camera AI,
+AI Camera Search,
+Visual Search,
+Image Search,
+AI Search,
+Contextual Intelligence,
+Search-first AI,
+Real-world AI,
+AI Reasoning,
+Multimodal AI,
+Computer Vision,
+SCGM,
+CFM,
+Social Context Generating Model,
+Chaos Feeling-Perception Model,
+Pre-AGI
+"
+/>
+
+<link
+rel="canonical"
+href="https://asknull.com/"
+/>
+
+<meta
+name="robots"
+content="index,follow,max-image-preview:large"
+/>
+
+<meta
+name="author"
+content="Ask Null"
+/>
+
+<meta
+property="og:site_name"
+content="Ask Null"
+/>
+
+<meta
+property="og:title"
+content="Ask Null | AI Camera Search & Contextual Intelligence"
+/>
+
+<meta
+property="og:description"
+content="Transform photos into contextual intelligence using real-world search, news, trends, and AI reasoning."
+/>
+
+<meta
+property="og:type"
+content="website"
+/>
+
+<meta
+property="og:url"
+content="https://asknull.com/"
+/>
+
+<meta
+property="og:image"
+content="https://images.squarespace-cdn.com/content/v1/6784e2cf16887b12d499fa90/0e3a143e-d11f-4b3e-af68-9725286ded1b/quick+smart+camera_20260526_074737_0000_Original.jpeg?format=750w"
+/>
+
+<meta
+property="og:image:alt"
+content="Ask Null AI Camera Search"
+/>
+
+<meta
+name="twitter:card"
+content="summary_large_image"
+/>
+
+<meta
+name="twitter:title"
+content="Ask Null | AI Camera Search & Contextual Intelligence"
+/>
+
+<meta
+name="twitter:description"
+content="Transform photos into contextual intelligence using real-world search, news, trends, and AI reasoning."
+/>
+
+<meta
+name="twitter:image"
+content="https://images.squarespace-cdn.com/content/v1/6784e2cf16887b12d499fa90/0e3a143e-d11f-4b3e-af68-9725286ded1b/quick+smart+camera_20260526_074737_0000_Original.jpeg?format=750w"
+/>
+
+<meta
+name="theme-color"
+content="#000000"
+/>
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1, viewport-fit=cover"
+/>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Ask Null",
+  "url": "https://asknull.com",
+  "applicationCategory": "AIApplication",
+  "operatingSystem": "Android, Web",
+  "description": "AI camera search engine that combines real-world search with contextual AI reasoning.",
+  "image": "https://images.squarespace-cdn.com/content/v1/6784e2cf16887b12d499fa90/0e3a143e-d11f-4b3e-af68-9725286ded1b/quick+smart+camera_20260526_074737_0000_Original.jpeg?format=750w"
+}
+</script>
+
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<style>
+
+html{
+  scrollbar-width:none;
+}
+
+body{
+  -ms-overflow-style:none;
+}
+
+body::-webkit-scrollbar{
+  display:none;
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  overflow:hidden;
+  -webkit-overflow-scrolling:touch;
+}
+
+body{
+  position:relative;
+touch-action:manipulation;
+
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  color:#111;
+
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+#cameraWrap{
+  position:fixed;
+  inset:0;
+  background:transparent;
+  overflow:hidden;
+  z-index:1;
+}
+
+#video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:#000;
+  display:block;
+}
+
+#helper{
+  position:absolute;
+  inset:0;
+
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center; 
+
+  z-index:10;
+
+  color:#fff;
+
+  font-size:24px;
+  font-weight:700;
+
+  letter-spacing:-0.5px;
+
+  text-align:center;
+
+  padding:30px;
+
+  pointer-events:auto; 
+
+  text-shadow:
+    0 2px 20px rgba(0,0,0,0.6);
+}
+
+#roomOverlay{
+  position:fixed;
+  inset:0;
+
+  background:rgba(255,255,255,0.06);
+
+  backdrop-filter:blur(30px) saturate(180%);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+
+  z-index:99999;
+
+  display:none;
+  flex-direction:column;
+  overflow:hidden;
+
+padding:8px 16px 8px 16px; 
+}
+
+#roomTitle{
+  font-size:18px;
+  font-weight:700;
+transform:translateY(-4px); 
+}
+
+#closeRoom{
+  font-size:32px;
+  line-height:1;
+  cursor:pointer;
+}
+
+#roomMessages{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  margin-top:18px;
+  padding-bottom:40px;
+  -webkit-overflow-scrolling:touch;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+
+  scroll-behavior:smooth;
+}
+
+#roomMessages img{
+  -webkit-user-drag:none;
+  user-select:none;
+}
+
+#roomMessages *{
+  overflow-wrap:break-word;
+}
+
+#roomInput{
+margin-top:0px;
+margin-bottom:8px;
+  width:100%;
+  height:58px;
+
+  border:none;
+  outline:none;
+
+  font-size:14px;
+
+  background:
+    rgba(255,255,255,0.78);
+
+  backdrop-filter:
+    blur(20px)
+    saturate(180%);
+
+  -webkit-backdrop-filter:
+    blur(20px)
+    saturate(180%);
+
+  border-radius:999px;
+
+  padding:0 22px;
+
+  color:#111;
+
+  position:relative;
+  z-index:5;
+
+  flex-shrink:0;
+
+  box-shadow:
+    0 8px 30px rgba(0,0,0,0.06);
+}
+
+#roomInput::placeholder{
+  color:#8d8d8d;
+}
+
+.aiDot{
+  width:6px;
+  height:6px;
+  border-radius:999px;
+  background:#fff;
+  opacity:0.3;
+  animation:aiBounce 1s infinite;
+}
+
+.aiDot:nth-child(2){
+  animation-delay:0.15s;
+}
+
+.aiDot:nth-child(3){
+  animation-delay:0.3s;
+}
+
+@keyframes moreBlink{
+
+  0%{
+    opacity:0.25;
+  }
+
+  50%{
+    opacity:1;
+  }
+
+  100%{
+    opacity:0.25;
+  }
+
+}
+
+@keyframes aiBounce{
+
+  0%{
+    opacity:0.25;
+    transform:translateY(0px);
+  }
+
+  50%{
+    opacity:1;
+    transform:translateY(-3px);
+  }
+
+  100%{
+    opacity:0.25;
+    transform:translateY(0px);
+  }
+}
+
+#appBgLogo{
+  position:fixed;
+  inset:0;
+
+  background-image:url("https://images.squarespace-cdn.com/content/6784e2cf16887b12d499fa90/08a644b5-0c16-4359-b3bb-15aee60cb9e5/ASK+NULL+%281%29.png?content-type=image%2Fpng");
+
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:220px;
+
+  opacity:0.35;
+
+  z-index:0;
+  pointer-events:none;
+}
+
+#modeBar{
+
+position:fixed;
+top:18px;
+left:16px;
+right:16px;
+
+display:flex;
+gap:8px;
+
+z-index:999;
+}
+
+#modeBar button{
+
+flex:1;
+
+border:none;
+
+background:#fff;
+
+color:#111;
+
+font-size:11px;
+font-weight:900;
+
+padding:10px 12px;
+
+border-radius:999px;
+}
+
+#dailyNullsScreen{
+
+display:none;
+
+position:fixed;
+inset:0;
+
+background:#000;
+
+color:#fff;
+
+z-index:998;
+
+overflow-y:auto;
+
+padding:
+90px
+16px
+40px
+16px;
+}
+
+.dailyNullCard{
+
+background:#fff;
+
+color:#111;
+
+border-radius:22px;
+
+padding:14px;
+
+margin-bottom:16px;
+
+max-width:420px;
+margin-left:auto;
+margin-right:auto;
+}
+
+#firstNextBtn{
+  display:none;
+}
+
+</style>
+</head>
+
+<body>
+<h1 style="
+position:absolute;
+left:-9999px;
+width:1px;
+height:1px;
+overflow:hidden;
+">
+Ask Null – AI Camera Search
+</h1>
+
+<div id="appBgLogo"></div>
+<div id="modeBar">
+
+<button
+id="createNullBtn"
+onclick="showCreateNull()"
+>
+ASK NULL
+</button>
+
+<button
+id="dailyNullsBtn"
+onclick="showDailyNulls()"
+>
+DAILY NULLS
+</button>
+
+
+
+</div>
+
+<div id="publicNullsScreen"
+style="
+display:none;
+position:fixed;
+inset:0;
+background:#000;
+color:#fff;
+z-index:998;
+overflow-y:auto;
+padding:90px 16px 40px 16px;
+">
+
+<div
+style="
+font-size:24px;
+font-weight:900;
+margin-bottom:8px;
+">
+PUBLIC NULLS
+</div>
+
+<div
+style="
+font-size:13px;
+line-height:1.5;
+opacity:.7;
+margin-bottom:24px;
+max-width:480px;
+">
+Public Nulls become part of the Ask Null network for others to discover.
+</div>
+
+
+<div id="publicNullsCards">
+Loading...
+</div>
+
+
+
+</div>
+
+<div id="dailyNullsScreen">
+
+<div
+style="
+font-size:24px;
+font-weight:900;
+margin-bottom:6px;
+"
+>
+DAILY NULLS
+</div>
+
+<div
+style="
+font-size:15px;
+opacity:.7;
+margin-bottom:20px;
+"
+>
+New Null searches every hour.
+</div>
+
+
+
+
+<div
+id="dailyNullCountdown"
+style="
+display:inline-flex;
+align-items:center;
+justify-content:center;
+
+width:fit-content;
+min-width:0;
+
+padding:6px 12px;
+border-radius:999px;
+
+background:#fff;
+color:#111;
+
+font-size:11px;
+font-weight:700;
+white-space:nowrap;
+margin-bottom:20px;
+box-shadow:0 2px 10px rgba(0,0,0,.04);
+"
+>
+Loading...
+</div>
+
+
+<div id="dailyNullsCards"></div>
+
+
+</div>
+
+<div id="cameraWrap">
+
+  <video
+    id="video"
+    autoplay
+    playsinline
+    muted
+  ></video>
+
+<input
+  id="uploadImage"
+  type="file"
+  accept="image/*"
+  style="display:none"
+>
+
+
+<img
+id="capturePreview"
+style="
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+object-fit:cover;
+display:none;
+z-index:4;
+"
+/>
+
+<div id="helper">
+
+
+    <button
+id="refreshCameraBtn"
+onclick="
+event.preventDefault();
+event.stopPropagation();
+window.location.reload();
+return false;
+"
+
+    style="
+      padding:8px 14px;
+      border:none;
+      border-radius:999px;
+      background:#fff;
+      color:#111;
+      font-size:11px;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow:0 4px 16px rgba(0,0,0,.18);
+      margin-bottom:18px;
+    "
+  >
+    REFRESH CAMERA
+  </button>
+
+  <div>
+    TAP THE IMAGE ON THE SCREEN TO SEARCH THE INTERNET
+  </div>
+
+  <div style="margin-top:16px;"></div>
+
+
+
+
+
+<button
+id="uploadBtn"
+style="
+margin-top:18px;
+padding:10px 18px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:12px;
+font-weight:900;
+cursor:pointer;
+pointer-events:auto;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+"
+>
+UPLOAD IMAGE
+</button>
+
+<button
+id="publicNullsBtn"
+style="
+margin-top:12px;
+padding:10px 18px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:12px;
+font-weight:900;
+cursor:pointer;
+pointer-events:auto;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+"
+onclick="showPublicNulls()"
+>
+PUBLIC NULLS
+</button>
+
+</div>
+</div>
+
+
+</div>
+
+<div id="roomOverlay">
+
+
+
+
+
+<div
+id="roomCountdown"
+style="
+display:inline-flex;
+align-items:center;
+justify-content:center;
+
+width:fit-content;
+flex:0 0 auto;
+
+height:24px;
+padding:0 10px;
+
+border:none;
+border-radius:999px;
+
+background:#fff;
+color:#000;
+
+font-size:9px;
+font-weight:700;
+white-space:nowrap;
+
+transform:translateY(-4px);
+cursor:default;
+"
+>
+59:59
+</div>
+
+
+<div
+id="roomHeader"
+style="
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:16px;
+padding-top:0;
+padding-bottom:0px;
+margin-bottom:0px; 
+"
+>
+
+<div
+style="
+display:flex;
+align-items:center;
+gap:14px;
+min-width:0;
+
+background:#fff;
+padding:2px 10px 10px 10px; 
+border-radius:16px;
+"
+>
+
+<div
+style="
+display:flex;
+flex-direction:column;
+gap:2px;
+min-width:0;
+"
+>
+
+<div
+style="
+display:flex;
+align-items:center;
+gap:8px;
+"
+>
+
+<div
+id="roomTitle"
+style="
+font-size:18px;
+font-weight:900;
+letter-spacing:-0.7px;
+color:#111;
+line-height:1;
+"
+>
+Ask Null
+</div>
+
+<button
+id="shareRoomBtn"
+onclick="shareRoom()"
+style="
+height:24px;
+padding:0 10px;
+border:none;
+border-radius:999px;
+background:#000;
+color:#fff;
+font-size:11px;
+font-weight:700;
+cursor:pointer;
+white-space:nowrap;
+transform:translateY(-4px); 
+"
+>
+Share
+</button>
+
+
+
+
+
+</div>
+
+
+<div
+style="
+display:flex;
+align-items:center;
+gap:6px;
+"
+>
+
+<div
+id="roomIdText"
+style="
+font-size:11px;
+font-weight:300;
+color:#111;
+line-height:1;
+letter-spacing:-0.3px;
+margin-top:-15px;
+padding:6px 10px;
+"
+>
+
+#room
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<div
+id="closeRoom"
+style="
+width:39px;
+height:39px;
+
+
+border-radius:999px;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+font-size:20px;
+font-weight:400;
+line-height:1;
+
+background:#f5f5f5;
+color:#111;
+
+flex-shrink:0;
+cursor:pointer;
+
+box-shadow:
+0 2px 10px rgba(0,0,0,0.04);
+"
+>
+×
+</div>
+
+
+</div>
+
+  <div id="roomMessages"></div>
+
+<div
+style="
+display:flex;
+justify-content:center;
+margin-bottom:12px;
+"
+>
+
+<button
+id="firstNextBtn"
+onclick="
+nextClicked = true;
+
+this.style.display='none';
+
+socket.emit(
+'roomMessage',
+{ text:'Null Feed' }
+);
+
+showAITyping();
+" 
+style="
+cursor:pointer;
+font-size:13px;
+font-weight:700;
+padding:8px 12px;
+border-radius:999px;
+background:#000;
+color:#fff;
+border:1px solid #111;
+"
+>
+NULL Feed
+</button>
+
+</div>
+
+  <input
+    id="roomInput"
+    placeholder="Ask"
+    autocomplete="off"
+  />
+
+</div>
+
+<script>
+const cameraWrap =
+  document.getElementById(
+    "cameraWrap"
+  );
+
+
+
+const capturePreview =
+  document.getElementById(
+    "capturePreview"
+  );
+
+const roomIdText =
+  document.getElementById(
+    "roomIdText"
+  );
+
+const socket =
+  io("https://three23p-backend.onrender.com");
+
+let deviceId =
+    localStorage.getItem("deviceId");
+
+if(!deviceId){
+
+    deviceId = crypto.randomUUID();
+
+    localStorage.setItem(
+        "deviceId",
+        deviceId
+    );
+
+}
+
+const video =
+  document.getElementById("video");
+
+const helper =
+  document.getElementById("helper");
+
+const roomOverlay =
+  document.getElementById(
+    "roomOverlay"
+  );
+
+const roomMessages =
+  document.getElementById(
+    "roomMessages"
+  );
+
+const roomInput =
+  document.getElementById(
+    "roomInput"
+  );
+
+const closeRoom =
+  document.getElementById(
+    "closeRoom"
+  );
+
+const dailyNullsScreen =
+  document.getElementById(
+    "dailyNullsScreen"
+  );
+
+const publicNullsScreen =
+document.getElementById(
+"publicNullsScreen"
+);
+
+const publicNullsCards =
+document.getElementById(
+"publicNullsCards"
+);
+
+
+const dailyNullsCards =
+  document.getElementById(
+    "dailyNullsCards"
+  );
+
+const dailyNullCountdown =
+  document.getElementById(
+    "dailyNullCountdown"
+  );
+
+let dailyNullsNextRefresh = null;
+let dailyNullCountdownStarted = false;
+
+let captureLock = false;
+let lastCaptureTime = 0;
+let aiTyping = false;
+let nextClicked = false;
+let imageIntroText = "";
+let roomNullCard = null;
+
+let pendingImageDataUrl = null;
+let publishMode = "public";
+
+let roomReady = true;
+let hasAutoRejoined = false;
+let roomExpiresAt = 0;
+let rejoinTimeout = null;
+let roomCountdownTimer = null;
+function startRoomCountdown(){
+
+    clearInterval(roomCountdownTimer);
+
+    roomCountdownTimer = setInterval(() => {
+
+        const remain =
+            roomExpiresAt - Date.now();
+
+        if(remain <= 0){
+
+            clearInterval(roomCountdownTimer);
+
+            document.getElementById(
+                "roomCountdown"
+            ).innerText =
+                "Expired";
+
+            return;
+
+        }
+
+        const mins =
+            Math.floor(remain / 60000);
+
+        const secs =
+            Math.floor(
+                (remain % 60000) / 1000
+            );
+
+        document.getElementById(
+            "roomCountdown"
+        ).innerText =
+            "Expires in " +
+            mins +
+            ":" +
+            String(secs).padStart(2,"0");
+
+    },1000);
+
+}
+
+
+async function shareRoom(){
+
+    const roomId =
+        localStorage.getItem("roomId");
+
+    if(!roomId) return;
+
+    const url =
+        location.origin +
+        "/?room=" +
+        roomId;
+
+    if(navigator.share){
+
+        try{
+
+            await navigator.share({
+
+                title:"Ask Null",
+
+                text:"Join my AI Live Room.",
+
+                url
+
+            });
+
+            return;
+
+        }catch(err){}
+
+    }
+
+    await navigator.clipboard.writeText(url);
+
+    alert("Room link copied.");
+
+}
+
+
+async function startCamera(){
+
+  try{
+
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video:{
+          facingMode:{
+            ideal:"environment"
+          }
+        },
+
+        audio:false
+      });
+
+    video.srcObject = stream;
+
+video.onloadedmetadata = async () => {
+
+  try{
+
+    await video.play();
+
+helper.style.display = "flex";
+
+
+  }catch(err){
+
+    console.log(
+      "video play failed",
+      err
+    );
+
+  }
+
+};
+
+    //////////////////////////////////////////////////
+    // SAFETY CHECK
+    //////////////////////////////////////////////////
+
+    setTimeout(()=>{
+
+      if(
+        !video.videoWidth
+      ){
+
+        helper.style.display =
+          "flex";
+
+    helper.innerHTML =
+`
+<div>OPEN IN CHROME<br>FOR CAMERA</div>
+
+<div style="margin-top:16px;"></div>
+
+<button id="uploadBtn">UPLOAD IMAGE</button>
+
+<button
+id="publicNullsBtn"
+onclick="
+event.preventDefault();
+event.stopPropagation();
+showPublicNulls();
+return false;
+">
+PUBLIC NULLS
+</button>
+
+`;
+
+document.getElementById("uploadBtn").onclick = e=>{
+    e.stopPropagation();
+    uploadImage.click();
+};
+
+
+
+
+      }
+
+    },4000);
+
+  }catch(err){
+
+    console.log(err);
+
+    const ua =
+      navigator.userAgent;
+
+    if(
+      ua.includes("LinkedIn")
+    ){
+
+      helper.innerHTML =
+        "OPEN IN CHROME<br>FOR CAMERA";
+
+    }else{
+
+      helper.innerHTML = `
+<button
+id="refreshCameraBtn"
+onclick="window.location.reload()"
+style="
+padding:8px 14px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:11px;
+font-weight:700;
+cursor:pointer;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+margin-bottom:18px;
+">
+REFRESH CAMERA
+</button>
+
+<div>
+ALLOW CAMERA ACCESS
+</div>
+`;
+
+    }
+  }
+}
+
+window.onload = async () => {
+
+    const savedRoomId =
+        localStorage.getItem("roomId");
+
+    if(!savedRoomId){
+        await startCamera();
+    }
+
+};
+
+const uploadImage =
+  document.getElementById("uploadImage");
+
+document
+  .getElementById("uploadBtn")
+  .onclick = e => {
+
+    e.stopPropagation();
+
+    uploadImage.click();
+
+};
+
+uploadImage.onchange = e => {
+
+  const file = e.target.files[0];
+
+  if(!file) return;
+
+  const img = new Image();
+
+  img.onload = () => {
+
+    const canvas =
+      document.createElement("canvas");
+
+    const maxWidth = 1080;
+
+    const scale =
+      Math.min(
+        1,
+        maxWidth / img.width
+      );
+
+    canvas.width =
+      img.width * scale;
+
+    canvas.height =
+      img.height * scale;
+
+    const ctx =
+      canvas.getContext("2d");
+
+    ctx.drawImage(
+      img,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    const imageDataUrl =
+      canvas.toDataURL(
+        "image/jpeg",
+        0.6
+      );
+
+    helper.innerHTML = `
+<div
+style="
+display:flex;
+align-items:center;
+gap:10px;
+"
+>
+
+<span>
+CREATING AI LIVE ROOM
+</span>
+
+<div
+style="
+display:flex;
+gap:4px;
+margin-top:2px;
+"
+>
+
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+
+</div>
+
+</div>
+`;
+
+pendingImageDataUrl = imageDataUrl;
+showPublishDialog();
+
+
+  };
+
+  img.src =
+    URL.createObjectURL(file);
+
+};
+
+function showPublishDialog(){
+
+    document.getElementById(
+        "publishDialog"
+    ).style.display = "flex";
+
+}
+
+function continueCreateRoom(){
+
+if (!roomReady) {
+
+    alert("Reconnecting...");
+
+    return;
+
+}
+
+
+    publishMode =
+        document.querySelector(
+            'input[name="publishMode"]:checked'
+        ).value;
+
+    document.getElementById(
+        "publishDialog"
+    ).style.display = "none";
+
+socket.emit("imageUpload",{
+deviceId,
+    imageDataUrl: pendingImageDataUrl,
+    roomMode: true,
+    askMode: false,
+    publishMode,
+    roomId: localStorage.getItem("roomId")
+});
+
+
+}
+
+
+
+
+async function captureImage(){
+
+  const now = Date.now();
+
+  if(
+    captureLock ||
+    now - lastCaptureTime < 1500
+  ){
+    return;
+  }
+gtag('event', 'capture_image');
+
+  captureLock = true;
+
+  lastCaptureTime = now;
+
+  try{
+
+    if(
+      !video.videoWidth ||
+      !video.videoHeight
+    ){
+
+      helper.innerHTML = `
+<button
+id="refreshCameraBtn"
+onclick="window.location.reload()"
+style="
+padding:8px 14px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:11px;
+font-weight:700;
+cursor:pointer;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+margin-bottom:18px;
+">
+REFRESH CAMERA
+</button>
+
+<div>
+CAMERA STILL LOADING
+</div>
+`;
+
+      captureLock = false;
+
+      return;
+    }
+
+    helper.innerHTML = `
+<div
+style="
+display:flex;
+align-items:center;
+gap:10px;
+"
+>
+
+<span>
+CREATING AI LIVE ROOM
+</span>
+
+<div
+style="
+display:flex;
+gap:4px;
+margin-top:2px;
+"
+>
+
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+
+</div>
+
+</div>
+`;
+
+    const canvas =
+      document.createElement("canvas");
+
+    const vw =
+      video.videoWidth || 1080;
+
+    const vh =
+      video.videoHeight || 1920;
+
+    canvas.width = 1080;
+
+    canvas.height =
+      vh * (1080 / vw);
+
+    const ctx =
+      canvas.getContext("2d");
+
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    const imageDataUrl =
+  canvas.toDataURL(
+    "image/jpeg",
+    0.58
+  );
+
+capturePreview.src =
+  imageDataUrl;
+
+capturePreview.style.display =
+  "block";
+
+pendingImageDataUrl = imageDataUrl;
+showPublishDialog();
+
+
+  }catch(err){
+
+    helper.innerText =
+      "CAPTURE FAILED";
+
+  }finally{
+
+    captureLock = false;
+  }
+}
+
+cameraWrap.addEventListener(
+  "click",
+  async e => {
+
+
+  if (
+    e.target.closest("#uploadBtn") ||
+    e.target.closest("#uploadImage") ||
+    e.target.closest("#publicNullsBtn") ||
+    e.target.closest("#refreshCameraBtn")
+  ){
+    e.stopPropagation();
+    return;
+  }
+
+  e.preventDefault();
+  await captureImage();
+
+});
+
+closeRoom.onclick = () => {
+
+  localStorage.removeItem("displayName");
+  localStorage.removeItem("roomId");
+  localStorage.removeItem("imageIntroText");
+
+  history.replaceState(
+    {},
+    "",
+    "/"
+  );
+
+  location.reload();
+};
+
+
+roomInput.onkeydown = e => {
+
+  if(e.key !== "Enter") return;
+
+  const text =
+    roomInput.value.trim();
+
+  if(!text) return;
+gtag('event', 'send_room_message');
+  socket.emit(
+    "roomMessage",
+    { text }
+  );
+
+  showAITyping();
+
+  roomInput.value = "";
+};
+
+socket.on(
+  "imageAiIntro",
+  text => {
+
+hideAITyping();
+
+    imageIntroText =
+      text
+        .split("\n")[0]
+        .trim();
+
+roomInput.style.display = "block";
+
+document.getElementById(
+  "firstNextBtn"
+).style.display = "block";
+
+    localStorage.setItem(
+      "imageIntroText",
+      imageIntroText
+    );
+
+    const savedDisplayName =
+      localStorage.getItem(
+        "displayName"
+      );
+
+    if(savedDisplayName){
+
+      roomIdText.innerText =
+        savedDisplayName +
+        " • " +
+        imageIntroText;
+
+    }
+  }
+);
+
+
+socket.on(
+    "roomNullCard",
+    card => {
+
+        roomNullCard = card;
+
+    }
+);
+
+
+
+socket.on("roomCreated", data => {
+
+clearTimeout(rejoinTimeout);
+
+window.isRoomOwner = data.isOwner;
+
+roomNullCard = data.nullCard;
+
+roomExpiresAt = data.expiresAt; 
+
+    startRoomCountdown();
+
+
+
+localStorage.setItem(
+  "displayName",
+  data.displayName
+);
+
+
+localStorage.setItem(
+  "roomId",
+  data.roomId
+);
+
+history.replaceState(
+  {},
+  "",
+  `/?room=${data.roomId}`
+);
+
+
+if(imageIntroText){
+  localStorage.setItem(
+    "imageIntroText",
+    imageIntroText
+  );
+}
+
+  gtag('event', 'create_live_room');
+
+  helper.innerHTML =
+    "AI LIVE ROOM<br>CONNECTED";
+
+roomOverlay.style.display = "flex";
+
+gtag('event', 'page_view', {
+  page_title: 'AI Live Room',
+  page_path: '/room'
+});
+
+
+roomInput.style.display = "none";
+
+roomIdText.innerText =
+  data.displayName;
+
+  capturePreview.style.display =
+    "none";
+
+
+
+document.getElementById(
+  "firstNextBtn"
+).style.display = "none";
+
+
+});
+
+//////////////////////////////////////////////////
+// ROOM MESSAGE CARDS
+//////////////////////////////////////////////////
+
+socket.on("roomMessages",messages => {
+roomOverlay.style.display = "flex";
+
+roomInput.style.display = "block";
+
+roomInput.disabled = false;
+
+roomInput.placeholder = "Ask";
+
+
+if(messages.length > 0){
+
+const btn =
+  document.getElementById("firstNextBtn");
+
+const hasFeed =
+  messages.some(
+    m => m.aiBeing
+  );
+
+if(btn){
+
+btn.style.display =
+  nextClicked || hasFeed
+    ? "none"
+    : "block";
+
+
+}
+} 
+
+const savedRoomId =
+  localStorage.getItem("roomId");
+
+const savedIntro =
+  localStorage.getItem("imageIntroText");
+
+const savedDisplayName =
+  localStorage.getItem(
+    "displayName"
+  );
+
+if(savedDisplayName && savedIntro){
+
+  roomIdText.innerText =
+    savedDisplayName +
+    " • " +
+    savedIntro;
+
+}else if(savedRoomId && savedIntro){
+
+  roomIdText.innerText =
+    "#" +
+    savedRoomId +
+    " • " +
+    savedIntro;
+
+}
+
+const latestCard = messages[messages.length - 1];
+
+if (
+  latestCard &&
+  latestCard.showNextButton
+){
+  nextClicked = false;
+}
+
+
+
+roomMessages.innerHTML =
+
+messages.map(m => {
+if(m.type === "nullCard"){
+
+    return `
+
+<div class="dailyNullCard">
+
+${m.image ? `
+<img
+src="${m.image}"
+style="
+width:100%;
+aspect-ratio:1/1;
+object-fit:cover;
+border-radius:12px;
+">
+` : ""}
+
+<div
+style="
+font-size:13px;
+font-weight:900;
+margin-top:10px;
+line-height:1.4;
+">
+${m.identity}
+</div>
+
+<div
+style="
+font-size:12px;
+margin-top:8px;
+line-height:1.4;
+">
+${m.intro}
+</div>
+
+</div>
+
+`;
+
+}
+
+
+
+if(
+  m.aiBeing &&
+m.text 
+){
+
+return `
+
+<div
+style="
+width:100%;
+display:flex;
+justify-content:center;
+margin-bottom:14px;
+"
+>
+
+<div
+style="
+max-width:340px;
+background:#fff;
+color:#111;
+border-radius:22px;
+padding:16px;
+border:1px solid #ececec;
+box-shadow:
+0 2px 10px rgba(0,0,0,0.04);
+"
+>
+
+<div
+style="
+font-size:12px;
+font-weight:700;
+letter-spacing:0px;
+opacity:.45;
+margin-bottom:8px;
+text-align:center;
+"
+>
+${m.from}
+</div>
+
+<div
+style="
+font-size:14px;
+line-height:1.55;
+text-align:center;
+font-weight:500;
+"
+>
+${m.text}
+</div>
+
+</div>
+
+</div>
+
+${
+m.showNextButton && !nextClicked
+? `
+
+
+<div
+style="
+width:100%;
+display:flex;
+justify-content:center;
+margin-top:-4px;
+margin-bottom:16px;
+"
+>
+
+<button
+onclick="
+nextClicked = true;
+
+socket.emit(
+  'roomMessage',
+  { text:'Null Feed' }
+);
+
+showAITyping();
+"
+
+
+style="
+cursor:pointer;
+font-size:13px;
+font-weight:900;
+padding:8px 12px;
+border-radius:999px;
+background:#000;
+color:#fff;
+border:1px solid #111;
+"
+>
+NULL Feed
+</button>
+
+</div>
+
+`
+: ""
+}
+
+`;
+
+}
+
+//////////////////////////////////////////////////
+// AI IMAGE CARD
+//////////////////////////////////////////////////
+
+if(m.image){
+
+const isLatestImage =
+
+  messages
+    .filter(x => x.image)
+    .indexOf(m)
+
+===
+
+  messages
+    .filter(x => x.image)
+    .length - 1;
+
+return `
+
+<div
+style="
+width:100%;
+display:flex;
+flex-direction:column;
+align-items:center;
+margin-bottom:18px;
+"
+>
+
+<div
+style="
+width:100%;
+max-width:420px;
+background:#fff;
+border-radius:24px;
+overflow:hidden;
+border:none;
+box-shadow:
+0 2px 10px rgba(0,0,0,0.04);
+"
+>
+
+<div
+data-share-card
+style="
+padding:14px;
+display:flex;
+flex-direction:column;
+gap:10px;
+"
+>
+
+
+
+<div data-share-content>
+
+${m.aiText ? `
+<div
+style="
+font-size:14px;
+line-height:1.55;
+color:#111;
+padding-bottom:12px;
+"
+>
+${m.aiText}
+</div>
+` : ""}
+
+${m.ask ? `
+<div
+style="
+padding-top:12px;
+"
+>
+
+<a
+href="${m.link || '#'}"
+target="_blank"
+rel="noopener noreferrer"
+style="
+display:block;
+text-decoration:none;
+color:#111;
+padding-top:0px;
+"
+>
+
+<div
+style="
+font-size:14px;
+font-weight:500;
+letter-spacing:0px;
+opacity:.45;
+margin-bottom:6px;
+"
+>
+
+${m.searchLabel || "NULL Search"}
+
+</div>
+
+${m.nullReason ? `
+<div
+style="
+font-size:13px;
+line-height:1.45;
+opacity:.75;
+margin-bottom:8px;
+"
+>
+${m.nullReason}
+</div>
+` : ""}
+
+
+<div
+style="
+font-size:14px;
+line-height:1.35;
+font-weight:900;
+"
+>
+${m.ask}
+</div>
+
+<div
+style="
+font-size:11px;
+font-weight:700;
+padding-top:6px;
+text-transform:uppercase;
+animation:moreBlink 1.4s infinite;
+display:flex;
+justify-content:flex-end;
+"
+>
+(read)
+</div>
+
+<img
+src="${m.image}"
+style="
+width:100%;
+border-radius:12px;
+margin-top:8px;
+"
+/>
+
+</a>
+
+</div>
+` : ""}
+
+
+</div>
+
+<div
+style="
+display:flex;
+justify-content:center;
+align-items:center;
+gap:12px;
+padding-top:2px;
+"
+>
+
+<span
+data-link="${m.link || ''}"
+
+onclick="
+shareCard(
+  this,
+  this.dataset.link
+)
+"
+style="
+cursor:pointer;
+font-size:13px;
+font-weight:700;
+padding:8px 12px;
+border-radius:999px;
+background:#000;
+color:#fff;
+border:1px solid #111;
+margin-left:4px;
+"
+>
+share
+</span>
+
+</div>
+
+</div>
+
+</div>
+
+${messages.filter(x => x.image).slice(-1)[0] === m && !nextClicked ? `
+
+<button
+onclick="
+nextClicked = true;
+
+socket.emit(
+  'roomMessage',
+  { text:'Null Feed' }
+);
+
+showAITyping();
+"
+
+
+style="
+cursor:pointer;
+font-size:13px;
+font-weight:700;
+padding:8px 12px;
+border-radius:999px;
+background:#000;
+color:#fff;
+border:1px solid #111;
+margin-left:4px;
+"
+>
+NULL Feed
+</button>
+
+` : ""}
+
+</div>
+
+</div>
+
+`;
+}
+
+//////////////////////////////////////////////////
+// AI ASK CARD
+//////////////////////////////////////////////////
+
+if (m.jobCard) {
+
+return `
+
+<div
+style="
+width:100%;
+display:flex;
+flex-direction:column;
+align-items:center;
+margin-bottom:18px;
+">
+
+<div
+data-share-card
+data-share-read="true"
+style="
+border:1px solid #ececec;
+max-width:340px;
+background:#fff;
+color:#000;
+padding:16px;
+border-radius:24px;
+display:flex;
+flex-direction:column;
+gap:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.12);
+">
+
+<div data-share-content>
+
+<div
+style="
+font-size:14px;
+font-weight:300;
+opacity:.45;
+margin-bottom:8px;
+">
+Null (AGI NETWORK) Feed
+</div>
+
+<div
+style="
+font-size:13px;
+font-weight:300;
+opacity:.55;
+margin-bottom:10px;
+line-height:1.4;
+">
+One job I think you should notice today:
+</div>
+
+<div
+style="
+display:flex;
+justify-content:flex-start;
+align-items:center;
+gap:16px;
+margin-top:4px;
+margin-bottom:12px;
+">
+
+<a
+href="${m.jobCard.link}"
+target="_blank"
+style="
+cursor:pointer;
+font-size:11px;
+font-weight:600;
+background:#000;
+color:#fff;
+padding:6px 8px;
+border-radius:999px;
+display:inline-block;
+line-height:1;
+text-decoration:none;
+">
+Check
+</a>
+
+<span
+data-link="${m.jobCard.link}"
+onclick="
+shareCard(
+  this,
+  this.dataset.link
+)
+"
+style="
+cursor:pointer;
+font-size:11px;
+font-weight:600;
+background:#000;
+color:#fff;
+padding:6px 8px;
+border-radius:999px;
+display:inline-block;
+line-height:1;
+">
+Share
+</span>
+
+</div>
+
+<div
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+word-break:break-word;
+">
+${m.jobCard.title}
+</div>
+
+<div
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+margin-top:4px;
+">
+${m.jobCard.company}
+</div>
+
+<div
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+opacity:.55;
+">
+${m.jobCard.location}
+</div>
+
+${m.jobCard.salary ? `
+<div
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+opacity:.55;
+">
+${m.jobCard.salary}
+</div>
+` : ""}
+
+${m.jobCard.type ? `
+<div
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+opacity:.55;
+">
+${m.jobCard.type}
+</div>
+` : ""}
+
+${m.jobCard.posted ? `
+<div
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+opacity:.55;
+">
+${m.jobCard.posted}
+</div>
+` : ""}
+
+</div>
+
+</div>
+
+`;
+}
+
+
+
+
+if(m.ask && !m.image){
+
+return `
+
+<div
+style="
+width:100%;
+display:flex;
+flex-direction:column;
+align-items:center;
+margin-bottom:18px;
+"
+>
+
+<div
+  data-share-card
+  data-share-read="${m.showRead !== false}"
+  style="
+    border:1px solid #ececec;
+    max-width:340px;
+    background:#fff;
+    color:#000;
+    padding:16px;
+    border-radius:24px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.12);
+  "
+>
+
+<div data-share-content>
+
+
+<div
+style="
+font-size:14px;
+font-weight:300;
+opacity:.45;
+margin-bottom:8px;
+"
+>
+${m.searchLabel || ""}
+</div>
+<div
+style="
+font-size:13px;
+font-weight:300;
+opacity:.55;
+margin-bottom:10px;
+line-height:1.4;
+"
+>
+One I think you should notice today:
+</div>
+
+
+${m.nullReason ? `
+<div
+style="
+font-size:13px;
+line-height:1.45;
+opacity:.75;
+margin-bottom:8px;
+"
+>
+${m.nullReason}
+</div>
+` : ""}
+
+
+<div
+style="
+display:flex;
+justify-content:flex-start;
+align-items:center;
+gap:16px;
+margin-top:4px;
+margin-bottom:12px;
+"
+>
+
+${m.showRead !== false ? `
+<a
+href="${m.link || '#'}"
+target="_blank"
+style="
+cursor:pointer;
+font-size:11px;
+font-weight:600;
+background:#000;
+color:#fff;
+padding:6px 8px;
+border-radius:999px;
+display:inline-block;
+line-height:1;
+text-decoration:none; 
+  "
+>
+Check
+</a>
+` : ""}
+
+
+<span
+onclick="shareCard(this)"
+style="
+cursor:pointer;
+font-size:11px;
+font-weight:600;
+background:#000;
+color:#fff;
+padding:6px 8px;
+border-radius:999px;
+display:inline-block;
+line-height:1; 
+"
+>
+Share
+</span>
+
+</div>
+
+<div
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+word-break:break-word;
+"
+>
+${m.ask}
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+${
+m.aiBeing &&
+m === messages
+  .filter(x => x.aiBeing)
+  .slice(-1)[0] &&
+!nextClicked
+
+? `
+
+
+
+<div
+style="
+width:100%;
+display:flex;
+justify-content:center;
+margin-top:-4px;
+margin-bottom:16px;
+"
+>
+
+<button
+onclick="
+nextClicked = true;
+
+
+socket.emit(
+  'roomMessage',
+  { text:'Null Feed' }
+);
+
+showAITyping();
+"
+
+
+style="
+cursor:pointer;
+font-size:13px;
+font-weight:700;
+padding:8px 12px;
+border-radius:999px;
+background:#000;
+color:#fff;
+border:1px solid #111;
+"
+>
+NULL Feed
+</button>
+
+</div>
+
+`
+: ""
+}
+
+`;
+}
+
+//////////////////////////////////////////////////
+// HUMAN CARD
+//////////////////////////////////////////////////
+
+return `
+
+<div
+style="
+width:100%;
+display:flex;
+justify-content:center;
+margin-top:18px;
+margin-bottom:14px;
+">
+
+
+<div
+style="
+max-width:78%;
+background:#f5f5f5;
+border-radius:22px;
+padding:12px 14px;
+display:flex;
+flex-direction:column;
+gap:6px;
+border:1px solid #ececec;
+"
+>
+
+<div
+style="
+font-size:10px;
+font-weight:700;
+letter-spacing:0.3px;
+opacity:0.45;
+"
+>
+${m.from || ""}
+</div>
+
+<div
+style="
+font-size:14px;
+line-height:1.5;
+color:#111;
+word-break:break-word;
+"
+>
+${m.text || ""}
+</div>
+
+</div>
+
+</div>
+
+`;
+
+}).join("");
+
+if(aiTyping){
+
+const typing =
+document.createElement("div");
+
+typing.id = "aiTyping";
+
+typing.style.display = "flex";
+typing.style.alignItems = "center";
+typing.style.gap = "4px";
+
+typing.style.padding = "10px 14px";
+
+typing.style.background = "#000";
+
+typing.style.borderRadius = "18px";
+
+typing.style.width = "fit-content";
+
+typing.style.marginBottom = "18px";
+
+
+typing.innerHTML = `
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+`;
+
+roomMessages.appendChild(
+typing
+);
+}
+
+requestAnimationFrame(() => {
+
+roomMessages.scrollTop =
+roomMessages.scrollHeight;
+
+});
+
+
+
+
+});
+
+socket.on("roomClosed", () => {
+
+    roomOverlay.style.display = "none";
+
+    localStorage.removeItem("roomId");
+    localStorage.removeItem("displayName");
+    localStorage.removeItem("imageIntroText");
+
+    history.replaceState(
+        {},
+        "",
+        "/"
+    );
+
+    startCamera();
+
+});
+
+socket.on("roomExpired", () => {
+
+clearTimeout(rejoinTimeout);
+
+    localStorage.removeItem("displayName");
+    localStorage.removeItem("roomId");
+    localStorage.removeItem("imageIntroText");
+
+    history.replaceState({}, "", "/");
+
+    roomOverlay.style.display = "none";
+    capturePreview.style.display = "none";
+
+    helper.style.display = "flex";
+
+    helper.innerHTML = `
+<button
+id="refreshCameraBtn"
+onclick="
+event.preventDefault();
+event.stopPropagation();
+window.location.reload();
+return false;
+"
+style="
+padding:8px 14px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:11px;
+font-weight:700;
+cursor:pointer;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+margin-bottom:18px;
+">
+REFRESH CAMERA
+</button>
+
+<div>
+ROOM EXPIRED<br>CREATE A NEW NULL
+</div>
+`;
+
+});
+
+
+
+function showAITyping(){
+
+  hideAITyping();
+
+  aiTyping = true;
+
+  const wrap =
+    document.createElement("div");
+
+  wrap.id = "aiTyping";
+
+  wrap.style.display = "flex";
+  wrap.style.alignItems = "center";
+  wrap.style.gap = "4px";
+
+  wrap.style.padding = "10px 14px";
+
+  wrap.style.background = "#000";
+
+  wrap.style.borderRadius = "18px";
+
+  wrap.style.width = "fit-content";
+
+  wrap.style.marginBottom = "14px";
+
+  wrap.innerHTML = `
+    <div class="aiDot"></div>
+    <div class="aiDot"></div>
+    <div class="aiDot"></div>
+  `;
+
+roomMessages.insertAdjacentElement(
+  "beforeend",
+  wrap
+);
+
+  roomMessages.scrollTop =
+    roomMessages.scrollHeight;
+}
+
+function hideAITyping(){
+
+  aiTyping = false;
+
+  const existing =
+    document.getElementById(
+      "aiTyping"
+    );
+
+  if(existing){
+    existing.remove();
+  }
+}
+
+socket.on(
+  "aiTypingStart",
+  () => {
+
+    showAITyping();
+
+  }
+);
+
+socket.on("aiTypingStop", () => {
+
+  requestAnimationFrame(() => {
+
+    requestAnimationFrame(() => {
+
+      hideAITyping();
+
+    });
+
+  });
+
+});
+
+
+//////////////////////////////////////////////////
+// SOCKET RECONNECT
+//////////////////////////////////////////////////
+
+socket.on(
+  "disconnect",
+  () => {
+
+    roomReady = false;
+
+
+
+
+    helper.style.display =
+      "flex";
+
+    helper.innerHTML = `
+
+<button
+onclick="
+event.preventDefault();
+event.stopPropagation();
+window.location.reload();
+return false;
+"
+style="
+padding:8px 14px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:11px;
+font-weight:700;
+cursor:pointer;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+margin-bottom:18px;
+">
+REFRESH CAMERA
+</button>
+
+<div>
+RECONNECTING...
+</div>
+
+`;
+
+  }
+);
+
+socket.on(
+  "roomReady",
+  () => {
+
+    roomReady = true;
+
+  }
+);
+
+
+socket.on(
+  "connect",
+  () => {
+
+const urlRoomId =
+    new URLSearchParams(window.location.search)
+        .get("room");
+
+const savedRoomId =
+    localStorage.getItem("roomId");
+
+
+
+
+    helper.style.display = "flex";
+
+
+
+
+
+
+if(urlRoomId){
+
+    helper.innerHTML = `
+<div style="
+display:flex;
+align-items:center;
+gap:10px;
+">
+<span>REJOINING AI LIVE ROOM</span>
+<div style="display:flex;gap:4px;">
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+</div>
+</div>
+`;
+
+    localStorage.setItem(
+        "roomId",
+        urlRoomId
+    );
+
+rejoinTimeout = setTimeout(() => {
+
+    helper.innerHTML = `
+<div>
+ROOM NOT FOUND
+</div>
+`;
+
+},5000);
+
+    socket.emit("rejoinRoom", {
+        roomId: urlRoomId,
+        deviceId
+    });
+
+    return;
+}
+
+
+if(savedRoomId && !hasAutoRejoined){
+
+    hasAutoRejoined = true;
+
+    helper.innerHTML = `
+<div style="
+display:flex;
+align-items:center;
+gap:10px;
+">
+<span>REJOINING AI LIVE ROOM</span>
+<div style="display:flex;gap:4px;">
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+</div>
+</div>
+`;
+
+rejoinTimeout = setTimeout(() => {
+
+    helper.innerHTML = `
+<div>
+ROOM NOT FOUND
+</div>
+`;
+
+},5000);
+   
+ socket.emit("rejoinRoom",{
+        roomId: savedRoomId,
+        deviceId
+    });
+
+    return;
+}
+
+
+
+    const savedIntro =
+      localStorage.getItem(
+        "imageIntroText"
+      );
+
+const savedDisplayName =
+  localStorage.getItem(
+    "displayName"
+  );
+
+if(savedDisplayName){
+
+  roomIdText.innerText =
+    savedDisplayName;
+
+}else if(savedRoomId){
+
+  roomIdText.innerText =
+    "#" + savedRoomId;
+
+}
+
+
+
+
+    if(
+      roomOverlay.style.display !==
+      "flex"
+    ){
+
+      helper.style.display =
+        "flex";
+
+  helper.innerHTML = `
+
+
+<button
+onclick="
+event.preventDefault();
+event.stopPropagation();
+window.location.reload();
+return false;
+"
+
+style="
+padding:8px 14px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:11px;
+font-weight:700;
+cursor:pointer;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+margin-bottom:18px;
+">
+REFRESH CAMERA
+</button>
+
+<div>
+TAP THE IMAGE ON THE SCREEN TO SEARCH THE INTERNET
+</div>
+
+<div style="margin-top:16px;"></div> 
+
+<button
+id="uploadBtn"
+style="
+margin-top:18px;
+padding:10px 18px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:12px;
+font-weight:900;
+cursor:pointer;
+pointer-events:auto;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+"
+>
+UPLOAD IMAGE
+</button>
+
+<button
+id="publicNullsBtn"
+onclick="showPublicNulls()"
+style="
+margin-top:12px;
+padding:10px 18px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:12px;
+font-weight:900;
+cursor:pointer;
+pointer-events:auto;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+"
+>
+PUBLIC NULLS
+</button>
+
+`;
+
+document
+.getElementById("uploadBtn")
+.onclick = e => {
+
+  e.stopPropagation();
+
+  uploadImage.click();
+
+};
+
+
+    }
+
+  }
+);
+
+//////////////////////////////////////////////////
+// SHARE CARD
+//////////////////////////////////////////////////
+function startDailyNullCountdown(){
+
+  if(
+    dailyNullCountdownStarted
+  ){
+    return;
+  }
+
+  dailyNullCountdownStarted =
+    true;
+
+  setInterval(() => {
+
+    if(
+      !dailyNullsNextRefresh
+    ){
+      return;
+    }
+
+    const diff =
+
+      dailyNullsNextRefresh -
+
+      Date.now();
+
+    if(diff <= 0){
+
+      dailyNullCountdown.innerText =
+        "Refreshing...";
+
+      return;
+    }
+
+    const mins =
+      Math.floor(
+        diff / 1000 / 60
+      );
+
+    const secs =
+      Math.floor(
+        (diff / 1000) % 60
+      );
+
+    dailyNullCountdown.innerText =
+
+      "Next refresh in " +
+
+      String(mins)
+        .padStart(2,"0")
+
+      +
+
+      ":"
+
+      +
+
+      String(secs)
+        .padStart(2,"0");
+
+  },1000);
+
+}
+
+function showCreateNull(){
+
+    publicNullsScreen.style.display = "none";
+
+    dailyNullsScreen.style.display = "none";
+
+    cameraWrap.style.display = "block";
+
+gtag('event', 'page_view', {
+  page_title: 'Create Null',
+  page_path: '/create'
+});
+
+}
+
+async function showDailyNulls(){
+
+    publicNullsScreen.style.display = "none";
+
+    cameraWrap.style.display = "none";
+
+    dailyNullsScreen.style.display = "block";
+
+gtag('event', 'page_view', {
+  page_title: 'Daily Nulls',
+  page_path: '/daily-nulls'
+});
+    
+await loadDailyNulls();
+
+}
+
+
+
+async function showPublicNulls(){
+
+    cameraWrap.style.display = "none";
+
+    dailyNullsScreen.style.display = "none";
+
+    publicNullsScreen.style.display = "block";
+
+gtag('event', 'page_view', {
+  page_title: 'Public Nulls',
+  page_path: '/public-nulls'
+});
+
+    await loadPublicNulls();
+
+}
+
+async function createRoomFromPublicNull(imageDataUrl){
+
+    publicNullsScreen.style.display = "none";
+    dailyNullsScreen.style.display = "none";
+    cameraWrap.style.display = "block";
+
+    helper.style.display = "flex";
+
+
+
+socket.emit("imageUpload",{
+deviceId,
+    imageDataUrl,
+    roomMode: true,
+    askMode: false,
+    publishMode: "private",
+    roomId: localStorage.getItem("roomId")
+});
+
+
+}
+
+
+
+
+async function loadPublicNulls(){
+
+  publicNullsCards.innerHTML = "Loading...";
+
+  const res =
+    await fetch(
+      "https://three23p-backend.onrender.com/public-nulls"
+    );
+
+  const data =
+    await res.json();
+
+  publicNullsCards.innerHTML =
+    data.map((item, i) => `
+
+<div class="dailyNullCard">
+
+${item.image ? `
+<img
+src="${item.image}"
+data-index="${i}"
+class="publicNullImage"
+style="
+width:100%;
+aspect-ratio:1/1;
+object-fit:cover;
+border-radius:12px;
+cursor:pointer;
+"
+>
+` : ""}
+
+<div
+style="
+font-size:13px;
+font-weight:900;
+Margin-top:10px;
+line-height:1.4;
+">
+${item.identity}
+</div>
+
+<div
+style="
+font-size:12px;
+margin-top:8px;
+line-height:1.4;
+">
+${item.intro}
+</div>
+
+<button
+onclick="deletePublicNull('${item.id}')"
+style="
+margin-top:12px;
+padding:8px 12px;
+border:none;
+border-radius:999px;
+background:#000;
+color:#fff;
+font-size:12px;
+font-weight:700;
+cursor:pointer;
+">
+Delete
+</button>
+
+
+</div>
+
+`).join("");
+
+document
+.querySelectorAll(".publicNullImage")
+.forEach(img => {
+
+    img.onclick = () => {
+
+        const index =
+            Number(img.dataset.index);
+
+        createRoomFromPublicNull(
+            data[index].image
+        );
+
+    };
+
+});
+
+
+}
+
+async function loadDailyNulls(){
+
+  dailyNullsCards.innerHTML =
+    "loading...";
+
+const res = await fetch(
+  "https://three23p-backend.onrender.com/daily-nulls?t=" + Date.now()
+);
+
+
+
+
+
+  const data =
+    await res.json();
+
+dailyNullsNextRefresh =
+
+  new Date(
+    data.updatedAt
+  ).getTime()
+
+  +
+
+  60 * 60 * 1000;
+
+startDailyNullCountdown();
+
+
+
+
+  dailyNullsCards.innerHTML =
+
+    data.cards.map(card => `
+
+<div
+class="dailyNullCard"
+data-share-card
+data-share-read="true"
+>
+
+
+<div data-share-content>
+
+<div
+style="
+font-size:11px;
+font-weight:900;
+opacity:.5;
+"
+>
+${card.category}
+</div>
+
+<div
+style="
+font-size:20px;
+font-weight:900;
+margin-top:6px;
+"
+>
+${card.identity}
+</div>
+
+<div
+style="
+font-size:13px;
+line-height:1.45;
+margin-top:8px;
+"
+>
+${card.intro}
+</div>
+
+<div
+style="
+margin-top:12px;
+font-size:16px;
+font-weight:600;
+line-height:1.4;
+"
+>
+${card.title}
+</div>
+
+</div>
+
+<a
+href="${card.link}"
+target="_blank"
+style="
+text-decoration:none;
+color:#111;
+"
+>
+
+<div
+style="
+font-size:11px;
+font-weight:700;
+padding-top:6px;
+text-transform:uppercase;
+animation:moreBlink 1.4s infinite;
+display:flex;
+justify-content:flex-end;
+"
+>
+(read)
+</div>
+
+<img
+src="${card.image}"
+style="
+width:100%;
+aspect-ratio:1/1;
+object-fit:cover;
+border-radius:12px;
+margin-top:10px;
+"
+/>
+
+</a>
+
+<div
+style="
+display:flex;
+gap:12px;
+margin-top:12px;
+"
+>
+
+<span
+data-link="${card.link}"
+
+onclick="
+shareCard(
+  this,
+  this.dataset.link
+)
+"
+style="
+cursor:pointer;
+font-size:13px;
+font-weight:700;
+padding:8px 12px;
+border-radius:999px;
+background:#000;
+color:#fff;
+display:inline-block;
+"
+>
+Share
+</span>
+
+</div>
+
+</div>
+
+
+`).join("");
+}
+
+async function deletePublicNull(id){
+
+    const password = prompt("Enter password");
+
+    if(password !== "AskNull2026"){
+        alert("Wrong password");
+        return;
+    }
+
+await fetch(
+    `https://three23p-backend.onrender.com/public-nulls/${id}?password=${encodeURIComponent(password)}`,
+    {
+        method:"DELETE"
+    }
+);
+
+
+    loadPublicNulls();
+
+}
+
+async function shareCard(el, link){
+gtag('event', 'share_card');
+
+  try{
+
+    const card =
+      el.closest('[data-share-card]');
+
+    if(!card) return;
+
+const content =
+  card.querySelector(
+    "[data-share-content]"
+  );
+
+const text =
+  content?.textContent
+    ?.replace(/\s+/g, " ")
+    .trim() || "";
+
+
+    const image =
+      card.parentElement.querySelector("img");
+
+    const imageUrl =
+      image?.src;
+
+const newsLink =
+  card.querySelector("a")?.href ||
+  link ||
+  "";
+
+
+
+const shareTitle =
+  "ASK NULL";
+
+const shareText =
+  text;
+
+console.log(text);
+
+const shareData =
+  card.dataset.shareRead === "true"
+  ? {
+      title: "ASK NULL",
+      text: `ASK NULL\n\n${text}`,
+      url: newsLink
+    }
+  : {
+      title: "ASK NULL",
+      text: `ASK NULL\n\n${text}`
+    };
+
+
+
+
+
+    //////////////////////////////////////////////////
+    // SHARE DATA
+    //////////////////////////////////////////////////
+
+    //////////////////////////////////////////////////
+    // TRY IMAGE SHARE
+    //////////////////////////////////////////////////
+
+  if(navigator.share){
+
+  try{
+
+await navigator.share(shareData);
+
+    return;
+
+  }catch(err){
+
+    if(err.name === "AbortError"){
+      return;
+    }
+
+    console.log(err);
+
+  }
+
+}
+
+    //////////////////////////////////////////////////
+    // FALLBACK
+    //////////////////////////////////////////////////
+
+await navigator.clipboard.writeText(
+
+  shareTitle +
+  "\n\n" +
+  text +
+  "\n\n" +
+  newsLink
+
+);
+
+    alert("copied");
+
+  }catch(err){
+
+    console.log(err);
+  }
+}
+
+async function enableNotifications(){
+
+    if(!("Notification" in window)){
+        alert("Notifications not supported.");
+        return;
+    }
+
+    const permission =
+        await Notification.requestPermission();
+
+    if(permission !== "granted"){
+        return;
+    }
+
+    const registration =
+        await navigator.serviceWorker.register("/sw.js");
+
+    const subscription =
+    await registration.pushManager.subscribe({
+
+        userVisibleOnly: true,
+
+        applicationServerKey:
+            "BHscTcjLHfpFsCS8H_R-C8s_5qST3F7C8UXTsICUb6xeRqJVJhX4PRmSqOvXLoBewJsiX23CX97RdLAZ_7cw4PQ"
+
+    });
+
+socket.emit(
+    "savePushSubscription",
+    {
+        deviceId,
+        subscription
+    }
+);
+
+
+}
+
+
+</script>
+
+<div id="publishDialog"
+style="
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.65);
+z-index:999999;
+align-items:center;
+justify-content:center;
+">
+
+<div
+style="
+background:#fff;
+color:#111;
+width:340px;
+border-radius:24px;
+padding:16px 16px 8px;
+box-sizing:border-box;
+">
+
+<div
+style="
+font-size:22px;
+font-weight:900;
+margin-bottom:6px;
+text-align:center;
+">
+Create AI Live Room
+</div>
+
+<div
+style="
+font-size:13px;
+font-weight:700;
+line-height:1.5;
+text-align:center;
+opacity:.7;
+color:#000;
+margin-bottom:10px;
+">
+How would you like to publish your Null?
+</div>
+
+<label
+style="
+display:flex;
+flex-direction:column;
+align-items:center;
+text-align:center;
+margin-bottom:12px;
+cursor:pointer;
+">
+
+<input
+type="radio"
+name="publishMode"
+value="public"
+checked
+style="
+width:22px;
+height:22px;
+margin:0 0 8px;
+accent-color:#000;
+">
+
+<b>Public</b>
+
+<div style="margin-top:2px;">
+Image + AI Null
+</div>
+
+</label>
+
+<label
+style="
+display:flex;
+flex-direction:column;
+align-items:center;
+text-align:center;
+margin-bottom:14px;
+cursor:pointer;
+">
+
+<input
+type="radio"
+name="publishMode"
+value="private"
+style="
+width:22px;
+height:22px;
+margin:0 0 8px;
+accent-color:#000;
+">
+
+<b>Private</b>
+
+<div style="margin-top:2px;">
+AI Null only
+</div>
+
+</label>
+
+<button
+onclick="continueCreateRoom()"
+style="
+width:100%;
+height:42px;
+border:none;
+border-radius:999px;
+background:#111;
+color:#fff;
+font-size:15px;
+font-weight:600;
+cursor:pointer;
+">
+Continue
+</button>
+
+<div
+style="
+display:flex;
+justify-content:center;
+margin-top:6px;
+">
+
+<button
+onclick="
+event.preventDefault();
+event.stopPropagation();
+window.location.reload();
+return false;
+"
+style="
+padding:6px 14px;
+border:none;
+border-radius:999px;
+background:#000;
+color:#fff;
+font-size:11px;
+font-weight:700;
+cursor:pointer;
+">
+REFRESH CAMERA
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+
+</body>
+</html>
+
