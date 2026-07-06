@@ -1811,10 +1811,19 @@ const hasFeed =
 
 if(btn){
 
-btn.style.display =
-  nextClicked || hasFeed
-    ? "none"
-    : "block";
+if (btn) {
+
+    if (nextClicked) {
+
+        btn.style.display = "none";
+
+    } else {
+
+        btn.style.display = "block";
+
+    }
+
+}
 
 
 }
@@ -1855,6 +1864,11 @@ if (
   latestCard.showNextButton
 ){
   nextClicked = false;
+
+  document.getElementById(
+    "firstNextBtn"
+).style.display = "block";
+  
 }
 
 
