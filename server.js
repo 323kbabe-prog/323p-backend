@@ -532,6 +532,11 @@ console.log("ROOMS:", Object.keys(rooms));
     const room =
       rooms[roomId];
 
+if (!room || Date.now() > room.expiresAt) {
+    socket.emit("roomExpired");
+    return;
+}
+
 const isOwner =
     deviceRooms[deviceId] === roomId;
 
@@ -4333,5 +4338,3 @@ console.log(publicNulls);
     });
 
 })();
-
-
