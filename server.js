@@ -2120,19 +2120,22 @@ if(isReminder){
 
     room.pendingReminder = text;
 
-    room.messages.push({
+room.messages.push({
 
-        from:"NULL",
+    from:"NULL",
 
-        aiBeing:true,
+    aiBeing:true,
 
-        reminderCard:true,
+    reminderCard:true,
 
-        title:"7-Day Memory",
+    title:"7-Day Memory",
 
-        text:"I can remember this for the next 7 days."
+    text:"I can remember this for the next 7 days.",
 
-    });
+    reminder:text
+
+});
+
 
     io.to(room.id).emit(
         "roomMessages",
