@@ -734,7 +734,7 @@ if(!reminderCheck.topic){
 
         aiBeing:true,
 
-        text:"What would you like me to remind you about?"
+        text:"What would you like to be notified about? Click 7-Day Notification again."
 
     });
 
