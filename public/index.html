@@ -1405,11 +1405,17 @@ showPublishDialog();
 
 function showPublishDialog(){
 
-    alert("showPublishDialog reached");
+    const dialog = document.getElementById("publishDialog");
 
-    document.getElementById("publishDialog").style.display = "flex";
+    alert(dialog);
+
+    if (!dialog) {
+        return;
+    }
+
+    dialog.style.display = "flex";
 }
-
+  
 function continueCreateRoom(){
 
 if (!roomReady) {
