@@ -12,6 +12,36 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+const path = require("path");
+
+app.use(
+    express.static(
+        path.join(__dirname, "public")
+    )
+);
+
+console.log(
+    "PUBLIC:",
+    path.join(__dirname, "public")
+);
+
+const fs = require("fs");
+
+console.log(
+    "INDEX EXISTS:",
+    fs.existsSync(
+        path.join(__dirname, "public", "index.html")
+    )
+);
+
+console.log(
+    "SW EXISTS:",
+    fs.existsSync(
+        path.join(__dirname, "public", "sw.js")
+    )
+);
+
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -516,6 +546,35 @@ users[socket.id] = {
 
   currentRoom:null
 };
+
+socket.on(
+    "savePushSubscription",
+    async ({
+        deviceId,
+        subscription
+    }) => {
+
+        const { error } = await supabase
+            .from("devices")
+            .upsert({
+
+                device_id: deviceId,
+
+                push_subscription: subscription,
+
+                notification_enabled: true
+
+            });
+
+        if (error) {
+            console.log(error);
+        } else {
+            console.log("Push subscription saved.");
+        }
+
+    }
+);
+
 
 socket.on(
   "rejoinRoom",
@@ -4293,6 +4352,19 @@ publicNulls = publicNulls.filter(
     });
 
 });
+
+app.get("*", (req, res) => {
+
+    res.sendFile(
+        path.join(
+            __dirname,
+            "public",
+            "index.html"
+        )
+    );
+
+});
+
 
 (async () => {
 
