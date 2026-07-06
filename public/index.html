@@ -1606,32 +1606,19 @@ closeRoom.onclick = () => {
 
 roomInput.onkeydown = e => {
 
-  if(e.key !== "Enter") return;
+    if (e.key !== "Enter") return;
 
-  const text =
-    roomInput.value.trim();
+    const text = roomInput.value.trim();
 
-  if(!text) return;
-gtag('event', 'send_room_message');
+    if (!text) return;
 
+    gtag('event', 'send_room_message');
 
-const remember =
-    confirm("Ask Null remember this for 7 days?");
-
-if (remember) {
-
-    socket.emit("createReminder", {
-        deviceId,
+    socket.emit("roomMessage", {
         text
     });
 
-}
-
-socket.emit("roomMessage", {
-    text
-});
-
-roomInput.value = "";
+    roomInput.value = "";
 
 };
 
@@ -1926,7 +1913,7 @@ onclick="
 
     });
 
-    alert('Reminder saved.');
+    
 
 })();
 "
@@ -3965,3 +3952,4 @@ REFRESH CAMERA
 
 </body>
 </html>
+
