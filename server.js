@@ -2137,64 +2137,7 @@ if(!room){
   return;
 }
 
-const reminderIntentRes =
-await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
-
-    messages:[
-
-        {
-            role:"system",
-
-            content:`
-Return only:
-
-reminder
-
-other
-
-Return reminder if the user wants to be reminded later.
-`
-        },
-
-        {
-            role:"user",
-
-            content:text
-
-        }
-
-    ]
-
-});
-
-const isReminder =
-    reminderIntentRes
-        .choices[0]
-        .message
-        .content
-        .trim() === "reminder";
-
-if(isReminder){
-
-    room.pendingReminder = text;
-
-room.messages.push({
-
-    from:"NULL",
-
-    aiBeing:true,
-
-    reminderCard:true,
-
-    title:"7-Day Memory",
-
-    text:"I can remember this for the next 7 days.",
-
-    reminder:text
-
-});
 
 
     io.to(room.id).emit(
