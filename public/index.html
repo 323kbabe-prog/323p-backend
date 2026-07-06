@@ -1611,6 +1611,22 @@ roomInput.onkeydown = e => {
 
   if(!text) return;
 gtag('event', 'send_room_message');
+
+if(confirm("Ask Null remember this for 7 days?")){
+
+    socket.emit(
+        "createReminder",
+        {
+
+            deviceId,
+
+            text
+
+        }
+    );
+
+}
+
   socket.emit(
     "roomMessage",
     { text }
