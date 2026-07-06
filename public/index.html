@@ -1916,10 +1916,21 @@ ${m.text}
 
 <button
 onclick="
-socket.emit('createReminder',{
-deviceId,
-text:'${m.reminder}'
-});
+(async () => {
+
+    await enableNotifications();
+
+    socket.emit('createReminder', {
+
+        deviceId,
+
+        text: '${m.reminder}'
+
+    });
+
+    alert('Reminder saved.');
+
+})();
 "
 style="
 width:100%;
@@ -1930,9 +1941,11 @@ background:#000;
 color:#fff;
 font-weight:700;
 cursor:pointer;
-">
+"
+>
 Remember
 </button>
+
 
 </div>
 
