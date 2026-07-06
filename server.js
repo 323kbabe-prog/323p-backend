@@ -620,6 +620,32 @@ socket.on(
     }
 );
 
+    socket.on("savePhoneNumber", async ({
+
+    deviceId,
+
+    phone
+
+}) => {
+
+    await supabase
+
+        .from("devices")
+
+        .update({
+
+            phone,
+
+            notification_type: "sms"
+
+        })
+
+        .eq("device_id", deviceId);
+
+    socket.emit("phoneSaved");
+
+});
+
 socket.on(
     "createReminder",
     async ({
