@@ -2135,23 +2135,8 @@ if(!room){
   );
 
   return;
-}
-
-
-
-
-    io.to(room.id).emit(
-        "roomMessages",
-        room.messages
-    );
-
-io.to(room.id).emit("aiTypingStop");
-
-    return;
 
 }
-
-
 
 const jobIntentRes = await openai.responses.create({
   model: "gpt-5-mini",
