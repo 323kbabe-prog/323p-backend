@@ -720,6 +720,15 @@ reminder_time:
 
 setTimeout(() => {
 
+room.messages.forEach(m => {
+
+    if (m.reminderCard) {
+
+        m.hidden = true;
+
+    }
+
+});
     room.messages.push({
 
         from: "NULL",
