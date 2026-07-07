@@ -1638,9 +1638,16 @@ socket.emit("createReminder", {
 
 } else {
 
-    socket.emit("roomMessage", {
-        text
-    });
+socket.emit(
+  "roomMessage",
+  {
+    text,
+    timeZone:
+      Intl.DateTimeFormat()
+        .resolvedOptions()
+        .timeZone
+  }
+);
 
 }
 
