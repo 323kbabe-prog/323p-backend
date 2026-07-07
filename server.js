@@ -4124,6 +4124,13 @@ const placeSearchFetch =
   const placeSearchRes =
     await placeSearchFetch.json();
 
+    if (!placeName) {
+
+    console.log("PLACE SEARCH FAILED");
+    console.log(placeSearchRes);
+
+}
+
   console.log(
   "PLACE RESULT:",
   JSON.stringify(
@@ -4280,7 +4287,7 @@ if(
     currentTopic;
 }
   
-if(
+if(!skipPlaceFlow){
   !skipPlaceFlow &&
   placeName
 ){
@@ -4342,7 +4349,7 @@ Rules:
           role:"user",
           content:`
 Place:
-${placeName}
+${placeName || "a real place matching the user's request"}
 
 News:
 ${selectedNews?.title || ""}
@@ -4694,6 +4701,8 @@ room.messages.push({
 ask:
 
 placeStory ||
+
+`I picked a place related to ${selectedNews.title} because it best matches your request today.`
 
 (
 isPersonalIntent
