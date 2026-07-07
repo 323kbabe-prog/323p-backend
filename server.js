@@ -657,7 +657,13 @@ async ({
         const user = users[socket.id];
 
 const room = rooms[user.currentRoom];
-
+    
+timeZone =
+  typeof timeZone === "string" &&
+  timeZone.length
+    ? timeZone
+    : "UTC";
+    
 if (!room) {
     return;
 }
@@ -2343,10 +2349,9 @@ return socket.emit(
   // ROOM MESSAGE
   //////////////////////////////////////////////////
 
-  socket.on(
-    "roomMessage",
-
-    async ({ text }) => {
+socket.on(
+  "roomMessage",
+  async ({ text, timeZone }) => {
 
  const user =
       users[socket.id];
