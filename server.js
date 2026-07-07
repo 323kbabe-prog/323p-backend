@@ -4797,59 +4797,39 @@ if (
  room.topicMemory[topicKey] = {
 
     searchLabel:
-
         isJobSearch
             ? "Job"
-
             : isYoutubeIntent
                 ? "YouTube"
-
                 : isShoppingIntent
                     ? "Shopping"
-
                     : "Null (AGI NETWORK) Feed",
 
     ask:
-
         placeStory ||
-
         (
-
             isPersonalIntent
-
                 ? nullReason
-
                 : selectedNews.title
-
         ),
 
-    image:imageUrl,
+    image: imageUrl,
 
     link:
-
         isYoutubeIntent
-
             ? youtubeLink
-
             : isShoppingIntent
-
                 ? amazonLink
-
                 : (
-
                     placeLink ||
-
                     selectedNews.link ||
-
                     selectedNews.news_link ||
-
                     ""
-
                 ),
 
-  jobCard: null
+    jobCard: null
 
-}
+};
 //////////////////////////////////////////////////
 // SHARE TEXT
 //////////////////////////////////////////////////
