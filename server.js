@@ -3645,14 +3645,6 @@ room.usedSearches.push(
 //////////////////////////////////////////////////
 // SERP CURRENT NEWS SEARCH
 //////////////////////////////////////////////////
-if (isLocationRequest) {
-
-  // skip AI news evaluation
-
-}
-
-
-
 
 if (isJobSearch) {
 
@@ -3978,15 +3970,6 @@ Choose the result that creates the strongest real-world connection between the u
 
 Return ONLY the exact title.
 
-If the same location request has already been answered and the previous recommendation is still the strongest match,
-
-do not invent a different recommendation.
-
-Instead return exactly:
-
-That is still my best answer right now. Use NULL Feed if you'd like me to explore another place.
-
-Only choose a different recommendation if NULL Feed is used or a genuinely better current recommendation exists.
 
 `
         },
