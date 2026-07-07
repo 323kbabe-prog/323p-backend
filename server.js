@@ -632,13 +632,16 @@ socket.on(
 console.log("DEVICE:", deviceId);
 console.log("PHONE:", phone);
 
- await supabase
-    .from("devices")
-    .upsert({
-        device_id: deviceId,
-        phone,
-        notification_type: "sms"
-    });
+const { data, error } = await supabase
+  .from("devices")
+  .upsert({
+    device_id: deviceId,
+    phone,
+    notification_type: "sms"
+  });
+
+console.log("UPSERT ERROR:", error);
+console.log("UPSERT DATA:", data);
 
     socket.emit("phoneSaved");
 
