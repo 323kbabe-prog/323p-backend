@@ -2753,16 +2753,14 @@ other
 
 `
       },
+        
       {
-        role: "user",
-        content: `
-User timezone:
-${timeZone}
-
+  role: "user",
+  content: `
 User:
 ${text}
 `
-      }
+}
     ]
   });
 
