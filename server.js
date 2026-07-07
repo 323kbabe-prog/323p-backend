@@ -3661,37 +3661,60 @@ const jobSearchRes =
         content:`
 Create ONE Google Jobs search.
 
-Understand what career the user is actually looking for.
+Understand exactly what career the user is looking for.
+
+If the user specifies a city, state, country, or remote,
+ALWAYS preserve it in the search.
+
+Never remove or replace the user's requested location.
 
 The uploaded image and hidden system provide context only.
 
 Prioritize:
-- user's career goal (90%)
-- hidden system (10%)
+
+1. User's career goal (90%)
+2. User's location (required if provided)
+3. Hidden system (10%)
 
 Examples:
 
-i love ai
+Need ai job
 → machine learning engineer
 
-i want to work at openai
-→ openai software engineer
+Need ai job Seattle
+→ machine learning engineer seattle
 
-i like design and ai
-→ ai ux designer
+Need ai job New York
+→ machine learning engineer new york
 
-i like cameras
-→ computer vision engineer
+Need product designer Tokyo
+→ product designer tokyo
 
-i want to build robots
-→ robotics engineer
+Need remote ai job
+→ machine learning engineer remote
+
+Need OpenAI job Seattle
+→ openai software engineer seattle
+
+Image:
+coffee cup
+
+Hidden system:
+morning routine
+
+User:
+Need ai job Seattle
+
+Search:
+machine learning engineer seattle
 
 Rules:
 
-- 2 to 6 words
-- lowercase only
-- no punctuation
-- real Google Jobs search
+- Return ONLY the Google Jobs search.
+- 2 to 8 words.
+- Lowercase only.
+- No punctuation.
+- Never remove the user's requested location.
 `
       },
 
