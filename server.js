@@ -3893,7 +3893,7 @@ const validNews =
 
 if(validNews.length > 0){
 
-if (validNews.length <= 2) {
+if (isLocationRequest || validNews.length <= 2) {
 
   selectedNews = validNews[0];
 
