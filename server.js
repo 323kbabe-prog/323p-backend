@@ -649,11 +649,11 @@ console.log("UPSERT DATA:", data);
 
 socket.on(
     "createReminder",
-    async ({
-        
-        deviceId,
-        text
-    }) => {
+async ({
+    deviceId,
+    text,
+    timeZone
+}) => {
         const user = users[socket.id];
 
 const room = rooms[user.currentRoom];
@@ -828,7 +828,8 @@ const reminderRes =
                     {
                         role:"system",
 
-                        content:`
+        
+content:`
 Return JSON only.
 
 {
@@ -838,6 +839,12 @@ Return JSON only.
 "body":"",
 "reminder_time":""
 }
+
+The user's timezone is provided below.
+
+When the user says things like "tomorrow at 8 PM" or "next Friday at 9", interpret those using the user's timezone.
+
+Return reminder_time as a valid ISO-8601 datetime that matches the user's local time.
 
 type:
 
@@ -851,7 +858,13 @@ news
 
                     {
                         role:"user",
-                        content:text
+                        content:`
+User timezone:
+${timeZone}
+
+User:
+${text}
+`
                     }
 
                 ]
@@ -2361,6 +2374,9 @@ Return ONLY:
 jobs
 none
 
+User timezone:
+${timeZone}
+
 User:
 ${text}
 `
@@ -2737,7 +2753,13 @@ other
       },
       {
         role: "user",
-        content: text
+        content: `
+User timezone:
+${timeZone}
+
+User:
+${text}
+`
       }
     ]
   });
