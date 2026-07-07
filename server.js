@@ -4758,25 +4758,53 @@ if (
     selectedNews
 ) {
 
-    room.topicMemory[topicKey] = {
+   room.topicMemory[topicKey] = {
 
-        title:
-            placeStory ||
-            (
-                isPersonalIntent
-                    ? nullReason
-                    : selectedNews.title
-            ),
+    searchLabel:
+        isJobSearch
+            ? "Job"
+            : isYoutubeIntent
+                ? "YouTube"
+                : isShoppingIntent
+                    ? "Shopping"
+                    : "Null (AGI NETWORK) Feed",
 
-        image: imageUrl,
+    ask:
+        placeStory ||
+        (
+            isPersonalIntent
+                ? nullReason
+                : selectedNews.title
+        ),
 
-        link:
-            placeLink ||
-            selectedNews.link ||
-            selectedNews.news_link ||
-            ""
+    image: imageUrl,
 
-    };
+    link:
+        isYoutubeIntent
+            ? youtubeLink
+            : isShoppingIntent
+                ? amazonLink
+                : (
+                    placeLink ||
+                    selectedNews.link ||
+                    selectedNews.news_link ||
+                    ""
+                ),
+
+    jobCard:
+        isJobSearch
+            ? {
+                title: job.title,
+                company: job.company_name,
+                location: job.location,
+                salary: job.detected_extensions?.salary,
+                type: job.detected_extensions?.schedule_type,
+                posted: job.detected_extensions?.posted_at,
+                link: jobsUrl
+            }
+            : null
+
+};
 
 }
 //////////////////////////////////////////////////
