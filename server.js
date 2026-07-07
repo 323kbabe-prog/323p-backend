@@ -4691,9 +4691,19 @@ room.messages.push({
 
 ask:
 
+ask:
+
 placeStory ||
 
-`I picked a place related to ${selectedNews.title} because it best matches your request today.` ||
+`I picked ${
+    locationPurposeSearch !== "none"
+        ? locationPurposeSearch
+        : isYoutubeIntent
+            ? "this video"
+            : isShoppingIntent
+                ? "this product"
+                : "this topic"
+} because ${selectedNews.title} best matches your request today.` ||
 
 (
     isPersonalIntent
