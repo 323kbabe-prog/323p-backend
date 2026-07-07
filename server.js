@@ -4124,12 +4124,6 @@ const placeSearchFetch =
   const placeSearchRes =
     await placeSearchFetch.json();
 
-    if (!placeName) {
-
-    console.log("PLACE SEARCH FAILED");
-    console.log(placeSearchRes);
-
-}
 
   console.log(
   "PLACE RESULT:",
@@ -4288,9 +4282,6 @@ if(
 }
   
 if(!skipPlaceFlow){
-  !skipPlaceFlow &&
-  placeName
-){
 
 
   try{
@@ -4349,7 +4340,7 @@ Rules:
           role:"user",
           content:`
 Place:
-${placeName || "a real place matching the user's request"}
+${placeName || locationPurposeSearch}
 
 News:
 ${selectedNews?.title || ""}
@@ -4702,13 +4693,14 @@ ask:
 
 placeStory ||
 
-`I picked a place related to ${selectedNews.title} because it best matches your request today.`
+`I picked a place related to ${selectedNews.title} because it best matches your request today.` ||
 
 (
-isPersonalIntent
-? nullReason
-: selectedNews.title
+    isPersonalIntent
+        ? nullReason
+        : selectedNews.title
 ),
+
 
 link:
   isYoutubeIntent
