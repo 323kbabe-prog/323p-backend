@@ -1352,6 +1352,7 @@ if (!roomId || !rooms[roomId]) {
         id: roomId,
 
         usedPlaceTopic: null,
+        topicMemory: {},
 
         displayName: user.displayName,
 
@@ -1414,6 +1415,7 @@ deviceRooms[deviceId] = roomId;
 
     room.coreTheme =
         coreTheme;
+    room.topicMemory = {};
 
 }
 
@@ -2718,6 +2720,10 @@ const userIntent =
     .content
     .trim();
 
+const topicKey = userIntent.trim().toLowerCase();
+
+const cachedTopic = room.topicMemory[topicKey];
+
 const personalIntentRes =
   await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -3541,6 +3547,55 @@ const emotionSearch =
     ? emotionRes.choices[0].message.content.trim()
     : "";
 
+if (
+    cachedTopic &&
+    !isNextSearch
+) {
+
+    room.messages.push({
+
+        from: "NULL",
+
+        aiBeing: true,
+
+        showNextButton: true,
+
+        text:
+        "This is still my best answer for now. I've already searched this topic from my identity. Use NULL Feed if you'd like me to explore a different direction."
+
+    });
+
+    room.messages.push({
+
+        from: "CHANG, TIEN",
+
+        aiBeing: true,
+
+        showNextButton: true,
+
+        showRead: true,
+
+        searchLabel: "Null (AGI NETWORK) Feed",
+
+        ask: cachedTopic.title,
+
+        image: cachedTopic.image,
+
+        link: cachedTopic.link
+
+    });
+
+    io.to(room.id).emit("aiTypingStop");
+
+    io.to(room.id).emit(
+        "roomMessages",
+        room.messages
+    );
+
+    return;
+
+}
+    
 const searchQuery = (
     isNextSearch
         ? (
@@ -3596,23 +3651,7 @@ if (isLocationRequest) {
 
 }
 
-if(isYoutubeIntent){
 
-  room.messages.push({
-    from:"CHANG, TIEN",
-    aiBeing:true,
-    showNextButton:true,
-    showRead:true,
-    searchLabel:"NULL (AGI NETWORK) Feed",
-    ask:directYoutubeSearch,
-    link:youtubeLink
-  });
-
-io.to(room.id).emit("aiTypingStop");
-io.to(room.id).emit("roomMessages", room.messages);
-return;
-
-}
 
 
 if (isJobSearch) {
@@ -4653,6 +4692,33 @@ link:
 
 });
 
+
+}
+
+if (
+    !isNextSearch &&
+    selectedNews
+) {
+
+    room.topicMemory[topicKey] = {
+
+        title:
+            placeStory ||
+            (
+                isPersonalIntent
+                    ? nullReason
+                    : selectedNews.title
+            ),
+
+        image: imageUrl,
+
+        link:
+            placeLink ||
+            selectedNews.link ||
+            selectedNews.news_link ||
+            ""
+
+    };
 
 }
 //////////////////////////////////////////////////
