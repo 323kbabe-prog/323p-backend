@@ -628,6 +628,10 @@ socket.on(
 
 }) => {
 
+        console.log("SAVE PHONE");
+console.log("DEVICE:", deviceId);
+console.log("PHONE:", phone);
+
  await supabase
     .from("devices")
     .upsert({
@@ -4876,6 +4880,8 @@ if (
     device.phone
 ) {
 
+    console.log("SENDING SMS TO:", device.phone);
+    
     await sendSMS(
         device.phone,
         reminder.body
