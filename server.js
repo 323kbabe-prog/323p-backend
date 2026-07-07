@@ -3929,44 +3929,52 @@ taipei ramen
 
 Priority:
 
-1. The user's request ALWAYS comes first.
+1. Identify the biggest current local news or event.
 
-2. If the user requested a place type
-(coffee shop, restaurant, ramen, hotel, bar, museum, park, store, etc.)
-you MUST keep that place type.
+2. The user's request ALWAYS determines the place type.
 
-3. Among the candidate news, choose the article that best helps recommend that requested place.
+3. Use the current local news to decide WHICH place best fits that request.
 
 4. Never change the user's requested place type.
 
-Example:
+Examples:
 
 User:
 need coffee shop in shinjuku
 
 Correct:
-news that helps recommend a coffee shop in Shinjuku
+A current local news story that helps recommend ONE coffee shop in Shinjuku.
 
 Wrong:
-LG electronics
+LG Electronics
 consumer products
 technology news
 design awards
 
+User:
+need ramen in shibuya
+
+Correct:
+A current local news story that helps recommend ONE ramen shop in Shibuya.
+
 Never prioritize:
 
 * coffee shop news
-* bar news
 * restaurant news
+* bar news
 * rankings
 * top 10 lists
-* guides
+* travel guides
 
-Choose the result that best satisfies the user's request.
+The place itself does not need to be in the news.
 
-The current local event should only help decide WHICH place to recommend.
+The news provides the reason.
 
-It must never replace WHAT the user asked for.
+The user's request determines WHAT place to recommend.
+
+The current local event determines WHY that place is recommended today.
+
+Choose the result that creates the strongest real-world connection between the user's request and today's local news.
 
 Return ONLY the exact title.
 
