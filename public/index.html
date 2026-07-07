@@ -1628,10 +1628,11 @@ if (memoryMode) {
 
     } else {
 
-        socket.emit("createReminder", {
-            deviceId,
-            text
-        });
+socket.emit("createReminder", {
+    deviceId,
+    text,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+});
 
     }
 
