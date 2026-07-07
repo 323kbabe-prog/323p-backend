@@ -3893,7 +3893,7 @@ const validNews =
 
 if(validNews.length > 0){
 
-if (isLocationRequest || validNews.length <= 2) {
+if (validNews.length <= 2) {
 
   selectedNews = validNews[0];
 
@@ -3929,9 +3929,29 @@ taipei ramen
 
 Priority:
 
-1. identify the biggest local news or event
-2. identify which result best represents that event
-3. identify ONE real place that could be connected to that event
+1. The user's request ALWAYS comes first.
+
+2. If the user requested a place type
+(coffee shop, restaurant, ramen, hotel, bar, museum, park, store, etc.)
+you MUST keep that place type.
+
+3. Among the candidate news, choose the article that best helps recommend that requested place.
+
+4. Never change the user's requested place type.
+
+Example:
+
+User:
+need coffee shop in shinjuku
+
+Correct:
+news that helps recommend a coffee shop in Shinjuku
+
+Wrong:
+LG electronics
+consumer products
+technology news
+design awards
 
 Never prioritize:
 
@@ -3942,7 +3962,11 @@ Never prioritize:
 * top 10 lists
 * guides
 
-Choose the result most useful for finding ONE real place related to the biggest current local event.
+Choose the result that best satisfies the user's request.
+
+The current local event should only help decide WHICH place to recommend.
+
+It must never replace WHAT the user asked for.
 
 Return ONLY the exact title.
 
