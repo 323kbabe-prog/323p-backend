@@ -3565,25 +3565,27 @@ if (
 
     });
 
-    room.messages.push({
+   room.messages.push({
 
-        from: "CHANG, TIEN",
+    from:"CHANG, TIEN",
 
-        aiBeing: true,
+    aiBeing:true,
 
-        showNextButton: true,
+    showNextButton:true,
 
-        showRead: true,
+    showRead:true,
 
-        searchLabel: "Null (AGI NETWORK) Feed",
+    searchLabel: cachedTopic.searchLabel,
 
-        ask: cachedTopic.title,
+    ask: cachedTopic.ask,
 
-        image: cachedTopic.image,
+    image: cachedTopic.image,
 
-        link: cachedTopic.link
+    link: cachedTopic.link,
 
-    });
+    jobCard: cachedTopic.jobCard
+
+});
 
     io.to(room.id).emit("aiTypingStop");
 
