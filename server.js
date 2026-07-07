@@ -3535,17 +3535,25 @@ const emotionSearch =
     ? emotionRes.choices[0].message.content.trim()
     : "";
 
-const searchQuery =
-  isNextSearch
-    ? emotionSearch
-    : (
-        directLocationSearch ||
-        directYoutubeSearch ||
-        directShoppingSearch ||
-        directNewsSearch ||
-        emotionSearch
-      );
-
+const searchQuery = (
+    isNextSearch
+        ? (
+            emotionSearch ||
+            hiddenSystem ||
+            userIntent ||
+            "latest news"
+        )
+        : (
+            directLocationSearch ||
+            directYoutubeSearch ||
+            directShoppingSearch ||
+            directNewsSearch ||
+            emotionSearch ||
+            hiddenSystem ||
+            userIntent ||
+            "latest news"
+        )
+).trim();
 
 
 const isLocationRequest =
@@ -3681,13 +3689,29 @@ console.log(
   jobSearch
 );
 
-
 const serpFetch = await fetch(
   `https://serpapi.com/search.json?engine=google_jobs&q=${encodeURIComponent(jobSearch)}&api_key=${process.env.SERPAPI_KEY}`
 );
 
+if (!serpFetch.ok) {
 
-  const serpRes = await serpFetch.json();
+    room.messages.push({
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        text: "Search service unavailable."
+    });
+
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+
+    return;
+}
+
+const serpRes = await serpFetch.json();
+
+console.log("SERP RESPONSE:");
+console.log(JSON.stringify(serpRes, null, 2));
 
 const job = serpRes.jobs_results?.[0];
 
@@ -4138,8 +4162,19 @@ if(!imageUrl){
 // V5.4.2 EMOTIONALLY CHOSEN TITLE
 //////////////////////////////////////////////////
 
-if(!selectedNews?.title){
-  return;
+if (!selectedNews?.title) {
+
+    room.messages.push({
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        text: "No results found."
+    });
+
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+
+    return;
 }
 
 let newsTitle =
@@ -4250,15 +4285,26 @@ ${selectedNews?.title || ""}
 
 }
 
-if(
-  !selectedNews ||
-  !selectedNews.title ||
-  !(
-    selectedNews.link ||
-    selectedNews.news_link
-  )
+if (
+    !selectedNews ||
+    !selectedNews.title ||
+    !(
+        selectedNews.link ||
+        selectedNews.news_link
+    )
 ){
-  return;
+
+    room.messages.push({
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        text: "No readable article found."
+    });
+
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+
+    return;
 }
   
 if(repeatedPlace){
