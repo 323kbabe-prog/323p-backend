@@ -1433,6 +1433,9 @@ if (!roomReady) {
         "publishDialog"
     ).style.display = "none";
 
+  helper.style.display = "flex";
+capturePreview.style.display = "none";
+  
   helper.innerHTML = `
 <div style="display:flex;align-items:center;gap:10px;">
 <span>CREATING AI LIVE ROOM...</span>
@@ -1700,7 +1703,11 @@ socket.on(
 
 
 socket.on("roomCreated", data => {
-
+  
+setTimeout(() => {
+    helper.style.display = "none";
+}, 600);
+  
 clearTimeout(rejoinTimeout);
 
 window.isRoomOwner = data.isOwner;
