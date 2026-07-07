@@ -3567,6 +3567,8 @@ if (
 
    room.messages.push({
 
+  room.messages.push({
+
     from:"CHANG, TIEN",
 
     aiBeing:true,
@@ -3575,15 +3577,15 @@ if (
 
     showRead:true,
 
-    searchLabel: cachedTopic.searchLabel,
+    searchLabel:cachedTopic.searchLabel,
 
-    ask: cachedTopic.ask,
+    ask:cachedTopic.ask,
 
-    image: cachedTopic.image,
+    image:cachedTopic.image,
 
-    link: cachedTopic.link,
+    link:cachedTopic.link,
 
-    jobCard: cachedTopic.jobCard
+    jobCard:cachedTopic.jobCard
 
 });
 
@@ -4760,50 +4762,81 @@ if (
     selectedNews
 ) {
 
-   room.topicMemory[topicKey] = {
+ room.topicMemory[topicKey] = {
 
     searchLabel:
+
         isJobSearch
             ? "Job"
+
             : isYoutubeIntent
                 ? "YouTube"
+
                 : isShoppingIntent
                     ? "Shopping"
+
                     : "Null (AGI NETWORK) Feed",
 
     ask:
+
         placeStory ||
+
         (
+
             isPersonalIntent
+
                 ? nullReason
+
                 : selectedNews.title
+
         ),
 
-    image: imageUrl,
+    image:imageUrl,
 
     link:
+
         isYoutubeIntent
+
             ? youtubeLink
+
             : isShoppingIntent
+
                 ? amazonLink
+
                 : (
+
                     placeLink ||
+
                     selectedNews.link ||
+
                     selectedNews.news_link ||
+
                     ""
+
                 ),
 
     jobCard:
+
         isJobSearch
+
             ? {
-                title: job.title,
-                company: job.company_name,
-                location: job.location,
-                salary: job.detected_extensions?.salary,
-                type: job.detected_extensions?.schedule_type,
-                posted: job.detected_extensions?.posted_at,
-                link: jobsUrl
+
+                title:job.title,
+
+                company:job.company_name,
+
+                location:job.location,
+
+                salary:job.detected_extensions?.salary,
+
+                type:job.detected_extensions?.schedule_type,
+
+                posted:job.detected_extensions?.posted_at,
+
+                link:jobsUrl
+
             }
+
             : null
 
 };
