@@ -3339,15 +3339,28 @@ async function createRoomFromPublicNull(imageDataUrl){
 
 
 
+helper.style.display = "flex";
+capturePreview.style.display = "none";
+
+helper.innerHTML = `
+<div style="display:flex;align-items:center;gap:10px;">
+<span>CREATING AI ROOM...</span>
+<div style="display:flex;gap:4px;">
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+</div>
+</div>
+`;
+
 socket.emit("imageUpload",{
-deviceId,
+    deviceId,
     imageDataUrl,
     roomMode: true,
     askMode: false,
     publishMode: "private",
     roomId: localStorage.getItem("roomId")
 });
-
 
 }
 
