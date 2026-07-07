@@ -2353,25 +2353,22 @@ socket.on(
   "roomMessage",
   async ({ text, timeZone }) => {
 
- const user =
-      users[socket.id];
+    const user = users[socket.id];
+    const room = rooms[user.currentRoom];
 
-    const room =
-  rooms[user.currentRoom];
+    if (!room) {
+        socket.emit("roomClosed");
+        return;
+    }
 
-if(!room){
+    let isJobSearch = false;
 
-  socket.emit(
-    "roomClosed"
-  );
+    try {
 
-  return;
-
-}
-
-const jobIntentRes = await openai.responses.create({
-  model: "gpt-5-mini",
-  input: `
+        const jobIntentRes =
+            await openai.responses.create({
+                model: "gpt-5-mini",
+                input: `
 Determine if the user is looking for jobs.
 
 Return ONLY:
@@ -2382,24 +2379,30 @@ none
 User:
 ${text}
 `
-});
+            });
 
-const isJobSearch =
-  jobIntentRes.output_text.trim().toLowerCase() === "jobs";
+        isJobSearch =
+            jobIntentRes.output_text
+                .trim()
+                .toLowerCase() === "jobs";
 
+    } catch (err) {
 
-   
+        console.error("Job intent failed:", err);
+        isJobSearch = false;
 
-      const isNextSearch =
-  text.trim().toLowerCase() === "null feed";
+    }
 
-      if (isNextSearch) {
+    const isNextSearch =
+        text.trim().toLowerCase() === "null feed";
 
-  room.messages.forEach(m => {
-    m.showNextButton = false;
-  });
+    if (isNextSearch) {
+        room.messages.forEach(m => {
+            m.showNextButton = false;
+        });
+    }
 
-}
+    // ...continue with the rest of roomMessage
 
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
@@ -3720,16 +3723,17 @@ const job = serpRes.jobs_results?.[0];
 
 if (!job) {
 
-  room.messages.push({
-    from: "CHANG, TIEN",
-    aiBeing: true,
-    showNextButton: true,
-    text: "No jobs found."
-  });
+    room.messages.push({
+        from: "CHANG, TIEN",
+        aiBeing: true,
+        showNextButton: true,
+        text: "No jobs found."
+    });
 
-  io.to(room.id).emit("aiTypingStop");
-  io.to(room.id).emit("roomMessages", room.messages);
-  return;
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+
+    return;
 }
 
 const jobsUrl =
@@ -3770,18 +3774,31 @@ return;
 
 
 // Existing Google News search
-const serpFetch =
-  await fetch(
-    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
-  );
 
-const serpRes =
-  await serpFetch.json();
+const serpFetch = await fetch(
+  `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+);
 
+if (!serpFetch.ok) {
+
+    room.messages.push({
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        text: "Search service unavailable."
+    });
+
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+
+    return;
+}
+
+const serpRes = await serpFetch.json();
 
 console.log(
-  "LOOP NEWS COUNT:",
-  serpRes?.news_results?.length
+    "LOOP NEWS COUNT:",
+    serpRes?.news_results?.length
 );
 
 //////////////////////////////////////////////////
@@ -4929,10 +4946,16 @@ const { data: devices } =
 
     console.log("DEVICES FOUND:", devices);
 
-if(!devices?.length){
+if (!devices?.length) {
+
+    await supabase
+        .from("reminders")
+        .update({
+            sent: true
+        })
+        .eq("id", reminder.id);
 
     continue;
-
 }
 
 try {
@@ -5024,3 +5047,5 @@ console.log(err);
 
 
 }, 60 * 1000);
+
+
