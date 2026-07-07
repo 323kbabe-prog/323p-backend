@@ -2374,9 +2374,6 @@ Return ONLY:
 jobs
 none
 
-User timezone:
-${timeZone}
-
 User:
 ${text}
 `
