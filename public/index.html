@@ -2532,6 +2532,7 @@ margin-bottom:8px;
 >
 ${m.searchLabel || ""}
 </div>
+
 <div
 style="
 font-size:13px;
@@ -2541,7 +2542,9 @@ margin-bottom:10px;
 line-height:1.4;
 "
 >
-One I think you should notice today:
+${m.nullReason
+    ? "One thought I want to share:"
+    : "One I think you should notice today:"}
 </div>
 
 
