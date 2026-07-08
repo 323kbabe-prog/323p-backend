@@ -2425,10 +2425,19 @@ if (
 
 // Unclear
 else if (
-    lowerIntent.length < 2 ||
-    /^(huh|what|\?+|\.{3}|asdf|idk|hmm|bbgd|i did bbgd)$/.test(lowerIntent)
+
+    lowerIntent.length <= 2 ||
+
+    /^[?.!]+$/.test(lowerIntent) ||
+
+    /^\.+$/.test(lowerIntent) ||
+
+    /^(huh+|what+|umm+|uh+|hmm+|idk|asdf+|bbgd|i did bbgd|k|kk|ok\?*)$/.test(lowerIntent)
+
 ) {
+
     inputType = "unclear";
+
 }
 
 if (inputType === "unclear") {
