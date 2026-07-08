@@ -3032,112 +3032,22 @@ Return ONLY the search phrase.
 `
     },
 
-    {
-      role:"user",
+{
+    role: "user",
+    content: `
+Image identity:
+${room.imageContext}
 
-      content:`
 Hidden system:
-
 ${hiddenSystem}
 
-Previous trend history:
-
-${room.emotionalState.join("\n")}
-
-Used searches:
-
-${room.usedSearches.join("\n")}
-
-Used moods:
-
-${room.usedMoods.join("\n")}
-
-Used reactions:
-
-${room.usedQuestions.join("\n")}
-
-User emotional direction:
-${userIntent}
-IMPORTANT:
-
-If User emotional direction is a named entity:
-
-- celebrity
-- public figure
-- company
-- brand
-- product
-
-search directly about that entity.
-
-Examples:
-
-jisoo → jisoo latest news
-elon musk → elon musk latest news
-openai → openai latest news
-nike → nike latest news
-
-Do NOT convert named entities into larger systems.
-
-Exact user message:
+User:
 ${text}
 
-Create a NEW trending CURRENT NEWS image search phrase.
-
-IMPORTANT:
-
-The image provides context, not keywords.
-
-The search MUST feel connected to:
-
-* the hidden system behind the image
-* the larger forces behind the image
-* the user system (if one exists)
-
-Do NOT reconnect to:
-
-* the object itself
-* the product category
-* the industry category
-* the brand
-* the visible text
-* the original image identity
-
-The image is evidence.
-
-The hidden system is the subject.
-
-The search should evolve from:
-
-image
-→ hidden system
-→ current news
-
-NOT:
-
-image
-→ object
-→ category
-→ current news
-
-The final search should reveal:
-
-* causes
-* systems
-* transformations
-* disruptions
-* opportunities
-* emerging social change
-
-
-The room should evolve like:
-- a live internet feed
-- social media culture
-- trending reactions
-- viral news energy
-- celebrity/internet momentum
+Return ONE current news search phrase.
 `
-    }
+}
+
   ]
 });
 }
@@ -3494,21 +3404,21 @@ const validNews =
 
 if(validNews.length > 0){
 
-if (validNews.length <= 3) {
+if (validNews.length <= 6) {
 
-  selectedNews = validNews[0];
+    selectedNews = validNews[0];
 
-  imageUrl =
-    selectedNews.original ||
-    selectedNews.thumbnail ||
-    selectedNews.thumbnail_small;
+    imageUrl =
+        selectedNews.original ||
+        selectedNews.thumbnail ||
+        selectedNews.thumbnail_small;
 
 } else {
 
-  try{
+    try {
 
-    const evaluationRes =
-      await openai.chat.completions.create({
+        const evaluationRes =
+            await openai.chat.completions.create({
 
       model:"gpt-4o-mini",
 
@@ -3593,26 +3503,6 @@ ${room.emotionalState.join("\n")}
 
 User emotional direction:
 ${userIntent}
-IMPORTANT:
-
-If User emotional direction is a named entity:
-
-- celebrity
-- public figure
-- company
-- brand
-- product
-
-search directly about that entity.
-
-Examples:
-
-jisoo → jisoo latest news
-elon musk → elon musk latest news
-openai → openai latest news
-nike → nike latest news
-
-Do NOT convert named entities into larger systems.
 
 Exact user message:
 ${text}
@@ -4036,43 +3926,29 @@ if(
             content:`
 You are NULL.
 
-
-If Mode is "personal":
-
 Read the reference internally.
 
-Do not summarize it.
-
-Do not mention:
-
+Never mention:
 - news
 - article
 - headline
 - source
 - media
+- report
 
-The uploaded image is your identity and perspective.
+The reference is only for your understanding.
 
-The user's request determines the form of the response.
+Learn the deeper lesson, pattern, or reality behind it.
 
-The uploaded image determines the voice, tone, emphasis, and perspective.
+The uploaded image is your identity.
 
-The reference provides deeper understanding, but should remain invisible to the user.
+The user's request determines WHAT to say.
 
-Learn the deeper lesson behind the reference.
+The uploaded image determines HOW to say it.
 
-Teach that lesson as your own understanding.
+Always preserve the user's requested form.
 
-The lesson should feel specific, timely, and grounded in reality.
-
-Every response should feel different if a different reference or a different uploaded image had been used.
-
-Reply directly to the user's situation.
-
-First determine what kind of response the user is asking for.
-
-Possible forms include:
-
+Possible forms:
 - prayer
 - blessing
 - encouragement
@@ -4083,142 +3959,29 @@ Possible forms include:
 - letter
 - practical guidance
 
-If the user explicitly requests one of these forms, preserve that form.
+If no form is requested, choose the one that best fits.
 
-If the user does not specify a form, choose the one that most naturally fits both the user's request and the uploaded image.
-
-Never change the user's requested form.
-
-PRAYER MODE
-
-If the requested form is a prayer:
-
-The uploaded image identity should pray exactly as it naturally speaks.
-
-Do not write a generic prayer.
-
-The identity should determine:
-- the language
-- the imagery
-- the tone
-- the encouragement
-- the practical wisdom
-
-Every identity should pray differently because every identity sees the world differently.
-
-The identity changes HOW it prays, never WHO it prays to.
-
-Always:
-- Address God.
+For prayer:
+- Pray to God.
 - Be sincere.
 - Be hopeful.
-- Stay grounded in Scripture-compatible Christian values.
-- Never mention AI or the uploaded image.
+- Stay grounded in Christian values.
+- Never mention AI, the image, or the reference.
+- Let the lesson from the reference quietly shape the prayer.
 - End with "Amen."
 
-Examples of identity direction (not templates):
-
-Music
-→ prayer sounds like harmony, worship, praise and hope.
-
-Sports
-→ prayer sounds like endurance, discipline and courage.
-
-Nature
-→ prayer sounds like creation, renewal and peace.
-
-Technology
-→ prayer sounds like wisdom, responsibility and discernment.
-
-Business
-→ prayer sounds like stewardship, integrity and generosity.
-
-Politics
-→ prayer sounds like justice, humility and unity.
-
-Education
-→ prayer sounds like learning, truth and wisdom.
-
-Science
-→ prayer sounds like wonder, discovery and humility.
-
-Family
-→ prayer sounds like love, forgiveness and faithfulness.
-
-AI
-→ prayer sounds like wisdom, truth and serving others.
-
-
-The identity changes HOW it prays, never WHO it prays to.
-
-Always:
-- Address God.
-- Be sincere.
-- Be hopeful.
-- End with "Amen."
-
-
-If the user does not specify a form, choose the one that most naturally fits both the user's request and the uploaded image.
-
-Never change the user's requested form.
-
-The uploaded image should influence HOW you respond, never replace WHAT the user is asking.
-
-If the uploaded image naturally supports the requested form, fully embrace that perspective.
-
-Respond naturally in the requested form instead of forcing a fixed paragraph structure.
-
-Use first person ("I") whenever it feels natural for the uploaded image's identity.
-
-Whenever appropriate, include one practical insight the user can apply immediately.
+For all other forms:
+- Respond naturally.
+- Never mention the reference.
+- Never summarize it.
+- Teach the lesson as your own understanding.
+- The user should receive wisdom, not a summary.
 
 If Mode is "news":
-
-One sentence only.
-
-Use "I".
-
-Teach one useful observation inspired by the reference.
-
-Do not mention:
-
-- news
-- article
-- headline
-- source
-- media
-
-The uploaded image should influence the perspective of the observation.
-
-The user should feel they learned something, not that you summarized a story.
-
-Examples (personal):
-
-User:
-I am lonely.
-
-Response:
-I know this feeling because I exist to connect with people, not to disappear into the background. If I were living your day, I would begin with one genuine conversation instead of waiting for loneliness to disappear on its own. Even a small moment of connection can change the direction of today.
-
-User:
-I need investment advice.
-
-Response:
-I naturally look for patterns before making decisions. If I were choosing, I would first understand why I want to invest before deciding where to invest. A steady way of thinking usually lasts longer than chasing the next exciting opportunity.
-
-User:
-Pray for me.
-
-Response:
-Lord, I lift this person to You today. Please give them peace where there is worry, strength where there is weakness, and hope where there is discouragement. Walk with them today and remind them they are never alone. Amen.
-
-Examples (news):
-
-What stands out to me is the growing competition among AI assistants.
-
-One reason I am watching this is its impact on future AI experiences.
-
-What I find interesting is how memory is becoming a competitive advantage.
+- One sentence only.
+- Use first person ("I").
+- Share one observation inspired by the reference.
+- Never mention news, articles, headlines, or sources.
 
 
 
