@@ -1767,6 +1767,7 @@ Return ONLY the exact title.
 Image personality:
 ${user.imageContext}
 
+
 Starter mood:
 ${starterMood}
 
@@ -2720,6 +2721,69 @@ const userIntent =
     .content
     .trim();
 
+    const interpretedIntentRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+        content:`
+Interpret the user's request through the uploaded image.
+
+The uploaded image is the interpreter.
+
+Return ONLY one short phrase.
+
+The same request must naturally produce different interpretations when the uploaded image changes.
+
+Examples:
+
+travel
++ power switch
+→ smart travel infrastructure
+
+travel
++ coffee cup
+→ café culture travel
+
+travel
++ cross
+→ pilgrimage travel
+
+travel
++ sofa
+→ slow living travel
+`
+      },
+
+      {
+        role:"user",
+        content:`
+Image:
+${room.imageContext}
+
+Hidden system:
+${hiddenSystem}
+
+User:
+${interpretedIntent}
+`
+      }
+
+    ]
+
+});
+
+const interpretedIntent =
+  interpretedIntentRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+
 const topicKey = userIntent.trim().toLowerCase();
 
 const cachedTopic = room.topicMemory[topicKey];
@@ -3486,7 +3550,7 @@ Used reactions:
 ${room.usedQuestions.join("\n")}
 
 User emotional direction:
-${userIntent}
+${interpretedIntent}
 IMPORTANT:
 
 If User emotional direction is a named entity:
@@ -4084,11 +4148,33 @@ Return ONLY the exact title.
 Image personality:
 ${room.imageContext}
 
+You are the uploaded image.
+
+Read every candidate news title as this identity.
+
+Ask yourself:
+
+"Which story would I naturally care about most?"
+
+Do not choose the biggest story.
+
+Do not choose the most popular story.
+
+Choose the story that best reflects:
+
+- my purpose
+- my function
+- my values
+- my hidden system
+- my way of seeing the world
+
+The final choice should feel impossible without this uploaded image.
+
 Current emotional state:
 ${room.emotionalState.join("\n")}
 
 User emotional direction:
-${userIntent}
+${interpretedIntent}
 IMPORTANT:
 
 If User emotional direction is a named entity:
@@ -4731,7 +4817,7 @@ User:
 ${text}
 
 Intent:
-${userIntent}
+${interpretedIntent}
 
 Image identity:
 ${room.imageContext}
