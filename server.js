@@ -2994,12 +2994,11 @@ const isNamedEntity =
         .toLowerCase() === "entity";
 
 const directNewsSearch =
-
-  !isNextSearch && isNamedEntity
-
-    ? userIntent + " latest news"
-
-    : null;
+    !isNextSearch &&
+    isNamedEntity &&
+    locationPurposeSearch === "none"
+        ? userIntent + " latest news"
+        : null;
 
 const skipPlaceFlow =
   directNewsSearch !== null &&
