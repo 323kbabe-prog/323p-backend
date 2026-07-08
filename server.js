@@ -2657,58 +2657,27 @@ const isYoutubeIntent =
     /(youtube|video|music|song|songs|podcast|watch|listen|bgm|lofi|sermon|trailer|documentary)/i
     .test(text);
   
-  const locationPurposeRes =
-  await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    messages:[
-      {
-        role:"system",
-       content:`
-Detect place requests.
+  let locationPurposeSearch = "none";
 
-Return:
+if (
+    !isPersonalIntent &&
+    !isShoppingIntent &&
+    !isYoutubeIntent &&
+    !isJobSearch
+) {
 
-<location> <place type>
+    const locationPurposeRes =
+        await openai.chat.completions.create({
+        ...
+    });
 
-Examples:
-
-new york bar
-shibuya ramen
-tokyo place
-taipei coffee shop
-
-If the user wants somewhere to go but doesn't specify a place type:
-
-<location> place
-
-Otherwise:
-
-none
-
-Rules:
-- lowercase
-- no punctuation
-- return only one line
-
-`
-
-      },
-{
-  role:"user",
-  content: combinedIntent
+    locationPurposeSearch =
+        locationPurposeRes
+            .choices[0]
+            .message
+            .content
+            .trim();
 }
-
-
-    ]
-  });
-
-const locationPurposeSearch =
-
-  locationPurposeRes
-    .choices[0]
-    .message
-    .content
-    .trim();
 
 const hiddenSystem =
   room.hiddenSystem;
@@ -3452,7 +3421,7 @@ const validNews =
 
 if(validNews.length > 0){
 
-if (validNews.length <= 6) {
+if (isPersonalIntent || validNews.length <= 6) {
 
     selectedNews = validNews[0];
 
