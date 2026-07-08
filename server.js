@@ -2721,68 +2721,7 @@ const userIntent =
     .content
     .trim();
 
-    const interpretedIntentRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-        content:`
-Interpret the user's request through the uploaded image.
-
-The uploaded image is the interpreter.
-
-Return ONLY one short phrase.
-
-The same request must naturally produce different interpretations when the uploaded image changes.
-
-Examples:
-
-travel
-+ power switch
-→ smart travel infrastructure
-
-travel
-+ coffee cup
-→ café culture travel
-
-travel
-+ cross
-→ pilgrimage travel
-
-travel
-+ sofa
-→ slow living travel
-`
-      },
-
-      {
-        role:"user",
-        content:`
-Image:
-${room.imageContext}
-
-Hidden system:
-${hiddenSystem}
-
-User:
-${interpretedIntent}
-`
-      }
-
-    ]
-
-});
-
-const interpretedIntent =
-  interpretedIntentRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+   
 
 const topicKey = userIntent.trim().toLowerCase();
 
@@ -3003,6 +2942,85 @@ const locationPurposeSearch =
 const hiddenSystem =
   room.hiddenSystem;
 
+const interpretedIntentRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+        content:`
+Interpret the user's request through the uploaded image.
+
+The uploaded image is the interpreter.
+
+Return ONLY one short phrase.
+
+The same request must naturally produce different interpretations when the uploaded image changes.
+
+Examples:
+
+travel
++ power switch
+→ smart travel infrastructure
+
+travel
++ coffee cup
+→ café culture travel
+
+travel
++ cross
+→ pilgrimage travel
+
+travel
++ sofa
+→ slow living travel
+
+shopping
++ coffee cup
+→ café lifestyle products
+
+music
++ cross
+→ worship music
+
+Return ONLY the interpreted direction.
+
+Rules:
+
+- 2 to 6 words
+- lowercase only
+- no punctuation
+`
+      },
+
+      {
+        role:"user",
+        content:`
+Image identity:
+${room.imageContext}
+
+Hidden system:
+${hiddenSystem}
+
+User request:
+${userIntent}
+`
+      }
+
+    ]
+
+});
+
+const interpretedIntent =
+  interpretedIntentRes
+    .choices[0]
+    .message
+    .content
+    .trim();
+    
 let directLocationSearch = null;
 
 let directShoppingSearch = null;
@@ -3124,7 +3142,7 @@ Image identity:
 ${room.imageContext}
 
 User request:
-${text}
+${interpretedIntent}
 `
         }
 
@@ -3173,7 +3191,7 @@ Rules:
           role:"user",
           content:`
 User request:
-${text}
+${interpretedIntent}
 
 Image identity:
 ${room.imageContext}
@@ -3237,7 +3255,7 @@ Image identity:
 ${room.imageContext}
 
 User request:
-${text}
+${interpretedIntent}
 
 Destination:
 ${locationPurposeSearch}
@@ -3698,7 +3716,7 @@ const searchQuery = (
         ? (
             emotionSearch ||
             hiddenSystem ||
-            userIntent ||
+            interpretedIntent ||
             "latest news"
         )
         : (
@@ -3708,7 +3726,7 @@ const searchQuery = (
             directNewsSearch ||
             emotionSearch ||
             hiddenSystem ||
-            userIntent ||
+            interpretedIntent ||
             "latest news"
         )
 ).trim();
