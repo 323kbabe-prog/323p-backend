@@ -4749,25 +4749,20 @@ room.messages.push({
   image:null,
 
 ask:
-
-
-placeStory ||
-
-`I picked ${
-    locationPurposeSearch !== "none"
-        ? locationPurposeSearch
-        : isYoutubeIntent
-            ? "this video"
-            : isShoppingIntent
+  isPersonalIntent
+    ? nullReason
+    : (
+        placeStory ||
+        `I picked ${
+          locationPurposeSearch !== "none"
+            ? locationPurposeSearch
+            : isYoutubeIntent
+              ? "this video"
+              : isShoppingIntent
                 ? "this product"
                 : "this topic"
-} because ${selectedNews.title} best matches your request today.` ||
-
-(
-    isPersonalIntent
-        ? nullReason
-        : selectedNews.title
-),
+        } because ${selectedNews.title} best matches your request today.`
+      ),
 
 
 link:
