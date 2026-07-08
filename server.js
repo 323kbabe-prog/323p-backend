@@ -4748,11 +4748,8 @@ room.messages.push({
   showNextButton:true,
 showRead:
     Boolean(
-        !isPersonalIntent &&
-        (
-            selectedNews?.link ||
-            selectedNews?.news_link
-        )
+        selectedNews?.link ||
+        selectedNews?.news_link
     ),
 
   searchLabel:
