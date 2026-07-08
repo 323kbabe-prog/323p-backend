@@ -4328,6 +4328,9 @@ let newsTitle =
 
   let repeatedPlace = false;
 
+    
+let nullReason = "";
+
   const currentTopic =
   selectedNews?.title || "";
   
@@ -4449,7 +4452,7 @@ if (
 
     return;
 }
-  
+
 if(repeatedPlace){
 
 room.messages.push({
@@ -4466,7 +4469,7 @@ room.messages.push({
 
 }else{
 
-  let nullReason = "";
+
 
 if(
   isNextSearch ||
@@ -4722,7 +4725,18 @@ ${selectedNews.title}
   }
 
 }
-  
+
+
+console.log("ADDING PERSONAL CARD");
+console.log({
+    isPersonalIntent,
+    nullReason,
+    ask: isPersonalIntent
+        ? nullReason
+        : placeStory
+});
+
+
 room.messages.push({
 
   from:
@@ -4790,6 +4804,9 @@ link:
 
 });
 
+console.log("LAST MESSAGE");
+console.log(room.messages[room.messages.length - 1]);
+
 
 }
 
@@ -4809,12 +4826,12 @@ if (
                     ? "Shopping"
                     : "Null (AGI NETWORK) Feed",
 
-    ask:
-        placeStory ||
-        (
-            isPersonalIntent
-                ? nullReason
-                : selectedNews.title
+ask:
+    isPersonalIntent
+        ? nullReason
+        : (
+            placeStory ||
+            selectedNews.title
         ),
 
     image: imageUrl,
