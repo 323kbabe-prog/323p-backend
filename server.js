@@ -4105,16 +4105,17 @@ placeStory ||
 
 
 link:
-  isYoutubeIntent
-    ? youtubeLink
-    : isShoppingIntent
-      ? amazonLink
-      : (
-          placeLink ||
-          selectedNews?.link ||
-          selectedNews?.news_link ||
-          ""
-        )
+    locationPurposeSearch !== "none"
+        ? placeLink
+        : isYoutubeIntent
+            ? youtubeLink
+            : isShoppingIntent
+                ? amazonLink
+                : (
+                    selectedNews?.link ||
+                    selectedNews?.news_link ||
+                    ""
+                )
 
 
 
@@ -4149,13 +4150,14 @@ if (
 
     image: imageUrl,
 
-    link:
-        isYoutubeIntent
+link:
+    locationPurposeSearch !== "none"
+        ? placeLink
+        : isYoutubeIntent
             ? youtubeLink
             : isShoppingIntent
                 ? amazonLink
                 : (
-                    placeLink ||
                     selectedNews.link ||
                     selectedNews.news_link ||
                     ""
