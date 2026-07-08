@@ -4070,7 +4070,7 @@ room.messages.push({
 
   aiBeing:true,
   showNextButton:true,
-  showRead: !isPersonalIntent,
+showRead: true,
 
   searchLabel:
 
