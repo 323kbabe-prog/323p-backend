@@ -2488,7 +2488,7 @@ ${m.jobCard.posted}
 
 
 
-if (m.ask) {
+if(m.ask && !m.image){
 
 return `
 
@@ -2532,7 +2532,6 @@ margin-bottom:8px;
 >
 ${m.searchLabel || ""}
 </div>
-
 <div
 style="
 font-size:13px;
@@ -2542,9 +2541,7 @@ margin-bottom:10px;
 line-height:1.4;
 "
 >
-${m.nullReason
-    ? "One thought I want to share:"
-    : "One I think you should notice today:"}
+One I think you should notice today:
 </div>
 
 
@@ -3908,10 +3905,6 @@ Continue
 
 </div>
 </div>
-
-
-
-
 
 </body>
 </html>
