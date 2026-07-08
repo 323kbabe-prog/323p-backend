@@ -2648,60 +2648,31 @@ const isYoutubeIntent =
       {
         role:"system",
        content:`
-Detect whether the user wants a real place recommendation.
+Detect place requests.
+
+Return:
+
+<location> <place type>
 
 Examples:
 
 new york bar
-→ new york bar
-
-best ramen in shibuya
-→ shibuya ramen
-
-where should i go in tokyo
-→ tokyo place
-
-i am in tokyo and want something unique
-→ tokyo place
-
-show me something very japanese in shibuya
-→ shibuya place
-
-i want to explore taipei tonight
-→ taipei place
-
-Rules:
-
-If user wants:
-- somewhere to go
-- somewhere to visit
-- somewhere to explore
-- something new
-- something local
-- something unique
-- something authentic
-
-return:
-
-location place
-
-If user already specifies type:
-
 shibuya ramen
+tokyo place
 taipei coffee shop
-new york bar
 
-keep the type.
+If the user wants somewhere to go but doesn't specify a place type:
 
-Return only:
-location place
+<location> place
 
-or
+Otherwise:
 
 none
 
-lowercase only
-no punctuation
+Rules:
+- lowercase
+- no punctuation
+- return only one line
 
 `
 
@@ -3025,196 +2996,38 @@ if (!directNewsSearch) {
       role:"system",
 
       content:`
-Create ONE trending CURRENT NEWS image search phrase.
+Create ONE current news search phrase.
 
-The uploaded image is not just context—it is the interpreter.
+Interpret:
 
-Every user request should be understood through the image's identity, purpose, cultural meaning, function, and hidden system.
+image → hidden system → current news
 
-The same user request should naturally produce different searches when the uploaded image changes.
+The user's request decides WHAT to search.
 
-Do not use a fixed response pattern.
+The image decides HOW to interpret it.
 
-The image should influence how the request is interpreted, but it should never ignore or replace the user's actual goal.
-
-IMPORTANT:
-
-The uploaded image provides perspective, not keywords.
-
-The room is:
-
-* personality-driven
-* internet-native
-* socially reactive
-* emotionally evolving
-
-The AI personality controls:
-
-* emotional tone
-* internet vibe
-* cultural direction
-* curiosity direction
-
-NEVER repeat:
-
-* previous searches
-* previous moods
-* previous trend situations
-* previous viral atmosphere
-
-The object is NOT the subject.
-
-The meaning behind the object is NOT the subject.
-
-The hidden system behind the meaning is the subject.
-
-Interpret the image as:
-
-image
-→ identity
-→ meaning
-→ deeper meaning
-→ hidden system
-→ current news
-
-Move TWO layers beyond the visible object.
+If the user mentions a person, company, brand, product, or place, search that directly.
 
 Never search for:
+- the object
+- the product
+- the brand
+- the visible image
 
-* the object
-* the product category
-* the industry category
-* the brand
-* the immediate meaning
-* the obvious interpretation
-
-Instead ask:
-
-* What would this image naturally care about?
-* What larger system gives this image its meaning?
-* What current real-world events would matter to this image?
-* If this image could guide the user, what would it search for?
-
-Examples:
-
-coffee cup
-→ routine
-→ consumer identity
-→ retail psychology
-→ consumer spending
-
-coffee cup
-→ routine
-→ workplace culture
-→ remote work economy
-
-frying pan
-→ cooking
-→ daily routine
-→ work life balance
-→ remote work trends
-
-frying pan
-→ household labor
-→ family structure
-→ birth rate decline
-
-keyboard
-→ productivity
-→ knowledge work
-→ ai automation
-→ labor market transformation
-
-book
-→ learning
-→ information access
-→ education systems
-→ workforce transformation
-
-shoe
-→ identity
-→ consumer expression
-→ youth culture
-→ spending behavior
-
-The final search should reveal:
-
-* causes
-* systems
-* consequences
-* transformations
-* disruptions
-* opportunities
-
-The final search should NOT reveal:
-
-* the object
-* the category
-* the industry
-* the immediate meaning
-
-The result should feel:
-
-* current
-* visually strong
-* internet-native
-* culturally alive
-* socially relevant
-* surprising but believable
-* emotionally meaningful
-* newsworthy
-
-Use REAL searchable public news entities.
-
-GOOD:
-
-remote work productivity shift
-consumer spending trends
-labor market transformation
-ai replacing entry level jobs
-digital nomad economy growth
-education workforce transition
-semiconductor trade tensions
-global manufacturing slowdown
-retail loyalty decline
-future of human computer interaction
-elon musk xai launch
-apple ai strategy
-
-BAD:
-
-coffee trends 2026
-starbucks cup launch
-food inflation
-kitchen products
-gaming keyboard launch
-book publishing news
-shoe buying guide
-mechanical keyboard review
-cooking trends 2026
+Instead search for:
+- causes
+- systems
+- transformations
+- opportunities
 
 Rules:
+- 3–8 words
+- lowercase
+- no punctuation
+- current searchable news
+- no repetition
 
-* 3 to 8 words
-* lowercase only
-* no punctuation
-* visually searchable
-* current news only
-* no philosophy
-* no repetition
-
-PRIORITY RULES:
-
-1. The user's request defines what they need.
-
-2. The uploaded image defines how that request should be interpreted.
-
-3. The hidden system determines where the search should go.
-
-The same request should naturally produce different searches when the uploaded image changes.
-
-The search should feel like the uploaded image itself is guiding the user toward the most relevant real-world information.
-
+Return ONLY the search phrase.
 
 `
     },
