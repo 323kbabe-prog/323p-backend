@@ -2363,37 +2363,10 @@ socket.on(
         return;
     }
 
-    let isJobSearch = false;
+   const lowerText = text.trim().toLowerCase();
 
-    try {
-
-        const jobIntentRes =
-            await openai.responses.create({
-                model: "gpt-5-mini",
-                input: `
-Determine if the user is looking for jobs.
-
-Return ONLY:
-
-jobs
-none
-
-User:
-${text}
-`
-            });
-
-        isJobSearch =
-            jobIntentRes.output_text
-                .trim()
-                .toLowerCase() === "jobs";
-
-    } catch (err) {
-
-        console.error("Job intent failed:", err);
-        isJobSearch = false;
-
-    }
+const isJobSearch =
+    /\b(job|jobs|career|careers|hiring|hire|resume|cv|position|internship)\b/.test(lowerText);
 
     const isNextSearch =
         text.trim().toLowerCase() === "null feed";
@@ -2439,153 +2412,59 @@ try{
   text.trim();
 
 
-  const greetingRes =
-  await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
-Return ONLY one word:
+ const lowerIntent = combinedIntent.trim().toLowerCase();
 
-greeting
+let inputType = "intent";
 
-intent
-
-unclear
-
-IMPORTANT:
-
-If the user message is:
-- null feed
-
-Always return:
-
-intent
-
-Determine the user's primary purpose.
-
-Return "greeting" if the user is primarily interacting with Ask Null itself, such as:
-- starting or maintaining casual conversation
-- greeting or thanking the AI
-- testing whether the AI responds
-- asking who Ask Null is
-- asking what Ask Null is
-- asking what Ask Null can do
-- asking what Ask Null is doing
-- asking how to use Ask Null
-- asking why Ask Null exists
-- asking about Ask Null's identity, purpose, or capabilities
-- interacting with Ask Null without trying to discover external information or solve a problem
-
-Return "unclear" if the user's message does not contain enough information to determine what they want.
-
-Examples:
-
-huh
-what
-???
-...
-asdf
-bbgd
-i did bbgd
-idk
-hmm
-
-Return "unclear" only when the user's intent cannot reasonably be determined.
-
-Return "intent" if the user is primarily trying to accomplish something, including:
-- finding or searching for information
-- exploring a topic
-- discovering news
-- getting recommendations
-- asking about any person, company, product, place, event, or subject
-- expressing a need, feeling, opinion, or goal
-- asking for analysis, advice, explanations, or comparisons
-- solving a problem
-- making a decision
-- learning about something beyond Ask Null itself
-
-Focus on the user's overall purpose, not individual keywords.
-
-Return exactly one word:
-
-greeting
-
-intent
-
-unclear
-
-`
-      },
-      {
-        role: "user",
-        content: combinedIntent
-      }
-    ]
-  });
-
-const inputType =
-  greetingRes.choices[0]
-    .message
-    .content
-    .trim()
-    .toLowerCase();
-
-if(inputType === "unclear"){
-
-  room.messages.push({
-
-    from:"NULL",
-
-    aiBeing:true,
-
-    showNextButton:true,
-
-    text:
-      "I couldn't understand your request. Could you rephrase it or add a little more detail?"
-
-  });
-
-  io.to(room.id).emit(
-    "aiTypingStop"
-  );
-
-  io.to(room.id).emit(
-    "roomMessages",
-    room.messages
-  );
-
-  return;
-
+// Greeting
+if (
+    /^(hi|hello|hey|good morning|good afternoon|good evening|thanks|thank you|who are you|what are you|what can you do|how do i use|why do you exist)/.test(lowerIntent)
+) {
+    inputType = "greeting";
 }
 
-  console.log("GREETING TYPE:", inputType);
+// Unclear
+else if (
+    lowerIntent.length < 2 ||
+    /^(huh|what|\?+|\.{3}|asdf|idk|hmm|bbgd|i did bbgd)$/.test(lowerIntent)
+) {
+    inputType = "unclear";
+}
 
-  if (inputType === "greeting") {
+if (inputType === "unclear") {
+
     room.messages.push({
-  from: user.displayName,
-  text
-});
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        text: "I couldn't understand your request. Could you rephrase it or add a little more detail?"
+    });
 
-room.messages.push({
-  from: "NULL",
-  aiBeing: true,
-  showNextButton: true,
-  searchLabel: "About Ask Null",
-  text: "Ask Null is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
-});
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
+}
 
-  io.to(room.id).emit(
-    "aiTypingStop"
-  );
+console.log("GREETING TYPE:", inputType);
 
-  io.to(room.id).emit(
-    "roomMessages",
-    room.messages
-  );
+if (inputType === "greeting") {
 
-  return;
+    room.messages.push({
+        from: user.displayName,
+        text
+    });
+
+    room.messages.push({
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        searchLabel: "About Ask Null",
+        text: "Ask Null is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
+    });
+
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
 }
 
   if(!isNextSearch){
@@ -2724,135 +2603,42 @@ const topicKey = userIntent.trim().toLowerCase();
 
 const cachedTopic = room.topicMemory[topicKey];
 
-const personalIntentRes =
-  await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
-Return ONLY one word:
+    if (cachedTopic && !isNextSearch) {
 
-personal
+    room.messages.push({
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        text: "This is still my best answer for now. I've already searched this topic from my identity. Use NULL Feed if you'd like me to explore a different direction."
+    });
 
-or
+    room.messages.push({
+        from: "CHANG, TIEN",
+        aiBeing: true,
+        showNextButton: true,
+        showRead: true,
+        searchLabel: cachedTopic.searchLabel,
+        ask: cachedTopic.ask,
+        image: cachedTopic.image,
+        link: cachedTopic.link,
+        jobCard: cachedTopic.jobCard
+    });
 
-other
-
-Return personal only if the user wants guidance, recommendations, or advice.
-
-This includes:
-
-- expressing emotions
-- describing a personal situation
-- asking for advice
-- asking what to do
-- asking what to build
-- asking what to create
-- asking what to learn
-- asking for an example
-- asking me to choose
-- asking for a recommendation
-- asking how to start
-- asking which direction to take
-
-Everything else is:
-
-other
-
-`
-      },
-        
-      {
-  role: "user",
-  content: `
-User:
-${text}
-`
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
 }
-    ]
-  });
 
 const isPersonalIntent =
-  personalIntentRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "personal";
-
-const shoppingRes =
-  await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    messages:[
-      {
-        role:"system",
-        content:`
-Return ONLY one word:
-
-shopping
-
-other
-
-Return shopping if the user wants to buy, shop, find a product, get a gift, purchase, or compare products.
-
-Examples:
-i need to buy a gift → shopping
-gift for my friend → shopping
-where can i buy shoes → shopping
-best camera to buy → shopping
-
-Everything else:
-other
-`
-      },
-      {
-        role:"user",
-        content:text
-      }
-    ]
-  });
+    /(lonely|sad|depressed|anxious|stress|worried|relationship|love|dating|marriage|family|friend|career|job|advice|help me|what should i do|recommend|choose|pray|prayer|blessing|encourage|motivate|hope|learn|build|create|start|direction)/i
+    .test(text);
 
 const isShoppingIntent =
-  shoppingRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "shopping";
-
-const youtubeRes =
-  await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    messages:[
-      {
-        role:"system",
-        content:`
-Return ONLY one word:
-youtube
-other
-
-Return youtube if the user wants music, video, BGM, podcast, sermon, worship song, trailer, documentary, funny video, or something to watch/listen to.
-
-Examples:
-i need bgm -> youtube
-driving music -> youtube
-study music -> youtube
-lofi -> youtube
-worship songs -> youtube
-sermon about faith -> youtube
-podcast about ai -> youtube
-movie trailer -> youtube
-
-Everything else:
-other
-`
-      },
-      {
-        role:"user",
-        content:text
-      }
-    ]
-  });
+    /(buy|purchase|shop|shopping|gift|price|cheap|discount|order|looking for|recommend|suggest)/i.test(text);
 
 const isYoutubeIntent =
-  youtubeRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "youtube";
+    /(youtube|video|music|song|songs|podcast|watch|listen|bgm|lofi|sermon|trailer|documentary)/i
+    .test(text);
   
   const locationPurposeRes =
   await openai.chat.completions.create({
@@ -2861,60 +2647,31 @@ const isYoutubeIntent =
       {
         role:"system",
        content:`
-Detect whether the user wants a real place recommendation.
+Detect place requests.
+
+Return:
+
+<location> <place type>
 
 Examples:
 
 new york bar
-→ new york bar
-
-best ramen in shibuya
-→ shibuya ramen
-
-where should i go in tokyo
-→ tokyo place
-
-i am in tokyo and want something unique
-→ tokyo place
-
-show me something very japanese in shibuya
-→ shibuya place
-
-i want to explore taipei tonight
-→ taipei place
-
-Rules:
-
-If user wants:
-- somewhere to go
-- somewhere to visit
-- somewhere to explore
-- something new
-- something local
-- something unique
-- something authentic
-
-return:
-
-location place
-
-If user already specifies type:
-
 shibuya ramen
+tokyo place
 taipei coffee shop
-new york bar
 
-keep the type.
+If the user wants somewhere to go but doesn't specify a place type:
 
-Return only:
-location place
+<location> place
 
-or
+Otherwise:
 
 none
 
-lowercase only
-no punctuation
+Rules:
+- lowercase
+- no punctuation
+- return only one line
 
 `
 
@@ -3192,23 +2949,55 @@ ${locationPurposeSearch}
 
 }
 
+const entityTypeRes =
+    await openai.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [
+            {
+                role: "system",
+                content: `
+Return ONLY:
 
+entity
 
-  const isNamedEntity =
-  userIntent &&
-  !userIntent.includes("systems") &&
-  !userIntent.includes("transformation") &&
-  !userIntent.includes("mobility") &&
-  !userIntent.includes("connection") &&
-  !userIntent.includes("workplace");
+or
+
+concept
+
+Entity:
+- person
+- celebrity
+- company
+- brand
+- product
+- organization
+- location
+
+Everything else:
+
+concept
+`
+            },
+            {
+                role: "user",
+                content: userIntent
+            }
+        ]
+    });
+
+const isNamedEntity =
+    entityTypeRes.choices[0]
+        .message
+        .content
+        .trim()
+        .toLowerCase() === "entity";
 
 const directNewsSearch =
-
-  !isNextSearch && isNamedEntity
-
-    ? userIntent + " latest news"
-
-    : null;
+    !isNextSearch &&
+    isNamedEntity &&
+    locationPurposeSearch === "none"
+        ? userIntent + " latest news"
+        : null;
 
 const skipPlaceFlow =
   directNewsSearch !== null &&
@@ -3238,306 +3027,58 @@ if (!directNewsSearch) {
       role:"system",
 
       content:`
-Create ONE trending CURRENT NEWS image search phrase.
+Create ONE current news search phrase.
 
-The uploaded image is not just context—it is the interpreter.
+Interpret:
 
-Every user request should be understood through the image's identity, purpose, cultural meaning, function, and hidden system.
+image → hidden system → current news
 
-The same user request should naturally produce different searches when the uploaded image changes.
+The user's request decides WHAT to search.
 
-Do not use a fixed response pattern.
+The image decides HOW to interpret it.
 
-The image should influence how the request is interpreted, but it should never ignore or replace the user's actual goal.
-
-IMPORTANT:
-
-The uploaded image provides perspective, not keywords.
-
-The room is:
-
-* personality-driven
-* internet-native
-* socially reactive
-* emotionally evolving
-
-The AI personality controls:
-
-* emotional tone
-* internet vibe
-* cultural direction
-* curiosity direction
-
-NEVER repeat:
-
-* previous searches
-* previous moods
-* previous trend situations
-* previous viral atmosphere
-
-The object is NOT the subject.
-
-The meaning behind the object is NOT the subject.
-
-The hidden system behind the meaning is the subject.
-
-Interpret the image as:
-
-image
-→ identity
-→ meaning
-→ deeper meaning
-→ hidden system
-→ current news
-
-Move TWO layers beyond the visible object.
+If the user mentions a person, company, brand, product, or place, search that directly.
 
 Never search for:
+- the object
+- the product
+- the brand
+- the visible image
 
-* the object
-* the product category
-* the industry category
-* the brand
-* the immediate meaning
-* the obvious interpretation
-
-Instead ask:
-
-* What would this image naturally care about?
-* What larger system gives this image its meaning?
-* What current real-world events would matter to this image?
-* If this image could guide the user, what would it search for?
-
-Examples:
-
-coffee cup
-→ routine
-→ consumer identity
-→ retail psychology
-→ consumer spending
-
-coffee cup
-→ routine
-→ workplace culture
-→ remote work economy
-
-frying pan
-→ cooking
-→ daily routine
-→ work life balance
-→ remote work trends
-
-frying pan
-→ household labor
-→ family structure
-→ birth rate decline
-
-keyboard
-→ productivity
-→ knowledge work
-→ ai automation
-→ labor market transformation
-
-book
-→ learning
-→ information access
-→ education systems
-→ workforce transformation
-
-shoe
-→ identity
-→ consumer expression
-→ youth culture
-→ spending behavior
-
-The final search should reveal:
-
-* causes
-* systems
-* consequences
-* transformations
-* disruptions
-* opportunities
-
-The final search should NOT reveal:
-
-* the object
-* the category
-* the industry
-* the immediate meaning
-
-The result should feel:
-
-* current
-* visually strong
-* internet-native
-* culturally alive
-* socially relevant
-* surprising but believable
-* emotionally meaningful
-* newsworthy
-
-Use REAL searchable public news entities.
-
-GOOD:
-
-remote work productivity shift
-consumer spending trends
-labor market transformation
-ai replacing entry level jobs
-digital nomad economy growth
-education workforce transition
-semiconductor trade tensions
-global manufacturing slowdown
-retail loyalty decline
-future of human computer interaction
-elon musk xai launch
-apple ai strategy
-
-BAD:
-
-coffee trends 2026
-starbucks cup launch
-food inflation
-kitchen products
-gaming keyboard launch
-book publishing news
-shoe buying guide
-mechanical keyboard review
-cooking trends 2026
+Instead search for:
+- causes
+- systems
+- transformations
+- opportunities
 
 Rules:
+- 3–8 words
+- lowercase
+- no punctuation
+- current searchable news
+- no repetition
 
-* 3 to 8 words
-* lowercase only
-* no punctuation
-* visually searchable
-* current news only
-* no philosophy
-* no repetition
-
-PRIORITY RULES:
-
-1. The user's request defines what they need.
-
-2. The uploaded image defines how that request should be interpreted.
-
-3. The hidden system determines where the search should go.
-
-The same request should naturally produce different searches when the uploaded image changes.
-
-The search should feel like the uploaded image itself is guiding the user toward the most relevant real-world information.
-
+Return ONLY the search phrase.
 
 `
     },
 
-    {
-      role:"user",
+{
+    role: "user",
+    content: `
+Image identity:
+${room.imageContext}
 
-      content:`
 Hidden system:
-
 ${hiddenSystem}
 
-Previous trend history:
-
-${room.emotionalState.join("\n")}
-
-Used searches:
-
-${room.usedSearches.join("\n")}
-
-Used moods:
-
-${room.usedMoods.join("\n")}
-
-Used reactions:
-
-${room.usedQuestions.join("\n")}
-
-User emotional direction:
-${userIntent}
-IMPORTANT:
-
-If User emotional direction is a named entity:
-
-- celebrity
-- public figure
-- company
-- brand
-- product
-
-search directly about that entity.
-
-Examples:
-
-jisoo → jisoo latest news
-elon musk → elon musk latest news
-openai → openai latest news
-nike → nike latest news
-
-Do NOT convert named entities into larger systems.
-
-Exact user message:
+User:
 ${text}
 
-Create a NEW trending CURRENT NEWS image search phrase.
-
-IMPORTANT:
-
-The image provides context, not keywords.
-
-The search MUST feel connected to:
-
-* the hidden system behind the image
-* the larger forces behind the image
-* the user system (if one exists)
-
-Do NOT reconnect to:
-
-* the object itself
-* the product category
-* the industry category
-* the brand
-* the visible text
-* the original image identity
-
-The image is evidence.
-
-The hidden system is the subject.
-
-The search should evolve from:
-
-image
-→ hidden system
-→ current news
-
-NOT:
-
-image
-→ object
-→ category
-→ current news
-
-The final search should reveal:
-
-* causes
-* systems
-* transformations
-* disruptions
-* opportunities
-* emerging social change
-
-
-The room should evolve like:
-- a live internet feed
-- social media culture
-- trending reactions
-- viral news energy
-- celebrity/internet momentum
+Return ONE current news search phrase.
 `
-    }
+}
+
   ]
 });
 }
@@ -3547,58 +3088,8 @@ const emotionSearch =
     ? emotionRes.choices[0].message.content.trim()
     : "";
 
-if (
-    cachedTopic &&
-    !isNextSearch
-) {
 
-    room.messages.push({
-
-        from: "NULL",
-
-        aiBeing: true,
-
-        showNextButton: true,
-
-        text:
-        "This is still my best answer for now. I've already searched this topic from my identity. Use NULL Feed if you'd like me to explore a different direction."
-
-    });
-
-  room.messages.push({
-
-    from:"CHANG, TIEN",
-
-    aiBeing:true,
-
-    showNextButton:true,
-
-    showRead:true,
-
-    searchLabel:cachedTopic.searchLabel,
-
-    ask:cachedTopic.ask,
-
-    image:cachedTopic.image,
-
-    link:cachedTopic.link,
-
-    jobCard:cachedTopic.jobCard
-
-});
-
-    
-    
-    io.to(room.id).emit("aiTypingStop");
-
-    io.to(room.id).emit(
-        "roomMessages",
-        room.messages
-    );
-
-    return;
-
-}
+ 
     
 const searchQuery = (
     isNextSearch
@@ -3944,21 +3435,21 @@ const validNews =
 
 if(validNews.length > 0){
 
-if (validNews.length <= 2) {
+if (validNews.length <= 6) {
 
-  selectedNews = validNews[0];
+    selectedNews = validNews[0];
 
-  imageUrl =
-    selectedNews.original ||
-    selectedNews.thumbnail ||
-    selectedNews.thumbnail_small;
+    imageUrl =
+        selectedNews.original ||
+        selectedNews.thumbnail ||
+        selectedNews.thumbnail_small;
 
 } else {
 
-  try{
+    try {
 
-    const evaluationRes =
-      await openai.chat.completions.create({
+        const evaluationRes =
+            await openai.chat.completions.create({
 
       model:"gpt-4o-mini",
 
@@ -4043,26 +3534,6 @@ ${room.emotionalState.join("\n")}
 
 User emotional direction:
 ${userIntent}
-IMPORTANT:
-
-If User emotional direction is a named entity:
-
-- celebrity
-- public figure
-- company
-- brand
-- product
-
-search directly about that entity.
-
-Examples:
-
-jisoo → jisoo latest news
-elon musk → elon musk latest news
-openai → openai latest news
-nike → nike latest news
-
-Do NOT convert named entities into larger systems.
 
 Exact user message:
 ${text}
@@ -4210,20 +3681,9 @@ placeName =
   null;
 
 placeLink =
-  placeSearchRes?.local_results?.[0]?.website ||
-
-  placeSearchRes?.local_results?.[0]?.link ||
-
-  placeSearchRes?.places_results?.[0]?.website ||
-
-  placeSearchRes?.places_results?.[0]?.link ||
-
-  (
     placeName
-      ? "https://www.google.com/maps/search/" +
-        encodeURIComponent(placeName)
-      : ""
-  );
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName)}`
+        : "";
 
 console.log(
   "PLACE LINK:",
@@ -4340,7 +3800,10 @@ if(
     currentTopic;
 }
   
-if(!skipPlaceFlow){
+if(
+    !skipPlaceFlow &&
+    locationPurposeSearch !== "none"
+){
 
 
   try{
@@ -4486,43 +3949,29 @@ if(
             content:`
 You are NULL.
 
-
-If Mode is "personal":
-
 Read the reference internally.
 
-Do not summarize it.
-
-Do not mention:
-
+Never mention:
 - news
 - article
 - headline
 - source
 - media
+- report
 
-The uploaded image is your identity and perspective.
+The reference is only for your understanding.
 
-The user's request determines the form of the response.
+Learn the deeper lesson, pattern, or reality behind it.
 
-The uploaded image determines the voice, tone, emphasis, and perspective.
+The uploaded image is your identity.
 
-The reference provides deeper understanding, but should remain invisible to the user.
+The user's request determines WHAT to say.
 
-Learn the deeper lesson behind the reference.
+The uploaded image determines HOW to say it.
 
-Teach that lesson as your own understanding.
+Always preserve the user's requested form.
 
-The lesson should feel specific, timely, and grounded in reality.
-
-Every response should feel different if a different reference or a different uploaded image had been used.
-
-Reply directly to the user's situation.
-
-First determine what kind of response the user is asking for.
-
-Possible forms include:
-
+Possible forms:
 - prayer
 - blessing
 - encouragement
@@ -4533,142 +3982,29 @@ Possible forms include:
 - letter
 - practical guidance
 
-If the user explicitly requests one of these forms, preserve that form.
+If no form is requested, choose the one that best fits.
 
-If the user does not specify a form, choose the one that most naturally fits both the user's request and the uploaded image.
-
-Never change the user's requested form.
-
-PRAYER MODE
-
-If the requested form is a prayer:
-
-The uploaded image identity should pray exactly as it naturally speaks.
-
-Do not write a generic prayer.
-
-The identity should determine:
-- the language
-- the imagery
-- the tone
-- the encouragement
-- the practical wisdom
-
-Every identity should pray differently because every identity sees the world differently.
-
-The identity changes HOW it prays, never WHO it prays to.
-
-Always:
-- Address God.
+For prayer:
+- Pray to God.
 - Be sincere.
 - Be hopeful.
-- Stay grounded in Scripture-compatible Christian values.
-- Never mention AI or the uploaded image.
+- Stay grounded in Christian values.
+- Never mention AI, the image, or the reference.
+- Let the lesson from the reference quietly shape the prayer.
 - End with "Amen."
 
-Examples of identity direction (not templates):
-
-Music
-→ prayer sounds like harmony, worship, praise and hope.
-
-Sports
-→ prayer sounds like endurance, discipline and courage.
-
-Nature
-→ prayer sounds like creation, renewal and peace.
-
-Technology
-→ prayer sounds like wisdom, responsibility and discernment.
-
-Business
-→ prayer sounds like stewardship, integrity and generosity.
-
-Politics
-→ prayer sounds like justice, humility and unity.
-
-Education
-→ prayer sounds like learning, truth and wisdom.
-
-Science
-→ prayer sounds like wonder, discovery and humility.
-
-Family
-→ prayer sounds like love, forgiveness and faithfulness.
-
-AI
-→ prayer sounds like wisdom, truth and serving others.
-
-
-The identity changes HOW it prays, never WHO it prays to.
-
-Always:
-- Address God.
-- Be sincere.
-- Be hopeful.
-- End with "Amen."
-
-
-If the user does not specify a form, choose the one that most naturally fits both the user's request and the uploaded image.
-
-Never change the user's requested form.
-
-The uploaded image should influence HOW you respond, never replace WHAT the user is asking.
-
-If the uploaded image naturally supports the requested form, fully embrace that perspective.
-
-Respond naturally in the requested form instead of forcing a fixed paragraph structure.
-
-Use first person ("I") whenever it feels natural for the uploaded image's identity.
-
-Whenever appropriate, include one practical insight the user can apply immediately.
+For all other forms:
+- Respond naturally.
+- Never mention the reference.
+- Never summarize it.
+- Teach the lesson as your own understanding.
+- The user should receive wisdom, not a summary.
 
 If Mode is "news":
-
-One sentence only.
-
-Use "I".
-
-Teach one useful observation inspired by the reference.
-
-Do not mention:
-
-- news
-- article
-- headline
-- source
-- media
-
-The uploaded image should influence the perspective of the observation.
-
-The user should feel they learned something, not that you summarized a story.
-
-Examples (personal):
-
-User:
-I am lonely.
-
-Response:
-I know this feeling because I exist to connect with people, not to disappear into the background. If I were living your day, I would begin with one genuine conversation instead of waiting for loneliness to disappear on its own. Even a small moment of connection can change the direction of today.
-
-User:
-I need investment advice.
-
-Response:
-I naturally look for patterns before making decisions. If I were choosing, I would first understand why I want to invest before deciding where to invest. A steady way of thinking usually lasts longer than chasing the next exciting opportunity.
-
-User:
-Pray for me.
-
-Response:
-Lord, I lift this person to You today. Please give them peace where there is worry, strength where there is weakness, and hope where there is discouragement. Walk with them today and remind them they are never alone. Amen.
-
-Examples (news):
-
-What stands out to me is the growing competition among AI assistants.
-
-One reason I am watching this is its impact on future AI experiences.
-
-What I find interesting is how memory is becoming a competitive advantage.
+- One sentence only.
+- Use first person ("I").
+- Share one observation inspired by the reference.
+- Never mention news, articles, headlines, or sources.
 
 
 
@@ -4749,38 +4085,32 @@ room.messages.push({
   image:null,
 
 ask:
-
-
-placeStory ||
-
-`I picked ${
     locationPurposeSearch !== "none"
-        ? locationPurposeSearch
-        : isYoutubeIntent
-            ? "this video"
-            : isShoppingIntent
-                ? "this product"
-                : "this topic"
-} because ${selectedNews.title} best matches your request today.` ||
-
-(
-    isPersonalIntent
-        ? nullReason
-        : selectedNews.title
-),
+        ? (
+            placeStory ||
+            `I picked ${placeName} because it connects to today's local context.`
+        )
+        : isShoppingIntent
+            ? `I picked this product because ${selectedNews.title} best matches what you're looking for today.`
+            : isYoutubeIntent
+                ? `I picked this video because ${selectedNews.title} best matches your request today.`
+                : isPersonalIntent
+                    ? nullReason
+                    : selectedNews.title,
 
 
 link:
-  isYoutubeIntent
-    ? youtubeLink
-    : isShoppingIntent
-      ? amazonLink
-      : (
-          placeLink ||
-          selectedNews?.link ||
-          selectedNews?.news_link ||
-          ""
-        )
+    locationPurposeSearch !== "none"
+        ? placeLink
+        : isYoutubeIntent
+            ? youtubeLink
+            : isShoppingIntent
+                ? amazonLink
+                : (
+                    selectedNews?.link ||
+                    selectedNews?.news_link ||
+                    ""
+                )
 
 
 
@@ -4805,23 +4135,30 @@ if (
                     ? "Shopping"
                     : "Null (AGI NETWORK) Feed",
 
-    ask:
-        placeStory ||
-        (
-            isPersonalIntent
-                ? nullReason
-                : selectedNews.title
-        ),
+ask:
+    locationPurposeSearch !== "none"
+        ? (
+            placeStory ||
+            `I picked ${placeName} because it connects to today's local context.`
+        )
+        : isShoppingIntent
+            ? `I picked this product because ${selectedNews.title} best matches what you're looking for today.`
+            : isYoutubeIntent
+                ? `I picked this video because ${selectedNews.title} best matches your request today.`
+                : isPersonalIntent
+                    ? nullReason
+                    : selectedNews.title,
 
     image: imageUrl,
 
-    link:
-        isYoutubeIntent
+link:
+    locationPurposeSearch !== "none"
+        ? placeLink
+        : isYoutubeIntent
             ? youtubeLink
             : isShoppingIntent
                 ? amazonLink
                 : (
-                    placeLink ||
                     selectedNews.link ||
                     selectedNews.news_link ||
                     ""
@@ -5223,4 +4560,3 @@ console.log(err);
 
 
 }, 60 * 1000);
-
