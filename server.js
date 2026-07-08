@@ -3968,7 +3968,13 @@ if (validNews.length <= 2) {
         {
           role:"system",
           content:`
-You are evaluating news results.
+You are evaluating current news through the uploaded image's identity.
+
+The uploaded image is the interpreter.
+
+The user defines the goal.
+
+The uploaded image determines which news matters most.
 
 If the user searched for a location and place type:
 
@@ -3980,13 +3986,15 @@ taipei ramen
 
 Priority:
 
-1. Identify the biggest current local news or event.
+1. The uploaded image's identity determines which news is most relevant.
 
-2. The user's request ALWAYS determines the place type.
+2. Identify the current local news that best matches the uploaded image's identity.
 
-3. Use the current local news to decide WHICH place best fits that request.
+3. The user's request ALWAYS determines the place type.
 
-4. Never change the user's requested place type.
+4. Use that news to decide WHICH place best fits the uploaded image's perspective.
+
+5. Never change the user's requested place type.
 
 Examples:
 
@@ -4025,7 +4033,16 @@ The user's request determines WHAT place to recommend.
 
 The current local event determines WHY that place is recommended today.
 
-Choose the result that creates the strongest real-world connection between the user's request and today's local news.
+Choose the result that creates the strongest connection between:
+
+- the uploaded image's identity
+- the hidden system
+- the user's request
+- today's local news
+
+If several news stories are valid, always choose the one the uploaded image would naturally care about.
+
+Do not simply choose the biggest news story.
 
 Return ONLY the exact title.
 
