@@ -2363,37 +2363,10 @@ socket.on(
         return;
     }
 
-    let isJobSearch = false;
+   const lowerText = text.trim().toLowerCase();
 
-    try {
-
-        const jobIntentRes =
-            await openai.responses.create({
-                model: "gpt-5-mini",
-                input: `
-Determine if the user is looking for jobs.
-
-Return ONLY:
-
-jobs
-none
-
-User:
-${text}
-`
-            });
-
-        isJobSearch =
-            jobIntentRes.output_text
-                .trim()
-                .toLowerCase() === "jobs";
-
-    } catch (err) {
-
-        console.error("Job intent failed:", err);
-        isJobSearch = false;
-
-    }
+const isJobSearch =
+    /\b(job|jobs|career|careers|hiring|hire|resume|cv|position|internship)\b/.test(lowerText);
 
     const isNextSearch =
         text.trim().toLowerCase() === "null feed";
@@ -2439,153 +2412,59 @@ try{
   text.trim();
 
 
-  const greetingRes =
-  await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
-Return ONLY one word:
+ const lowerIntent = combinedIntent.trim().toLowerCase();
 
-greeting
+let inputType = "intent";
 
-intent
-
-unclear
-
-IMPORTANT:
-
-If the user message is:
-- null feed
-
-Always return:
-
-intent
-
-Determine the user's primary purpose.
-
-Return "greeting" if the user is primarily interacting with Ask Null itself, such as:
-- starting or maintaining casual conversation
-- greeting or thanking the AI
-- testing whether the AI responds
-- asking who Ask Null is
-- asking what Ask Null is
-- asking what Ask Null can do
-- asking what Ask Null is doing
-- asking how to use Ask Null
-- asking why Ask Null exists
-- asking about Ask Null's identity, purpose, or capabilities
-- interacting with Ask Null without trying to discover external information or solve a problem
-
-Return "unclear" if the user's message does not contain enough information to determine what they want.
-
-Examples:
-
-huh
-what
-???
-...
-asdf
-bbgd
-i did bbgd
-idk
-hmm
-
-Return "unclear" only when the user's intent cannot reasonably be determined.
-
-Return "intent" if the user is primarily trying to accomplish something, including:
-- finding or searching for information
-- exploring a topic
-- discovering news
-- getting recommendations
-- asking about any person, company, product, place, event, or subject
-- expressing a need, feeling, opinion, or goal
-- asking for analysis, advice, explanations, or comparisons
-- solving a problem
-- making a decision
-- learning about something beyond Ask Null itself
-
-Focus on the user's overall purpose, not individual keywords.
-
-Return exactly one word:
-
-greeting
-
-intent
-
-unclear
-
-`
-      },
-      {
-        role: "user",
-        content: combinedIntent
-      }
-    ]
-  });
-
-const inputType =
-  greetingRes.choices[0]
-    .message
-    .content
-    .trim()
-    .toLowerCase();
-
-if(inputType === "unclear"){
-
-  room.messages.push({
-
-    from:"NULL",
-
-    aiBeing:true,
-
-    showNextButton:true,
-
-    text:
-      "I couldn't understand your request. Could you rephrase it or add a little more detail?"
-
-  });
-
-  io.to(room.id).emit(
-    "aiTypingStop"
-  );
-
-  io.to(room.id).emit(
-    "roomMessages",
-    room.messages
-  );
-
-  return;
-
+// Greeting
+if (
+    /^(hi|hello|hey|good morning|good afternoon|good evening|thanks|thank you|who are you|what are you|what can you do|how do i use|why do you exist)/.test(lowerIntent)
+) {
+    inputType = "greeting";
 }
 
-  console.log("GREETING TYPE:", inputType);
+// Unclear
+else if (
+    lowerIntent.length < 2 ||
+    /^(huh|what|\?+|\.{3}|asdf|idk|hmm|bbgd|i did bbgd)$/.test(lowerIntent)
+) {
+    inputType = "unclear";
+}
 
-  if (inputType === "greeting") {
+if (inputType === "unclear") {
+
     room.messages.push({
-  from: user.displayName,
-  text
-});
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        text: "I couldn't understand your request. Could you rephrase it or add a little more detail?"
+    });
 
-room.messages.push({
-  from: "NULL",
-  aiBeing: true,
-  showNextButton: true,
-  searchLabel: "About Ask Null",
-  text: "Ask Null is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
-});
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
+}
 
-  io.to(room.id).emit(
-    "aiTypingStop"
-  );
+console.log("GREETING TYPE:", inputType);
 
-  io.to(room.id).emit(
-    "roomMessages",
-    room.messages
-  );
+if (inputType === "greeting") {
 
-  return;
+    room.messages.push({
+        from: user.displayName,
+        text
+    });
+
+    room.messages.push({
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        searchLabel: "About Ask Null",
+        text: "Ask Null is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
+    });
+
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
 }
 
   if(!isNextSearch){
@@ -2724,135 +2603,43 @@ const topicKey = userIntent.trim().toLowerCase();
 
 const cachedTopic = room.topicMemory[topicKey];
 
-const personalIntentRes =
-  await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
-Return ONLY one word:
+    if (cachedTopic && !isNextSearch) {
 
-personal
+    room.messages.push({
+        from: "NULL",
+        aiBeing: true,
+        showNextButton: true,
+        text: "This is still my best answer for now. I've already searched this topic from my identity. Use NULL Feed if you'd like me to explore a different direction."
+    });
 
-or
+    room.messages.push({
+        from: "CHANG, TIEN",
+        aiBeing: true,
+        showNextButton: true,
+        showRead: true,
+        searchLabel: cachedTopic.searchLabel,
+        ask: cachedTopic.ask,
+        image: cachedTopic.image,
+        link: cachedTopic.link,
+        jobCard: cachedTopic.jobCard
+    });
 
-other
-
-Return personal only if the user wants guidance, recommendations, or advice.
-
-This includes:
-
-- expressing emotions
-- describing a personal situation
-- asking for advice
-- asking what to do
-- asking what to build
-- asking what to create
-- asking what to learn
-- asking for an example
-- asking me to choose
-- asking for a recommendation
-- asking how to start
-- asking which direction to take
-
-Everything else is:
-
-other
-
-`
-      },
-        
-      {
-  role: "user",
-  content: `
-User:
-${text}
-`
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
 }
-    ]
-  });
 
 const isPersonalIntent =
-  personalIntentRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "personal";
-
-const shoppingRes =
-  await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    messages:[
-      {
-        role:"system",
-        content:`
-Return ONLY one word:
-
-shopping
-
-other
-
-Return shopping if the user wants to buy, shop, find a product, get a gift, purchase, or compare products.
-
-Examples:
-i need to buy a gift → shopping
-gift for my friend → shopping
-where can i buy shoes → shopping
-best camera to buy → shopping
-
-Everything else:
-other
-`
-      },
-      {
-        role:"user",
-        content:text
-      }
-    ]
-  });
+    /(lonely|sad|depressed|anxious|stress|worried|relationship|love|dating|marriage|family|friend|career|job|advice|help me|what should i do|recommend|choose|pray|prayer|blessing|encourage|motivate|hope|learn|build|create|start|direction)/i
+    .test(text);
 
 const isShoppingIntent =
-  shoppingRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "shopping";
-
-const youtubeRes =
-  await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    messages:[
-      {
-        role:"system",
-        content:`
-Return ONLY one word:
-youtube
-other
-
-Return youtube if the user wants music, video, BGM, podcast, sermon, worship song, trailer, documentary, funny video, or something to watch/listen to.
-
-Examples:
-i need bgm -> youtube
-driving music -> youtube
-study music -> youtube
-lofi -> youtube
-worship songs -> youtube
-sermon about faith -> youtube
-podcast about ai -> youtube
-movie trailer -> youtube
-
-Everything else:
-other
-`
-      },
-      {
-        role:"user",
-        content:text
-      }
-    ]
-  });
+    /(buy|purchase|shop|shopping|gift|price|cheap|discount|order|recommend.*buy|best.*buy|where.*buy|looking for)/i
+    .test(text);
 
 const isYoutubeIntent =
-  youtubeRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "youtube";
+    /(youtube|video|music|song|songs|podcast|watch|listen|bgm|lofi|sermon|trailer|documentary)/i
+    .test(text);
   
   const locationPurposeRes =
   await openai.chat.completions.create({
@@ -3547,58 +3334,8 @@ const emotionSearch =
     ? emotionRes.choices[0].message.content.trim()
     : "";
 
-if (
-    cachedTopic &&
-    !isNextSearch
-) {
 
-    room.messages.push({
-
-        from: "NULL",
-
-        aiBeing: true,
-
-        showNextButton: true,
-
-        text:
-        "This is still my best answer for now. I've already searched this topic from my identity. Use NULL Feed if you'd like me to explore a different direction."
-
-    });
-
-  room.messages.push({
-
-    from:"CHANG, TIEN",
-
-    aiBeing:true,
-
-    showNextButton:true,
-
-    showRead:true,
-
-    searchLabel:cachedTopic.searchLabel,
-
-    ask:cachedTopic.ask,
-
-    image:cachedTopic.image,
-
-    link:cachedTopic.link,
-
-    jobCard:cachedTopic.jobCard
-
-});
-
-    
-    
-    io.to(room.id).emit("aiTypingStop");
-
-    io.to(room.id).emit(
-        "roomMessages",
-        room.messages
-    );
-
-    return;
-
-}
+ 
     
 const searchQuery = (
     isNextSearch
@@ -3944,7 +3681,7 @@ const validNews =
 
 if(validNews.length > 0){
 
-if (validNews.length <= 2) {
+if (validNews.length <= 3) {
 
   selectedNews = validNews[0];
 
