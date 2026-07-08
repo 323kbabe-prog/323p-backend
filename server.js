@@ -2634,8 +2634,7 @@ const isPersonalIntent =
     .test(text);
 
 const isShoppingIntent =
-    /(buy|purchase|shop|shopping|gift|price|cheap|discount|order|recommend.*buy|best.*buy|where.*buy|looking for)/i
-    .test(text);
+    /(buy|purchase|shop|shopping|gift|price|cheap|discount|order|looking for|recommend|suggest)/i.test(text);
 
 const isYoutubeIntent =
     /(youtube|video|music|song|songs|podcast|watch|listen|bgm|lofi|sermon|trailer|documentary)/i
@@ -3801,7 +3800,10 @@ if(
     currentTopic;
 }
   
-if(!skipPlaceFlow){
+if(
+    !skipPlaceFlow &&
+    locationPurposeSearch !== "none"
+){
 
 
   try{
@@ -4083,25 +4085,18 @@ room.messages.push({
   image:null,
 
 ask:
-
-
-placeStory ||
-
-`I picked ${
     locationPurposeSearch !== "none"
-        ? locationPurposeSearch
-        : isYoutubeIntent
-            ? "this video"
-            : isShoppingIntent
-                ? "this product"
-                : "this topic"
-} because ${selectedNews.title} best matches your request today.` ||
-
-(
-    isPersonalIntent
-        ? nullReason
-        : selectedNews.title
-),
+        ? (
+            placeStory ||
+            `I picked ${placeName} because it connects to today's local context.`
+        )
+        : isShoppingIntent
+            ? `I picked this product because ${selectedNews.title} best matches what you're looking for today.`
+            : isYoutubeIntent
+                ? `I picked this video because ${selectedNews.title} best matches your request today.`
+                : isPersonalIntent
+                    ? nullReason
+                    : selectedNews.title
 
 
 link:
@@ -4140,13 +4135,19 @@ if (
                     ? "Shopping"
                     : "Null (AGI NETWORK) Feed",
 
-    ask:
-        placeStory ||
-        (
-            isPersonalIntent
-                ? nullReason
-                : selectedNews.title
-        ),
+ask:
+    locationPurposeSearch !== "none"
+        ? (
+            placeStory ||
+            `I picked ${placeName} because it connects to today's local context.`
+        )
+        : isShoppingIntent
+            ? `I picked this product because ${selectedNews.title} best matches what you're looking for today.`
+            : isYoutubeIntent
+                ? `I picked this video because ${selectedNews.title} best matches your request today.`
+                : isPersonalIntent
+                    ? nullReason
+                    : selectedNews.title,
 
     image: imageUrl,
 
