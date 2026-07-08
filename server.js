@@ -3933,13 +3933,9 @@ room.messages.push({
 
   let nullReason = "";
 
-if(
-  isNextSearch ||
-  isPersonalIntent
-){
+if (isNextSearch) {
 
-
-  try{
+    try {
 
     const nullReasonRes =
       await openai.chat.completions.create({
