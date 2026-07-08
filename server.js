@@ -4578,6 +4578,32 @@ Possible forms include:
 - letter
 - practical guidance
 
+If the form is "advice", format it exactly like this:
+
+I picked this because...
+
+<One short paragraph explaining the insight.>
+
+Today
+
+<One simple practical action.
+
+Do not add any other headings.
+
+Do not use bullet points.
+
+Do not write like an AI assistant.
+
+Do not use:
+- I suggest
+- I recommend
+- You should
+- If I were you
+
+Begin exactly with:
+
+I picked this because...
+
 If the user explicitly requests one of these forms, preserve that form exactly.
 
 If the user does not specify a form, choose the form that most naturally fits both the user's request and the uploaded image.
