@@ -4427,14 +4427,16 @@ ${selectedNews?.title || ""}
 }
 
 if (
-    !selectedNews ||
-    !selectedNews.title ||
-    !(
-        selectedNews.link ||
-        selectedNews.news_link
+    !isPersonalIntent &&
+    (
+        !selectedNews ||
+        !selectedNews.title ||
+        !(
+            selectedNews.link ||
+            selectedNews.news_link
+        )
     )
 ){
-
     room.messages.push({
         from: "NULL",
         aiBeing: true,
