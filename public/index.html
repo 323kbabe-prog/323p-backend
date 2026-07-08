@@ -1792,6 +1792,11 @@ document.getElementById(
 //////////////////////////////////////////////////
 
 socket.on("roomMessages",messages => {
+
+console.log("ROOM MESSAGES");
+console.log(messages);
+console.log(messages[messages.length - 1]);
+  
 roomOverlay.style.display = "flex";
 
 roomInput.style.display = "block";
