@@ -2666,10 +2666,28 @@ if (
     !isJobSearch
 ) {
 
-    const locationPurposeRes =
-        await openai.chat.completions.create({
-        ...
-    });
+const locationPurposeRes =
+    await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+        {
+            role:"system",
+            content:`
+            ...
+            `
+        },
+
+        {
+            role:"user",
+            content:combinedIntent
+        }
+
+    ]
+
+});
 
     locationPurposeSearch =
         locationPurposeRes
