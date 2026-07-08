@@ -2415,6 +2415,14 @@ try{
  const lowerIntent = combinedIntent.trim().toLowerCase();
 
 let inputType = "intent";
+    
+    // Random gibberish detection
+if (
+    /^[a-z]{7,}$/.test(lowerIntent) &&
+    !/[aeiou].*[aeiou]/.test(lowerIntent)
+) {
+    inputType = "unclear";
+}
 
 // Greeting
 if (
