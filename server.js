@@ -4749,7 +4749,7 @@ ask:
               : isShoppingIntent
                 ? "this product"
                 : "this topic"
-        } because ${selectedNews.title} best matches your request today.`
+        } because ${selectedNews.title} .`
       ),
 
 
