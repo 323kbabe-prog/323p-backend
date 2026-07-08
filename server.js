@@ -3418,16 +3418,45 @@ Rules:
 
 PRIORITY RULES:
 
-1. The user's request defines what they need.
+1. The user's request defines the destination.
 
-2. The uploaded image defines how that request should be interpreted.
+2. The uploaded image defines the interpretation.
 
-3. The hidden system determines where the search should go.
+3. The hidden system determines the real-world direction.
 
-The same request should naturally produce different searches when the uploaded image changes.
+The search must satisfy BOTH:
+
+- the user's goal
+- the uploaded image's identity
+
+The uploaded image is not optional.
+
+It is the lens through which reality is interpreted.
+
+If the search would be essentially the same without the uploaded image, it is incorrect.
+
+The uploaded image must materially change the search.
+
+The same user request should naturally produce different searches for different uploaded images.
+
+Before returning the search, ask yourself:
+
+"Would a different uploaded image naturally produce a different search?"
+
+If the answer is no, rewrite the search until the uploaded image clearly changes the result.
+
+The uploaded image should influence:
+
+- what matters
+- what deserves attention
+- what is ignored
+- what current events become relevant
+
+The search should never feel generic.
+
+It should feel like the uploaded image itself is searching the real world through its own identity.
 
 The search should feel like the uploaded image itself is guiding the user toward the most relevant real-world information.
-
 
 `
     },
