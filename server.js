@@ -2950,15 +2950,48 @@ ${locationPurposeSearch}
 
 }
 
+const entityTypeRes =
+    await openai.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [
+            {
+                role: "system",
+                content: `
+Return ONLY:
 
+entity
 
-  const isNamedEntity =
-  userIntent &&
-  !userIntent.includes("systems") &&
-  !userIntent.includes("transformation") &&
-  !userIntent.includes("mobility") &&
-  !userIntent.includes("connection") &&
-  !userIntent.includes("workplace");
+or
+
+concept
+
+Entity:
+- person
+- celebrity
+- company
+- brand
+- product
+- organization
+- location
+
+Everything else:
+
+concept
+`
+            },
+            {
+                role: "user",
+                content: userIntent
+            }
+        ]
+    });
+
+const isNamedEntity =
+    entityTypeRes.choices[0]
+        .message
+        .content
+        .trim()
+        .toLowerCase() === "entity";
 
 const directNewsSearch =
 
@@ -3650,20 +3683,9 @@ placeName =
   null;
 
 placeLink =
-  placeSearchRes?.local_results?.[0]?.website ||
-
-  placeSearchRes?.local_results?.[0]?.link ||
-
-  placeSearchRes?.places_results?.[0]?.website ||
-
-  placeSearchRes?.places_results?.[0]?.link ||
-
-  (
     placeName
-      ? "https://www.google.com/maps/search/" +
-        encodeURIComponent(placeName)
-      : ""
-  );
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName)}`
+        : "";
 
 console.log(
   "PLACE LINK:",
