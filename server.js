@@ -4874,13 +4874,16 @@ ${selectedNews.title}
 
 console.log("ADDING PERSONAL CARD");
 console.log({
+    isNextSearch,
     isPersonalIntent,
     nullReason,
-    ask: isPersonalIntent
-        ? nullReason
-        : placeStory
+    ask:
+        isNextSearch
+            ? nullReason
+            : isPersonalIntent
+                ? nullReason
+                : placeStory
 });
-
 
 room.messages.push({
 
@@ -4914,21 +4917,22 @@ showRead:
   image:null,
 
 ask:
-  isPersonalIntent
+  isNextSearch
     ? nullReason
-    : (
-        placeStory ||
-        `I picked ${
-          locationPurposeSearch !== "none"
-            ? locationPurposeSearch
-            : isYoutubeIntent
-              ? "this video"
-              : isShoppingIntent
-                ? "this product"
-                : "this topic"
-        } because ${selectedNews.title} .`
-      ),
-
+    : isPersonalIntent
+      ? nullReason
+      : (
+          placeStory ||
+          `I picked ${
+            locationPurposeSearch !== "none"
+              ? locationPurposeSearch
+              : isYoutubeIntent
+                ? "this video"
+                : isShoppingIntent
+                  ? "this product"
+                  : "this topic"
+          } because ${selectedNews.title}.`
+        ),
 
 link:
   isYoutubeIntent
@@ -4969,11 +4973,13 @@ if (
                     : "Null (AGI NETWORK) Feed",
 
 ask:
-    isPersonalIntent
-        ? nullReason
-        : (
-            placeStory ||
-            selectedNews.title
+  isNextSearch
+    ? nullReason
+    : isPersonalIntent
+      ? nullReason
+      : (
+          placeStory ||
+          selectedNews.title
         ),
 
     image: imageUrl,
