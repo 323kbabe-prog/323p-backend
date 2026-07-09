@@ -2988,8 +2988,11 @@ music
 
 Return ONLY the interpreted direction.
 
-Rules:
+This interpreted direction becomes the ONLY direction used for later Google News searches.
 
+It must be specific enough that changing the uploaded image changes the final search.
+
+Rules:
 - 2 to 6 words
 - lowercase only
 - no punctuation
@@ -3571,15 +3574,39 @@ User emotional direction:
 ${interpretedIntent}
 IMPORTANT:
 
-If User emotional direction is a named entity:
+The user's request has already been interpreted.
 
-- celebrity
-- public figure
-- company
-- brand
-- product
+${interpretedIntent} is the FINAL destination.
 
-search directly about that entity.
+Build the search directly from ${interpretedIntent}.
+
+Never go back to the original user request.
+
+The uploaded image is the interpreter.
+
+The same user request with different uploaded images MUST produce different searches.
+
+Examples:
+
+Need travel
+
+Food preparation station
+→ street food tourism
+→ culinary travel
+→ airport dining trends
+
+Coffee cup
+→ cafe culture travel
+
+Cross
+→ pilgrimage travel
+
+Keyboard
+→ digital nomad travel
+
+If your search could also work for every uploaded image, it is WRONG.
+
+Rewrite it until the uploaded image clearly changes the search.
 
 Examples:
 
@@ -3714,9 +3741,9 @@ if (
 const searchQuery = (
     isNextSearch
         ? (
+            interpretedIntent ||
             emotionSearch ||
             hiddenSystem ||
-            interpretedIntent ||
             "latest news"
         )
         : (
@@ -3724,19 +3751,21 @@ const searchQuery = (
             directYoutubeSearch ||
             directShoppingSearch ||
             directNewsSearch ||
+            interpretedIntent ||
             emotionSearch ||
             hiddenSystem ||
-            interpretedIntent ||
             "latest news"
         )
 ).trim();
 
+console.log("USER:", text);
+console.log("IMAGE:", room.imageContext);
+console.log("INTERPRETED:", interpretedIntent);
+console.log("EMOTION:", emotionSearch);
+console.log("FINAL SEARCH:", searchQuery);
 
 const isLocationRequest =
   locationPurposeSearch !== "none";
-
-
-
 
   console.log(
   "USER SYSTEM:",
