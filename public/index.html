@@ -2552,56 +2552,6 @@ line-height:1.4;
 One I think you should notice today:
 </div>
 
-<div
-style="
-display:flex;
-justify-content:flex-start;
-align-items:center;
-gap:16px;
-margin-top:4px;
-margin-bottom:18px;
-"
->
-
-${m.showRead !== false ? `
-<a
-href="${m.link || '#'}"
-target="_blank"
-style="
-cursor:pointer;
-font-size:11px;
-font-weight:600;
-background:#000;
-color:#fff;
-padding:6px 8px;
-border-radius:999px;
-display:inline-block;
-line-height:1;
-text-decoration:none;
-"
->
-Check
-</a>
-` : ""}
-
-<span
-onclick="shareCard(this)"
-style="
-cursor:pointer;
-font-size:11px;
-font-weight:600;
-background:#000;
-color:#fff;
-padding:6px 8px;
-border-radius:999px;
-display:inline-block;
-line-height:1;
-"
->
-Share
-</span>
-
-</div>
 
 ${m.searchLabel === "NULL Feed" ? `
 <div
@@ -2628,7 +2578,44 @@ margin-bottom:12px;
 "
 >
 
+${m.showRead !== false ? `
+<a
+href="${m.link || '#'}"
+target="_blank"
+style="
+cursor:pointer;
+font-size:11px;
+font-weight:600;
+background:#000;
+color:#fff;
+padding:6px 8px;
+border-radius:999px;
+display:inline-block;
+line-height:1;
+text-decoration:none; 
+  "
+>
+Check
+</a>
+` : ""}
 
+
+<span
+onclick="shareCard(this)"
+style="
+cursor:pointer;
+font-size:11px;
+font-weight:600;
+background:#000;
+color:#fff;
+padding:6px 8px;
+border-radius:999px;
+display:inline-block;
+line-height:1; 
+"
+>
+Share
+</span>
 
 </div>
 
