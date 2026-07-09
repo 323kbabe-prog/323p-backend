@@ -1281,34 +1281,35 @@ helper.style.display = "flex";
         helper.style.display =
           "flex";
 
-    helper.innerHTML =
-`
+  helper.innerHTML = `
 <div>OPEN IN CHROME<br>FOR CAMERA</div>
 
-<div style="margin-top:16px;"></div>
-
-<button id="uploadBtn">Upload Image</button>
-
 <button
-id="publicNullsBtn"
-onclick="
-event.preventDefault();
-event.stopPropagation();
-showPublicNulls();
-return false;
-">
-PUBLIC NULLS
+onclick="window.location.reload()"
+style="
+  width:48px;
+  height:48px;
+  margin-top:18px;
+  border:none;
+  border-radius:50%;
+  background:#111;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+"
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="22"
+    height="22"
+    viewBox="0 -960 960 960"
+    fill="#fff"
+  >
+    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
+  </svg>
 </button>
-
 `;
-
-document.getElementById("uploadBtn").onclick = e=>{
-    e.stopPropagation();
-    uploadImage.click();
-};
-
-
-
 
       }
 
@@ -1385,15 +1386,7 @@ window.onload = async () => {
 const uploadImage =
   document.getElementById("uploadImage");
 
-document
-  .getElementById("uploadBtn")
-  .onclick = e => {
 
-    e.stopPropagation();
-
-    uploadImage.click();
-
-};
 
 uploadImage.onchange = e => {
 
