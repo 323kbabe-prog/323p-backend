@@ -2553,13 +2553,13 @@ One I think you should notice today:
 </div>
 
 
-${m.nullReason ? `
+${m.searchLabel === "NULL Feed" ? `
 <div
 style="
-font-size:13px;
-line-height:1.45;
-opacity:.75;
-margin-bottom:8px;
+font-size:14px;
+line-height:1.55;
+font-weight:300;
+word-break:break-word;
 "
 >
 ${m.nullReason}
@@ -2619,6 +2619,7 @@ Share
 
 </div>
 
+${m.searchLabel !== "NULL Feed" ? `
 <div
 style="
 font-size:14px;
@@ -2629,6 +2630,7 @@ word-break:break-word;
 >
 ${m.ask}
 </div>
+` : ""}
 
 </div>
 
