@@ -2552,6 +2552,17 @@ line-height:1.4;
 One I think you should notice today:
 </div>
 
+<div
+style="
+display:flex;
+justify-content:flex-start;
+align-items:center;
+gap:16px;
+margin-top:4px;
+margin-bottom:18px;
+"
+>
+
 ${m.showRead !== false ? `
 <a
 href="${m.link || '#'}"
@@ -2566,13 +2577,12 @@ padding:6px 8px;
 border-radius:999px;
 display:inline-block;
 line-height:1;
-text-decoration:none; 
-  "
+text-decoration:none;
+"
 >
 Check
 </a>
 ` : ""}
-
 
 <span
 onclick="shareCard(this)"
@@ -2585,11 +2595,13 @@ color:#fff;
 padding:6px 8px;
 border-radius:999px;
 display:inline-block;
-line-height:1; 
+line-height:1;
 "
 >
 Share
 </span>
+
+</div>
 
 ${m.searchLabel === "NULL Feed" ? `
 <div
