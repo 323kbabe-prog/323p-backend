@@ -3279,13 +3279,50 @@ ${locationPurposeSearch}
 
 
 
-  const isNamedEntity =
-  userIntent &&
-  !userIntent.includes("systems") &&
-  !userIntent.includes("transformation") &&
-  !userIntent.includes("mobility") &&
-  !userIntent.includes("connection") &&
-  !userIntent.includes("workplace");
+const namedEntityRes =
+  await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `
+Return ONLY:
+
+entity
+
+or
+
+other
+
+Return entity only if the text is:
+
+- person
+- celebrity
+- company
+- organization
+- product
+- brand
+- movie
+- game
+- book
+- location
+
+Everything else is:
+
+other
+`
+      },
+      {
+        role: "user",
+        content: userIntent
+      }
+    ]
+  });
+
+const isNamedEntity =
+  namedEntityRes.choices[0].message.content
+    .trim()
+    .toLowerCase() === "entity";
 
 const directNewsSearch =
 
