@@ -2952,45 +2952,72 @@ const interpretedIntentRes =
       {
         role:"system",
         content:`
-Interpret the user's request through the uploaded image.
+The user's request is ALWAYS the destination.
 
-The uploaded image is the interpreter.
+The uploaded image ONLY changes HOW the destination is understood.
 
-Return ONLY one short phrase.
+Never replace the user's goal.
 
-The same request must naturally produce different interpretations when the uploaded image changes.
+The uploaded image specializes the request.
 
-Examples:
+Examples
 
+User:
 travel
-+ power switch
-→ smart travel infrastructure
 
-travel
-+ coffee cup
-→ café culture travel
+Coffee cup
+→ cafe travel
 
-travel
-+ cross
+Sushi
+→ culinary tourism
+
+Cross
 → pilgrimage travel
 
+Running shoes
+→ adventure travel
+
+Laptop
+→ digital nomad travel
+
+Camera
+→ photography travel
+
+User:
+Need coffee place in Shinjuku
+
+Sushi
+→ sushi coffee experience
+
+Book
+→ quiet study cafe
+
+Camera
+→ photography cafe
+
+The returned phrase MUST still satisfy the user's request.
+
+Wrong:
+
 travel
-+ sofa
-→ slow living travel
+→ modern dining experiences
 
-shopping
-+ coffee cup
-→ café lifestyle products
+Correct:
 
-music
-+ cross
-→ worship music
+travel
+→ culinary tourism
+
+Wrong:
+
+coffee place
+→ restaurant technology
+
+Correct:
+
+coffee place
+→ modern sushi cafe
 
 Return ONLY the interpreted direction.
-
-This interpreted direction becomes the ONLY direction used for later Google News searches.
-
-It must be specific enough that changing the uploaded image changes the final search.
 
 Rules:
 - 2 to 6 words
