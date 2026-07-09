@@ -682,25 +682,38 @@ window.location.reload();
 return false;
 "
 
-style="
-  width:44px;
-  height:44px;
-  padding:0;
-  border:none;
-  border-radius:50%;
-  background:#fff;
-  color:#111;
-  font-size:20px;
-  font-weight:700;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 2px 8px rgba(0,0,0,.15);
-  margin-bottom:18px;
-"
+<button
+  id="refreshCameraBtn"
+  onclick="
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.reload();
+    return false;
+  "
+  style="
+    width:40px;
+    height:40px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    margin-bottom:18px;
+  "
 >
-  ⟳
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 -960 960 960"
+    width="22"
+    height="22"
+    fill="#111"
+  >
+    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
+  </svg>
 </button>
 
 <div style="
@@ -3888,6 +3901,39 @@ padding:16px;
 box-sizing:border-box;
 ">
 
+<button
+  onclick="window.location.reload()"
+  style="
+    width:40px;
+    height:40px;
+    margin:0 auto 16px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+  "
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#111"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M21 2v6h-6"></path>
+    <path d="M20.49 15A9 9 0 1 1 21 8"></path>
+  </svg>
+</button>
+  
 <div style="
 font-size:22px;
 font-weight:900;
