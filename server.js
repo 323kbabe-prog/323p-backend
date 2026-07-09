@@ -2364,48 +2364,7 @@ socket.on(
         return;
     }
 
-    let isJobSearch = false;
-
-    try {
-
-        const jobIntentRes =
-            await openai.responses.create({
-                model: "gpt-5-mini",
-                input: `
-Determine if the user is looking for jobs.
-
-Return ONLY:
-
-jobs
-none
-
-User:
-${text}
-`
-            });
-
-        isJobSearch =
-            jobIntentRes.output_text
-                .trim()
-                .toLowerCase() === "jobs";
-
-    } catch (err) {
-
-        console.error("Job intent failed:", err);
-        isJobSearch = false;
-
-    }
-
-    const isNextSearch =
-        text.trim().toLowerCase() === "null feed";
-
-    if (isNextSearch) {
-        room.messages.forEach(m => {
-            m.showNextButton = false;
-        });
-    }
-
-    // ...continue with the rest of roomMessage
+   
 
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
@@ -2447,76 +2406,202 @@ try{
       {
         role: "system",
         content: `
-Return ONLY one word:
+You are the Ask Null Intent Router.
 
+Determine the user's PRIMARY intent.
+
+Return ONLY one of these values.
+
+news
+advice
+prayer
+encouragement
+reflection
+meditation
+letter
+poem
+place
+music
+shopping
+jobs
+entity
+reminder
+public_null
+daily_nulls
+share
+check
+null_feed
 greeting
-
-intent
-
 unclear
 
-IMPORTANT:
+Definitions
 
-If the user message is:
-- null feed
+news
+Current events, latest news, headlines, updates, or information.
 
-Always return:
+advice
+The user wants personal guidance, recommendations, or advice.
 
-intent
+prayer
+The user explicitly asks for prayer, a blessing, or asks someone to pray.
 
-Determine the user's primary purpose.
+encouragement
+The user wants hope, comfort, motivation, reassurance, or encouragement.
 
-Return "greeting" if the user is primarily interacting with Ask Null itself, such as:
-- starting or maintaining casual conversation
-- greeting or thanking the AI
-- testing whether the AI responds
-- asking who Ask Null is
-- asking what Ask Null is
-- asking what Ask Null can do
-- asking what Ask Null is doing
-- asking how to use Ask Null
-- asking why Ask Null exists
-- asking about Ask Null's identity, purpose, or capabilities
-- interacting with Ask Null without trying to discover external information or solve a problem
+reflection
+The user wants self-reflection, journaling, deeper thinking, or meaning.
 
-Return "unclear" if the user's message does not contain enough information to determine what they want.
+meditation
+The user wants meditation, mindfulness, breathing exercises, or relaxation.
 
-Examples:
+letter
+The user explicitly asks for a letter.
 
-huh
-what
-???
-...
-asdf
-bbgd
-i did bbgd
-idk
-hmm
+poem
+The user explicitly asks for a poem or poetry.
 
-Return "unclear" only when the user's intent cannot reasonably be determined.
+place
+The user wants somewhere to go, visit, eat, drink, explore, or experience.
 
-Return "intent" if the user is primarily trying to accomplish something, including:
-- finding or searching for information
-- exploring a topic
-- discovering news
-- getting recommendations
-- asking about any person, company, product, place, event, or subject
-- expressing a need, feeling, opinion, or goal
-- asking for analysis, advice, explanations, or comparisons
-- solving a problem
-- making a decision
-- learning about something beyond Ask Null itself
+music
+The user wants music, songs, playlists, podcasts, YouTube videos, worship music, or something to watch or listen to.
 
-Focus on the user's overall purpose, not individual keywords.
+shopping
+The user wants to buy, compare, or find a product.
 
-Return exactly one word:
+jobs
+The user wants jobs, careers, hiring information, or employment.
+
+entity
+The input is mainly a person, celebrity, company, brand, organization, movie, product, or location.
+
+reminder
+The user wants a reminder or future notification.
+
+public_null
+The user wants to publish a Public Null.
+
+daily_nulls
+The user wants Daily Nulls.
+
+share
+The user wants to share a card.
+
+check
+The user wants to open or view the referenced source.
+
+null_feed
+The user explicitly requests "null feed".
 
 greeting
-
-intent
+Greetings or questions about Ask Null itself.
 
 unclear
+The intent cannot be determined.
 
+Priority Rules
+
+1. reminder
+2. public_null
+3. daily_nulls
+4. share
+5. check
+6. null_feed
+7. jobs
+8. shopping
+9. music
+10. place
+11. prayer
+12. meditation
+13. poem
+14. letter
+15. encouragement
+16. reflection
+17. advice
+18. entity
+19. news
+20. greeting
+21. unclear
+
+Examples
+
+latest ai news
+→ news
+
+need advice
+→ advice
+
+pray for me
+→ prayer
+
+encourage me
+→ encouragement
+
+help me reflect
+→ reflection
+
+guide me through meditation
+→ meditation
+
+write me a letter
+→ letter
+
+write me a poem
+→ poem
+
+shinjuku coffee shop
+→ place
+
+tokyo ramen
+→ place
+
+i need music
+→ music
+
+best worship music
+→ music
+
+i need headphones
+→ shopping
+
+ai jobs seattle
+→ jobs
+
+elon musk
+→ entity
+
+remind me to call mom tomorrow at 8pm
+→ reminder
+
+publish public null
+→ public_null
+
+open daily nulls
+→ daily_nulls
+
+share this
+→ share
+
+check
+→ check
+
+null feed
+→ null_feed
+
+hello
+→ greeting
+
+hi
+→ greeting
+
+asdfasdf
+→ unclear
+
+Return EXACTLY one value.
+
+No explanation.
+No punctuation.
+Lowercase only.
 `
       },
       {
@@ -2526,14 +2611,14 @@ unclear
     ]
   });
 
-const inputType =
+const intent =
   greetingRes.choices[0]
     .message
     .content
     .trim()
     .toLowerCase();
 
-if(inputType === "unclear"){
+if(intent === "unclear"){
 
   room.messages.push({
 
@@ -2561,9 +2646,9 @@ if(inputType === "unclear"){
 
 }
 
-  console.log("GREETING TYPE:", inputType);
+console.log("INTENT:", intent);
 
-  if (inputType === "greeting") {
+if(intent === "greeting"){
     room.messages.push({
   from: user.displayName,
   text
@@ -2589,17 +2674,7 @@ room.messages.push({
   return;
 }
 
-  if(!isNextSearch){
 
-  room.messages.push({
-
-    from:user.displayName,
-
-    text
-
-  });
-
-}
 
 io.to(room.id).emit(
   "roomMessages",
@@ -2721,223 +2796,53 @@ const userIntent =
     .content
     .trim();
 
+     const isPersonalIntent =
+[
+  "advice",
+  "prayer",
+  "encouragement",
+  "reflection",
+  "meditation",
+  "letter",
+  "poem"
+].includes(intent);
+
+const isShoppingIntent =
+  intent === "shopping";
+
+const isYoutubeIntent =
+  intent === "music";
+
+const isNamedEntity =
+  intent === "entity";
+
+const isJobSearch =
+  intent === "jobs";
+
+const isNextSearch =
+  intent === "null_feed";
+
+const isLocationRequest =
+  intent === "place";
+
+      if(!isNextSearch){
+
+  room.messages.push({
+
+    from:user.displayName,
+
+    text
+
+  });
+
+}
+
+
    
 
 const topicKey = userIntent.trim().toLowerCase();
 
 const cachedTopic = room.topicMemory[topicKey];
-
-const personalIntentRes =
-  await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
-Return ONLY one word:
-
-personal
-
-or
-
-other
-
-Return personal only if the user wants guidance, recommendations, or advice.
-
-This includes:
-
-- expressing emotions
-- describing a personal situation
-- asking for advice
-- asking what to do
-- asking what to build
-- asking what to create
-- asking what to learn
-- asking for an example
-- asking me to choose
-- asking for a recommendation
-- asking how to start
-- asking which direction to take
-
-Everything else is:
-
-other
-
-`
-      },
-        
-      {
-  role: "user",
-  content: `
-User:
-${text}
-`
-}
-    ]
-  });
-
-const isPersonalIntent =
-  personalIntentRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "personal";
-
-const shoppingRes =
-  await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    messages:[
-      {
-        role:"system",
-        content:`
-Return ONLY one word:
-
-shopping
-
-other
-
-Return shopping if the user wants to buy, shop, find a product, get a gift, purchase, or compare products.
-
-Examples:
-i need to buy a gift → shopping
-gift for my friend → shopping
-where can i buy shoes → shopping
-best camera to buy → shopping
-
-Everything else:
-other
-`
-      },
-      {
-        role:"user",
-        content:text
-      }
-    ]
-  });
-
-const isShoppingIntent =
-  shoppingRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "shopping";
-
-const youtubeRes =
-  await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    messages:[
-      {
-        role:"system",
-        content:`
-Return ONLY one word:
-youtube
-other
-
-Return youtube if the user wants music, video, BGM, podcast, sermon, worship song, trailer, documentary, funny video, or something to watch/listen to.
-
-Examples:
-i need bgm -> youtube
-driving music -> youtube
-study music -> youtube
-lofi -> youtube
-worship songs -> youtube
-sermon about faith -> youtube
-podcast about ai -> youtube
-movie trailer -> youtube
-
-Everything else:
-other
-`
-      },
-      {
-        role:"user",
-        content:text
-      }
-    ]
-  });
-
-const isYoutubeIntent =
-  youtubeRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "youtube";
-  
-  const locationPurposeRes =
-  await openai.chat.completions.create({
-    model:"gpt-4o-mini",
-    messages:[
-      {
-        role:"system",
-       content:`
-Detect whether the user wants a real place recommendation.
-
-Examples:
-
-new york bar
-→ new york bar
-
-best ramen in shibuya
-→ shibuya ramen
-
-where should i go in tokyo
-→ tokyo place
-
-i am in tokyo and want something unique
-→ tokyo place
-
-show me something very japanese in shibuya
-→ shibuya place
-
-i want to explore taipei tonight
-→ taipei place
-
-Rules:
-
-If user wants:
-- somewhere to go
-- somewhere to visit
-- somewhere to explore
-- something new
-- something local
-- something unique
-- something authentic
-
-return:
-
-location place
-
-If user already specifies type:
-
-shibuya ramen
-taipei coffee shop
-new york bar
-
-keep the type.
-
-Return only:
-location place
-
-or
-
-none
-
-lowercase only
-no punctuation
-
-`
-
-      },
-{
-  role:"user",
-  content: combinedIntent
-}
-
-
-    ]
-  });
-
-const locationPurposeSearch =
-
-  locationPurposeRes
-    .choices[0]
-    .message
-    .content
-    .trim();
 
 const hiddenSystem =
   room.hiddenSystem;
@@ -3246,7 +3151,7 @@ const youtubeLink =
 
 if(
   !isNextSearch &&
-  locationPurposeSearch !== "none"
+  isLocationRequest
 ){
 
   const locationNewsRes =
@@ -3288,7 +3193,7 @@ User request:
 ${interpretedIntent}
 
 Destination:
-${locationPurposeSearch}
+${userIntent}
 `
 
         }
@@ -3306,50 +3211,9 @@ ${locationPurposeSearch}
 
 
 
-const namedEntityRes =
-  await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
-Return ONLY:
 
-entity
 
-or
 
-other
-
-Return entity only if the text is:
-
-- person
-- celebrity
-- company
-- organization
-- product
-- brand
-- movie
-- game
-- book
-- location
-
-Everything else is:
-
-other
-`
-      },
-      {
-        role: "user",
-        content: userIntent
-      }
-    ]
-  });
-
-const isNamedEntity =
-  namedEntityRes.choices[0].message.content
-    .trim()
-    .toLowerCase() === "entity";
 
 const directNewsSearch =
 
@@ -3360,9 +3224,8 @@ const directNewsSearch =
     : null;
 
 const skipPlaceFlow =
-  directNewsSearch !== null &&
-  locationPurposeSearch === "none";
-
+    directNewsSearch !== null &&
+    !isLocationRequest;
 
 
 
@@ -3828,8 +3691,6 @@ console.log("INTERPRETED:", interpretedIntent);
 console.log("EMOTION:", emotionSearch);
 console.log("FINAL SEARCH:", searchQuery);
 
-const isLocationRequest =
-  locationPurposeSearch !== "none";
 
   console.log(
   "USER SYSTEM:",
@@ -4340,16 +4201,16 @@ ${validNews.map(
       );
 
 console.log("PLACE FLOW", {
-  skipPlaceFlow,
-  isNextSearch,
-  locationPurposeSearch
+    skipPlaceFlow,
+    isNextSearch,
+    userIntent
 });
 
 
 if(
   !skipPlaceFlow &&
   !isNextSearch &&
-  locationPurposeSearch !== "none"
+  isLocationRequest
 ){
 
 const placeQueryRes =
@@ -4389,7 +4250,7 @@ Hidden system:
 ${hiddenSystem}
 
 Search:
-${locationPurposeSearch}
+${userIntent}
 
 News:
 ${selectedNews?.title}
@@ -4400,7 +4261,10 @@ ${selectedNews?.title}
   });
 
 console.log("HIDDEN SYSTEM:", hiddenSystem);
-console.log("PLACE SEARCH:", locationPurposeSearch);
+console.log(
+    "PLACE SEARCH:",
+    userIntent
+);
 console.log("NEWS:", selectedNews?.title);
 
 const placeQuery =
@@ -4645,7 +4509,7 @@ Rules:
           role:"user",
           content:`
 Place:
-${placeName || locationPurposeSearch}
+${placeName || userIntent}
 
 News:
 ${selectedNews?.title || ""}
@@ -5017,8 +4881,8 @@ ask:
       : (
           placeStory ||
           `I picked ${
-            locationPurposeSearch !== "none"
-              ? locationPurposeSearch
+isLocationRequest
+    ? userIntent
               : isYoutubeIntent
                 ? "this video"
                 : isShoppingIntent
@@ -5485,4 +5349,5 @@ console.log(err);
 
 
 }, 60 * 1000);
+
 
