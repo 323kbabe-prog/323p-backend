@@ -1332,23 +1332,36 @@ document.getElementById("uploadBtn").onclick = e=>{
 
       helper.innerHTML = `
 <button
-id="refreshCameraBtn"
-onclick="window.location.reload()"
-style="
-padding:8px 14px;
-border:none;
-border-radius:999px;
-background:#fff;
-color:#111;
-font-size:20px;
-font-weight:700;
-cursor:pointer;
-box-shadow:0 4px 16px rgba(0,0,0,.18);
-margin-bottom:18px;
-">
-⟳
+  onclick="window.location.reload()"
+  style="
+    width:40px;
+    height:40px;
+    margin:0 auto 16px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#111;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  "
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#fff"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M21 2v6h-6"></path>
+    <path d="M20.49 15A9 9 0 1 1 21 8"></path>
+  </svg>
 </button>
-
 <div>
 ALLOW CAMERA ACCESS
 </div>
