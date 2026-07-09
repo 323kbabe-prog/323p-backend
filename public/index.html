@@ -2532,16 +2532,6 @@ margin-bottom:18px;
 
 <div
 style="
-font-size:14px;
-font-weight:300;
-opacity:.45;
-margin-bottom:8px;
-"
->
-${m.searchLabel || ""}
-</div>
-<div
-style="
 font-size:13px;
 font-weight:300;
 opacity:.55;
@@ -2549,23 +2539,8 @@ margin-bottom:10px;
 line-height:1.4;
 "
 >
-One I think you should notice today:
+One thing I think you should notice today:
 </div>
-
-
-${m.searchLabel === "NULL Feed" ? `
-<div
-style="
-font-size:14px;
-line-height:1.55;
-font-weight:300;
-word-break:break-word;
-"
->
-${m.nullReason}
-</div>
-` : ""}
-
 
 <div
 style="
@@ -2573,7 +2548,6 @@ display:flex;
 justify-content:flex-start;
 align-items:center;
 gap:16px;
-margin-top:4px;
 margin-bottom:12px;
 "
 >
@@ -2592,13 +2566,12 @@ padding:6px 8px;
 border-radius:999px;
 display:inline-block;
 line-height:1;
-text-decoration:none; 
-  "
+text-decoration:none;
+"
 >
 Check
 </a>
 ` : ""}
-
 
 <span
 onclick="shareCard(this)"
@@ -2611,13 +2584,26 @@ color:#fff;
 padding:6px 8px;
 border-radius:999px;
 display:inline-block;
-line-height:1; 
+line-height:1;
 "
 >
 Share
 </span>
 
 </div>
+
+${m.searchLabel === "NULL Feed" ? `
+<div
+style="
+font-size:14px;
+line-height:1.55;
+font-weight:300;
+word-break:break-word;
+"
+>
+${m.nullReason}
+</div>
+` : ""}
 
 ${m.searchLabel !== "NULL Feed" ? `
 <div
