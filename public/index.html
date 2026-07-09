@@ -2552,32 +2552,6 @@ line-height:1.4;
 One I think you should notice today:
 </div>
 
-
-${m.searchLabel === "NULL Feed" ? `
-<div
-style="
-font-size:14px;
-line-height:1.55;
-font-weight:300;
-word-break:break-word;
-"
->
-${m.nullReason}
-</div>
-` : ""}
-
-
-<div
-style="
-display:flex;
-justify-content:flex-start;
-align-items:center;
-gap:16px;
-margin-top:4px;
-margin-bottom:12px;
-"
->
-
 ${m.showRead !== false ? `
 <a
 href="${m.link || '#'}"
@@ -2616,6 +2590,33 @@ line-height:1;
 >
 Share
 </span>
+
+${m.searchLabel === "NULL Feed" ? `
+<div
+style="
+font-size:14px;
+line-height:1.55;
+font-weight:300;
+word-break:break-word;
+"
+>
+${m.nullReason}
+</div>
+` : ""}
+
+
+<div
+style="
+display:flex;
+justify-content:flex-start;
+align-items:center;
+gap:16px;
+margin-top:4px;
+margin-bottom:12px;
+"
+>
+
+
 
 </div>
 
