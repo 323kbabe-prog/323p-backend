@@ -2478,11 +2478,11 @@ Null (AGI NETWORK) Feed
 
 <div
 class="card-body"
-style="
-opacity:.55;
-margin-bottom:10px;
-"
+style="margin-top:4px;"
 >
+${m.jobCard.company}
+</div>
+
 One job I think you should notice today:
 </div>
 
@@ -2553,49 +2553,35 @@ ${m.jobCard.company}
 </div>
 
 <div
-style="
 class="card-body"
-style="opacity:.55;";
-line-height:1.45;
-font-weight:300;
-opacity:.55;
-">
+style="opacity:.55;"
+>
 ${m.jobCard.location}
 </div>
 
 ${m.jobCard.salary ? `
 <div
-style="
 class="card-body"
 style="opacity:.55;"
-line-height:1.45;
-font-weight:300;
-opacity:.55;
-">
+>
 ${m.jobCard.salary}
 </div>
 ` : ""}
 
 ${m.jobCard.type ? `
 <div
-style="
-font-size:14px;
-line-height:1.45;
-font-weight:300;
-opacity:.55;
-">
+class="card-body"
+style="opacity:.55;"
+>
 ${m.jobCard.type}
 </div>
 ` : ""}
 
 ${m.jobCard.posted ? `
 <div
-style="
-font-size:14px;
-line-height:1.45;
-font-weight:300;
-opacity:.55;
-">
+class="card-body"
+style="opacity:.55;"
+>
 ${m.jobCard.posted}
 </div>
 ` : ""}
@@ -2658,7 +2644,7 @@ opacity:.55;
 margin-bottom:10px;
 "
 >
-One I think you should notice today:
+One job I think you should notice today:
 </div>
 
 <div
