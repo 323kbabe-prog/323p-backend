@@ -3083,9 +3083,18 @@ socket.on("phoneSaved", () => {
 // SOCKET RECONNECT
 //////////////////////////////////////////////////
 
-socket.on(
-  "disconnect",
-  () => {
+socket.on("disconnect", reason => {
+
+    console.log("DISCONNECT:", reason);
+
+    if (reason === "io client disconnect") {
+        return;
+    }
+
+    roomReady = false;
+
+    // existing UI code...
+});
 
     roomReady = false;
 
