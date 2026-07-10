@@ -3217,11 +3217,22 @@ ROOM NOT FOUND
 
 },5000);
    
- socket.emit("rejoinRoom",{
-        roomId: savedRoomId,
-        deviceId
-    });
+if (savedRoomId && !hasAutoRejoined) {
 
+    hasAutoRejoined = true;
+
+    setTimeout(() => {
+
+        socket.emit("rejoinRoom", {
+            roomId: savedRoomId,
+            deviceId
+        });
+
+    }, 300);
+
+    return;
+}
+  
   const thumb = localStorage.getItem("roomThumbnail");
 
 if (thumb) {
