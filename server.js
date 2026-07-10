@@ -1024,7 +1024,7 @@ socket.emit("roomReady");
     users[socket.id].displayName =
       room.displayName;
 
-ssocket.emit(
+socket.emit(
     "roomMessages",
     room.messages
 );
