@@ -657,42 +657,6 @@ Loading...
   accept="image/*"
   style="display:none"
 >
-
-<div
-id="homeRoomCard"
-style="
-display:none;
-position:absolute;
-top:86px;
-left:50%;
-transform:translateX(-50%);
-background:#fff;
-border-radius:18px;
-padding:14px 18px;
-text-align:center;
-z-index:1000;
-box-shadow:0 8px 24px rgba(0,0,0,.15);
-">
-
-<div style="font-size:11px;font-weight:700;opacity:.5;">
-AI LIVE ROOM
-</div>
-
-<div
-id="homeRoomId"
-style="font-size:18px;font-weight:900;margin-top:6px;"
->
-#room
-</div>
-
-<div
-id="homeRoomCountdown"
-style="font-size:12px;margin-top:6px;"
->
-Expires in 60:00
-</div>
-
-</div>
   
 <img
 id="capturePreview"
@@ -707,8 +671,41 @@ z-index:4;
 "
 />
 
-<div id="helper">
 
+<div
+id="homeRoomCard"
+style="
+display:none;
+position:fixed;
+top:72px;
+left:50%;
+transform:translateX(-50%);
+z-index:100000;
+pointer-events:none;
+padding:8px 14px;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:12px;
+font-weight:700;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+">
+
+<span id="homeRoomId">
+#room
+</span>
+
+<span style="opacity:.45;padding:0 6px;">
+•
+</span>
+
+<span id="homeRoomCountdown">
+60:00
+</span>
+
+</div>
+  
+<div id="helper">
 
 <button
   id="refreshCameraBtn"
