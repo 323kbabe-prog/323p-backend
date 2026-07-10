@@ -2959,47 +2959,18 @@ clearTimeout(rejoinTimeout);
 
     helper.style.display = "flex";
 
-    helper.innerHTML = `
-<button
-  id="refreshCameraBtn"
-  onclick="
-    event.preventDefault();
-    event.stopPropagation();
-    window.location.reload();
-    return false;
-  "
-  style="
-    width:40px;
-    height:40px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
-    margin-bottom:18px;
-  "
->
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 -960 960 960"
-    width="22"
-    height="22"
-    fill="#111"
-  >
-    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-  </svg>
-</button>
+    helper.innerHTML = helperDefaultHtml;
 
-<div>
-ROOM EXPIRED<br>CREATE A NEW NULL
-</div>
-`;
+document
+.getElementById("uploadBtn")
+.onclick = e => {
 
-});
+    e.stopPropagation();
+
+    uploadImage.click();
+
+};
+
 
 
 
@@ -3127,47 +3098,19 @@ socket.on(
     helper.style.display =
       "flex";
 
-    helper.innerHTML = `
+   helper.innerHTML = helperDefaultHtml;
 
-<button
-id="refreshCameraBtn"
-onclick="
-event.preventDefault();
-event.stopPropagation();
-window.location.reload();
-return false;
-"
-  style="
-    width:40px;
-    height:40px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
-    margin-bottom:18px;
-  "
->
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 -960 960 960"
-    width="22"
-    height="22"
-    fill="#111"
-  >
-    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-  </svg>
-</button>
+document
+.getElementById("uploadBtn")
+.onclick = e => {
 
-<div>
-RECONNECTING...
-</div>
+    e.stopPropagation();
 
-`;
+    uploadImage.click();
+
+};
+
+
 
   }
 );
@@ -3206,20 +3149,17 @@ const savedRoomId =
 
 if(urlRoomId){
 
-    helper.innerHTML = `
-<div style="
-display:flex;
-align-items:center;
-gap:10px;
-">
-<span>REJOINING AI LIVE ROOM</span>
-<div style="display:flex;gap:4px;">
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-</div>
-</div>
-`;
+   helper.innerHTML = helperDefaultHtml;
+
+document
+.getElementById("uploadBtn")
+.onclick = e => {
+
+    e.stopPropagation();
+
+    uploadImage.click();
+
+};
 
     localStorage.setItem(
         "roomId",
@@ -3331,103 +3271,15 @@ if(savedDisplayName){
       helper.style.display =
         "flex";
 
-  helper.innerHTML = `
-
-<button
-  id="refreshCameraBtn"
-  onclick="
-    event.preventDefault();
-    event.stopPropagation();
-    window.location.reload();
-    return false;
-  "
-  style="
-    width:40px;
-    height:40px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
-    margin-bottom:18px;
-  "
->
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 -960 960 960"
-    width="22"
-    height="22"
-    fill="#111"
-  >
-    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-  </svg>
-</button>
-
-<div style="
-  max-width:600px;
-  margin:0 auto;
-  text-align:left;
-  font-weight:500;
-  font-size:16px;
-  line-height:1.6;
-">
-  Search the internet through the Nulls around you. Tap the Screen, Upload an Image, or explore Public Nulls. Use the Nulls in any image as your search navigator.
-</div>
-
-<div style="margin-top:16px;"></div>
-
-<button
-id="uploadBtn"
-style="
-margin-top:18px;
-padding:10px 18px;
-border:none;
-border-radius:999px;
-background:#fff;
-color:#111;
-font-size:16px;
-font-weight:500;
-cursor:pointer;
-pointer-events:auto;
-box-shadow:0 4px 16px rgba(0,0,0,.18);
-"
->
-Upload Image
-</button>
-
-<button
-id="publicNullsBtn"
-onclick="showPublicNulls()"
-style="
-margin-top:12px;
-padding:10px 18px;
-border:none;
-border-radius:999px;
-background:#fff;
-color:#111;
-font-size:16px;
-font-weight:500;
-cursor:pointer;
-pointer-events:auto;
-box-shadow:0 4px 16px rgba(0,0,0,.18);
-"
->
-Public Nulls
-</button>
-
-`;
+ helper.innerHTML = helperDefaultHtml;
 
 document
 .getElementById("uploadBtn")
 .onclick = e => {
 
-  e.stopPropagation();
+    e.stopPropagation();
 
-  uploadImage.click();
+    uploadImage.click();
 
 };
 
