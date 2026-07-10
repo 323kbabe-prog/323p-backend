@@ -1081,6 +1081,7 @@ const video =
 
 const helper =
   document.getElementById("helper");
+  const helperDefaultHtml = helper.innerHTML;
 
 const roomOverlay =
   document.getElementById(
@@ -1246,16 +1247,7 @@ function openSavedRoom(){
 
     helper.style.display = "flex";
 
-    helper.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;">
-        <span>REJOINING AI LIVE ROOM</span>
-        <div style="display:flex;gap:4px;">
-            <div class="aiDot"></div>
-            <div class="aiDot"></div>
-            <div class="aiDot"></div>
-        </div>
-    </div>
-    `;
+helper.style.display = "none";
 
     clearTimeout(rejoinTimeout);
 
