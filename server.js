@@ -4534,7 +4534,133 @@ ${selectedNews?.title || ""}
 
   }
 
+    //////////////////////////////////////////////////
+// FINAL FIT CHECK
+//////////////////////////////////////////////////
+
+const fitRes =
+await openai.chat.completions.create({
+
+  model:"gpt-4o-mini",
+
+  messages:[
+
+    {
+      role:"system",
+      content:`
+Return JSON only.
+
+{
+  "pass": true,
+  "reason": ""
 }
+
+PASS only if:
+
+- the answer satisfies the user's request
+- the recommended place directly matches the user's intent
+- the image identity is still relevant
+- the news naturally connects the image and the place
+
+Otherwise return:
+
+{
+  "pass": false,
+  "reason": "short explanation"
+}
+`
+    },
+
+    {
+      role:"user",
+      content:`
+User:
+${text}
+
+Image:
+${room.imageContext}
+
+News:
+${selectedNews?.title}
+
+Place:
+${placeName}
+
+Answer:
+${placeStory}
+`
+    }
+
+  ]
+
+});
+
+const fit = JSON.parse(
+  fitRes.choices[0].message.content
+);
+
+if(!fit.pass){
+
+    console.log("FINAL FIT FAILED");
+    console.log("REASON:", fit.reason);
+
+    // Regenerate the place query once
+    const betterPlaceQueryRes =
+        await openai.chat.completions.create({
+
+        model:"gpt-4o-mini",
+
+        messages:[
+
+            {
+                role:"system",
+                content:`
+Create a BETTER Google local search.
+
+Previous place was rejected because:
+${fit.reason}
+
+Return ONLY the search query.
+`
+            },
+
+            {
+                role:"user",
+                content:`
+User:
+${text}
+
+Image:
+${room.imageContext}
+
+News:
+${selectedNews?.title}
+
+Original search:
+${userIntent}
+`
+            }
+
+        ]
+
+    });
+
+    const betterPlaceQuery =
+        betterPlaceQueryRes
+            .choices[0]
+            .message
+            .content
+            .trim();
+
+    console.log("RETRY PLACE:", betterPlaceQuery);
+
+    // Then repeat your existing Google Local search using betterPlaceQuery.
+
+}
+
+//////////////////////////////////////////////////
+// CONTINUE
+//////////////////////////////////////////////////
 
 if (
     !isPersonalIntent &&
