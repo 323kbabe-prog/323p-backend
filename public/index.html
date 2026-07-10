@@ -701,7 +701,10 @@ fill="#111"
 
 <button
 id="openRoomBtn"
-onclick="openSavedRoom()"
+onclick="
+event.stopPropagation();
+openSavedRoom();
+"
 style="
 height:40px;
 padding:0 14px;
@@ -1719,15 +1722,16 @@ cameraWrap.addEventListener(
   async e => {
 
 
-  if (
+if (
     e.target.closest("#uploadBtn") ||
     e.target.closest("#uploadImage") ||
     e.target.closest("#publicNullsBtn") ||
-    e.target.closest("#refreshCameraBtn")
-  ){
+    e.target.closest("#refreshCameraBtn") ||
+    e.target.closest("#openRoomBtn")
+){
     e.stopPropagation();
     return;
-  }
+}
 
   e.preventDefault();
   await captureImage();
