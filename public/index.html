@@ -658,7 +658,43 @@ Loading...
   style="display:none"
 >
 
+<div
+id="homeRoomCard"
+style="
+display:none;
+position:absolute;
+top:86px;
+left:50%;
+transform:translateX(-50%);
+background:#fff;
+border-radius:18px;
+padding:14px 18px;
+text-align:center;
+z-index:20;
+box-shadow:0 8px 24px rgba(0,0,0,.15);
+"
+>
 
+<div style="font-size:11px;font-weight:700;opacity:.5;">
+AI LIVE ROOM
+</div>
+
+<div
+id="homeRoomId"
+style="font-size:18px;font-weight:900;margin-top:6px;"
+>
+#room
+</div>
+
+<div
+id="homeRoomCountdown"
+style="font-size:12px;margin-top:6px;"
+>
+Expires in 60:00
+</div>
+
+</div>
+  
 <img
 id="capturePreview"
 style="
@@ -1173,6 +1209,12 @@ function startRoomCountdown(){
             mins +
             ":" +
             String(secs).padStart(2,"0");
+
+      document.getElementById("homeRoomCountdown").innerText =
+    "Expires in " +
+    mins +
+    ":" +
+    String(secs).padStart(2,"0");
 
     },1000);
 
@@ -1818,7 +1860,8 @@ window.isRoomOwner = data.isOwner;
 roomNullCard = data.nullCard;
 
 roomExpiresAt = data.expiresAt; 
-
+document.getElementById("homeRoomCard").style.display = "block";
+document.getElementById("homeRoomId").innerText = "#" + data.roomId;
     startRoomCountdown();
 
 
@@ -1948,7 +1991,14 @@ if (btn) {
 
 const savedRoomId =
   localStorage.getItem("roomId");
+if (savedRoomId) {
 
+    document.getElementById("homeRoomCard").style.display = "block";
+
+    document.getElementById("homeRoomId").innerText =
+        "#" + savedRoomId;
+
+}
 const savedIntro =
   localStorage.getItem("imageIntroText");
 
@@ -3226,16 +3276,19 @@ ROOM NOT FOUND
         roomThumbnail.style.display = "block";
     }
 
-    setTimeout(() => {
+console.log("CONNECT EVENT");
+console.log("savedRoomId =", savedRoomId);
 
-        socket.emit("rejoinRoom", {
-            roomId: savedRoomId,
-            deviceId
-        });
+setTimeout(() => {
 
-    }, 300);
+    console.log("EMIT REJOIN", savedRoomId);
 
-    return;
+    socket.emit("rejoinRoom", {
+        roomId: savedRoomId,
+        deviceId
+    });
+
+}, 300);
 }
 
 
