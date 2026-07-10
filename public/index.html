@@ -834,8 +834,8 @@ margin-bottom:0px;
 style="
 display:flex;
 align-items:center;
-gap:14px;
-min-width:0;
+justify-content:space-between;
+width:100%;
 
 background:#fff;
 padding:8px 10px;
@@ -843,86 +843,55 @@ border-radius:16px;
 "
 >
 
+
 <div
 style="
-display:block;
-min-width:0;
-">
+display:flex;
+align-items:center;
+justify-content:space-between;
+flex:1;
+"
+>
 
 <div
 style="
 display:flex;
 align-items:center;
 gap:8px;
-
 "
 >
 
 <img
-  id="roomThumbnail"
-  src=""
-  style="
-    width:44px;
-    height:44px;
-    object-fit:cover;
-    border-radius:10px;
-    flex-shrink:0;
-    display:none;
-  "
->
-
-<div
-id="roomTitle"
+id="roomThumbnail"
+src=""
 style="
-font-size:18px;
-font-weight:900;
-letter-spacing:-0.7px;
-color:#111;
-line-height:1;
+width:44px;
+height:44px;
+object-fit:cover;
+border-radius:10px;
+flex-shrink:0;
+display:none;
 "
 >
+
+<div id="roomTitle">
 Ask Null
 </div>
 
-<div
-  id="roomIdText"
-  style="
-    font-size:11px;
-    font-weight:400;
-    color:#666;
-    white-space:nowrap;
-  "
->
-  #room
+<div id="roomIdText">
+#room
 </div>
 
-  
+</div>
+
 <button
 id="shareRoomBtn"
-onclick="shareRoom()"
-style="
-height:24px;
-padding:0 10px;
-border:none;
-border-radius:999px;
-background:#000;
-color:#fff;
-font-size:11px;
-font-weight:700;
-cursor:pointer;
-white-space:nowrap;
-
-"
+...
 >
 Share
 </button>
 
-
-
-
-
 </div>
-
 
 <div
 style="
