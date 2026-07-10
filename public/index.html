@@ -3179,6 +3179,8 @@ ROOM NOT FOUND
 
 },5000);
 
+console.log("REJOINING:", savedRoomId);
+  
     socket.emit("rejoinRoom", {
         roomId: urlRoomId,
         deviceId
