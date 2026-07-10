@@ -1024,21 +1024,24 @@ socket.emit("roomReady");
     users[socket.id].displayName =
       room.displayName;
 
-socket.emit(
-    "roomMessages",
-    room.messages
-);
-
-console.log("SENDING roomCreated", roomId);
 socket.emit("roomCreated", {
+
     roomId,
+
     displayName: room.displayName,
+
     imageContext: room.imageContext,
+
     imageDataUrl: null,
-    messages: room.messages,
+
+    messages: [],
+
     expiresAt: room.expiresAt,
+
     isOwner,
+
     nullCard: room.nullCard
+
 });
 
 
@@ -4485,20 +4488,6 @@ You are Ask Null.
 Explain why this real place is contextually connected to the current news.
 
 The recommendation should be based on the relationship between the place and the news, not on generic qualities.
-
-IMPORTANT:
-
-Return the entire response in natural English only.
-
-Never output Chinese, Japanese, Korean, or any other language.
-
-Do not translate or localize place names or place types.
-
-Examples:
-hotel (NOT 旅館 or ryokan)
-music (NOT 音樂推薦)
-coffee shop (NOT 咖啡店)
-restaurant (NOT 餐廳)
 
 Good connections include:
 - neighborhood
