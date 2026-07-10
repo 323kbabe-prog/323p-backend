@@ -267,6 +267,8 @@ justify-content:center;
 padding:8px 16px 8px 16px; 
 }
 
+
+
 #roomTitle{
   font-size:18px;
   font-weight:700;
@@ -857,6 +859,19 @@ align-items:center;
 gap:8px;
 margin-top:10px;
 "
+>
+
+<img
+  id="roomThumbnail"
+  src=""
+  style="
+    width:44px;
+    height:44px;
+    object-fit:cover;
+    border-radius:10px;
+    flex-shrink:0;
+    display:none;
+  "
 >
 
 <div
@@ -1450,11 +1465,36 @@ showPublishDialog();
 
 function showPublishDialog(){
 
-    document.getElementById("publishThumbnail").src =
-        pendingImageDataUrl;
+    const img =
+        document.getElementById("publishThumbnail");
 
-    document.getElementById("publishDialog").style.display =
-        "flex";
+    img.onload = () => {
+
+        if (img.naturalWidth > img.naturalHeight) {
+
+            // Landscape
+            img.style.width = "128px";
+            img.style.height = "96px";
+
+        } else if (img.naturalHeight > img.naturalWidth) {
+
+            // Portrait
+            img.style.width = "96px";
+            img.style.height = "128px";
+
+        } else {
+
+            // Square
+            img.style.width = "96px";
+            img.style.height = "96px";
+
+        }
+
+    };
+
+    img.src = pendingImageDataUrl;
+
+    document.getElementById("publishDialog").style.display = "flex";
 
 }
   
@@ -1481,6 +1521,7 @@ if (!roomReady) {
   helper.style.display = "flex";
 capturePreview.style.display = "none";
   
+  
   helper.innerHTML = `
 <div style="display:flex;align-items:center;gap:10px;">
 <span>CREATING AI LIVE ROOM...</span>
@@ -1492,6 +1533,12 @@ capturePreview.style.display = "none";
 </div>
 `;
 
+
+localStorage.setItem(
+    "roomThumbnail",
+    pendingImageDataUrl
+);
+  
 socket.emit("imageUpload",{
 deviceId,
     imageDataUrl: pendingImageDataUrl,
@@ -1655,6 +1702,7 @@ closeRoom.onclick = () => {
   localStorage.removeItem("displayName");
   localStorage.removeItem("roomId");
   localStorage.removeItem("imageIntroText");
+  localStorage.removeItem("roomThumbnail");
 
   history.replaceState(
     {},
@@ -1832,10 +1880,22 @@ roomInput.style.display = "none";
 roomIdText.innerText =
   data.displayName;
 
-  capturePreview.style.display =
-    "none";
+capturePreview.style.display =
+  "none";
 
+const roomThumbnail =
+    document.getElementById("roomThumbnail");
 
+const thumb =
+    localStorage.getItem("roomThumbnail");
+
+if (thumb) {
+    roomThumbnail.onload = () => {
+        roomThumbnail.style.display = "block";
+    };
+
+    roomThumbnail.src = thumb;
+}
 
 document.getElementById(
   "firstNextBtn"
@@ -3185,6 +3245,16 @@ ROOM NOT FOUND
         deviceId
     });
 
+  const thumb = localStorage.getItem("roomThumbnail");
+
+if (thumb) {
+    const roomThumbnail =
+        document.getElementById("roomThumbnail");
+
+    roomThumbnail.src = thumb;
+    roomThumbnail.style.display = "block";
+}
+
     return;
 }
 
@@ -3470,6 +3540,11 @@ helper.innerHTML = `
 </div>
 `;
 
+localStorage.setItem(
+    "roomThumbnail",
+    imageDataUrl
+);
+  
 socket.emit("imageUpload",{
     deviceId,
     imageDataUrl,
