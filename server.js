@@ -4424,6 +4424,55 @@ const placeQuery =
     .content
     .trim();
 
+const locationRes =
+  await openai.chat.completions.create({
+
+    model:"gpt-4o-mini",
+
+    messages:[
+
+      {
+        role:"system",
+        content:`
+Extract ONLY the location from the user's request.
+
+Return ONLY the location.
+
+Examples:
+
+tokyo coffee shop
+→ tokyo
+
+coffee shop in tokyo
+→ tokyo
+
+shinjuku ramen
+→ shinjuku
+
+coffee near times square
+→ times square
+
+If there is no location, return:
+none
+`
+      },
+
+      {
+        role:"user",
+        content:text
+      }
+
+    ]
+
+  });
+
+const location =
+  locationRes.choices[0].message.content.trim();
+
+const finalPlaceQuery =
+  location.toLowerCase() === "none"
+    ? placeQuery
+    : `${placeQuery} ${location}`;
 
 console.log(
   "PLACE QUERY:",
@@ -4433,7 +4482,7 @@ console.log(
 const placeSearchFetch =
   await fetch(
 
-`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(placeQuery)}&api_key=${process.env.SERPAPI_KEY}`
+`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(finalPlaceQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
   );
 
