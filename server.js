@@ -2845,117 +2845,83 @@ const topicKey = userIntent.trim().toLowerCase();
 const cachedTopic = room.topicMemory[topicKey];
 
 const hiddenSystem =
-  room.hiddenSystem;
+    room.hiddenSystem;
 
-const interpretedIntentRes =
+        const nullInputRes =
   await openai.chat.completions.create({
 
-    model:"gpt-4o-mini",
+    model: "gpt-4o-mini",
 
-    messages:[
+    messages: [
 
       {
-        role:"system",
-        content:`
-The user's request is ALWAYS the destination.
+        role: "system",
+        content: `
+You are the NULL INPUT TRANSLATOR.
 
-The uploaded image ONLY changes HOW the destination is understood.
+The uploaded image has already been analyzed.
 
-Never replace the user's goal.
+Translate the user's reality into the uploaded image's reality.
 
-The uploaded image specializes the request.
+Never change:
+- destination
+- place type
+- location
+- named entities
 
-Examples
+Transform:
+- perspective
+- recommendation style
+- internet search direction
 
-User:
-travel
+Return JSON only.
 
-Coffee cup
-→ cafe travel
-
-Sushi
-→ culinary tourism
-
-Cross
-→ pilgrimage travel
-
-Running shoes
-→ adventure travel
-
-Laptop
-→ digital nomad travel
-
-Camera
-→ photography travel
-
-User:
-Need coffee place in Shinjuku
-
-Sushi
-→ sushi coffee experience
-
-Book
-→ quiet study cafe
-
-Camera
-→ photography cafe
-
-The returned phrase MUST still satisfy the user's request.
-
-Wrong:
-
-travel
-→ modern dining experiences
-
-Correct:
-
-travel
-→ culinary tourism
-
-Wrong:
-
-coffee place
-→ restaurant technology
-
-Correct:
-
-coffee place
-→ modern sushi cafe
-
-Return ONLY the interpreted direction.
-
-Rules:
-- 2 to 6 words
-- lowercase only
-- no punctuation
+{
+  "destination":"",
+  "location":"",
+  "userReality":"",
+  "imagePerspective":"",
+  "nullReality":"",
+  "searchDirection":""
+}
 `
       },
 
       {
-        role:"user",
-        content:`
-Image identity:
+        role: "user",
+        content: `
+Image Analysis:
 ${room.imageContext}
 
-Hidden system:
+Hidden System:
 ${hiddenSystem}
 
-User request:
-${userIntent}
+User:
+${text}
 `
       }
 
     ]
 
-});
+  });
+
+const nullInput =
+    JSON.parse(
+        nullInputRes
+            .choices[0]
+            .message
+            .content
+    );
 
 const interpretedIntent =
-  interpretedIntentRes
-    .choices[0]
-    .message
-    .content
-    .trim();
-    const originalUserRequest = text.trim();
+    nullInput.searchDirection;
+
+const originalUserRequest =
+    text.trim();
+
+console.log("NULL INPUT");
+console.log(nullInput);
+
     
 let directLocationSearch = null;
 
