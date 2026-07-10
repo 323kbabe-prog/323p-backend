@@ -675,7 +675,7 @@ z-index:4;
 <div
 id="homeRoomCard"
 style="
-display:none;
+display:block;
 position:fixed;
 top:72px;
 left:50%;
@@ -692,7 +692,7 @@ box-shadow:0 4px 16px rgba(0,0,0,.18);
 ">
 
 <span id="homeRoomId">
-#room
+No Room
 </span>
 
 <span style="opacity:.45;padding:0 6px;">
@@ -700,7 +700,7 @@ box-shadow:0 4px 16px rgba(0,0,0,.18);
 </span>
 
 <span id="homeRoomCountdown">
-60:00
+--:--
 </span>
 
 </div>
@@ -2924,7 +2924,12 @@ socket.on("roomClosed", () => {
         "",
         "/"
     );
+document.getElementById("homeRoomId").innerText =
+    "No Room";
 
+document.getElementById("homeRoomCountdown").innerText =
+    "--:--";
+  
     startCamera();
 
 });
@@ -2944,6 +2949,12 @@ clearTimeout(rejoinTimeout);
 
     helper.style.display = "flex";
 
+document.getElementById("homeRoomId").innerText =
+    "Expired";
+
+document.getElementById("homeRoomCountdown").innerText =
+    "00:00";
+  
     helper.innerHTML = `
 <button
   id="refreshCameraBtn"
@@ -3228,6 +3239,9 @@ ROOM NOT FOUND
 },5000);
 
 console.log("REJOINING:", savedRoomId);
+  
+document.getElementById("homeRoomCountdown").innerText =
+    "Rejoining...";  
   
 setTimeout(() => {
 
