@@ -1024,24 +1024,20 @@ socket.emit("roomReady");
     users[socket.id].displayName =
       room.displayName;
 
+ssocket.emit(
+    "roomMessages",
+    room.messages
+);
+
 socket.emit("roomCreated", {
-
     roomId,
-
     displayName: room.displayName,
-
     imageContext: room.imageContext,
-
     imageDataUrl: null,
-
-    messages: [],
-
+    messages: room.messages,
     expiresAt: room.expiresAt,
-
     isOwner,
-
     nullCard: room.nullCard
-
 });
 
 
