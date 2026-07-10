@@ -2821,24 +2821,7 @@ const isNextSearch =
   intent === "null_feed";
 
 const isLocationRequest =
-  intent === "place";
-
-      if(!isNextSearch){
-
-room.messages.push({
-
-    from: user.displayName,
-
-    text,
-
-    translation: englishText
-
-});
-
-}
-
-
-   
+  intent === "place";   
 
 const topicKey = userIntent.trim().toLowerCase();
 
@@ -2930,6 +2913,16 @@ const interpretedIntent =
 
 const englishText =
     nullInput.userReality;
+
+    if(!isNextSearch){
+
+    room.messages.push({
+        from: user.displayName,
+        text,
+        translation: englishText
+    });
+
+}
 
 const originalUserRequest =
     text.trim();
