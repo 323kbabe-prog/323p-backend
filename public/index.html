@@ -2817,6 +2817,19 @@ word-break:break-word;
 ${m.text || ""}
 </div>
 
+${m.translation ? `
+<div
+style="
+margin-top:8px;
+font-size:12px;
+line-height:1.4;
+color:#888;
+font-style:italic;
+"
+>
+English: ${m.translation}
+</div>
+` : ""}
 </div>
 
 </div>
