@@ -2827,13 +2827,15 @@ const isLocationRequest =
 
       if(!isNextSearch){
 
-  room.messages.push({
+room.messages.push({
 
-    from:user.displayName,
+    from: user.displayName,
 
-    text
+    text,
 
-  });
+    translation: englishText
+
+});
 
 }
 
@@ -2927,6 +2929,9 @@ const nullInput =
 
 const interpretedIntent =
     nullInput.searchDirection;
+
+const englishText =
+    nullInput.userReality;
 
 const originalUserRequest =
     text.trim();
