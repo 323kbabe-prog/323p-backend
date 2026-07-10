@@ -1811,7 +1811,7 @@ socket.on(
 
 
 socket.on("roomCreated", data => {
-  
+localStorage.setItem("roomId", data.roomId);
 setTimeout(() => {
     helper.style.display = "none";
 }, 600);
