@@ -1029,6 +1029,7 @@ socket.emit(
     room.messages
 );
 
+console.log("SENDING roomCreated", roomId);
 socket.emit("roomCreated", {
     roomId,
     displayName: room.displayName,
