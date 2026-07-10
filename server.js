@@ -2461,7 +2461,7 @@ poem
 The user explicitly asks for a poem or poetry.
 
 place
-The user wants somewhere to go, stay, visit, eat, drink, explore, or experience.
+The user wants somewhere to go, visit, eat, drink, explore, or experience.
 
 music
 The user wants music, songs, playlists, podcasts, YouTube videos, worship music, or something to watch or listen to.
@@ -2553,18 +2553,6 @@ shinjuku coffee shop
 → place
 
 tokyo ramen
-→ place
-
-hotel in new york
-→ place
-
-cheap hotel tokyo
-→ place
-
-luxury hotel taipei
-→ place
-
-hotel near disneyland
 → place
 
 i need music
@@ -2877,46 +2865,6 @@ Never replace the user's goal.
 
 The uploaded image specializes the request.
 
-LOCATION RULE (HIGHEST PRIORITY)
-
-If the user specifies any location, NEVER remove, replace, generalize, or change it.
-
-Always preserve exactly:
-- city
-- district
-- neighborhood
-- state
-- province
-- country
-- landmark
-- "near ..." expressions
-
-The returned phrase MUST contain the same location.
-
-Examples:
-
-shinjuku coffee shop
-→ photography coffee shop shinjuku
-
-tokyo ramen
-→ culinary ramen tokyo
-
-coffee near times square
-→ specialty coffee near times square
-
-ai jobs seattle
-→ machine learning engineer seattle
-
-hotel in taipei
-→ luxury hotel taipei
-
-Never substitute:
-tokyo → japan
-shinjuku → tokyo
-seattle → washington
-
-The user's location is mandatory.
-
 Examples
 
 User:
@@ -3220,28 +3168,7 @@ Create ONE Google News search.
 
 The hidden system is the subject.
 
-LOCATION RULE (REQUIRED)
-
-If the user specifies any location, the returned search MUST contain that exact location.
-
-Never:
-- remove it
-- replace it
-- generalize it
-- move to another city
-
-Examples:
-
-tokyo ramen
-→ tokyo food festival
-
-shinjuku coffee shop
-→ shinjuku tourism
-
-coffee near times square
-→ times square events
-
-Return ONLY the search.
+The location only limits where.
 
 Return ONLY the search.
 
@@ -4000,67 +3927,11 @@ return;
 
 }
 
-let referenceSearch = searchQuery;
 
-if (isPersonalIntent) {
-
-  const referenceRes =
-    await openai.chat.completions.create({
-
-      model:"gpt-4o-mini",
-
-      messages:[
-
-        {
-          role:"system",
-          content:`
-Create ONE Google News search that provides
-real-world context for the user's request.
-
-Return ONLY the search.
-
-Examples:
-
-need advice
-→ workplace burnout
-
-pray for me
-→ hope after disaster
-
-encourage me
-→ resilience stories
-
-help me reflect
-→ work life balance
-
-guide me through meditation
-→ mindfulness research
-
-write me a letter
-→ long distance relationships
-
-write me a poem
-→ nature inspiration
-`
-        },
-
-        {
-          role:"user",
-          content:text
-        }
-
-      ]
-
-    });
-
-  referenceSearch =
-    referenceRes.choices[0].message.content.trim();
-
-}
 // Existing Google News search
 
 const serpFetch = await fetch(
-  `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(referenceSearch)}&api_key=${process.env.SERPAPI_KEY}`
+  `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
 );
 
 if (!serpFetch.ok) {
@@ -4360,27 +4231,6 @@ Given:
 - the current local news event
 
 Create ONE Google local search query.
-LOCATION RULE (REQUIRED)
-
-The returned Google Local search MUST include the exact location from the user's request.
-
-Never:
-
-- remove the location
-- change the city
-- expand to another area
-- recommend places outside that location
-
-Examples:
-
-tokyo ramen
-→ ramen tokyo
-
-shinjuku coffee shop
-→ specialty coffee shinjuku
-
-coffee near times square
-→ coffee near times square
 
 The hidden system determines WHICH place to choose.
 
@@ -4424,55 +4274,6 @@ const placeQuery =
     .content
     .trim();
 
-const locationRes =
-  await openai.chat.completions.create({
-
-    model:"gpt-4o-mini",
-
-    messages:[
-
-      {
-        role:"system",
-        content:`
-Extract ONLY the location from the user's request.
-
-Return ONLY the location.
-
-Examples:
-
-tokyo coffee shop
-→ tokyo
-
-coffee shop in tokyo
-→ tokyo
-
-shinjuku ramen
-→ shinjuku
-
-coffee near times square
-→ times square
-
-If there is no location, return:
-none
-`
-      },
-
-      {
-        role:"user",
-        content:userIntent
-      }
-
-    ]
-
-  });
-
-const location =
-  locationRes.choices[0].message.content.trim();
-
-const finalPlaceQuery =
-  location.toLowerCase() === "none"
-    ? placeQuery
-    : `${placeQuery} ${location}`;
 
 console.log(
   "PLACE QUERY:",
@@ -4482,7 +4283,7 @@ console.log(
 const placeSearchFetch =
   await fetch(
 
-`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(finalPlaceQuery)}&api_key=${process.env.SERPAPI_KEY}`
+`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(placeQuery)}&api_key=${process.env.SERPAPI_KEY}`
 
   );
 
@@ -5548,3 +5349,4 @@ console.log(err);
 
 
 }, 60 * 1000);
+
