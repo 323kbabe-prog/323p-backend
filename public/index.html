@@ -1383,7 +1383,16 @@ ALLOW CAMERA ACCESS
   }
 }
 
-window.onload = () => {};
+window.onload = async () => {
+
+    const savedRoomId =
+        localStorage.getItem("roomId");
+
+    if(!savedRoomId){
+        await startCamera();
+    }
+
+};
 
 const uploadImage =
   document.getElementById("uploadImage");
@@ -1830,11 +1839,6 @@ localStorage.setItem(
   data.roomId
 );
 
-socket.emit("rejoinRoom", {
-    roomId: data.roomId,
-    deviceId
-});
-  
 history.replaceState(
   {},
   "",
@@ -3122,7 +3126,9 @@ socket.on(
 );
 
 
-socket.on("connect", async () => {
+socket.on(
+  "connect",
+  () => {
 
 const urlRoomId =
     new URLSearchParams(window.location.search)
@@ -3131,7 +3137,14 @@ const urlRoomId =
 const savedRoomId =
     localStorage.getItem("roomId");
 
+
+
+
     helper.style.display = "flex";
+
+
+
+
 
 
 if(urlRoomId){
@@ -3166,16 +3179,10 @@ ROOM NOT FOUND
 
 },5000);
 
-console.log("EMIT REJOIN");
-  
-setTimeout(() => {
-
     socket.emit("rejoinRoom", {
         roomId: urlRoomId,
         deviceId
     });
-
-}, 100);
 
     return;
 }
@@ -3210,14 +3217,10 @@ ROOM NOT FOUND
 
 },5000);
    
-setTimeout(() => {
-
-    socket.emit("rejoinRoom", {
+ socket.emit("rejoinRoom",{
         roomId: savedRoomId,
         deviceId
     });
-
-}, 100);
 
   const thumb = localStorage.getItem("roomThumbnail");
 
@@ -3231,8 +3234,7 @@ if (thumb) {
 
     return;
 }
-// No live room
-await startCamera();
+
 
 
     const savedIntro =
@@ -4109,4 +4111,3 @@ Continue
 
 </body>
 </html>
-
