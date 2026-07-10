@@ -1811,7 +1811,7 @@ socket.on(
 
 
 socket.on("roomCreated", data => {
-  
+localStorage.setItem("roomId", data.roomId);
 setTimeout(() => {
     helper.style.display = "none";
 }, 600);
@@ -2890,6 +2890,8 @@ socket.on("roomClosed", () => {
 
 socket.on("roomExpired", () => {
 
+  localStorage.removeItem("roomId");
+
 clearTimeout(rejoinTimeout);
 
     localStorage.removeItem("displayName");
@@ -3130,6 +3132,7 @@ socket.on(
   "connect",
   () => {
 
+    
 const urlRoomId =
     new URLSearchParams(window.location.search)
         .get("room");
