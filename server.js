@@ -4654,7 +4654,25 @@ ${userIntent}
 
     console.log("RETRY PLACE:", betterPlaceQuery);
 
-    // Then repeat your existing Google Local search using betterPlaceQuery.
+    const placeSearchFetch =
+await fetch(
+`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(betterPlaceQuery)}&api_key=${process.env.SERPAPI_KEY}`
+);
+
+const placeSearchRes =
+await placeSearchFetch.json();
+
+placeName =
+placeSearchRes?.local_results?.[0]?.title ||
+placeSearchRes?.places_results?.[0]?.title ||
+placeName;
+
+placeLink =
+placeSearchRes?.local_results?.[0]?.website ||
+placeSearchRes?.local_results?.[0]?.link ||
+placeSearchRes?.places_results?.[0]?.website ||
+placeSearchRes?.places_results?.[0]?.link ||
+placeLink;
 
 }
 
