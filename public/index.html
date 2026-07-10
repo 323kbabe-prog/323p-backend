@@ -157,7 +157,7 @@ content="width=device-width, initial-scale=1, viewport-fit=cover"
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <style>
-  
+
 html{
   scrollbar-width:none;
 }
@@ -203,14 +203,6 @@ touch-action:manipulation;
   text-rendering:optimizeLegibility;
 }
 
-:root{
-  --fs-title:20px;
-  --fs-subtitle:16px;
-  --fs-body:14px;
-  --fs-label:13px;
-  --fs-meta:11px;
-}
-  
 #cameraWrap{
   position:fixed;
   inset:0;
@@ -504,37 +496,6 @@ margin-right:auto;
 
 #firstNextBtn{
   display:none;
-}
-
-.card-label{
-  font-size:12px;
-  font-weight:700;
-  opacity:.5;
-  letter-spacing:.3px;
-  text-transform:uppercase;
-}
-
-.card-title{
-  font-size:18px;
-  font-weight:700;
-  line-height:1.25;
-  letter-spacing:-0.3px;
-}
-
-.card-body{
-  font-size:14px;
-  line-height:1.45;
-}
-
-.card-meta{
-  font-size:11px;
-  font-weight:700;
-}
-
-.card-subtitle{
-  font-size:var(--fs-subtitle);
-  font-weight:600;
-  line-height:1.4;
 }
 
 </style>
@@ -2329,15 +2290,24 @@ padding-top:0px;
 >
 
 <div
-class="card-label"
-style="margin-bottom:6px;"
+style="
+font-size:14px;
+font-weight:500;
+letter-spacing:0px;
+opacity:.45;
+margin-bottom:6px;
+"
 >
+
 ${m.searchLabel || "NULL Search"}
+
 </div>
 
+${m.nullReason ? `
 <div
-class="card-body"
 style="
+font-size:13px;
+line-height:1.45;
 opacity:.75;
 margin-bottom:8px;
 "
@@ -2346,13 +2316,20 @@ ${m.nullReason}
 </div>
 ` : ""}
 
-<div class="card-subtitle">
+
+<div
+style="
+font-size:14px;
+line-height:1.35;
+font-weight:900;
+"
+>
 ${m.ask}
 </div>
 
 <div
 style="
-font-size:var(--fs-meta);
+font-size:11px;
 font-weight:700;
 padding-top:6px;
 text-transform:uppercase;
@@ -2402,7 +2379,7 @@ shareCard(
 "
 style="
 cursor:pointer;
-font-size:var(--fs-label);
+font-size:13px;
 font-weight:700;
 padding:8px 12px;
 border-radius:999px;
@@ -2470,19 +2447,23 @@ box-shadow:0 2px 10px rgba(0,0,0,0.12);
 <div data-share-content>
 
 <div
-class="card-label"
-style="margin-bottom:8px;"
->
+style="
+font-size:14px;
+font-weight:300;
+opacity:.45;
+margin-bottom:8px;
+">
 Null (AGI NETWORK) Feed
 </div>
 
 <div
-class="card-body"
-style="margin-top:4px;"
->
-${m.jobCard.company}
-</div>
-
+style="
+font-size:13px;
+font-weight:300;
+opacity:.55;
+margin-bottom:10px;
+line-height:1.4;
+">
 One job I think you should notice today:
 </div>
 
@@ -2501,7 +2482,7 @@ href="${m.jobCard.link}"
 target="_blank"
 style="
 cursor:pointer;
-font-size:var(--fs-meta);
+font-size:11px;
 font-weight:600;
 background:#000;
 color:#fff;
@@ -2524,7 +2505,7 @@ shareCard(
 "
 style="
 cursor:pointer;
-font-size:var(--fs-meta);
+font-size:11px;
 font-weight:600;
 background:#000;
 color:#fff;
@@ -2538,13 +2519,19 @@ Share
 
 </div>
 
-<div class="card-subtitle">
+<div
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+word-break:break-word;
+">
 ${m.jobCard.title}
 </div>
 
 <div
 style="
-class="card-body"
+font-size:14px;
 line-height:1.45;
 font-weight:300;
 margin-top:4px;
@@ -2553,35 +2540,47 @@ ${m.jobCard.company}
 </div>
 
 <div
-class="card-body"
-style="opacity:.55;"
->
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+opacity:.55;
+">
 ${m.jobCard.location}
 </div>
 
 ${m.jobCard.salary ? `
 <div
-class="card-body"
-style="opacity:.55;"
->
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+opacity:.55;
+">
 ${m.jobCard.salary}
 </div>
 ` : ""}
 
 ${m.jobCard.type ? `
 <div
-class="card-body"
-style="opacity:.55;"
->
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+opacity:.55;
+">
 ${m.jobCard.type}
 </div>
 ` : ""}
 
 ${m.jobCard.posted ? `
 <div
-class="card-body"
-style="opacity:.55;"
->
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+opacity:.55;
+">
 ${m.jobCard.posted}
 </div>
 ` : ""}
@@ -2631,20 +2630,26 @@ margin-bottom:18px;
 
 
 <div
-class="card-label"
-style="margin-bottom:8px;"
+style="
+font-size:14px;
+font-weight:300;
+opacity:.45;
+margin-bottom:8px;
+"
 >
 ${m.searchLabel || ""}
 </div>
 
 <div
-class="card-body"
 style="
+font-size:13px;
+font-weight:300;
 opacity:.55;
 margin-bottom:10px;
+line-height:1.4;
 "
 >
-One job I think you should notice today:
+One I think you should notice today:
 </div>
 
 <div
@@ -2663,7 +2668,7 @@ href="${m.link || '#'}"
 target="_blank"
 style="
 cursor:pointer;
-font-size:var(--fs-meta);
+font-size:11px;
 font-weight:600;
 background:#000;
 color:#fff;
@@ -2682,7 +2687,7 @@ Check
 onclick="shareCard(this)"
 style="
 cursor:pointer;
-font-size:var(--fs-meta);
+font-size:11px;
 font-weight:600;
 background:#000;
 color:#fff;
@@ -2699,8 +2704,12 @@ Share
 
 ${m.searchLabel === "NULL Feed" ? `
 <div
-class="card-body"
-style="word-break:break-word;"
+style="
+font-size:14px;
+line-height:1.55;
+font-weight:300;
+word-break:break-word;
+"
 >
 ${m.nullReason}
 </div>
@@ -2708,8 +2717,12 @@ ${m.nullReason}
 
 ${m.searchLabel !== "NULL Feed" ? `
 <div
-class="card-subtitle"
-style="word-break:break-word;"
+style="
+font-size:14px;
+line-height:1.45;
+font-weight:300;
+word-break:break-word;
+"
 >
 ${m.ask}
 </div>
@@ -2783,15 +2796,20 @@ border:1px solid #ececec;
 >
 
 <div
-class="card-meta"
-style="opacity:.45;"
+style="
+font-size:10px;
+font-weight:700;
+letter-spacing:0.3px;
+opacity:0.45;
+"
 >
 ${m.from || ""}
 </div>
 
 <div
-class="card-body"
 style="
+font-size:14px;
+line-height:1.5;
 color:#111;
 word-break:break-word;
 "
@@ -3551,16 +3569,21 @@ cursor:pointer;
 ` : ""}
 
 <div
-class="card-title"
-style="margin-top:10px;"
->
+style="
+font-size:13px;
+font-weight:900;
+Margin-top:10px;
+line-height:1.4;
+">
 ${item.identity}
 </div>
 
 <div
-class="card-body"
-style="margin-top:8px;"
->
+style="
+font-size:12px;
+margin-top:8px;
+line-height:1.4;
+">
 ${item.intro}
 </div>
 
@@ -3573,7 +3596,7 @@ border:none;
 border-radius:999px;
 background:#000;
 color:#fff;
-font-size:var(--fs-label);
+font-size:12px;
 font-weight:700;
 cursor:pointer;
 ">
@@ -3649,30 +3672,24 @@ data-share-read="true"
 
 <div data-share-content>
 
-<div class="card-meta">
-
+<div
+style="
+font-size:11px;
+font-weight:900;
+opacity:.5;
+"
+>
 ${card.category}
 </div>
 
 <div
-class="card-title"
-style="margin-top:6px;"
+style="
+font-size:20px;
+font-weight:900;
+margin-top:6px;
+"
 >
 ${card.identity}
-</div>
-
-<div
-class="card-body"
-style="margin-top:8px;"
->
-${card.intro}
-</div>
-
-<div
-class="card-subtitle"
-style="margin-top:12px;"
->
-${card.title}
 </div>
 
 <div
@@ -4094,4 +4111,3 @@ Continue
 
 </body>
 </html>
-
