@@ -1223,7 +1223,14 @@ if(remain <= 0){
 
 }
 
-function openHomeRoom(){
+function openHomeRoom(event){
+
+    if(event){
+
+        event.preventDefault();
+        event.stopPropagation();
+
+    }
 
     const roomId =
         localStorage.getItem("roomId");
