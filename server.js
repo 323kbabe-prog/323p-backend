@@ -4459,7 +4459,7 @@ none
 
       {
         role:"user",
-        content:text
+        content:userIntent
       }
 
     ]
