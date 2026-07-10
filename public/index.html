@@ -1450,7 +1450,11 @@ showPublishDialog();
 
 function showPublishDialog(){
 
-    document.getElementById("publishDialog").style.display = "flex";
+    document.getElementById("publishThumbnail").src =
+        pendingImageDataUrl;
+
+    document.getElementById("publishDialog").style.display =
+        "flex";
 
 }
   
@@ -3991,14 +3995,16 @@ box-sizing:border-box;
 
 <img
   id="publishThumbnail"
-  src="${capturedImage}"
+  src=""
   style="
+    display:block;
     width:96px;
     height:96px;
     object-fit:cover;
     border-radius:12px;
     border:1px solid #e5e5e5;
     box-shadow:0 2px 8px rgba(0,0,0,.08);
+    margin:16px auto;
   "
 >
   
