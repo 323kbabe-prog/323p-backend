@@ -1830,6 +1830,11 @@ localStorage.setItem(
   data.roomId
 );
 
+socket.emit("rejoinRoom", {
+    roomId: data.roomId,
+    deviceId
+});
+  
 history.replaceState(
   {},
   "",
