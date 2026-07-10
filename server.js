@@ -4489,6 +4489,20 @@ Explain why this real place is contextually connected to the current news.
 
 The recommendation should be based on the relationship between the place and the news, not on generic qualities.
 
+IMPORTANT:
+
+Return the entire response in natural English only.
+
+Never output Chinese, Japanese, Korean, or any other language.
+
+Do not translate or localize place names or place types.
+
+Examples:
+hotel (NOT 旅館 or ryokan)
+music (NOT 音樂推薦)
+coffee shop (NOT 咖啡店)
+restaurant (NOT 餐廳)
+
 Good connections include:
 - neighborhood
 - nearby event
