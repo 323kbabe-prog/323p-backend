@@ -674,14 +674,17 @@ z-index:4;
 
 <div
 id="homeRoomCard"
+onclick="openHomeRoom()"
 style="
+cursor:pointer;
 display:block;
 position:fixed;
 top:72px;
 left:50%;
 transform:translateX(-50%);
 z-index:100000;
-pointer-events:none;
+pointer-events:auto;
+cursor:pointer;
 padding:8px 14px;
 border-radius:999px;
 background:#fff;
@@ -1220,7 +1223,18 @@ if(remain <= 0){
 
 }
 
+function openHomeRoom(){
 
+    const roomId =
+        localStorage.getItem("roomId");
+
+    if(!roomId) return;
+
+    location.href =
+        "/?room=" + roomId;
+
+}
+  
 async function shareRoom(){
 
     const roomId =
