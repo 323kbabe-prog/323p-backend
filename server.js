@@ -953,12 +953,10 @@ room.messages.forEach(m => {
 
 });
 
-    room.messages.push({
-
+room.messages.push({
     from: user.displayName,
-
-    text
-
+    text,
+    translation: nullInput.userReality
 });
     
     room.messages.push({
