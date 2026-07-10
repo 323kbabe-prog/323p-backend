@@ -675,54 +675,39 @@ z-index:4;
 <div id="helper">
 
 
-<div
-style="
-display:flex;
-align-items:center;
-gap:10px;
-margin-bottom:18px;
-"
->
-
 <button
-id="refreshCameraBtn"
-...
+  id="refreshCameraBtn"
+  onclick="
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.reload();
+    return false;
+  "
+  style="
+    width:40px;
+    height:40px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    margin-bottom:18px;
+  "
 >
-<svg
-xmlns="http://www.w3.org/2000/svg"
-viewBox="0 -960 960 960"
-width="22"
-height="22"
-fill="#111"
->
-<path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-</svg>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 -960 960 960"
+    width="22"
+    height="22"
+    fill="#111"
+  >
+    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
+  </svg>
 </button>
-
-<button
-id="openRoomBtn"
-onclick="
-event.stopPropagation();
-openSavedRoom();
-"
-style="
-height:40px;
-padding:0 14px;
-border:none;
-border-radius:999px;
-background:#fff;
-font-size:13px;
-font-weight:700;
-cursor:pointer;
-box-shadow:0 2px 8px rgba(0,0,0,.15);
-"
->
-ROOM
-</button>
-
-</div>
-
-  
 
 <div style="
   max-width:600px;
@@ -1084,7 +1069,6 @@ const video =
 
 const helper =
   document.getElementById("helper");
-  const helperDefaultHtml = helper.innerHTML;
 
 const roomOverlay =
   document.getElementById(
@@ -1162,8 +1146,6 @@ function startRoomCountdown(){
             roomExpiresAt - Date.now();
 
         if(remain <= 0){
-          const roomBtn = document.getElementById("openRoomBtn");
-if (roomBtn) roomBtn.innerText = "ROOM";
 
             clearInterval(roomCountdownTimer);
 
@@ -1184,13 +1166,6 @@ if (roomBtn) roomBtn.innerText = "ROOM";
                 (remain % 60000) / 1000
             );
 
-      const roomBtn = document.getElementById("openRoomBtn");
-
-if (roomBtn && localStorage.getItem("roomId")) {
-    roomBtn.innerText =
-        `ROOM ${mins}:${String(secs).padStart(2,"0")}`;
-}
-
         document.getElementById(
             "roomCountdown"
         ).innerText =
@@ -1208,7 +1183,7 @@ async function shareRoom(){
 
     const roomId =
         localStorage.getItem("roomId");
-console.log("ROOM ID:", localStorage.getItem("roomId"));
+
     if(!roomId) return;
 
     const url =
@@ -1242,33 +1217,6 @@ console.log("ROOM ID:", localStorage.getItem("roomId"));
 
 }
 
-function openSavedRoom(){
-
-    const roomId = localStorage.getItem("roomId");
-console.log("ROOM ID:", localStorage.getItem("roomId"));
-    if(!roomId) return;
-
-helper.style.display = "none";
-
-    clearTimeout(rejoinTimeout);
-
-    rejoinTimeout = setTimeout(() => {
-
-        helper.innerHTML = `
-        <div>
-        ROOM NOT FOUND
-        </div>
-        `;
-
-    }, 5000);
-
-    socket.emit("rejoinRoom",{
-        roomId,
-        deviceId
-    });
-
-}
-  
 function startMemoryMode(){
 
     memoryMode = true;
@@ -1435,11 +1383,7 @@ ALLOW CAMERA ACCESS
   }
 }
 
-window.onload = async () => {
-
-    await startCamera();
-
-};
+window.onload = () => {};
 
 const uploadImage =
   document.getElementById("uploadImage");
@@ -1722,16 +1666,15 @@ cameraWrap.addEventListener(
   async e => {
 
 
-if (
+  if (
     e.target.closest("#uploadBtn") ||
     e.target.closest("#uploadImage") ||
     e.target.closest("#publicNullsBtn") ||
-    e.target.closest("#refreshCameraBtn") ||
-    e.target.closest("#openRoomBtn")
-){
+    e.target.closest("#refreshCameraBtn")
+  ){
     e.stopPropagation();
     return;
-}
+  }
 
   e.preventDefault();
   await captureImage();
@@ -1859,7 +1802,7 @@ socket.on(
 
 
 socket.on("roomCreated", data => {
-localStorage.setItem("roomId", data.roomId);
+  
 setTimeout(() => {
     helper.style.display = "none";
 }, 600);
@@ -1875,7 +1818,7 @@ roomExpiresAt = data.expiresAt;
     startRoomCountdown();
 
 
-console.log("ROOM CREATED:", data.roomId);
+
 localStorage.setItem(
   "displayName",
   data.displayName
@@ -1958,9 +1901,6 @@ console.log(messages);
 console.log(messages[messages.length - 1]);
   
 roomOverlay.style.display = "flex";
-  helper.style.display = "none";
-clearTimeout(rejoinTimeout);
-
 
 roomInput.style.display = "block";
 
@@ -2941,8 +2881,6 @@ socket.on("roomClosed", () => {
 
 socket.on("roomExpired", () => {
 
-  localStorage.removeItem("roomId");
-
 clearTimeout(rejoinTimeout);
 
     localStorage.removeItem("displayName");
@@ -2956,21 +2894,50 @@ clearTimeout(rejoinTimeout);
 
     helper.style.display = "flex";
 
-    helper.innerHTML = helperDefaultHtml;
+    helper.innerHTML = `
+<button
+  id="refreshCameraBtn"
+  onclick="
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.reload();
+    return false;
+  "
+  style="
+    width:40px;
+    height:40px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    margin-bottom:18px;
+  "
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 -960 960 960"
+    width="22"
+    height="22"
+    fill="#111"
+  >
+    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
+  </svg>
+</button>
 
-document
-.getElementById("uploadBtn")
-.onclick = e => {
-
-    e.stopPropagation();
-
-    uploadImage.click();
-
-};
-
-
+<div>
+ROOM EXPIRED<br>CREATE A NEW NULL
+</div>
+`;
 
 });
+
+
+
 function showAITyping(){
 
   hideAITyping();
@@ -3085,33 +3052,61 @@ socket.on("phoneSaved", () => {
 
 socket.on(
   "disconnect",
-  reason => {
-
-    console.log("DISCONNECT:", reason);
-
-    if (reason === "io client disconnect") {
-        return;
-    }
+  () => {
 
     roomReady = false;
 
-    helper.style.display = "flex";
 
-    helper.innerHTML = helperDefaultHtml;
 
-    document
-    .getElementById("uploadBtn")
-    .onclick = e => {
 
-        e.stopPropagation();
+    helper.style.display =
+      "flex";
 
-        uploadImage.click();
+    helper.innerHTML = `
 
-    };
+<button
+id="refreshCameraBtn"
+onclick="
+event.preventDefault();
+event.stopPropagation();
+window.location.reload();
+return false;
+"
+  style="
+    width:40px;
+    height:40px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    margin-bottom:18px;
+  "
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 -960 960 960"
+    width="22"
+    height="22"
+    fill="#111"
+  >
+    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
+  </svg>
+</button>
+
+<div>
+RECONNECTING...
+</div>
+
+`;
 
   }
 );
-  
+
 socket.on(
   "roomReady",
   () => {
@@ -3126,7 +3121,6 @@ socket.on(
   "connect",
   () => {
 
-    
 const urlRoomId =
     new URLSearchParams(window.location.search)
         .get("room");
@@ -3146,23 +3140,26 @@ const savedRoomId =
 
 if(urlRoomId){
 
-   helper.innerHTML = helperDefaultHtml;
-
-document
-.getElementById("uploadBtn")
-.onclick = e => {
-
-    e.stopPropagation();
-
-    uploadImage.click();
-
-};
+    helper.innerHTML = `
+<div style="
+display:flex;
+align-items:center;
+gap:10px;
+">
+<span>REJOINING AI LIVE ROOM</span>
+<div style="display:flex;gap:4px;">
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+<div class="aiDot"></div>
+</div>
+</div>
+`;
 
     localStorage.setItem(
         "roomId",
         urlRoomId
     );
-clearTimeout(rejoinTimeout);
+
 rejoinTimeout = setTimeout(() => {
 
     helper.innerHTML = `
@@ -3172,8 +3169,6 @@ ROOM NOT FOUND
 `;
 
 },5000);
-
-  
 
     socket.emit("rejoinRoom", {
         roomId: urlRoomId,
@@ -3203,15 +3198,13 @@ gap:10px;
 </div>
 `;
 
-clearTimeout(rejoinTimeout);
-
 rejoinTimeout = setTimeout(() => {
 
     helper.innerHTML = `
-    <div>
-    ROOM NOT FOUND
-    </div>
-    `;
+<div>
+ROOM NOT FOUND
+</div>
+`;
 
 },5000);
    
@@ -3232,7 +3225,8 @@ if (thumb) {
 
     return;
 }
-
+// No live room
+await startCamera();
 
 
     const savedIntro =
@@ -3268,15 +3262,103 @@ if(savedDisplayName){
       helper.style.display =
         "flex";
 
- helper.innerHTML = helperDefaultHtml;
+  helper.innerHTML = `
+
+<button
+  id="refreshCameraBtn"
+  onclick="
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.reload();
+    return false;
+  "
+  style="
+    width:40px;
+    height:40px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    margin-bottom:18px;
+  "
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 -960 960 960"
+    width="22"
+    height="22"
+    fill="#111"
+  >
+    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
+  </svg>
+</button>
+
+<div style="
+  max-width:600px;
+  margin:0 auto;
+  text-align:left;
+  font-weight:500;
+  font-size:16px;
+  line-height:1.6;
+">
+  Search the internet through the Nulls around you. Tap the Screen, Upload an Image, or explore Public Nulls. Use the Nulls in any image as your search navigator.
+</div>
+
+<div style="margin-top:16px;"></div>
+
+<button
+id="uploadBtn"
+style="
+margin-top:18px;
+padding:10px 18px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:16px;
+font-weight:500;
+cursor:pointer;
+pointer-events:auto;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+"
+>
+Upload Image
+</button>
+
+<button
+id="publicNullsBtn"
+onclick="showPublicNulls()"
+style="
+margin-top:12px;
+padding:10px 18px;
+border:none;
+border-radius:999px;
+background:#fff;
+color:#111;
+font-size:16px;
+font-weight:500;
+cursor:pointer;
+pointer-events:auto;
+box-shadow:0 4px 16px rgba(0,0,0,.18);
+"
+>
+Public Nulls
+</button>
+
+`;
 
 document
 .getElementById("uploadBtn")
 .onclick = e => {
 
-    e.stopPropagation();
+  e.stopPropagation();
 
-    uploadImage.click();
+  uploadImage.click();
 
 };
 
@@ -4021,3 +4103,4 @@ Continue
 
 </body>
 </html>
+
