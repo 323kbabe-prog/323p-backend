@@ -272,7 +272,7 @@ padding:8px 16px 8px 16px;
 #roomTitle{
   font-size:18px;
   font-weight:700;
-
+transform:translateY(-4px); 
 }
 
 #closeRoom{
@@ -834,8 +834,8 @@ margin-bottom:0px;
 style="
 display:flex;
 align-items:center;
-justify-content:space-between;
-width:100%;
+gap:14px;
+min-width:0;
 
 background:#fff;
 padding:8px 10px;
@@ -843,13 +843,12 @@ border-radius:16px;
 "
 >
 
-
 <div
 style="
 display:flex;
-align-items:center;
-justify-content:space-between;
-flex:1;
+flex-direction:column;
+gap:2px;
+min-width:0;
 "
 >
 
@@ -858,40 +857,62 @@ style="
 display:flex;
 align-items:center;
 gap:8px;
+margin-top:10px;
 "
 >
 
 <img
-id="roomThumbnail"
-src=""
-style="
-width:44px;
-height:44px;
-object-fit:cover;
-border-radius:10px;
-flex-shrink:0;
-display:none;
-"
+  id="roomThumbnail"
+  src=""
+  style="
+    width:44px;
+    height:44px;
+    object-fit:cover;
+    border-radius:10px;
+    flex-shrink:0;
+    display:none;
+  "
 >
 
-<div id="roomTitle">
+<div
+id="roomTitle"
+style="
+font-size:18px;
+font-weight:900;
+letter-spacing:-0.7px;
+color:#111;
+line-height:1;
+"
+>
 Ask Null
-</div>
-
-<div id="roomIdText">
-#room
-</div>
-
 </div>
 
 <button
 id="shareRoomBtn"
-...
+onclick="shareRoom()"
+style="
+height:24px;
+padding:0 10px;
+border:none;
+border-radius:999px;
+background:#000;
+color:#fff;
+font-size:11px;
+font-weight:700;
+cursor:pointer;
+white-space:nowrap;
+transform:translateY(-4px); 
+"
 >
 Share
 </button>
 
+
+
+
+
 </div>
+
 
 <div
 style="
@@ -900,6 +921,22 @@ align-items:center;
 gap:6px;
 "
 >
+
+<div
+id="roomIdText"
+style="
+font-size:11px;
+font-weight:300;
+color:#111;
+line-height:1;
+letter-spacing:-0.3px;
+margin-top:0px;
+padding:6px 10px;
+"
+>
+
+#room
+</div>
 
 </div>
 
@@ -1763,10 +1800,8 @@ document.getElementById(
 
       roomIdText.innerText =
         savedDisplayName +
-    /*
-    + " • " +
-    imageIntroText
-    */;
+        " • " +
+        imageIntroText;
 
     }
   }
@@ -4099,5 +4134,3 @@ Continue
 
 </body>
 </html>
-
-
