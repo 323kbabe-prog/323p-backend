@@ -1991,14 +1991,20 @@ if (btn) {
 
 const savedRoomId =
   localStorage.getItem("roomId");
+  
 if (savedRoomId) {
 
-    document.getElementById("homeRoomCard").style.display = "block";
+    socket.emit("rejoinRoom", {
+        roomId: savedRoomId,
+        deviceId
+    });
 
-    document.getElementById("homeRoomId").innerText =
-        "#" + savedRoomId;
+} else {
+
+    // Do nothing
 
 }
+  
 const savedIntro =
   localStorage.getItem("imageIntroText");
 
