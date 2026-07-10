@@ -4253,12 +4253,32 @@ Given:
 
 Create ONE Google local search query.
 
-The hidden system determines WHICH place to choose.
+The ORIGINAL USER REQUEST determines the place type.
 
-Do NOT choose a generic place.
+The hidden system only determines WHICH place of that type to recommend.
 
-Choose a place whose purpose, location, customers, history, or surrounding area naturally connects to the hidden system and the news event.
+Never change the requested place type.
 
+Examples:
+
+hotel in shinjuku
+→ luxury hotel in shinjuku
+
+coffee shop in shinjuku
+→ specialty coffee shop in shinjuku
+
+ramen in shibuya
+→ premium ramen shop in shibuya
+
+Wrong:
+
+hotel in shinjuku
+→ car dealership
+
+coffee shop
+→ museum
+
+The hidden system can influence style, quality, neighborhood, or atmosphere, but NEVER the place category.
 Return ONLY the Google local search query.
 
 `
