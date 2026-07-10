@@ -1225,6 +1225,9 @@ async function shareRoom(){
 
     const roomId =
         localStorage.getItem("roomId");
+  socket.emit("getRoomStatus", {
+    deviceId
+});
 
     if(!roomId) return;
 
@@ -3181,7 +3184,33 @@ socket.on(
   }
 );
 
+socket.on("roomStatus", data => {
 
+    if (!data) {
+
+        localStorage.removeItem("roomId");
+
+        document.getElementById("homeRoomId").innerText =
+            "No Room";
+
+        document.getElementById("homeRoomCountdown").innerText =
+            "--:--";
+
+        return;
+
+    }
+
+    localStorage.setItem("roomId", data.roomId);
+
+    document.getElementById("homeRoomId").innerText =
+        "#" + data.roomId;
+
+    roomExpiresAt = data.expiresAt;
+
+    startRoomCountdown();
+
+});
+  
 socket.on("connect",() => {
 
 const urlRoomId =
@@ -3190,6 +3219,8 @@ const urlRoomId =
 
 const savedRoomId =
     localStorage.getItem("roomId");
+
+
 
 if (savedRoomId) {
 
