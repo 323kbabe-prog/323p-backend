@@ -1257,6 +1257,18 @@ function openSavedRoom(){
     </div>
     `;
 
+    clearTimeout(rejoinTimeout);
+
+    rejoinTimeout = setTimeout(() => {
+
+        helper.innerHTML = `
+        <div>
+        ROOM NOT FOUND
+        </div>
+        `;
+
+    }, 5000);
+
     socket.emit("rejoinRoom",{
         roomId,
         deviceId
@@ -1959,7 +1971,7 @@ console.log(messages[messages.length - 1]);
 roomOverlay.style.display = "flex";
   helper.style.display = "none";
 clearTimeout(rejoinTimeout);
-startRoomCountdown();
+
 
 roomInput.style.display = "block";
 
@@ -3221,7 +3233,7 @@ gap:10px;
         "roomId",
         urlRoomId
     );
-
+clearTimeout(rejoinTimeout);
 rejoinTimeout = setTimeout(() => {
 
     helper.innerHTML = `
@@ -3231,6 +3243,8 @@ ROOM NOT FOUND
 `;
 
 },5000);
+
+  
 
     socket.emit("rejoinRoom", {
         roomId: urlRoomId,
@@ -3260,13 +3274,15 @@ gap:10px;
 </div>
 `;
 
+clearTimeout(rejoinTimeout);
+
 rejoinTimeout = setTimeout(() => {
 
     helper.innerHTML = `
-<div>
-ROOM NOT FOUND
-</div>
-`;
+    <div>
+    ROOM NOT FOUND
+    </div>
+    `;
 
 },5000);
    
