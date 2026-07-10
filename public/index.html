@@ -1848,6 +1848,14 @@ socket.on(
 
 
 socket.on("roomCreated", data => {
+
+roomExpiresAt = data.expiresAt;
+
+document.getElementById("homeRoomId").innerText =
+    "#" + data.roomId;
+
+startRoomCountdown();
+
 localStorage.setItem("roomId", data.roomId);
 setTimeout(() => {
     helper.style.display = "none";
@@ -1989,21 +1997,7 @@ if (btn) {
 }
 } 
 
-const savedRoomId =
-  localStorage.getItem("roomId");
-  
-if (savedRoomId) {
 
-    socket.emit("rejoinRoom", {
-        roomId: savedRoomId,
-        deviceId
-    });
-
-} else {
-
-    // Do nothing
-
-}
   
 const savedIntro =
   localStorage.getItem("imageIntroText");
@@ -3203,11 +3197,6 @@ if (savedRoomId) {
 
     document.getElementById("homeRoomId").innerText =
         "#" + savedRoomId;
-
-roomExpiresAt = data.expiresAt;
-
-startRoomCountdown();
-
 }
 
 
