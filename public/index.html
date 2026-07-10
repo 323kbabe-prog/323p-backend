@@ -3212,6 +3212,9 @@ socket.on("roomStatus", data => {
 });
   
 socket.on("connect",() => {
+  socket.emit("getRoomStatus", {
+    deviceId
+});
 
 const urlRoomId =
     new URLSearchParams(window.location.search)
