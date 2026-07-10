@@ -2555,6 +2555,18 @@ shinjuku coffee shop
 tokyo ramen
 → place
 
+hotel in new york
+→ place
+
+cheap hotel tokyo
+→ place
+
+luxury hotel taipei
+→ place
+
+hotel near disneyland
+→ place
+
 i need music
 → music
 
