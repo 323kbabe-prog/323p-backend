@@ -1208,7 +1208,7 @@ async function shareRoom(){
 
     const roomId =
         localStorage.getItem("roomId");
-
+console.log("ROOM ID:", localStorage.getItem("roomId"));
     if(!roomId) return;
 
     const url =
@@ -1245,7 +1245,7 @@ async function shareRoom(){
 function openSavedRoom(){
 
     const roomId = localStorage.getItem("roomId");
-
+console.log("ROOM ID:", localStorage.getItem("roomId"));
     if(!roomId) return;
 
 helper.style.display = "none";
