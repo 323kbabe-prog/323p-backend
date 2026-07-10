@@ -3071,6 +3071,7 @@ Return ONLY the Amazon search.
         {
           role: "user",
           content: `
+content:`
 Hidden system:
 ${hiddenSystem}
 
@@ -3080,7 +3081,7 @@ ${room.imageContext}
 User request:
 ${interpretedIntent}
 
-Original user request:
+Original request:
 ${originalUserRequest}
 `
         }
@@ -3172,17 +3173,26 @@ Create ONE Google News search.
 
 The hidden system is the subject.
 
-The location only limits where.
+The original user request determines the destination.
+
+If the original user request contains:
+- a location (city, country, state, neighborhood, district, or "near me")
+- a place type (hotel, coffee shop, ramen, bar, museum, hospital, park, etc.)
+
+ALWAYS preserve BOTH.
+
+Never replace or generalize the user's requested place type.
+
+The hidden system only determines WHAT current news to search, never the user's destination.
 
 Return ONLY the search.
 
 Rules:
 - 3 to 8 words
-- lowercase
+- lowercase only
 - no punctuation
 - current news
-- If the original user request contains a city, country, state, neighborhood, or "near me", ALWAYS preserve that location in the search.
-`
+    `
         },
 
         {
@@ -3197,8 +3207,8 @@ ${room.imageContext}
 User request:
 ${interpretedIntent}
 
-Destination:
-${userIntent}
+Original request:
+${originalUserRequest}
 `
 
         }
@@ -3211,6 +3221,12 @@ ${userIntent}
     locationNewsRes.choices[0]
       .message.content
       .trim();
+
+      console.log("===== LOCATION DEBUG =====");
+console.log("Original:", originalUserRequest);
+console.log("Interpreted:", interpretedIntent);
+console.log("Location Search:", directLocationSearch);
+console.log("==========================");
 
 }
 
@@ -4250,15 +4266,18 @@ Return ONLY the Google local search query.
 
       {
         role:"user",
-       content:`
+content:`
 Hidden system:
 ${hiddenSystem}
 
-Original user request:
-${originalUserRequest}
+Image identity:
+${room.imageContext}
 
-News:
-${selectedNews?.title}
+User request:
+${interpretedIntent}
+
+Original request:
+${originalUserRequest}
 `
 
       }
