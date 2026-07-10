@@ -2461,7 +2461,7 @@ poem
 The user explicitly asks for a poem or poetry.
 
 place
-The user wants somewhere to go, visit, eat, drink, explore, or experience.
+The user wants somewhere to go, stay, visit, eat, drink, explore, or experience.
 
 music
 The user wants music, songs, playlists, podcasts, YouTube videos, worship music, or something to watch or listen to.
