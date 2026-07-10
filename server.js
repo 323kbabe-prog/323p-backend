@@ -2955,6 +2955,7 @@ const interpretedIntent =
     .message
     .content
     .trim();
+    const originalUserRequest = text.trim();
     
 let directLocationSearch = null;
 
@@ -3078,6 +3079,9 @@ ${room.imageContext}
 
 User request:
 ${interpretedIntent}
+
+Original user request:
+${originalUserRequest}
 `
         }
 
@@ -3177,6 +3181,7 @@ Rules:
 - lowercase
 - no punctuation
 - current news
+- If the original user request contains a city, country, state, neighborhood, or "near me", ALWAYS preserve that location in the search.
 `
         },
 
@@ -4249,8 +4254,8 @@ Return ONLY the Google local search query.
 Hidden system:
 ${hiddenSystem}
 
-Search:
-${userIntent}
+Original user request:
+${originalUserRequest}
 
 News:
 ${selectedNews?.title}
