@@ -983,6 +983,32 @@ room.messages.push({
 socket.emit("reminderSaved");
 });
 
+socket.on("getRoomStatus", ({ deviceId }) => {
+
+    const roomId = deviceRooms[deviceId];
+
+    if (!roomId || !rooms[roomId]) {
+
+        socket.emit("roomStatus", null);
+
+        return;
+
+    }
+
+    const room = rooms[roomId];
+
+    socket.emit("roomStatus", {
+
+        roomId,
+
+        displayName: room.displayName,
+
+        expiresAt: room.expiresAt
+
+    });
+
+});
+    
 socket.on(
   "rejoinRoom",
   ({
@@ -1002,6 +1028,8 @@ if (!room || Date.now() > room.expiresAt) {
     socket.emit("roomExpired");
     return;
 }
+
+      
 
 const isOwner =
     deviceRooms[deviceId] === roomId;
