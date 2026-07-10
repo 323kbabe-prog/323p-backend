@@ -3118,6 +3118,9 @@ socket.on(
 
 
 socket.on("connect", async () => {
+  console.log("CONNECTED");
+console.log("URL ROOM:", urlRoomId);
+console.log("LOCAL ROOM:", savedRoomId);
 
 const urlRoomId =
     new URLSearchParams(window.location.search)
@@ -3168,7 +3171,9 @@ ROOM NOT FOUND
 
 },5000);
 
-    socket.emit("rejoinRoom", {
+console.log("EMIT REJOIN");
+  
+  socket.emit("rejoinRoom", {
         roomId: urlRoomId,
         deviceId
     });
