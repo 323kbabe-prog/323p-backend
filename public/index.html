@@ -1385,12 +1385,7 @@ ALLOW CAMERA ACCESS
 
 window.onload = async () => {
 
-    const savedRoomId =
-        localStorage.getItem("roomId");
-
-    if(!savedRoomId){
-        await startCamera();
-    }
+    await startCamera();
 
 };
 
@@ -3181,18 +3176,20 @@ ROOM NOT FOUND
 
 console.log("REJOINING:", savedRoomId);
   
+setTimeout(() => {
+
     socket.emit("rejoinRoom", {
         roomId: urlRoomId,
         deviceId
     });
 
+}, 300);
+
     return;
 }
 
 
-if(savedRoomId && !hasAutoRejoined){
-
-    hasAutoRejoined = true;
+if (savedRoomId) {
 
     helper.innerHTML = `
 <div style="
@@ -3209,39 +3206,34 @@ gap:10px;
 </div>
 `;
 
-rejoinTimeout = setTimeout(() => {
+    rejoinTimeout = setTimeout(() => {
 
-    helper.innerHTML = `
+        helper.innerHTML = `
 <div>
 ROOM NOT FOUND
 </div>
 `;
 
-},5000);
-   
-if(savedRoomId){
+    }, 5000);
+
+    const thumb = localStorage.getItem("roomThumbnail");
+
+    if (thumb) {
+        const roomThumbnail =
+            document.getElementById("roomThumbnail");
+
+        roomThumbnail.src = thumb;
+        roomThumbnail.style.display = "block";
+    }
 
     setTimeout(() => {
 
-        socket.emit("rejoinRoom",{
+        socket.emit("rejoinRoom", {
             roomId: savedRoomId,
             deviceId
         });
 
-    },300);
-
-    return;
-}
-  
-  const thumb = localStorage.getItem("roomThumbnail");
-
-if (thumb) {
-    const roomThumbnail =
-        document.getElementById("roomThumbnail");
-
-    roomThumbnail.src = thumb;
-    roomThumbnail.style.display = "block";
-}
+    }, 300);
 
     return;
 }
