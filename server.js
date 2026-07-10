@@ -2877,6 +2877,46 @@ Never replace the user's goal.
 
 The uploaded image specializes the request.
 
+LOCATION RULE (HIGHEST PRIORITY)
+
+If the user specifies any location, NEVER remove, replace, generalize, or change it.
+
+Always preserve exactly:
+- city
+- district
+- neighborhood
+- state
+- province
+- country
+- landmark
+- "near ..." expressions
+
+The returned phrase MUST contain the same location.
+
+Examples:
+
+shinjuku coffee shop
+→ photography coffee shop shinjuku
+
+tokyo ramen
+→ culinary ramen tokyo
+
+coffee near times square
+→ specialty coffee near times square
+
+ai jobs seattle
+→ machine learning engineer seattle
+
+hotel in taipei
+→ luxury hotel taipei
+
+Never substitute:
+tokyo → japan
+shinjuku → tokyo
+seattle → washington
+
+The user's location is mandatory.
+
 Examples
 
 User:
@@ -3180,7 +3220,28 @@ Create ONE Google News search.
 
 The hidden system is the subject.
 
-The location only limits where.
+LOCATION RULE (REQUIRED)
+
+If the user specifies any location, the returned search MUST contain that exact location.
+
+Never:
+- remove it
+- replace it
+- generalize it
+- move to another city
+
+Examples:
+
+tokyo ramen
+→ tokyo food festival
+
+shinjuku coffee shop
+→ shinjuku tourism
+
+coffee near times square
+→ times square events
+
+Return ONLY the search.
 
 Return ONLY the search.
 
@@ -4299,6 +4360,27 @@ Given:
 - the current local news event
 
 Create ONE Google local search query.
+LOCATION RULE (REQUIRED)
+
+The returned Google Local search MUST include the exact location from the user's request.
+
+Never:
+
+- remove the location
+- change the city
+- expand to another area
+- recommend places outside that location
+
+Examples:
+
+tokyo ramen
+→ ramen tokyo
+
+shinjuku coffee shop
+→ specialty coffee shinjuku
+
+coffee near times square
+→ coffee near times square
 
 The hidden system determines WHICH place to choose.
 
