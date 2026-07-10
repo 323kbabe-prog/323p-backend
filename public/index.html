@@ -3217,18 +3217,16 @@ ROOM NOT FOUND
 
 },5000);
    
-if (savedRoomId && !hasAutoRejoined) {
-
-    hasAutoRejoined = true;
+if(savedRoomId){
 
     setTimeout(() => {
 
-        socket.emit("rejoinRoom", {
+        socket.emit("rejoinRoom",{
             roomId: savedRoomId,
             deviceId
         });
 
-    }, 300);
+    },300);
 
     return;
 }
