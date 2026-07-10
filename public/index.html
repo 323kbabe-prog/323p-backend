@@ -3083,7 +3083,9 @@ socket.on("phoneSaved", () => {
 // SOCKET RECONNECT
 //////////////////////////////////////////////////
 
-socket.on("disconnect", reason => {
+socket.on(
+  "disconnect",
+  reason => {
 
     console.log("DISCONNECT:", reason);
 
@@ -3093,34 +3095,23 @@ socket.on("disconnect", reason => {
 
     roomReady = false;
 
-    // existing UI code...
-});
+    helper.style.display = "flex";
 
-    roomReady = false;
+    helper.innerHTML = helperDefaultHtml;
 
+    document
+    .getElementById("uploadBtn")
+    .onclick = e => {
 
+        e.stopPropagation();
 
+        uploadImage.click();
 
-    helper.style.display =
-      "flex";
-
-   helper.innerHTML = helperDefaultHtml;
-
-document
-.getElementById("uploadBtn")
-.onclick = e => {
-
-    e.stopPropagation();
-
-    uploadImage.click();
-
-};
-
-
+    };
 
   }
 );
-
+  
 socket.on(
   "roomReady",
   () => {
