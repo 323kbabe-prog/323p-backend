@@ -887,25 +887,6 @@ line-height:1;
 Ask Null
 </div>
 
-<div
-  id="roomIdText"
-  style="
-    font-size:11px;
-    font-weight:400;
-    color:#666;
-    white-space:nowrap;
-  "
->
-  #room
-</div>
-
-<button
-  id="shareRoomBtn"
-  ...
->
-  Share
-</button>
-  
 <button
 id="shareRoomBtn"
 onclick="shareRoom()"
@@ -1817,12 +1798,8 @@ document.getElementById(
 
     if(savedDisplayName){
 
-      roomIdText.innerText =
-        savedDisplayName +
-    /*
-    + " • " +
-    imageIntroText
-    */;
+roomIdText.innerText =
+    savedDisplayName;
 
     }
   }
@@ -1992,22 +1969,7 @@ const savedDisplayName =
     "displayName"
   );
 
-if(savedDisplayName && savedIntro){
-
-  roomIdText.innerText =
-    savedDisplayName +
-    " • " +
-    savedIntro;
-
-}else if(savedRoomId && savedIntro){
-
-  roomIdText.innerText =
-    "#" +
-    savedRoomId +
-    " • " +
-    savedIntro;
-
-}
+if(savedDisplayName
 
 const latestCard = messages[messages.length - 1];
 
@@ -2022,8 +1984,6 @@ if (
 ).style.display = "block";
   
 }
-
-
 
 roomMessages.innerHTML =
 
