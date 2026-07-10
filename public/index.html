@@ -1177,18 +1177,22 @@ function startRoomCountdown(){
         const remain =
             roomExpiresAt - Date.now();
 
-        if(remain <= 0){
+if(remain <= 0){
 
-            clearInterval(roomCountdownTimer);
+    clearInterval(roomCountdownTimer);
 
-            document.getElementById(
-                "roomCountdown"
-            ).innerText =
-                "Expired";
+    document.getElementById("roomCountdown").innerText =
+        "Expired";
 
-            return;
+    document.getElementById("homeRoomId").innerText =
+        "Expired";
 
-        }
+    document.getElementById("homeRoomCountdown").innerText =
+        "00:00";
+
+    return;
+
+}
 
         const mins =
             Math.floor(remain / 60000);
@@ -3243,6 +3247,9 @@ ROOM NOT FOUND
 },5000);
 
 console.log("REJOINING:", savedRoomId);
+
+document.getElementById("homeRoomId").innerText =
+    "#" + savedRoomId;
   
 document.getElementById("homeRoomCountdown").innerText =
     "Rejoining...";  
