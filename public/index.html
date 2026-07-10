@@ -3163,10 +3163,14 @@ ROOM NOT FOUND
 
 console.log("EMIT REJOIN");
   
-  socket.emit("rejoinRoom", {
+setTimeout(() => {
+
+    socket.emit("rejoinRoom", {
         roomId: urlRoomId,
         deviceId
     });
+
+}, 100);
 
     return;
 }
@@ -3201,10 +3205,14 @@ ROOM NOT FOUND
 
 },5000);
    
- socket.emit("rejoinRoom",{
+setTimeout(() => {
+
+    socket.emit("rejoinRoom", {
         roomId: savedRoomId,
         deviceId
     });
+
+}, 100);
 
   const thumb = localStorage.getItem("roomThumbnail");
 
