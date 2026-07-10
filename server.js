@@ -3070,7 +3070,7 @@ Return ONLY the Amazon search.
 
         {
           role: "user",
-          content: `
+            
 content:`
 Hidden system:
 ${hiddenSystem}
