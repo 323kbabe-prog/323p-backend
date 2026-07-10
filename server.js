@@ -3939,11 +3939,67 @@ return;
 
 }
 
+let referenceSearch = searchQuery;
 
+if (isPersonalIntent) {
+
+  const referenceRes =
+    await openai.chat.completions.create({
+
+      model:"gpt-4o-mini",
+
+      messages:[
+
+        {
+          role:"system",
+          content:`
+Create ONE Google News search that provides
+real-world context for the user's request.
+
+Return ONLY the search.
+
+Examples:
+
+need advice
+→ workplace burnout
+
+pray for me
+→ hope after disaster
+
+encourage me
+→ resilience stories
+
+help me reflect
+→ work life balance
+
+guide me through meditation
+→ mindfulness research
+
+write me a letter
+→ long distance relationships
+
+write me a poem
+→ nature inspiration
+`
+        },
+
+        {
+          role:"user",
+          content:text
+        }
+
+      ]
+
+    });
+
+  referenceSearch =
+    referenceRes.choices[0].message.content.trim();
+
+}
 // Existing Google News search
 
 const serpFetch = await fetch(
-  `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+  `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(referenceSearch)}&api_key=${process.env.SERPAPI_KEY}`
 );
 
 if (!serpFetch.ok) {
