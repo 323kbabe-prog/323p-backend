@@ -887,25 +887,6 @@ line-height:1;
 Ask Null
 </div>
 
-<div
-  id="roomIdText"
-  style="
-    font-size:11px;
-    font-weight:400;
-    color:#666;
-    white-space:nowrap;
-  "
->
-  #room
-</div>
-
-<button
-  id="shareRoomBtn"
-  ...
->
-  Share
-</button>
-  
 <button
 id="shareRoomBtn"
 onclick="shareRoom()"
@@ -1819,10 +1800,8 @@ document.getElementById(
 
       roomIdText.innerText =
         savedDisplayName +
-    /*
-    + " • " +
-    imageIntroText
-    */;
+        " • " +
+        imageIntroText;
 
     }
   }
