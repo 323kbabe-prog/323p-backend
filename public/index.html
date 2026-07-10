@@ -675,15 +675,6 @@ z-index:4;
 <div id="helper">
 
 
-    <button
-id="refreshCameraBtn"
-onclick="
-event.preventDefault();
-event.stopPropagation();
-window.location.reload();
-return false;
-"
-
 <button
   id="refreshCameraBtn"
   onclick="
@@ -1965,11 +1956,17 @@ const savedIntro =
   localStorage.getItem("imageIntroText");
 
 const savedDisplayName =
-  localStorage.getItem(
-    "displayName"
-  );
+  localStorage.getItem("displayName");
 
-if(savedDisplayName
+if (savedDisplayName) {
+
+  roomIdText.innerText = savedDisplayName;
+
+} else if (savedRoomId) {
+
+  roomIdText.innerText = "#" + savedRoomId;
+
+}
 
 const latestCard = messages[messages.length - 1];
 
@@ -3078,13 +3075,13 @@ socket.on(
     helper.innerHTML = `
 
 <button
-  id="refreshCameraBtn"
-  onclick="
-    event.preventDefault();
-    event.stopPropagation();
-    window.location.reload();
-    return false;
-  "
+id="refreshCameraBtn"
+onclick="
+event.preventDefault();
+event.stopPropagation();
+window.location.reload();
+return false;
+"
   style="
     width:40px;
     height:40px;
