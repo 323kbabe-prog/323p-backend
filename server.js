@@ -4908,7 +4908,7 @@ console.log({
     nullReason,
     ask:
         isNextSearch
-            ? nullReason
+            ? selectedNews.title
             : isPersonalIntent
                 ? nullReason
                 : placeStory
