@@ -2453,6 +2453,11 @@ try{
 
  const combinedIntent =
   text.trim();
+    if (combinedIntent.toLowerCase() === "null feed") {
+
+    intent = "null_feed";
+
+}
 
 
   const greetingRes =
@@ -2667,12 +2672,16 @@ Lowercase only.
     ]
   });
 
-const intent =
-  greetingRes.choices[0]
-    .message
-    .content
-    .trim()
-    .toLowerCase();
+let intent =
+    greetingRes.choices[0]
+        .message
+        .content
+        .trim()
+        .toLowerCase();
+
+if (combinedIntent.toLowerCase() === "null feed") {
+    intent = "null_feed";
+}
 
 if(intent === "unclear"){
 
@@ -3721,7 +3730,6 @@ if (
 const searchQuery = (
     isNextSearch
         ? (
-            interpretedIntent ||
             emotionSearch ||
             hiddenSystem ||
             "latest news"
