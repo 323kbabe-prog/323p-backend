@@ -1958,9 +1958,8 @@ document.getElementById("homeRoomId").innerText =
 startRoomCountdown();
 
 localStorage.setItem("roomId", data.roomId);
-setTimeout(() => {
-    helper.style.display = "none";
-}, 600);
+  
+// helper.style.display = "none";
   
 clearTimeout(rejoinTimeout);
 
@@ -3548,6 +3547,36 @@ margin-left:6px;
 <span>Public Nulls</span>
 
 </button>
+
+<div style="
+position:absolute;
+left:0;
+right:0;
+bottom:34px;
+text-align:center;
+line-height:1.4;
+pointer-events:none;
+">
+  <div style="
+    font-size:14px;
+    font-weight:900;
+    letter-spacing:1px;
+    opacity:.7;
+  ">
+    ASKNULL.COM
+  </div>
+
+  <div style="
+    margin-top:4px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.4px;
+    opacity:.45;
+    text-transform:uppercase;
+  ">
+    THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.
+  </div>
+</div>
 
 `;
 
