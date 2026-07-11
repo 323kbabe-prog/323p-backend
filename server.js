@@ -8,6 +8,18 @@
 // - Added NULL Verdict
 // - Fixed share button room ID
 // - Improved search intent detection
+//////////////////////////////////////////////////
+// CARD TYPES
+//////////////////////////////////////////////////
+
+// Starter Null
+// Next Null
+// Place Null
+// Entity Null
+// Daily Null
+// Business Null
+// Jobs Null
+// Verdict Null
 
 const express = require("express");
 
