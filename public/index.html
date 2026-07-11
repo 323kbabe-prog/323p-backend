@@ -712,7 +712,13 @@ transform:translateX(-50%);
 z-index:100000;
 pointer-events:auto;
 cursor:pointer;
-padding:8px 14px;
+padding:8px 18px;
+min-width:340px;
+white-space:nowrap;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:8px;
 border-radius:999px;
 background:#fff;
 color:#111;
@@ -722,6 +728,7 @@ box-shadow:0 4px 16px rgba(0,0,0,.18);
 ">
 
 <span id="homeRoomId">
+  style="white-space:nowrap;"
 No Room
 </span>
 
@@ -730,6 +737,7 @@ No Room
 </span>
 
 <span id="homeRoomCountdown">
+  style="white-space:nowrap;"
 --:--
 </span>
 
