@@ -5214,13 +5214,17 @@ app.get("/public-nulls", (req,res)=>{
 
 app.post("/public-nulls/:id/love", async (req,res)=>{
 
+    console.log("LOVE ID:", req.params.id);
+
     const { data, error } = await supabase
-    .from("public_nulls")
-    .select("*")
-    .eq("id", req.params.id)
-    .single();
+        .from("public_nulls")
+        .select("*")
+        .eq("id", req.params.id)
+        .single();
 
     if(error || !data){
+
+        console.log(error);
 
         return res.status(404).json({
             error:"Not found"
@@ -5228,7 +5232,11 @@ app.post("/public-nulls/:id/love", async (req,res)=>{
 
     }
 
+    console.log("CURRENT LOVE:", data.love);
+
     const love = (data.love || 0) + 1;
+
+    console.log("NEW LOVE:", love);
 
     await supabase
         .from("public_nulls")
@@ -5236,6 +5244,14 @@ app.post("/public-nulls/:id/love", async (req,res)=>{
             love
         })
         .eq("id", req.params.id);
+
+    const { data: check } = await supabase
+        .from("public_nulls")
+        .select("love")
+        .eq("id", req.params.id)
+        .single();
+
+    console.log("DB LOVE:", check?.love);
 
     publicNulls = publicNulls.map(item =>
         item.id === req.params.id
