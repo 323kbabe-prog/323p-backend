@@ -4947,7 +4947,7 @@ showRead:
 
 ask:
   isNextSearch
-    ? nullReason
+    ? selectedNews.title
     : isPersonalIntent
       ? nullReason
       : (
