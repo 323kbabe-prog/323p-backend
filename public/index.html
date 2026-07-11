@@ -826,6 +826,7 @@ Upload Image
 
 <button
 id="publicNullsBtn"
+onclick="showPublicNulls()"
 style="
 margin-top:12px;
 padding:10px 18px;
@@ -838,10 +839,24 @@ font-weight:500;
 cursor:pointer;
 pointer-events:auto;
 box-shadow:0 4px 16px rgba(0,0,0,.18);
+
+display:flex;
+align-items:center;
+justify-content:center;
+gap:8px;
 "
-onclick="showPublicNulls()"
 >
-Public Nulls
+
+<div
+id="publicNullsThumbs"
+style="
+display:flex;
+margin-left:6px;
+"
+></div>
+
+<span>Public Nulls</span>
+
 </button>
 
 </div>
@@ -1268,6 +1283,8 @@ function openHomeRoom(event){
         "/?room=" + roomId;
 
 }
+
+
   
 async function shareRoom(){
 
@@ -1479,6 +1496,8 @@ ALLOW CAMERA ACCESS
 window.onload = async () => {
 
     await startCamera();
+
+    loadPublicNullThumbnails();
 
 };
 
@@ -3479,13 +3498,29 @@ font-weight:500;
 cursor:pointer;
 pointer-events:auto;
 box-shadow:0 4px 16px rgba(0,0,0,.18);
+display:flex;
+align-items:center;
+justify-content:center;
+gap:8px;
 "
 >
-Public Nulls
+
+<div
+id="publicNullsThumbs"
+style="
+display:flex;
+margin-left:6px;
+"
+></div>
+
+<span>Public Nulls</span>
+
 </button>
 
 `;
 
+loadPublicNullThumbnails();
+      
 document
 .getElementById("uploadBtn")
 .onclick = e => {
@@ -3659,8 +3694,37 @@ socket.emit("imageUpload",{
 
 }
 
+async function loadPublicNullThumbnails(){
 
+  const res = await fetch(
+    "https://three23p-backend.onrender.com/public-nulls-top"
+  );
 
+  const top = await res.json();
+
+  const thumbs = document.getElementById("publicNullsThumbs");
+
+if (!thumbs) return;
+
+thumbs.innerHTML =
+    top
+      .slice(0,3)
+      .map(item=>`
+        <img
+          src="${item.image}"
+          style="
+            width:24px;
+            height:24px;
+            object-fit:cover;
+            border-radius:50%;
+            border:2px solid #fff;
+            margin-left:-8px;
+          "
+        >
+      `)
+      .join("");
+
+}
 
 async function loadPublicNulls(){
 
