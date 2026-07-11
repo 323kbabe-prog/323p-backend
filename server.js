@@ -2453,12 +2453,6 @@ try{
 
  const combinedIntent =
   text.trim();
-    if (combinedIntent.toLowerCase() === "null feed") {
-
-    intent = "null_feed";
-
-}
-
 
   const greetingRes =
   await openai.chat.completions.create({
