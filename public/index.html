@@ -3973,20 +3973,14 @@ const shareText =
 
 console.log(text);
 
-const shareData =
-  card.dataset.shareRead === "true"
-  ? {
-      title: "ASK NULL",
-      text: `ASK NULL\n\n${text}`,
-      url: newsLink
-    }
-  : {
-      title: "ASK NULL",
-      text: `ASK NULL\n\n${text}`
-    };
+const shareData = {
+    title: "ASK NULL",
+    text: `ASK NULL\n\n${text}\n\n${newsLink}`
+};
 
-
-
+if(newsLink){
+    shareData.url = newsLink;
+}
 
 
     //////////////////////////////////////////////////
