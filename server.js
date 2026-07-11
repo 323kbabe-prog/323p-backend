@@ -2074,14 +2074,16 @@ if (publishMode === "public") {
   publicNulls = publicNulls.slice(0, 50);
 
   const { error } = await supabase
-    .from("public_nulls")
-    .upsert({
+  .from("public_nulls")
+  .upsert({
       id: publicNullId,
       image: imageDataUrl,
       identity: user.imageContext,
       intro: adviceText,
+      love: 0,
+      skeleton: 0,
       created_at: createdAt
-    });
+  });
 
   console.log(
     "SUPABASE SAVE ERROR:",
@@ -5183,6 +5185,88 @@ app.get("/daily-nulls", (req,res) => {
 
 app.get("/public-nulls", (req, res) => {
   res.json(publicNulls);
+});
+
+app.post("/public-nulls/:id/love", async (req,res)=>{
+
+    const { data, error } = await supabase
+        .from("public_nulls")
+        .select("*")
+        .eq("id", req.params.id)
+        .single();
+
+    if(error || !data){
+
+        return res.status(404).json({
+            error:"Not found"
+        });
+
+    }
+
+    const love = (data.love || 0) + 1;
+
+    await supabase
+        .from("public_nulls")
+        .update({
+            love
+        })
+        .eq("id", req.params.id);
+
+    publicNulls = publicNulls.map(item =>
+        item.id === req.params.id
+            ? {
+                ...item,
+                love
+            }
+            : item
+    );
+
+    res.json({
+        success:true,
+        love
+    });
+
+});
+
+app.post("/public-nulls/:id/skeleton", async (req,res)=>{
+
+    const { data, error } = await supabase
+        .from("public_nulls")
+        .select("*")
+        .eq("id", req.params.id)
+        .single();
+
+    if(error || !data){
+
+        return res.status(404).json({
+            error:"Not found"
+        });
+
+    }
+
+    const skeleton = (data.skeleton || 0) + 1;
+
+    await supabase
+        .from("public_nulls")
+        .update({
+            skeleton
+        })
+        .eq("id", req.params.id);
+
+    publicNulls = publicNulls.map(item =>
+        item.id === req.params.id
+            ? {
+                ...item,
+                skeleton
+            }
+            : item
+    );
+
+    res.json({
+        success:true,
+        skeleton
+    });
+
 });
 
 app.delete("/public-nulls/:id", async (req, res) => {
