@@ -4914,6 +4914,14 @@ console.log({
                 : placeStory
 });
 
+    console.log("NEXT NULL LINK:", {
+  youtubeLink,
+  amazonLink,
+  placeLink,
+  newsLink: selectedNews?.link,
+  newsLink2: selectedNews?.news_link
+});
+    
 room.messages.push({
 
   from:
