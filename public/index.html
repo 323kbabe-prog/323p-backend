@@ -2115,79 +2115,123 @@ if(m.reminderCard && !m.hidden){
 return `
 
 <div
+class="dailyNullCard"
+data-share-card
+data-share-read="true"
+>
+
+
+<div data-share-content>
+
+<div
+style="
+font-size:11px;
+font-weight:900;
+opacity:.5;
+"
+>
+${card.category}
+</div>
+
+<div
+style="
+font-size:20px;
+font-weight:900;
+margin-top:6px;
+"
+>
+${card.identity}
+</div>
+
+<div
+style="
+font-size:13px;
+line-height:1.45;
+margin-top:8px;
+"
+>
+${card.intro}
+</div>
+
+<div
+style="
+margin-top:12px;
+font-size:16px;
+font-weight:600;
+line-height:1.4;
+"
+>
+${card.title}
+</div>
+
+</div>
+
+<a
+href="${card.link}"
+target="_blank"
+style="
+text-decoration:none;
+color:#111;
+"
+>
+
+<div
+style="
+font-size:11px;
+font-weight:700;
+padding-top:6px;
+text-transform:uppercase;
+animation:moreBlink 1.4s infinite;
+display:flex;
+justify-content:flex-end;
+"
+>
+(read)
+</div>
+
+<img
+src="${card.image}"
 style="
 width:100%;
+aspect-ratio:1/1;
+object-fit:cover;
+border-radius:12px;
+margin-top:10px;
+"
+/>
+
+</a>
+
+<div
+style="
 display:flex;
-justify-content:center;
-margin-bottom:14px;
-">
+gap:12px;
+margin-top:12px;
+"
+>
 
-<div
-style="
-max-width:340px;
-background:#fff;
-color:#111;
-border-radius:22px;
-padding:16px;
-">
+<span
+data-link="${card.link}"
 
-<div
-style="
-font-size:16px;
-font-weight:900;
-margin-bottom:8px;
-">
-${m.title}
-</div>
-
-<div
-style="
-font-size:14px;
-line-height:1.5;
-margin-bottom:14px;
-">
-${m.text}
-</div>
-
-<button
 onclick="
-(async () => {
-this.disabled = true;
-this.innerText = "Enabling...";
-
-const ok = await enableNotifications();
-
-if (!ok) {
-
-    this.disabled = false;
-    this.innerText = "Enable Notifications";
-    return;
-
-}
-
-socket.emit('createReminder', {
-    deviceId,
-    text: '${m.reminder}'
-});
-
-    
-
-})();
+shareCard(
+  this,
+  this.dataset.link
+)
 "
 style="
-width:100%;
-height:42px;
-border:none;
+cursor:pointer;
+font-size:13px;
+font-weight:700;
+padding:8px 12px;
 border-radius:999px;
 background:#000;
 color:#fff;
-font-weight:700;
-cursor:pointer;
+display:inline-block;
 "
 >
-Enable Notifications
-</button>
-
+Share
+</span>
 
 </div>
 
