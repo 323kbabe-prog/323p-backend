@@ -951,21 +951,7 @@ line-height:1;
 Ask Null
 </div>
 
-<div
-id="roomIdText"
-style="
-font-size:11px;
-font-weight:300;
-color:#111;
-line-height:1;
-letter-spacing:-0.3px;
-margin-top:0px;
-padding:6px 10px;
-"
->
 
-#room
-</div>
 
 <button
 id="shareRoomBtn"
@@ -1113,10 +1099,7 @@ const capturePreview =
     "capturePreview"
   );
 
-const roomIdText =
-  document.getElementById(
-    "roomIdText"
-  );
+
 
 const socket = io(
     window.location.origin
@@ -1890,8 +1873,8 @@ document.getElementById(
 
     if(savedDisplayName){
 
-roomIdText.innerText =
-    savedDisplayName;
+    document.getElementById("shareRoomBtn").innerText =
+        "Share Room " + savedDisplayName;
 
     }
   }
@@ -1976,8 +1959,8 @@ gtag('event', 'page_view', {
 
 roomInput.style.display = "none";
 
-roomIdText.innerText =
-  data.displayName;
+document.getElementById("shareRoomBtn").innerText =
+  "Share Room " + data.displayName;
 
 capturePreview.style.display =
   "none";
@@ -2069,11 +2052,13 @@ const savedDisplayName =
 
 if (savedDisplayName) {
 
-  roomIdText.innerText = savedDisplayName;
+  document.getElementById("shareRoomBtn").innerText =
+    "Share Room " + savedDisplayName;
 
 } else if (savedRoomId) {
 
-  roomIdText.innerText = "#" + savedRoomId;
+  document.getElementById("shareRoomBtn").innerText =
+    "Share Room #" + savedRoomId;
 
 }
 
@@ -3375,15 +3360,15 @@ const savedDisplayName =
     "displayName"
   );
 
-if(savedDisplayName){
+if (savedDisplayName) {
 
-  roomIdText.innerText =
-    savedDisplayName;
+    document.getElementById("shareRoomBtn").innerText =
+        "Share Room " + savedDisplayName;
 
-}else if(savedRoomId){
+} else if (savedRoomId) {
 
-  roomIdText.innerText =
-    "#" + savedRoomId;
+    document.getElementById("shareRoomBtn").innerText =
+        "Share Room #" + savedRoomId;
 
 }
 
