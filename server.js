@@ -4945,7 +4945,8 @@ showRead:
 
   image:imageUrl,
 
-ask:
+intro:
+
   isNextSearch
     ? nullReason
     : isPersonalIntent
@@ -4953,15 +4954,17 @@ ask:
       : (
           placeStory ||
           `I picked ${
-isLocationRequest
-    ? userIntent
-              : isYoutubeIntent
-                ? "this video"
-                : isShoppingIntent
-                  ? "this product"
-                  : "this topic"
+              isLocationRequest
+                  ? userIntent
+                  : isYoutubeIntent
+                      ? "this video"
+                      : isShoppingIntent
+                          ? "this product"
+                          : "this topic"
           } because ${selectedNews.title}.`
-        ),
+      ),
+
+title: selectedNews.title,
 
 link:
   isYoutubeIntent
