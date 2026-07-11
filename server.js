@@ -2062,13 +2062,15 @@ if (publishMode === "public") {
     Date.now();
 
   // Add newest to the top
-  publicNulls.unshift({
+publicNulls.unshift({
     id: publicNullId,
     image: imageDataUrl,
     identity: user.imageContext,
     intro: adviceText,
+    love: 0,
+    skeleton: 0,
     createdAt
-  });
+});
 
   // Keep only latest 50
   publicNulls = publicNulls.slice(0, 50);
