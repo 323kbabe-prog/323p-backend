@@ -2789,7 +2789,13 @@ Check
 ` : ""}
 
 <span
-onclick="shareCard(this)"
+data-link="${m.link || ''}"
+onclick="
+shareCard(
+  this,
+  this.dataset.link
+)
+"
 style="
 cursor:pointer;
 font-size:13px;
@@ -3872,6 +3878,8 @@ margin-top:12px;
 <span
 data-link="${card.link}"
 
+data-link="${m.link || ''}"
+
 onclick="
 shareCard(
   this,
@@ -3949,8 +3957,8 @@ const text =
       image?.src;
 
 const newsLink =
-  card.querySelector("a")?.href ||
   link ||
+  card.querySelector("a")?.href ||
   "";
 
 
