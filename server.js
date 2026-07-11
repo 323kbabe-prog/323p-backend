@@ -5185,17 +5185,38 @@ app.get("/daily-nulls", (req,res) => {
   });
 });
 
-app.get("/public-nulls", (req, res) => {
-  res.json(publicNulls);
+app.get("/public-nulls-top", async (req,res)=>{
+
+    const { data, error } = await supabase
+        .from("public_nulls")
+        .select("*")
+        .order("love", { ascending:false })
+        .limit(3);
+
+    if(error){
+
+        console.log(error);
+        return res.json([]);
+
+    }
+
+    res.json(data || []);
+
+});
+
+app.get("/public-nulls", (req,res)=>{
+
+    res.json(publicNulls);
+
 });
 
 app.post("/public-nulls/:id/love", async (req,res)=>{
 
     const { data, error } = await supabase
-        .from("public_nulls")
-        .select("*")
-        .eq("id", req.params.id)
-        .single();
+    .from("public_nulls")
+    .select("*")
+    .eq("id", req.params.id)
+    .single();
 
     if(error || !data){
 
