@@ -2688,9 +2688,6 @@ ${m.jobCard.posted}
 `;
 }
 
-
-
-
 if(m.ask){
 
 return `
@@ -2723,6 +2720,7 @@ margin-bottom:18px;
 >
 
 <div data-share-content>
+
 
 <div
 style="
@@ -2778,6 +2776,19 @@ Check
 </a>
 ` : ""}
 
+${m.image ? `
+<img
+src="${m.image}"
+style="
+width:100%;
+aspect-ratio:1/1;
+object-fit:cover;
+border-radius:12px;
+margin-top:10px;
+"
+/>
+` : ""}
+
 <span
 onclick="shareCard(this)"
 style="
@@ -2810,19 +2821,6 @@ ${m.nullReason}
 </div>
 ` : ""}
 
-${m.image ? `
-<img
-src="${m.image}"
-style="
-width:100%;
-aspect-ratio:1/1;
-object-fit:cover;
-border-radius:12px;
-margin-top:10px;
-"
-/>
-` : ""}
-
 ${m.searchLabel !== "NULL Feed" ? `
 <div
 style="
@@ -2850,6 +2848,8 @@ m === messages
 !nextClicked
 
 ? `
+
+
 
 <div
 style="
