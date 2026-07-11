@@ -1,3 +1,14 @@
+//////////////////////////////////////////////////
+// CHANGE LOG
+//////////////////////////////////////////////////
+
+// v9.0.0 (2026-07-11)
+// - Added business search
+// - Improved object search logic
+// - Added NULL Verdict
+// - Fixed share button room ID
+// - Improved search intent detection
+
 const express = require("express");
 
 const http = require("http");
