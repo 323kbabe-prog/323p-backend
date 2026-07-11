@@ -3660,9 +3660,83 @@ async function loadPublicNulls(){
 
   const data =
     await res.json();
+  const topRes =
+    await fetch(
+        "https://three23p-backend.onrender.com/public-nulls-top"
+    );
 
-  publicNullsCards.innerHTML =
-    data.map((item, i) => `
+const top =
+    await topRes.json();
+
+publicNullsCards.innerHTML = `
+
+<div
+style="
+margin-bottom:26px;
+"
+>
+
+<div
+style="
+font-size:13px;
+font-weight:700;
+opacity:.5;
+margin-bottom:12px;
+"
+>
+🏆 Featured Nulls
+</div>
+
+<div
+style="
+display:flex;
+gap:12px;
+justify-content:center;
+margin-bottom:20px;
+"
+>
+
+${top.map(item => `
+
+<div
+onclick="createRoomFromPublicNull('${item.image}')"
+style="
+cursor:pointer;
+text-align:center;
+"
+>
+
+<img
+src="${item.image}"
+style="
+width:56px;
+height:56px;
+object-fit:cover;
+border-radius:14px;
+"
+/>
+
+<div
+style="
+font-size:11px;
+font-weight:700;
+margin-top:4px;
+"
+>
+❤️ ${item.love}
+</div>
+
+</div>
+
+`).join("")}
+
+</div>
+
+</div>
+
+` +
+
+data.map((item, i) => `
 
 <div class="dailyNullCard">
 
