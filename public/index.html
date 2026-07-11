@@ -1,32 +1,5 @@
 <!DOCTYPE html>
-<!--
-//////////////////////////////////////////////////
-CHANGE LOG
-//////////////////////////////////////////////////
-
-v9.0.0 (2026-07-11)
-- Added business search
-- Improved object search logic
-- Added NULL Verdict
-- Fixed share button room ID
-- Improved search intent detection
--->
-
-<!--
-//////////////////////////////////////////////////
-CARD TYPES
-//////////////////////////////////////////////////
-
-Starter Null
-Next Null
-Place Null
-Entity Null
-Daily Null
-Business Null
-Jobs Null
-Verdict Null
--->
-
+<!-- CONNECTAING V8 — ASK NULL — meet null — 21:16 2026/07/04 -->
 <html lang="en">
 <head>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-FB5FLT606Z"></script>
@@ -2688,7 +2661,10 @@ ${m.jobCard.posted}
 `;
 }
 
-if(m.ask){
+
+
+
+if(m.ask && !m.image){
 
 return `
 
@@ -2774,19 +2750,6 @@ text-decoration:none;
 >
 Check
 </a>
-` : ""}
-
-${m.image ? `
-<img
-src="${m.image}"
-style="
-width:100%;
-aspect-ratio:1/1;
-object-fit:cover;
-border-radius:12px;
-margin-top:10px;
-"
-/>
 ` : ""}
 
 <span
