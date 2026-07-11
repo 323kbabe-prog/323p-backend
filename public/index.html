@@ -3879,7 +3879,6 @@ margin-top:12px;
 <span
 data-link="${card.link}"
 
-data-link="${m.link || ''}"
 
 onclick="
 shareCard(
@@ -3959,6 +3958,8 @@ const text =
 
 const newsLink =
   link ||
+  el.dataset.link ||
+  card.dataset.link ||
   card.querySelector("a")?.href ||
   "";
 
