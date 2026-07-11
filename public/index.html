@@ -704,31 +704,32 @@ id="homeRoomCard"
 onclick="openHomeRoom()"
 style="
 cursor:pointer;
-display:block;
 position:fixed;
 top:72px;
 left:50%;
 transform:translateX(-50%);
 z-index:100000;
 pointer-events:auto;
-cursor:pointer;
-padding:8px 18px;
-min-width:340px;
-white-space:nowrap;
-display:flex;
+display:inline-flex;
 align-items:center;
 justify-content:center;
 gap:8px;
+width:fit-content;
+max-width:calc(100vw - 32px);
+padding:8px 16px;
 border-radius:999px;
 background:#fff;
 color:#111;
 font-size:12px;
 font-weight:700;
+white-space:nowrap;
 box-shadow:0 4px 16px rgba(0,0,0,.18);
 ">
 
-<span id="homeRoomId">
-  style="white-space:nowrap;"
+<span
+id="homeRoomId"
+style="white-space:nowrap;"
+>
 No Room
 </span>
 
@@ -736,8 +737,10 @@ No Room
 •
 </span>
 
-<span id="homeRoomCountdown">
-  style="white-space:nowrap;"
+<span
+id="homeRoomCountdown"
+style="white-space:nowrap;"
+>
 --:--
 </span>
 
