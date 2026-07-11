@@ -2,25 +2,27 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-v9.0.0 (2026-07-11)
-- Added business search
-- Improved object search logic
-- Added NULL Verdict
-- Fixed share button room ID
-- Improved search intent detection
+// v9.0.0 (2026-07-11)
+// - Added Business Null card
+// - Added Jobs Null card
+// - Added NULL Verdict card
+// - Added business search
+// - Improved object search logic
+// - Improved search intent detection
+// - Fixed share button room ID
 
 //////////////////////////////////////////////////
 CARD TYPES
 //////////////////////////////////////////////////
 
-Starter Null
-Next Null
-Place Null
-Entity Null
-Daily Null
-Business Null
-Jobs Null
-Verdict Null
+// Starter Null
+// Next Null
+// Place Null
+// Entity Null
+// Daily Null
+// Business Null
+// Jobs Null
+// Verdict Null
 
 const express = require("express");
 
@@ -4941,7 +4943,7 @@ showRead:
       ? nullReason
       : null,
 
-  image:null,
+  image:imageUrl,
 
 ask:
   isNextSearch
