@@ -1897,7 +1897,7 @@ socket.on("roomCreated", data => {
 roomExpiresAt = data.expiresAt;
 
 document.getElementById("homeRoomId").innerText =
-    "#" + data.roomId;
+    "Room #" + data.roomId;
 
 startRoomCountdown();
 
@@ -1914,7 +1914,8 @@ roomNullCard = data.nullCard;
 
 roomExpiresAt = data.expiresAt; 
 document.getElementById("homeRoomCard").style.display = "block";
-document.getElementById("homeRoomId").innerText = "#" + data.roomId;
+document.getElementById("homeRoomId").innerText =
+    "Room #" + data.roomId;
     startRoomCountdown();
 
 
@@ -3202,8 +3203,8 @@ socket.on("roomStatus", data => {
 
     localStorage.setItem("roomId", data.roomId);
 
-    document.getElementById("homeRoomId").innerText =
-        "#" + data.roomId;
+document.getElementById("homeRoomId").innerText =
+    "Room #" + data.roomId;
 
     roomExpiresAt = data.expiresAt;
 
@@ -3229,8 +3230,8 @@ if (savedRoomId) {
 
     document.getElementById("homeRoomCard").style.display = "block";
 
-    document.getElementById("homeRoomId").innerText =
-        "#" + savedRoomId;
+document.getElementById("homeRoomId").innerText =
+    "Room #" + savedRoomId;
 }
 
 
@@ -3278,7 +3279,7 @@ ROOM NOT FOUND
 console.log("REJOINING:", savedRoomId);
 
 document.getElementById("homeRoomId").innerText =
-    "#" + savedRoomId;
+    "Room #" + savedRoomId;
   
 document.getElementById("homeRoomCountdown").innerText =
     "Rejoining...";  
