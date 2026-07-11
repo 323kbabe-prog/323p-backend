@@ -3684,7 +3684,7 @@ opacity:.5;
 margin-bottom:12px;
 "
 >
-🏆 Featured Nulls
+❤️ Featured Nulls
 </div>
 
 <div
@@ -3718,12 +3718,31 @@ border-radius:14px;
 
 <div
 style="
+display:flex;
+justify-content:center;
+gap:10px;
+margin-top:4px;
 font-size:11px;
 font-weight:700;
-margin-top:4px;
 "
 >
-❤️ ${item.love}
+
+<span
+class="loveCount"
+data-id="${item.id}"
+>
+❤️ ${item.love || 0}
+</span>
+
+<span
+class="skeletonCount"
+data-id="${item.id}"
+onclick="kickPublicNull('${item.id}')"
+style="cursor:pointer;"
+>
+💀 ${item.skeleton || 0}
+</span>
+
 </div>
 
 </div>
@@ -3785,6 +3804,8 @@ align-items:center;
 ">
 
 <span
+class="loveCount"
+data-id="${item.id}"
 onclick="usePublicNull('${item.id}','${item.image}')"
 style="cursor:pointer;"
 >
@@ -3792,8 +3813,16 @@ style="cursor:pointer;"
 </span>
 
 <span
+class="skeletonCount"
+data-id="${item.id}"
 onclick="kickPublicNull('${item.id}')"
-style="cursor:pointer;"
+style="
+cursor:pointer;
+display:block;
+font-size:11px;
+font-weight:700;
+margin-top:4px;
+"
 >
 💀 ${item.skeleton || 0}
 </span>
@@ -4028,27 +4057,48 @@ Share
 
 async function usePublicNull(id,image){
 
-    await fetch(
+    const res = await fetch(
         `https://three23p-backend.onrender.com/public-nulls/${id}/love`,
         {
             method:"POST"
         }
     );
 
-    createRoomFromPublicNull(image);
+    const json = await res.json();
+
+   document
+    .querySelectorAll(`.loveCount[data-id="${id}"]`)
+    .forEach(el => {
+
+        el.innerText = `❤️ ${json.love}`;
+
+    });
+    setTimeout(() => {
+
+        createRoomFromPublicNull(image);
+
+    },250);
 
 }
 
 async function kickPublicNull(id){
 
-    await fetch(
+    const res = await fetch(
         `https://three23p-backend.onrender.com/public-nulls/${id}/skeleton`,
         {
             method:"POST"
         }
     );
 
-    loadPublicNulls();
+    const json = await res.json();
+
+    document
+        .querySelectorAll(`.skeletonCount[data-id="${id}"]`)
+        .forEach(el => {
+
+            el.innerText = `💀 ${json.skeleton}`;
+
+        });
 
 }
   
