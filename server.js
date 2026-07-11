@@ -3031,6 +3031,16 @@ let interpretedIntent =
 const originalUserRequest =
     text.trim();
 
+    if(!isNextSearch){
+
+    room.messages.push({
+        from: user.displayName,
+        text,
+        translation: englishText
+    });
+
+}
+    
 console.log("NULL INPUT");
 console.log(nullInput);
 
