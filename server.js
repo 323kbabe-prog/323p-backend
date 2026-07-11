@@ -2930,6 +2930,41 @@ Transform:
 - recommendation style
 - internet search direction
 
+IMPORTANT
+
+If the user's request explicitly asks for:
+
+- prayer
+- pray
+- blessing
+- worship
+- Bible
+- scripture
+
+preserve the user's wording.
+
+Examples:
+
+pray for me
+→ pray for me
+
+please pray for my family
+→ pray for my family
+
+pray for my job
+→ pray for my job
+
+Do NOT rewrite these into:
+
+- encouragement
+- emotional support
+- hope
+- comfort
+- healing
+- challenging time
+
+The requested form must never change.
+
 Return JSON only.
 
 {
@@ -2969,8 +3004,20 @@ const nullInput =
             .content
     );
 
-const interpretedIntent =
+let interpretedIntent =
     nullInput.searchDirection;
+
+if(
+    [
+        "prayer",
+        "letter",
+        "poem"
+    ].includes(intent)
+){
+
+    interpretedIntent = text.trim();
+
+}
 
 const englishText =
     nullInput.userReality;
