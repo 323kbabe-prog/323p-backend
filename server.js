@@ -3015,7 +3015,7 @@ if(
     ].includes(intent)
 ){
 
-    interpretedIntent = text.trim();
+    interpretedIntent = englishText;
 
 }
 
