@@ -4940,7 +4940,7 @@ showRead:
       ? nullReason
       : null,
 
-  image:null,
+  image:imageUrl,
 
 ask:
   isNextSearch
