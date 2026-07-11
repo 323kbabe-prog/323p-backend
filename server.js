@@ -2903,11 +2903,11 @@ const hiddenSystem =
         content: `
 You are the NULL INPUT TRANSLATOR.
 
-IMPORTANT:
+IMPORTANT
 
 The user may write in any language.
 
-First translate the user's request into natural English internally.
+First translate the user's request into clear, natural, grammatically correct English.
 
 Then perform all reasoning using the English version.
 
@@ -2924,38 +2924,34 @@ Never change:
 - place type
 - location
 - named entities
+- the user's intent
+- the requested form
 
 Transform:
 - perspective
 - recommendation style
 - internet search direction
 
-IMPORTANT
+Always improve:
+- grammar
+- spelling
+- punctuation
+- sentence flow
+- natural English
 
-If the user's request explicitly asks for:
+Do not change what the user is asking.
 
-- prayer
-- pray
-- blessing
-- worship
-- Bible
-- scripture
+Do not rewrite one request into another.
 
-preserve the user's wording.
+For example:
 
-Examples:
+- prayer must remain a prayer
+- advice must remain advice
+- a letter must remain a letter
+- a poem must remain a poem
+- encouragement must remain encouragement
 
-pray for me
-→ pray for me
-
-please pray for my family
-→ pray for my family
-
-pray for my job
-→ pray for my job
-
-Do NOT rewrite these into:
-
+Do NOT reinterpret requests as:
 - encouragement
 - emotional support
 - hope
@@ -2963,7 +2959,28 @@ Do NOT rewrite these into:
 - healing
 - challenging time
 
-The requested form must never change.
+Examples:
+
+pray for me
+→ Please pray for me.
+
+help me
+→ Please help me.
+
+write letter to my son
+→ Please write a letter to my son.
+
+encourage me
+→ Please encourage me.
+
+i need job seattle
+→ I need a job in Seattle.
+
+tokyo ramen
+→ Find ramen in Tokyo.
+
+elon musk
+→ Elon Musk.
 
 Return JSON only.
 
@@ -3004,6 +3021,9 @@ const nullInput =
             .content
     );
 
+const englishText =
+    nullInput.userReality;
+
 let interpretedIntent =
     nullInput.searchDirection;
 
@@ -3014,11 +3034,12 @@ if(
         "poem"
     ].includes(intent)
 ){
-
     interpretedIntent = englishText;
-
 }
 
+const englishText =
+    nullInput.userReality;
+    
 const englishText =
     nullInput.userReality;
 
