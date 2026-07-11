@@ -3698,6 +3698,32 @@ margin-top:8px;
 line-height:1.4;
 ">
 ${item.intro}
+
+<div
+style="
+display:flex;
+gap:18px;
+margin-top:12px;
+font-size:20px;
+font-weight:700;
+align-items:center;
+"
+>
+
+<span
+onclick="usePublicNull('${item.id}','${item.image}')"
+style="cursor:pointer;"
+>
+❤️ ${item.love || 0}
+</span>
+
+<span
+onclick="kickPublicNull('${item.id}')"
+style="cursor:pointer;"
+>
+💀 ${item.skeleton || 0}
+</span>
+
 </div>
 
 <button
@@ -3904,6 +3930,32 @@ Share
 `).join("");
 }
 
+async function usePublicNull(id,image){
+
+    await fetch(
+        `https://three23p-backend.onrender.com/public-nulls/${id}/love`,
+        {
+            method:"POST"
+        }
+    );
+
+    createRoomFromPublicNull(image);
+
+}
+
+async function kickPublicNull(id){
+
+    await fetch(
+        `https://three23p-backend.onrender.com/public-nulls/${id}/skeleton`,
+        {
+            method:"POST"
+        }
+    );
+
+    loadPublicNulls();
+
+}
+  
 async function deletePublicNull(id){
 
     const password = prompt("Enter password");
