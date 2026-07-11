@@ -3027,31 +3027,6 @@ const englishText =
 let interpretedIntent =
     nullInput.searchDirection;
 
-if(
-    [
-        "prayer",
-        "letter",
-        "poem"
-    ].includes(intent)
-){
-    interpretedIntent = englishText;
-}
-
-const englishText =
-    nullInput.userReality;
-    
-const englishText =
-    nullInput.userReality;
-
-    if(!isNextSearch){
-
-    room.messages.push({
-        from: user.displayName,
-        text,
-        translation: englishText
-    });
-
-}
 
 const originalUserRequest =
     text.trim();
