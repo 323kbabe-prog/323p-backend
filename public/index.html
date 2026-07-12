@@ -4011,16 +4011,17 @@ document
 .querySelectorAll(".publicNullImage")
 .forEach(img => {
 
-    img.onclick = () => {
+img.onclick = () => {
 
-        const index =
-            Number(img.dataset.index);
+    const index =
+        Number(img.dataset.index);
 
-        createRoomFromPublicNull(
-            data[index].image
-        );
+    usePublicNull(
+        data[index].id,
+        data[index].image
+    );
 
-    };
+};
 
 });
 
