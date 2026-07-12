@@ -1914,9 +1914,7 @@ document.getElementById(
     "firstNextBtn"
 ).style.display = "block";
 
-document.getElementById(
-    "memoryBtn"
-).style.display = "block";
+document.getElementById("memoryBtn").style.display = "none";
 
     localStorage.setItem(
       "imageIntroText",
@@ -2069,10 +2067,8 @@ roomInput.placeholder = "Ask";
 if(messages.length > 0){
 
 const btn =
-  document.getElementById("firstNextBtn");
-  document.getElementById(
-    "memoryBtn"
-).style.display = "block";
+document.getElementById("firstNextBtn");
+document.getElementById("memoryBtn").style.display = "none";
 
 const hasFeed =
   messages.some(
