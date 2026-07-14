@@ -823,10 +823,6 @@ style="white-space:nowrap;"
 
 <div style="margin-top:16px;"></div>
 
-
-
-
-
 <button
 id="uploadBtn"
 style="
@@ -917,11 +913,50 @@ pointer-events:none;
 
 </div>
 
+
+<div id="floatingButtons"
+style="
+position:fixed;
+top:18px;
+right:18px;
+display:flex;
+gap:10px;
+z-index:999999;
+">
+
+<button
+onclick="window.location.reload()"
+style="
+width:40px;
+height:40px;
+border:none;
+border-radius:50%;
+background:#fff;
+cursor:pointer;
+box-shadow:0 2px 8px rgba(0,0,0,.15);
+">
+↻
+</button>
+
+<button
+onclick="openGuide()"
+style="
+width:40px;
+height:40px;
+border:none;
+border-radius:50%;
+background:#fff;
+cursor:pointer;
+font-size:18px;
+font-weight:700;
+box-shadow:0 2px 8px rgba(0,0,0,.15);
+">
+?
+</button>
+
+</div>
+  
 <div id="roomOverlay">
-
-
-
-
 
 <div
 id="roomCountdown"
