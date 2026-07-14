@@ -2475,7 +2475,13 @@ socket.on(
         return;
     }
 
-   
+await trackEvent(
+    users[socket.id].deviceId,
+    "room_message",
+    {
+        roomId: room.id
+    }
+);   
 
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
