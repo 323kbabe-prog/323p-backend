@@ -922,49 +922,6 @@ pointer-events:none;
 
 
 </div>
-
-
-<div id="floatingButtons"
-style="
-position:fixed;
-top:18px;
-right:18px;
-display:flex;
-gap:10px;
-z-index:999999;
-">
-
-<button
-onclick="window.location.reload()"
-style="
-width:40px;
-height:40px;
-border:none;
-border-radius:50%;
-background:#fff;
-cursor:pointer;
-box-shadow:0 2px 8px rgba(0,0,0,.15);
-">
-↻
-</button>
-
-<button
-onclick="openGuide()"
-style="
-width:40px;
-height:40px;
-border:none;
-border-radius:50%;
-background:#fff;
-cursor:pointer;
-font-size:18px;
-font-weight:700;
-box-shadow:0 2px 8px rgba(0,0,0,.15);
-">
-?
-</button>
-
-</div>
   
 <div id="roomOverlay">
 
@@ -3112,7 +3069,16 @@ document.getElementById("homeRoomId").innerText =
 document.getElementById("homeRoomCountdown").innerText =
     "00:00";
   
-    helper.innerHTML = `
+   helper.innerHTML = `
+
+<div
+style="
+display:flex;
+justify-content:center;
+gap:10px;
+margin-bottom:18px;
+">
+
 <button
   id="refreshCameraBtn"
   onclick="
@@ -3133,7 +3099,6 @@ document.getElementById("homeRoomCountdown").innerText =
     align-items:center;
     justify-content:center;
     box-shadow:0 2px 8px rgba(0,0,0,.15);
-    margin-bottom:18px;
   "
 >
   <svg
@@ -3147,14 +3112,37 @@ document.getElementById("homeRoomCountdown").innerText =
   </svg>
 </button>
 
+<button
+  id="guideBtn"
+  onclick="openGuide()"
+  style="
+    width:40px;
+    height:40px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    font-size:18px;
+    font-weight:700;
+  "
+>
+  ?
+</button>
+
+</div>
+
 <div>
 ROOM EXPIRED<br>CREATE A NEW NULL
 </div>
+
 `;
 
 });
-
-
 
 function showAITyping(){
 
@@ -3280,7 +3268,15 @@ socket.on(
     helper.style.display =
       "flex";
 
-    helper.innerHTML = `
+   helper.innerHTML = `
+
+<div
+style="
+display:flex;
+justify-content:center;
+gap:10px;
+margin-bottom:18px;
+">
 
 <button
 id="refreshCameraBtn"
@@ -3290,31 +3286,54 @@ event.stopPropagation();
 window.location.reload();
 return false;
 "
-  style="
-    width:40px;
-    height:40px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
-    margin-bottom:18px;
-  "
+style="
+width:40px;
+height:40px;
+padding:0;
+border:none;
+border-radius:50%;
+background:#fff;
+cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
+box-shadow:0 2px 8px rgba(0,0,0,.15);
+"
 >
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 -960 960 960"
-    width="22"
-    height="22"
-    fill="#111"
-  >
-    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-  </svg>
+<svg
+xmlns="http://www.w3.org/2000/svg"
+viewBox="0 -960 960 960"
+width="22"
+height="22"
+fill="#111"
+>
+<path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
+</svg>
 </button>
+
+<button
+id="guideBtn"
+onclick="openGuide()"
+style="
+width:40px;
+height:40px;
+padding:0;
+border:none;
+border-radius:50%;
+background:#fff;
+cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
+box-shadow:0 2px 8px rgba(0,0,0,.15);
+font-size:18px;
+font-weight:700;
+"
+>
+?
+</button>
+
+</div>
 
 <div>
 RECONNECTING...
@@ -3537,8 +3556,16 @@ if (savedDisplayName) {
 
       helper.style.display =
         "flex";
+      
+helper.innerHTML = `
 
-  helper.innerHTML = `
+<div
+style="
+display:flex;
+justify-content:center;
+gap:10px;
+margin-bottom:18px;
+">
 
 <button
   id="refreshCameraBtn"
@@ -3560,7 +3587,6 @@ if (savedDisplayName) {
     align-items:center;
     justify-content:center;
     box-shadow:0 2px 8px rgba(0,0,0,.15);
-    margin-bottom:18px;
   "
 >
   <svg
@@ -3573,6 +3599,30 @@ if (savedDisplayName) {
     <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
   </svg>
 </button>
+
+<button
+  id="guideBtn"
+  onclick="openGuide()"
+  style="
+    width:40px;
+    height:40px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    font-size:18px;
+    font-weight:700;
+  "
+>
+  ?
+</button>
+
+</div>
 
 <div style="
   max-width:600px;
