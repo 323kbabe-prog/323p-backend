@@ -3264,10 +3264,15 @@ document.getElementById("homeRoomId").innerText =
 
 });
   
-socket.on("connect",() => {
-  socket.emit("getRoomStatus", {
-    deviceId
-});
+socket.on("connect", () => {
+
+    socket.emit("registerDevice", {
+        deviceId
+    });
+
+    socket.emit("getRoomStatus", {
+        deviceId
+    });
 
 const urlRoomId =
     new URLSearchParams(window.location.search)
