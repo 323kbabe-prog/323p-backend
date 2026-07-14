@@ -1466,6 +1466,16 @@ nullCard: null,
             Date.now() + 60 * 60 * 1000
     };
 
+    await trackEvent(
+    deviceId,
+    "room_created",
+    {
+        roomId,
+        coreTheme,
+        publishMode
+    }
+);
+
     socket.join(roomId);
     user.currentRoom = roomId;
 deviceRooms[deviceId] = roomId;
