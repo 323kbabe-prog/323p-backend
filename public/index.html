@@ -1776,6 +1776,15 @@ gtag('event', 'capture_image');
     ){
 
       helper.innerHTML = `
+
+<div
+style="
+display:flex;
+justify-content:center;
+gap:10px;
+margin-bottom:18px;
+">
+
 <button
   id="refreshCameraBtn"
   onclick="
@@ -1796,7 +1805,6 @@ gtag('event', 'capture_image');
     align-items:center;
     justify-content:center;
     box-shadow:0 2px 8px rgba(0,0,0,.15);
-    margin-bottom:18px;
   "
 >
   <svg
@@ -1810,17 +1818,40 @@ gtag('event', 'capture_image');
   </svg>
 </button>
 
+<button
+  id="guideBtn"
+  onclick="openGuide()"
+  style="
+    width:40px;
+    height:40px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    font-size:18px;
+    font-weight:700;
+  "
+>
+  ?
+</button>
+
+</div>
+
 <div>
 CAMERA STILL LOADING
 </div>
+
 `;
 
       captureLock = false;
 
       return;
     }
-
-    
 
     const canvas =
       document.createElement("canvas");
