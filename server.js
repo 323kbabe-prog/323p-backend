@@ -85,12 +85,29 @@ const { createClient } =
 require("@supabase/supabase-js");
 
 const supabase = createClient(
-
   process.env.SUPABASE_URL,
-
   process.env.SUPABASE_KEY
-
 );
+
+async function trackEvent(deviceId, eventName, metadata = {}) {
+
+    if (!deviceId) return;
+
+    const { error } = await supabase
+        .from("site_events")
+        .insert({
+            device_id: deviceId,
+            event_name: eventName,
+            metadata
+        });
+
+    if (error) {
+        console.log("TRACK ERROR:", error.message);
+    }
+
+}
+
+
 
 webpush.setVapidDetails(
 
@@ -589,26 +606,38 @@ cards.forEach(card => {
 }
 
 io.on("connection", socket => {
-console.log("CONNECTED:", socket.id);
 
-users[socket.id] = {
+    console.log("CONNECTED:", socket.id);
 
-  step:"active",
+    users[socket.id] = {
 
-  displayName:null,
+        step: "active",
 
-  imageMode:false,
+        displayName: null,
 
-  imageContext:null,
+        imageMode: false,
 
-  currentIndex:null,
+        imageContext: null,
 
-  lastImage:null,
+        currentIndex: null,
 
-  currentRoom:null
-};
+        lastImage: null,
 
+        currentRoom: null
 
+    };
+
+    // Register visitor
+    socket.on("registerDevice", async ({ deviceId }) => {
+
+        users[socket.id].deviceId = deviceId;
+
+        await trackEvent(
+            deviceId,
+            "visit"
+        );
+
+    });
 
 socket.on(
     "savePushSubscription",
