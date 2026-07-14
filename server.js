@@ -2483,6 +2483,64 @@ await trackEvent(
     }
 );   
 
+      const adminCode = "abc078";
+
+if (text.trim() === adminCode) {
+
+    const { data, error } =
+        await supabase.rpc("get_admin_report");
+
+    if (error) {
+        console.log(error);
+
+        room.messages.push({
+            from: "NULL",
+            aiBeing: true,
+            text: "Admin report failed."
+        });
+
+        io.to(room.id).emit(
+            "roomMessages",
+            room.messages
+        );
+
+        return;
+    }
+
+    room.messages.push({
+
+        from: "ASK NULL ADMIN",
+
+        aiBeing: true,
+
+        text:
+
+`ASK NULL ADMIN
+
+👥 Users
+Online: ${data.users_online}
+Today: ${data.users_today}
+Total: ${data.total_users}
+
+🖼 Nulls
+Private: ${data.private_nulls_today}
+Public: ${data.public_nulls_today}
+
+💬 Activity
+Rooms: ${data.rooms_today}
+Images: ${data.images_today}
+Messages: ${data.messages_today}`
+
+    });
+
+    io.to(room.id).emit(
+        "roomMessages",
+        room.messages
+    );
+
+    return;
+}
+
 //////////////////////////////////////////////////
 // LIMIT FEED SIZE
 //////////////////////////////////////////////////
