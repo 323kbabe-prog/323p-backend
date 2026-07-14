@@ -2068,7 +2068,16 @@ io.to(roomId).emit(
     rooms[roomId].messages
 );
 
-
+await trackEvent(
+    deviceId,
+    publishMode === "public"
+        ? "public_null"
+        : "private_null",
+    {
+        roomId,
+        coreTheme
+    }
+);
 
 if (publishMode === "public") {
 
