@@ -1169,9 +1169,6 @@ deviceId,
     publishMode
 }) => {
 
-
-
-
 console.log(
     "PUBLIC NULL IMAGE:",
     imageDataUrl.substring(0,40)
@@ -1180,6 +1177,16 @@ console.log(
 
     const user =
       users[socket.id];
+
+    await trackEvent(
+    deviceId,
+    "image_upload",
+    {
+        publishMode,
+        roomMode,
+        askMode
+    }
+);
 
 console.log("SOCKET:", socket.id);
 console.log("CURRENT ROOM:", user.currentRoom);
