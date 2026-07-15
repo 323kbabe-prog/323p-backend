@@ -2520,18 +2520,32 @@ if (text.trim() === adminCode) {
 👥 Users
 Online: ${data.users_online}
 Today: ${data.users_today}
+7 Days: ${data.users_7days}
 Total: ${data.total_users}
 
 🖼 Nulls
-Private: ${data.private_nulls_today}
-Public: ${data.public_nulls_today}
+Private
+Today: ${data.private_nulls_today}
+7 Days: ${data.private_nulls_7days}
+
+Public
+Today: ${data.public_nulls_today}
+7 Days: ${data.public_nulls_7days}
 
 💬 Activity
-Rooms: ${data.rooms_today}
-Images: ${data.images_today}
-Messages: ${data.messages_today}`
+Rooms
+Today: ${data.rooms_today}
+7 Days: ${data.rooms_7days}
 
-    });
+Images
+Today: ${data.images_today}
+7 Days: ${data.images_7days}
+
+Messages
+Today: ${data.messages_today}
+7 Days: ${data.messages_7days}`
+
+});
 
     io.to(room.id).emit(
         "roomMessages",
