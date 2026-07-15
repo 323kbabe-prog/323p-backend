@@ -540,7 +540,7 @@ width:1px;
 height:1px;
 overflow:hidden;
 ">
-Ask Null �� AI Camera Search
+Ask Null – AI Camera Search
 </h1>
 
 <div id="appBgLogo"></div>
@@ -735,7 +735,7 @@ No Room
 </span>
 
 <span style="opacity:.45;padding:0 6px;">
-��
+•
 </span>
 
 <span
@@ -3999,7 +3999,7 @@ opacity:.5;
 margin-bottom:12px;
 "
 >
-�歹� Featured Nulls
+❤️ Featured Nulls
 </div>
 
 <div
@@ -4046,7 +4046,7 @@ font-weight:700;
 class="loveCount"
 data-id="${item.id}"
 >
-�歹� ${item.love || 0}
+❤️ ${item.love || 0}
 </span>
 
 <span
@@ -4055,7 +4055,7 @@ data-id="${item.id}"
 onclick="kickPublicNull('${item.id}')"
 style="cursor:pointer;"
 >
-�� ${item.skeleton || 0}
+💀 ${item.skeleton || 0}
 </span>
 
 </div>
@@ -4124,7 +4124,7 @@ data-id="${item.id}"
 onclick="usePublicNull('${item.id}','${item.image}')"
 style="cursor:pointer;"
 >
-�歹� ${item.love || 0}
+❤️ ${item.love || 0}
 </span>
 
 <span
@@ -4139,7 +4139,7 @@ font-weight:700;
 margin-top:4px;
 "
 >
-�� ${item.skeleton || 0}
+💀 ${item.skeleton || 0}
 </span>
 
 </div>
@@ -4386,7 +4386,7 @@ async function usePublicNull(id,image){
     .querySelectorAll(`.loveCount[data-id="${id}"]`)
     .forEach(el => {
 
-        el.innerText = `�歹� ${json.love}`;
+        el.innerText = `❤️ ${json.love}`;
 
     });
     setTimeout(() => {
@@ -4412,7 +4412,7 @@ async function kickPublicNull(id){
         .querySelectorAll(`.skeletonCount[data-id="${id}"]`)
         .forEach(el => {
 
-            el.innerText = `�� ${json.skeleton}`;
+            el.innerText = `💀 ${json.skeleton}`;
 
         });
 
