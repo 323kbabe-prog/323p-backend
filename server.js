@@ -5,6 +5,7 @@
 // v9.0.0 (2026-07-11)
 // - Added Business Null card
 // - Added Jobs Null card
+// - Added Google Real Estate Null card (one result)
 // - Added NULL Verdict card
 // - Added business search
 // - Improved object search logic
@@ -22,6 +23,7 @@
 // Daily Null
 // Business Null
 // Jobs Null
+// Real Estate Null
 // Verdict Null
 
 const express = require("express");
@@ -764,28 +766,28 @@ Return an empty string if either is missing.
 Examples:
 
 Call John tomorrow at 9.
-→
+��
 {
   "topic":"Call John",
   "time":"tomorrow at 9"
 }
 
 Take medicine every day at 8am.
-→
+��
 {
   "topic":"Take medicine",
   "time":"every day at 8am"
 }
 
 Remind me next Friday.
-→
+��
 {
   "topic":"",
   "time":"next Friday"
 }
 
 Buy milk.
-→
+��
 {
   "topic":"Buy milk",
   "time":""
@@ -1726,10 +1728,10 @@ Ignore:
 Think:
 
 image
-→ meaning
-→ deeper meaning
-→ hidden system
-→ current news
+�� meaning
+�� deeper meaning
+�� hidden system
+�� current news
 
 Search ONLY from the hidden system.
 
@@ -2517,35 +2519,21 @@ if (text.trim() === adminCode) {
 
 `ASK NULL ADMIN
 
-👥 Users
+�𡤻 Users
 Online: ${data.users_online}
 Today: ${data.users_today}
-7 Days: ${data.users_7days}
 Total: ${data.total_users}
 
-🖼 Nulls
-Private
-Today: ${data.private_nulls_today}
-7 Days: ${data.private_nulls_7days}
+�䲰 Nulls
+Private: ${data.private_nulls_today}
+Public: ${data.public_nulls_today}
 
-Public
-Today: ${data.public_nulls_today}
-7 Days: ${data.public_nulls_7days}
+�俥 Activity
+Rooms: ${data.rooms_today}
+Images: ${data.images_today}
+Messages: ${data.messages_today}`
 
-💬 Activity
-Rooms
-Today: ${data.rooms_today}
-7 Days: ${data.rooms_7days}
-
-Images
-Today: ${data.images_today}
-7 Days: ${data.images_7days}
-
-Messages
-Today: ${data.messages_today}
-7 Days: ${data.messages_7days}`
-
-});
+    });
 
     io.to(room.id).emit(
         "roomMessages",
@@ -2612,6 +2600,7 @@ place
 music
 shopping
 jobs
+real_estate
 entity
 reminder
 public_null
@@ -2660,6 +2649,9 @@ The user wants to buy, compare, or find a product.
 jobs
 The user wants jobs, careers, hiring information, or employment.
 
+real_estate
+The user wants to buy, rent, lease, or find a home, apartment, condo, house, land, or other real estate.
+
 entity
 The input is mainly a person, celebrity, company, brand, organization, movie, product, or location.
 
@@ -2695,10 +2687,11 @@ Priority Rules
 4. share
 5. check
 6. null_feed
-7. jobs
-8. shopping
-9. music
-10. place
+7. real_estate
+8. jobs
+9. shopping
+10. music
+11. place
 11. prayer
 12. meditation
 13. poem
@@ -2714,76 +2707,82 @@ Priority Rules
 Examples
 
 latest ai news
-→ news
+�� news
 
 need advice
-→ advice
+�� advice
 
 pray for me
-→ prayer
+�� prayer
 
 encourage me
-→ encouragement
+�� encouragement
 
 help me reflect
-→ reflection
+�� reflection
 
 guide me through meditation
-→ meditation
+�� meditation
 
 write me a letter
-→ letter
+�� letter
 
 write me a poem
-→ poem
+�� poem
 
 shinjuku coffee shop
-→ place
+�� place
 
 tokyo ramen
-→ place
+�� place
 
 i need music
-→ music
+�� music
 
 best worship music
-→ music
+�� music
 
 i need headphones
-→ shopping
+�� shopping
 
 ai jobs seattle
-→ jobs
+�� jobs
+
+apartment for rent taipei
+�� real_estate
+
+buy a house in seattle
+�� real_estate
 
 elon musk
-→ entity
+�� entity
 
 remind me to call mom tomorrow at 8pm
-→ reminder
+�� reminder
 
 publish public null
-→ public_null
+�� public_null
 
 open daily nulls
-→ daily_nulls
+�� daily_nulls
 
 share this
-→ share
+�� share
 
 check
-→ check
+�� check
 
 null feed
-→ null_feed
+�� null_feed
 
 hello
-→ greeting
+�� greeting
 
 hi
-→ greeting
+�� greeting
 
 asdfasdf
-→ unclear
+�� unclear
 
 Return EXACTLY one value.
 
@@ -2905,19 +2904,19 @@ return the exact name.
 Examples:
 
 jisoo
-→ jisoo
+�� jisoo
 
 taylor swift
-→ taylor swift
+�� taylor swift
 
 elon musk
-→ elon musk
+�� elon musk
 
 openai
-→ openai
+�� openai
 
 nike
-→ nike
+�� nike
 
 Only convert to larger systems when the input is not a named entity.
 
@@ -2926,18 +2925,18 @@ Examples:
 Named entities:
 
 jisoo
-→ jisoo
+�� jisoo
 
 openai
-→ openai
+�� openai
 
 Non-emotional systems:
 
 i need money
-→ economic mobility
+�� economic mobility
 
 i hate my job
-→ workplace transformation
+�� workplace transformation
 
 EMOTION MODE
 
@@ -2951,19 +2950,19 @@ The image identity will interpret and respond to those words in its own voice.
 Examples:
 
 i need relationship advice
-→ relationship advice
+�� relationship advice
 
 i feel lonely
-→ lonely
+�� lonely
 
 i miss my ex
-→ miss my ex
+�� miss my ex
 
 i feel anxious
-→ anxious
+�� anxious
 
 i am depressed
-→ depressed
+�� depressed
 
 Use the user's own wording whenever possible.
 
@@ -3010,6 +3009,9 @@ const isNamedEntity =
 
 const isJobSearch =
   intent === "jobs";
+
+const isRealEstateSearch =
+  intent === "real_estate";
 
 const isNextSearch =
   intent === "null_feed";
@@ -3095,25 +3097,25 @@ Do NOT reinterpret requests as:
 Examples:
 
 pray for me
-→ Please pray for me.
+�� Please pray for me.
 
 help me
-→ Please help me.
+�� Please help me.
 
 write letter to my son
-→ Please write a letter to my son.
+�� Please write a letter to my son.
 
 encourage me
-→ Please encourage me.
+�� Please encourage me.
 
 i need job seattle
-→ I need a job in Seattle.
+�� I need a job in Seattle.
 
 tokyo ramen
-→ Find ramen in Tokyo.
+�� Find ramen in Tokyo.
 
 elon musk
-→ Elon Musk.
+�� Elon Musk.
 
 Return JSON only.
 
@@ -3494,7 +3496,7 @@ if (!directNewsSearch) {
       content:`
 Create ONE trending CURRENT NEWS image search phrase.
 
-The uploaded image is not just context—it is the interpreter.
+The uploaded image is not just context�㻳t is the interpreter.
 
 Every user request should be understood through the image's identity, purpose, cultural meaning, function, and hidden system.
 
@@ -3538,11 +3540,11 @@ The hidden system behind the meaning is the subject.
 Interpret the image as:
 
 image
-→ identity
-→ meaning
-→ deeper meaning
-→ hidden system
-→ current news
+�� identity
+�� meaning
+�� deeper meaning
+�� hidden system
+�� current news
 
 Move TWO layers beyond the visible object.
 
@@ -3565,44 +3567,44 @@ Instead ask:
 Examples:
 
 coffee cup
-→ routine
-→ consumer identity
-→ retail psychology
-→ consumer spending
+�� routine
+�� consumer identity
+�� retail psychology
+�� consumer spending
 
 coffee cup
-→ routine
-→ workplace culture
-→ remote work economy
+�� routine
+�� workplace culture
+�� remote work economy
 
 frying pan
-→ cooking
-→ daily routine
-→ work life balance
-→ remote work trends
+�� cooking
+�� daily routine
+�� work life balance
+�� remote work trends
 
 frying pan
-→ household labor
-→ family structure
-→ birth rate decline
+�� household labor
+�� family structure
+�� birth rate decline
 
 keyboard
-→ productivity
-→ knowledge work
-→ ai automation
-→ labor market transformation
+�� productivity
+�� knowledge work
+�� ai automation
+�� labor market transformation
 
 book
-→ learning
-→ information access
-→ education systems
-→ workforce transformation
+�� learning
+�� information access
+�� education systems
+�� workforce transformation
 
 shoe
-→ identity
-→ consumer expression
-→ youth culture
-→ spending behavior
+�� identity
+�� consumer expression
+�� youth culture
+�� spending behavior
 
 The final search should reveal:
 
@@ -3760,18 +3762,18 @@ Examples:
 Need travel
 
 Food preparation station
-→ street food tourism
-→ culinary travel
-→ airport dining trends
+�� street food tourism
+�� culinary travel
+�� airport dining trends
 
 Coffee cup
-→ cafe culture travel
+�� cafe culture travel
 
 Cross
-→ pilgrimage travel
+�� pilgrimage travel
 
 Keyboard
-→ digital nomad travel
+�� digital nomad travel
 
 If your search could also work for every uploaded image, it is WRONG.
 
@@ -3779,10 +3781,10 @@ Rewrite it until the uploaded image clearly changes the search.
 
 Examples:
 
-jisoo → jisoo latest news
-elon musk → elon musk latest news
-openai → openai latest news
-nike → nike latest news
+jisoo �� jisoo latest news
+elon musk �� elon musk latest news
+openai �� openai latest news
+nike �� nike latest news
 
 Do NOT convert named entities into larger systems.
 
@@ -3817,15 +3819,15 @@ The hidden system is the subject.
 The search should evolve from:
 
 image
-→ hidden system
-→ current news
+�� hidden system
+�� current news
 
 NOT:
 
 image
-→ object
-→ category
-→ current news
+�� object
+�� category
+�� current news
 
 The final search should reveal:
 
@@ -3890,7 +3892,9 @@ if (
 
     link:cachedTopic.link,
 
-    jobCard:cachedTopic.jobCard
+    jobCard:cachedTopic.jobCard,
+
+    realEstateCard:cachedTopic.realEstateCard
 
 });
 
@@ -3953,6 +3957,111 @@ room.usedSearches.push(
 );
 
 //////////////////////////////////////////////////
+// GOOGLE REAL ESTATE SEARCH �� ONE RESULT
+//////////////////////////////////////////////////
+
+if (isRealEstateSearch) {
+
+  const realEstateQueryRes =
+    await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
+Create ONE Google real-estate search query.
+
+Preserve exactly:
+- buy or rent intent
+- requested location
+- property type
+- bedrooms, budget, and other requirements when provided
+
+Do not let the uploaded image change the requested location or property type.
+Return ONLY the search query.
+Use 2 to 12 words, lowercase, with no punctuation.
+`
+        },
+        {
+          role: "user",
+          content: `
+User request:
+${text}
+
+Image identity:
+${room.imageContext}
+`
+        }
+      ]
+    });
+
+  const realEstateQuery =
+    realEstateQueryRes.choices[0].message.content.trim();
+
+  const googleRealEstateUrl =
+    "https://www.google.com/search?q=" +
+    encodeURIComponent(realEstateQuery);
+
+  const realEstateFetch = await fetch(
+    `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(realEstateQuery)}&api_key=${process.env.SERPAPI_KEY}`
+  );
+
+  if (!realEstateFetch.ok) {
+    room.messages.push({
+      from: "NULL",
+      aiBeing: true,
+      showNextButton: true,
+      text: "Real-estate search is unavailable right now."
+    });
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
+  }
+
+  const realEstateRes = await realEstateFetch.json();
+  const result = realEstateRes.organic_results?.[0];
+
+  if (!result) {
+    room.messages.push({
+      from: "NULL",
+      aiBeing: true,
+      showNextButton: true,
+      text: "No real-estate result found. Try adding a city or neighborhood."
+    });
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
+  }
+
+  const realEstateCard = {
+    title: result.title,
+    description: result.snippet || "",
+    source: result.source || result.displayed_link || "Google",
+    link: result.link || googleRealEstateUrl,
+    googleLink: googleRealEstateUrl
+  };
+
+  room.messages.push({
+    from: "CHANG, TIEN",
+    aiBeing: true,
+    showNextButton: true,
+    realEstateCard
+  });
+
+  room.topicMemory[topicKey] = {
+    searchLabel: "Real Estate",
+    ask: result.title,
+    image: null,
+    link: realEstateCard.link,
+    realEstateCard
+  };
+
+  io.to(room.id).emit("aiTypingStop");
+  io.to(room.id).emit("roomMessages", room.messages);
+  return;
+}
+
+//////////////////////////////////////////////////
 // SERP CURRENT NEWS SEARCH
 //////////////////////////////////////////////////
 
@@ -3989,22 +4098,22 @@ Prioritize:
 Examples:
 
 Need ai job
-→ machine learning engineer
+�� machine learning engineer
 
 Need ai job Seattle
-→ machine learning engineer seattle
+�� machine learning engineer seattle
 
 Need ai job New York
-→ machine learning engineer new york
+�� machine learning engineer new york
 
 Need product designer Tokyo
-→ product designer tokyo
+�� product designer tokyo
 
 Need remote ai job
-→ machine learning engineer remote
+�� machine learning engineer remote
 
 Need OpenAI job Seattle
-→ openai software engineer seattle
+�� openai software engineer seattle
 
 Image:
 coffee cup
@@ -4402,10 +4511,10 @@ search directly about that entity.
 
 Examples:
 
-jisoo → jisoo latest news
-elon musk → elon musk latest news
-openai → openai latest news
-nike → nike latest news
+jisoo �� jisoo latest news
+elon musk �� elon musk latest news
+openai �� openai latest news
+nike �� nike latest news
 
 Do NOT convert named entities into larger systems.
 
@@ -4482,21 +4591,21 @@ Never change the requested place type.
 Examples:
 
 hotel in shinjuku
-→ luxury hotel in shinjuku
+�� luxury hotel in shinjuku
 
 coffee shop in shinjuku
-→ specialty coffee shop in shinjuku
+�� specialty coffee shop in shinjuku
 
 ramen in shibuya
-→ premium ramen shop in shibuya
+�� premium ramen shop in shibuya
 
 Wrong:
 
 hotel in shinjuku
-→ car dealership
+�� car dealership
 
 coffee shop
-→ museum
+�� museum
 
 The hidden system can influence style, quality, neighborhood, or atmosphere, but NEVER the place category.
 Return ONLY the Google local search query.
@@ -4960,7 +5069,7 @@ Whenever appropriate:
 
 Keep the response concise.
 
-Normally use 2–4 short paragraphs unless the requested form naturally requires another structure.
+Normally use 2��4 short paragraphs unless the requested form naturally requires another structure.
 
 First determine what kind of response the user is asking for.
 
@@ -5575,7 +5684,7 @@ console.log(publicNulls);
     server.listen(10000, () => {
 
         console.log(
-            "CONNECTAING V9 — ASK NULL — meet null — 21:16 2026/07/04"
+            "CONNECTAING V9 �� ASK NULL �� meet null �� 21:16 2026/07/04"
         );
 
     });
