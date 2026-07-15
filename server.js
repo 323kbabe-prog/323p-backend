@@ -5,7 +5,7 @@
 // v9.0.0 (2026-07-11)
 // - Added Business Null card
 // - Added Jobs Null card
-// - Added Google Real Estate Null card (one result)
+// - Added real estate as a Find a Place result type
 // - Added NULL Verdict card
 // - Added business search
 // - Improved object search logic
@@ -1168,7 +1168,10 @@ deviceId,
     imageDataUrl,
     roomMode,
     askMode,
-    publishMode
+    publishMode,
+    publicNullId,
+    publicNullIdentity,
+    publicNullIntro
 }) => {
 
 console.log(
@@ -1179,6 +1182,31 @@ console.log(
 
     const user =
       users[socket.id];
+
+    let sourcePublicNull =
+      publicNullId && publicNullIdentity && publicNullIntro
+        ? {
+            id: publicNullId,
+            image: imageDataUrl,
+            identity: publicNullIdentity,
+            intro: publicNullIntro
+          }
+        : publicNullId
+          ? publicNulls.find(item => String(item.id) === String(publicNullId))
+          : null;
+
+    if (publicNullId && !sourcePublicNull) {
+      const { data: storedPublicNull, error: publicNullError } =
+        await supabase
+          .from("public_nulls")
+          .select("id,image,identity,intro,love,skeleton,created_at")
+          .eq("id", publicNullId)
+          .single();
+
+      if (!publicNullError && storedPublicNull) {
+        sourcePublicNull = storedPublicNull;
+      }
+    }
 
     await trackEvent(
     deviceId,
@@ -1200,6 +1228,12 @@ console.log("CURRENT ROOM:", user.currentRoom);
       imageDataUrl;
 
     try{
+
+      let coreTheme = "culture";
+
+      if (sourcePublicNull) {
+        user.imageContext = sourcePublicNull.identity;
+      } else {
       
       const res =
         await openai.chat.completions.create({
@@ -1360,7 +1394,7 @@ Rules:
   ]
 });
 
-const coreTheme =
+coreTheme =
 
   themeRes
     .choices[0]
@@ -1368,6 +1402,8 @@ const coreTheme =
     .content
     .trim()
     .toLowerCase();
+
+      }
 
 //////////////////////////////////////////////////
 // ROOM MODE
@@ -1519,6 +1555,28 @@ deviceRooms[deviceId] = roomId;
 
 }
 
+if (sourcePublicNull) {
+
+    const room = rooms[roomId];
+
+    room.imageContext = sourcePublicNull.identity;
+    room.hiddenSystem = sourcePublicNull.identity;
+    room.nullCard = {
+        image: sourcePublicNull.image,
+        identity: sourcePublicNull.identity,
+        intro: sourcePublicNull.intro,
+        publicNullId: sourcePublicNull.id
+    };
+
+    room.messages = [{
+        type: "nullCard",
+        image: sourcePublicNull.image,
+        identity: sourcePublicNull.identity,
+        intro: sourcePublicNull.intro,
+        publicNullId: sourcePublicNull.id
+    }];
+}
+
 
 console.log("ROOM CREATED:", roomId);
 console.log("ROOM COUNT:", Object.keys(rooms).length);
@@ -1542,15 +1600,19 @@ socket.emit("roomCreated", {
 
     imageDataUrl: null,
 
-    messages: [],
+    messages: rooms[roomId].messages,
 
     expiresAt: rooms[roomId].expiresAt,
 
     isOwner,
 
-    nullCard: null
+    nullCard: rooms[roomId].nullCard
 
 });
+
+if (sourcePublicNull) {
+  socket.emit("imageAiIntro", sourcePublicNull.intro);
+}
 
 io.to(roomId).emit(
     "roomMessages",
@@ -1564,7 +1626,7 @@ io.to(roomId).emit(
 //////////////////////////////////////////////////
 // GENERATE FIRST AI MESSAGE ASYNC
 //////////////////////////////////////////////////
-if(true){
+if(!sourcePublicNull){
 
 io.to(roomId).emit(
   "aiTypingStart"
@@ -2809,6 +2871,14 @@ if (combinedIntent.toLowerCase() === "null feed") {
     intent = "null_feed";
 }
 
+const hasRealEstateLanguage =
+  /\b(apartment|condo|house|home|property|real estate|land|rental|rent|lease|housing)\b/i
+    .test(combinedIntent);
+
+if (hasRealEstateLanguage) {
+  intent = "real_estate";
+}
+
 if(intent === "unclear"){
 
   room.messages.push({
@@ -3010,14 +3080,11 @@ const isNamedEntity =
 const isJobSearch =
   intent === "jobs";
 
-const isRealEstateSearch =
-  intent === "real_estate";
-
 const isNextSearch =
   intent === "null_feed";
 
 const isLocationRequest =
-  intent === "place";   
+  intent === "place" || intent === "real_estate";   
 
 const topicKey = userIntent.trim().toLowerCase();
 
@@ -3394,13 +3461,20 @@ if(
           content:`
 Create ONE Google News search.
 
+${intent === "real_estate" ? `
+REAL ESTATE MODE:
+- The news search MUST be about housing, apartments, property, rent, home prices, development, or the real-estate market.
+- Preserve the requested city or neighborhood.
+- Never search for bars, restaurants, nightlife, coffee shops, hotels, fashion, music, or unrelated venues.
+` : ""}
+
 The hidden system is the subject.
 
 The original user request determines the destination.
 
 If the original user request contains:
 - a location (city, country, state, neighborhood, district, or "near me")
-- a place type (hotel, coffee shop, ramen, bar, museum, hospital, park, etc.)
+- a place type (hotel, coffee shop, ramen, bar, museum, hospital, park, apartment, condo, house, land, real-estate property, etc.)
 
 ALWAYS preserve BOTH.
 
@@ -3892,9 +3966,7 @@ if (
 
     link:cachedTopic.link,
 
-    jobCard:cachedTopic.jobCard,
-
-    realEstateCard:cachedTopic.realEstateCard
+    jobCard:cachedTopic.jobCard
 
 });
 
@@ -3955,111 +4027,6 @@ console.log(
 room.usedSearches.push(
   searchQuery
 );
-
-//////////////////////////////////////////////////
-// GOOGLE REAL ESTATE SEARCH — ONE RESULT
-//////////////////////////////////////////////////
-
-if (isRealEstateSearch) {
-
-  const realEstateQueryRes =
-    await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `
-Create ONE Google real-estate search query.
-
-Preserve exactly:
-- buy or rent intent
-- requested location
-- property type
-- bedrooms, budget, and other requirements when provided
-
-Do not let the uploaded image change the requested location or property type.
-Return ONLY the search query.
-Use 2 to 12 words, lowercase, with no punctuation.
-`
-        },
-        {
-          role: "user",
-          content: `
-User request:
-${text}
-
-Image identity:
-${room.imageContext}
-`
-        }
-      ]
-    });
-
-  const realEstateQuery =
-    realEstateQueryRes.choices[0].message.content.trim();
-
-  const googleRealEstateUrl =
-    "https://www.google.com/search?q=" +
-    encodeURIComponent(realEstateQuery);
-
-  const realEstateFetch = await fetch(
-    `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(realEstateQuery)}&api_key=${process.env.SERPAPI_KEY}`
-  );
-
-  if (!realEstateFetch.ok) {
-    room.messages.push({
-      from: "NULL",
-      aiBeing: true,
-      showNextButton: true,
-      text: "Real-estate search is unavailable right now."
-    });
-    io.to(room.id).emit("aiTypingStop");
-    io.to(room.id).emit("roomMessages", room.messages);
-    return;
-  }
-
-  const realEstateRes = await realEstateFetch.json();
-  const result = realEstateRes.organic_results?.[0];
-
-  if (!result) {
-    room.messages.push({
-      from: "NULL",
-      aiBeing: true,
-      showNextButton: true,
-      text: "No real-estate result found. Try adding a city or neighborhood."
-    });
-    io.to(room.id).emit("aiTypingStop");
-    io.to(room.id).emit("roomMessages", room.messages);
-    return;
-  }
-
-  const realEstateCard = {
-    title: result.title,
-    description: result.snippet || "",
-    source: result.source || result.displayed_link || "Google",
-    link: result.link || googleRealEstateUrl,
-    googleLink: googleRealEstateUrl
-  };
-
-  room.messages.push({
-    from: "CHANG, TIEN",
-    aiBeing: true,
-    showNextButton: true,
-    realEstateCard
-  });
-
-  room.topicMemory[topicKey] = {
-    searchLabel: "Real Estate",
-    ask: result.title,
-    image: null,
-    link: realEstateCard.link,
-    realEstateCard
-  };
-
-  io.to(room.id).emit("aiTypingStop");
-  io.to(room.id).emit("roomMessages", room.messages);
-  return;
-}
 
 //////////////////////////////////////////////////
 // SERP CURRENT NEWS SEARCH
@@ -4584,6 +4551,18 @@ Create ONE Google local search query.
 
 The ORIGINAL USER REQUEST determines the place type.
 
+Real estate is a place type in this same system.
+For apartment, condo, house, land, rental, or property requests, preserve:
+- buy or rent intent
+- city, neighborhood, or near-me location
+- property type
+- bedrooms, budget, and other requirements
+
+Return ONE Google local result only, exactly like coffee shop or hotel requests.
+
+In real-estate mode, the result MUST be an apartment, condo, house, housing development, property, or real-estate location.
+Never return a bar, restaurant, coffee shop, hotel, store, nightlife venue, music venue, or unrelated business.
+
 The hidden system only determines WHICH place of that type to recommend.
 
 Never change the requested place type.
@@ -4598,6 +4577,12 @@ coffee shop in shinjuku
 
 ramen in shibuya
 → premium ramen shop in shibuya
+
+apartment for rent in taipei
+→ modern apartment rental in taipei
+
+buy a condo in seattle
+→ premium condo for sale in seattle
 
 Wrong:
 
@@ -4627,6 +4612,9 @@ ${interpretedIntent}
 
 Original request:
 ${originalUserRequest}
+
+Current local news:
+${selectedNews?.title || ""}
 `
 
       }
@@ -4704,6 +4692,15 @@ placeLink =
         encodeURIComponent(placeName)
       : ""
   );
+
+if (intent === "real_estate" && placeName) {
+  const realEstateMapQuery =
+    `${placeName} ${nullInput.location || originalUserRequest}`.trim();
+
+  placeLink =
+    "https://www.google.com/maps/search/?api=1&query=" +
+    encodeURIComponent(realEstateMapQuery);
+}
 
 console.log(
   "PLACE LINK:",
@@ -4839,6 +4836,13 @@ if(!skipPlaceFlow){
           role:"system",
           content:`
 You are Ask Null.
+
+${intent === "real_estate" ? `
+REAL ESTATE MODE:
+- The selected place is a real-estate property or housing location.
+- The explanation must be about housing, property, rent, home buying, development, or the real-estate market.
+- Never describe a bar, restaurant, nightlife venue, coffee shop, hotel, or unrelated business.
+` : ""}
 
 Explain why this real place is contextually connected to the current news.
 
