@@ -6,6 +6,7 @@ CHANGE LOG
 
 v9.0.0 (2026-07-11)
 - Added business search
+- Added Google Real Estate search with one result
 - Improved object search logic
 - Added NULL Verdict
 - Fixed share button room ID
@@ -539,7 +540,7 @@ width:1px;
 height:1px;
 overflow:hidden;
 ">
-Ask Null – AI Camera Search
+Ask Null �� AI Camera Search
 </h1>
 
 <div id="appBgLogo"></div>
@@ -734,7 +735,7 @@ No Room
 </span>
 
 <span style="opacity:.45;padding:0 6px;">
-•
+��
 </span>
 
 <span
@@ -2791,6 +2792,33 @@ ${m.jobCard.posted}
 `;
 }
 
+if (m.realEstateCard) {
+
+return `
+
+<div style="width:100%;display:flex;justify-content:center;margin-bottom:18px;">
+<div data-share-card data-link="${m.realEstateCard.link}" style="border:1px solid #ececec;max-width:340px;background:#fff;color:#000;padding:16px;border-radius:24px;box-shadow:0 2px 10px rgba(0,0,0,0.12);">
+
+<div data-share-content>
+<div style="font-size:14px;font-weight:300;opacity:.45;margin-bottom:8px;">Google Real Estate</div>
+<div style="font-size:13px;font-weight:300;opacity:.55;margin-bottom:10px;">One property result I think you should notice:</div>
+<div style="font-size:16px;line-height:1.4;font-weight:700;word-break:break-word;">${m.realEstateCard.title}</div>
+${m.realEstateCard.description ? `<div style="font-size:14px;line-height:1.45;font-weight:300;margin-top:8px;">${m.realEstateCard.description}</div>` : ""}
+<div style="font-size:12px;opacity:.5;margin-top:8px;">${m.realEstateCard.source || "Google"}</div>
+</div>
+
+<div style="display:flex;gap:10px;margin-top:14px;">
+<a href="${m.realEstateCard.link}" target="_blank" rel="noopener noreferrer" style="font-size:12px;font-weight:700;background:#000;color:#fff;padding:8px 12px;border-radius:999px;text-decoration:none;">Check</a>
+<a href="${m.realEstateCard.googleLink}" target="_blank" rel="noopener noreferrer" style="font-size:12px;font-weight:700;background:#000;color:#fff;padding:8px 12px;border-radius:999px;text-decoration:none;">Google</a>
+<span data-link="${m.realEstateCard.link}" onclick="shareCard(this,this.dataset.link)" style="cursor:pointer;font-size:12px;font-weight:700;background:#000;color:#fff;padding:8px 12px;border-radius:999px;">Share</span>
+</div>
+
+</div>
+</div>
+
+`;
+}
+
 if(m.ask){
 
 return `
@@ -3971,7 +3999,7 @@ opacity:.5;
 margin-bottom:12px;
 "
 >
-❤️ Featured Nulls
+�歹� Featured Nulls
 </div>
 
 <div
@@ -4018,7 +4046,7 @@ font-weight:700;
 class="loveCount"
 data-id="${item.id}"
 >
-❤️ ${item.love || 0}
+�歹� ${item.love || 0}
 </span>
 
 <span
@@ -4027,7 +4055,7 @@ data-id="${item.id}"
 onclick="kickPublicNull('${item.id}')"
 style="cursor:pointer;"
 >
-💀 ${item.skeleton || 0}
+�� ${item.skeleton || 0}
 </span>
 
 </div>
@@ -4096,7 +4124,7 @@ data-id="${item.id}"
 onclick="usePublicNull('${item.id}','${item.image}')"
 style="cursor:pointer;"
 >
-❤️ ${item.love || 0}
+�歹� ${item.love || 0}
 </span>
 
 <span
@@ -4111,7 +4139,7 @@ font-weight:700;
 margin-top:4px;
 "
 >
-💀 ${item.skeleton || 0}
+�� ${item.skeleton || 0}
 </span>
 
 </div>
@@ -4358,7 +4386,7 @@ async function usePublicNull(id,image){
     .querySelectorAll(`.loveCount[data-id="${id}"]`)
     .forEach(el => {
 
-        el.innerText = `❤️ ${json.love}`;
+        el.innerText = `�歹� ${json.love}`;
 
     });
     setTimeout(() => {
@@ -4384,7 +4412,7 @@ async function kickPublicNull(id){
         .querySelectorAll(`.skeletonCount[data-id="${id}"]`)
         .forEach(el => {
 
-            el.innerText = `💀 ${json.skeleton}`;
+            el.innerText = `�� ${json.skeleton}`;
 
         });
 
