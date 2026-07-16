@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.12 (2026-07-17)
+// - Made AI Being bio, category, and three personality words drive 80% of
+//   generated interpretations, search directions, cards, and room replies
+
 // v10.0.11 (2026-07-17)
 // - Fixed AI Being form creation crash caused by an out-of-scope recovery code
 
@@ -1214,7 +1218,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `AI Being Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}`
+      ? `AI Being Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nAI BEING RESPONSE INFLUENCE\n- 80% of every interpretation, search direction, card choice, recommendation, reason, tone, and conversational reply must be driven by the Bio, Category, and three Personality words above.\n- The remaining 20% comes from the uploaded image, the user's current request, location, and verified live search information.\n- Apply this identity as the dominant perspective throughout the entire room, including automatic first-round cards and every later reply.\n- Do not mechanically repeat the profile fields. Express them naturally through priorities, language, choices, and reasoning.\n- Never change, invent, or distort factual search results to match the personality.`
       : "AI Being Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -3067,6 +3071,13 @@ if(intent === "unclear"){
 console.log("INTENT:", intent);
 
 if(intent === "greeting"){
+  const beingBio = room.being
+    ? String(room.being.best_current_choice || "").trim().replace(/[.!?]+$/, "")
+    : "";
+  const greetingReply = room.being
+    ? `I am ${room.being.name}. My perspective is rooted in ${beingBio}. I approach what you show me through ${room.being.category}, guided by ${room.being.word1}, ${room.being.word2}, and ${room.being.word3}. What would you like to explore?`
+    : "ASK.CAMERA is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM).";
+
     room.messages.push({
   from: user.displayName,
   text
@@ -3076,8 +3087,8 @@ room.messages.push({
   from: "CAMERA PERSPECTIVE",
   aiBeing: true,
   showNextButton: true,
-  searchLabel: "About ASK.CAMERA",
-  text: "ASK.CAMERA is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
+  searchLabel: room.being ? room.being.name : "About ASK.CAMERA",
+  text: greetingReply
 });
 
   io.to(room.id).emit(
