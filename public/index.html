@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.11 (2026-07-16)
+  v10.0.12 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -4837,10 +4837,38 @@ async function loadAIBeings(){
           ${[being.word1,being.word2,being.word3].map(word => `<span style="background:#f1f1f1;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;">${escapeBeingText(word)}</span>`).join("")}
         </div>
         <button onclick="openAIBeing('${being.id}')" style="margin-top:14px;width:100%;height:42px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">OPEN</button>
+        <button onclick="deleteAIBeing('${being.id}')" style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:4px 8px;border:none;border-radius:999px;background:#f5f5f5;color:#666;font-size:9px;font-weight:500;cursor:pointer;opacity:.8;">
+          ⚙ Admin
+        </button>
       </div>
     `).join("");
   }catch(error){
     holder.innerHTML = `<div class="beingCard">${escapeBeingText(error.message)}</div>`;
+  }
+}
+
+async function deleteAIBeing(id){
+  const password = prompt("Enter password");
+
+  if(password === null) return;
+
+  if(password !== "AskNull2026"){
+    alert("Wrong password");
+    return;
+  }
+
+  if(!confirm("Delete this AI Being permanently?")) return;
+
+  try{
+    const response = await fetch(
+      `${AI_BEINGS_API}/ai-beings/${encodeURIComponent(id)}?password=${encodeURIComponent(password)}`,
+      { method:"DELETE" }
+    );
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || "Could not delete AI Being.");
+    await loadAIBeings();
+  }catch(error){
+    alert(error.message);
   }
 }
 
