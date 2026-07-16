@@ -2,7 +2,7 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
-// v10.0.0 (2026-07-16)
+// v10.0.3 (2026-07-16)
 // - Added Business Null card
 // - Added Jobs Null card
 // - Added real estate as a Find a Place result type
@@ -1203,7 +1203,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `AI Being Name: ${selectedBeing.name}\nBest Current Choice: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}`
+      ? `AI Being Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}`
       : "AI Being Name: Ask Null";
 
     let sourcePublicNull =
@@ -5705,16 +5705,84 @@ app.post("/ai-beings", async (req, res) => {
     return res.status(400).json({ error: "All AI Being fields are required." });
   }
 
+  let englishBeing;
+
+  try {
+    const rewriteResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: `
+You are the ASK NULL ENGLISH REWRITE SYSTEM.
+
+The user may enter AI Being information in any language.
+Translate and rewrite every descriptive field into clear, natural,
+grammatically correct English before it is saved.
+
+Return JSON only with exactly these keys:
+name, bio, category, word1, word2, word3
+
+Rules:
+- Preserve the user's meaning. Never invent facts or change the personality.
+- Preserve proper names, person names, brands, companies, cities, and countries.
+- Bio must be exactly one concise, complete English sentence.
+- Bio must contain no more than 160 characters, including spaces.
+- Category must be a short English category.
+- word1, word2, and word3 must each be a short English word or phrase.
+- Correct grammar, spelling, punctuation, and sentence flow.
+- All descriptive output must be English.
+          `.trim()
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            name: String(name).trim(),
+            bio: String(best_current_choice).trim(),
+            category: String(category).trim(),
+            word1: String(word1).trim(),
+            word2: String(word2).trim(),
+            word3: String(word3).trim()
+          })
+        }
+      ]
+    });
+
+    englishBeing = JSON.parse(
+      rewriteResponse.choices?.[0]?.message?.content || "{}"
+    );
+
+    const rewrittenRequired = [
+      englishBeing.name,
+      englishBeing.bio,
+      englishBeing.category,
+      englishBeing.word1,
+      englishBeing.word2,
+      englishBeing.word3
+    ];
+
+    if (rewrittenRequired.some(value => !String(value || "").trim())) {
+      throw new Error("The English rewrite was incomplete.");
+    }
+  } catch (rewriteError) {
+    console.error("AI Being English rewrite failed:", rewriteError);
+    return res.status(502).json({
+      error: "Could not rewrite the AI Being information in English. Please try again."
+    });
+  }
+
   const { data, error } = await supabase
     .from("ai_beings")
     .insert({
       photo,
-      name: String(name).trim().slice(0, 60),
-      best_current_choice: String(best_current_choice).trim().slice(0, 240),
-      category: String(category).trim().slice(0, 60),
-      word1: String(word1).trim().slice(0, 40),
-      word2: String(word2).trim().slice(0, 40),
-      word3: String(word3).trim().slice(0, 40),
+      name: String(englishBeing.name).trim().slice(0, 60),
+      best_current_choice: String(englishBeing.bio).trim().slice(0, 160),
+      category: String(englishBeing.category).trim().slice(0, 60),
+      word1: String(englishBeing.word1).trim().slice(0, 40),
+      word2: String(englishBeing.word2).trim().slice(0, 40),
+      word3: String(englishBeing.word3).trim().slice(0, 40),
       created_by: created_by || null,
       followers: 0,
       public: true
