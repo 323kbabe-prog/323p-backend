@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.33 (2026-07-17)
+- Fixed AI Being image uploads incorrectly reporting Reconnecting after recovery
+- Made ASK.CAMERA and Back to ASK.CAMERA start a completely new standard session
+
   v10.0.32 (2026-07-17)
 - Replaced the three AI Beings gallery navigation buttons with one Back to ASK.CAMERA button
 
@@ -1991,13 +1995,16 @@ function hideRoomLoadingScreen(){
   
 function continueCreateRoom(){
 
-if (!roomReady) {
+if (!socket.connected) {
 
-    alert("Reconnecting...");
+    socket.connect();
+    alert("Connection is restoring. Please try again in a moment.");
 
     return;
 
 }
+
+roomReady = true;
 
 
     publishMode =
@@ -3780,6 +3787,8 @@ document.getElementById("homeRoomId").innerText =
   
 socket.on("connect", () => {
 
+    roomReady = true;
+
     socket.emit("registerDevice", {
         deviceId
     });
@@ -4215,23 +4224,18 @@ function startDailyNullCountdown(){
 
 function showCreateNull(){
 
-    document.getElementById("modeBar").style.display = "";
+    [
+      "displayName",
+      "roomId",
+      "imageIntroText",
+      "roomThumbnail",
+      "selectedBeingId",
+      "selectedBeing",
+      "selectedBeingSessionId"
+    ].forEach(key => localStorage.removeItem(key));
 
-    localStorage.removeItem("selectedBeingId");
-    localStorage.removeItem("selectedBeing");
-
-    document.getElementById("aiBeingsScreen").style.display = "none";
-
-    publicNullsScreen.style.display = "none";
-
-    dailyNullsScreen.style.display = "none";
-
-    cameraWrap.style.display = "block";
-
-gtag('event', 'page_view', {
-  page_title: 'Create Camera Perspective',
-  page_path: '/create'
-});
+    history.replaceState({}, "", "/");
+    location.reload();
 
 }
 
