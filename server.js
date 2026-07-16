@@ -2,6 +2,9 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.13 (2026-07-17)
+// - Added explicit device detachment when an AI Being room session is ended
+
 // v10.0.12 (2026-07-17)
 // - Made AI Being bio, category, and three personality words drive 80% of
 //   generated interpretations, search directions, cards, and room replies
@@ -654,6 +657,28 @@ io.on("connection", socket => {
             "visit"
         );
 
+    });
+
+    socket.on("leaveCurrentRoom", ({ deviceId } = {}, acknowledge) => {
+        const user = users[socket.id];
+        const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
+
+        if (roomId) socket.leave(roomId);
+
+        if (deviceId && deviceRooms[deviceId] === roomId) {
+            delete deviceRooms[deviceId];
+        }
+
+        if (user) {
+            user.currentRoom = null;
+            user.displayName = null;
+            user.imageContext = null;
+            user.lastImage = null;
+        }
+
+        if (typeof acknowledge === "function") {
+            acknowledge({ success: true });
+        }
     });
 
 socket.on(
