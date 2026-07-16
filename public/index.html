@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.35 (2026-07-17)
+- Restored the one-hour countdown for standard ASK.CAMERA rooms
+- Kept AI Being rooms permanent without a countdown
+- Preserved the correct timer state after reconnecting
+
   v10.0.34 (2026-07-17)
 - Made X and ASK.CAMERA detach the device from its backend room before restarting
 
@@ -1537,18 +1542,29 @@ let hasAutoRejoined = false;
 let roomExpiresAt = 0;
 let rejoinTimeout = null;
 let roomCountdownTimer = null;
+
+function stopRoomCountdown(){
+    clearInterval(roomCountdownTimer);
+    roomCountdownTimer = null;
+}
+
 function startRoomCountdown(){
 
-    clearInterval(roomCountdownTimer);
+    stopRoomCountdown();
 
-    roomCountdownTimer = setInterval(() => {
+    if(!Number.isFinite(Number(roomExpiresAt)) || Number(roomExpiresAt) <= 0){
+        document.getElementById("homeRoomCountdown").innerText = "--:--";
+        return;
+    }
+
+    const updateRoomCountdown = () => {
 
         const remain =
             roomExpiresAt - Date.now();
 
 if(remain <= 0){
 
-    clearInterval(roomCountdownTimer);
+    stopRoomCountdown();
 
     document.getElementById("roomCountdown").innerText =
         "Expired";
@@ -1585,7 +1601,10 @@ if(remain <= 0){
     ":" +
     String(secs).padStart(2,"0");
 
-    },1000);
+    };
+
+    updateRoomCountdown();
+    roomCountdownTimer = setInterval(updateRoomCountdown,1000);
 
 }
 
@@ -2389,7 +2408,12 @@ roomExpiresAt = data.expiresAt;
 document.getElementById("homeRoomId").innerText =
     "Room #" + data.roomId;
 
-if (!data.permanent) startRoomCountdown();
+if (data.permanent) {
+    stopRoomCountdown();
+    document.getElementById("homeRoomCountdown").innerText = "--:--";
+} else {
+    startRoomCountdown();
+}
 
 localStorage.setItem("roomId", data.roomId);
   
@@ -2405,7 +2429,12 @@ roomExpiresAt = data.expiresAt;
 document.getElementById("homeRoomCard").style.display = "block";
 document.getElementById("homeRoomId").innerText =
     "Room #" + data.roomId;
-    if (!data.permanent) startRoomCountdown();
+    if (data.permanent) {
+        stopRoomCountdown();
+        document.getElementById("homeRoomCountdown").innerText = "--:--";
+    } else {
+        startRoomCountdown();
+    }
 
 
 
@@ -3808,7 +3837,12 @@ document.getElementById("homeRoomId").innerText =
 
     roomExpiresAt = data.expiresAt;
 
-    startRoomCountdown();
+    if (data.permanent) {
+        stopRoomCountdown();
+        document.getElementById("homeRoomCountdown").innerText = "--:--";
+    } else {
+        startRoomCountdown();
+    }
 
 });
   
