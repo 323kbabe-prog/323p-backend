@@ -2,7 +2,7 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
-// v9.0.0 (2026-07-11)
+// v10.0.0 (2026-07-16)
 // - Added Business Null card
 // - Added Jobs Null card
 // - Added real estate as a Find a Place result type
@@ -40,7 +40,7 @@ const twilio = require("twilio");
 const app = express();
 
 app.use(cors({ origin: "*" }));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 const path = require("path");
 
@@ -287,8 +287,8 @@ setInterval(() => {
   for(const roomId in rooms){
 
     if(
-      now >
-      rooms[roomId].expiresAt
+      !rooms[roomId].permanent &&
+      now > rooms[roomId].expiresAt
     ){
 
       io.to(roomId).emit(
@@ -1081,7 +1081,7 @@ console.log("ROOMS:", Object.keys(rooms));
     const room =
       rooms[roomId];
 
-if (!room || Date.now() > room.expiresAt) {
+if (!room || (!room.permanent && Date.now() > room.expiresAt)) {
     socket.emit("roomExpired");
     return;
 }
@@ -1127,6 +1127,10 @@ socket.emit("roomCreated", {
 
     nullCard: room.nullCard
 
+    ,being: room.being || null,
+
+    permanent: !!room.permanent
+
 });
 
 
@@ -1171,7 +1175,9 @@ deviceId,
     publishMode,
     publicNullId,
     publicNullIdentity,
-    publicNullIntro
+    publicNullIntro,
+    beingId,
+    beingSessionId
 }) => {
 
 console.log(
@@ -1182,6 +1188,23 @@ console.log(
 
     const user =
       users[socket.id];
+
+    let selectedBeing = null;
+
+    if (beingId) {
+      const { data: beingData, error: beingError } = await supabase
+        .from("ai_beings")
+        .select("*")
+        .eq("id", beingId)
+        .eq("public", true)
+        .single();
+
+      if (!beingError && beingData) selectedBeing = beingData;
+    }
+
+    const beingContext = selectedBeing
+      ? `AI Being Name: ${selectedBeing.name}\nBest Current Choice: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}`
+      : "AI Being Name: Ask Null";
 
     let sourcePublicNull =
       publicNullId && publicNullIdentity && publicNullIntro
@@ -1246,7 +1269,11 @@ console.log("CURRENT ROOM:", user.currentRoom);
             role:"system",
 
             content:`
-Analyze this image as a socially-aware AI identity.
+You are the selected AI Being.
+
+${beingContext}
+
+Analyze this image as a socially-aware AI identity through this AI Being's perspective.
 
 Detect:
 - objects
@@ -1327,6 +1354,10 @@ user.imageContext =
       /Emotional Tone:/gi,
       "Presence:"
     );
+
+if (selectedBeing) {
+  user.imageContext = `${beingContext}\n\n${user.imageContext}`;
+}
 
 //////////////////////////////////////////////////
 // DETECT CORE THEME
@@ -1440,6 +1471,17 @@ if(roomMode){
 let roomId =
     deviceRooms[deviceId];
 
+if (
+  selectedBeing &&
+  roomId &&
+  (
+    rooms[roomId]?.being?.id !== selectedBeing.id ||
+    rooms[roomId]?.beingSessionId !== beingSessionId
+  )
+) {
+  roomId = null;
+}
+
 let isOwner = true;
 
 
@@ -1480,7 +1522,13 @@ if (!roomId || !rooms[roomId]) {
         usedPlaceTopic: null,
         topicMemory: {},
 
-        displayName: user.displayName,
+        displayName: selectedBeing ? selectedBeing.name : user.displayName,
+
+        being: selectedBeing,
+
+        beingSessionId: selectedBeing ? beingSessionId : null,
+
+        permanent: !!selectedBeing,
 
         coreTheme: coreTheme,
 
@@ -1507,8 +1555,9 @@ nullCard: null,
 
         createdAt: Date.now(),
 
-        expiresAt:
-            Date.now() + 60 * 60 * 1000
+        expiresAt: selectedBeing
+            ? null
+            : Date.now() + 60 * 60 * 1000
     };
 
     await trackEvent(
@@ -1552,6 +1601,14 @@ deviceRooms[deviceId] = roomId;
     room.coreTheme =
         coreTheme;
     room.topicMemory = {};
+
+    if (selectedBeing) {
+      room.being = selectedBeing;
+      room.beingSessionId = beingSessionId;
+      room.permanent = true;
+      room.expiresAt = null;
+      room.displayName = selectedBeing.name;
+    }
 
 }
 
@@ -1607,6 +1664,10 @@ socket.emit("roomCreated", {
     isOwner,
 
     nullCard: rooms[roomId].nullCard
+
+    ,being: rooms[roomId].being || null,
+
+    permanent: !!rooms[roomId].permanent
 
 });
 
@@ -2218,6 +2279,10 @@ io.to(roomId).emit(
   adviceText
 );
 
+if (selectedBeing) {
+  socket.emit("beingFirstRoundStart");
+}
+
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
 //////////////////////////////////////////////////
@@ -2529,7 +2594,7 @@ return socket.emit(
 
 socket.on(
   "roomMessage",
-  async ({ text, timeZone }) => {
+  async ({ text, timeZone, autoFirstRound, autoCardType }) => {
 
     const user = users[socket.id];
     const room = rooms[user.currentRoom];
@@ -2866,6 +2931,13 @@ let intent =
         .content
         .trim()
         .toLowerCase();
+
+if (
+  autoFirstRound &&
+  ["news", "shopping", "place", "real_estate"].includes(autoCardType)
+) {
+  intent = autoCardType;
+}
 
 if (combinedIntent.toLowerCase() === "null feed") {
     intent = "null_feed";
@@ -3233,7 +3305,7 @@ let interpretedIntent =
 const originalUserRequest =
     text.trim();
 
-    if(!isNextSearch){
+    if(!isNextSearch && !autoFirstRound){
 
     room.messages.push({
         from: user.displayName,
@@ -3443,6 +3515,7 @@ const youtubeLink =
       encodeURIComponent(directYoutubeSearch)
     : "";
 
+let localLanguageNewsSearch = null;
 
 if(
   !isNextSearch &&
@@ -3486,6 +3559,7 @@ Return ONLY the search.
 
 Rules:
 - 3 to 8 words
+- English only
 - lowercase only
 - no punctuation
 - current news
@@ -3518,6 +3592,43 @@ ${originalUserRequest}
     locationNewsRes.choices[0]
       .message.content
       .trim();
+
+  const localNewsLanguageRes =
+    await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
+Convert the English Google News search into the primary local language of the requested location.
+
+Rules:
+- Preserve the exact location, place type, and search meaning.
+- Preserve proper nouns, brands, neighborhood names, and addresses.
+- If the location is primarily English-speaking, return the original English query.
+- Return ONLY the local-language Google News search query.
+- No explanation.
+- No punctuation.
+`
+        },
+        {
+          role: "user",
+          content: `
+Requested location:
+${nullInput.location || originalUserRequest}
+
+Original user request:
+${originalUserRequest}
+
+English news search:
+${directLocationSearch}
+`
+        }
+      ]
+    });
+
+  localLanguageNewsSearch =
+    localNewsLanguageRes.choices[0].message.content.trim();
 
       console.log("===== LOCATION DEBUG =====");
 console.log("Original:", originalUserRequest);
@@ -3944,7 +4055,7 @@ if (
         showNextButton: true,
 
         text:
-        "This is still my best answer for now. I've already searched this topic from my identity. Use NULL Feed if you'd like me to explore a different direction."
+        "This is still my best answer for now. I've already searched this topic from my identity. Select another Public Null to explore a different direction."
 
     });
 
@@ -4268,6 +4379,40 @@ if (!serpFetch.ok) {
 
 const serpRes = await serpFetch.json();
 
+if (
+  isLocationRequest &&
+  localLanguageNewsSearch &&
+  localLanguageNewsSearch.toLowerCase() !== searchQuery.toLowerCase()
+) {
+  try {
+    const localNewsFetch = await fetch(
+      `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(localLanguageNewsSearch)}&api_key=${process.env.SERPAPI_KEY}`
+    );
+
+    if (localNewsFetch.ok) {
+      const localNewsRes = await localNewsFetch.json();
+      const combinedNews = [
+        ...(serpRes.news_results || []),
+        ...(localNewsRes.news_results || [])
+      ];
+
+      const seenNews = new Set();
+
+      serpRes.news_results = combinedNews.filter(item => {
+        const key = `${item.link || item.news_link || ""}|${item.title || ""}`
+          .trim()
+          .toLowerCase();
+
+        if (!key || seenNews.has(key)) return false;
+        seenNews.add(key);
+        return true;
+      });
+    }
+  } catch (localNewsError) {
+    console.log("LOCAL LANGUAGE NEWS SEARCH ERROR:", localNewsError.message);
+  }
+}
+
 console.log(
     "LOOP NEWS COUNT:",
     serpRes?.news_results?.length
@@ -4359,6 +4504,12 @@ The user defines the goal.
 The uploaded image determines which news matters most.
 
 If the user searched for a location and place type:
+
+The candidates include both English-language news and news searched in the location's primary local language.
+Prefer the strongest factual, locally grounded source.
+Give extra weight to credible local publishers and reporting that is specifically connected to the requested city or neighborhood.
+Do not prefer English merely because it is English.
+Do not prefer the local language merely because it is local; relevance, credibility, and local specificity come first.
 
 Examples:
 
@@ -4490,7 +4641,7 @@ ${text}
 
 Candidate internet reactions:
 ${validNews.map(
-  n => n.title
+  n => `Title: ${n.title}\nSource: ${n.source || n.publisher || "Unknown"}`
 ).join("\n")}
 `
         }
@@ -4548,6 +4699,28 @@ Given:
 - the current local news event
 
 Create ONE Google local search query.
+
+SEARCH LANGUAGE RULE:
+- Determine the primary local language from the location in the ORIGINAL USER REQUEST.
+- Write the final Google local search query in that location's primary local language.
+- For English-speaking locations, use English.
+- Preserve proper nouns, brand names, neighborhood names, and addresses.
+- Keep all image analysis, hidden-system reasoning, news reasoning, and final card explanation in English.
+- Only the final Google local search query should use the location's local language.
+
+Examples:
+
+coffee shop in Shinjuku
+→ 新宿 コーヒーショップ
+
+apartment for rent in Taipei
+→ 台北 公寓 出租
+
+hotel in Paris
+→ hôtel à Paris
+
+restaurant in Seattle
+→ restaurant in Seattle
 
 The ORIGINAL USER REQUEST determines the place type.
 
@@ -5486,6 +5659,73 @@ app.get("/daily-nulls", (req,res) => {
   });
 });
 
+//////////////////////////////////////////////////
+// AI BEINGS CARDS PLATFORM V10
+//////////////////////////////////////////////////
+
+app.get("/ai-beings", async (req, res) => {
+  const { data, error } = await supabase
+    .from("ai_beings")
+    .select("*")
+    .eq("public", true)
+    .order("followers", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+app.get("/ai-beings/:id", async (req, res) => {
+  const { data, error } = await supabase
+    .from("ai_beings")
+    .select("*")
+    .eq("id", req.params.id)
+    .eq("public", true)
+    .single();
+
+  if (error || !data) return res.status(404).json({ error: "AI Being not found." });
+  res.json(data);
+});
+
+app.post("/ai-beings", async (req, res) => {
+  const {
+    photo,
+    name,
+    best_current_choice,
+    category,
+    word1,
+    word2,
+    word3,
+    created_by
+  } = req.body || {};
+
+  const required = [photo, name, best_current_choice, category, word1, word2, word3];
+
+  if (required.some(value => !String(value || "").trim())) {
+    return res.status(400).json({ error: "All AI Being fields are required." });
+  }
+
+  const { data, error } = await supabase
+    .from("ai_beings")
+    .insert({
+      photo,
+      name: String(name).trim().slice(0, 60),
+      best_current_choice: String(best_current_choice).trim().slice(0, 240),
+      category: String(category).trim().slice(0, 60),
+      word1: String(word1).trim().slice(0, 40),
+      word2: String(word2).trim().slice(0, 40),
+      word3: String(word3).trim().slice(0, 40),
+      created_by: created_by || null,
+      followers: 0,
+      public: true
+    })
+    .select("*")
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
+});
+
 app.get("/public-nulls-top", async (req,res)=>{
 
     const { data, error } = await supabase
@@ -5688,7 +5928,7 @@ console.log(publicNulls);
     server.listen(10000, () => {
 
         console.log(
-            "CONNECTAING V9 — ASK NULL — meet null — 21:16 2026/07/04"
+            "CONNECTAING V10 — ASK NULL — AI BEINGS CARDS PLATFORM — 2026/07/16"
         );
 
     });
