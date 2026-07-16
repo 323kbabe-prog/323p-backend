@@ -2,7 +2,7 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
-// v10.0.4 (2026-07-16)
+// v10.0.5 (2026-07-16)
 // - Added Business Null card
 // - Added Jobs Null card
 // - Added real estate as a Find a Place result type
@@ -2212,15 +2212,37 @@ const adviceText =
     .content
     .trim();
 
+let visibleCardIdentity = user.imageContext;
+let visibleCardIntro = adviceText;
+
+if (selectedBeing) {
+  const beingNameSentence = `I am ${selectedBeing.name}.`;
+  const beingStatusText = adviceText
+    .toLowerCase()
+    .startsWith(beingNameSentence.toLowerCase())
+      ? adviceText.slice(beingNameSentence.length).trim()
+      : adviceText;
+
+  visibleCardIdentity = [
+    `AI Being Name: ${selectedBeing.name}`,
+    `Bio: ${selectedBeing.best_current_choice}`,
+    `Category: ${selectedBeing.category}`,
+    `Personality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}.`,
+    beingStatusText
+  ].join(" ");
+
+  visibleCardIntro = "";
+}
+
 rooms[roomId].imageIntro =
   adviceText;
 rooms[roomId].nullCard = {
 
     image: imageDataUrl,
 
-    identity: user.imageContext,
+    identity: visibleCardIdentity,
 
-    intro: adviceText
+    intro: visibleCardIntro
 
 };
 
@@ -2230,9 +2252,9 @@ rooms[roomId].messages.push({
 
     image: imageDataUrl,
 
-    identity: user.imageContext,
+    identity: visibleCardIdentity,
 
-    intro: adviceText
+    intro: visibleCardIntro
 
 });
 
