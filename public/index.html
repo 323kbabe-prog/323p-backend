@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.36 (2026-07-17)
+- Restored the visible live countdown in standard ASK.CAMERA rooms
+- Made ASK.CAMERA return home without ending a standard room
+- Restored the home Room ID/countdown pill as the return-to-room control
+- Kept AI Being X and ASK.CAMERA actions ending only the AI Being session
+
   v10.0.35 (2026-07-17)
 - Restored the one-hour countdown for standard ASK.CAMERA rooms
 - Kept AI Being rooms permanent without a countdown
@@ -1622,8 +1628,17 @@ function openHomeRoom(event){
 
     if(!roomId) return;
 
-    location.href =
-        "/?room=" + roomId;
+    document.getElementById("roomCountdown").style.display = "block";
+    document.getElementById("beingQrBtn").style.display = "none";
+    document.getElementById("shareRoomBtn").innerText = "Share Room";
+    roomOverlay.style.display = "flex";
+    cameraWrap.style.display = "block";
+    helper.style.display = "none";
+    history.replaceState({}, "", "/?room=" + roomId);
+
+    if(socket.connected){
+        socket.emit("rejoinRoom", { roomId, deviceId });
+    }
 
 }
 
@@ -2293,7 +2308,13 @@ function endCurrentRoomAndRestart(){
   }
 }
 
-closeRoom.onclick = endCurrentRoomAndRestart;
+closeRoom.onclick = () => {
+    if(localStorage.getItem("selectedBeingId")){
+        endCurrentRoomAndRestart();
+    } else {
+        showCreateNull();
+    }
+};
 
 
 roomInput.onkeydown = e => {
@@ -2457,6 +2478,8 @@ if (data.being) {
 } else {
   history.replaceState({}, "", `/?room=${data.roomId}`);
   document.getElementById("beingQrBtn").style.display = "none";
+  document.getElementById("roomCountdown").style.display = "block";
+  document.getElementById("homeRoomCard").style.display = "inline-flex";
 }
 
 
@@ -4284,7 +4307,28 @@ function startDailyNullCountdown(){
 }
 
 function showCreateNull(){
-    endCurrentRoomAndRestart();
+    if(localStorage.getItem("selectedBeingId")){
+        endCurrentRoomAndRestart();
+        return;
+    }
+
+    document.getElementById("modeBar").style.display = "";
+    document.getElementById("aiBeingsScreen").style.display = "none";
+    document.getElementById("createBeingScreen").style.display = "none";
+    dailyNullsScreen.style.display = "none";
+    publicNullsScreen.style.display = "none";
+    roomOverlay.style.display = "none";
+    capturePreview.style.display = "none";
+    cameraWrap.style.display = "block";
+    helper.style.display = "flex";
+    history.replaceState({}, "", "/");
+
+    const activeRoomId = localStorage.getItem("roomId");
+    if(activeRoomId){
+        document.getElementById("homeRoomCard").style.display = "inline-flex";
+        document.getElementById("homeRoomId").innerText = "Room #" + activeRoomId;
+        startRoomCountdown();
+    }
 }
 
 async function showDailyNulls(){
