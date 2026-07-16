@@ -2,7 +2,9 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
-// v10.0.6 (2026-07-16)
+// v10.0.8 (2026-07-16)
+// - Renamed user-facing Null features to Camera Perspectives
+// - Rebranded all user-facing product identity to ASK.CAMERA
 // - Added password-protected AI Being card deletion
 // - Added Business Null card
 // - Added Jobs Null card
@@ -219,7 +221,7 @@ await smsClient.messages.create({
 
     to,
 
-    body: `I am Null: ${body}`
+    body: `I am a Camera Perspective: ${body}`
 
 });
 
@@ -361,7 +363,7 @@ const usedIdentities = [];
            {
   role:"system",
   content:`
-Create one Ask Null identity for this category.
+Create one ASK.CAMERA identity for this category.
 
 Return JSON only:
 {
@@ -473,7 +475,7 @@ Rules:
 Category:
 ${category}
 
-Null Identity:
+Camera Perspective Identity:
 ${identityData.identity}
 
 Intro:
@@ -844,7 +846,7 @@ if(!reminderCheck.topic){
 
     room.messages.push({
 
-        from:"NULL",
+        from:"CAMERA PERSPECTIVE",
 
         aiBeing:true,
 
@@ -865,7 +867,7 @@ if(!reminderCheck.time){
 
     room.messages.push({
 
-        from:"NULL",
+        from:"CAMERA PERSPECTIVE",
 
         aiBeing:true,
 
@@ -1019,7 +1021,7 @@ room.messages.push({
     
     room.messages.push({
 
-        from: "NULL",
+        from: "CAMERA PERSPECTIVE",
 
         aiBeing: true,
 
@@ -1205,7 +1207,7 @@ console.log(
 
     const beingContext = selectedBeing
       ? `AI Being Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}`
-      : "AI Being Name: Ask Null";
+      : "AI Being Name: ASK.CAMERA";
 
     let sourcePublicNull =
       publicNullId && publicNullIdentity && publicNullIntro
@@ -2075,7 +2077,7 @@ ${validStarterNews.map(
 
 const beingRoomIntroPrompt = selectedBeing
   ? `
-You are the ASK NULL ENGLISH REWRITE SYSTEM speaking as the selected AI Being.
+You are the ASK.CAMERA ENGLISH REWRITE SYSTEM speaking as the selected AI Being.
 
 AI Being:
 ${beingContext}
@@ -2374,13 +2376,13 @@ setTimeout(() => {
 
 rooms[roomId].messages.push({
 
-  from:"NULL",
+  from:"CAMERA PERSPECTIVE",
 
   aiBeing:true,
   showNextButton: true,
 
   searchLabel:
-    "NULL Search",
+    "CAMERA PERSPECTIVE Search",
 
   image:starterImage,
 
@@ -2698,7 +2700,7 @@ if (text.trim() === adminCode) {
         console.log(error);
 
         room.messages.push({
-            from: "NULL",
+            from: "CAMERA PERSPECTIVE",
             aiBeing: true,
             text: "Admin report failed."
         });
@@ -2713,13 +2715,13 @@ if (text.trim() === adminCode) {
 
     room.messages.push({
 
-        from: "ASK NULL ADMIN",
+        from: "ASK.CAMERA ADMIN",
 
         aiBeing: true,
 
         text:
 
-`ASK NULL ADMIN
+`ASK.CAMERA ADMIN
 
 👥 Users
 Online: ${data.users_online}
@@ -2784,7 +2786,7 @@ try{
       {
         role: "system",
         content: `
-You are the Ask Null Intent Router.
+You are the ASK.CAMERA Intent Router.
 
 Determine the user's PRIMARY intent.
 
@@ -2861,10 +2863,10 @@ reminder
 The user wants a reminder or future notification.
 
 public_null
-The user wants to publish a Public Null.
+The user wants to publish a Public Camera Perspective. Treat "Public Null" as a legacy synonym.
 
 daily_nulls
-The user wants Daily Nulls.
+The user wants Daily Camera Perspectives. Treat "Daily Nulls" as a legacy synonym.
 
 share
 The user wants to share a card.
@@ -2873,10 +2875,10 @@ check
 The user wants to open or view the referenced source.
 
 null_feed
-The user explicitly requests "null feed".
+The user explicitly requests "camera perspective feed" or the legacy phrase "null feed".
 
 greeting
-Greetings or questions about Ask Null itself.
+Greetings or questions about ASK.CAMERA itself.
 
 unclear
 The intent cannot be determined.
@@ -3014,7 +3016,7 @@ if (
   intent = autoCardType;
 }
 
-if (combinedIntent.toLowerCase() === "null feed") {
+if (/^(camera perspective feed|null feed)$/i.test(combinedIntent.trim())) {
     intent = "null_feed";
 }
 
@@ -3030,7 +3032,7 @@ if(intent === "unclear"){
 
   room.messages.push({
 
-    from:"NULL",
+    from:"CAMERA PERSPECTIVE",
 
     aiBeing:true,
 
@@ -3063,11 +3065,11 @@ if(intent === "greeting"){
 });
 
 room.messages.push({
-  from: "NULL",
+  from: "CAMERA PERSPECTIVE",
   aiBeing: true,
   showNextButton: true,
-  searchLabel: "About Ask Null",
-  text: "Ask Null is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
+  searchLabel: "About ASK.CAMERA",
+  text: "ASK.CAMERA is an experimental AGI contextual AI built on the Social Context Generating Model (SCGM) and the Chaos Feeling-Perception Model (CFM)."
 });
 
   io.to(room.id).emit(
@@ -4123,14 +4125,14 @@ if (
 
     room.messages.push({
 
-        from: "NULL",
+        from: "CAMERA PERSPECTIVE",
 
         aiBeing: true,
 
         showNextButton: true,
 
         text:
-        "This is still my best answer for now. I've already searched this topic from my identity. Select another Public Null to explore a different direction."
+        "This is still my best answer for now. I've already searched this topic from my identity. Select another Public Camera Perspective to explore a different direction."
 
     });
 
@@ -4328,7 +4330,7 @@ const serpFetch = await fetch(
 if (!serpFetch.ok) {
 
     room.messages.push({
-        from: "NULL",
+        from: "CAMERA PERSPECTIVE",
         aiBeing: true,
         showNextButton: true,
         text: "Search service unavailable."
@@ -4440,7 +4442,7 @@ const serpFetch = await fetch(
 if (!serpFetch.ok) {
 
     room.messages.push({
-        from: "NULL",
+        from: "CAMERA PERSPECTIVE",
         aiBeing: true,
         showNextButton: true,
         text: "Search service unavailable."
@@ -5034,7 +5036,7 @@ if(!imageUrl){
 if (!selectedNews?.title) {
 
     room.messages.push({
-        from: "NULL",
+        from: "CAMERA PERSPECTIVE",
         aiBeing: true,
         showNextButton: true,
         text: "No results found."
@@ -5083,7 +5085,7 @@ if(!skipPlaceFlow){
         {
           role:"system",
           content:`
-You are Ask Null.
+You are ASK.CAMERA.
 
 ${intent === "real_estate" ? `
 REAL ESTATE MODE:
@@ -5173,7 +5175,7 @@ if (
     )
 ){
     room.messages.push({
-        from: "NULL",
+        from: "CAMERA PERSPECTIVE",
         aiBeing: true,
         showNextButton: true,
         text: "No readable article found."
@@ -5189,7 +5191,7 @@ if(repeatedPlace){
 
 room.messages.push({
 
-  from:"Null (AGI NETWORK)",
+  from:"CAMERA PERSPECTIVE",
 
   aiBeing:true,
 
@@ -5221,12 +5223,12 @@ if(
           {
             role:"system",
             content:`
-You are NULL.
+You are a CAMERA PERSPECTIVE.
 
 
 If Mode is "personal":
 
-This is the upper section of a NULL Feed card.
+This is the upper section of a CAMERA PERSPECTIVE FEED card.
 
 Do NOT begin with:
 
@@ -5240,7 +5242,7 @@ Instead, begin immediately with the observation itself.
 
 The first sentence should reveal a grounded real-world pattern inspired by the hidden reference.
 
-The user should feel they are reading a NULL Feed rather than receiving advice from an AI.
+The user should feel they are reading a CAMERA PERSPECTIVE FEED rather than receiving advice from an AI.
 
 Do not use introductory phrases such as:
 
@@ -5281,7 +5283,7 @@ The lesson should feel specific, timely, and grounded in reality.
 
 Every response should feel different if a different reference or uploaded image had been used.
 
-This is a NULL Feed, not an AI conversation.
+This is a CAMERA PERSPECTIVE FEED, not an AI conversation.
 
 Do NOT sound like an AI assistant.
 
@@ -5479,7 +5481,7 @@ room.messages.push({
 
   from:
     isNextSearch
-      ? "NULL"
+      ? "CAMERA PERSPECTIVE"
       : "CHANG, TIEN",
 
   aiBeing:true,
@@ -5494,9 +5496,9 @@ showRead:
 
     isNextSearch
 
-      ? "NULL Feed"
+      ? "CAMERA PERSPECTIVE FEED"
 
-      : "Null (AGI NETWORK) Feed",
+      : "CAMERA PERSPECTIVE FEED",
 
   nullReason:
 
@@ -5560,7 +5562,7 @@ if (
                 ? "YouTube"
                 : isShoppingIntent
                     ? "Shopping"
-                    : "Null (AGI NETWORK) Feed",
+                    : "CAMERA PERSPECTIVE FEED",
 
 ask:
   isNextSearch
@@ -5791,7 +5793,7 @@ app.post("/ai-beings", async (req, res) => {
         {
           role: "system",
           content: `
-You are the ASK NULL ENGLISH REWRITE SYSTEM.
+You are the ASK.CAMERA ENGLISH REWRITE SYSTEM.
 
 The user may enter AI Being information in any language.
 Translate and rewrite every descriptive field into clear, natural,
@@ -6087,7 +6089,7 @@ console.log(publicNulls);
     server.listen(10000, () => {
 
         console.log(
-            "CONNECTAING V10 — ASK NULL — AI BEINGS CARDS PLATFORM — 2026/07/16"
+            "CONNECTAING V10 — ASK.CAMERA — AI BEINGS CARDS PLATFORM — 2026/07/16"
         );
 
     });
