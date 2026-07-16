@@ -4,7 +4,8 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.28 (2026-07-16)
+  v10.0.29 (2026-07-16)
+- Added immediate AI Being profile-image preview in the create/edit form
 - Added per-AI-Being management passwords and one-time recovery codes
 - Added optional public international phone numbers to AI Being profiles
 - Added password or recovery-code profile editing and deletion
@@ -743,8 +744,8 @@ ASK.CAMERA – AI Camera Search
       <div id="beingFormTitle" style="font-size:24px;font-weight:900;">CREATE AI BEING</div>
       <button onclick="closeCreateBeing()" style="border:none;background:#f2f2f2;border-radius:50%;width:40px;height:40px;font-size:22px;">×</button>
     </div>
-    <img id="beingCurrentPhoto" alt="Current AI Being profile" style="display:none;width:82px;height:82px;object-fit:cover;border-radius:18px;margin:0 0 12px;">
-    <input id="beingPhoto" type="file" accept="image/*" style="margin-bottom:14px;width:100%;">
+    <img id="beingCurrentPhoto" alt="AI Being profile preview" style="display:none;width:112px;height:112px;object-fit:cover;border-radius:22px;margin:0 auto 14px;box-shadow:0 8px 24px rgba(0,0,0,.14);">
+    <input id="beingPhoto" type="file" accept="image/*" onchange="previewBeingPhoto(this)" style="margin-bottom:14px;width:100%;">
     <input id="beingName" placeholder="Name" class="beingInput">
     <textarea id="beingChoice" placeholder="Bio — one sentence" maxlength="160" class="beingInput" rows="3"></textarea>
     <input id="beingCategory" placeholder="Category" class="beingInput">
@@ -5084,12 +5085,30 @@ async function deleteAIBeing(id){
 
 let editingBeing = null;
 let editingBeingPassword = "";
+let beingPreviewUrl = "";
+
+function previewBeingPhoto(input){
+  const preview = document.getElementById("beingCurrentPhoto");
+  const file = input?.files?.[0];
+  if(!file){
+    if(!editingBeing) preview.style.display = "none";
+    return;
+  }
+  if(beingPreviewUrl) URL.revokeObjectURL(beingPreviewUrl);
+  beingPreviewUrl = URL.createObjectURL(file);
+  preview.src = beingPreviewUrl;
+  preview.style.display = "block";
+}
 
 function resetBeingForm(){
+  if(beingPreviewUrl) URL.revokeObjectURL(beingPreviewUrl);
+  beingPreviewUrl = "";
   editingBeing = null;
   editingBeingPassword = "";
   document.getElementById("beingFormTitle").innerText = "CREATE AI BEING";
-  document.getElementById("beingCurrentPhoto").style.display = "none";
+  const preview = document.getElementById("beingCurrentPhoto");
+  preview.removeAttribute("src");
+  preview.style.display = "none";
   document.getElementById("beingPhoto").value = "";
   ["beingName","beingChoice","beingCategory","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
     .forEach(id => document.getElementById(id).value = "");
