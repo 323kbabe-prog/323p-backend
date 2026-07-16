@@ -748,6 +748,12 @@ ASK.CAMERA – AI Camera Search
     <input id="beingWord1" placeholder="Word 1" class="beingInput">
     <input id="beingWord2" placeholder="Word 2" class="beingInput">
     <input id="beingWord3" placeholder="Word 3" class="beingInput">
+    <input id="beingPhone" type="tel" inputmode="tel" placeholder="Public phone with country code (optional), e.g. +12125550123" class="beingInput">
+    <div id="beingPasswordFields">
+      <input id="beingPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Management password — minimum 8 characters" class="beingInput">
+      <input id="beingPasswordConfirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Confirm management password" class="beingInput">
+      <div style="font-size:11px;line-height:1.4;color:#666;margin:-3px 4px 14px;">Save this password and the recovery code shown after creation. ASK.CAMERA cannot reveal them later.</div>
+    </div>
     <button id="createBeingSubmit" onclick="createAIBeing()" style="width:100%;height:48px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;font-size:15px;">CREATE AI BEING</button>
   </div>
 </div>
@@ -5054,22 +5060,17 @@ async function loadAIBeings(){
 }
 
 async function deleteAIBeing(id){
-  const password = prompt("Enter password");
-
+  const password = prompt("Enter the management password or recovery code");
   if(password === null) return;
-
-  if(password !== "AskNull2026"){
-    alert("Wrong password");
-    return;
-  }
 
   if(!confirm("Delete this AI Being permanently?")) return;
 
   try{
-    const response = await fetch(
-      `${AI_BEINGS_API}/ai-beings/${encodeURIComponent(id)}?password=${encodeURIComponent(password)}`,
-      { method:"DELETE" }
-    );
+    const response = await fetch(`${AI_BEINGS_API}/ai-beings/${encodeURIComponent(id)}`,{
+      method:"DELETE",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ management_credential:password })
+    });
     const result = await response.json().catch(() => ({}));
     if(!response.ok) throw new Error(result.error || "Could not delete AI Being.");
     await loadAIBeings();
@@ -5087,8 +5088,9 @@ function resetBeingForm(){
   document.getElementById("beingFormTitle").innerText = "CREATE AI BEING";
   document.getElementById("beingCurrentPhoto").style.display = "none";
   document.getElementById("beingPhoto").value = "";
-  ["beingName","beingChoice","beingCategory","beingWord1","beingWord2","beingWord3"]
+  ["beingName","beingChoice","beingCategory","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
     .forEach(id => document.getElementById(id).value = "");
+  document.getElementById("beingPasswordFields").style.display = "block";
   document.getElementById("createBeingSubmit").innerText = "CREATE AI BEING";
 }
 
@@ -5098,12 +5100,8 @@ function openCreateBeing(){
 }
 
 async function changeAIBeingProfile(id){
-  const password = prompt("Enter password");
+  const password = prompt("Enter the management password or recovery code");
   if(password === null) return;
-  if(password !== "AskNull2026"){
-    alert("Wrong password");
-    return;
-  }
 
   try{
     const response = await fetch(`${AI_BEINGS_API}/ai-beings/${encodeURIComponent(id)}`);
@@ -5123,6 +5121,8 @@ async function changeAIBeingProfile(id){
     document.getElementById("beingWord1").value = being.word1 || "";
     document.getElementById("beingWord2").value = being.word2 || "";
     document.getElementById("beingWord3").value = being.word3 || "";
+    document.getElementById("beingPhone").value = being.phone || "";
+    document.getElementById("beingPasswordFields").style.display = "none";
     document.getElementById("createBeingSubmit").innerText = "UPDATE AI BEING";
     document.getElementById("createBeingScreen").style.display = "block";
   }catch(error){
@@ -5165,10 +5165,22 @@ async function createAIBeing(){
     word1: document.getElementById("beingWord1").value.trim(),
     word2: document.getElementById("beingWord2").value.trim(),
     word3: document.getElementById("beingWord3").value.trim(),
+    phone: document.getElementById("beingPhone").value.trim(),
     created_by: deviceId
   };
 
-  if(Object.entries(payload).some(([key,value]) => key !== "created_by" && !value) || (!file && !editingBeing)){
+  if(!editingBeing){
+    const password = document.getElementById("beingPassword").value;
+    const confirmation = document.getElementById("beingPasswordConfirm").value;
+    if(password.length < 8){ alert("Management password must be at least 8 characters."); return; }
+    if(password !== confirmation){ alert("Management passwords do not match."); return; }
+    payload.management_password = password;
+  }else{
+    payload.management_credential = editingBeingPassword;
+  }
+
+  const requiredValues = [payload.name,payload.best_current_choice,payload.category,payload.word1,payload.word2,payload.word3];
+  if(requiredValues.some(value => !value) || (!file && !editingBeing)){
     alert(editingBeing ? "Please complete every field." : "Please complete every field and choose a profile photo.");
     return;
   }
@@ -5179,7 +5191,7 @@ async function createAIBeing(){
     payload.photo = file ? await beingPhotoDataUrl(file) : editingBeing.photo;
     const updateId = editingBeing?.id;
     const requestUrl = updateId
-      ? `${AI_BEINGS_API}/ai-beings/${encodeURIComponent(updateId)}?password=${encodeURIComponent(editingBeingPassword)}`
+      ? `${AI_BEINGS_API}/ai-beings/${encodeURIComponent(updateId)}`
       : `${AI_BEINGS_API}/ai-beings`;
     const response = await fetch(requestUrl,{
       method:updateId ? "PUT" : "POST",
@@ -5192,7 +5204,7 @@ async function createAIBeing(){
     if(updateId){
       await loadAIBeings();
     }else{
-      await openAIBeing(being.id);
+      showBeingRecoveryCode(being);
     }
   }catch(error){
     alert(error.message);
@@ -5200,6 +5212,27 @@ async function createAIBeing(){
     button.disabled = false;
     button.innerText = editingBeing ? "UPDATE AI BEING" : "CREATE AI BEING";
   }
+}
+
+function showBeingRecoveryCode(being){
+  let overlay = document.getElementById("beingRecoveryOverlay");
+  if(!overlay){
+    overlay = document.createElement("div");
+    overlay.id = "beingRecoveryOverlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:1000001;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:22px;";
+    document.body.appendChild(overlay);
+  }
+  const code = escapeBeingText(being.recovery_code || "");
+  overlay.innerHTML = `<div style="background:#fff;color:#111;width:100%;max-width:380px;border-radius:24px;padding:22px;text-align:center;"><div style="font-size:21px;font-weight:900;">SAVE YOUR RECOVERY CODE</div><div style="font-size:12px;line-height:1.45;color:#666;margin-top:8px;">This is shown only once. It can manage or delete this AI Being if the password is forgotten.</div><div id="beingRecoveryCode" style="font:800 17px/1.3 monospace;letter-spacing:.5px;background:#f1f1f1;border-radius:14px;padding:14px 10px;margin-top:16px;word-break:break-all;">${code}</div><button id="copyBeingRecovery" style="margin-top:12px;border:none;border-radius:999px;background:#eee;color:#111;padding:10px 18px;font-weight:800;">COPY CODE</button><button id="continueToBeing" style="display:block;width:100%;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;padding:13px 18px;font-weight:900;">I SAVED IT — OPEN AI BEING</button></div>`;
+  overlay.style.display = "flex";
+  document.getElementById("copyBeingRecovery").onclick = async () => {
+    await navigator.clipboard.writeText(being.recovery_code || "");
+    document.getElementById("copyBeingRecovery").innerText = "COPIED";
+  };
+  document.getElementById("continueToBeing").onclick = async () => {
+    overlay.style.display = "none";
+    await openAIBeing(being.id);
+  };
 }
 
 async function openAIBeing(id){
@@ -5286,6 +5319,7 @@ function renderBeingRoomHeader(being){
   title.innerHTML = `
     <span style="font-size:8px;line-height:1;letter-spacing:.8px;opacity:.45;white-space:nowrap;">AI BEING</span>
     <span style="font-size:14px;line-height:1.15;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeBeingText(being.name)}</span>
+    ${being.phone ? `<a href="tel:${escapeBeingText(being.phone)}" style="font-size:8px;line-height:1.2;margin-top:3px;color:#111;text-decoration:none;white-space:nowrap;">${escapeBeingText(being.phone)}</a>` : ""}
   `;
 
   document.getElementById("beingQrBtn").style.display = "inline-block";
@@ -5589,7 +5623,7 @@ flex-shrink:0;
 <hr style="margin:20px 0;border:none;border-top:1px solid #eee;">
 
 <div style="text-align:center;">
-<b>POINT YOUR CAMERA AT THE WORLD. TAP THE SCREEN OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.</b><br><br>
+<b>You can now search without knowing what to search for.</b><br><br>
 
 <b>Capture. Ask. Discover.</b>
 </div>
