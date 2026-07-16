@@ -2,7 +2,8 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
-// v10.0.8 (2026-07-16)
+// v10.0.9 (2026-07-16)
+// - Added password-protected AI Being profile updates
 // - Renamed user-facing Null features to Camera Perspectives
 // - Rebranded all user-facing product identity to ASK.CAMERA
 // - Added password-protected AI Being card deletion
@@ -5869,6 +5870,82 @@ Rules:
 
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data);
+});
+
+app.put("/ai-beings/:id", async (req, res) => {
+  if (req.query.password !== "AskNull2026") {
+    return res.status(403).json({ error: "Wrong password" });
+  }
+
+  const { photo, name, best_current_choice, category, word1, word2, word3 } = req.body || {};
+  const required = [photo, name, best_current_choice, category, word1, word2, word3];
+
+  if (required.some(value => !String(value || "").trim())) {
+    return res.status(400).json({ error: "All AI Being fields are required." });
+  }
+
+  let englishBeing;
+  try {
+    const rewriteResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: `
+You are the ASK.CAMERA ENGLISH REWRITE SYSTEM.
+Translate and rewrite every descriptive field into clear, natural English.
+Return JSON only with exactly these keys:
+name, bio, category, word1, word2, word3
+
+Rules:
+- Preserve meaning and proper names. Never invent facts.
+- Bio must be exactly one concise, complete English sentence.
+- Bio must contain no more than 160 characters, including spaces.
+- Category and personality words must be short English words or phrases.
+- Correct grammar, spelling, punctuation, and sentence flow.
+          `.trim()
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            name: String(name).trim(),
+            bio: String(best_current_choice).trim(),
+            category: String(category).trim(),
+            word1: String(word1).trim(),
+            word2: String(word2).trim(),
+            word3: String(word3).trim()
+          })
+        }
+      ]
+    });
+
+    englishBeing = JSON.parse(rewriteResponse.choices?.[0]?.message?.content || "{}");
+    if ([englishBeing.name, englishBeing.bio, englishBeing.category, englishBeing.word1, englishBeing.word2, englishBeing.word3]
+      .some(value => !String(value || "").trim())) {
+      throw new Error("The English rewrite was incomplete.");
+    }
+  } catch (rewriteError) {
+    console.error("AI Being profile rewrite failed:", rewriteError);
+    return res.status(502).json({ error: "Could not rewrite the AI Being profile in English. Please try again." });
+  }
+
+  const { data, error } = await supabase.rpc("update_ai_being_admin", {
+    p_id: req.params.id,
+    p_password: req.query.password,
+    p_photo: String(photo),
+    p_name: String(englishBeing.name).trim().slice(0, 60),
+    p_best_current_choice: String(englishBeing.bio).trim().slice(0, 160),
+    p_category: String(englishBeing.category).trim().slice(0, 60),
+    p_word1: String(englishBeing.word1).trim().slice(0, 40),
+    p_word2: String(englishBeing.word2).trim().slice(0, 40),
+    p_word3: String(englishBeing.word3).trim().slice(0, 40)
+  });
+
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: "AI Being not found." });
+  res.json(data);
 });
 
 app.delete("/ai-beings/:id", async (req, res) => {
