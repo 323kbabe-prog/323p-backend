@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.25 (2026-07-16)
+  v10.0.26 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -532,8 +532,7 @@ z-index:999;
   grid-column:1 / -1;
   grid-row:2;
   justify-self:center;
-  width:max-content;
-  max-width:100%;
+  width:calc((100% - 8px) / 2);
 }
 
 #modeBar button{
@@ -601,7 +600,12 @@ min-height:40px;
   }
 
   #createNullBtn{ grid-column:1; grid-row:1; }
-  #dailyNullsBtn{ grid-column:2; grid-row:1; }
+  #dailyNullsBtn{
+    grid-column:2;
+    grid-row:1;
+    justify-self:stretch;
+    width:auto;
+  }
   #aiBeingsBtn{ grid-column:3; grid-row:1; }
 
   #homeControlStack{ top:96px; }
@@ -1007,7 +1011,7 @@ margin:0;
   margin:0 auto;
   text-align:left;
   font-weight:900;
-  font-size:18px;
+  font-size:20px;
   line-height:1.2;
   text-transform:uppercase;
   -webkit-text-stroke:0.2px currentColor;
@@ -3993,7 +3997,7 @@ margin-bottom:18px;
   margin:0 auto;
   text-align:left;
   font-weight:900;
-  font-size:18px;
+  font-size:20px;
   line-height:1.2;
   text-transform:uppercase;
   -webkit-text-stroke:0.2px currentColor;
