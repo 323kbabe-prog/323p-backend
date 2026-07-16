@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.18 (2026-07-16)
+  v10.0.20 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -531,6 +531,9 @@ z-index:999;
 #dailyNullsBtn{
   grid-column:1 / -1;
   grid-row:2;
+  justify-self:center;
+  width:max-content;
+  max-width:100%;
 }
 
 #modeBar button{
@@ -549,6 +552,16 @@ font-weight:900;
 padding:10px 12px;
 
 border-radius:999px;
+min-height:40px;
+}
+
+/* Mobile home controls: keep a stable, non-overlapping vertical order. */
+#homeRoomCard{
+  top:142px !important;
+}
+
+#homeUtilityButtons{
+  top:190px !important;
 }
 
 @media (min-width:700px){
