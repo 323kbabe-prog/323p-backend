@@ -2,7 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
-// v10.0.9 (2026-07-16)
+// v10.0.10 (2026-07-16)
+// - Added private per-AI-Being management passwords and recovery codes
+// - Removed AI Being credentials from URLs and public API responses
+// - Kept an environment-controlled admin override for recovery support
 // - Added password-protected AI Being profile updates
 // - Renamed user-facing Null features to Camera Perspectives
 // - Rebranded all user-facing product identity to ASK.CAMERA
@@ -40,6 +43,7 @@ const OpenAI = require("openai");
 const fetch = global.fetch;
 const webpush = require("web-push");
 const twilio = require("twilio");
+const crypto = require("crypto");
 
 const app = express();
 
@@ -5741,10 +5745,64 @@ app.get("/daily-nulls", (req,res) => {
 // AI BEINGS CARDS PLATFORM V10
 //////////////////////////////////////////////////
 
+const AI_BEING_PUBLIC_COLUMNS =
+  "id,photo,name,best_current_choice,category,word1,word2,word3,phone,created_by,created_at,followers,public";
+
+function hashBeingCredential(value) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(value), salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+function verifyBeingCredential(value, stored) {
+  try {
+    const [salt, expectedHex] = String(stored || "").split(":");
+    if (!salt || !expectedHex) return false;
+    const actual = crypto.scryptSync(String(value), salt, 64);
+    const expected = Buffer.from(expectedHex, "hex");
+    return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+  } catch (_) {
+    return false;
+  }
+}
+
+function createBeingRecoveryCode() {
+  const token = crypto.randomBytes(9).toString("hex").toUpperCase();
+  return `CAM-${token.slice(0, 6)}-${token.slice(6, 12)}-${token.slice(12, 18)}`;
+}
+
+function normalizeBeingPhone(value) {
+  const phone = String(value || "").trim();
+  if (!phone) return null;
+  if (!/^\+[1-9][0-9 ()-]{6,24}$/.test(phone)) return false;
+  return phone.replace(/[^+\d]/g, "");
+}
+
+function isBeingAdminCredential(value) {
+  const adminPassword = process.env.AI_BEINGS_ADMIN_PASSWORD;
+  return Boolean(adminPassword) && String(value || "") === adminPassword;
+}
+
+async function authorizeBeingManagement(id, credential) {
+  if (!String(credential || "").trim()) return { authorized: false };
+  const { data, error } = await supabase
+    .from("ai_beings")
+    .select("id,management_password_hash,recovery_code_hash")
+    .eq("id", id)
+    .single();
+  if (error || !data) return { authorized: false, notFound: true };
+  return {
+    authorized:
+      isBeingAdminCredential(credential) ||
+      verifyBeingCredential(credential, data.management_password_hash) ||
+      verifyBeingCredential(credential, data.recovery_code_hash)
+  };
+}
+
 app.get("/ai-beings", async (req, res) => {
   const { data, error } = await supabase
     .from("ai_beings")
-    .select("*")
+    .select(AI_BEING_PUBLIC_COLUMNS)
     .eq("public", true)
     .order("followers", { ascending: false })
     .order("created_at", { ascending: false });
@@ -5756,7 +5814,7 @@ app.get("/ai-beings", async (req, res) => {
 app.get("/ai-beings/:id", async (req, res) => {
   const { data, error } = await supabase
     .from("ai_beings")
-    .select("*")
+    .select(AI_BEING_PUBLIC_COLUMNS)
     .eq("id", req.params.id)
     .eq("public", true)
     .single();
@@ -5774,13 +5832,24 @@ app.post("/ai-beings", async (req, res) => {
     word1,
     word2,
     word3,
-    created_by
+    phone,
+    created_by,
+    management_password
   } = req.body || {};
 
   const required = [photo, name, best_current_choice, category, word1, word2, word3];
 
   if (required.some(value => !String(value || "").trim())) {
     return res.status(400).json({ error: "All AI Being fields are required." });
+  }
+
+  if (String(management_password || "").length < 8 || String(management_password || "").length > 128) {
+    return res.status(400).json({ error: "Management password must be 8 to 128 characters." });
+  }
+
+  const normalizedPhone = normalizeBeingPhone(phone);
+  if (normalizedPhone === false) {
+    return res.status(400).json({ error: "Phone number must include a valid country code, such as +12125550123." });
   }
 
   let englishBeing;
@@ -5861,27 +5930,34 @@ Rules:
       word1: String(englishBeing.word1).trim().slice(0, 40),
       word2: String(englishBeing.word2).trim().slice(0, 40),
       word3: String(englishBeing.word3).trim().slice(0, 40),
+      phone: normalizedPhone,
       created_by: created_by || null,
       followers: 0,
-      public: true
+      public: true,
+      management_password_hash: hashBeingCredential(management_password),
+      recovery_code_hash: hashBeingCredential(recoveryCode)
     })
-    .select("*")
+    .select(AI_BEING_PUBLIC_COLUMNS)
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
+  res.status(201).json({ ...data, recovery_code: recoveryCode });
 });
 
 app.put("/ai-beings/:id", async (req, res) => {
-  if (req.query.password !== "AskNull2026") {
-    return res.status(403).json({ error: "Wrong password" });
-  }
-
-  const { photo, name, best_current_choice, category, word1, word2, word3 } = req.body || {};
+  const { photo, name, best_current_choice, category, word1, word2, word3, phone, management_credential } = req.body || {};
+  const authorization = await authorizeBeingManagement(req.params.id, management_credential);
+  if (authorization.notFound) return res.status(404).json({ error: "AI Being not found." });
+  if (!authorization.authorized) return res.status(403).json({ error: "Wrong management password or recovery code." });
   const required = [photo, name, best_current_choice, category, word1, word2, word3];
 
   if (required.some(value => !String(value || "").trim())) {
     return res.status(400).json({ error: "All AI Being fields are required." });
+  }
+
+  const normalizedPhone = normalizeBeingPhone(phone);
+  if (normalizedPhone === false) {
+    return res.status(400).json({ error: "Phone number must include a valid country code, such as +12125550123." });
   }
 
   let englishBeing;
@@ -5931,17 +6007,21 @@ Rules:
     return res.status(502).json({ error: "Could not rewrite the AI Being profile in English. Please try again." });
   }
 
-  const { data, error } = await supabase.rpc("update_ai_being_admin", {
-    p_id: req.params.id,
-    p_password: req.query.password,
-    p_photo: String(photo),
-    p_name: String(englishBeing.name).trim().slice(0, 60),
-    p_best_current_choice: String(englishBeing.bio).trim().slice(0, 160),
-    p_category: String(englishBeing.category).trim().slice(0, 60),
-    p_word1: String(englishBeing.word1).trim().slice(0, 40),
-    p_word2: String(englishBeing.word2).trim().slice(0, 40),
-    p_word3: String(englishBeing.word3).trim().slice(0, 40)
-  });
+  const { data, error } = await supabase
+    .from("ai_beings")
+    .update({
+      photo: String(photo),
+      name: String(englishBeing.name).trim().slice(0, 60),
+      best_current_choice: String(englishBeing.bio).trim().slice(0, 160),
+      category: String(englishBeing.category).trim().slice(0, 60),
+      word1: String(englishBeing.word1).trim().slice(0, 40),
+      word2: String(englishBeing.word2).trim().slice(0, 40),
+      word3: String(englishBeing.word3).trim().slice(0, 40),
+      phone: normalizedPhone
+    })
+    .eq("id", req.params.id)
+    .select(AI_BEING_PUBLIC_COLUMNS)
+    .single();
 
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: "AI Being not found." });
@@ -5949,24 +6029,21 @@ Rules:
 });
 
 app.delete("/ai-beings/:id", async (req, res) => {
-  if (req.query.password !== "AskNull2026") {
-    return res.status(403).json({ error: "Wrong password" });
-  }
+  const { management_credential } = req.body || {};
+  const authorization = await authorizeBeingManagement(req.params.id, management_credential);
+  if (authorization.notFound) return res.status(404).json({ error: "AI Being not found." });
+  if (!authorization.authorized) return res.status(403).json({ error: "Wrong management password or recovery code." });
 
-  const { data, error } = await supabase.rpc("delete_ai_being_admin", {
-    p_id: req.params.id,
-    p_password: req.query.password
-  });
-
+  const { error } = await supabase.from("ai_beings").delete().eq("id", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
-  if (!data) return res.status(404).json({ error: "AI Being not found." });
 
   res.json({ success: true });
 });
 
 app.get("/public-nulls-top", async (req,res)=>{
 
-    const { data, error } = await supabase
+  const recoveryCode = createBeingRecoveryCode();
+  const { data, error } = await supabase
         .from("public_nulls")
         .select("*")
         .order("love", { ascending:false })
