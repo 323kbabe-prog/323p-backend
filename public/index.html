@@ -4,7 +4,8 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.29 (2026-07-16)
+  v10.0.30 (2026-07-16)
+- Added a Show passwords control to the AI Being creation form
 - Added immediate AI Being profile-image preview in the create/edit form
 - Added per-AI-Being management passwords and one-time recovery codes
 - Added optional public international phone numbers to AI Being profiles
@@ -756,6 +757,10 @@ ASK.CAMERA – AI Camera Search
     <div id="beingPasswordFields">
       <input id="beingPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Management password — minimum 8 characters" class="beingInput">
       <input id="beingPasswordConfirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Confirm management password" class="beingInput">
+      <label style="display:flex;align-items:center;gap:8px;margin:-2px 4px 12px;font-size:13px;font-weight:700;cursor:pointer;">
+        <input id="beingShowPasswords" type="checkbox" onchange="toggleBeingPasswords(this.checked)" style="width:18px;height:18px;margin:0;">
+        Show passwords
+      </label>
       <div style="font-size:11px;line-height:1.4;color:#666;margin:-3px 4px 14px;">Save this password and the recovery code shown after creation. ASK.CAMERA cannot reveal them later.</div>
     </div>
     <button id="createBeingSubmit" onclick="createAIBeing()" style="width:100%;height:48px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;font-size:15px;">CREATE AI BEING</button>
@@ -5087,6 +5092,12 @@ let editingBeing = null;
 let editingBeingPassword = "";
 let beingPreviewUrl = "";
 
+function toggleBeingPasswords(show){
+  const type = show ? "text" : "password";
+  document.getElementById("beingPassword").type = type;
+  document.getElementById("beingPasswordConfirm").type = type;
+}
+
 function previewBeingPhoto(input){
   const preview = document.getElementById("beingCurrentPhoto");
   const file = input?.files?.[0];
@@ -5112,6 +5123,8 @@ function resetBeingForm(){
   document.getElementById("beingPhoto").value = "";
   ["beingName","beingChoice","beingCategory","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
     .forEach(id => document.getElementById(id).value = "");
+  document.getElementById("beingShowPasswords").checked = false;
+  toggleBeingPasswords(false);
   document.getElementById("beingPasswordFields").style.display = "block";
   document.getElementById("createBeingSubmit").innerText = "CREATE AI BEING";
 }
