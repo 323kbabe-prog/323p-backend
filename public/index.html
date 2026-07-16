@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.12 (2026-07-16)
+  v10.0.13 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -230,6 +230,57 @@ touch-action:manipulation;
 
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
+}
+
+#appStartupLoader{
+  position:fixed;
+  inset:0;
+  z-index:2147483647;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  color:#fff;
+  opacity:1;
+  visibility:visible;
+  transition:opacity .28s ease, visibility .28s ease;
+}
+
+#appStartupLoader.ready{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+
+.appStartupName{
+  font-size:28px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:1px;
+}
+
+.appStartupDots{
+  display:flex;
+  gap:7px;
+  margin-top:18px;
+}
+
+.appStartupDots span{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#fff;
+  opacity:.25;
+  animation:appStartupPulse 1s infinite ease-in-out;
+}
+
+.appStartupDots span:nth-child(2){ animation-delay:.16s; }
+.appStartupDots span:nth-child(3){ animation-delay:.32s; }
+
+@keyframes appStartupPulse{
+  0%, 70%, 100%{ opacity:.25; transform:scale(.8); }
+  35%{ opacity:1; transform:scale(1); }
 }
 
 #cameraWrap{
@@ -531,6 +582,13 @@ margin-right:auto;
 </head>
 
 <body>
+
+<div id="appStartupLoader" role="status" aria-label="Ask Null loading">
+  <div class="appStartupName">ASK NULL</div>
+  <div class="appStartupDots" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+</div>
 
   
   
@@ -1603,12 +1661,27 @@ ALLOW CAMERA ACCESS
   }
 }
 
+function revealReadyApp(){
+  const loader = document.getElementById("appStartupLoader");
+  if(!loader) return;
+  loader.classList.add("ready");
+  setTimeout(() => loader.remove(), 320);
+}
+
 window.onload = async () => {
+  const minimumDisplay = new Promise(resolve => setTimeout(resolve, 650));
+  const initialization = Promise.allSettled([
+    startCamera(),
+    loadPublicNullThumbnails()
+  ]);
+  const fallback = new Promise(resolve => setTimeout(resolve, 4500));
 
-    await startCamera();
+  await Promise.all([
+    minimumDisplay,
+    Promise.race([initialization, fallback])
+  ]);
 
-    loadPublicNullThumbnails();
-
+  revealReadyApp();
 };
 
 const uploadImage =
