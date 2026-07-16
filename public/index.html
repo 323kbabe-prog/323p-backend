@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.34 (2026-07-17)
+- Made X and ASK.CAMERA detach the device from its backend room before restarting
+
   v10.0.33 (2026-07-17)
 - Fixed AI Being image uploads incorrectly reporting Reconnecting after recovery
 - Made ASK.CAMERA and Back to ASK.CAMERA start a completely new standard session
@@ -1529,6 +1532,7 @@ let pendingImageDataUrl = null;
 let publishMode = "public";
 
 let roomReady = true;
+let endingRoomSession = false;
 let hasAutoRejoined = false;
 let roomExpiresAt = 0;
 let rejoinTimeout = null;
@@ -2234,24 +2238,43 @@ cameraWrap.addEventListener(
 
 });
 
-closeRoom.onclick = () => {
+function endCurrentRoomAndRestart(){
+  if (endingRoomSession) return;
+  endingRoomSession = true;
 
-  localStorage.removeItem("displayName");
-  localStorage.removeItem("roomId");
-  localStorage.removeItem("imageIntroText");
-  localStorage.removeItem("roomThumbnail");
-  localStorage.removeItem("selectedBeingId");
-  localStorage.removeItem("selectedBeing");
-  localStorage.removeItem("selectedBeingSessionId");
+  [
+    "displayName",
+    "roomId",
+    "imageIntroText",
+    "roomThumbnail",
+    "selectedBeingId",
+    "selectedBeing",
+    "selectedBeingSessionId"
+  ].forEach(key => localStorage.removeItem(key));
 
-  history.replaceState(
-    {},
-    "",
-    "/"
-  );
+  history.replaceState({}, "", "/");
 
-  location.reload();
-};
+  let restarted = false;
+  const restart = () => {
+    if (restarted) return;
+    restarted = true;
+    location.reload();
+  };
+
+  const fallback = setTimeout(restart, 800);
+
+  if (socket.connected) {
+    socket.emit("leaveCurrentRoom", { deviceId }, () => {
+      clearTimeout(fallback);
+      restart();
+    });
+  } else {
+    clearTimeout(fallback);
+    restart();
+  }
+}
+
+closeRoom.onclick = endCurrentRoomAndRestart;
 
 
 roomInput.onkeydown = e => {
@@ -2356,6 +2379,8 @@ socket.on(
 
 
 socket.on("roomCreated", data => {
+
+if (endingRoomSession) return;
 
 hideRoomLoadingScreen();
 
@@ -3760,6 +3785,8 @@ socket.on(
 
 socket.on("roomStatus", data => {
 
+    if (endingRoomSession) return;
+
     if (!data) {
 
         localStorage.removeItem("roomId");
@@ -4223,20 +4250,7 @@ function startDailyNullCountdown(){
 }
 
 function showCreateNull(){
-
-    [
-      "displayName",
-      "roomId",
-      "imageIntroText",
-      "roomThumbnail",
-      "selectedBeingId",
-      "selectedBeing",
-      "selectedBeingSessionId"
-    ].forEach(key => localStorage.removeItem(key));
-
-    history.replaceState({}, "", "/");
-    location.reload();
-
+    endCurrentRoomAndRestart();
 }
 
 async function showDailyNulls(){
