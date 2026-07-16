@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-v10.0.3 (2026-07-16)
+v10.0.4 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -1065,6 +1065,8 @@ Ask Null
 
 
 
+<button id="beingQrBtn" onclick="showBeingQR()" style="display:none;height:24px;padding:0 10px;border:none;border-radius:999px;background:#000;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">QR</button>
+
 <button
 id="shareRoomBtn"
 onclick="shareRoom()"
@@ -1085,8 +1087,6 @@ margin-top:-2px;
 >
 Share
 </button>
-
-<button id="beingQrBtn" onclick="showBeingQR()" style="display:none;height:24px;padding:0 10px;border:none;border-radius:999px;background:#000;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">QR</button>
 
 
 
@@ -1388,13 +1388,14 @@ async function shareRoom(){
 
     const roomId =
         localStorage.getItem("roomId");
-  socket.emit("getRoomStatus", {
-    deviceId
-});
-
-    if(!roomId) return;
-
     const selectedBeingId = localStorage.getItem("selectedBeingId");
+
+    if(!roomId && !selectedBeingId) return;
+
+    if(roomId){
+      socket.emit("getRoomStatus", { deviceId });
+    }
+
     const url = selectedBeingId
       ? `${location.origin}/being/${selectedBeingId}`
       : `${location.origin}/?room=${roomId}`;
@@ -1938,6 +1939,9 @@ closeRoom.onclick = () => {
   localStorage.removeItem("roomId");
   localStorage.removeItem("imageIntroText");
   localStorage.removeItem("roomThumbnail");
+  localStorage.removeItem("selectedBeingId");
+  localStorage.removeItem("selectedBeing");
+  localStorage.removeItem("selectedBeingSessionId");
 
   history.replaceState(
     {},
@@ -2126,8 +2130,9 @@ gtag('event', 'page_view', {
 
 roomInput.style.display = "none";
 
-document.getElementById("shareRoomBtn").innerText =
-  "Share Room " + data.displayName;
+document.getElementById("shareRoomBtn").innerText = data.being
+  ? "Share"
+  : "Share Room " + data.displayName;
 
 capturePreview.style.display =
   "none";
@@ -2138,7 +2143,7 @@ const roomThumbnail =
 const thumb =
     localStorage.getItem("roomThumbnail");
 
-if (thumb) {
+if (!data.being && thumb) {
     roomThumbnail.onload = () => {
         roomThumbnail.style.display = "block";
     };
@@ -4854,11 +4859,34 @@ async function openAIBeing(id){
   dailyNullsScreen.style.display = "none";
   publicNullsScreen.style.display = "none";
   cameraWrap.style.display = "block";
-  roomOverlay.style.display = "none";
+  roomOverlay.style.display = "flex";
   document.getElementById("roomTitle").innerText = being.name;
+  document.getElementById("roomThumbnail").src = being.photo;
+  document.getElementById("roomThumbnail").style.display = "block";
+  document.getElementById("beingQrBtn").style.display = "inline-block";
+  document.getElementById("roomCountdown").style.display = "none";
+  document.getElementById("shareRoomBtn").innerText = "Share";
+  document.getElementById("homeRoomCard").style.display = "none";
+  document.getElementById("firstNextBtn").style.display = "none";
+  document.getElementById("memoryBtn").style.display = "none";
+
+  roomMessages.innerHTML = `
+    <div style="width:100%;max-width:420px;margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;text-align:center;padding:30px 10px;">
+      <img src="${being.photo}" alt="${escapeBeingText(being.name)}" style="width:96px;height:96px;object-fit:cover;border-radius:24px;box-shadow:0 8px 30px rgba(0,0,0,.18);">
+      <div style="font-size:24px;font-weight:900;margin-top:16px;">${escapeBeingText(being.name)}</div>
+      <div style="font-size:14px;line-height:1.45;margin-top:8px;max-width:320px;">${escapeBeingText(being.best_current_choice)}</div>
+      <div style="display:flex;gap:10px;margin-top:22px;width:100%;max-width:320px;">
+        <button onclick="captureImage()" style="flex:1;height:46px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">TAKE PHOTO</button>
+        <button onclick="document.getElementById('uploadImage').click()" style="flex:1;height:46px;border:none;border-radius:999px;background:#fff;color:#111;font-weight:800;">UPLOAD IMAGE</button>
+      </div>
+    </div>
+  `;
+
+  roomInput.style.display = "block";
+  roomInput.disabled = true;
+  roomInput.placeholder = "Ask — upload an image first";
   history.replaceState({},"",`/being/${being.id}`);
-  helper.style.display = "flex";
-  helper.innerHTML = `<div style="font-size:22px;font-weight:900;">${escapeBeingText(being.name)}</div><div style="margin-top:8px;">Take a photo or upload an image.</div>`;
+  helper.style.display = "none";
 }
 
 function showBeingQR(){
