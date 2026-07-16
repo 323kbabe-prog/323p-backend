@@ -2,6 +2,9 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.11 (2026-07-17)
+// - Fixed AI Being form creation crash caused by an out-of-scope recovery code
+
 // v10.0.10 (2026-07-16)
 // - Added private per-AI-Being management passwords and recovery codes
 // - Removed AI Being credentials from URLs and public API responses
@@ -5920,6 +5923,8 @@ Rules:
     });
   }
 
+  const recoveryCode = createBeingRecoveryCode();
+
   const { data, error } = await supabase
     .from("ai_beings")
     .insert({
@@ -6041,8 +6046,6 @@ app.delete("/ai-beings/:id", async (req, res) => {
 });
 
 app.get("/public-nulls-top", async (req,res)=>{
-
-  const recoveryCode = createBeingRecoveryCode();
   const { data, error } = await supabase
         .from("public_nulls")
         .select("*")
