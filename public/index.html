@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-v10.0.7 (2026-07-16)
+v10.0.8 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -787,11 +787,17 @@ style="white-space:nowrap;"
 <div id="helper">
 
 <div
+id="homeUtilityButtons"
 style="
+position:fixed;
+top:142px;
+left:50%;
+transform:translateX(-50%);
+z-index:20;
 display:flex;
 justify-content:center;
 gap:10px;
-margin-bottom:18px;
+margin:0;
 ">
 
 <button
@@ -4928,7 +4934,11 @@ async function openAIBeing(id){
 
   roomMessages.innerHTML = `
     <div style="width:100%;max-width:420px;margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;text-align:center;padding:30px 10px;">
-      <img src="${being.photo}" alt="${escapeBeingText(being.name)}" style="width:96px;height:96px;object-fit:cover;border-radius:24px;box-shadow:0 8px 30px rgba(0,0,0,.18);">
+      <div style="position:relative;width:180px;height:112px;border:3px solid #fff;border-radius:18px;overflow:hidden;background:#111;box-shadow:0 8px 30px rgba(0,0,0,.22);">
+        <video id="beingCameraPreview" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+        <div style="position:absolute;left:8px;bottom:7px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.68);color:#fff;font-size:8px;font-weight:900;letter-spacing:.8px;">LIVE CAMERA</div>
+      </div>
+      <img src="${being.photo}" alt="${escapeBeingText(being.name)}" style="width:96px;height:96px;object-fit:cover;border-radius:24px;box-shadow:0 8px 30px rgba(0,0,0,.18);margin-top:16px;">
       <div style="font-size:24px;font-weight:900;margin-top:16px;">${escapeBeingText(being.name)}</div>
       <div style="font-size:14px;line-height:1.45;margin-top:8px;max-width:320px;">${escapeBeingText(being.best_current_choice)}</div>
       <div style="display:flex;gap:10px;margin-top:22px;width:100%;max-width:320px;">
@@ -4938,11 +4948,28 @@ async function openAIBeing(id){
     </div>
   `;
 
+  connectBeingCameraPreview();
+
   roomInput.style.display = "block";
   roomInput.disabled = true;
   roomInput.placeholder = "Ask — upload an image first";
   history.replaceState({},"",`/being/${being.id}`);
   helper.style.display = "none";
+}
+
+function connectBeingCameraPreview(attempt = 0){
+  const preview = document.getElementById("beingCameraPreview");
+  if(!preview) return;
+
+  if(video.srcObject){
+    preview.srcObject = video.srcObject;
+    preview.play().catch(() => {});
+    return;
+  }
+
+  if(attempt < 20){
+    setTimeout(() => connectBeingCameraPreview(attempt + 1), 200);
+  }
 }
 
 function renderBeingRoomHeader(being){
