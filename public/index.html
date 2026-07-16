@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-v10.0.4 (2026-07-16)
+v10.0.5 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -183,6 +183,7 @@ content="width=device-width, initial-scale=1, viewport-fit=cover"
 
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
 
@@ -1007,6 +1008,7 @@ margin-bottom:0px;
 >
 
 <div
+id="roomIdentityPanel"
 style="
 display:flex;
 align-items:center;
@@ -2036,7 +2038,7 @@ document.getElementById("memoryBtn").style.display = "none";
     if(savedDisplayName){
 
     document.getElementById("shareRoomBtn").innerText =
-        "Share Room " + savedDisplayName;
+        localStorage.getItem("selectedBeingId") ? "Share" : "Share Room " + savedDisplayName;
 
     }
   }
@@ -2096,12 +2098,7 @@ if (data.being) {
   localStorage.setItem("selectedBeingId", data.being.id);
   localStorage.setItem("selectedBeing", JSON.stringify(data.being));
   history.replaceState({}, "", `/being/${data.being.id}`);
-  document.getElementById("roomTitle").innerText = data.being.name;
-  document.getElementById("roomThumbnail").src = data.being.photo;
-  document.getElementById("roomThumbnail").style.display = "block";
-  document.getElementById("beingQrBtn").style.display = "inline-block";
-  document.getElementById("roomCountdown").style.display = "none";
-  document.getElementById("homeRoomCard").style.display = "none";
+  renderBeingRoomHeader(data.being);
 } else {
   history.replaceState({}, "", `/?room=${data.roomId}`);
   document.getElementById("beingQrBtn").style.display = "none";
@@ -2233,7 +2230,7 @@ const savedDisplayName =
 if (savedDisplayName) {
 
   document.getElementById("shareRoomBtn").innerText =
-    "Share Room " + savedDisplayName;
+    localStorage.getItem("selectedBeingId") ? "Share" : "Share Room " + savedDisplayName;
 
 } else if (savedRoomId) {
 
@@ -3641,7 +3638,7 @@ const savedDisplayName =
 if (savedDisplayName) {
 
     document.getElementById("shareRoomBtn").innerText =
-        "Share Room " + savedDisplayName;
+        localStorage.getItem("selectedBeingId") ? "Share" : "Share Room " + savedDisplayName;
 
 } else if (savedRoomId) {
 
@@ -4860,13 +4857,7 @@ async function openAIBeing(id){
   publicNullsScreen.style.display = "none";
   cameraWrap.style.display = "block";
   roomOverlay.style.display = "flex";
-  document.getElementById("roomTitle").innerText = being.name;
-  document.getElementById("roomThumbnail").src = being.photo;
-  document.getElementById("roomThumbnail").style.display = "block";
-  document.getElementById("beingQrBtn").style.display = "inline-block";
-  document.getElementById("roomCountdown").style.display = "none";
-  document.getElementById("shareRoomBtn").innerText = "Share";
-  document.getElementById("homeRoomCard").style.display = "none";
+  renderBeingRoomHeader(being);
   document.getElementById("firstNextBtn").style.display = "none";
   document.getElementById("memoryBtn").style.display = "none";
 
@@ -4889,6 +4880,35 @@ async function openAIBeing(id){
   helper.style.display = "none";
 }
 
+function renderBeingRoomHeader(being){
+  if(!being) return;
+
+  const panel = document.getElementById("roomIdentityPanel");
+  const title = document.getElementById("roomTitle");
+  const thumbnail = document.getElementById("roomThumbnail");
+
+  panel.style.flex = "1";
+  panel.style.minWidth = "0";
+  panel.style.maxWidth = "calc(100% - 55px)";
+
+  thumbnail.src = being.photo;
+  thumbnail.style.display = "block";
+
+  title.style.display = "flex";
+  title.style.flexDirection = "column";
+  title.style.minWidth = "0";
+  title.style.maxWidth = "92px";
+  title.innerHTML = `
+    <span style="font-size:8px;line-height:1;letter-spacing:.8px;opacity:.45;white-space:nowrap;">AI BEING</span>
+    <span style="font-size:14px;line-height:1.15;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeBeingText(being.name)}</span>
+  `;
+
+  document.getElementById("beingQrBtn").style.display = "inline-block";
+  document.getElementById("shareRoomBtn").innerText = "Share";
+  document.getElementById("roomCountdown").style.display = "none";
+  document.getElementById("homeRoomCard").style.display = "none";
+}
+
 function showBeingQR(){
   const beingId = localStorage.getItem("selectedBeingId");
   if(!beingId) return;
@@ -4901,8 +4921,22 @@ function showBeingQR(){
     overlay.onclick = () => overlay.style.display = "none";
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:24px;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:14px;">AI BEING QR</div><img alt="AI Being QR code" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}" style="width:240px;max-width:100%;"><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:999px;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
+  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:24px;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:14px;">AI BEING QR</div><div id="beingQrCode" style="width:240px;height:240px;max-width:100%;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:999px;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
   overlay.style.display = "flex";
+
+  const qrHolder = document.getElementById("beingQrCode");
+  if(typeof QRCode === "function"){
+    new QRCode(qrHolder, {
+      text: url,
+      width: 240,
+      height: 240,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  }else{
+    qrHolder.innerHTML = `<div style="font-size:13px;padding:20px;">QR generator is loading. Close and tap QR again.</div>`;
+  }
 }
 
 const directBeingMatch = location.pathname.match(/^\/being\/([^/]+)$/);
