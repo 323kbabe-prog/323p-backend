@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.17 (2026-07-16)
+  v10.0.18 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -511,10 +511,26 @@ top:18px;
 left:16px;
 right:16px;
 
-display:flex;
+display:grid;
+grid-template-columns:minmax(0,1fr) minmax(0,1fr);
 gap:8px;
 
 z-index:999;
+}
+
+#createNullBtn{
+  grid-column:1;
+  grid-row:1;
+}
+
+#aiBeingsBtn{
+  grid-column:2;
+  grid-row:1;
+}
+
+#dailyNullsBtn{
+  grid-column:1 / -1;
+  grid-row:2;
 }
 
 #modeBar button{
@@ -535,6 +551,22 @@ padding:10px 12px;
 border-radius:999px;
 }
 
+@media (min-width:700px){
+  #modeBar{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+  #createNullBtn{ grid-column:1; grid-row:1; }
+  #dailyNullsBtn{ grid-column:2; grid-row:1; }
+  #aiBeingsBtn{ grid-column:3; grid-row:1; }
+
+  #homeRoomCard{ top:96px !important; }
+  #homeUtilityButtons{ top:142px !important; }
+  #dailyNullsScreen,
+  #publicNullsScreen,
+  #aiBeingsScreen{ padding-top:90px !important; }
+}
+
 #dailyNullsScreen{
 
 display:none;
@@ -551,7 +583,7 @@ z-index:998;
 overflow-y:auto;
 
 padding:
-90px
+140px
 16px
 40px
 16px;
@@ -639,7 +671,7 @@ ASK.CAMERA – AI Camera Search
 
 </div>
 
-<div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:90px 16px 24px;box-sizing:border-box;flex-direction:column;">
+<div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:140px 16px 24px;box-sizing:border-box;flex-direction:column;">
   <div style="flex:0 0 auto;">
     <div style="font-size:24px;font-weight:900;margin-bottom:6px;">AI BEINGS CARDS</div>
     <div style="font-size:13px;opacity:.7;margin-bottom:14px;">Choose an AI Being or create your own.</div>
@@ -680,7 +712,7 @@ background:#000;
 color:#fff;
 z-index:998;
 overflow-y:auto;
-padding:90px 16px 40px 16px;
+padding:140px 16px 40px 16px;
 ">
 
 <div
@@ -805,7 +837,7 @@ onclick="openHomeRoom()"
 style="
 cursor:pointer;
 position:fixed;
-top:96px;
+top:126px;
 left:50%;
 transform:translateX(-50%);
 z-index:100000;
@@ -852,7 +884,7 @@ style="white-space:nowrap;"
 id="homeUtilityButtons"
 style="
 position:fixed;
-top:142px;
+top:172px;
 left:50%;
 transform:translateX(-50%);
 z-index:20;
