@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.20 (2026-07-16)
+  v10.0.21 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -555,13 +555,36 @@ border-radius:999px;
 min-height:40px;
 }
 
-/* Mobile home controls: keep a stable, non-overlapping vertical order. */
-#homeRoomCard{
-  top:142px !important;
+/* Permanent home controls live outside the helper content that JS replaces. */
+#homeControlStack{
+  position:fixed;
+  top:122px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:100000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  width:max-content;
+  max-width:calc(100vw - 32px);
+  pointer-events:none;
 }
 
+#homeRoomCard,
 #homeUtilityButtons{
-  top:190px !important;
+  position:relative !important;
+  top:auto !important;
+  left:auto !important;
+  transform:none !important;
+  flex:0 0 auto;
+  pointer-events:auto;
+}
+
+/* State messages may contain old copies; keep only the permanent controls. */
+#helper #refreshCameraBtn,
+#helper #guideBtn{
+  display:none !important;
 }
 
 @media (min-width:700px){
@@ -573,8 +596,7 @@ min-height:40px;
   #dailyNullsBtn{ grid-column:2; grid-row:1; }
   #aiBeingsBtn{ grid-column:3; grid-row:1; }
 
-  #homeRoomCard{ top:96px !important; }
-  #homeUtilityButtons{ top:142px !important; }
+  #homeControlStack{ top:96px; }
   #dailyNullsScreen,
   #publicNullsScreen,
   #aiBeingsScreen{ padding-top:90px !important; }
@@ -844,6 +866,8 @@ z-index:4;
 />
 
 
+<div id="homeControlStack">
+
 <div
 id="homeRoomCard"
 onclick="openHomeRoom()"
@@ -890,8 +914,6 @@ style="white-space:nowrap;"
 </span>
 
 </div>
-  
-<div id="helper">
 
 <div
 id="homeUtilityButtons"
@@ -963,6 +985,10 @@ margin:0;
 </button>
 
 </div>
+
+</div>
+
+<div id="helper">
 
 <div style="
   max-width:600px;
@@ -1360,6 +1386,39 @@ const roomOverlay =
   document.getElementById(
     "roomOverlay"
   );
+
+const homeControlStack =
+  document.getElementById(
+    "homeControlStack"
+  );
+
+function syncHomeControlStack(){
+  const cameraIsVisible =
+    getComputedStyle(cameraWrap).display !== "none";
+
+  const roomIsOpen =
+    getComputedStyle(roomOverlay).display === "flex";
+
+  homeControlStack.style.display =
+    cameraIsVisible && !roomIsOpen
+      ? "flex"
+      : "none";
+}
+
+const homeControlObserver =
+  new MutationObserver(syncHomeControlStack);
+
+homeControlObserver.observe(cameraWrap,{
+  attributes:true,
+  attributeFilter:["style"]
+});
+
+homeControlObserver.observe(roomOverlay,{
+  attributes:true,
+  attributeFilter:["style"]
+});
+
+syncHomeControlStack();
 
 const roomMessages =
   document.getElementById(
