@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.14 (2026-07-17)
+// - Restored explicit one-hour expiry reporting for standard ASK.CAMERA rooms
+// - Kept AI Being rooms permanent and timer-free after reconnecting
+
 // v10.0.13 (2026-07-17)
 // - Added explicit device detachment when an AI Being room session is ended
 
@@ -1100,7 +1104,9 @@ socket.on("getRoomStatus", ({ deviceId }) => {
 
         displayName: room.displayName,
 
-        expiresAt: room.expiresAt
+        expiresAt: room.expiresAt,
+
+        permanent: !!room.permanent
 
     });
 
