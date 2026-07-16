@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-v10.0.1 (2026-07-16)
+v10.0.3 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -594,7 +594,7 @@ Ask Null – AI Camera Search
     </div>
     <input id="beingPhoto" type="file" accept="image/*" style="margin-bottom:14px;width:100%;">
     <input id="beingName" placeholder="Name" class="beingInput">
-    <textarea id="beingChoice" placeholder="Best Current Choice" class="beingInput" rows="3"></textarea>
+    <textarea id="beingChoice" placeholder="Bio — one sentence" maxlength="160" class="beingInput" rows="3"></textarea>
     <input id="beingCategory" placeholder="Category" class="beingInput">
     <input id="beingWord1" placeholder="Word 1" class="beingInput">
     <input id="beingWord2" placeholder="Word 2" class="beingInput">
@@ -4752,7 +4752,7 @@ async function loadAIBeings(){
           <img src="${being.photo}" style="width:74px;height:74px;object-fit:cover;border-radius:18px;">
           <div style="min-width:0;flex:1;">
             <div style="font-size:20px;font-weight:900;">${escapeBeingText(being.name)}</div>
-            <div style="font-size:11px;opacity:.45;margin-top:7px;">BEST CURRENT CHOICE</div>
+            <div style="font-size:11px;opacity:.45;margin-top:7px;">BIO</div>
             <div style="font-size:14px;font-weight:700;line-height:1.35;">${escapeBeingText(being.best_current_choice)}</div>
           </div>
         </div>
