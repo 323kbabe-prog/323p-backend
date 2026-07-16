@@ -4,7 +4,7 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-v9.0.0 (2026-07-11)
+v10.0.0 (2026-07-16)
 - Added business search
 - Added real estate to the existing Find a Place flow
 - Improved object search logic
@@ -568,9 +568,45 @@ Ask Null – AI Camera Search
   Daily Nulls
 </button>
 
+<button
+  id="aiBeingsBtn"
+  onclick="showAIBeings()"
+  style="font-size:16px;font-weight:500;"
+>
+  AI Beings Cards
+</button>
+
 
 
 </div>
+
+<div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow-y:auto;padding:90px 16px 40px;">
+  <div style="font-size:24px;font-weight:900;margin-bottom:6px;">AI BEINGS CARDS</div>
+  <div style="font-size:13px;opacity:.7;margin-bottom:22px;">Choose an AI Being or create your own.</div>
+  <div id="aiBeingsCards">Loading...</div>
+</div>
+
+<div id="createBeingScreen" style="display:none;position:fixed;inset:0;background:#fff;color:#111;z-index:1002;overflow-y:auto;padding:28px 18px 50px;">
+  <div style="max-width:460px;margin:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;">
+      <div style="font-size:24px;font-weight:900;">CREATE AI BEING</div>
+      <button onclick="closeCreateBeing()" style="border:none;background:#f2f2f2;border-radius:50%;width:40px;height:40px;font-size:22px;">×</button>
+    </div>
+    <input id="beingPhoto" type="file" accept="image/*" style="margin-bottom:14px;width:100%;">
+    <input id="beingName" placeholder="Name" class="beingInput">
+    <textarea id="beingChoice" placeholder="Best Current Choice" class="beingInput" rows="3"></textarea>
+    <input id="beingCategory" placeholder="Category" class="beingInput">
+    <input id="beingWord1" placeholder="Word 1" class="beingInput">
+    <input id="beingWord2" placeholder="Word 2" class="beingInput">
+    <input id="beingWord3" placeholder="Word 3" class="beingInput">
+    <button id="createBeingSubmit" onclick="createAIBeing()" style="width:100%;height:48px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;font-size:15px;">CREATE AI BEING</button>
+  </div>
+</div>
+
+<style>
+.beingInput{width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:16px;padding:13px 14px;margin-bottom:12px;font:inherit;background:#fff;color:#111;}
+.beingCard{background:#fff;color:#111;border-radius:24px;padding:16px;margin:0 auto 16px;max-width:420px;}
+</style>
 
 <div id="publicNullsScreen"
 style="
@@ -1050,6 +1086,8 @@ margin-top:-2px;
 Share
 </button>
 
+<button id="beingQrBtn" onclick="showBeingQR()" style="display:none;height:24px;padding:0 10px;border:none;border-radius:999px;background:#000;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">QR</button>
+
 
 
 
@@ -1260,6 +1298,10 @@ let memoryMode = false;
 let notificationMode = null;
 let imageIntroText = "";
 let roomNullCard = null;
+let beingFirstRoundQueue = [];
+let beingFirstRoundWaiting = false;
+let beingFirstRoundBaseline = 0;
+let lastRoomMessageCount = 0;
 
 let pendingImageDataUrl = null;
 let publishMode = "public";
@@ -1352,10 +1394,10 @@ async function shareRoom(){
 
     if(!roomId) return;
 
-    const url =
-        location.origin +
-        "/?room=" +
-        roomId;
+    const selectedBeingId = localStorage.getItem("selectedBeingId");
+    const url = selectedBeingId
+      ? `${location.origin}/being/${selectedBeingId}`
+      : `${location.origin}/?room=${roomId}`;
 
     if(navigator.share){
 
@@ -1363,9 +1405,9 @@ async function shareRoom(){
 
             await navigator.share({
 
-                title:"Ask Null",
+                title: selectedBeingId ? "AI Being on Ask Null" : "Ask Null",
 
-                text:"Join my AI Live Room.",
+                text: selectedBeingId ? "Open this AI Being." : "Join my AI Live Room.",
 
                 url
 
@@ -1670,6 +1712,10 @@ if (!roomReady) {
             'input[name="publishMode"]:checked'
         ).value;
 
+    if (localStorage.getItem("selectedBeingId")) {
+      publishMode = "private";
+    }
+
     document.getElementById(
         "publishDialog"
     ).style.display = "none";
@@ -1701,6 +1747,8 @@ deviceId,
     roomMode: true,
     askMode: false,
     publishMode,
+    beingId: localStorage.getItem("selectedBeingId"),
+    beingSessionId: localStorage.getItem("selectedBeingSessionId"),
     roomId: localStorage.getItem("roomId")
 });
 
@@ -2009,7 +2057,7 @@ roomExpiresAt = data.expiresAt;
 document.getElementById("homeRoomId").innerText =
     "Room #" + data.roomId;
 
-startRoomCountdown();
+if (!data.permanent) startRoomCountdown();
 
 localStorage.setItem("roomId", data.roomId);
   
@@ -2025,7 +2073,7 @@ roomExpiresAt = data.expiresAt;
 document.getElementById("homeRoomCard").style.display = "block";
 document.getElementById("homeRoomId").innerText =
     "Room #" + data.roomId;
-    startRoomCountdown();
+    if (!data.permanent) startRoomCountdown();
 
 
 
@@ -2040,11 +2088,20 @@ localStorage.setItem(
   data.roomId
 );
 
-history.replaceState(
-  {},
-  "",
-  `/?room=${data.roomId}`
-);
+if (data.being) {
+  localStorage.setItem("selectedBeingId", data.being.id);
+  localStorage.setItem("selectedBeing", JSON.stringify(data.being));
+  history.replaceState({}, "", `/being/${data.being.id}`);
+  document.getElementById("roomTitle").innerText = data.being.name;
+  document.getElementById("roomThumbnail").src = data.being.photo;
+  document.getElementById("roomThumbnail").style.display = "block";
+  document.getElementById("beingQrBtn").style.display = "inline-block";
+  document.getElementById("roomCountdown").style.display = "none";
+  document.getElementById("homeRoomCard").style.display = "none";
+} else {
+  history.replaceState({}, "", `/?room=${data.roomId}`);
+  document.getElementById("beingQrBtn").style.display = "none";
+}
 
 
 if(imageIntroText){
@@ -2105,6 +2162,16 @@ document.getElementById(
 //////////////////////////////////////////////////
 
 socket.on("roomMessages",messages => {
+
+lastRoomMessageCount = messages.length;
+
+if (
+  beingFirstRoundWaiting &&
+  messages.length > beingFirstRoundBaseline
+) {
+  beingFirstRoundWaiting = false;
+  setTimeout(runNextBeingFirstCard, 500);
+}
 
 console.log("ROOM MESSAGES");
 console.log(messages);
@@ -3228,6 +3295,37 @@ socket.on("aiTypingStop", () => {
 
 });
 
+socket.on("beingFirstRoundStart", () => {
+  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g," ");
+  beingFirstRoundQueue = [
+    { type: "news", text: "latest news" },
+    { type: "shopping", text: "one shopping recommendation" },
+    { type: "place", text: `one place to go near me in ${localZone}` },
+    { type: "real_estate", text: `one real estate property near me in ${localZone}` }
+  ];
+  beingFirstRoundWaiting = false;
+  setTimeout(runNextBeingFirstCard, 700);
+});
+
+function runNextBeingFirstCard(){
+  if (beingFirstRoundWaiting || !beingFirstRoundQueue.length) {
+    if (!beingFirstRoundQueue.length) roomInput.style.display = "block";
+    return;
+  }
+
+  const next = beingFirstRoundQueue.shift();
+  beingFirstRoundBaseline = lastRoomMessageCount;
+  beingFirstRoundWaiting = true;
+  roomInput.style.display = "none";
+
+  socket.emit("roomMessage", {
+    text: next.text,
+    autoFirstRound: true,
+    autoCardType: next.type,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+}
+
   socket.on("reminderSaved", () => {
 
     memoryMode = false;
@@ -3816,6 +3914,11 @@ function startDailyNullCountdown(){
 
 function showCreateNull(){
 
+    localStorage.removeItem("selectedBeingId");
+    localStorage.removeItem("selectedBeing");
+
+    document.getElementById("aiBeingsScreen").style.display = "none";
+
     publicNullsScreen.style.display = "none";
 
     dailyNullsScreen.style.display = "none";
@@ -3832,6 +3935,8 @@ gtag('event', 'page_view', {
 async function showDailyNulls(){
 
     publicNullsScreen.style.display = "none";
+
+    document.getElementById("aiBeingsScreen").style.display = "none";
 
     cameraWrap.style.display = "none";
 
@@ -3853,6 +3958,8 @@ async function showPublicNulls(){
     cameraWrap.style.display = "none";
 
     dailyNullsScreen.style.display = "none";
+
+    document.getElementById("aiBeingsScreen").style.display = "none";
 
     publicNullsScreen.style.display = "block";
 
@@ -4610,6 +4717,169 @@ function openGuide() {
 
 function closeGuide() {
     document.getElementById("guidePopup").style.display = "none";
+}
+
+const AI_BEINGS_API = "https://three23p-backend.onrender.com";
+
+function escapeBeingText(value){
+  return String(value || "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+
+async function showAIBeings(){
+  cameraWrap.style.display = "none";
+  dailyNullsScreen.style.display = "none";
+  publicNullsScreen.style.display = "none";
+  document.getElementById("aiBeingsScreen").style.display = "block";
+  await loadAIBeings();
+}
+
+async function loadAIBeings(){
+  const holder = document.getElementById("aiBeingsCards");
+  holder.innerHTML = "Loading...";
+
+  try{
+    const response = await fetch(`${AI_BEINGS_API}/ai-beings`);
+    const beings = await response.json();
+    if(!response.ok) throw new Error(beings.error || "Could not load AI Beings.");
+
+    holder.innerHTML = beings.map(being => `
+      <div class="beingCard">
+        <div style="display:flex;gap:14px;align-items:center;">
+          <img src="${being.photo}" style="width:74px;height:74px;object-fit:cover;border-radius:18px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:20px;font-weight:900;">${escapeBeingText(being.name)}</div>
+            <div style="font-size:11px;opacity:.45;margin-top:7px;">BEST CURRENT CHOICE</div>
+            <div style="font-size:14px;font-weight:700;line-height:1.35;">${escapeBeingText(being.best_current_choice)}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:800;margin-top:14px;opacity:.6;">${escapeBeingText(being.category)}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;">
+          ${[being.word1,being.word2,being.word3].map(word => `<span style="background:#f1f1f1;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;">${escapeBeingText(word)}</span>`).join("")}
+        </div>
+        <button onclick="openAIBeing('${being.id}')" style="margin-top:14px;width:100%;height:42px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">OPEN</button>
+      </div>
+    `).join("") + `
+      <button onclick="openCreateBeing()" style="display:block;width:100%;max-width:420px;margin:18px auto;height:64px;border:1px solid #fff;border-radius:22px;background:transparent;color:#fff;font-size:18px;font-weight:900;">+ Create AI Being</button>
+    `;
+  }catch(error){
+    holder.innerHTML = `<div class="beingCard">${escapeBeingText(error.message)}</div>`;
+  }
+}
+
+function openCreateBeing(){
+  document.getElementById("createBeingScreen").style.display = "block";
+}
+
+function closeCreateBeing(){
+  document.getElementById("createBeingScreen").style.display = "none";
+}
+
+async function beingPhotoDataUrl(file){
+  return new Promise((resolve,reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const size = 512;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext("2d");
+      const scale = Math.max(size / image.width, size / image.height);
+      const width = image.width * scale;
+      const height = image.height * scale;
+      context.drawImage(image,(size-width)/2,(size-height)/2,width,height);
+      resolve(canvas.toDataURL("image/jpeg",0.78));
+    };
+    image.onerror = reject;
+    image.src = URL.createObjectURL(file);
+  });
+}
+
+async function createAIBeing(){
+  const button = document.getElementById("createBeingSubmit");
+  const file = document.getElementById("beingPhoto").files[0];
+  const payload = {
+    name: document.getElementById("beingName").value.trim(),
+    best_current_choice: document.getElementById("beingChoice").value.trim(),
+    category: document.getElementById("beingCategory").value.trim(),
+    word1: document.getElementById("beingWord1").value.trim(),
+    word2: document.getElementById("beingWord2").value.trim(),
+    word3: document.getElementById("beingWord3").value.trim(),
+    created_by: deviceId
+  };
+
+  if(!file || Object.entries(payload).some(([key,value]) => key !== "created_by" && !value)){
+    alert("Please complete every field and choose a profile photo.");
+    return;
+  }
+
+  button.disabled = true;
+  button.innerText = "CREATING...";
+  try{
+    payload.photo = await beingPhotoDataUrl(file);
+    const response = await fetch(`${AI_BEINGS_API}/ai-beings`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload)
+    });
+    const being = await response.json();
+    if(!response.ok) throw new Error(being.error || "Could not create AI Being.");
+    closeCreateBeing();
+    await openAIBeing(being.id);
+  }catch(error){
+    alert(error.message);
+  }finally{
+    button.disabled = false;
+    button.innerText = "CREATE AI BEING";
+  }
+}
+
+async function openAIBeing(id){
+  const response = await fetch(`${AI_BEINGS_API}/ai-beings/${id}`);
+  const being = await response.json();
+  if(!response.ok){ alert(being.error || "AI Being not found."); return; }
+
+  localStorage.setItem("selectedBeingId", being.id);
+  localStorage.setItem("selectedBeing", JSON.stringify(being));
+  localStorage.setItem("selectedBeingSessionId", crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
+  localStorage.removeItem("roomId");
+  localStorage.removeItem("displayName");
+  localStorage.removeItem("imageIntroText");
+
+  document.getElementById("aiBeingsScreen").style.display = "none";
+  document.getElementById("createBeingScreen").style.display = "none";
+  dailyNullsScreen.style.display = "none";
+  publicNullsScreen.style.display = "none";
+  cameraWrap.style.display = "block";
+  roomOverlay.style.display = "none";
+  document.getElementById("roomTitle").innerText = being.name;
+  history.replaceState({},"",`/being/${being.id}`);
+  helper.style.display = "flex";
+  helper.innerHTML = `<div style="font-size:22px;font-weight:900;">${escapeBeingText(being.name)}</div><div style="margin-top:8px;">Take a photo or upload an image.</div>`;
+}
+
+function showBeingQR(){
+  const beingId = localStorage.getItem("selectedBeingId");
+  if(!beingId) return;
+  const url = `${location.origin}/being/${beingId}`;
+  let overlay = document.getElementById("beingQrOverlay");
+  if(!overlay){
+    overlay = document.createElement("div");
+    overlay.id = "beingQrOverlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:24px;";
+    overlay.onclick = () => overlay.style.display = "none";
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:24px;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:14px;">AI BEING QR</div><img alt="AI Being QR code" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}" style="width:240px;max-width:100%;"><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:999px;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
+  overlay.style.display = "flex";
+}
+
+const directBeingMatch = location.pathname.match(/^\/being\/([^/]+)$/);
+if(directBeingMatch){
+  setTimeout(() => openAIBeing(directBeingMatch[1]), 300);
 }
   
 </script>
