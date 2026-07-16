@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.32 (2026-07-17)
+- Replaced the three AI Beings gallery navigation buttons with one Back to ASK.CAMERA button
+
+  v10.0.31 (2026-07-17)
+- Updated the guide message to the ASK.CAMERA camera-search statement
+
   v10.0.30 (2026-07-16)
 - Added a Show passwords control to the AI Being creation form
 - Added immediate AI Being profile-image preview in the create/edit form
@@ -730,7 +736,8 @@ ASK.CAMERA – AI Camera Search
 
 </div>
 
-<div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:140px 16px 24px;box-sizing:border-box;flex-direction:column;">
+<div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:92px 16px 24px;box-sizing:border-box;flex-direction:column;">
+  <button id="aiBeingsBackBtn" onclick="showCreateNull()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;">← Back to ASK.CAMERA</button>
   <div style="flex:0 0 auto;">
     <div style="font-size:24px;font-weight:900;margin-bottom:6px;">AI BEINGS CARDS</div>
     <div style="font-size:13px;opacity:.7;margin-bottom:14px;">Choose an AI Being or create your own.</div>
@@ -4208,6 +4215,8 @@ function startDailyNullCountdown(){
 
 function showCreateNull(){
 
+    document.getElementById("modeBar").style.display = "";
+
     localStorage.removeItem("selectedBeingId");
     localStorage.removeItem("selectedBeing");
 
@@ -4227,6 +4236,8 @@ gtag('event', 'page_view', {
 }
 
 async function showDailyNulls(){
+
+    document.getElementById("modeBar").style.display = "";
 
     publicNullsScreen.style.display = "none";
 
@@ -4248,6 +4259,8 @@ await loadDailyNulls();
 
 
 async function showPublicNulls(){
+
+    document.getElementById("modeBar").style.display = "";
 
     cameraWrap.style.display = "none";
 
@@ -5024,6 +5037,7 @@ function escapeBeingText(value){
 }
 
 async function showAIBeings(){
+  document.getElementById("modeBar").style.display = "none";
   cameraWrap.style.display = "none";
   dailyNullsScreen.style.display = "none";
   publicNullsScreen.style.display = "none";
@@ -5658,7 +5672,7 @@ flex-shrink:0;
 <hr style="margin:20px 0;border:none;border-top:1px solid #eee;">
 
 <div style="text-align:center;">
-<b>You can now search without knowing what to search for.</b><br><br>
+<b>POINT YOUR CAMERA AT THE WORLD. TAP THE SCREEN OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.</b><br><br>
 
 <b>Capture. Ask. Discover.</b>
 </div>
