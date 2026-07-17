@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.58 (2026-07-18)
+- Corrected the Public back button placement so it remains visible on mobile and desktop
+
   v10.0.57 (2026-07-18)
 - Replaced all Public Camera Perspectives upper controls with one Back to ASK.CAMERA button
 
@@ -1267,8 +1270,6 @@ justify-content:center;
 gap:8px;
 "
 >
-
-<button id="publicBackBtn" onclick="showCreateNull()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span></button>
 
 <div
 id="publicNullsThumbs"
@@ -4596,6 +4597,17 @@ async function showPublicNulls(){
 
     document.getElementById("modeBar").style.display = "none";
     document.getElementById("homeControlStack").style.display = "none";
+
+    let publicBackBtn = document.getElementById("publicBackBtn");
+    if(!publicBackBtn){
+      publicBackBtn = document.createElement("button");
+      publicBackBtn.id = "publicBackBtn";
+      publicBackBtn.type = "button";
+      publicBackBtn.onclick = showCreateNull;
+      publicBackBtn.style.cssText = "position:fixed;top:18px;left:16px;right:16px;z-index:1000;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;";
+      publicBackBtn.innerHTML = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span>';
+      publicNullsScreen.appendChild(publicBackBtn);
+    }
 
     cameraWrap.style.display = "none";
 
