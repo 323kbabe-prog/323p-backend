@@ -4,6 +4,13 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.60 (2026-07-18)
+- Completed a full screen-state audit and stabilized ASK.CAMERA/HUMAN room transitions
+- Prevented intentional HUMAN navigation from clearing the restored ASK.CAMERA room
+- Rebuilt connected-home UI only from saved ASK.CAMERA room identity, thumbnail, and timer
+- Separated HUMAN expiration/closure handling from standard ASK.CAMERA expiration/closure
+- Cleared stale standard-room persistence only when the standard room actually closes or expires
+
   v10.0.59 (2026-07-18)
 - Added one standard ASK.CAMERA room-header renderer to prevent HUMAN identity state leaking back into ASK.CAMERA rooms
 - Applied the standard-room reset on room creation, re-entry, status restoration, and message restoration
@@ -1741,6 +1748,7 @@ let publishMode = "public";
 
 let roomReady = true;
 let endingRoomSession = false;
+let suppressRoomClosedUntil = 0;
 let hasAutoRejoined = false;
 let roomExpiresAt = 0;
 let rejoinTimeout = null;
@@ -1861,6 +1869,44 @@ function renderStandardRoomHeader(){
     document.getElementById("roomImageActions").style.display = "flex";
 }
 
+function leaveCurrentRoomForTransition(){
+    suppressRoomClosedUntil = Date.now() + 2500;
+    if(socket.connected){
+        socket.emit("leaveCurrentRoom",{ deviceId });
+    }
+}
+
+function renderConnectedHome(){
+    const standardRoomId = localStorage.getItem("askCameraRoomId") || localStorage.getItem("roomId");
+    if(!standardRoomId) return;
+
+    const standardThumbnail = localStorage.getItem("askCameraRoomThumbnail") || localStorage.getItem("roomThumbnail") || "";
+    const savedExpiry = Number(localStorage.getItem("askCameraRoomExpiresAt"));
+    if(Number.isFinite(savedExpiry) && savedExpiry > 0){
+        roomExpiresAt = savedExpiry;
+    }
+
+    helper.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;max-width:360px;padding:0 20px;">
+        <div id="connectedRoomCountdown" style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);">${document.getElementById("homeRoomCountdown").innerText}</div>
+        <div style="font-size:26px;font-weight:800;line-height:1.12;">AI LIVE ROOM<br>CONNECTED</div>
+        <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:8px;width:100%;max-width:350px;min-height:62px;box-sizing:border-box;overflow:hidden;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
+          <img src="${standardThumbnail}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex:0 0 auto;${standardThumbnail ? "" : "display:none;"}">
+          <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">ASK.CAMERA</span>
+          <span style="flex:0 0 auto;margin-left:auto;padding:8px 9px;border-radius:999px;background:#000;color:#fff;font-size:8px;font-weight:800;white-space:nowrap;">GO BACK TO ROOM</span>
+        </button>
+        <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your room stays active. Explore HUMAN Cards or Daily Camera Perspectives, then return anytime before it expires.</div>
+        <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
+          <button onclick="event.stopPropagation();showDailyNulls();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">Daily Camera Perspectives</button>
+          <button onclick="event.stopPropagation();showAIBeings();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">HUMAN Cards</button>
+          <button onclick="event.stopPropagation();openGuide();" aria-label="Help" style="align-self:center;width:46px;height:46px;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">?</button>
+        </div>
+      </div>
+    `;
+
+    startRoomCountdown();
+}
+
 function openHomeRoom(event){
 
     if(event){
@@ -1876,6 +1922,8 @@ function openHomeRoom(event){
     if(!roomId) return;
 
     renderStandardRoomHeader();
+    roomMessages.innerHTML = '<div style="margin:auto;padding:24px;text-align:center;font-size:14px;font-weight:800;">RESTORING ASK.CAMERA ROOM...</div>';
+    roomInput.style.display = "none";
     roomOverlay.style.display = "flex";
     cameraWrap.style.display = "block";
     helper.style.display = "none";
@@ -2567,6 +2615,7 @@ function endCurrentRoomAndRestart(){
   const fallback = setTimeout(restart, 800);
 
   if (socket.connected) {
+    suppressRoomClosedUntil = Date.now() + 2500;
     socket.emit("leaveCurrentRoom", { deviceId }, () => {
       clearTimeout(fallback);
       restart();
@@ -2794,6 +2843,10 @@ if(imageIntroText){
     </div>
   `;
   startRoomCountdown();
+
+  if(!data.being){
+    renderConnectedHome();
+  }
 
 roomOverlay.style.display = "flex";
 
@@ -3777,6 +3830,15 @@ roomMessages.scrollHeight;
 
 socket.on("roomClosed", () => {
 
+    if(Date.now() < suppressRoomClosedUntil){
+        return;
+    }
+
+    if(localStorage.getItem("selectedBeingId")){
+        returnToHumanCards();
+        return;
+    }
+
     hideRoomLoadingScreen();
 
     roomOverlay.style.display = "none";
@@ -3784,6 +3846,11 @@ socket.on("roomClosed", () => {
     localStorage.removeItem("roomId");
     localStorage.removeItem("displayName");
     localStorage.removeItem("imageIntroText");
+    localStorage.removeItem("roomThumbnail");
+    localStorage.removeItem("askCameraRoomId");
+    localStorage.removeItem("askCameraRoomThumbnail");
+    localStorage.removeItem("askCameraRoomExpiresAt");
+    document.body.classList.remove("connectedHome");
 
     history.replaceState(
         {},
@@ -3796,11 +3863,16 @@ document.getElementById("homeRoomId").innerText =
 document.getElementById("homeRoomCountdown").innerText =
     "--:--";
   
-    startCamera();
+    location.reload();
 
 });
 
 socket.on("roomExpired", () => {
+
+if(localStorage.getItem("selectedBeingId")){
+  returnToHumanCards();
+  return;
+}
 
 hideRoomLoadingScreen();
 
@@ -3809,6 +3881,10 @@ clearTimeout(rejoinTimeout);
     localStorage.removeItem("displayName");
     localStorage.removeItem("roomId");
     localStorage.removeItem("imageIntroText");
+    localStorage.removeItem("roomThumbnail");
+    localStorage.removeItem("askCameraRoomId");
+    localStorage.removeItem("askCameraRoomThumbnail");
+    localStorage.removeItem("askCameraRoomExpiresAt");
 
     history.replaceState({}, "", "/");
 
@@ -4107,7 +4183,16 @@ socket.on("roomStatus", data => {
 
     if (!data) {
 
+        if(localStorage.getItem("selectedBeingId") || Date.now() < suppressRoomClosedUntil){
+            return;
+        }
+
         localStorage.removeItem("roomId");
+        localStorage.removeItem("roomThumbnail");
+        localStorage.removeItem("askCameraRoomId");
+        localStorage.removeItem("askCameraRoomThumbnail");
+        localStorage.removeItem("askCameraRoomExpiresAt");
+        document.body.classList.remove("connectedHome");
 
         document.getElementById("homeRoomId").innerText =
             "No Room";
@@ -4611,7 +4696,7 @@ function showCreateNull(){
         document.body.classList.add("connectedHome");
         document.getElementById("modeBar").style.display = "none";
         document.getElementById("homeControlStack").style.display = "none";
-        startRoomCountdown();
+        renderConnectedHome();
     }else{
         document.body.classList.remove("connectedHome");
     }
@@ -5728,9 +5813,7 @@ async function openAIBeing(id){
     if(activeStandardThumbnail){
       localStorage.setItem("askCameraRoomThumbnail",activeStandardThumbnail);
     }
-    if(socket.connected){
-      socket.emit("leaveCurrentRoom",{ deviceId });
-    }
+    leaveCurrentRoomForTransition();
   }
 
   localStorage.setItem("selectedBeingId", being.id);
@@ -5787,9 +5870,7 @@ async function returnToHumanCards(event){
     event.stopPropagation();
   }
 
-  if(socket.connected){
-    socket.emit("leaveCurrentRoom",{ deviceId });
-  }
+  leaveCurrentRoomForTransition();
 
   ["selectedBeingId","selectedBeing","selectedBeingSessionId","displayName","imageIntroText"]
     .forEach(key => localStorage.removeItem(key));
