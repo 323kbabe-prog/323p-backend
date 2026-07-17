@@ -4,6 +4,13 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.72 (2026-07-18)
+- Audited every app screen and rebuilt the DOS system as strict monochrome
+- Set application, content, room, connected, expired, form, and dialog backgrounds to white
+- Removed all blue UI, glass, pills, rounded chat boxes, and decorative shadows
+- Restored visible text labels for Share, Camera, Upload, Public, and other essential commands
+- Standardized AI and user chat as square black/white DOS terminal messages
+
   v10.0.71 (2026-07-18)
 - Rebuilt the entire interface as a literal contemporary DOS-inspired system
 - Applied IBM Plex Mono typography, terminal surfaces, square borders, and blue/white commands
@@ -2767,6 +2774,278 @@ body.connectedHome #helper button,
 body.connectedHome #connectedRoomCountdown{
   border-radius:0 !important;
   box-shadow:none !important;
+}
+
+/* v10.0.72 — final monochrome DOS system */
+:root{
+  color-scheme:light;
+  --dos-bg:#fff;
+  --dos-panel:#fff;
+  --dos-ink:#000;
+  --dos-gray-1:#f2f2f2;
+  --dos-gray-2:#d0d0d0;
+  --dos-gray-3:#707070;
+  --dos-line:#000;
+}
+
+html,body{background:#fff !important;color:#000 !important;}
+body,button,input,textarea,a{
+  font-family:"IBM Plex Mono","Courier New",monospace !important;
+}
+button{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  text-shadow:none !important;
+}
+button:hover{background:#ededed !important;color:#000 !important;}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid #000 !important;
+  outline-offset:2px;
+}
+a{color:#000 !important;}
+
+#appStartupLoader{background:#fff !important;color:#000 !important;}
+.appStartupDots span{background:#000 !important;}
+
+/* Home command area — the live camera is the only non-white background. */
+#modeBar{
+  background:#fff !important;
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#modeBar button{
+  background:#fff !important;
+  color:#000 !important;
+  border:0 !important;
+  border-right:1px solid #000 !important;
+}
+#modeBar button:last-child{border-right:0 !important;}
+#modeBar #createNullBtn{background:#000 !important;color:#fff !important;}
+#homeRoomCard,#homeUtilityButtons button,#publicNullsBtn{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+}
+#uploadBtn{
+  background:#000 !important;
+  color:#fff !important;
+  border:1px solid #000 !important;
+}
+
+/* Every non-camera application workspace is white. */
+#dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen,#createBeingScreen,
+body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
+  background:#fff !important;
+  color:#000 !important;
+}
+body.connectedHome #video,body.expiredHome #video{opacity:0 !important;}
+body.connectedHome #helper,body.expiredHome #helper{
+  color:#000 !important;
+  text-shadow:none !important;
+}
+body.connectedHome #helper *,body.expiredHome #helper *{text-shadow:none !important;}
+body.connectedHome #helper button,body.expiredHome #helper button,
+body.connectedHome #connectedRoomCountdown{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+}
+
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,#dailyNullCountdown{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+}
+.dailyNullCard,.beingCard{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+.dailyNullCard *,.beingCard *{color:inherit !important;}
+.dailyNullCard img,.beingCard img{
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+}
+.beingCard > div:nth-child(3) span{
+  background:#f2f2f2 !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+}
+.beingCard > button:nth-of-type(1),#aiBeingsScreen > div:first-of-type > button{
+  background:#000 !important;
+  color:#fff !important;
+  border:1px solid #000 !important;
+}
+.beingCard > button:nth-of-type(n+2){background:#fff !important;color:#000 !important;}
+.loveCount,.skeletonCount{filter:grayscale(1);}
+
+/* Forms */
+.beingInput,#roomInput{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+  caret-color:#000 !important;
+}
+.beingInput::placeholder,#roomInput::placeholder{color:#707070 !important;}
+#createBeingSubmit{
+  background:#000 !important;
+  color:#fff !important;
+  border:1px solid #000 !important;
+}
+
+/* White DOS room workspace */
+#roomOverlay{
+  background:#fff !important;
+  color:#000 !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#roomHeader{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+}
+#roomCountdown{
+  background:#000 !important;
+  color:#fff !important;
+  border:1px solid #000 !important;
+}
+#roomIdentityPanel{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+}
+#roomThumbnail,#roomCameraThumbnail{border:1px solid #000 !important;border-radius:0 !important;}
+#roomTitle,#roomTitle *{color:#000 !important;}
+#shareRoomBtn,#beingQrBtn{
+  background:#000 !important;
+  color:#fff !important;
+  border:1px solid #000 !important;
+}
+#shareRoomBtn{
+  width:auto !important;
+  min-width:54px !important;
+  max-width:none !important;
+  padding:0 8px !important;
+  font-size:10px !important;
+}
+#shareRoomBtn::before{content:none !important;display:none !important;}
+#closeRoom{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+}
+#closeRoom path{stroke:#000 !important;}
+
+/* Restore essential text commands in the room. */
+#roomImageActions{
+  width:100% !important;
+  height:34px !important;
+  min-height:34px !important;
+  gap:4px !important;
+}
+#roomImageActions button,#roomImageActions button:first-child,#roomImageActions button:not(:first-child){
+  width:auto !important;
+  max-width:none !important;
+  flex:0 0 auto !important;
+  min-height:30px !important;
+  height:30px !important;
+  padding:0 8px !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  gap:0 !important;
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+}
+#roomImageActions button:first-child{background:#000 !important;color:#fff !important;}
+.roomActionIcon{display:none !important;}
+.roomActionLabel{
+  display:inline !important;
+  color:inherit !important;
+  font-size:10px !important;
+  line-height:1 !important;
+  text-shadow:none !important;
+  text-transform:uppercase;
+}
+.roomActionLabel::before{content:"[";}
+.roomActionLabel::after{content:"]";}
+
+/* Monochrome DOS chat */
+#roomMessages{color:#000 !important;scrollbar-color:#777 transparent;}
+#roomMessages.geminiThread .geminiAiResponse::before{
+  content:"AI>" !important;
+  color:#000 !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiUserMessage::before{
+  content:"YOU>" !important;
+  color:#000 !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
+  background:#000 !important;
+  color:#fff !important;
+  border:1px solid #000 !important;
+}
+#roomMessages.geminiThread .chatReplyImage{
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+  background:#fff !important;
+}
+#roomMessages.geminiThread .chatOpenAction,
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction,#firstNextBtn,#memoryBtn{
+  background:#fff !important;
+  color:#000 !important;
+  border:0 !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .chatOpenAction:hover,
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction:hover{
+  background:#ededed !important;
+}
+
+/* DOS dialog windows */
+#publishDialog,#guidePopup,#beingRecoveryOverlay,#beingQrOverlay,#humanCardsGuide{
+  background:rgba(0,0,0,.68) !important;
+}
+#publishDialog > div,#guidePopup > div,#beingRecoveryOverlay > div,#beingQrOverlay > div,#humanCardsGuide > div{
+  background:#fff !important;
+  color:#000 !important;
+  border:1px solid #000 !important;
+  border-radius:0 !important;
+  box-shadow:8px 8px 0 #000 !important;
+}
+#publishDialog label{background:#f2f2f2 !important;color:#000 !important;border-radius:0 !important;}
+#publishDialog button:last-child,#humanCardsGuide button:last-child{
+  background:#000 !important;
+  color:#fff !important;
+  border:1px solid #000 !important;
+}
+
+/* Ensure icons and inline UI cannot reintroduce interface color. */
+#roomOverlay svg,#homeControlStack svg,#modeBar svg{filter:grayscale(1) contrast(1.3);}
+#roomOverlay ::selection,#dailyNullsScreen ::selection,#publicNullsScreen ::selection,#aiBeingsScreen ::selection{
+  background:#000;color:#fff;
 }
 </style>
 
