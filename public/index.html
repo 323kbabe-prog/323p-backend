@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.56 (2026-07-18)
+- Disabled automatic HUMAN first-round cards so HUMAN rooms wait for the user's question
+
   v10.0.55 (2026-07-18)
 - Restored publishing dialogs and Take Photo after moving the camera capture helper to global scope
 - Separated the live Take Photo preview from the selected Upload Image preview
@@ -3897,17 +3900,11 @@ socket.on("aiTypingStop", () => {
 });
 
 socket.on("beingFirstRoundStart", () => {
-  if(!localStorage.getItem("selectedBeingId") || !pendingImageDataUrl) return;
-
-  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g," ");
-  beingFirstRoundQueue = [
-    { type: "news", text: "latest news" },
-    { type: "shopping", text: "one shopping recommendation" },
-    { type: "place", text: `one place to go near me in ${localZone}` },
-    { type: "real_estate", text: `one real estate property near me in ${localZone}` }
-  ];
+  beingFirstRoundQueue = [];
   beingFirstRoundWaiting = false;
-  setTimeout(runNextBeingFirstCard, 700);
+  roomInput.style.display = "block";
+  roomInput.disabled = false;
+  roomInput.placeholder = "Ask";
 });
 
 function runNextBeingFirstCard(){
