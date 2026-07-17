@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.40 (2026-07-17)
+- Added a prominent Go Back to Room button beneath the connected message
+- Told users they can explore AI Beings Cards or Daily Camera Perspectives while the room remains active
+
   v10.0.39 (2026-07-17)
 - Changed the Create AI Live Room dialog thumbnail to the live camera feed
 - Restored the captured-image thumbnail in the standard room header
@@ -2546,8 +2550,17 @@ if(imageIntroText){
 
   gtag('event', 'create_live_room');
 
-  helper.innerHTML =
-    "AI LIVE ROOM<br>CONNECTED";
+  helper.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;max-width:340px;padding:0 20px;">
+      <div style="font-size:26px;font-weight:800;line-height:1.12;">AI LIVE ROOM<br>CONNECTED</div>
+      <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:10px;width:min(100%,330px);min-height:64px;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
+        <img src="${localStorage.getItem('roomThumbnail') || ''}" alt="" style="width:46px;height:46px;object-fit:cover;border-radius:11px;flex:0 0 auto;">
+        <span style="font-size:17px;font-weight:900;white-space:nowrap;">ASK.CAMERA</span>
+        <span style="margin-left:auto;padding:9px 11px;border-radius:999px;background:#000;color:#fff;font-size:10px;font-weight:800;white-space:nowrap;">GO BACK TO ROOM</span>
+      </button>
+      <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your room stays active. Explore AI Beings Cards or Daily Camera Perspectives, then return anytime before it expires.</div>
+    </div>
+  `;
 
 roomOverlay.style.display = "flex";
 
