@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.71 (2026-07-18)
+- Rebuilt the entire interface as a literal contemporary DOS-inspired system
+- Applied IBM Plex Mono typography, terminal surfaces, square borders, and blue/white commands
+- Removed glass, soft pills, rounded cards, and decorative shadows throughout the app
+- Added terminal-style AI and user chat identities while preserving camera and room behavior
+
   v10.0.70 (2026-07-18)
 - Formalized the entire interface as the ASK.CAMERA DOS (Design Operating System)
 - Unified image-to-bubble spacing and matched both AI bubble shapes exactly
@@ -254,6 +260,7 @@ href="https://images.squarespace-cdn.com/content/v1/6784e2cf16887b12d499fa90/0e3
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <title>
 ASK.CAMERA | AI Camera Search, Visual Search & Contextual Intelligence
@@ -2501,6 +2508,265 @@ button:disabled{opacity:.48;cursor:not-allowed;}
 #roomMessages.geminiThread .chatOpenAction:hover,
 #roomMessages.geminiThread .geminiMediaResponse .chatShareAction:hover{
   background:rgba(255,255,255,.16) !important;
+}
+
+/* v10.0.71 — literal contemporary DOS interface */
+:root{
+  --dos-bg:#05070a;
+  --dos-panel:#0b0f16;
+  --dos-blue:#2f6bff;
+  --dos-cyan:#72a7ff;
+  --dos-white:#f5f7ff;
+  --dos-dim:#98a2b3;
+  --dos-line:#2f6bff;
+}
+
+html,body,button,input,textarea,a{
+  font-family:"IBM Plex Mono","Courier New",monospace !important;
+}
+body{background:var(--dos-bg) !important;color:var(--dos-white) !important;}
+button,input,textarea{border-radius:0 !important;box-shadow:none !important;}
+button{text-transform:uppercase;letter-spacing:.03em;}
+
+/* DOS command bar */
+#modeBar{
+  padding:2px !important;
+  background:var(--dos-bg) !important;
+  border:1px solid var(--dos-line) !important;
+  border-radius:0 !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#modeBar button{
+  background:var(--dos-bg) !important;
+  color:var(--dos-cyan) !important;
+  border:0 !important;
+  border-right:1px solid #23314a !important;
+  border-radius:0 !important;
+  font-size:11px !important;
+}
+#modeBar button:last-child{border-right:0 !important;}
+#modeBar #createNullBtn{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+}
+#modeBar button:hover{background:#13213a !important;color:#fff !important;}
+
+#homeRoomCard,#homeUtilityButtons button{
+  background:var(--dos-panel) !important;
+  color:var(--dos-white) !important;
+  border:1px solid var(--dos-line) !important;
+  border-radius:0 !important;
+}
+#homeInstruction{
+  color:var(--dos-white) !important;
+  font-weight:600 !important;
+  text-shadow:0 1px 4px #000;
+}
+#uploadBtn{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+  border:1px solid var(--dos-cyan) !important;
+  border-radius:0 !important;
+}
+#uploadBtn::before{content:"[ ";}
+#uploadBtn::after{content:" ]";}
+#publicNullsBtn{
+  background:var(--dos-panel) !important;
+  color:var(--dos-white) !important;
+  border:1px solid var(--dos-line) !important;
+  border-radius:0 !important;
+}
+
+/* All feature screens become terminal workspaces. */
+#dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen,#createBeingScreen{
+  background:var(--dos-bg) !important;
+  color:var(--dos-white) !important;
+}
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn{
+  background:var(--dos-panel) !important;
+  color:var(--dos-white) !important;
+  border:1px solid var(--dos-line) !important;
+  border-radius:0 !important;
+}
+#dailyNullCountdown{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+  border-radius:0 !important;
+}
+.dailyNullCard,.beingCard{
+  background:var(--dos-panel) !important;
+  color:var(--dos-white) !important;
+  border:1px solid #314364 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+.dailyNullCard *,.beingCard *{color:inherit;}
+.dailyNullCard img,.beingCard img{border-radius:0 !important;border:1px solid #314364;}
+.beingCard > div:first-child > div > div:nth-child(2),
+.dailyNullCard [data-share-content] > div:first-child{color:var(--dos-cyan) !important;}
+.beingCard > div:nth-child(3) span{
+  background:#111a29 !important;
+  color:var(--dos-cyan) !important;
+  border:1px solid #314364;
+  border-radius:0 !important;
+}
+.beingCard > button:nth-of-type(1),#aiBeingsScreen > div:first-of-type > button{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+  border:1px solid var(--dos-cyan) !important;
+  border-radius:0 !important;
+}
+.beingCard > button:nth-of-type(n+2){color:var(--dos-cyan) !important;}
+
+/* DOS forms */
+.beingInput,#roomInput{
+  background:var(--dos-bg) !important;
+  color:var(--dos-white) !important;
+  border:1px solid #53627a !important;
+  border-radius:0 !important;
+  caret-color:var(--dos-cyan);
+}
+.beingInput::placeholder,#roomInput::placeholder{color:#7e899b !important;}
+.beingInput:focus,#roomInput:focus{
+  border-color:var(--dos-cyan) !important;
+  outline:1px solid var(--dos-cyan) !important;
+}
+#createBeingSubmit{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+  border:1px solid var(--dos-cyan) !important;
+  border-radius:0 !important;
+}
+
+/* Room window chrome */
+#roomOverlay{
+  background:rgba(0,0,0,.34) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#roomHeader{
+  background:rgba(5,7,10,.94) !important;
+  border:1px solid var(--dos-line) !important;
+  border-radius:0 !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#roomCountdown{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+  border:1px solid var(--dos-cyan) !important;
+  border-radius:0 !important;
+}
+#roomIdentityPanel{
+  background:var(--dos-panel) !important;
+  color:var(--dos-white) !important;
+  border:1px solid #314364 !important;
+  border-radius:0 !important;
+}
+#roomThumbnail,#roomCameraThumbnail{border-radius:0 !important;border:1px solid var(--dos-cyan);}
+#roomTitle,#roomTitle *{color:var(--dos-white) !important;}
+#shareRoomBtn,#beingQrBtn{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+  border:1px solid var(--dos-cyan) !important;
+  border-radius:0 !important;
+}
+#closeRoom{
+  background:var(--dos-panel) !important;
+  color:#fff !important;
+  border:1px solid var(--dos-line) !important;
+  border-radius:0 !important;
+}
+#closeRoom path{stroke:#fff !important;}
+.roomActionIcon{
+  background:var(--dos-panel) !important;
+  color:var(--dos-white) !important;
+  border:1px solid var(--dos-line) !important;
+  border-radius:0 !important;
+}
+#roomImageActions button:first-child .roomActionIcon{
+  background:var(--dos-blue) !important;
+  border-color:var(--dos-cyan) !important;
+}
+
+/* DOS chat: rectangular terminal prompts, still easy to scan. */
+#roomMessages.geminiThread .geminiAiResponse::before{
+  content:"AI>" !important;
+  color:var(--dos-cyan) !important;
+  font-family:"IBM Plex Mono",monospace !important;
+  text-shadow:0 1px 3px #000;
+}
+#roomMessages.geminiThread .geminiUserMessage::before{
+  content:"YOU>";
+  display:block;
+  margin:0 5px 3px auto;
+  color:#fff;
+  font-size:10px;
+  font-weight:600;
+  text-shadow:0 1px 3px #000;
+}
+#roomMessages.geminiThread .geminiUserMessage{
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+#roomMessages.geminiThread .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  background:var(--dos-panel) !important;
+  color:var(--dos-white) !important;
+  border:1px solid #53627a !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+  border:1px solid var(--dos-cyan) !important;
+  border-radius:0 !important;
+}
+#roomMessages.geminiThread .chatReplyImage{
+  border:1px solid var(--dos-cyan) !important;
+  border-radius:0 !important;
+  background:var(--dos-bg) !important;
+}
+#roomMessages.geminiThread .chatOpenAction,
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction,#firstNextBtn{
+  color:var(--dos-cyan) !important;
+  background:var(--dos-bg) !important;
+  border:0 !important;
+  border-radius:0 !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .chatOpenAction::before{content:"[";}
+#roomMessages.geminiThread .chatOpenAction::after{content:"]";}
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction::before{content:"[" !important;}
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction::after{content:"]";}
+#firstNextBtn::before{content:"[ ";}
+#firstNextBtn::after{content:" ]";}
+
+/* Dialog windows */
+#publishDialog,#guidePopup,#beingRecoveryOverlay,#beingQrOverlay,#humanCardsGuide{
+  background:rgba(0,0,0,.82) !important;
+}
+#publishDialog > div,#guidePopup > div,#beingRecoveryOverlay > div,#beingQrOverlay > div,#humanCardsGuide > div{
+  background:var(--dos-panel) !important;
+  color:var(--dos-white) !important;
+  border:1px solid var(--dos-line) !important;
+  border-radius:0 !important;
+  box-shadow:12px 12px 0 rgba(0,0,0,.45) !important;
+}
+#publishDialog label{background:#111a29 !important;color:var(--dos-white) !important;border-radius:0 !important;}
+#publishDialog button:last-child,#humanCardsGuide button:last-child{
+  background:var(--dos-blue) !important;
+  color:#fff !important;
+  border:1px solid var(--dos-cyan) !important;
+  border-radius:0 !important;
+}
+
+body.connectedHome #helper button,
+body.connectedHome #connectedRoomCountdown{
+  border-radius:0 !important;
+  box-shadow:none !important;
 }
 </style>
 
