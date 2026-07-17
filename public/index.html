@@ -4,6 +4,14 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.39 (2026-07-17)
+- Changed the Create AI Live Room dialog thumbnail to the live camera feed
+- Restored the captured-image thumbnail in the standard room header
+
+  v10.0.38 (2026-07-17)
+- Tested live-camera placement before moving it to the publish dialog
+- Removed outlines from all three in-room image controls
+
   v10.0.37 (2026-07-17)
 - Added Take Photo, Upload Image, and Public Perspective controls inside connected rooms
 - Kept new images in the current one-hour ASK.CAMERA room
@@ -1245,6 +1253,21 @@ margin-top:0px;
 "
 >
 
+<video
+  id="roomCameraThumbnail"
+  autoplay
+  playsinline
+  muted
+  style="
+    width:44px;
+    height:44px;
+    object-fit:cover;
+    border-radius:10px;
+    flex-shrink:0;
+    display:none;
+  "
+></video>
+
 <img
   id="roomThumbnail"
   src=""
@@ -1358,8 +1381,8 @@ margin:12px 0 4px;
 "
 >
   <button onclick="captureImage()" style="flex:1;max-width:150px;height:42px;padding:0 12px;border:none;border-radius:999px;background:#000;color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">TAKE PHOTO</button>
-  <button onclick="openRoomImageUpload()" style="flex:1;max-width:150px;height:42px;padding:0 12px;border:1px solid #111;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">UPLOAD IMAGE</button>
-  <button onclick="openRoomPublicPerspectives()" style="flex:1;max-width:170px;height:42px;padding:0 12px;border:1px solid #111;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:800;cursor:pointer;line-height:1.05;">PUBLIC<br>PERSPECTIVE</button>
+  <button onclick="openRoomImageUpload()" style="flex:1;max-width:150px;height:42px;padding:0 12px;border:none;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">UPLOAD IMAGE</button>
+  <button onclick="openRoomPublicPerspectives()" style="flex:1;max-width:170px;height:42px;padding:0 12px;border:none;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:800;cursor:pointer;line-height:1.05;">PUBLIC<br>PERSPECTIVE</button>
 </div>
 
   <div id="roomMessages"></div>
@@ -1656,11 +1679,35 @@ function openHomeRoom(event){
     cameraWrap.style.display = "block";
     helper.style.display = "none";
     history.replaceState({}, "", "/?room=" + roomId);
+    document.getElementById("roomCameraThumbnail").style.display = "none";
+    const savedThumbnail = localStorage.getItem("roomThumbnail");
+    if(savedThumbnail){
+        document.getElementById("roomThumbnail").src = savedThumbnail;
+        document.getElementById("roomThumbnail").style.display = "block";
+    }
 
     if(socket.connected){
         socket.emit("rejoinRoom", { roomId, deviceId });
     }
 
+}
+
+function connectRoomCameraThumbnail(attempt = 0){
+    if(localStorage.getItem("selectedBeingId")) return;
+
+    const thumbnail = document.getElementById("roomCameraThumbnail");
+    if(!thumbnail) return;
+
+    if(video.srcObject){
+        thumbnail.srcObject = video.srcObject;
+        thumbnail.style.display = "block";
+        thumbnail.play().catch(() => {});
+        return;
+    }
+
+    if(attempt < 20){
+        setTimeout(() => connectRoomCameraThumbnail(attempt + 1), 200);
+    }
 }
 
 function openRoomImageUpload(){
@@ -1969,35 +2016,10 @@ showPublishDialog();
 };
 
 function showPublishDialog(){
-
-    const img =
+    const preview =
         document.getElementById("publishThumbnail");
-
-    img.onload = () => {
-
-        if (img.naturalWidth > img.naturalHeight) {
-
-            // Landscape
-            img.style.width = "128px";
-            img.style.height = "96px";
-
-        } else if (img.naturalHeight > img.naturalWidth) {
-
-            // Portrait
-            img.style.width = "96px";
-            img.style.height = "128px";
-
-        } else {
-
-            // Square
-            img.style.width = "96px";
-            img.style.height = "96px";
-
-        }
-
-    };
-
-    img.src = pendingImageDataUrl;
+    preview.srcObject = video.srcObject;
+    preview.play().catch(() => {});
 
     document.getElementById("publishDialog").style.display = "flex";
 
@@ -2511,6 +2533,7 @@ if (data.being) {
   document.getElementById("beingQrBtn").style.display = "none";
   document.getElementById("roomCountdown").style.display = "block";
   document.getElementById("homeRoomCard").style.display = "inline-flex";
+  document.getElementById("roomCameraThumbnail").style.display = "none";
 }
 
 
@@ -2551,7 +2574,6 @@ if (!data.being && thumb) {
     roomThumbnail.onload = () => {
         roomThumbnail.style.display = "block";
     };
-
     roomThumbnail.src = thumb;
 }
 
@@ -5480,6 +5502,7 @@ function renderBeingRoomHeader(being){
   const panel = document.getElementById("roomIdentityPanel");
   const title = document.getElementById("roomTitle");
   const thumbnail = document.getElementById("roomThumbnail");
+  const cameraThumbnail = document.getElementById("roomCameraThumbnail");
 
   panel.style.flex = "0 0 auto";
   panel.style.width = "fit-content";
@@ -5488,6 +5511,8 @@ function renderBeingRoomHeader(being){
 
   thumbnail.src = being.photo;
   thumbnail.style.display = "block";
+  cameraThumbnail.style.display = "none";
+  cameraThumbnail.srcObject = null;
 
   title.style.display = "flex";
   title.style.flexDirection = "column";
@@ -5593,20 +5618,22 @@ box-sizing:border-box;
   </svg>
 </button>
 
-<img
+<video
   id="publishThumbnail"
-  src=""
+  autoplay
+  playsinline
+  muted
   style="
     display:block;
     width:96px;
-    height:96px;
+    height:128px;
     object-fit:cover;
     border-radius:12px;
     border:1px solid #e5e5e5;
     box-shadow:0 2px 8px rgba(0,0,0,.08);
     margin:16px auto;
   "
->
+></video>
   
 <div style="
 font-size:22px;
