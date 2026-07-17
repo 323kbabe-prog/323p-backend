@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.57 (2026-07-18)
+- Replaced all Public Camera Perspectives upper controls with one Back to ASK.CAMERA button
+
   v10.0.56 (2026-07-18)
 - Disabled automatic HUMAN first-round cards so HUMAN rooms wait for the user's question
 
@@ -1264,6 +1267,8 @@ justify-content:center;
 gap:8px;
 "
 >
+
+<button id="publicBackBtn" onclick="showCreateNull()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span></button>
 
 <div
 id="publicNullsThumbs"
@@ -4589,7 +4594,8 @@ await loadDailyNulls();
 
 async function showPublicNulls(){
 
-    document.getElementById("modeBar").style.display = "";
+    document.getElementById("modeBar").style.display = "none";
+    document.getElementById("homeControlStack").style.display = "none";
 
     cameraWrap.style.display = "none";
 
