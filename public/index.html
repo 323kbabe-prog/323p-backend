@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.78 (2026-07-18)
+  - Corrected stylesheet order so the shared app system can no longer be overridden by older themes
+  - Applied square geometry to all static and dynamically generated controls, cards, images, dialogs, and room states
+  - Normalized every screen family to the ASK.CAMERA room frame, spacing, typography, and white canvas
+  - Added explicit coverage for HUMAN landing, photo viewer, recovery, loading, error, empty, Daily, and Public states
+
   v10.0.77 (2026-07-18)
   - Completed a 15-area full-app UI system audit using the ASK.CAMERA room as the master
   - Standardized square geometry, GitHub-weight typography, frames, spacing, backgrounds, and accents
@@ -3814,6 +3820,163 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   #roomMessages.geminiThread .geminiAiResponse .chatBubble,
   #roomMessages.geminiThread .geminiMediaResponse .chatBubble,
   #roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{max-width:88%!important;}
+}
+/* v10.0.78 — definitive final system; must remain last */
+:root{
+  --final-bg:#fff;
+  --final-panel:#f6f8fa;
+  --final-text:#1f2328;
+  --final-muted:#656d76;
+  --final-line:#d0d7de;
+  --final-purple:#8250df;
+  --final-blue:#0969da;
+  --final-orange:#bc4c00;
+  --final-pink:#bf3989;
+  --final-cyan:#1b7c83;
+  --final-width:760px;
+}
+
+/* Global reset: square, quiet, readable. This also catches runtime HTML. */
+html,body{background:var(--final-bg)!important;color:var(--final-text)!important;}
+body,body *{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif!important;text-shadow:none!important;}
+body{font-weight:400!important;}
+body *{border-radius:0!important;}
+body *[style*="font-weight:700"],body *[style*="font-weight: 700"],
+body *[style*="font-weight:800"],body *[style*="font-weight: 800"],
+body *[style*="font-weight:850"],body *[style*="font-weight: 850"],
+body *[style*="font-weight:900"],body *[style*="font-weight: 900"],
+h1,h2,h3,h4,h5,h6,strong,b{font-weight:600!important;}
+button{font-weight:600!important;box-shadow:none!important;}
+input,textarea,select{font-weight:400!important;box-shadow:none!important;}
+img,video{border-radius:0!important;}
+
+/* Home */
+#modeBar{width:auto!important;max-width:calc(100% - 24px)!important;min-height:34px!important;padding:0!important;gap:6px!important;background:transparent!important;border:0!important;box-shadow:none!important;}
+#modeBar button,#modeBar button:first-child,#modeBar button:last-child{height:34px!important;min-height:34px!important;padding:0 11px!important;font-size:12px!important;border-radius:0!important;}
+#modeBar #createNullBtn{background:var(--final-purple)!important;color:#fff!important;border:1px solid var(--final-purple)!important;}
+#modeBar #dailyNullsBtn{background:#f1f8ff!important;color:var(--final-blue)!important;border:1px solid #b6d6f2!important;}
+#modeBar #aiBeingsBtn{background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;}
+#homeControlStack{gap:6px!important;}
+#homeRoomCard,#homeUtilityButtons button,#publicNullsBtn{background:#fff!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;box-shadow:none!important;}
+#homeInstruction{font-weight:600!important;letter-spacing:0!important;}
+#homeInstruction > div:first-child{font-weight:600!important;}
+#homeInstruction > div:nth-child(2){font-weight:400!important;}
+#uploadBtn{background:var(--final-purple)!important;color:#fff!important;border:1px solid var(--final-purple)!important;box-shadow:none!important;font-weight:600!important;}
+
+/* Shared white screen system */
+#aiBeingsScreen,#createBeingScreen,#dailyNullsScreen,#publicNullsScreen,
+body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
+  background:#fff!important;color:var(--final-text)!important;
+}
+#aiBeingsScreen > div,#createBeingScreen > div,#dailyNullsScreen > div,#publicNullsScreen > div{color:var(--final-text)!important;}
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn{
+  left:max(16px,calc((100vw - var(--final-width))/2))!important;
+  right:max(16px,calc((100vw - var(--final-width))/2))!important;
+  height:40px!important;min-height:40px!important;
+  background:var(--final-panel)!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;
+  font-size:14px!important;font-weight:600!important;box-shadow:none!important;
+}
+
+/* Daily, Public, HUMAN cards—including runtime cards and failures */
+#dailyNullsCards,#publicNullsCards,#aiBeingsCards{width:100%!important;max-width:660px!important;margin-left:auto!important;margin-right:auto!important;color:var(--final-text)!important;}
+.dailyNullCard,.beingCard{
+  width:100%!important;max-width:620px!important;box-sizing:border-box!important;margin:0 auto 14px!important;padding:16px!important;
+  background:#fff!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;box-shadow:none!important;
+}
+.dailyNullCard *,.beingCard *{color:inherit;}
+.dailyNullCard img,.beingCard img{border:1px solid var(--final-line)!important;box-shadow:none!important;}
+.beingCard > div:nth-child(3) span{background:var(--final-panel)!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;}
+.beingCard > button:nth-of-type(1),#aiBeingsScreen > div:first-of-type > button,#createBeingSubmit{
+  background:var(--final-purple)!important;color:#fff!important;border:1px solid var(--final-purple)!important;font-weight:600!important;
+}
+.beingCard > button:nth-of-type(n+2){background:var(--final-panel)!important;color:var(--final-muted)!important;border:1px solid var(--final-line)!important;}
+
+/* HUMAN create/edit form */
+#createBeingScreen > div{width:100%!important;max-width:620px!important;margin:0 auto!important;}
+.beingInput,#beingPhoto{
+  background:#fff!important;color:var(--final-text)!important;border:1px solid #8c959f!important;outline:0!important;box-shadow:none!important;
+}
+.beingInput:focus{border-color:var(--final-blue)!important;outline:0!important;box-shadow:none!important;}
+#beingCurrentPhoto{border:1px solid var(--final-line)!important;box-shadow:none!important;}
+
+/* ASK.CAMERA and HUMAN room master shell */
+#roomOverlay{background:#fff!important;color:var(--final-text)!important;padding-left:12px!important;padding-right:12px!important;}
+#roomHeader{width:min(var(--final-width),100%)!important;min-height:46px!important;padding:6px!important;background:var(--final-panel)!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;box-shadow:none!important;}
+#roomCountdown{background:#24292f!important;color:#fff!important;border:1px solid #24292f!important;font-weight:600!important;}
+#roomIdentityPanel{background:transparent!important;color:var(--final-text)!important;border:0!important;box-shadow:none!important;}
+#roomThumbnail,#roomCameraThumbnail{border:1px solid var(--final-line)!important;box-shadow:none!important;}
+#roomTitle,#roomTitle *{color:var(--final-text)!important;font-weight:600!important;}
+#shareRoomBtn{background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;}
+#beingQrBtn{background:#f0ffff!important;color:var(--final-cyan)!important;border:1px solid #9ed8dc!important;}
+#closeRoom{background:#fff!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;}
+#roomImageActions{width:min(var(--final-width),100%)!important;height:32px!important;min-height:32px!important;gap:6px!important;justify-content:flex-start!important;}
+#roomImageActions button,#roomImageActions button:first-child,#roomImageActions button:not(:first-child){height:32px!important;min-height:32px!important;padding:0 10px!important;font-size:12px!important;}
+#roomImageActions button:first-child{background:var(--final-purple)!important;color:#fff!important;border:1px solid var(--final-purple)!important;}
+#roomImageActions button:nth-child(2){background:#f1f8ff!important;color:var(--final-blue)!important;border:1px solid #b6d6f2!important;}
+#roomImageActions button:nth-child(3){background:#fff8f2!important;color:var(--final-orange)!important;border:1px solid #f0c7a6!important;}
+
+/* HUMAN landing state rendered inside roomMessages */
+#roomMessages:not(.geminiThread) > div{width:100%!important;max-width:620px!important;box-sizing:border-box!important;color:var(--final-text)!important;}
+#roomMessages:not(.geminiThread) img{border:1px solid var(--final-line)!important;box-shadow:none!important;}
+#roomMessages:not(.geminiThread) button{height:40px!important;min-height:40px!important;border:1px solid var(--final-line)!important;background:var(--final-panel)!important;color:var(--final-text)!important;}
+#roomMessages:not(.geminiThread) button:first-of-type{background:var(--final-purple)!important;color:#fff!important;border-color:var(--final-purple)!important;}
+
+/* Unified chat/result stream */
+#roomMessages{width:min(var(--final-width),100%)!important;color:var(--final-text)!important;}
+#roomMessages.geminiThread .geminiAiResponse,#roomMessages.geminiThread .geminiMediaResponse{align-items:flex-start!important;gap:6px!important;padding:0!important;margin:0 0 14px!important;}
+#roomMessages.geminiThread .geminiAiResponse::before,#roomMessages.geminiThread .geminiMediaResponse::before,#roomMessages.geminiThread .geminiUserMessage::before{font-weight:600!important;text-shadow:none!important;}
+#roomMessages.geminiThread .chatBubble,#roomMessages.geminiThread .geminiAiResponse .chatBubble,#roomMessages.geminiThread .geminiMediaResponse .chatBubble,#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  width:fit-content!important;max-width:min(82%,520px)!important;margin:0!important;padding:10px 14px!important;
+  background:var(--final-panel)!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;box-shadow:none!important;
+  font-size:14px!important;line-height:1.5!important;font-weight:400!important;text-align:left!important;
+}
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{background:#ddf4ff!important;color:var(--final-text)!important;border:1px solid #54aeff!important;box-shadow:none!important;font-weight:400!important;}
+#roomMessages.geminiThread .chatReplyImage{width:min(180px,46vw)!important;max-width:180px!important;max-height:180px!important;object-fit:cover!important;border:1px solid var(--final-line)!important;box-shadow:none!important;}
+#roomMessages.geminiThread .chatOpenAction{background:#f1f8ff!important;color:var(--final-blue)!important;border:1px solid #b6d6f2!important;}
+#roomMessages.geminiThread .chatShareAction{background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;}
+#firstNextBtn{background:#f7f2ff!important;color:var(--final-purple)!important;border:1px solid #d8c7f3!important;font-weight:600!important;}
+
+/* Composer */
+#roomInput{width:min(var(--final-width),calc(100% - 24px))!important;height:44px!important;min-height:44px!important;background:#fff!important;color:var(--final-text)!important;border:1px solid #8c959f!important;outline:0!important;box-shadow:none!important;font-size:14px!important;font-weight:400!important;}
+#roomInput:focus,#roomInput:focus-visible{border-color:var(--final-blue)!important;outline:0!important;box-shadow:none!important;}
+
+/* All static and runtime dialogs/viewers */
+#publishDialog,#guidePopup,#humanCardsGuide,#beingRecoveryOverlay,#beingQrOverlay,#humanPhotoOverlay{background:rgba(31,35,40,.5)!important;}
+#publishDialog > div,#guidePopup > div,#humanCardsGuide > div,#beingRecoveryOverlay > div,#beingQrOverlay > div{
+  width:min(440px,calc(100vw - 32px))!important;box-sizing:border-box!important;padding:20px!important;
+  background:#fff!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;box-shadow:0 8px 24px rgba(140,149,159,.24)!important;
+}
+#publishDialog label{background:var(--final-panel)!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;}
+#publishDialog button:last-child,#humanCardsGuide button:last-child,#continueToBeing{background:var(--final-purple)!important;color:#fff!important;border:1px solid var(--final-purple)!important;}
+#beingRecoveryCode{background:var(--final-panel)!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;font-weight:600!important;}
+#humanPhotoOverlay img{border:1px solid var(--final-line)!important;box-shadow:none!important;}
+#humanPhotoOverlay button{background:#fff!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;}
+
+/* Loading, typing, empty, and error states */
+#appStartupLoader{background:#fff!important;color:var(--final-text)!important;}
+.appStartupDots span{background:var(--final-purple)!important;}
+#roomLoadingScreen,#aiTypingIndicator{background:#fff!important;color:var(--final-text)!important;}
+#aiBeingsCards:empty,#publicNullsCards:empty,#dailyNullsCards:empty{min-height:80px!important;border:1px solid var(--final-line)!important;background:var(--final-panel)!important;}
+
+/* Connected/expired screens */
+body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{background:#fff!important;color:var(--final-text)!important;}
+body.connectedHome #helper,body.expiredHome #helper{color:var(--final-text)!important;}
+body.connectedHome #helper button,body.expiredHome #helper button,body.connectedHome #connectedRoomCountdown{background:#fff!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;box-shadow:none!important;font-weight:600!important;}
+
+/* Responsive alignment */
+@media(min-width:561px){
+  #roomInput{bottom:42px!important;}
+  #firstNextBtn{bottom:94px!important;}
+  #roomMessages{padding-bottom:164px!important;}
+}
+@media(max-width:560px){
+  #modeBar{gap:5px!important;}
+  #modeBar button,#modeBar button:first-child,#modeBar button:last-child{padding:0 9px!important;font-size:11px!important;}
+  #roomOverlay{padding-left:8px!important;padding-right:8px!important;}
+  #roomInput{bottom:calc(24px + env(safe-area-inset-bottom,0px))!important;}
+  #firstNextBtn{bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;}
+  #roomMessages{padding-bottom:150px!important;}
+  #roomMessages.geminiThread .chatBubble,#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{max-width:88%!important;}
 }
 </style>
 
