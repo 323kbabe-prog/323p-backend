@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.84 (2026-07-18)
+  - Put the complete app on one shared left/right alignment frame
+  - Fixed the mobile top navigation translating halfway beyond the left screen edge
+  - Matched home text, buttons, room controls, cards, headings, forms, and states to the same rails
+  - Removed the remaining CSS-generated brackets from the Upload button
+
   v10.0.83 (2026-07-18)
   - Converted the complete frontend to one Google-inspired product UI system
   - Applied Google blue, green, red, yellow, gray surfaces, typography, and focus states
@@ -4483,6 +4489,138 @@ body *{border-radius:0!important;}
   #modeBar #createNullBtn,#modeBar #dailyNullsBtn,#modeBar #aiBeingsBtn{padding-left:4px!important;padding-right:4px!important;}
   .dailyNullCard,.beingCard,.humanRoomIntro,.roomRecoveryState{padding:12px!important;margin-bottom:12px!important;}
   #roomHeader{padding:6px!important;}
+}
+
+/* v10.0.84 — one left/right frame and one spacing rail across the app */
+:root{
+  --app-frame:760px;
+  --app-edge:16px;
+  --app-rail:min(var(--app-frame),calc(100vw - (var(--app-edge) * 2)));
+}
+
+/* Top navigation: cancel the legacy centered transform that pushed it off-screen. */
+#modeBar{
+  left:50%!important;
+  right:auto!important;
+  width:var(--app-rail)!important;
+  max-width:var(--app-rail)!important;
+  transform:translateX(-50%)!important;
+  box-sizing:border-box!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+#modeBar #createNullBtn,#modeBar #dailyNullsBtn,#modeBar #aiBeingsBtn{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+}
+
+/* Home status row uses the same outer left and right edges. */
+#homeControlStack{
+  left:50%!important;
+  right:auto!important;
+  width:var(--app-rail)!important;
+  max-width:var(--app-rail)!important;
+  transform:translateX(-50%)!important;
+  justify-content:space-between!important;
+  box-sizing:border-box!important;
+}
+#homeRoomCard{margin:0!important;}
+#homeUtilityButtons{margin-left:auto!important;}
+
+/* Home copy and both actions share exactly the same edges. */
+#homeMainContent{
+  width:var(--app-rail)!important;
+  max-width:var(--app-rail)!important;
+  padding-left:0!important;
+  padding-right:0!important;
+  box-sizing:border-box!important;
+  align-items:stretch!important;
+}
+#homeInstruction,#uploadBtn,#publicNullsBtn{
+  width:100%!important;
+  max-width:none!important;
+  box-sizing:border-box!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+#homeInstruction{text-align:left!important;}
+#uploadBtn,#publicNullsBtn{justify-content:center!important;}
+#uploadBtn::before,#uploadBtn::after{content:none!important;display:none!important;}
+
+/* Every full screen uses the same content rail. */
+#aiBeingsScreen,#createBeingScreen,#dailyNullsScreen,#publicNullsScreen{
+  padding-left:var(--app-edge)!important;
+  padding-right:var(--app-edge)!important;
+  box-sizing:border-box!important;
+}
+#aiBeingsScreen > div:first-of-type,
+#createBeingScreen > div,
+#dailyNullsScreen > div:not(#dailyNullsCards),
+#publicNullsScreen > div:not(#publicNullsCards),
+#aiBeingsCards,#dailyNullsCards,#publicNullsCards{
+  width:var(--app-rail)!important;
+  max-width:var(--app-rail)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  box-sizing:border-box!important;
+}
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn{
+  left:50%!important;
+  right:auto!important;
+  width:var(--app-rail)!important;
+  max-width:var(--app-rail)!important;
+  transform:translateX(-50%)!important;
+  box-sizing:border-box!important;
+}
+.dailyNullCard,.beingCard,#publicNullsCards > div:first-child,
+.humanRoomIntro,.roomRecoveryState{
+  width:100%!important;
+  max-width:none!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  box-sizing:border-box!important;
+}
+
+/* All room elements sit on the same rail. */
+#roomOverlay{
+  padding-left:var(--app-edge)!important;
+  padding-right:var(--app-edge)!important;
+  box-sizing:border-box!important;
+}
+#roomHeader,#roomImageActions,#roomMessages,#roomInput{
+  width:var(--app-rail)!important;
+  max-width:var(--app-rail)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  box-sizing:border-box!important;
+}
+#roomMessages.geminiThread .geminiAiResponse,
+#roomMessages.geminiThread .geminiMediaResponse{
+  width:100%!important;
+  align-items:flex-start!important;
+}
+#roomMessages.geminiThread .geminiUserMessage{
+  width:100%!important;
+  align-items:flex-end!important;
+}
+
+/* Shared dialog alignment with smaller internal width by design. */
+#publishDialog,#guidePopup,#beingRecoveryOverlay,#beingQrOverlay,
+#humanPhotoOverlay,#humanCardsGuide{
+  padding-left:var(--app-edge)!important;
+  padding-right:var(--app-edge)!important;
+  box-sizing:border-box!important;
+}
+
+@media(max-width:560px){
+  :root{--app-edge:12px;}
+  #modeBar{gap:4px!important;}
+  #homeControlStack{gap:8px!important;}
+  #homeRoomCard{min-width:0!important;max-width:calc(100% - 96px)!important;overflow:hidden!important;}
+  #homeUtilityButtons{flex:0 0 auto!important;}
+  #roomOverlay{padding-left:var(--app-edge)!important;padding-right:var(--app-edge)!important;}
 }
 </style>
 
