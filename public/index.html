@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.73 (2026-07-18)
+  - Replaced the strict DOS skin with one cohesive GitHub-inspired design system
+  - Standardized canvas, borders, typography, spacing, controls, cards, dialogs, and forms
+  - Rebuilt AI and user replies as compact GitHub discussion-style comments
+  - Preserved all existing room, camera, upload, HUMAN, Daily, and Public navigation logic
+
   v10.0.72 (2026-07-18)
 - Audited every app screen and rebuilt the DOS system as strict monochrome
 - Set application, content, room, connected, expired, form, and dialog backgrounds to white
@@ -3046,6 +3052,219 @@ body.connectedHome #connectedRoomCountdown{
 #roomOverlay svg,#homeControlStack svg,#modeBar svg{filter:grayscale(1) contrast(1.3);}
 #roomOverlay ::selection,#dailyNullsScreen ::selection,#publicNullsScreen ::selection,#aiBeingsScreen ::selection{
   background:#000;color:#fff;
+}
+
+/* v10.0.73 — cohesive GitHub-inspired application system */
+:root{
+  color-scheme:light;
+  --gh-canvas:#ffffff;
+  --gh-subtle:#f6f8fa;
+  --gh-muted:#57606a;
+  --gh-border:#d0d7de;
+  --gh-border-muted:#d8dee4;
+  --gh-fg:#1f2328;
+  --gh-accent:#0969da;
+  --gh-accent-soft:#ddf4ff;
+  --gh-success:#1f883d;
+  --gh-success-hover:#1a7f37;
+  --gh-danger:#cf222e;
+  --gh-shadow:0 1px 0 rgba(31,35,40,.04);
+}
+
+html,body{background:var(--gh-canvas)!important;color:var(--gh-fg)!important;}
+body,button,input,textarea,a{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif!important;
+}
+a{color:var(--gh-accent)!important;}
+button{
+  min-height:32px;
+  padding:0 12px!important;
+  background:var(--gh-subtle)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid rgba(31,35,40,.15)!important;
+  border-radius:6px!important;
+  box-shadow:var(--gh-shadow)!important;
+  font-weight:600!important;
+  text-transform:none!important;
+}
+button:hover{background:#f3f4f6!important;border-color:#b6bec7!important;}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--gh-accent)!important;
+  outline-offset:2px!important;
+}
+
+#appStartupLoader{background:var(--gh-canvas)!important;color:var(--gh-fg)!important;}
+.appStartupDots span{background:var(--gh-muted)!important;}
+
+/* Home and section navigation */
+#modeBar{
+  background:var(--gh-canvas)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:8px!important;
+  box-shadow:0 1px 3px rgba(31,35,40,.08)!important;
+}
+#modeBar button{
+  background:var(--gh-canvas)!important;
+  color:var(--gh-fg)!important;
+  border:0!important;
+  border-right:1px solid var(--gh-border)!important;
+  border-radius:0!important;
+}
+#modeBar button:first-child{border-radius:7px 0 0 7px!important;}
+#modeBar button:last-child{border-right:0!important;border-radius:0 7px 7px 0!important;}
+#modeBar #createNullBtn{background:var(--gh-fg)!important;color:#fff!important;}
+#homeRoomCard,#homeUtilityButtons button,#publicNullsBtn,
+body.connectedHome #helper button,body.expiredHome #helper button,
+body.connectedHome #connectedRoomCountdown{
+  background:var(--gh-canvas)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:6px!important;
+}
+#uploadBtn,#createBeingSubmit{
+  background:var(--gh-success)!important;
+  color:#fff!important;
+  border-color:rgba(31,35,40,.15)!important;
+}
+#uploadBtn:hover,#createBeingSubmit:hover{background:var(--gh-success-hover)!important;}
+
+#dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen,#createBeingScreen,
+body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
+  background:var(--gh-canvas)!important;
+  color:var(--gh-fg)!important;
+}
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,#dailyNullCountdown{
+  background:var(--gh-subtle)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:6px!important;
+}
+.dailyNullCard,.beingCard{
+  background:var(--gh-canvas)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:8px!important;
+  box-shadow:var(--gh-shadow)!important;
+}
+.dailyNullCard img,.beingCard img{border:1px solid var(--gh-border)!important;border-radius:6px!important;}
+.beingCard > div:nth-child(3) span{
+  background:var(--gh-subtle)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid transparent!important;
+  border-radius:999px!important;
+}
+.beingCard > button:nth-of-type(1),#aiBeingsScreen > div:first-of-type > button{
+  background:var(--gh-success)!important;color:#fff!important;border-radius:6px!important;
+}
+
+/* Forms and dialogs */
+.beingInput,#roomInput{
+  background:var(--gh-canvas)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:6px!important;
+  box-shadow:inset 0 1px 0 rgba(31,35,40,.04)!important;
+}
+.beingInput::placeholder,#roomInput::placeholder{color:var(--gh-muted)!important;}
+#publishDialog,#guidePopup,#beingRecoveryOverlay,#beingQrOverlay,#humanCardsGuide{
+  background:rgba(31,35,40,.48)!important;
+}
+#publishDialog > div,#guidePopup > div,#beingRecoveryOverlay > div,#beingQrOverlay > div,#humanCardsGuide > div{
+  background:var(--gh-canvas)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:12px!important;
+  box-shadow:0 8px 24px rgba(140,149,159,.25)!important;
+}
+#publishDialog label{background:var(--gh-subtle)!important;color:var(--gh-fg)!important;border-radius:6px!important;}
+#publishDialog button:last-child,#humanCardsGuide button:last-child{
+  background:var(--gh-success)!important;color:#fff!important;border-radius:6px!important;
+}
+
+/* Room chrome: compact GitHub toolbar */
+#roomOverlay{background:var(--gh-canvas)!important;color:var(--gh-fg)!important;}
+#roomHeader{
+  background:var(--gh-subtle)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:8px!important;
+  box-shadow:var(--gh-shadow)!important;
+}
+#roomCountdown{
+  background:var(--gh-fg)!important;
+  color:#fff!important;
+  border:1px solid var(--gh-fg)!important;
+  border-radius:6px!important;
+}
+#roomIdentityPanel{background:transparent!important;color:var(--gh-fg)!important;border:0!important;}
+#roomThumbnail,#roomCameraThumbnail{border:1px solid var(--gh-border)!important;border-radius:6px!important;}
+#shareRoomBtn,#beingQrBtn{
+  background:var(--gh-subtle)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:6px!important;
+}
+#closeRoom{background:var(--gh-subtle)!important;color:var(--gh-fg)!important;border:1px solid var(--gh-border)!important;border-radius:6px!important;}
+#closeRoom path{stroke:var(--gh-fg)!important;}
+#roomImageActions{gap:6px!important;height:34px!important;min-height:34px!important;}
+#roomImageActions button,#roomImageActions button:first-child,#roomImageActions button:not(:first-child){
+  min-height:32px!important;height:32px!important;padding:0 10px!important;
+  background:var(--gh-subtle)!important;color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;border-radius:6px!important;
+}
+#roomImageActions button:first-child{background:var(--gh-success)!important;color:#fff!important;border-color:rgba(31,35,40,.15)!important;}
+.roomActionLabel{font-size:12px!important;text-transform:none!important;}
+.roomActionLabel::before,.roomActionLabel::after{content:none!important;}
+
+/* GitHub discussion-style chat */
+#roomMessages{color:var(--gh-fg)!important;scrollbar-color:#afb8c1 transparent;}
+#roomMessages.geminiThread .geminiAiResponse,
+#roomMessages.geminiThread .geminiUserMessage{gap:4px!important;}
+#roomMessages.geminiThread .geminiAiResponse::before,
+#roomMessages.geminiThread .geminiUserMessage::before{
+  display:block!important;
+  color:var(--gh-muted)!important;
+  font-size:11px!important;
+  line-height:18px!important;
+  font-weight:600!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+#roomMessages.geminiThread .geminiAiResponse::before{content:"ASK.CAMERA"!important;}
+#roomMessages.geminiThread .geminiUserMessage::before{content:"You"!important;color:var(--gh-accent)!important;}
+#roomMessages.geminiThread .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  background:var(--gh-canvas)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:6px!important;
+  box-shadow:var(--gh-shadow)!important;
+  text-shadow:none!important;
+}
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
+  background:var(--gh-accent-soft)!important;
+  color:var(--gh-fg)!important;
+  border:1px solid #54aeff!important;
+  border-radius:6px!important;
+}
+#roomMessages.geminiThread .chatReplyImage{
+  border:1px solid var(--gh-border)!important;
+  border-radius:6px!important;
+  background:var(--gh-subtle)!important;
+}
+#roomMessages.geminiThread .chatOpenAction,
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction,#firstNextBtn,#memoryBtn{
+  background:var(--gh-subtle)!important;
+  color:var(--gh-accent)!important;
+  border:1px solid var(--gh-border)!important;
+  border-radius:6px!important;
+  padding:0 10px!important;
+}
+#roomMessages.geminiThread .chatOpenAction:hover,
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction:hover{background:#eef1f4!important;}
+#roomOverlay svg,#homeControlStack svg,#modeBar svg{filter:none!important;}
+#roomOverlay ::selection,#dailyNullsScreen ::selection,#publicNullsScreen ::selection,#aiBeingsScreen ::selection{
+  background:var(--gh-accent-soft)!important;color:var(--gh-fg)!important;
 }
 </style>
 
