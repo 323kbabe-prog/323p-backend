@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.64 (2026-07-17)
+- Fixed independent vertical scrolling inside ASK.CAMERA and HUMAN rooms
+- Replaced room reply cards with a Gemini-inspired continuous AI conversation layout
+- Kept user messages as compact bubbles while AI responses use open reading sections
+- Preserved card formatting only in Daily, Public, and HUMAN gallery screens
+
   v10.0.63 (2026-07-17)
 - Applied a Google Material 3-inspired type, color, spacing, shape, and elevation system
 - Reorganized content cards into clear label, title, description, media, and action sections
@@ -1494,6 +1500,149 @@ body{
   .dailyNullCard,.beingCard{padding:16px !important;border-radius:18px !important;}
   .beingCard > div:first-child img{width:72px !important;height:72px !important;}
   #dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen{padding-left:16px !important;padding-right:16px !important;}
+}
+
+/* v10.0.64 — scrollable Gemini-style room conversation */
+#roomOverlay{
+  height:100vh;
+  height:100dvh;
+  min-height:0 !important;
+}
+#roomMessages{
+  flex:1 1 0 !important;
+  height:0 !important;
+  min-height:0 !important;
+  overflow-y:scroll !important;
+  overflow-x:hidden !important;
+  overscroll-behavior-y:contain;
+  touch-action:pan-y !important;
+  -webkit-overflow-scrolling:touch;
+  pointer-events:auto;
+  scrollbar-gutter:stable;
+}
+#roomMessages.geminiThread{
+  display:block !important;
+  align-items:initial !important;
+  padding:4px 8px 48px;
+  scroll-padding-top:16px;
+  scroll-padding-bottom:48px;
+}
+
+/* AI replies are open reading sections, not separate cards. */
+#roomMessages.geminiThread .geminiAiResponse{
+  display:block !important;
+  width:100% !important;
+  max-width:620px !important;
+  margin:0 auto !important;
+  padding:22px 8px 24px !important;
+  background:transparent !important;
+  color:#fff !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  overflow:visible !important;
+  text-align:left !important;
+}
+#roomMessages.geminiThread .geminiAiResponse + .geminiAiResponse{
+  border-top:1px solid rgba(255,255,255,.22) !important;
+}
+#roomMessages.geminiThread .geminiAiResponse::before{
+  content:"✦  ASK.CAMERA";
+  display:block;
+  margin-bottom:14px;
+  color:#a8c7fa;
+  font-size:12px;
+  line-height:1;
+  font-weight:700;
+  letter-spacing:.06em;
+}
+#roomMessages.geminiThread .geminiAiResponse > div{
+  width:100% !important;
+  max-width:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  background:transparent !important;
+  color:inherit !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiAiResponse > div > div{
+  color:inherit !important;
+}
+#roomMessages.geminiThread .geminiAiResponse [data-share-card]{
+  padding:0 !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiAiResponse [data-share-content],
+#roomMessages.geminiThread .geminiAiResponse [data-share-content] *{
+  color:inherit !important;
+  text-align:left !important;
+}
+#roomMessages.geminiThread .geminiAiResponse [data-share-content] > div:first-child{
+  color:#a8c7fa !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+  opacity:1 !important;
+}
+#roomMessages.geminiThread .geminiAiResponse img{
+  display:block;
+  width:100% !important;
+  height:auto !important;
+  max-height:520px;
+  margin:16px 0 0 !important;
+  object-fit:contain !important;
+  border-radius:18px !important;
+  background:rgba(0,0,0,.16);
+}
+#roomMessages.geminiThread .geminiAiResponse a{
+  color:#a8c7fa !important;
+}
+#roomMessages.geminiThread .geminiAiResponse [onclick*="shareCard"],
+#roomMessages.geminiThread .geminiAiResponse a[style*="background:#000"]{
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+  min-height:40px;
+  padding:0 16px !important;
+  background:#a8c7fa !important;
+  color:#062e6f !important;
+  border:0 !important;
+  border-radius:20px !important;
+  text-decoration:none !important;
+  font-size:13px !important;
+  font-weight:600 !important;
+}
+
+/* User text remains a small, familiar conversation bubble. */
+#roomMessages.geminiThread .geminiUserMessage{
+  display:flex !important;
+  justify-content:flex-end !important;
+  width:100% !important;
+  max-width:620px;
+  margin:8px auto 16px !important;
+}
+#roomMessages.geminiThread .geminiUserMessage > div{
+  max-width:min(82%,440px) !important;
+  padding:12px 16px !important;
+  background:rgba(211,227,253,.96) !important;
+  color:#041e49 !important;
+  border:0 !important;
+  border-radius:20px 20px 4px 20px !important;
+  box-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiReminderResponse{
+  width:100%;
+  max-width:620px;
+  margin:8px auto 20px !important;
+}
+
+@media (max-width:520px){
+  #roomMessages.geminiThread{padding-left:2px;padding-right:2px;}
+  #roomMessages.geminiThread .geminiAiResponse{padding-left:6px !important;padding-right:6px !important;}
+  #roomMessages.geminiThread .geminiAiResponse img{max-height:440px;}
 }
 </style>
 
@@ -3515,6 +3664,7 @@ if (
   
 }
 
+roomMessages.classList.add("geminiThread");
 roomMessages.innerHTML =
 
 messages.map(m => {
@@ -3522,7 +3672,7 @@ if(m.type === "nullCard"){
 
     return `
 
-<div class="dailyNullCard">
+<div class="dailyNullCard geminiAiResponse">
 
 ${m.image ? `
 <img
@@ -3566,7 +3716,7 @@ if(m.reminderCard && !m.hidden){
 
 return `
 
-<div
+<div class="geminiReminderResponse"
 style="
 width:100%;
 display:flex;
@@ -3658,7 +3808,7 @@ if(
 
 return `
 
-<div
+<div class="geminiAiResponse"
 style="
 width:100%;
 display:flex;
@@ -3753,7 +3903,7 @@ const isLatestImage =
 
 return `
 
-<div
+<div class="geminiAiResponse geminiMediaResponse"
 style="
 width:100%;
 display:flex;
@@ -3952,7 +4102,7 @@ if (m.jobCard) {
 
 return `
 
-<div
+<div class="geminiAiResponse geminiJobResponse"
 style="
 width:100%;
 display:flex;
@@ -4130,7 +4280,7 @@ if(m.ask){
 return `
 
 <div
-class="dailyNullCard"
+class="dailyNullCard geminiAiResponse"
 data-share-card
 data-share-read="${m.showRead !== false}"
 data-link="${m.link || ''}"
@@ -4261,7 +4411,7 @@ Share
 
 return `
 
-<div
+<div class="geminiUserMessage"
 style="
 width:100%;
 display:flex;
@@ -6372,6 +6522,7 @@ async function openAIBeing(id){
   document.getElementById("firstNextBtn").style.display = "none";
   document.getElementById("memoryBtn").style.display = "none";
 
+  roomMessages.classList.remove("geminiThread");
   roomMessages.innerHTML = `
     <div style="width:100%;max-width:420px;margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;text-align:center;padding:30px 10px;">
       <div style="position:relative;width:112px;height:168px;min-width:112px;min-height:168px;aspect-ratio:2/3;flex:0 0 auto;border:3px solid #fff;border-radius:18px;overflow:hidden;background:#111;box-shadow:0 8px 30px rgba(0,0,0,.22);">
