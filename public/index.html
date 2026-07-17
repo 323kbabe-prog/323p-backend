@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.55 (2026-07-18)
+- Restored publishing dialogs and Take Photo after moving the camera capture helper to global scope
+- Separated the live Take Photo preview from the selected Upload Image preview
+- Restored the saved ASK.CAMERA room expiration and connected-screen countdown
+- Hid duplicate home navigation and utility controls on the connected-room screen
+
   v10.0.54 (2026-07-18)
 - Added HUMAN categories to room headers and standardized all back-arrow icons
 - Improved narrow-screen Public Camera Perspectives spacing and modal centering
@@ -2159,13 +2165,44 @@ showPublishDialog();
 };
 
 function showPublishDialog(){
-    const preview =
-        document.getElementById("publishThumbnail");
-    preview.srcObject = video.srcObject;
-    preview.play().catch(() => {});
+    const livePreview = document.getElementById("publishThumbnail");
+    let imagePreview = document.getElementById("publishImageThumbnail");
+
+    if(!imagePreview){
+      imagePreview = document.createElement("img");
+      imagePreview.id = "publishImageThumbnail";
+      imagePreview.alt = "Selected upload preview";
+      imagePreview.style.cssText = "display:none;width:96px;height:128px;object-fit:cover;border-radius:12px;border:1px solid #e5e5e5;box-shadow:0 2px 8px rgba(0,0,0,.08);margin:16px auto;";
+      livePreview.insertAdjacentElement("afterend",imagePreview);
+    }
+
+    if(pendingImageSource === "upload"){
+      livePreview.pause();
+      livePreview.srcObject = null;
+      livePreview.style.display = "none";
+      imagePreview.src = pendingImageDataUrl || "";
+      imagePreview.style.display = "block";
+    }else{
+      imagePreview.style.display = "none";
+      imagePreview.removeAttribute("src");
+      livePreview.style.display = "block";
+      livePreview.srcObject = video.srcObject;
+      livePreview.play().catch(() => {});
+    }
 
     document.getElementById("publishDialog").style.display = "flex";
+}
 
+function captureCurrentCameraFrame(){
+  if(!video.videoWidth || !video.videoHeight) return null;
+
+  const canvas = document.createElement("canvas");
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  canvas.width = 1080;
+  canvas.height = Math.max(1,Math.round(vh * (1080 / vw)));
+  canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);
+  return canvas.toDataURL("image/jpeg",0.58);
 }
 
 function showRoomLoadingScreen(){
@@ -2665,6 +2702,12 @@ if (data.being) {
   renderBeingRoomHeader(data.being);
 } else {
   localStorage.setItem("askCameraRoomId",data.roomId);
+  if(data.expiresAt){
+    localStorage.setItem("askCameraRoomExpiresAt",String(data.expiresAt));
+  }
+  document.body.classList.add("connectedHome");
+  document.getElementById("modeBar").style.display = "none";
+  document.getElementById("homeControlStack").style.display = "none";
   const standardRoomThumbnail = localStorage.getItem("roomThumbnail");
   if(standardRoomThumbnail){
     localStorage.setItem("askCameraRoomThumbnail",standardRoomThumbnail);
@@ -2675,19 +2718,6 @@ if (data.being) {
   document.getElementById("homeRoomCard").style.display = "inline-flex";
   document.getElementById("roomCameraThumbnail").style.display = "none";
 }
-
-function captureCurrentCameraFrame(){
-  if(!video.videoWidth || !video.videoHeight) return null;
-
-  const canvas = document.createElement("canvas");
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-  canvas.width = 1080;
-  canvas.height = Math.max(1,Math.round(vh * (1080 / vw)));
-  canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);
-  return canvas.toDataURL("image/jpeg",0.58);
-}
-
 
 if(imageIntroText){
   localStorage.setItem(
@@ -4050,6 +4080,10 @@ document.getElementById("homeRoomId").innerText =
 
     roomExpiresAt = data.expiresAt;
 
+    if(!localStorage.getItem("selectedBeingId") && data.expiresAt){
+      localStorage.setItem("askCameraRoomExpiresAt",String(data.expiresAt));
+    }
+
     if (data.permanent) {
         stopRoomCountdown();
         document.getElementById("homeRoomCountdown").innerText = "--:--";
@@ -4515,23 +4549,18 @@ function showCreateNull(){
     history.replaceState({}, "", "/");
 
     const activeRoomId = localStorage.getItem("roomId");
-    const returningFromHumanCards =
-        localStorage.getItem("returningFromHumanCards") === "true";
     localStorage.removeItem("returningFromHumanCards");
 
     if(activeRoomId){
+        const savedStandardExpiry = Number(localStorage.getItem("askCameraRoomExpiresAt"));
+        if(Number.isFinite(savedStandardExpiry) && savedStandardExpiry > 0){
+            roomExpiresAt = savedStandardExpiry;
+        }
         document.getElementById("homeRoomId").innerText = "Room #" + activeRoomId;
         document.getElementById("homeRoomCard").style.display = "inline-flex";
-
-        if(returningFromHumanCards){
-            document.body.classList.remove("connectedHome");
-            document.getElementById("modeBar").style.display = "grid";
-            document.getElementById("homeControlStack").style.display = "flex";
-        }else{
-            document.body.classList.add("connectedHome");
-            document.getElementById("modeBar").style.display = "none";
-            document.getElementById("homeControlStack").style.display = "none";
-        }
+        document.body.classList.add("connectedHome");
+        document.getElementById("modeBar").style.display = "none";
+        document.getElementById("homeControlStack").style.display = "none";
         startRoomCountdown();
     }else{
         document.body.classList.remove("connectedHome");
@@ -5630,6 +5659,9 @@ async function openAIBeing(id){
   const activeStandardRoomId = localStorage.getItem("roomId");
   if(activeStandardRoomId && !localStorage.getItem("selectedBeingId")){
     localStorage.setItem("askCameraRoomId",activeStandardRoomId);
+    if(roomExpiresAt){
+      localStorage.setItem("askCameraRoomExpiresAt",String(roomExpiresAt));
+    }
     const activeStandardThumbnail = localStorage.getItem("roomThumbnail");
     if(activeStandardThumbnail){
       localStorage.setItem("askCameraRoomThumbnail",activeStandardThumbnail);
@@ -5702,10 +5734,14 @@ async function returnToHumanCards(event){
 
   const returnRoomId = localStorage.getItem("askCameraRoomId");
   const returnThumbnail = localStorage.getItem("askCameraRoomThumbnail");
+  const returnExpiresAt = Number(localStorage.getItem("askCameraRoomExpiresAt"));
   localStorage.removeItem("roomId");
   localStorage.removeItem("roomThumbnail");
   if(returnRoomId) localStorage.setItem("roomId",returnRoomId);
   if(returnThumbnail) localStorage.setItem("roomThumbnail",returnThumbnail);
+  if(Number.isFinite(returnExpiresAt) && returnExpiresAt > 0){
+    roomExpiresAt = returnExpiresAt;
+  }
   localStorage.setItem("returningFromHumanCards","true");
 
   roomOverlay.style.display = "none";
