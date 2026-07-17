@@ -4,6 +4,19 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.69 (2026-07-18)
+- Removed the first submitted image from ASK.CAMERA and HUMAN conversations because it is already represented in the room header
+- Kept all later AI result images visible in the conversation
+- Finished the app with a contemporary OS-style command bar, window surfaces, controls, focus states, and motion
+- Unified the complete interface around compact black, white, and blue system styling
+
+  v10.0.68 (2026-07-18)
+- Converted the text below result images into the same AI chat-bubble format
+- Removed Camera Perspective Feed labels from room results
+- Placed source and Share actions directly beneath the related AI bubble
+- Matched the room Share control to the compact square header controls
+- Tightened vertical spacing between messages, media, actions, and the input
+
   v10.0.67 (2026-07-18)
 - Redesigned the whole app as one compact black, white, and blue interface
 - Reduced home navigation to one row and shortened destination labels
@@ -2214,6 +2227,197 @@ body.connectedHome #helper button[onclick*="openHomeRoom"]{
   #shareRoomBtn,#beingQrBtn{padding:0 7px !important;}
   #closeRoom{width:34px !important;height:34px !important;flex-basis:34px !important;}
 }
+
+/* v10.0.68 — one continuous chat language for result details */
+#shareRoomBtn{
+  width:36px !important;
+  min-width:36px !important;
+  max-width:36px !important;
+  height:36px !important;
+  min-height:36px !important;
+  padding:0 !important;
+  border-radius:10px !important;
+  background:var(--app-black) !important;
+  color:#fff !important;
+  font-size:0 !important;
+  flex:0 0 36px;
+}
+#shareRoomBtn::before{
+  content:"↗";
+  display:block;
+  font-size:19px;
+  line-height:36px;
+  font-weight:500;
+}
+
+#roomMessages.geminiThread .geminiMediaResponse{
+  gap:6px !important;
+  padding-top:8px !important;
+  padding-bottom:12px !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse::before{
+  margin-bottom:0 !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatBubble.chatAiBubble{
+  color:#111 !important;
+  font-weight:400 !important;
+  letter-spacing:0 !important;
+  text-transform:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceLabel{
+  display:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceLink{
+  max-width:520px !important;
+  gap:0 !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  order:3;
+  width:fit-content !important;
+  max-width:min(88%,520px) !important;
+  margin:0 !important;
+  padding:10px 13px !important;
+  background:rgba(248,250,253,.97) !important;
+  color:#111 !important;
+  border-radius:4px 14px 14px 14px !important;
+  font-size:14px !important;
+  line-height:1.48 !important;
+  font-weight:400 !important;
+  box-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle::after{
+  content:"Open source ↗";
+  margin-top:7px;
+  color:var(--app-blue);
+  font-size:11px;
+  font-weight:600;
+}
+#roomMessages.geminiThread .geminiMediaResponse [data-share-card] > div:last-child{
+  margin-top:0 !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction{
+  min-height:28px !important;
+  padding:0 7px !important;
+  background:transparent !important;
+  color:#fff !important;
+  border-radius:6px !important;
+  box-shadow:none !important;
+  font-size:11px !important;
+  text-shadow:0 1px 4px rgba(0,0,0,.5);
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction::before{
+  content:"↗ ";
+}
+
+#roomMessages.geminiThread .geminiAiResponse,
+#roomMessages.geminiThread .geminiUserMessage{
+  margin-bottom:8px !important;
+}
+#roomMessages.geminiThread .chatReplyImage,
+#roomMessages.geminiThread .geminiAiResponse img.chatReplyImage{
+  margin-bottom:2px !important;
+}
+#roomOverlay div:has(> #firstNextBtn){
+  margin-bottom:4px !important;
+}
+#firstNextBtn{
+  min-height:28px !important;
+  height:28px !important;
+  padding:0 9px !important;
+  background:transparent !important;
+  color:#fff !important;
+  font-size:11px !important;
+  text-shadow:0 1px 4px rgba(0,0,0,.5);
+}
+
+@media (max-width:380px){
+  #shareRoomBtn{width:34px !important;min-width:34px !important;height:34px !important;min-height:34px !important;flex-basis:34px;}
+  #shareRoomBtn::before{line-height:34px;}
+}
+
+/* v10.0.69 — contemporary OS finish */
+:root{
+  --os-blue:#0b57d0;
+  --os-blue-hover:#0842a0;
+  --os-ink:#171717;
+  --os-surface:#fff;
+  --os-surface-soft:#f5f7fb;
+  --os-border:#d9dee8;
+  --os-radius:10px;
+  --os-shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+
+button,a,input,textarea{
+  transition:background-color .15s ease,color .15s ease,border-color .15s ease,transform .1s ease;
+}
+button:active,a:active{transform:scale(.97);}
+button:disabled{opacity:.48;cursor:not-allowed;}
+
+/* Compact application command bar. */
+#modeBar{
+  padding:4px;
+  border:1px solid rgba(217,222,232,.88);
+  border-radius:14px;
+  background:rgba(255,255,255,.78);
+  backdrop-filter:blur(18px) saturate(150%);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+}
+#modeBar button{border:0 !important;}
+#modeBar button:hover{background:#e8eef9 !important;}
+#createNullBtn:hover{background:var(--os-blue-hover) !important;}
+
+/* OS-like surfaces remain flat and readable. */
+#dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen,#createBeingScreen{
+  background:var(--os-surface-soft) !important;
+}
+.dailyNullCard,.beingCard,
+#publishDialog > div,#guidePopup > div,#beingRecoveryOverlay > div,#beingQrOverlay > div,#humanCardsGuide > div{
+  background:var(--os-surface) !important;
+  border:1px solid var(--os-border) !important;
+  box-shadow:var(--os-shadow) !important;
+}
+.dailyNullCard:hover,.beingCard:hover{
+  border-color:#b9c2d0 !important;
+}
+
+/* Room chrome behaves like a compact floating window toolbar. */
+#roomHeader{
+  padding:4px;
+  border:1px solid rgba(217,222,232,.72);
+  border-radius:14px;
+  background:rgba(255,255,255,.18);
+  backdrop-filter:blur(16px) saturate(130%);
+  -webkit-backdrop-filter:blur(16px) saturate(130%);
+}
+#roomIdentityPanel{background:rgba(255,255,255,.96) !important;}
+#roomCountdown,#shareRoomBtn,#closeRoom,.roomActionIcon{box-shadow:none !important;}
+#roomInput:focus{
+  border-color:var(--os-blue) !important;
+  outline:2px solid rgba(11,87,208,.22) !important;
+  outline-offset:0;
+}
+
+/* The header already represents the submitted image. */
+#roomMessages .firstRoomReplyImage{
+  display:none !important;
+}
+
+/* Small, OS-style scrollbars where the browser supports them. */
+#roomMessages,#aiBeingsCards,#dailyNullsScreen,#publicNullsScreen{
+  scrollbar-width:thin;
+  scrollbar-color:#aeb6c3 transparent;
+}
+#roomMessages::-webkit-scrollbar,#aiBeingsCards::-webkit-scrollbar,
+#dailyNullsScreen::-webkit-scrollbar,#publicNullsScreen::-webkit-scrollbar{width:6px;}
+#roomMessages::-webkit-scrollbar-thumb,#aiBeingsCards::-webkit-scrollbar-thumb,
+#dailyNullsScreen::-webkit-scrollbar-thumb,#publicNullsScreen::-webkit-scrollbar-thumb{
+  background:#aeb6c3;
+  border-radius:999px;
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto !important;transition:none !important;animation-duration:.01ms !important;animation-iteration-count:1 !important;}
+}
 </style>
 
 <div id="publicNullsScreen"
@@ -2707,6 +2911,7 @@ ASK.CAMERA
 
 <button
 id="shareRoomBtn"
+aria-label="Share room"
 onclick="shareRoom()"
 style="
 height:24px;
@@ -4247,7 +4452,6 @@ if(m.type === "nullCard"){
 
 <div class="geminiAiResponse chatAiGroup">
   <div class="chatBubble chatAiBubble">Hi</div>
-  ${m.image ? `<img class="chatReplyImage" src="${m.image}" alt="Shared camera image">` : ""}
 </div>
 
 `;
@@ -4564,7 +4768,7 @@ justify-content:flex-end;
 </div>
 
 <img
-class="chatReplyImage"
+class="chatReplyImage ${isFirstImage ? "firstRoomReplyImage" : ""}"
 src="${m.image}"
 style="
 width:100%;
