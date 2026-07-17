@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.66 (2026-07-18)
+- Made AI answers readable as simple chat groups instead of loose text over the camera
+- Moved the real AI explanation into the reply bubble
+- Kept images small and placed source information directly below each image
+- Reduced Read, Share, and Next Perspective actions to compact chat controls
+
   v10.0.65 (2026-07-17)
 - Replaced oversized room actions with a compact Camera, Upload, and Public icon bar
 - Changed room replies to left/right colored chat bubbles with AI text always shown first
@@ -1822,6 +1828,118 @@ body{
     max-width:86% !important;
   }
 }
+
+/* v10.0.66 — simple readable AI chat result groups */
+#roomMessages.geminiThread .geminiMediaResponse{
+  gap:8px !important;
+  padding-bottom:22px !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .legacyNullReason{
+  display:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceBlock,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceLink{
+  width:auto !important;
+  max-width:340px !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-start !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  text-decoration:none !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatReplyImage{
+  order:1;
+  margin:0 0 8px !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceLabel{
+  order:2;
+  width:min(100%,320px);
+  margin:0 !important;
+  padding:9px 12px 2px !important;
+  background:rgba(248,250,253,.97) !important;
+  color:#5f6368 !important;
+  border-radius:14px 14px 0 0 !important;
+  font-size:10px !important;
+  line-height:1.25 !important;
+  font-weight:600 !important;
+  opacity:1 !important;
+  text-transform:none !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  order:3;
+  width:min(100%,320px);
+  margin:0 !important;
+  padding:3px 12px 10px !important;
+  background:rgba(248,250,253,.97) !important;
+  color:#1f1f1f !important;
+  border-radius:0 0 14px 14px !important;
+  font-size:13px !important;
+  line-height:1.4 !important;
+  font-weight:600 !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle::after{
+  content:"Open source ↗";
+  display:block;
+  margin-top:6px;
+  color:#0b57d0;
+  font-size:11px;
+  font-weight:600;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatReadHint{
+  display:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse [data-share-card] > div:last-child{
+  justify-content:flex-start !important;
+  width:auto !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction{
+  min-height:34px !important;
+  padding:0 14px !important;
+  margin:0 !important;
+  background:rgba(248,250,253,.97) !important;
+  color:#0b57d0 !important;
+  border:0 !important;
+  border-radius:17px !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.12);
+  font-size:12px !important;
+  font-weight:600 !important;
+  text-transform:capitalize;
+}
+#firstNextBtn{
+  min-height:36px !important;
+  padding:0 16px !important;
+  margin:0 !important;
+  border:0 !important;
+  border-radius:18px !important;
+  background:rgba(248,250,253,.97) !important;
+  color:#0b57d0 !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.12) !important;
+  text-transform:none;
+}
+
+/* Generic source-only replies also remain readable. */
+#roomMessages.geminiThread .dailyNullCard.geminiAiResponse{
+  padding:14px 6px 20px !important;
+}
+#roomMessages.geminiThread .dailyNullCard.geminiAiResponse [data-share-content] > div:not(.chatBubble){
+  max-width:480px;
+  padding:11px 15px !important;
+  background:rgba(248,250,253,.97) !important;
+  color:#1f1f1f !important;
+  border-radius:4px 18px 18px 18px !important;
+  text-shadow:none !important;
+}
 </style>
 
 <div id="publicNullsScreen"
@@ -2434,7 +2552,7 @@ color:#fff;
 border:1px solid #111;
 "
 >
-Camera Perspective feed
+Next perspective
 </button>
 
 <button
@@ -4093,17 +4211,18 @@ gap:10px;
 <div data-share-content>
 
 <div class="chatBubble chatAiBubble" style="font-size:14px;line-height:1.55;">
-${isFirstImage ? "Hi" : (m.aiText || "Here’s what I found.")}
+${isFirstImage ? "Hi" : (m.nullReason || m.aiText || "Here’s what I found.")}
 </div>
 
 ${m.ask ? `
-<div
+<div class="chatSourceBlock"
 style="
 padding-top:12px;
 "
 >
 
 <a
+class="chatSourceLink"
 href="${m.link || '#'}"
 target="_blank"
 rel="noopener noreferrer"
@@ -4115,7 +4234,7 @@ padding-top:0px;
 "
 >
 
-<div
+<div class="chatSourceLabel"
 style="
 font-size:14px;
 font-weight:500;
@@ -4130,7 +4249,7 @@ ${m.searchLabel || "CAMERA PERSPECTIVE Search"}
 </div>
 
 ${m.nullReason ? `
-<div
+<div class="legacyNullReason"
 style="
 font-size:13px;
 line-height:1.45;
@@ -4143,7 +4262,7 @@ ${m.nullReason}
 ` : ""}
 
 
-<div
+<div class="chatSourceTitle"
 style="
 font-size:14px;
 line-height:1.35;
@@ -4153,7 +4272,7 @@ font-weight:900;
 ${m.ask}
 </div>
 
-<div
+<div class="chatReadHint"
 style="
 font-size:11px;
 font-weight:700;
@@ -4195,7 +4314,7 @@ padding-top:2px;
 "
 >
 
-<span
+<span class="chatShareAction"
 data-link="${m.link || ''}"
 
 onclick="
