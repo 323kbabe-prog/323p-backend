@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.52 (2026-07-18)
+- Fixed the Go Back to Room button alignment inside the connected-room card
+
+  v10.0.51 (2026-07-18)
+- Added one refresh/back button on the initial HUMAN screen to return to HUMAN Cards
+
   v10.0.50 (2026-07-18)
 - Preserved the active ASK.CAMERA room while a HUMAN is opened
 - Restored the same ASK.CAMERA Room ID and remaining countdown after the HUMAN closes
@@ -2632,10 +2638,10 @@ if(imageIntroText){
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;max-width:360px;padding:0 20px;">
       <div id="connectedRoomCountdown" style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);">${document.getElementById('homeRoomCountdown').innerText}</div>
       <div style="font-size:26px;font-weight:800;line-height:1.12;">AI LIVE ROOM<br>CONNECTED</div>
-      <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:10px;width:min(100%,330px);min-height:64px;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
-        <img src="${localStorage.getItem('roomThumbnail') || ''}" alt="" style="width:46px;height:46px;object-fit:cover;border-radius:11px;flex:0 0 auto;">
-        <span style="font-size:17px;font-weight:900;white-space:nowrap;">ASK.CAMERA</span>
-        <span style="margin-left:auto;padding:9px 11px;border-radius:999px;background:#000;color:#fff;font-size:10px;font-weight:800;white-space:nowrap;">GO BACK TO ROOM</span>
+      <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:8px;width:100%;max-width:350px;min-height:62px;box-sizing:border-box;overflow:hidden;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
+        <img src="${localStorage.getItem('roomThumbnail') || ''}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex:0 0 auto;">
+        <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">ASK.CAMERA</span>
+        <span style="flex:0 0 auto;margin-left:auto;padding:8px 9px;border-radius:999px;background:#000;color:#fff;font-size:8px;font-weight:800;white-space:nowrap;">GO BACK TO ROOM</span>
       </button>
       <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your room stays active. Explore HUMAN Cards or Daily Camera Perspectives, then return anytime before it expires.</div>
       <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
@@ -5577,6 +5583,9 @@ async function openAIBeing(id){
         <button onclick="captureImage()" style="flex:1;height:46px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">TAKE PHOTO</button>
         <button onclick="document.getElementById('uploadImage').click()" style="flex:1;height:46px;border:none;border-radius:999px;background:#fff;color:#111;font-weight:800;">UPLOAD IMAGE</button>
       </div>
+      <button onclick="returnToHumanCards(event)" aria-label="Back to HUMAN Cards" style="width:46px;height:46px;margin-top:16px;padding:0;border:none;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.12);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" fill="#111"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/></svg>
+      </button>
     </div>
   `;
 
@@ -5585,6 +5594,27 @@ async function openAIBeing(id){
   roomInput.placeholder = "Ask — upload an image first";
   history.replaceState({},"",`/being/${being.id}`);
   helper.style.display = "none";
+}
+
+async function returnToHumanCards(event){
+  if(event){
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  ["selectedBeingId","selectedBeing","selectedBeingSessionId","displayName","imageIntroText"]
+    .forEach(key => localStorage.removeItem(key));
+
+  const returnRoomId = localStorage.getItem("askCameraRoomId");
+  const returnThumbnail = localStorage.getItem("askCameraRoomThumbnail");
+  localStorage.removeItem("roomId");
+  localStorage.removeItem("roomThumbnail");
+  if(returnRoomId) localStorage.setItem("roomId",returnRoomId);
+  if(returnThumbnail) localStorage.setItem("roomThumbnail",returnThumbnail);
+
+  roomOverlay.style.display = "none";
+  history.replaceState({},"","/");
+  await showAIBeings();
 }
 
 function connectBeingCameraPreview(attempt = 0){
