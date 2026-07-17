@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.62 (2026-07-17)
+- Simplified the home instructions into one clear headline and one supporting sentence
+- Reworded room, upload, Public Perspective, and HUMAN Card actions around user intent
+- Added clearer loading and recovery states with direct retry actions
+- Improved camera-permission guidance without changing camera or room behavior
+
   v10.0.61 (2026-07-17)
 - Unified spacing, typography, button sizing, cards, and modal layout across the app
 - Added responsive rules for narrow phones, standard mobile screens, and desktop
@@ -933,7 +939,7 @@ ASK.CAMERA – AI Camera Search
   <button id="aiBeingsBackBtn" onclick="showCreateNull()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span></button>
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN CARDS</div><button onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
-    <div style="font-size:13px;opacity:.7;margin-bottom:14px;">Choose a HUMAN or create your own.</div>
+    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a perspective, or create an AI name card that can answer as you.</div>
     <button onclick="openCreateBeing()" style="display:block;width:100%;max-width:420px;margin:0 auto 18px;height:56px;border:1px solid #fff;border-radius:22px;background:transparent;color:#fff;font-size:18px;font-weight:900;">+ Create HUMAN Card</button>
   </div>
   <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
@@ -1476,11 +1482,8 @@ margin:0;
   text-transform:uppercase;
   -webkit-text-stroke:0.2px currentColor;
 ">
-  POINT YOUR CAMERA AT THE WORLD.
-  <span style="animation:moreBlink 1.2s infinite;">
-    TAP THE SCREEN
-  </span>
-  OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.
+  <div style="font-size:1.12em;line-height:1.05;">Point your camera at anything.</div>
+  <div style="margin-top:10px;font-size:.65em;font-weight:650;line-height:1.4;text-transform:none;letter-spacing:0;max-width:520px;">Tap the camera view to take a photo, or upload one. ASK.CAMERA turns what you see into new context and perspectives.</div>
 </div>
 
 <div style="margin-top:16px;"></div>
@@ -1501,7 +1504,7 @@ pointer-events:auto;
 box-shadow:0 4px 16px rgba(0,0,0,.18);
 "
 >
-Upload Image
+Upload a Photo
 </button>
 
 <button
@@ -1535,7 +1538,7 @@ margin-left:6px;
 "
 ></div>
 
-<span>Public Camera Perspectives</span>
+<span>Explore Public Perspectives</span>
 
 </button>
 
@@ -2134,11 +2137,11 @@ function renderConnectedHome(){
     helper.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;max-width:360px;padding:0 20px;">
         <div id="connectedRoomCountdown" style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);">${document.getElementById("homeRoomCountdown").innerText}</div>
-        <div style="font-size:26px;font-weight:800;line-height:1.12;">AI LIVE ROOM<br>CONNECTED</div>
+        <div style="font-size:26px;font-weight:800;line-height:1.12;">YOUR ROOM<br>IS ACTIVE</div>
         <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:8px;width:100%;max-width:350px;min-height:62px;box-sizing:border-box;overflow:hidden;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
           <img src="${standardThumbnail}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex:0 0 auto;${standardThumbnail ? "" : "display:none;"}">
           <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">ASK.CAMERA</span>
-          <span style="flex:0 0 auto;margin-left:auto;padding:8px 9px;border-radius:999px;background:#000;color:#fff;font-size:8px;font-weight:800;white-space:nowrap;">GO BACK TO ROOM</span>
+          <span style="flex:0 0 auto;margin-left:auto;padding:8px 10px;border-radius:999px;background:#000;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;">RETURN TO ROOM</span>
         </button>
         <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your room stays active. Explore HUMAN Cards or Daily Camera Perspectives, then return anytime before it expires.</div>
         <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
@@ -2328,7 +2331,9 @@ helper.style.display = "flex";
           "flex";
 
   helper.innerHTML = `
-<div>OPEN IN CHROME<br>FOR CAMERA</div>
+<div style="font-size:21px;line-height:1.2;">CAMERA NOT AVAILABLE</div>
+<div style="margin-top:10px;max-width:300px;font-size:14px;line-height:1.45;font-weight:600;">Open ASK.CAMERA in Chrome and allow camera access, or use Upload a Photo.</div>
+<button onclick="event.stopPropagation();document.getElementById('uploadImage').click();" style="margin-top:16px;min-height:46px;padding:0 20px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:750;">UPLOAD A PHOTO</button>
 
 <button
 onclick="window.location.reload()"
@@ -2373,7 +2378,7 @@ style="
     ){
 
       helper.innerHTML =
-        "OPEN IN CHROME<br>FOR CAMERA";
+        '<div style="font-size:21px;line-height:1.2;">OPEN IN CHROME</div><div style="margin-top:10px;max-width:300px;font-size:14px;line-height:1.45;font-weight:600;">This in-app browser cannot use the camera. Open ASK.CAMERA in Chrome, or upload a photo here.</div><button onclick="event.stopPropagation();document.getElementById(\'uploadImage\').click();" style="margin-top:16px;min-height:46px;padding:0 20px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:750;">UPLOAD A PHOTO</button>';
 
     }else{
 
@@ -2409,9 +2414,9 @@ style="
     <path d="M20.49 15A9 9 0 1 1 21 8"></path>
   </svg>
 </button>
-<div>
-ALLOW CAMERA ACCESS
-</div>
+<div style="font-size:21px;line-height:1.2;">CAMERA ACCESS NEEDED</div>
+<div style="margin-top:10px;max-width:300px;font-size:14px;line-height:1.45;font-weight:600;">Allow camera access in your browser settings, then tap refresh. You can also upload a photo.</div>
+<button onclick="event.stopPropagation();document.getElementById('uploadImage').click();" style="margin-top:16px;min-height:46px;padding:0 20px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:750;">UPLOAD A PHOTO</button>
 `;
 
     }
@@ -3073,11 +3078,11 @@ if(imageIntroText){
   helper.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;max-width:360px;padding:0 20px;">
       <div id="connectedRoomCountdown" style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);">${document.getElementById('homeRoomCountdown').innerText}</div>
-      <div style="font-size:26px;font-weight:800;line-height:1.12;">AI LIVE ROOM<br>CONNECTED</div>
+      <div style="font-size:26px;font-weight:800;line-height:1.12;">YOUR ROOM<br>IS ACTIVE</div>
       <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:8px;width:100%;max-width:350px;min-height:62px;box-sizing:border-box;overflow:hidden;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
         <img src="${localStorage.getItem('roomThumbnail') || ''}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex:0 0 auto;">
         <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">ASK.CAMERA</span>
-        <span style="flex:0 0 auto;margin-left:auto;padding:8px 9px;border-radius:999px;background:#000;color:#fff;font-size:8px;font-weight:800;white-space:nowrap;">GO BACK TO ROOM</span>
+        <span style="flex:0 0 auto;margin-left:auto;padding:8px 10px;border-radius:999px;background:#000;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;">RETURN TO ROOM</span>
       </button>
       <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your room stays active. Explore HUMAN Cards or Daily Camera Perspectives, then return anytime before it expires.</div>
       <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
@@ -4149,7 +4154,8 @@ document.getElementById("homeRoomCountdown").innerText =
    helper.innerHTML = `
 <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:0 20px;">
   <div style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;">Expired · 00:00</div>
-  <div style="font-size:25px;line-height:1.2;">ROOM EXPIRED<br>CREATE A NEW CAMERA<br>PERSPECTIVE</div>
+  <div style="font-size:25px;line-height:1.2;font-weight:800;">ROOM EXPIRED</div>
+  <div style="margin-top:10px;font-size:14px;line-height:1.45;font-weight:600;opacity:.8;">Refresh to start a new Camera Perspective.</div>
   <button
   onclick="
     event.preventDefault();
@@ -5023,7 +5029,7 @@ capturePreview.style.display = "none";
 
 helper.innerHTML = `
 <div style="display:flex;align-items:center;gap:10px;">
-<span>CREATING AI ROOM...</span>
+<span>CREATING YOUR ROOM...</span>
 <div style="display:flex;gap:4px;">
 <div class="aiDot"></div>
 <div class="aiDot"></div>
@@ -5781,7 +5787,7 @@ async function showAIBeings(){
 
 async function loadAIBeings(){
   const holder = document.getElementById("aiBeingsCards");
-  holder.innerHTML = "Loading...";
+  holder.innerHTML = '<div style="padding:36px 16px;text-align:center;font-size:14px;font-weight:700;opacity:.72;">Loading HUMAN Cards…</div>';
 
   try{
     const response = await fetch(`${AI_BEINGS_API}/ai-beings`);
@@ -5802,9 +5808,9 @@ async function loadAIBeings(){
         <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;">
           ${[being.word1,being.word2,being.word3].map(word => `<span style="background:#f1f1f1;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;">${escapeBeingText(word)}</span>`).join("")}
         </div>
-        <button onclick="openAIBeing('${being.id}')" style="margin-top:14px;width:100%;height:42px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">OPEN</button>
+        <button onclick="openAIBeing('${being.id}')" style="margin-top:14px;width:100%;height:44px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">OPEN CARD</button>
         <button onclick="changeAIBeingProfile('${being.id}')" style="display:inline-flex;align-items:center;margin-top:8px;margin-right:5px;padding:4px 8px;border:none;border-radius:999px;background:#f5f5f5;color:#666;font-size:9px;font-weight:500;cursor:pointer;opacity:.8;">
-          Change Profile
+          Edit Profile
         </button>
         <button onclick="deleteAIBeing('${being.id}')" style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:4px 8px;border:none;border-radius:999px;background:#f5f5f5;color:#666;font-size:9px;font-weight:500;cursor:pointer;opacity:.8;">
           ⚙ Admin
@@ -5812,7 +5818,7 @@ async function loadAIBeings(){
       </div>
     `).join("");
   }catch(error){
-    holder.innerHTML = `<div class="beingCard">${escapeBeingText(error.message)}</div>`;
+    holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:850;">HUMAN Cards could not load</div><div style="margin-top:8px;font-size:13px;line-height:1.45;color:#666;">${escapeBeingText(error.message)}</div><button onclick="loadAIBeings()" style="width:100%;height:44px;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">TRY AGAIN</button></div>`;
   }
 }
 
