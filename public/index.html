@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.53 (2026-07-18)
+- Restored all upper home controls after returning from a HUMAN through HUMAN Cards
+
   v10.0.52 (2026-07-18)
 - Fixed the Go Back to Room button alignment inside the connected-room card
 
@@ -4449,10 +4452,23 @@ function showCreateNull(){
     history.replaceState({}, "", "/");
 
     const activeRoomId = localStorage.getItem("roomId");
+    const returningFromHumanCards =
+        localStorage.getItem("returningFromHumanCards") === "true";
+    localStorage.removeItem("returningFromHumanCards");
+
     if(activeRoomId){
-        document.body.classList.add("connectedHome");
-        document.getElementById("modeBar").style.display = "none";
-        document.getElementById("homeControlStack").style.display = "none";
+        document.getElementById("homeRoomId").innerText = "Room #" + activeRoomId;
+        document.getElementById("homeRoomCard").style.display = "inline-flex";
+
+        if(returningFromHumanCards){
+            document.body.classList.remove("connectedHome");
+            document.getElementById("modeBar").style.display = "grid";
+            document.getElementById("homeControlStack").style.display = "flex";
+        }else{
+            document.body.classList.add("connectedHome");
+            document.getElementById("modeBar").style.display = "none";
+            document.getElementById("homeControlStack").style.display = "none";
+        }
         startRoomCountdown();
     }else{
         document.body.classList.remove("connectedHome");
@@ -5611,6 +5627,7 @@ async function returnToHumanCards(event){
   localStorage.removeItem("roomThumbnail");
   if(returnRoomId) localStorage.setItem("roomId",returnRoomId);
   if(returnThumbnail) localStorage.setItem("roomThumbnail",returnThumbnail);
+  localStorage.setItem("returningFromHumanCards","true");
 
   roomOverlay.style.display = "none";
   history.replaceState({},"","/");
