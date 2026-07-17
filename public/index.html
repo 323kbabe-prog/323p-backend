@@ -4,6 +4,16 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.83 (2026-07-18)
+  - Converted the complete frontend to one Google-inspired product UI system
+  - Applied Google blue, green, red, yellow, gray surfaces, typography, and focus states
+  - Preserved square geometry, circular thumbnails, room behavior, and the 8px spacing rhythm
+
+  v10.0.82 (2026-07-18)
+  - Audited the complete app for shared spacing, square button geometry, and consistent touch sizing
+  - Applied one semantic color system to home, room, gallery, form, dialog, recovery, and runtime buttons
+  - Removed bracket styling from button labels and removed boxes behind HUMAN personality words
+
   v10.0.81 (2026-07-18)
   - Fixed the three upper navigation buttons as an equal-width mobile row
   - Prevented HUMAN thumbnails and labels from overlapping adjacent buttons
@@ -4168,6 +4178,311 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
 @media(min-width:561px){
   #roomInput{bottom:56px!important;}
   #roomMessages{padding-bottom:126px!important;}
+}
+
+/* v10.0.82 — final whole-app button, spacing, and color system */
+:root{
+  --action-primary:#8250df;
+  --action-primary-hover:#6e40c9;
+  --action-blue:#0969da;
+  --action-blue-bg:#f1f8ff;
+  --action-blue-line:#b6d6f2;
+  --action-orange:#bc4c00;
+  --action-orange-bg:#fff8f2;
+  --action-orange-line:#f0c7a6;
+  --action-pink:#bf3989;
+  --action-pink-bg:#fff5fa;
+  --action-pink-line:#e9b6d3;
+  --action-neutral-bg:#f6f8fa;
+}
+
+/* Buttons are square controls. Profile/navigation thumbnails remain circular. */
+button,[role="button"],#homeRoomCard{
+  border-radius:0!important;
+  box-shadow:none!important;
+  letter-spacing:0!important;
+}
+button,[role="button"]{
+  background:#fff!important;
+  color:var(--final-text)!important;
+  border:1px solid var(--final-line)!important;
+}
+button{line-height:1.15!important;}
+button:focus-visible,[role="button"]:focus-visible,#homeRoomCard:focus-visible{
+  outline:2px solid var(--action-blue)!important;
+  outline-offset:2px!important;
+}
+button:disabled{opacity:.55!important;cursor:not-allowed!important;}
+
+/* One spacing rhythm for screen headings, cards, actions, and forms. */
+#aiBeingsScreen,#createBeingScreen,#dailyNullsScreen,#publicNullsScreen{padding-left:16px!important;padding-right:16px!important;}
+#aiBeingsCards,#dailyNullsCards,#publicNullsCards{gap:12px!important;}
+.dailyNullCard,.beingCard,.roomRecoveryState,.humanRoomIntro{margin-bottom:12px!important;}
+.beingCardActions,.roomRecoveryActions,.roomActionRow{gap:8px!important;}
+.beingInput,#beingPhoto{min-height:42px!important;margin-bottom:10px!important;box-sizing:border-box!important;}
+
+/* Primary/create/confirm actions. */
+#uploadBtn,#createBeingSubmit,#continueToBeing,
+.beingOpenButton,.roomRecoveryActions button:last-child,
+#publishDialog button:last-child,#humanCardsGuide button:last-child,
+#copyBeingRecovery + button{
+  background:var(--action-primary)!important;
+  color:#fff!important;
+  border:1px solid var(--action-primary)!important;
+}
+
+/* Navigation, retry, article, upload, and informational actions. */
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,
+#roomImageActions button:nth-child(2),.chatOpenAction,
+#retryUnavailableRoomBtn,.roomRecoveryActions button:first-child{
+  background:var(--action-blue-bg)!important;
+  color:var(--action-blue)!important;
+  border:1px solid var(--action-blue-line)!important;
+}
+
+/* Public perspective actions. */
+#publicNullsBtn,#roomImageActions button:nth-child(3){
+  background:var(--action-orange-bg)!important;
+  color:var(--action-orange)!important;
+  border:1px solid var(--action-orange-line)!important;
+}
+
+/* HUMAN and sharing actions. */
+#shareRoomBtn,#beingQrBtn,.chatShareAction,
+.dailyNullCard [data-share-content] + div span{
+  background:var(--action-pink-bg)!important;
+  color:var(--action-pink)!important;
+  border:1px solid var(--action-pink-line)!important;
+}
+
+/* Camera and primary room action stay visually direct. */
+#roomImageActions button:first-child{
+  background:var(--action-primary)!important;
+  color:#fff!important;
+  border:1px solid var(--action-primary)!important;
+}
+
+/* Utility, close, edit, manage, and secondary actions. */
+#refreshCameraBtn,#guideBtn,#closeRoom,
+#createBeingScreen button[onclick="closeCreateBeing()"],
+.beingCardActions button:not(.beingOpenButton),
+#copyBeingRecovery,#backFromUnavailableRoomBtn{
+  background:#fff!important;
+  color:var(--final-text)!important;
+  border:1px solid var(--final-line)!important;
+}
+
+/* Personality words are plain text, never chips or boxed controls. */
+.beingCardWords{gap:8px!important;}
+.beingCardWords span,
+.beingCard > div:nth-child(3) span{
+  padding:0!important;
+  background:transparent!important;
+  color:var(--final-muted)!important;
+  border:0!important;
+  font-size:11px!important;
+}
+.beingCardWords span:not(:last-child)::after{content:" · ";color:var(--final-muted);}
+
+/* Consistent control sizes without enlarging compact room-header actions. */
+#modeBar button,#homeUtilityButtons button,#uploadBtn,#publicNullsBtn,
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,
+.beingCardActions button,.roomRecoveryActions button,
+#publishDialog button,#guidePopup button,#humanCardsGuide button{
+  min-height:36px!important;
+  box-sizing:border-box!important;
+}
+#roomImageActions button{min-height:32px!important;box-sizing:border-box!important;}
+
+@media(max-width:560px){
+  #aiBeingsScreen,#createBeingScreen,#dailyNullsScreen,#publicNullsScreen{padding-left:12px!important;padding-right:12px!important;}
+  .dailyNullCard,.beingCard,.roomRecoveryState,.humanRoomIntro{padding:12px!important;}
+  #uploadBtn,#publicNullsBtn{width:min(100%,360px)!important;justify-content:center!important;}
+  .beingCardActions button{min-height:36px!important;}
+}
+
+/* v10.0.83 — Google-inspired product system, with ASK.CAMERA square geometry */
+:root{
+  --google-blue:#1a73e8;
+  --google-blue-dark:#185abc;
+  --google-blue-soft:#e8f0fe;
+  --google-blue-line:#aecbfa;
+  --google-red:#d93025;
+  --google-red-soft:#fce8e6;
+  --google-red-line:#f6aea9;
+  --google-yellow:#e37400;
+  --google-yellow-soft:#fef7e0;
+  --google-yellow-line:#fdd663;
+  --google-green:#188038;
+  --google-green-soft:#e6f4ea;
+  --google-green-line:#a8dab5;
+  --google-text:#202124;
+  --google-muted:#5f6368;
+  --google-border:#dadce0;
+  --google-surface:#fff;
+  --google-surface-2:#f8f9fa;
+  --final-bg:var(--google-surface);
+  --final-panel:var(--google-surface-2);
+  --final-text:var(--google-text);
+  --final-muted:var(--google-muted);
+  --final-line:var(--google-border);
+  --final-purple:var(--google-blue);
+  --final-blue:var(--google-blue);
+  --final-orange:var(--google-yellow);
+  --final-pink:var(--google-red);
+  --final-cyan:var(--google-green);
+  --action-primary:var(--google-blue);
+  --action-primary-hover:var(--google-blue-dark);
+  --action-blue:var(--google-blue);
+  --action-blue-bg:var(--google-blue-soft);
+  --action-blue-line:var(--google-blue-line);
+  --action-orange:var(--google-yellow);
+  --action-orange-bg:var(--google-yellow-soft);
+  --action-orange-line:var(--google-yellow-line);
+  --action-pink:var(--google-red);
+  --action-pink-bg:var(--google-red-soft);
+  --action-pink-line:var(--google-red-line);
+  --action-neutral-bg:var(--google-surface-2);
+}
+
+html,body,button,input,textarea,select{
+  font-family:"Google Sans",Roboto,Arial,sans-serif!important;
+  color:var(--google-text)!important;
+}
+body{background:var(--google-surface)!important;}
+body,body *{letter-spacing:0!important;text-shadow:none!important;}
+button,input,textarea,select{font-size:14px;}
+button{font-weight:500!important;}
+h1,h2,h3,h4,h5,h6,strong,b{font-weight:500!important;}
+
+/* Google gray canvas, surfaces, dividers, and fields. */
+#roomOverlay,#aiBeingsScreen,#createBeingScreen,#dailyNullsScreen,#publicNullsScreen,
+body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
+  background:var(--google-surface)!important;
+  color:var(--google-text)!important;
+}
+#roomHeader,.dailyNullCard,.beingCard,.humanRoomIntro,.roomRecoveryState,
+#publishDialog > div,#guidePopup > div,#humanCardsGuide > div,
+#beingRecoveryOverlay > div,#beingQrOverlay > div{
+  background:var(--google-surface)!important;
+  border:1px solid var(--google-border)!important;
+  box-shadow:none!important;
+}
+input,textarea,select,.beingInput,#beingPhoto,#roomInput{
+  background:var(--google-surface)!important;
+  color:var(--google-text)!important;
+  border:1px solid var(--google-border)!important;
+  box-shadow:none!important;
+}
+input:focus,textarea:focus,select:focus,.beingInput:focus,#roomInput:focus{
+  border-color:var(--google-blue)!important;
+  outline:2px solid var(--google-blue-soft)!important;
+  outline-offset:0!important;
+}
+
+/* Top destinations: one Google color per product family. */
+#modeBar #createNullBtn{
+  background:var(--google-blue)!important;
+  color:#fff!important;
+  border:1px solid var(--google-blue)!important;
+}
+#modeBar #dailyNullsBtn{
+  background:var(--google-green-soft)!important;
+  color:var(--google-green)!important;
+  border:1px solid var(--google-green-line)!important;
+}
+#modeBar #aiBeingsBtn{
+  background:var(--google-red-soft)!important;
+  color:var(--google-red)!important;
+  border:1px solid var(--google-red-line)!important;
+}
+
+/* Primary blue actions. */
+#uploadBtn,#createBeingSubmit,#continueToBeing,.beingOpenButton,
+.roomRecoveryActions button:last-child,#publishDialog button:last-child,
+#humanCardsGuide button:last-child,#roomImageActions button:first-child{
+  background:var(--google-blue)!important;
+  color:#fff!important;
+  border:1px solid var(--google-blue)!important;
+}
+
+/* Navigation, upload, read, and retry actions. */
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,
+#roomImageActions button:nth-child(2),.chatOpenAction,
+#retryUnavailableRoomBtn,.roomRecoveryActions button:first-child{
+  background:var(--google-blue-soft)!important;
+  color:var(--google-blue)!important;
+  border:1px solid var(--google-blue-line)!important;
+}
+
+/* Daily green actions and accents. */
+#dailyNullCountdown{
+  background:var(--google-green-soft)!important;
+  color:var(--google-green)!important;
+  border:1px solid var(--google-green-line)!important;
+}
+#dailyNullsCards .dailyNullCard [data-share-content] > div:nth-child(1),
+.beingCardBioLabel{color:var(--google-green)!important;}
+
+/* Public yellow actions. */
+#publicNullsBtn,#roomImageActions button:nth-child(3){
+  background:var(--google-yellow-soft)!important;
+  color:var(--google-yellow)!important;
+  border:1px solid var(--google-yellow-line)!important;
+}
+
+/* HUMAN and sharing red actions. */
+#shareRoomBtn,#beingQrBtn,.chatShareAction,
+.dailyNullCard [data-share-content] + div span{
+  background:var(--google-red-soft)!important;
+  color:var(--google-red)!important;
+  border:1px solid var(--google-red-line)!important;
+}
+
+/* Quiet Google utility controls. */
+button,[role="button"],#homeRoomCard,#homeUtilityButtons button,
+#closeRoom,#refreshCameraBtn,#guideBtn,
+.beingCardActions button:not(.beingOpenButton),#copyBeingRecovery,
+#backFromUnavailableRoomBtn{
+  box-shadow:none!important;
+}
+#homeRoomCard,#homeUtilityButtons button,#closeRoom,#refreshCameraBtn,#guideBtn,
+.beingCardActions button:not(.beingOpenButton),#copyBeingRecovery,
+#backFromUnavailableRoomBtn{
+  background:var(--google-surface)!important;
+  color:var(--google-text)!important;
+  border:1px solid var(--google-border)!important;
+}
+
+/* Conversation follows Google message contrast without returning to cards. */
+#roomMessages.geminiThread .chatBubble,
+#roomMessages.geminiThread .geminiAiResponse .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  background:var(--google-surface-2)!important;
+  color:var(--google-text)!important;
+  border:1px solid var(--google-border)!important;
+}
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
+  background:var(--google-blue-soft)!important;
+  color:var(--google-text)!important;
+  border:1px solid var(--google-blue-line)!important;
+}
+
+/* Keep the approved 8px system and square shape everywhere. */
+body *{border-radius:0!important;}
+#publicNullsThumbs img,#humanCardsThumbs img{border-radius:50%!important;}
+#modeBar,#homeControlStack,#homeUtilityButtons,#roomImageActions,
+.beingCardActions,.roomRecoveryActions{gap:8px!important;}
+.dailyNullCard,.beingCard,.humanRoomIntro,.roomRecoveryState{padding:16px!important;margin-bottom:16px!important;}
+#roomHeader{padding:8px!important;}
+#roomMessages.geminiThread .chatBubble{padding:12px 16px!important;}
+
+@media(max-width:560px){
+  #modeBar{gap:4px!important;}
+  #modeBar #createNullBtn,#modeBar #dailyNullsBtn,#modeBar #aiBeingsBtn{padding-left:4px!important;padding-right:4px!important;}
+  .dailyNullCard,.beingCard,.humanRoomIntro,.roomRecoveryState{padding:12px!important;margin-bottom:12px!important;}
+  #roomHeader{padding:6px!important;}
 }
 </style>
 
@@ -9564,5 +9879,29 @@ Close
 
 </div>
   
+<script>
+/* Keep button labels clean even when cards and recovery states are rendered later. */
+(function cleanBracketedButtonLabels(){
+  const clean = root => {
+    if(!root || root.nodeType !== 1) return;
+    const buttons = root.matches && root.matches('button,[role="button"]')
+      ? [root]
+      : Array.from(root.querySelectorAll ? root.querySelectorAll('button,[role="button"]') : []);
+    buttons.forEach(button => {
+      const walker = document.createTreeWalker(button,NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while(walker.nextNode()) textNodes.push(walker.currentNode);
+      textNodes.forEach(node => {
+        const match = node.nodeValue.match(/^(\s*)\[\s*([^\[\]]+?)\s*\](\s*)$/);
+        if(match) node.nodeValue = match[1] + match[2] + match[3];
+      });
+    });
+  };
+  clean(document.body);
+  new MutationObserver(records => {
+    records.forEach(record => record.addedNodes.forEach(node => clean(node)));
+  }).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
 </body>
 </html>
