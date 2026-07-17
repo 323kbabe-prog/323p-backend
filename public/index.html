@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.42 (2026-07-17)
+- Removed all top navigation and utility controls from the connected-room home screen
+- Moved the guide button below the connected-screen AI Beings Cards button
+- Replaced Daily Camera Perspectives navigation with one Back to ASK.CAMERA button
+- Simplified the expired screen to timer, message, and refresh button
+
   v10.0.41 (2026-07-17)
 - Vertically centered the countdown text inside its room pill
 - Moved a live countdown above the connected-screen headline
@@ -650,6 +656,13 @@ body.imageStage #homeControlStack{
   display:none !important;
 }
 
+body.connectedHome #modeBar,
+body.connectedHome #homeControlStack,
+body.expiredHome #modeBar,
+body.expiredHome #homeControlStack{
+  display:none !important;
+}
+
 @media (min-width:700px){
   #modeBar{
     grid-template-columns:repeat(3,minmax(0,1fr));
@@ -861,6 +874,8 @@ Loading...
 </div>
 
 <div id="dailyNullsScreen">
+
+<button id="dailyBackBtn" onclick="showCreateNull()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;cursor:pointer;">← Back to ASK.CAMERA</button>
 
 <div
 style="
@@ -2577,6 +2592,7 @@ if(imageIntroText){
       <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
         <button onclick="event.stopPropagation();showDailyNulls();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">Daily Camera Perspectives</button>
         <button onclick="event.stopPropagation();showAIBeings();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">AI Beings Cards</button>
+        <button onclick="event.stopPropagation();openGuide();" aria-label="Help" style="align-self:center;width:46px;height:46px;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">?</button>
       </div>
     </div>
   `;
@@ -3599,6 +3615,8 @@ clearTimeout(rejoinTimeout);
     capturePreview.style.display = "none";
 
     helper.style.display = "flex";
+    document.body.classList.remove("connectedHome");
+    document.body.classList.add("expiredHome");
 
 document.getElementById("homeRoomId").innerText =
     "Expired";
@@ -3607,17 +3625,10 @@ document.getElementById("homeRoomCountdown").innerText =
     "00:00";
   
    helper.innerHTML = `
-
-<div
-style="
-display:flex;
-justify-content:center;
-gap:10px;
-margin-bottom:18px;
-">
-
-<button
-  id="refreshCameraBtn"
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:0 20px;">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;">Expired · 00:00</div>
+  <div style="font-size:25px;line-height:1.2;">ROOM EXPIRED<br>CREATE A NEW CAMERA<br>PERSPECTIVE</div>
+  <button
   onclick="
     event.preventDefault();
     event.stopPropagation();
@@ -3648,35 +3659,7 @@ margin-bottom:18px;
     <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
   </svg>
 </button>
-
-<button
-  id="guideBtn"
-  onclick="openGuide()"
-  style="
-    width:40px;
-    height:40px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
-    font-size:18px;
-    font-weight:700;
-  "
->
-  ?
-</button>
-
 </div>
-
-<div>
-ROOM EXPIRED<br>CREATE A NEW CAMERA PERSPECTIVE
-</div>
-
 `;
 
 });
@@ -4398,6 +4381,7 @@ function showCreateNull(){
         return;
     }
 
+    document.body.classList.remove("expiredHome");
     document.getElementById("modeBar").style.display = "";
     document.getElementById("aiBeingsScreen").style.display = "none";
     document.getElementById("createBeingScreen").style.display = "none";
@@ -4411,15 +4395,17 @@ function showCreateNull(){
 
     const activeRoomId = localStorage.getItem("roomId");
     if(activeRoomId){
-        document.getElementById("homeRoomCard").style.display = "inline-flex";
-        document.getElementById("homeRoomId").innerText = "Room #" + activeRoomId;
+        document.body.classList.add("connectedHome");
+        document.getElementById("modeBar").style.display = "none";
+        document.getElementById("homeControlStack").style.display = "none";
         startRoomCountdown();
+    }else{
+        document.body.classList.remove("connectedHome");
     }
 }
 
 async function showDailyNulls(){
-
-    document.getElementById("modeBar").style.display = "";
+    document.getElementById("modeBar").style.display = "none";
 
     publicNullsScreen.style.display = "none";
 
@@ -4428,6 +4414,7 @@ async function showDailyNulls(){
     cameraWrap.style.display = "none";
 
     dailyNullsScreen.style.display = "block";
+    dailyNullsScreen.style.paddingTop = "92px";
 
 gtag('event', 'page_view', {
   page_title: 'Daily Camera Perspectives',
