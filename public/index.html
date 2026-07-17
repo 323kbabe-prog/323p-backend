@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.70 (2026-07-18)
+- Formalized the entire interface as the ASK.CAMERA DOS (Design Operating System)
+- Unified image-to-bubble spacing and matched both AI bubble shapes exactly
+- Moved external actions outside answer bubbles and placed them before Share
+- Added contextual action labels: Open map, article, product, listing, job, business, or source
+
   v10.0.69 (2026-07-18)
 - Removed the first submitted image from ASK.CAMERA and HUMAN conversations because it is already represented in the room header
 - Kept all later AI result images visible in the conversation
@@ -2418,6 +2424,84 @@ button:disabled{opacity:.48;cursor:not-allowed;}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto !important;transition:none !important;animation-duration:.01ms !important;animation-iteration-count:1 !important;}
 }
+
+/* v10.0.70 — ASK.CAMERA DOS chat-result component */
+#roomMessages.geminiThread .geminiMediaResponse{
+  gap:4px !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceLink{
+  gap:4px !important;
+  pointer-events:none;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatReplyImage{
+  margin:0 0 4px !important;
+}
+
+/* The upper and lower AI messages are the exact same DOS bubble component. */
+#roomMessages.geminiThread .geminiMediaResponse .chatBubble.chatAiBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  width:fit-content !important;
+  max-width:min(88%,520px) !important;
+  margin:0 !important;
+  padding:10px 13px !important;
+  background:rgba(255,255,255,.97) !important;
+  color:#111 !important;
+  border:0 !important;
+  border-radius:4px 14px 14px 14px !important;
+  box-shadow:none !important;
+  font-size:14px !important;
+  line-height:1.48 !important;
+  font-weight:400 !important;
+  letter-spacing:0 !important;
+  text-transform:none !important;
+  text-shadow:none !important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle::after{
+  content:none !important;
+  display:none !important;
+}
+
+/* External action row sits outside the conversation bubble. */
+#roomMessages.geminiThread .geminiMediaResponse [data-share-card] > div:last-child{
+  width:100% !important;
+  display:flex !important;
+  justify-content:flex-start !important;
+  align-items:center !important;
+  gap:4px !important;
+  margin:2px 0 0 !important;
+  padding:0 !important;
+}
+#roomMessages.geminiThread .chatOpenAction,
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction{
+  min-height:30px !important;
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+  padding:0 9px !important;
+  margin:0 !important;
+  background:transparent !important;
+  color:#fff !important;
+  border:0 !important;
+  border-radius:7px !important;
+  box-shadow:none !important;
+  font-size:11px !important;
+  line-height:1 !important;
+  font-weight:600 !important;
+  text-decoration:none !important;
+  text-transform:none !important;
+  text-shadow:0 1px 4px rgba(0,0,0,.55);
+  pointer-events:auto;
+}
+#roomMessages.geminiThread .chatOpenAction::after{
+  content:" ↗";
+}
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction::before{
+  content:none !important;
+}
+#roomMessages.geminiThread .chatOpenAction:hover,
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction:hover{
+  background:rgba(255,255,255,.16) !important;
+}
 </style>
 
 <div id="publicNullsScreen"
@@ -4350,6 +4434,25 @@ document.getElementById(
 // ROOM MESSAGE CARDS
 //////////////////////////////////////////////////
 
+function getRoomOpenActionLabel(message){
+  const combined = [
+    message?.searchLabel,
+    message?.ask,
+    message?.nullReason,
+    message?.title,
+    message?.category,
+    message?.link
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  if(message?.jobCard || /\b(job|career|hiring|salary)\b/.test(combined)) return "Open job";
+  if(/\b(real estate|property|apartment|house|home listing|rent|condo)\b/.test(combined)) return "Open listing";
+  if(/\b(product|shopping|shop now|buy|price|store item)\b/.test(combined)) return "Open product";
+  if(/\b(cafe|coffee|restaurant|bar|hotel|museum|park|venue|place|location|map|nearby|shinjuku|tokyo)\b/.test(combined)) return "Open map";
+  if(/\b(business|company|service provider)\b/.test(combined)) return "Open business";
+  if(/\b(news|article|report|story|read|perspective feed)\b/.test(combined)) return "Open article";
+  return "Open source";
+}
+
 socket.on("roomMessages",messages => {
 
 if(!localStorage.getItem("selectedBeingId")){
@@ -4795,6 +4898,12 @@ padding-top:2px;
 "
 >
 
+${m.link ? `
+<a class="chatOpenAction" href="${m.link}" target="_blank" rel="noopener noreferrer">
+${getRoomOpenActionLabel(m)}
+</a>
+` : ""}
+
 <span class="chatShareAction"
 data-link="${m.link || ''}"
 
@@ -4921,7 +5030,7 @@ display:inline-block;
 line-height:1;
 text-decoration:none;
 ">
-Check
+Open job
 </a>
 
 <span
@@ -5121,7 +5230,7 @@ color:#fff;
 text-decoration:none;
 "
 >
-Check
+${getRoomOpenActionLabel(m)}
 </a>
 ` : ""}
 
