@@ -4,6 +4,13 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.75 (2026-07-18)
+  - Unified text-only and media AI replies into the same rounded conversation style
+  - Simplified the home tabs and compacted room/status controls
+  - Centered Daily, Public, HUMAN, and dialog cards at readable widths
+  - Removed the duplicate Ask input outline and kept one clear focus border
+  - Replaced all green actions with a restrained purple, blue, orange, and pink accent system
+
   v10.0.74 (2026-07-18)
   - Simplified the GitHub-inspired system into one minimal product interface
   - Reduced decorative containers, oversized controls, labels, shadows, and visual noise
@@ -3398,6 +3405,165 @@ button{min-height:30px!important;padding:0 10px!important;border-radius:6px!impo
   #shareRoomBtn{min-width:44px!important;padding:0 7px!important;}
   #roomMessages.geminiThread .chatBubble,
   #roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{max-width:92%!important;}
+}
+
+/* v10.0.75 — unified simple chat and restrained rainbow navigation */
+:root{
+  --rainbow-purple:#8250df;
+  --rainbow-blue:#0969da;
+  --rainbow-orange:#bc4c00;
+  --rainbow-pink:#bf3989;
+  --rainbow-cyan:#1b7c83;
+}
+
+/* Simple text tabs instead of a heavy segmented control. */
+#modeBar{
+  width:auto!important;
+  max-width:calc(100% - 24px)!important;
+  min-height:36px!important;
+  padding:0 4px!important;
+  gap:2px!important;
+  background:rgba(255,255,255,.94)!important;
+  border:0!important;
+  border-radius:8px!important;
+  box-shadow:0 1px 4px rgba(31,35,40,.12)!important;
+}
+#modeBar button,#modeBar button:first-child,#modeBar button:last-child{
+  min-height:34px!important;
+  padding:0 11px!important;
+  background:transparent!important;
+  color:#57606a!important;
+  border:0!important;
+  border-radius:5px!important;
+  box-shadow:none!important;
+  font-size:12px!important;
+}
+#modeBar #createNullBtn{background:var(--rainbow-purple)!important;color:#fff!important;}
+#dailyNullsBtn:hover{color:var(--rainbow-orange)!important;background:#fff1e5!important;}
+#aiBeingsBtn:hover{color:var(--rainbow-pink)!important;background:#ffeff7!important;}
+#homeControlStack{gap:5px!important;}
+#homeRoomCard{min-height:32px!important;height:32px!important;font-size:11px!important;border-radius:6px!important;}
+#homeUtilityButtons button{width:32px!important;height:32px!important;min-height:32px!important;}
+
+/* No green: use a small rainbow vocabulary by function. */
+#uploadBtn,#createBeingSubmit,
+.beingCard > button:nth-of-type(1),#aiBeingsScreen > div:first-of-type > button{
+  background:var(--rainbow-purple)!important;
+  color:#fff!important;
+  border-color:var(--rainbow-purple)!important;
+}
+#uploadBtn:hover,#createBeingSubmit:hover,
+.beingCard > button:nth-of-type(1):hover{background:#6e40c9!important;}
+#roomImageActions button:first-child{background:var(--rainbow-purple)!important;color:#fff!important;border-color:var(--rainbow-purple)!important;}
+#roomImageActions button:nth-child(2){color:var(--rainbow-blue)!important;border-color:#b6d6f2!important;background:#f1f8ff!important;}
+#roomImageActions button:nth-child(3){color:var(--rainbow-orange)!important;border-color:#f0c7a6!important;background:#fff8f2!important;}
+#shareRoomBtn{color:var(--rainbow-pink)!important;background:#fff5fa!important;border-color:#e9b6d3!important;}
+#beingQrBtn{color:var(--rainbow-cyan)!important;background:#f0ffff!important;border-color:#9ed8dc!important;}
+
+/* Every content card is centered and constrained. */
+.dailyNullCard,.beingCard{
+  width:100%!important;
+  max-width:560px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  box-sizing:border-box!important;
+}
+#dailyNullsList,#publicNullsList,#aiBeingsCards{
+  width:100%!important;
+  max-width:620px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+/* One visual language for every AI response, with or without media. */
+#roomMessages.geminiThread .geminiAiResponse,
+#roomMessages.geminiThread .geminiMediaResponse{
+  align-items:flex-start!important;
+  gap:6px!important;
+  padding:0!important;
+  margin:0 0 14px!important;
+}
+#roomMessages.geminiThread .geminiAiResponse::before,
+#roomMessages.geminiThread .geminiMediaResponse::before{
+  content:"ASK.CAMERA"!important;
+  margin:0 0 0 7px!important;
+  color:#57606a!important;
+  font-size:10px!important;
+  line-height:14px!important;
+  font-weight:600!important;
+  text-shadow:none!important;
+}
+#roomMessages.geminiThread .chatBubble,
+#roomMessages.geminiThread .geminiAiResponse .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  width:fit-content!important;
+  max-width:min(82%,520px)!important;
+  margin:0!important;
+  padding:10px 14px!important;
+  background:#f6f8fa!important;
+  color:#1f2328!important;
+  border:0!important;
+  border-radius:4px 18px 18px 18px!important;
+  box-shadow:0 1px 2px rgba(31,35,40,.12)!important;
+  font-size:14px!important;
+  line-height:1.5!important;
+  font-weight:400!important;
+  text-align:left!important;
+  box-sizing:border-box!important;
+}
+#roomMessages.geminiThread .geminiMediaResponse .legacyNullReason,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceLabel,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle::after{display:none!important;content:none!important;}
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceBlock,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceLink{
+  width:100%!important;
+  max-width:100%!important;
+  gap:6px!important;
+}
+#roomMessages.geminiThread .chatReplyImage,
+#roomMessages.geminiThread .geminiMediaResponse .chatReplyImage{
+  width:min(180px,46vw)!important;
+  max-width:180px!important;
+  height:auto!important;
+  max-height:180px!important;
+  margin:0 0 0 7px!important;
+  object-fit:cover!important;
+  border:1px solid #d0d7de!important;
+  border-radius:14px!important;
+  box-shadow:none!important;
+}
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
+  background:#ddf4ff!important;
+  color:#1f2328!important;
+  border:0!important;
+  border-radius:18px 4px 18px 18px!important;
+  box-shadow:0 1px 2px rgba(31,35,40,.12)!important;
+}
+#roomMessages.geminiThread .geminiUserMessage::before{color:var(--rainbow-blue)!important;}
+#roomMessages.geminiThread .chatOpenAction{color:var(--rainbow-blue)!important;background:#f1f8ff!important;border-color:#b6d6f2!important;}
+#roomMessages.geminiThread .chatShareAction{color:var(--rainbow-pink)!important;background:#fff5fa!important;border-color:#e9b6d3!important;}
+#firstNextBtn{color:var(--rainbow-purple)!important;background:#f7f2ff!important;border-color:#d8c7f3!important;}
+
+/* The Ask field has exactly one border and one focus state. */
+#roomInput{
+  border:1px solid #8c959f!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:#fff!important;
+}
+#roomInput:focus,#roomInput:focus-visible{
+  border-color:var(--rainbow-blue)!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+
+@media(max-width:560px){
+  #modeBar button,#modeBar button:first-child,#modeBar button:last-child{padding:0 9px!important;font-size:11px!important;}
+  #roomMessages.geminiThread .chatBubble,
+  #roomMessages.geminiThread .geminiAiResponse .chatBubble,
+  #roomMessages.geminiThread .geminiMediaResponse .chatBubble,
+  #roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{max-width:88%!important;}
 }
 </style>
 
