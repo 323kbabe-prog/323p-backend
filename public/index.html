@@ -4,6 +4,17 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.80 (2026-07-18)
+  - Rebuilt generated HUMAN and Daily card templates instead of styling the legacy markup
+  - Added up to three circular HUMAN profile thumbnails to the home HUMAN button
+  - Standardized circular thumbnails inside the HUMAN and Public navigation buttons
+  - Removed the Next/feed control above the Ask input in standard and HUMAN rooms
+
+  v10.0.79 (2026-07-18)
+  - Replaced ROOM NOT FOUND dead ends with Retry and Back to ASK.CAMERA recovery actions
+  - Added one shared stale-room cleanup path for URL and saved-room rejoin failures
+  - Fixed the rejoining room label to display the actual URL room ID
+
   v10.0.78 (2026-07-18)
   - Corrected stylesheet order so the shared app system can no longer be overridden by older themes
   - Applied square geometry to all static and dynamically generated controls, cards, images, dialogs, and room states
@@ -1034,7 +1045,8 @@ ASK.CAMERA – AI Camera Search
   onclick="showAIBeings()"
   style="font-size:16px;font-weight:500;"
 >
-  HUMAN
+  <span id="humanCardsThumbs" aria-hidden="true"></span>
+  <span>HUMAN</span>
 </button>
 
 
@@ -3978,6 +3990,133 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   #roomMessages{padding-bottom:150px!important;}
   #roomMessages.geminiThread .chatBubble,#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{max-width:88%!important;}
 }
+
+/* v10.0.79 — room recovery must always offer a way forward */
+.roomRecoveryState{
+  width:min(420px,calc(100vw - 32px));
+  box-sizing:border-box;
+  padding:24px;
+  background:#fff;
+  color:var(--final-text);
+  border:1px solid var(--final-line);
+  text-align:left;
+}
+.roomRecoveryTitle{font-size:20px;font-weight:600;line-height:1.2;}
+.roomRecoveryText{margin-top:8px;color:var(--final-muted);font-size:14px;line-height:1.45;}
+.roomRecoveryActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;}
+.roomRecoveryActions button{
+  min-height:38px;
+  padding:0 14px;
+  background:#fff;
+  color:var(--final-text);
+  border:1px solid var(--final-line);
+  font-size:13px;
+  font-weight:600;
+}
+.roomRecoveryActions button:last-child{background:var(--final-purple);color:#fff;border-color:var(--final-purple);}
+
+/* v10.0.80 — final-touch gallery, navigation thumbnails, and feed removal */
+#firstNextBtn{display:none!important;}
+
+/* Circular thumbnails are the only rounded elements in the app. */
+#publicNullsThumbs img,#humanCardsThumbs img{
+  width:24px!important;
+  height:24px!important;
+  object-fit:cover!important;
+  border-radius:50%!important;
+  border:2px solid #fff!important;
+  margin-left:-8px!important;
+  box-sizing:border-box!important;
+}
+#publicNullsThumbs img:first-child,#humanCardsThumbs img:first-child{margin-left:0!important;}
+#humanCardsThumbs{display:flex;align-items:center;flex:0 0 auto;}
+#aiBeingsBtn{display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;}
+
+/* HUMAN gallery rebuilt around the room width and component rhythm. */
+#aiBeingsScreen{padding-top:74px!important;}
+#aiBeingsScreen > div:first-of-type{width:100%!important;max-width:660px!important;margin:0 auto!important;}
+#aiBeingsScreen > div:first-of-type > div:first-child{margin-bottom:4px!important;}
+#aiBeingsScreen > div:first-of-type > div:first-child > div{font-size:22px!important;font-weight:600!important;}
+#aiBeingsScreen > div:first-of-type > div:nth-child(2){font-size:13px!important;margin-bottom:12px!important;color:var(--final-muted)!important;}
+#aiBeingsScreen > div:first-of-type > button{width:auto!important;max-width:none!important;height:36px!important;min-height:36px!important;margin:0 0 14px!important;padding:0 14px!important;font-size:13px!important;}
+.beingCardV2{padding:14px!important;}
+.beingCardMain{display:flex;align-items:flex-start;gap:12px;}
+.beingCardPhoto{width:68px!important;height:68px!important;object-fit:cover;cursor:pointer;flex:0 0 auto;}
+.beingCardCopy{min-width:0;flex:1;}
+.beingCardName{font-size:18px;font-weight:600!important;line-height:1.2;}
+.beingCardBioLabel{margin-top:5px;color:var(--final-blue)!important;font-size:10px;text-transform:uppercase;}
+.beingCardBio{margin-top:2px;font-size:13px;line-height:1.4;color:var(--final-text)!important;}
+.beingCardCategory{margin-top:10px;font-size:12px;font-weight:600!important;color:var(--final-muted)!important;}
+.beingCardWords{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+.beingCardWords span{padding:4px 7px!important;background:var(--final-panel)!important;border:1px solid var(--final-line)!important;font-size:11px!important;}
+.beingCardActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.beingCardActions button{height:32px!important;min-height:32px!important;padding:0 10px!important;margin:0!important;background:var(--final-panel)!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;font-size:11px!important;}
+.beingCardActions .beingOpenButton{background:var(--final-purple)!important;color:#fff!important;border-color:var(--final-purple)!important;}
+
+/* Daily screen header and compact card layout. */
+#dailyNullsScreen{padding-top:74px!important;padding-bottom:48px!important;}
+#dailyNullsScreen > div:not(#dailyNullsCards){width:100%!important;max-width:660px!important;margin-left:auto!important;margin-right:auto!important;}
+#dailyNullsScreen > div:nth-of-type(1){font-size:22px!important;font-weight:600!important;margin-bottom:3px!important;}
+#dailyNullsScreen > div:nth-of-type(2){font-size:13px!important;margin-bottom:10px!important;color:var(--final-muted)!important;}
+#dailyNullCountdown{padding:6px 9px!important;margin-bottom:14px!important;background:var(--final-panel)!important;color:var(--final-muted)!important;border:1px solid var(--final-line)!important;box-shadow:none!important;font-size:11px!important;}
+#dailyNullsCards .dailyNullCard{display:grid!important;grid-template-columns:minmax(0,1fr) 210px!important;gap:14px!important;align-items:start!important;}
+#dailyNullsCards .dailyNullCard [data-share-content]{grid-column:1;min-width:0;}
+#dailyNullsCards .dailyNullCard > a{grid-column:2;grid-row:1 / span 2;text-decoration:none!important;color:var(--final-text)!important;}
+#dailyNullsCards .dailyNullCard > a img{width:210px!important;height:210px!important;aspect-ratio:1/1!important;object-fit:cover!important;margin:0!important;border:1px solid var(--final-line)!important;}
+#dailyNullsCards .dailyNullCard [data-share-content] > div:nth-child(1){font-size:10px!important;font-weight:600!important;color:var(--final-blue)!important;text-transform:uppercase;}
+#dailyNullsCards .dailyNullCard [data-share-content] > div:nth-child(2){font-size:18px!important;font-weight:600!important;margin-top:4px!important;}
+#dailyNullsCards .dailyNullCard [data-share-content] > div:nth-child(3){font-size:13px!important;line-height:1.4!important;margin-top:6px!important;color:var(--final-muted)!important;}
+#dailyNullsCards .dailyNullCard [data-share-content] > div:nth-child(4){font-size:14px!important;font-weight:500!important;line-height:1.4!important;margin-top:10px!important;}
+#dailyNullsCards .dailyNullCard > a > div{font-size:0!important;animation:none!important;justify-content:flex-start!important;padding:0 0 6px!important;color:var(--final-blue)!important;}
+#dailyNullsCards .dailyNullCard > a > div::after{content:"Read article";font-size:12px;font-weight:600;}
+#dailyNullsCards .dailyNullCard > div:last-child{grid-column:1;display:flex!important;gap:6px!important;margin-top:6px!important;}
+#dailyNullsCards .dailyNullCard > div:last-child span{padding:7px 10px!important;background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;font-size:11px!important;font-weight:600!important;}
+
+/* Public screen and cards. */
+#publicNullsScreen{padding-top:74px!important;padding-bottom:48px!important;}
+#publicNullsScreen > div:not(#publicNullsCards){width:100%!important;max-width:660px!important;margin-left:auto!important;margin-right:auto!important;}
+#publicNullsScreen > div:nth-of-type(1){font-size:22px!important;font-weight:600!important;margin-bottom:3px!important;}
+#publicNullsScreen > div:nth-of-type(2){font-size:13px!important;margin-bottom:14px!important;color:var(--final-muted)!important;}
+#publicNullsCards > div:first-child{max-width:620px!important;margin:0 auto 14px!important;padding:12px!important;border:1px solid var(--final-line)!important;background:var(--final-panel)!important;}
+#publicNullsCards > div:first-child > div:first-child{font-size:11px!important;font-weight:600!important;margin-bottom:9px!important;color:var(--final-muted)!important;}
+#publicNullsCards > div:first-child img{border-radius:0!important;border:1px solid var(--final-line)!important;}
+#publicNullsCards .dailyNullCard{display:grid!important;grid-template-columns:210px minmax(0,1fr)!important;column-gap:14px!important;row-gap:8px!important;align-items:start!important;}
+#publicNullsCards .dailyNullCard > .publicNullImage{grid-column:1;grid-row:1 / span 5;width:210px!important;height:210px!important;aspect-ratio:1/1!important;object-fit:cover!important;margin:0!important;border-radius:0!important;}
+#publicNullsCards .dailyNullCard > div:nth-of-type(1){grid-column:2;font-size:17px!important;font-weight:600!important;margin:0!important;}
+#publicNullsCards .dailyNullCard > div:nth-of-type(2){grid-column:2;font-size:13px!important;line-height:1.4!important;margin:0!important;color:var(--final-muted)!important;}
+#publicNullsCards .dailyNullCard > div:nth-of-type(3){grid-column:2;display:flex!important;gap:8px!important;margin:4px 0 0!important;font-size:11px!important;}
+#publicNullsCards .dailyNullCard > button{grid-column:2;width:max-content!important;margin:0!important;padding:6px 9px!important;background:var(--final-panel)!important;color:var(--final-muted)!important;border:1px solid var(--final-line)!important;font-size:10px!important;}
+
+@media(max-width:560px){
+  #dailyNullsCards .dailyNullCard,#publicNullsCards .dailyNullCard{display:flex!important;flex-direction:column!important;gap:9px!important;}
+  #dailyNullsCards .dailyNullCard > a{order:2;width:100%!important;}
+  #dailyNullsCards .dailyNullCard > a img,#publicNullsCards .dailyNullCard > .publicNullImage{width:100%!important;height:auto!important;max-height:280px!important;object-fit:cover!important;}
+  #dailyNullsCards .dailyNullCard > div:last-child{order:3;}
+  .beingCardMain{align-items:flex-start;}
+}
+
+/* v10.0.80 — one alignment rail for every room element */
+#roomOverlay{align-items:center!important;}
+#roomHeader,#roomImageActions,#roomMessages,#roomInput{
+  width:min(var(--final-width),calc(100vw - 24px))!important;
+  max-width:min(var(--final-width),calc(100vw - 24px))!important;
+  box-sizing:border-box!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+#roomHeader{align-self:center!important;}
+#roomImageActions{align-self:center!important;padding-left:0!important;padding-right:0!important;}
+#roomMessages{align-self:center!important;padding-left:0!important;padding-right:0!important;}
+#roomMessages.geminiThread .chatBubble,
+#roomMessages.geminiThread .geminiAiResponse .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatBubble,
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
+  border-radius:0!important;
+}
+@media(min-width:561px){
+  #roomInput{bottom:56px!important;}
+  #roomMessages{padding-bottom:126px!important;}
+}
 </style>
 
 <div id="publicNullsScreen"
@@ -5204,7 +5343,8 @@ window.onload = async () => {
   const minimumDisplay = new Promise(resolve => setTimeout(resolve, 650));
   const initialization = Promise.allSettled([
     startCamera(),
-    loadPublicNullThumbnails()
+    loadPublicNullThumbnails(),
+    loadHumanCardThumbnails()
   ]);
   const fallback = new Promise(resolve => setTimeout(resolve, 4500));
 
@@ -7243,6 +7383,75 @@ document.getElementById("homeRoomId").innerText =
     }
 
 });
+
+function clearUnavailableRoomState(){
+  clearTimeout(rejoinTimeout);
+  rejoinTimeout = null;
+  roomReady = false;
+  roomExpiresAt = null;
+
+  [
+    "roomId",
+    "displayName",
+    "imageIntroText",
+    "roomThumbnail",
+    "askCameraRoomId",
+    "askCameraRoomThumbnail",
+    "askCameraRoomExpiresAt"
+  ].forEach(key => localStorage.removeItem(key));
+
+  document.body.classList.remove("connectedHome","expiredHome");
+  const roomIdLabel = document.getElementById("homeRoomId");
+  const countdownLabel = document.getElementById("homeRoomCountdown");
+  if(roomIdLabel) roomIdLabel.innerText = "No Room";
+  if(countdownLabel) countdownLabel.innerText = "--:--";
+}
+
+function returnFromUnavailableRoom(){
+  clearUnavailableRoomState();
+  history.replaceState({},"","/");
+  window.location.replace("/");
+}
+
+function retryUnavailableRoom(roomId){
+  if(!roomId){
+    returnFromUnavailableRoom();
+    return;
+  }
+
+  helper.style.display = "flex";
+  helper.innerHTML = `
+    <div class="roomRecoveryState" role="status" aria-live="polite">
+      <div class="roomRecoveryTitle">REJOINING ROOM</div>
+      <div class="roomRecoveryText">Trying Room #${escapeBeingText(roomId)} again…</div>
+    </div>
+  `;
+
+  socket.emit("rejoinRoom", { roomId, deviceId });
+  clearTimeout(rejoinTimeout);
+  rejoinTimeout = setTimeout(() => showRoomUnavailable(roomId),5000);
+}
+
+function showRoomUnavailable(roomId){
+  hideRoomLoadingScreen();
+  roomOverlay.style.display = "none";
+  capturePreview.style.display = "none";
+  helper.style.display = "flex";
+  document.body.classList.remove("connectedHome","expiredHome");
+
+  helper.innerHTML = `
+    <div class="roomRecoveryState" role="alert">
+      <div class="roomRecoveryTitle">ROOM NOT FOUND</div>
+      <div class="roomRecoveryText">This room may have expired or is no longer available.</div>
+      <div class="roomRecoveryActions">
+        <button id="retryUnavailableRoomBtn" type="button">Retry</button>
+        <button id="backFromUnavailableRoomBtn" type="button">Back to ASK.CAMERA</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("retryUnavailableRoomBtn").onclick = () => retryUnavailableRoom(roomId);
+  document.getElementById("backFromUnavailableRoomBtn").onclick = returnFromUnavailableRoom;
+}
   
 socket.on("connect", () => {
 
@@ -7307,18 +7516,14 @@ gap:10px;
 
 rejoinTimeout = setTimeout(() => {
 
-    helper.innerHTML = `
-<div>
-ROOM NOT FOUND
-</div>
-`;
+    showRoomUnavailable(urlRoomId);
 
 },5000);
 
 console.log("REJOINING:", savedRoomId);
 
 document.getElementById("homeRoomId").innerText =
-    "Room #" + savedRoomId;
+    "Room #" + urlRoomId;
   
 document.getElementById("homeRoomCountdown").innerText =
     "Rejoining...";  
@@ -7355,11 +7560,7 @@ gap:10px;
 
     rejoinTimeout = setTimeout(() => {
 
-        helper.innerHTML = `
-<div>
-ROOM NOT FOUND
-</div>
-`;
+        showRoomUnavailable(savedRoomId);
 
     }, 5000);
 
@@ -7597,6 +7798,7 @@ pointer-events:none;
 `;
 
 loadPublicNullThumbnails();
+loadHumanCardThumbnails();
       
 document
 .getElementById("uploadBtn")
@@ -7851,6 +8053,27 @@ thumbs.innerHTML =
       `)
       .join("");
 
+}
+
+async function loadHumanCardThumbnails(){
+  const thumbs = document.getElementById("humanCardsThumbs");
+  if(!thumbs) return;
+
+  try{
+    const response = await fetch("https://three23p-backend.onrender.com/ai-beings");
+    const humans = await response.json();
+    if(!response.ok || !Array.isArray(humans)) throw new Error("HUMAN thumbnails unavailable");
+
+    thumbs.innerHTML = humans
+      .filter(human => human && human.photo)
+      .slice(0,3)
+      .map(human => `<img src="${human.photo}" alt="">`)
+      .join("");
+    thumbs.style.display = thumbs.children.length ? "flex" : "none";
+  }catch(error){
+    thumbs.innerHTML = "";
+    thumbs.style.display = "none";
+  }
 }
 
 async function loadPublicNulls(){
@@ -8559,28 +8782,27 @@ async function loadAIBeings(){
     if(!response.ok) throw new Error(beings.error || "Could not load HUMAN.");
 
     holder.innerHTML = beings.map(being => `
-      <div class="beingCard">
-        <div style="display:flex;gap:14px;align-items:center;">
-          <img src="${being.photo}" alt="${escapeBeingText(being.name)}" onclick="showHumanPhoto(this.src,this.alt)" style="width:74px;height:74px;object-fit:cover;border-radius:18px;cursor:pointer;">
-          <div style="min-width:0;flex:1;">
-            <div style="font-size:20px;font-weight:900;">${escapeBeingText(being.name)}</div>
-            <div style="font-size:11px;opacity:.45;margin-top:7px;">BIO</div>
-            <div style="font-size:14px;font-weight:700;line-height:1.35;">${escapeBeingText(being.best_current_choice)}</div>
+      <article class="beingCard beingCardV2">
+        <div class="beingCardMain">
+          <img class="beingCardPhoto" src="${being.photo}" alt="${escapeBeingText(being.name)}" onclick="showHumanPhoto(this.src,this.alt)">
+          <div class="beingCardCopy">
+            <div class="beingCardName">${escapeBeingText(being.name)}</div>
+            <div class="beingCardBioLabel">Bio</div>
+            <div class="beingCardBio">${escapeBeingText(being.best_current_choice)}</div>
           </div>
         </div>
-        <div style="font-size:12px;font-weight:800;margin-top:14px;opacity:.6;">${escapeBeingText(being.category)}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;">
-          ${[being.word1,being.word2,being.word3].map(word => `<span style="background:#f1f1f1;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;">${escapeBeingText(word)}</span>`).join("")}
+        <div class="beingCardCategory">${escapeBeingText(being.category)}</div>
+        <div class="beingCardWords">
+          ${[being.word1,being.word2,being.word3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
         </div>
-        <button onclick="openAIBeing('${being.id}')" style="margin-top:14px;width:100%;height:44px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">Open card</button>
-        <button onclick="changeAIBeingProfile('${being.id}')" style="display:inline-flex;align-items:center;margin-top:8px;margin-right:5px;padding:4px 8px;border:none;border-radius:999px;background:#f5f5f5;color:#666;font-size:9px;font-weight:500;cursor:pointer;opacity:.8;">
-          Edit profile
-        </button>
-        <button onclick="deleteAIBeing('${being.id}')" style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:4px 8px;border:none;border-radius:999px;background:#f5f5f5;color:#666;font-size:9px;font-weight:500;cursor:pointer;opacity:.8;">
-          Manage
-        </button>
-      </div>
+        <div class="beingCardActions">
+          <button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Open</button>
+          <button onclick="changeAIBeingProfile('${being.id}')">Edit profile</button>
+          <button onclick="deleteAIBeing('${being.id}')">Manage</button>
+        </div>
+      </article>
     `).join("");
+    loadHumanCardThumbnails();
   }catch(error){
     holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:850;">HUMAN Cards could not load</div><div style="margin-top:8px;font-size:13px;line-height:1.45;color:#666;">${escapeBeingText(error.message)}</div><button onclick="loadAIBeings()" style="width:100%;height:44px;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">Try again</button></div>`;
   }
