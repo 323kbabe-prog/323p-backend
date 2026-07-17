@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.50 (2026-07-18)
+- Preserved the active ASK.CAMERA room while a HUMAN is opened
+- Restored the same ASK.CAMERA Room ID and remaining countdown after the HUMAN closes
+- Kept the original one-hour expiry without restarting the timer
+
   v10.0.49 (2026-07-17)
 - Hid all navigation and controls during the Creating AI Room loading state
 - Replaced the initial HUMAN live-camera thumbnail with the HUMAN profile photo
@@ -2390,6 +2395,9 @@ function endCurrentRoomAndRestart(){
   if (endingRoomSession) return;
   endingRoomSession = true;
 
+  const returnRoomId = localStorage.getItem("askCameraRoomId");
+  const returnThumbnail = localStorage.getItem("askCameraRoomThumbnail");
+
   [
     "displayName",
     "roomId",
@@ -2400,7 +2408,12 @@ function endCurrentRoomAndRestart(){
     "selectedBeingSessionId"
   ].forEach(key => localStorage.removeItem(key));
 
-  history.replaceState({}, "", "/");
+  if(returnRoomId){
+    localStorage.setItem("roomId",returnRoomId);
+    if(returnThumbnail) localStorage.setItem("roomThumbnail",returnThumbnail);
+  }
+
+  history.replaceState({}, "", returnRoomId ? `/?room=${returnRoomId}` : "/");
 
   let restarted = false;
   const restart = () => {
@@ -2593,6 +2606,11 @@ if (data.being) {
   history.replaceState({}, "", `/being/${data.being.id}`);
   renderBeingRoomHeader(data.being);
 } else {
+  localStorage.setItem("askCameraRoomId",data.roomId);
+  const standardRoomThumbnail = localStorage.getItem("roomThumbnail");
+  if(standardRoomThumbnail){
+    localStorage.setItem("askCameraRoomThumbnail",standardRoomThumbnail);
+  }
   history.replaceState({}, "", `/?room=${data.roomId}`);
   document.getElementById("beingQrBtn").style.display = "none";
   document.getElementById("roomCountdown").style.display = "block";
@@ -5515,6 +5533,18 @@ async function openAIBeing(id){
   const response = await fetch(`${AI_BEINGS_API}/ai-beings/${id}`);
   const being = await response.json();
   if(!response.ok){ alert(being.error || "HUMAN not found."); return; }
+
+  const activeStandardRoomId = localStorage.getItem("roomId");
+  if(activeStandardRoomId && !localStorage.getItem("selectedBeingId")){
+    localStorage.setItem("askCameraRoomId",activeStandardRoomId);
+    const activeStandardThumbnail = localStorage.getItem("roomThumbnail");
+    if(activeStandardThumbnail){
+      localStorage.setItem("askCameraRoomThumbnail",activeStandardThumbnail);
+    }
+    if(socket.connected){
+      socket.emit("leaveCurrentRoom",{ deviceId });
+    }
+  }
 
   localStorage.setItem("selectedBeingId", being.id);
   localStorage.setItem("selectedBeing", JSON.stringify(being));
