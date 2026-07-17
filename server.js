@@ -2,6 +2,9 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.16 (2026-07-17)
+// - Changed generated HUMAN identity labels from AI Being Name to HUMAN Name
+
 // v10.0.15 (2026-07-17)
 // - Kept earlier room messages when a Public Camera Perspective adds a new image
 // - Returned all new image sources to the current one-hour ASK.CAMERA room
@@ -1253,8 +1256,8 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `AI Being Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nAI BEING RESPONSE INFLUENCE\n- 80% of every interpretation, search direction, card choice, recommendation, reason, tone, and conversational reply must be driven by the Bio, Category, and three Personality words above.\n- The remaining 20% comes from the uploaded image, the user's current request, location, and verified live search information.\n- Apply this identity as the dominant perspective throughout the entire room, including automatic first-round cards and every later reply.\n- Do not mechanically repeat the profile fields. Express them naturally through priorities, language, choices, and reasoning.\n- Never change, invent, or distort factual search results to match the personality.`
-      : "AI Being Name: ASK.CAMERA";
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- 80% of every interpretation, search direction, card choice, recommendation, reason, tone, and conversational reply must be driven by the Bio, Category, and three Personality words above.\n- The remaining 20% comes from the uploaded image, the user's current request, location, and verified live search information.\n- Apply this identity as the dominant perspective throughout the entire room, including automatic first-round cards and every later reply.\n- Do not mechanically repeat the profile fields. Express them naturally through priorities, language, choices, and reasoning.\n- Never change, invent, or distort factual search results to match the personality.`
+      : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
       publicNullId && publicNullIdentity && publicNullIntro
@@ -2275,7 +2278,7 @@ if (selectedBeing) {
       : adviceText;
 
   visibleCardIdentity = [
-    `AI Being Name: ${selectedBeing.name}`,
+    `HUMAN Name: ${selectedBeing.name}`,
     `Bio: ${selectedBeing.best_current_choice}`,
     `Category: ${selectedBeing.category}`,
     `Personality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}.`,
