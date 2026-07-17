@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.74 (2026-07-18)
+  - Simplified the GitHub-inspired system into one minimal product interface
+  - Reduced decorative containers, oversized controls, labels, shadows, and visual noise
+  - Kept every essential camera, upload, room, HUMAN, Daily, Public, share, and back action
+  - Simplified AI conversation into compact left/right messages with small media previews
+
   v10.0.73 (2026-07-18)
   - Replaced the strict DOS skin with one cohesive GitHub-inspired design system
   - Standardized canvas, borders, typography, spacing, controls, cards, dialogs, and forms
@@ -3265,6 +3271,133 @@ body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
 #roomOverlay svg,#homeControlStack svg,#modeBar svg{filter:none!important;}
 #roomOverlay ::selection,#dailyNullsScreen ::selection,#publicNullsScreen ::selection,#aiBeingsScreen ::selection{
   background:var(--gh-accent-soft)!important;color:var(--gh-fg)!important;
+}
+
+/* v10.0.74 — extremely simple GitHub-based interface */
+:root{
+  --simple-bg:#fff;
+  --simple-fg:#1f2328;
+  --simple-muted:#656d76;
+  --simple-line:#d0d7de;
+  --simple-soft:#f6f8fa;
+  --simple-blue:#0969da;
+}
+
+html,body{background:var(--simple-bg)!important;color:var(--simple-fg)!important;}
+body{font-size:14px!important;}
+button{min-height:30px!important;padding:0 10px!important;border-radius:6px!important;box-shadow:none!important;}
+
+/* One compact navigation strip. */
+#modeBar{
+  width:min(560px,calc(100% - 24px))!important;
+  min-height:38px!important;
+  border-radius:6px!important;
+  box-shadow:none!important;
+}
+#modeBar button{min-height:36px!important;font-size:13px!important;font-weight:600!important;}
+#homeControlStack{gap:8px!important;}
+#homeRoomCard{min-height:38px!important;padding:4px 8px!important;}
+#homeUtilityButtons{gap:6px!important;}
+#homeUtilityButtons button{width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;}
+
+/* Flat section pages with restrained spacing. */
+#dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen,#createBeingScreen{
+  padding-left:max(16px,calc((100vw - 680px)/2))!important;
+  padding-right:max(16px,calc((100vw - 680px)/2))!important;
+}
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn{
+  left:max(16px,calc((100vw - 680px)/2))!important;
+  right:max(16px,calc((100vw - 680px)/2))!important;
+  height:38px!important;
+  min-height:38px!important;
+}
+.dailyNullCard,.beingCard{
+  border-radius:6px!important;
+  box-shadow:none!important;
+  padding:14px!important;
+}
+.beingCard > div:nth-child(3) span{font-size:12px!important;padding:3px 8px!important;}
+
+/* Simple forms and modal sheets. */
+.beingInput{min-height:38px!important;font-size:14px!important;}
+#publishDialog > div,#guidePopup > div,#beingRecoveryOverlay > div,#beingQrOverlay > div,#humanCardsGuide > div{
+  width:min(420px,calc(100vw - 32px))!important;
+  border-radius:8px!important;
+  box-shadow:0 8px 24px rgba(140,149,159,.2)!important;
+  padding:20px!important;
+}
+#publishDialog label{padding:10px!important;margin-bottom:8px!important;}
+
+/* Room: a small toolbar followed immediately by conversation. */
+#roomOverlay{padding:8px 12px 0!important;}
+#roomHeader{
+  width:min(680px,100%)!important;
+  min-height:46px!important;
+  padding:5px!important;
+  border-radius:6px!important;
+}
+#roomCountdown{height:30px!important;min-height:30px!important;padding:0 8px!important;font-size:11px!important;}
+#roomIdentityPanel{min-height:34px!important;padding:0!important;}
+#roomThumbnail,#roomCameraThumbnail{width:34px!important;height:34px!important;}
+#roomTitle{font-size:13px!important;}
+#shareRoomBtn,#beingQrBtn,#closeRoom{height:30px!important;min-height:30px!important;}
+#closeRoom{width:30px!important;padding:0!important;}
+#roomImageActions{
+  width:min(680px,100%)!important;
+  height:32px!important;
+  min-height:32px!important;
+  margin-top:6px!important;
+  justify-content:flex-start!important;
+}
+#roomImageActions button,#roomImageActions button:first-child,#roomImageActions button:not(:first-child){
+  height:30px!important;min-height:30px!important;padding:0 9px!important;font-size:12px!important;
+}
+
+/* Minimal conversation: no cards, titles, or oversized gaps. */
+#roomMessages{
+  width:min(680px,100%)!important;
+  padding:12px 0 92px!important;
+  gap:12px!important;
+}
+#roomMessages.geminiThread .geminiAiResponse,
+#roomMessages.geminiThread .geminiUserMessage{margin:0!important;gap:3px!important;}
+#roomMessages.geminiThread .geminiAiResponse::before,
+#roomMessages.geminiThread .geminiUserMessage::before{font-size:10px!important;line-height:14px!important;}
+#roomMessages.geminiThread .chatBubble,
+#roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
+  max-width:min(560px,88%)!important;
+  padding:9px 11px!important;
+  border-radius:6px!important;
+  font-size:14px!important;
+  line-height:1.45!important;
+  box-shadow:none!important;
+}
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{max-width:min(520px,82%)!important;}
+#roomMessages.geminiThread .chatReplyImage{
+  width:min(180px,46vw)!important;
+  max-height:180px!important;
+  object-fit:cover!important;
+  border-radius:6px!important;
+}
+#roomMessages.geminiThread .chatOpenAction,
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction,#firstNextBtn,#memoryBtn{
+  min-height:28px!important;height:28px!important;padding:0 8px!important;font-size:12px!important;
+}
+#roomInput{
+  width:min(680px,calc(100% - 24px))!important;
+  min-height:42px!important;
+  height:42px!important;
+  padding:0 12px!important;
+  font-size:14px!important;
+  box-shadow:0 1px 3px rgba(31,35,40,.08)!important;
+}
+
+@media(max-width:560px){
+  #roomOverlay{padding-left:8px!important;padding-right:8px!important;}
+  #roomHeader{gap:4px!important;}
+  #shareRoomBtn{min-width:44px!important;padding:0 7px!important;}
+  #roomMessages.geminiThread .chatBubble,
+  #roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{max-width:92%!important;}
 }
 </style>
 
