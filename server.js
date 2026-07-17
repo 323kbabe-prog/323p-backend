@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.15 (2026-07-17)
+// - Kept earlier room messages when a Public Camera Perspective adds a new image
+// - Returned all new image sources to the current one-hour ASK.CAMERA room
+
 // v10.0.14 (2026-07-17)
 // - Restored explicit one-hour expiry reporting for standard ASK.CAMERA rooms
 // - Kept AI Being rooms permanent and timer-free after reconnecting
@@ -1661,6 +1665,13 @@ deviceRooms[deviceId] = roomId;
 if (sourcePublicNull) {
 
     const room = rooms[roomId];
+    const publicPerspectiveMessage = {
+        type: "nullCard",
+        image: sourcePublicNull.image,
+        identity: sourcePublicNull.identity,
+        intro: sourcePublicNull.intro,
+        publicNullId: sourcePublicNull.id
+    };
 
     room.imageContext = sourcePublicNull.identity;
     room.hiddenSystem = sourcePublicNull.identity;
@@ -1671,13 +1682,7 @@ if (sourcePublicNull) {
         publicNullId: sourcePublicNull.id
     };
 
-    room.messages = [{
-        type: "nullCard",
-        image: sourcePublicNull.image,
-        identity: sourcePublicNull.identity,
-        intro: sourcePublicNull.intro,
-        publicNullId: sourcePublicNull.id
-    }];
+    room.messages.push(publicPerspectiveMessage);
 }
 
 
