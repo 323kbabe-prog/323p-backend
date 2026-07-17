@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.76 (2026-07-18)
+  - Matched the home navigation buttons to the room action-button system
+  - Removed the remaining segmented-tab appearance from ASK.CAMERA, Daily, and HUMAN
+  - Raised the mobile Ask composer and Next perspective control above browser navigation
+
   v10.0.75 (2026-07-18)
   - Unified text-only and media AI replies into the same rounded conversation style
   - Simplified the home tabs and compacted room/status controls
@@ -3405,6 +3410,66 @@ button{min-height:30px!important;padding:0 10px!important;border-radius:6px!impo
   #shareRoomBtn{min-width:44px!important;padding:0 7px!important;}
   #roomMessages.geminiThread .chatBubble,
   #roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{max-width:92%!important;}
+}
+
+/* v10.0.76 — home actions match room actions; safer mobile composer */
+#modeBar{
+  width:auto!important;
+  max-width:calc(100% - 24px)!important;
+  min-height:34px!important;
+  padding:0!important;
+  gap:6px!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+#modeBar button,#modeBar button:first-child,#modeBar button:last-child{
+  min-height:34px!important;
+  height:34px!important;
+  padding:0 11px!important;
+  border-radius:6px!important;
+  box-shadow:none!important;
+  font-size:12px!important;
+  font-weight:600!important;
+  white-space:nowrap!important;
+}
+#modeBar #createNullBtn{
+  background:var(--rainbow-purple)!important;
+  color:#fff!important;
+  border:1px solid var(--rainbow-purple)!important;
+}
+#modeBar #dailyNullsBtn{
+  background:#f1f8ff!important;
+  color:var(--rainbow-blue)!important;
+  border:1px solid #b6d6f2!important;
+}
+#modeBar #aiBeingsBtn{
+  background:#fff5fa!important;
+  color:var(--rainbow-pink)!important;
+  border:1px solid #e9b6d3!important;
+}
+#modeBar #createNullBtn:hover{background:#6e40c9!important;}
+#modeBar #dailyNullsBtn:hover{background:#ddf4ff!important;}
+#modeBar #aiBeingsBtn:hover{background:#ffeff7!important;}
+
+@media(max-width:560px){
+  #modeBar{gap:5px!important;}
+  #modeBar button,#modeBar button:first-child,#modeBar button:last-child{
+    min-width:0!important;
+    padding:0 9px!important;
+    font-size:11px!important;
+  }
+  #roomInput{
+    bottom:calc(24px + env(safe-area-inset-bottom,0px))!important;
+  }
+  #firstNextBtn{
+    bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;
+  }
+  #roomMessages{
+    padding-bottom:150px!important;
+  }
 }
 
 /* v10.0.75 — unified simple chat and restrained rainbow navigation */
