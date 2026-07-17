@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.59 (2026-07-18)
+- Added one standard ASK.CAMERA room-header renderer to prevent HUMAN identity state leaking back into ASK.CAMERA rooms
+- Applied the standard-room reset on room creation, re-entry, status restoration, and message restoration
+
   v10.0.58 (2026-07-18)
 - Corrected the Public back button placement so it remains visible on mobile and desktop
 
@@ -1815,6 +1819,48 @@ if(remain <= 0){
 
 }
 
+function renderStandardRoomHeader(){
+    const panel = document.getElementById("roomIdentityPanel");
+    const title = document.getElementById("roomTitle");
+    const thumbnail = document.getElementById("roomThumbnail");
+    const cameraThumbnail = document.getElementById("roomCameraThumbnail");
+    const savedThumbnail =
+        localStorage.getItem("askCameraRoomThumbnail") ||
+        localStorage.getItem("roomThumbnail") ||
+        "";
+
+    panel.style.flex = "0 1 auto";
+    panel.style.width = "auto";
+    panel.style.minWidth = "0";
+    panel.style.maxWidth = "calc(100% - 55px)";
+
+    title.style.display = "block";
+    title.style.flexDirection = "initial";
+    title.style.minWidth = "0";
+    title.style.maxWidth = "none";
+    title.innerHTML = "";
+    title.innerText = "ASK.CAMERA";
+
+    cameraThumbnail.pause();
+    cameraThumbnail.srcObject = null;
+    cameraThumbnail.style.display = "none";
+
+    if(savedThumbnail){
+        thumbnail.src = savedThumbnail;
+        thumbnail.alt = "ASK.CAMERA room image";
+        thumbnail.style.display = "block";
+    }else{
+        thumbnail.removeAttribute("src");
+        thumbnail.style.display = "none";
+    }
+
+    document.getElementById("beingQrBtn").style.display = "none";
+    document.getElementById("shareRoomBtn").innerText = "Share Room";
+    document.getElementById("roomCountdown").style.display = "inline-flex";
+    document.getElementById("roomHeader").style.display = "flex";
+    document.getElementById("roomImageActions").style.display = "flex";
+}
+
 function openHomeRoom(event){
 
     if(event){
@@ -1829,19 +1875,11 @@ function openHomeRoom(event){
 
     if(!roomId) return;
 
-    document.getElementById("roomCountdown").style.display = "block";
-    document.getElementById("beingQrBtn").style.display = "none";
-    document.getElementById("shareRoomBtn").innerText = "Share Room";
+    renderStandardRoomHeader();
     roomOverlay.style.display = "flex";
     cameraWrap.style.display = "block";
     helper.style.display = "none";
     history.replaceState({}, "", "/?room=" + roomId);
-    document.getElementById("roomCameraThumbnail").style.display = "none";
-    const savedThumbnail = localStorage.getItem("roomThumbnail");
-    if(savedThumbnail){
-        document.getElementById("roomThumbnail").src = savedThumbnail;
-        document.getElementById("roomThumbnail").style.display = "block";
-    }
 
     if(socket.connected){
         socket.emit("rejoinRoom", { roomId, deviceId });
@@ -2726,6 +2764,7 @@ if (data.being) {
   document.getElementById("roomCountdown").style.display = "block";
   document.getElementById("homeRoomCard").style.display = "inline-flex";
   document.getElementById("roomCameraThumbnail").style.display = "none";
+  renderStandardRoomHeader();
 }
 
 if(imageIntroText){
@@ -2800,6 +2839,10 @@ document.getElementById(
 //////////////////////////////////////////////////
 
 socket.on("roomMessages",messages => {
+
+if(!localStorage.getItem("selectedBeingId")){
+  renderStandardRoomHeader();
+}
 
 lastRoomMessageCount = messages.length;
 
@@ -4077,6 +4120,10 @@ socket.on("roomStatus", data => {
     }
 
     localStorage.setItem("roomId", data.roomId);
+
+    if(!localStorage.getItem("selectedBeingId")){
+      renderStandardRoomHeader();
+    }
 
 document.getElementById("homeRoomId").innerText =
     "Room #" + data.roomId;
