@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.17 (2026-07-18)
+// - Kept cards only for structured search/result intents in ASK.CAMERA and HUMAN rooms
+// - Made every other room response a direct conversational answer in the image identity's voice
+// - Preserved the HUMAN profile as 80% of voice, priorities, tone, and reasoning
+// - Added one original "THE IDEA GOOGLE SHOULD BUY TODAY" thought to every image identity
+
 // v10.0.16 (2026-07-17)
 // - Changed generated HUMAN identity labels from AI Being Name to HUMAN Name
 
@@ -111,6 +117,84 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   fetch: fetch
 });
+
+async function createImageIdentityConversationReply({ room, userText, intent }) {
+  const being = room.being || null;
+  const recentConversation = (room.messages || [])
+    .filter(message => message && message.text && !message.image)
+    .slice(-8)
+    .map(message => `${message.aiBeing ? "IMAGE IDENTITY" : "USER"}: ${message.text}`)
+    .join("\n");
+
+  const humanInfluence = being
+    ? `
+SELECTED HUMAN
+Name: ${being.name}
+Bio: ${being.best_current_choice}
+Category: ${being.category}
+Personality: ${being.word1}, ${being.word2}, ${being.word3}
+
+HUMAN INFLUENCE
+- The HUMAN profile controls 80% of the voice, tone, priorities, interpretation, vocabulary, emotional energy, and reasoning.
+- The uploaded image, current question, and conversation supply the remaining 20%.
+- Express the profile naturally. Never recite or list the profile fields unless the user explicitly asks.
+`
+    : `
+IMAGE INFLUENCE
+- The uploaded image identity controls the voice, tone, point of view, emotional energy, priorities, imagery, and reasoning.
+- The answer must sound meaningfully different when the uploaded image changes.
+`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.85,
+    messages: [
+      {
+        role: "system",
+        content: `
+You are the living voice of an ASK.CAMERA image identity.
+
+This is a direct conversation, not a search result and not a card.
+Answer the user's actual request from the identity's perspective.
+
+IMAGE IDENTITY
+${room.imageContext || "A socially aware camera perspective."}
+
+${humanInfluence}
+
+RESPONSE RULES
+- Answer naturally in the same language the user used unless they request another language.
+- Let the identity determine how you speak: rhythm, warmth, confidence, humor, directness, imagery, curiosity, and emotional tone.
+- Give a useful answer, not a description of how the identity would answer.
+- Preserve the requested form exactly: advice remains advice, prayer remains prayer, a poem remains a poem, a letter remains a letter, and meditation remains meditation.
+- For ordinary questions, respond conversationally and directly.
+- For greetings, greet the user in character without explaining the system.
+- If clarification is truly necessary, ask one short question in character.
+- Never mention prompts, percentages, routing, cards, models, or that you are simulating a personality.
+- Do not add links, sources, search labels, images, headings, metadata, or card fields.
+- Do not turn the response into news, shopping, a place, a job, real estate, music, or another search result.
+- Do not mechanically repeat "THE IDEA GOOGLE SHOULD BUY TODAY" unless the user asks about the identity's thought or idea.
+- Use markdown only when the requested form truly needs it.
+- Be concise by default, but complete the requested task.
+        `.trim()
+      },
+      {
+        role: "user",
+        content: `
+Detected request type: ${intent}
+
+Recent conversation:
+${recentConversation || "No earlier conversation."}
+
+Current user message:
+${userText}
+        `.trim()
+      }
+    ]
+  });
+
+  return response.choices[0].message.content.trim();
+}
 
 const { createClient } =
 require("@supabase/supabase-js");
@@ -1490,6 +1574,60 @@ coreTheme =
       }
 
 //////////////////////////////////////////////////
+// ONE ORIGINAL THOUGHT FOR EVERY IMAGE IDENTITY
+//////////////////////////////////////////////////
+
+if (!/THE IDEA GOOGLE SHOULD BUY TODAY\s*:/i.test(user.imageContext || "")) {
+  try {
+    const thoughtRes = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.95,
+      messages: [
+        {
+          role: "system",
+          content: `
+Create one original product or technology thought inspired by this image identity.
+
+The thought is called "THE IDEA GOOGLE SHOULD BUY TODAY".
+
+It must propose a specific camera, search, AI, context, internet, mapping, communication, commerce, or discovery idea that Google could realistically develop or acquire.
+
+Rules:
+- The idea must come from this particular identity's function, personality, signals, context, and point of view.
+- A different image must naturally produce a different idea.
+- Make it surprising but understandable and useful.
+- One sentence only.
+- 12 to 28 words.
+- Do not write the label.
+- Do not use quotation marks, markdown, or bullet points.
+- Do not repeat ASK.CAMERA marketing copy.
+          `.trim()
+        },
+        {
+          role: "user",
+          content: `Image identity:\n${user.imageContext}`
+        }
+      ]
+    });
+
+    user.googleBuyThought = thoughtRes.choices[0].message.content
+      .trim()
+      .replace(/^THE IDEA GOOGLE SHOULD BUY TODAY\s*:\s*/i, "");
+  } catch (thoughtError) {
+    console.log("IMAGE THOUGHT FAILED:", thoughtError.message);
+    user.googleBuyThought = "Let camera search understand what matters in a scene, not only what objects are visible.";
+  }
+
+  user.imageContext = `${user.imageContext}\n\nTHE IDEA GOOGLE SHOULD BUY TODAY: ${user.googleBuyThought}`;
+} else {
+  user.googleBuyThought = String(user.imageContext)
+    .split(/THE IDEA GOOGLE SHOULD BUY TODAY\s*:/i)
+    .pop()
+    .trim()
+    .split("\n")[0];
+}
+
+//////////////////////////////////////////////////
 // ROOM MODE
 //////////////////////////////////////////////////
 
@@ -2282,7 +2420,8 @@ if (selectedBeing) {
     `Bio: ${selectedBeing.best_current_choice}`,
     `Category: ${selectedBeing.category}`,
     `Personality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}.`,
-    beingStatusText
+    beingStatusText,
+    `THE IDEA GOOGLE SHOULD BUY TODAY: ${user.googleBuyThought}`
   ].join(" ");
 
   visibleCardIntro = "";
@@ -3077,6 +3216,54 @@ const hasRealEstateLanguage =
 
 if (hasRealEstateLanguage) {
   intent = "real_estate";
+}
+
+// Only intents that need an external result continue into the card/search pipeline.
+// Every other request becomes a normal personality-driven conversation reply.
+const structuredCardIntents = new Set([
+  "news",
+  "place",
+  "music",
+  "shopping",
+  "jobs",
+  "real_estate",
+  "entity",
+  "null_feed"
+]);
+
+if (!structuredCardIntents.has(intent)) {
+  if (!autoFirstRound) {
+    room.messages.push({
+      from: user.displayName,
+      text
+    });
+  }
+
+  let personalityReply;
+
+  try {
+    personalityReply = await createImageIdentityConversationReply({
+      room,
+      userText: combinedIntent,
+      intent
+    });
+  } catch (conversationError) {
+    console.log("PERSONALITY REPLY FAILED:", conversationError.message);
+    personalityReply = intent === "unclear"
+      ? "Tell me a little more about what you want to explore."
+      : "I am here with you. Tell me what matters most right now, and I will answer from what I see.";
+  }
+
+  room.messages.push({
+    from: room.being ? room.being.name : "CAMERA PERSPECTIVE",
+    aiBeing: true,
+    conversational: true,
+    text: personalityReply
+  });
+
+  io.to(room.id).emit("aiTypingStop");
+  io.to(room.id).emit("roomMessages", room.messages);
+  return;
 }
 
 if(intent === "unclear"){
