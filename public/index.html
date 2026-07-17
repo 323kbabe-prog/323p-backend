@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.81 (2026-07-18)
+  - Fixed the three upper navigation buttons as an equal-width mobile row
+  - Prevented HUMAN thumbnails and labels from overlapping adjacent buttons
+  - Moved the initial HUMAN room onto the shared ASK.CAMERA header, action, frame, and spacing system
+
   v10.0.80 (2026-07-18)
   - Rebuilt generated HUMAN and Daily card templates instead of styling the legacy markup
   - Added up to three circular HUMAN profile thumbnails to the home HUMAN button
@@ -3982,8 +3987,28 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   #roomMessages{padding-bottom:164px!important;}
 }
 @media(max-width:560px){
-  #modeBar{gap:5px!important;}
-  #modeBar button,#modeBar button:first-child,#modeBar button:last-child{padding:0 9px!important;font-size:11px!important;}
+  #modeBar{
+    left:12px!important;
+    right:12px!important;
+    width:calc(100% - 24px)!important;
+    max-width:none!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:5px!important;
+  }
+  #modeBar #createNullBtn,#modeBar #dailyNullsBtn,#modeBar #aiBeingsBtn{
+    grid-column:auto!important;
+    grid-row:auto!important;
+    width:100%!important;
+    min-width:0!important;
+    padding:0 5px!important;
+    overflow:hidden!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
+  }
+  #modeBar #aiBeingsBtn{gap:4px!important;}
+  #modeBar #humanCardsThumbs{min-width:0!important;overflow:hidden!important;}
+  #modeBar #humanCardsThumbs img{width:20px!important;height:20px!important;margin-left:-8px!important;flex:0 0 20px!important;}
+  #modeBar #humanCardsThumbs img:nth-child(n+3){display:none!important;}
   #roomOverlay{padding-left:8px!important;padding-right:8px!important;}
   #roomInput{bottom:calc(24px + env(safe-area-inset-bottom,0px))!important;}
   #firstNextBtn{bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;}
@@ -4031,6 +4056,33 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
 #publicNullsThumbs img:first-child,#humanCardsThumbs img:first-child{margin-left:0!important;}
 #humanCardsThumbs{display:flex;align-items:center;flex:0 0 auto;}
 #aiBeingsBtn{display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;}
+
+/* The HUMAN entry state uses the same room frame as ASK.CAMERA. */
+.humanRoomIntro{
+  width:100%!important;
+  max-width:620px!important;
+  box-sizing:border-box!important;
+  margin:8px auto 0!important;
+  padding:14px!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:12px!important;
+  background:#fff!important;
+  color:var(--final-text)!important;
+  border:1px solid var(--final-line)!important;
+  text-align:left!important;
+}
+.humanRoomIntroPhoto{
+  width:68px!important;
+  height:68px!important;
+  flex:0 0 68px!important;
+  object-fit:cover!important;
+  border:1px solid var(--final-line)!important;
+}
+.humanRoomIntroCopy{min-width:0!important;flex:1!important;}
+.humanRoomIntroName{font-size:17px!important;line-height:1.25!important;font-weight:600!important;}
+.humanRoomIntroBio{margin-top:5px!important;font-size:13px!important;line-height:1.45!important;color:var(--final-muted)!important;}
+.humanRoomIntroHint{margin-top:9px!important;font-size:12px!important;line-height:1.4!important;color:var(--final-text)!important;}
 
 /* HUMAN gallery rebuilt around the room width and component rhythm. */
 #aiBeingsScreen{padding-top:74px!important;}
@@ -9072,26 +9124,20 @@ async function openAIBeing(id){
   roomOverlay.style.display = "flex";
   renderBeingRoomHeader(being);
   document.getElementById("roomCountdown").style.display = "none";
-  document.getElementById("roomHeader").style.display = "none";
-  document.getElementById("roomImageActions").style.display = "none";
+  document.getElementById("roomHeader").style.display = "flex";
+  document.getElementById("roomImageActions").style.display = "flex";
   document.getElementById("firstNextBtn").style.display = "none";
   document.getElementById("memoryBtn").style.display = "none";
 
   roomMessages.classList.remove("geminiThread");
   roomMessages.innerHTML = `
-    <div style="width:100%;max-width:420px;margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;text-align:center;padding:30px 10px;">
-      <div style="position:relative;width:112px;height:168px;min-width:112px;min-height:168px;aspect-ratio:2/3;flex:0 0 auto;border:3px solid #fff;border-radius:18px;overflow:hidden;background:#111;box-shadow:0 8px 30px rgba(0,0,0,.22);">
-        <img src="${being.photo}" alt="${escapeBeingText(being.name)}" style="width:100%;height:100%;object-fit:cover;display:block;">
+    <div class="humanRoomIntro">
+      <img class="humanRoomIntroPhoto" src="${being.photo}" alt="${escapeBeingText(being.name)}">
+      <div class="humanRoomIntroCopy">
+        <div class="humanRoomIntroName">${escapeBeingText(being.name)}</div>
+        <div class="humanRoomIntroBio">${escapeBeingText(being.best_current_choice)}</div>
+        <div class="humanRoomIntroHint">Take a photo or upload an image to ask from this HUMAN perspective.</div>
       </div>
-      <div style="font-size:24px;font-weight:900;margin-top:20px;">${escapeBeingText(being.name)}</div>
-      <div style="font-size:14px;line-height:1.45;margin-top:8px;max-width:320px;">${escapeBeingText(being.best_current_choice)}</div>
-      <div style="display:flex;gap:10px;margin-top:22px;width:100%;max-width:320px;">
-        <button onclick="captureImage()" style="flex:1;height:46px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">Take photo</button>
-        <button onclick="document.getElementById('uploadImage').click()" style="flex:1;height:46px;border:none;border-radius:999px;background:#fff;color:#111;font-weight:800;">Upload photo</button>
-      </div>
-      <button onclick="returnToHumanCards(event)" aria-label="Back to HUMAN Cards" style="width:46px;height:46px;margin-top:16px;padding:0;border:none;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.12);">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" fill="#111"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/></svg>
-      </button>
     </div>
   `;
 
