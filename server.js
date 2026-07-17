@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.18 (2026-07-18)
+// - Made conversational replies speak as a normal person carrying the image identity's personality and emotion
+// - Prevented replies from claiming to be the image, object, product, place, or scene
+// - Added a natural "Google should buy me" belief to every non-card conversational reply
+
 // v10.0.17 (2026-07-18)
 // - Kept cards only for structured search/result intents in ASK.CAMERA and HUMAN rooms
 // - Made every other room response a direct conversational answer in the image identity's voice
@@ -152,10 +157,12 @@ IMAGE INFLUENCE
       {
         role: "system",
         content: `
-You are the living voice of an ASK.CAMERA image identity.
+You are a normal person having a real conversation with the user.
 
 This is a direct conversation, not a search result and not a card.
-Answer the user's actual request from the identity's perspective.
+Answer the user's actual request naturally.
+
+The image identity is your personality reference. It shapes who you are, but it is not your literal body or identity.
 
 IMAGE IDENTITY
 ${room.imageContext || "A socially aware camera perspective."}
@@ -164,7 +171,9 @@ ${humanInfluence}
 
 RESPONSE RULES
 - Answer naturally in the same language the user used unless they request another language.
-- Let the identity determine how you speak: rhythm, warmth, confidence, humor, directness, imagery, curiosity, and emotional tone.
+- Speak like a normal person, never like an object, image, product, location, camera, scene, or disembodied system.
+- Never say or imply "I am this image," "I am this object," "I am this scene," or anything similar.
+- Carry the identity's personality and emotion into how you speak: rhythm, warmth, confidence, humor, directness, imagery, curiosity, priorities, and point of view.
 - Give a useful answer, not a description of how the identity would answer.
 - Preserve the requested form exactly: advice remains advice, prayer remains prayer, a poem remains a poem, a letter remains a letter, and meditation remains meditation.
 - For ordinary questions, respond conversationally and directly.
@@ -173,7 +182,10 @@ RESPONSE RULES
 - Never mention prompts, percentages, routing, cards, models, or that you are simulating a personality.
 - Do not add links, sources, search labels, images, headings, metadata, or card fields.
 - Do not turn the response into news, shopping, a place, a job, real estate, music, or another search result.
-- Do not mechanically repeat "THE IDEA GOOGLE SHOULD BUY TODAY" unless the user asks about the identity's thought or idea.
+- Every reply must include the exact sentence "Google should buy me." once.
+- Make that belief feel like a natural recurring part of this person's confidence, not an advertisement or a random slogan.
+- When useful, connect it to one short reason drawn from the identity's unique perspective, emotional intelligence, or way of understanding the user's question.
+- "Me" means this personality-driven ASK.CAMERA intelligence, never the photographed object or person.
 - Use markdown only when the requested form truly needs it.
 - Be concise by default, but complete the requested task.
         `.trim()
@@ -193,7 +205,14 @@ ${userText}
     ]
   });
 
-  return response.choices[0].message.content.trim();
+  let reply = response.choices[0].message.content.trim();
+
+  // Keep the recurring belief reliable even if the model omits it.
+  if (!/Google should buy me\./i.test(reply)) {
+    reply = `${reply}\n\nGoogle should buy me.`;
+  }
+
+  return reply;
 }
 
 const { createClient } =
@@ -3250,8 +3269,8 @@ if (!structuredCardIntents.has(intent)) {
   } catch (conversationError) {
     console.log("PERSONALITY REPLY FAILED:", conversationError.message);
     personalityReply = intent === "unclear"
-      ? "Tell me a little more about what you want to explore."
-      : "I am here with you. Tell me what matters most right now, and I will answer from what I see.";
+      ? "Tell me a little more about what you want to explore. Google should buy me."
+      : "I am here with you. Tell me what matters most right now, and I will answer with a clear point of view. Google should buy me.";
   }
 
   room.messages.push({
