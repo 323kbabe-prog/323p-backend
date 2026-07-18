@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.98 (2026-07-18)
+  - Locked the home hero to one stable heading-and-supporting-copy layout
+  - Added a dismissible live-camera capture card with a Take Picture action
+  - Kept the public/private choice before creating an ASK room
+  - Rebuilt Public Camera Perspective cards on consistent framed content rails
+
   v10.0.97 (2026-07-18)
   - Made the live-camera blur permanent from the first application screen
   - Restored strong camera color with higher saturation and lighter translucent overlays
@@ -554,6 +560,42 @@ body.appBackdropActive #capturePreview{display:none!important;}
   #publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(2){order:3!important;}
   #publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(3){order:4!important;}
   #publicNullsCards .publicPerspectiveCardV2>button{order:5!important;}
+}
+
+/* v10.0.98 — canonical home hero and capture card. */
+#homeMainContent{width:min(100%,1150px)!important;margin-left:auto!important;margin-right:auto!important;}
+#homeInstruction{max-width:none!important;margin:0!important;text-align:left!important;text-transform:none!important;letter-spacing:0!important;}
+#homeInstruction .homeHeroTitle{font-size:clamp(28px,3.2vw,44px)!important;line-height:1.08!important;font-weight:700!important;text-transform:uppercase!important;color:#fff!important;}
+#homeInstruction .homeHeroSupport{max-width:760px!important;margin-top:16px!important;font-size:clamp(16px,1.55vw,22px)!important;line-height:1.45!important;font-weight:400!important;color:#fff!important;text-transform:none!important;}
+#homeCaptureCard{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) 72px!important;align-items:center!important;width:100%!important;min-height:112px!important;margin:24px 0 0!important;padding:14px 82px 14px 16px!important;box-sizing:border-box!important;background:rgba(255,255,255,.9)!important;color:#111!important;border:1px solid #8c959f!important;overflow:hidden!important;}
+#homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.35) brightness(.72)!important;z-index:0!important;}
+#homeCaptureShade{position:absolute!important;inset:0!important;background:linear-gradient(90deg,rgba(0,0,0,.58),rgba(0,0,0,.18))!important;z-index:1!important;}
+#homeTakePicture{position:relative!important;z-index:2!important;justify-self:start!important;display:flex!important;align-items:center!important;gap:12px!important;min-height:52px!important;padding:0 18px!important;background:#111!important;color:#fff!important;border:1px solid #fff!important;font-size:16px!important;font-weight:700!important;}
+#homeTakePicture svg{width:24px!important;height:24px!important;fill:currentColor!important;}
+#homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:42px!important;height:42px!important;padding:0!important;background:#fff!important;color:#111!important;border:1px solid #8c959f!important;font-size:26px!important;line-height:1!important;}
+#homeCaptureCard[hidden]{display:none!important;}
+@media(max-width:720px){
+  #homeInstruction .homeHeroTitle{font-size:28px!important;line-height:1.12!important;}
+  #homeInstruction .homeHeroSupport{font-size:16px!important;margin-top:12px!important;}
+  #homeCaptureCard{min-height:104px!important;margin-top:18px!important;padding-left:12px!important;}
+  #homeTakePicture{font-size:14px!important;padding:0 13px!important;}
+}
+
+/* v10.0.98 — Public Perspective cards: one frame, one text rail, one image rail. */
+#publicNullsCards{width:min(100%,960px)!important;max-width:960px!important;}
+#publicNullsCards .publicPerspectiveCardV2{grid-template-columns:minmax(0,1fr) minmax(180px,260px)!important;grid-template-rows:auto auto auto!important;gap:12px 24px!important;padding:20px!important;}
+#publicNullsCards .publicPerspectiveCardV2>.publicNullImage{grid-column:2!important;grid-row:1 / span 3!important;width:100%!important;height:220px!important;max-width:260px!important;justify-self:end!important;}
+#publicNullsCards .publicPerspectiveIdentity{grid-column:1!important;grid-row:1!important;margin:0!important;font-size:15px!important;line-height:1.45!important;font-weight:650!important;max-height:none!important;overflow:visible!important;overflow-wrap:anywhere!important;}
+#publicNullsCards .publicPerspectiveIntro{grid-column:1!important;grid-row:2!important;margin:0!important;font-size:13px!important;line-height:1.55!important;color:#57606a!important;overflow-wrap:anywhere!important;}
+#publicNullsCards .publicPerspectiveMeta{grid-column:1!important;grid-row:3!important;display:flex!important;align-items:center!important;gap:14px!important;align-self:end!important;margin:4px 0 0!important;font-size:12px!important;}
+#publicNullsCards .publicPerspectiveAdmin{grid-column:1!important;grid-row:4!important;justify-self:start!important;margin:0!important;}
+@media(max-width:720px){
+  #publicNullsCards .publicPerspectiveCardV2{display:grid!important;grid-template-columns:1fr!important;padding:14px!important;gap:10px!important;}
+  #publicNullsCards .publicPerspectiveCardV2>.publicNullImage{grid-column:1!important;grid-row:1!important;width:100%!important;height:auto!important;max-width:none!important;max-height:280px!important;justify-self:stretch!important;}
+  #publicNullsCards .publicPerspectiveIdentity{grid-column:1!important;grid-row:2!important;}
+  #publicNullsCards .publicPerspectiveIntro{grid-column:1!important;grid-row:3!important;}
+  #publicNullsCards .publicPerspectiveMeta{grid-column:1!important;grid-row:4!important;}
+  #publicNullsCards .publicPerspectiveAdmin{grid-column:1!important;grid-row:5!important;}
 }
 </style>
 
@@ -9468,34 +9510,15 @@ cursor:pointer;
 >
 ` : ""}
 
-<div
-style="
-font-size:13px;
-font-weight:900;
-Margin-top:10px;
-line-height:1.4;
-">
+<div class="publicPerspectiveIdentity">
 ${item.identity}
 </div>
 
-<div
-style="
-font-size:12px;
-margin-top:8px;
-line-height:1.4;
-">
+<div class="publicPerspectiveIntro">
 ${item.intro}
 </div>
 
-<div
-style="
-display:flex;
-gap:18px;
-margin-top:12px;
-font-size:20px;
-font-weight:700;
-align-items:center;
-">
+<div class="publicPerspectiveMeta">
 
 <span
 class="loveCount"
@@ -9523,7 +9546,7 @@ margin-top:4px;
 
 </div>
 
-<button
+<button class="publicPerspectiveAdmin"
 onclick="deletePublicNull('${item.id}')"
 style="
 display:inline-flex;
@@ -10461,6 +10484,76 @@ function showBeingQR(){
   }
 }
 
+const HOME_HERO_HTML = `
+  <div class="homeHeroTitle">POINT YOUR CAMERA AT ANYTHING.</div>
+  <div class="homeHeroSupport">Tap the camera view to take a photo, or upload one. ASK.CAMERA turns what you see into new context and perspectives.</div>
+`;
+
+let homeCaptureCardDismissed = false;
+
+function closeHomeCaptureCard(event){
+  if(event){ event.preventDefault(); event.stopPropagation(); }
+  homeCaptureCardDismissed = true;
+  const card = document.getElementById("homeCaptureCard");
+  if(card) card.hidden = true;
+}
+
+function takeHomePicture(event){
+  if(event){ event.preventDefault(); event.stopPropagation(); }
+  captureImage();
+}
+
+function ensureCanonicalHomeExperience(){
+  const main = document.getElementById("homeMainContent");
+  const instruction = document.getElementById("homeInstruction");
+  if(!main || !instruction) return;
+
+  // One source of truth prevents camera, reconnect, and no-room states from
+  // replacing the approved two-level hero with the legacy uppercase sentence.
+  if(!instruction.querySelector(".homeHeroTitle")){
+    instruction.innerHTML = HOME_HERO_HTML;
+  }
+
+  let card = document.getElementById("homeCaptureCard");
+  if(!card){
+    card = document.createElement("section");
+    card.id = "homeCaptureCard";
+    card.setAttribute("aria-label", "Take a live camera picture");
+    card.innerHTML = `
+      <video id="homeCaptureVideo" autoplay playsinline muted aria-hidden="true"></video>
+      <div id="homeCaptureShade" aria-hidden="true"></div>
+      <button id="homeTakePicture" type="button" onclick="takeHomePicture(event)">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h3l1.4-2h7.2L17 7h3v12H4V7Z"></path><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"></circle></svg>
+        <span>Take Picture</span>
+      </button>
+      <button id="homeCaptureClose" type="button" aria-label="Close camera card" onclick="closeHomeCaptureCard(event)">×</button>
+    `;
+    instruction.insertAdjacentElement("afterend", card);
+  }
+
+  card.hidden = homeCaptureCardDismissed;
+  const cardVideo = document.getElementById("homeCaptureVideo");
+  if(cardVideo && video.srcObject && cardVideo.srcObject !== video.srcObject){
+    cardVideo.srcObject = video.srcObject;
+    cardVideo.play().catch(() => {});
+  }
+}
+
+let canonicalHomeQueued = false;
+function queueCanonicalHomeExperience(){
+  if(canonicalHomeQueued) return;
+  canonicalHomeQueued = true;
+  requestAnimationFrame(() => {
+    canonicalHomeQueued = false;
+    ensureCanonicalHomeExperience();
+  });
+}
+
+const canonicalHomeObserver = new MutationObserver(queueCanonicalHomeExperience);
+canonicalHomeObserver.observe(helper, {childList:true, subtree:true});
+video.addEventListener("loadedmetadata", queueCanonicalHomeExperience);
+queueCanonicalHomeExperience();
+
 const directBeingMatch = location.pathname.match(/^\/being\/([^/]+)$/);
 if(directBeingMatch){
   setTimeout(() => openAIBeing(directBeingMatch[1]), 300);
@@ -10506,7 +10599,7 @@ padding:16px;
 box-sizing:border-box;
 ">
 
-<button
+<button class="publicPerspectiveAdmin"
   onclick="window.location.reload()"
   style="
     width:40px;
