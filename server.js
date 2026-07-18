@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.21 (2026-07-18)
+// - Starts automatic cards from the common room path used by Camera, Upload, and Public
+// - Prevents an empty legacy starter-news result from aborting room initialization
+//
 // v10.0.20 (2026-07-18)
 // - Starts the contextual three-card preview for ASK and HUMAN rooms
 // - Uses one shared roomFirstRoundStart event for deterministic frontend timing
@@ -2016,6 +2020,20 @@ io.to(roomId).emit(
     rooms[roomId].messages
 );
 
+// Camera, Upload, and Public all start the same automatic preview here.
+// This common point runs after the room/image context exists and before any
+// optional legacy starter-news work can delay or abort the experience.
+{
+  const firstRoundCardTypes = await chooseRoomFirstRoundCardTypes(rooms[roomId]);
+  socket.emit("roomFirstRoundStart", {
+    cardTypes:firstRoundCardTypes,
+    imageContext:rooms[roomId].imageContext,
+    category:rooms[roomId].coreTheme,
+    humanCategory:selectedBeing?.category || "",
+    roomKind:selectedBeing ? "human" : "ask"
+  });
+}
+
 
 
 
@@ -2288,8 +2306,8 @@ const validStarterNews =
 
   });
 
-  if(validStarterNews.length === 0){
-  return;
+if(validStarterNews.length === 0){
+  console.log("NO VALID STARTER NEWS; CONTINUING ROOM INITIALIZATION");
 }
 
 if(validStarterNews.length > 0){
@@ -2689,17 +2707,6 @@ io.to(roomId).emit(
   "imageAiIntro",
   adviceText
 );
-
-{
-  const firstRoundCardTypes = await chooseRoomFirstRoundCardTypes(rooms[roomId]);
-  socket.emit("roomFirstRoundStart", {
-    cardTypes:firstRoundCardTypes,
-    imageContext:rooms[roomId].imageContext,
-    category:rooms[roomId].coreTheme,
-    humanCategory:selectedBeing?.category || "",
-    roomKind:selectedBeing ? "human" : "ask"
-  });
-}
 
 //////////////////////////////////////////////////
 // PUSH FIRST MESSAGE
