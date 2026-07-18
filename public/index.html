@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.101 (2026-07-18)
+  - Removed the outer frame from the floating home camera
+  - Corrected the mobile home heading, copy, and action alignment rails
+  - Changed the camera action to explain what the image connects to today
+  - Removed broken white wrappers from selected images in ASK and HUMAN rooms
+
   v10.0.100 (2026-07-18)
   - Centered the mobile capture card with equal viewport margins
   - Positioned it below home controls and above the device navigation edge
@@ -576,18 +582,49 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeInstruction{max-width:none!important;margin:0!important;text-align:left!important;text-transform:none!important;letter-spacing:0!important;}
 #homeInstruction .homeHeroTitle{font-size:clamp(28px,3.2vw,44px)!important;line-height:1.08!important;font-weight:700!important;text-transform:uppercase!important;color:#fff!important;}
 #homeInstruction .homeHeroSupport{max-width:760px!important;margin-top:16px!important;font-size:clamp(16px,1.55vw,22px)!important;line-height:1.45!important;font-weight:400!important;color:#fff!important;text-transform:none!important;}
-#homeCaptureCard{position:fixed!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;z-index:2147483500!important;display:block!important;width:min(88vw,480px)!important;height:min(82vh,780px)!important;min-height:min(520px,calc(100vh - 32px))!important;margin:0!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:2px solid #fff!important;box-shadow:0 24px 80px rgba(0,0,0,.55)!important;overflow:hidden!important;}
+#homeCaptureCard{position:fixed!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;z-index:2147483500!important;display:block!important;width:min(88vw,480px)!important;height:min(82vh,780px)!important;min-height:min(520px,calc(100vh - 32px))!important;margin:0!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:0!important;box-shadow:0 24px 80px rgba(0,0,0,.55)!important;overflow:hidden!important;}
 #homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;z-index:0!important;}
 #homeCaptureShade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(0,0,0,.12) 45%,rgba(0,0,0,.72) 100%)!important;z-index:1!important;}
-#homeTakePicture{position:absolute!important;z-index:2!important;left:18px!important;right:18px!important;bottom:18px!important;width:calc(100% - 36px)!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:12px!important;min-height:58px!important;padding:0 18px!important;background:#111!important;color:#fff!important;border:1px solid #fff!important;font-size:16px!important;font-weight:700!important;}
+#homeTakePicture{position:absolute!important;z-index:2!important;left:18px!important;right:18px!important;bottom:18px!important;width:calc(100% - 36px)!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:12px!important;min-height:58px!important;padding:10px 18px!important;background:#111!important;color:#fff!important;border:1px solid #fff!important;font-size:16px!important;font-weight:700!important;line-height:1.35!important;text-align:center!important;white-space:normal!important;}
 #homeTakePicture svg{width:24px!important;height:24px!important;fill:currentColor!important;}
 #homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:42px!important;height:42px!important;padding:0!important;background:#fff!important;color:#111!important;border:1px solid #8c959f!important;font-size:26px!important;line-height:1!important;}
 #homeCaptureCard[hidden]{display:none!important;}
+
+/* Selected room images are image-only: no broken white mat or frame. */
+.roomImageChapter .humanChosenImageWrap,
+.humanChosenImageSequence .humanChosenImageWrap{
+  display:inline-flex!important;
+  width:128px!important;
+  height:128px!important;
+  margin:8px 0 12px!important;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+.roomImageChapter .humanChosenImage,
+.humanChosenImageSequence .humanChosenImage{
+  display:block!important;
+  width:128px!important;
+  height:128px!important;
+  max-width:128px!important;
+  margin:0!important;
+  padding:0!important;
+  object-fit:cover!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
 @media(max-width:720px){
+  #helper{padding-left:16px!important;padding-right:16px!important;box-sizing:border-box!important;}
+  #homeMainContent{width:100%!important;max-width:100%!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important;}
+  #homeInstruction,#uploadBtn,#publicNullsBtn{width:100%!important;max-width:100%!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important;}
+  #homeInstruction{text-align:left!important;overflow:visible!important;}
   #homeInstruction .homeHeroTitle{font-size:28px!important;line-height:1.12!important;}
-  #homeInstruction .homeHeroSupport{font-size:16px!important;margin-top:12px!important;}
+  #homeInstruction .homeHeroSupport{width:100%!important;max-width:100%!important;font-size:16px!important;margin-top:12px!important;overflow-wrap:anywhere!important;}
   #homeCaptureCard{left:16px!important;right:16px!important;top:max(148px,calc(env(safe-area-inset-top) + 128px))!important;bottom:max(16px,env(safe-area-inset-bottom))!important;transform:none!important;width:auto!important;height:auto!important;min-height:0!important;max-height:none!important;}
-  #homeTakePicture{left:14px!important;right:14px!important;bottom:14px!important;width:calc(100% - 28px)!important;font-size:15px!important;}
+  #homeTakePicture{left:14px!important;right:14px!important;bottom:14px!important;width:calc(100% - 28px)!important;min-height:68px!important;height:auto!important;padding:12px 14px!important;font-size:14px!important;line-height:1.35!important;text-align:center!important;white-space:normal!important;}
 }
 
 /* v10.0.98 — Public Perspective cards: one frame, one text rail, one image rail. */
@@ -10551,7 +10588,7 @@ function ensureCanonicalHomeExperience(){
       <div id="homeCaptureShade" aria-hidden="true"></div>
       <button id="homeTakePicture" type="button" onclick="takeHomePicture(event)">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h3l1.4-2h7.2L17 7h3v12H4V7Z"></path><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"></circle></svg>
-        <span>Take Picture</span>
+        <span>Take a picture and see what this image connects you to today.</span>
       </button>
       <button id="homeCaptureClose" type="button" aria-label="Close camera card" onclick="closeHomeCaptureCard(event)">×</button>
     `;
