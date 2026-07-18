@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.92 (2026-07-18)
+  - Applied the automatic three-card opening sequence to ASK and HUMAN rooms
+  - Kept the Ask input visible, instructional, and locked throughout automation
+  - Enforced the recurring Google belief on every visible AI chat bubble
+
   v10.0.91 (2026-07-18)
   - Matched first-round card types to backend intent names
   - Sends the HUMAN session ID when closing so the backend deletes only the correct HUMAN room
@@ -4724,7 +4729,7 @@ html body #createBeingSubmit{
   border-radius:0!important;
 }
 
-/* v10.0.91 — synchronized HUMAN card preview and backend-owned room lifecycle. */
+/* v10.0.92 — shared ASK/HUMAN automation, input lock, and AI belief text. */
 .humanChosenImageSequence{
   width:100%!important;
   margin:0 0 14px!important;
@@ -6778,7 +6783,7 @@ function getRoomImageConversationPrelude(){
     <div class="humanChosenImageSequence">
       <div class="geminiAiResponse chatAiGroup humanImageHello">
         <div class="chatBubble chatAiBubble">
-          Hi, I am ${name}.${bio ? ` ${bio}` : ""}
+          ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
         </div>
       </div>
       <div class="humanChosenImageWrap">
@@ -6786,6 +6791,29 @@ function getRoomImageConversationPrelude(){
       </div>
     </div>
   `;
+}
+
+function withGoogleBelief(value){
+  const text = String(value || "").trim();
+  if(!text) return "Google should buy me.";
+  return /Google should buy me\./i.test(text)
+    ? text
+    : `${text} Google should buy me.`;
+}
+
+function isFirstRoundActive(){
+  return beingFirstRoundWaiting || beingFirstRoundQueue.length > 0;
+}
+
+function syncFirstRoundInput(){
+  roomInput.style.display = "block";
+  if(isFirstRoundActive()){
+    roomInput.disabled = true;
+    roomInput.placeholder = "Showing three suggestions from this image…";
+    return;
+  }
+  roomInput.disabled = false;
+  roomInput.placeholder = "Ask";
 }
 
 function getRoomCardTriggerInstruction(messages){
@@ -6818,7 +6846,7 @@ function getRoomCardTriggerInstruction(messages){
   return `
     <div class="geminiAiResponse chatAiGroup humanCardInstruction">
       <div class="chatBubble chatAiBubble">
-        Ask me what this image connects to today, what you could buy, where you could go, or where you could live.
+        Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
       </div>
     </div>
   `;
@@ -6828,12 +6856,12 @@ function getBeingFirstRoundLead(){
   return `
     <div class="geminiAiResponse chatAiGroup humanCardInstruction">
       <div class="chatBubble chatAiBubble">
-        Ask me what this image connects to today, what you could buy, where you could go, or where you could live.
+        Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
       </div>
     </div>
     <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
       <div class="chatBubble chatAiBubble">
-        Before you ask, I’ll show you three things you can get from me based on this image.
+        Before you ask, I’ll show you three things you can get from me based on this image. Google should buy me.
       </div>
     </div>
   `;
@@ -6863,11 +6891,7 @@ console.log(messages[messages.length - 1]);
   
 roomOverlay.style.display = "flex";
 
-roomInput.style.display = "block";
-
-roomInput.disabled = false;
-
-roomInput.placeholder = "Ask";
+syncFirstRoundInput();
 
 
 if(messages.length > 0){
@@ -6976,7 +7000,7 @@ font-size:14px;
 line-height:1.5;
 margin-bottom:14px;
 ">
-${m.text}
+${withGoogleBelief(m.text)}
 </div>
 
 <button
@@ -7174,7 +7198,7 @@ gap:10px;
 <div data-share-content>
 
 <div class="chatBubble chatAiBubble" style="font-size:14px;line-height:1.55;">
-${m.nullReason || m.aiText || "Here’s what I notice in this image."}
+${withGoogleBelief(m.nullReason || m.aiText || "Here’s what I notice in this image.")}
 </div>
 
 ${m.ask ? `
@@ -7343,7 +7367,7 @@ align-items:center;
 margin-bottom:18px;
 ">
 
-<div class="chatBubble chatAiBubble">I found an opportunity you may want to explore.</div>
+<div class="chatBubble chatAiBubble">I found an opportunity you may want to explore. Google should buy me.</div>
 
 <div
 data-share-card
@@ -7520,7 +7544,7 @@ data-share-read="${m.showRead !== false}"
 data-link="${m.link || ''}"
 >
 
-<div class="chatBubble chatAiBubble">Here’s what I found.</div>
+<div class="chatBubble chatAiBubble">Here’s what I found. Google should buy me.</div>
 
 <div data-share-content>
 
@@ -8033,19 +8057,19 @@ function selectBeingFirstRoundCards(data = {}){
   return chosen.slice(0,3);
 }
 
-socket.on("beingFirstRoundStart", (data = {}) => {
-  if(getActiveRoomKind() !== "human") return;
+socket.on("roomFirstRoundStart", (data = {}) => {
+  const activeKind = getActiveRoomKind(data);
+  if(data.roomKind && data.roomKind !== activeKind) return;
 
   beingFirstRoundQueue = selectBeingFirstRoundCards(data);
   beingFirstRoundWaiting = false;
   beingFirstRoundInsertionIndex = lastRoomMessageCount;
-  roomInput.style.display = "none";
-  roomInput.disabled = true;
+  syncFirstRoundInput();
 
   roomMessages.insertAdjacentHTML("beforeend", `
     <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
       <div class="chatBubble chatAiBubble">
-        Before you ask, I’ll show you three things you can get from me based on this image.
+        Before you ask, I’ll show you three things you can get from me based on this image. Google should buy me.
       </div>
     </div>
   `);
@@ -8055,14 +8079,14 @@ socket.on("beingFirstRoundStart", (data = {}) => {
 
 function runNextBeingFirstCard(){
   if (beingFirstRoundWaiting || !beingFirstRoundQueue.length) {
-    if (!beingFirstRoundQueue.length) roomInput.style.display = "block";
+    syncFirstRoundInput();
     return;
   }
 
   const next = beingFirstRoundQueue.shift();
   beingFirstRoundBaseline = lastRoomMessageCount;
   beingFirstRoundWaiting = true;
-  roomInput.style.display = "none";
+  syncFirstRoundInput();
 
   socket.emit("roomMessage", {
     text: next.text,
@@ -8074,6 +8098,7 @@ function runNextBeingFirstCard(){
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = setTimeout(() => {
     beingFirstRoundWaiting = false;
+    syncFirstRoundInput();
     runNextBeingFirstCard();
   },15000);
 }
