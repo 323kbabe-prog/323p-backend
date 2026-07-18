@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.85 (2026-07-18)
+  - Enforced 90-degree corners on every static and runtime-generated button
+  - Made HUMAN Edit profile and Manage actions smaller than Open
+  - Colored Edit profile green and Manage red for clear action separation
+
   v10.0.84 (2026-07-18)
   - Put the complete app on one shared left/right alignment frame
   - Fixed the mobile top navigation translating halfway beyond the left screen edge
@@ -4621,6 +4626,49 @@ body *{border-radius:0!important;}
   #homeRoomCard{min-width:0!important;max-width:calc(100% - 96px)!important;overflow:hidden!important;}
   #homeUtilityButtons{flex:0 0 auto!important;}
   #roomOverlay{padding-left:var(--app-edge)!important;padding-right:var(--app-edge)!important;}
+}
+
+/* v10.0.85 — strict square controls and compact HUMAN management actions */
+html body button,
+html body button[class],
+html body button[id],
+html body [role="button"],
+html body #homeRoomCard,
+html body input[type="button"],
+html body input[type="submit"]{
+  border-radius:0!important;
+}
+
+.beingCardActions .beingOpenButton{
+  height:34px!important;
+  min-height:34px!important;
+  padding:0 12px!important;
+  background:var(--google-blue)!important;
+  color:#fff!important;
+  border:1px solid var(--google-blue)!important;
+  font-size:12px!important;
+}
+.beingCardActions .beingEditButton{
+  height:28px!important;
+  min-height:28px!important;
+  padding:0 8px!important;
+  align-self:center!important;
+  background:var(--google-green-soft)!important;
+  color:var(--google-green)!important;
+  border:1px solid var(--google-green-line)!important;
+  font-size:10px!important;
+  font-weight:500!important;
+}
+.beingCardActions .beingManageButton{
+  height:28px!important;
+  min-height:28px!important;
+  padding:0 8px!important;
+  align-self:center!important;
+  background:var(--google-red-soft)!important;
+  color:var(--google-red)!important;
+  border:1px solid var(--google-red-line)!important;
+  font-size:10px!important;
+  font-weight:500!important;
 }
 </style>
 
@@ -9302,8 +9350,8 @@ async function loadAIBeings(){
         </div>
         <div class="beingCardActions">
           <button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Open</button>
-          <button onclick="changeAIBeingProfile('${being.id}')">Edit profile</button>
-          <button onclick="deleteAIBeing('${being.id}')">Manage</button>
+          <button class="beingEditButton" onclick="changeAIBeingProfile('${being.id}')">Edit profile</button>
+          <button class="beingManageButton" onclick="deleteAIBeing('${being.id}')">Manage</button>
         </div>
       </article>
     `).join("");
@@ -10026,6 +10074,7 @@ Close
       ? [root]
       : Array.from(root.querySelectorAll ? root.querySelectorAll('button,[role="button"]') : []);
     buttons.forEach(button => {
+      button.style.setProperty('border-radius','0','important');
       const walker = document.createTreeWalker(button,NodeFilter.SHOW_TEXT);
       const textNodes = [];
       while(walker.nextNode()) textNodes.push(walker.currentNode);
