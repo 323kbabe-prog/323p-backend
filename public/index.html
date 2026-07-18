@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.100 (2026-07-18)
+  - Centered the mobile capture card with equal viewport margins
+  - Positioned it below home controls and above the device navigation edge
+  - Moved the floating card to the viewport layer to prevent parent transforms from clipping it
+
   v10.0.99 (2026-07-18)
   - Changed the startup live-camera card into a floating, nearly full-height portrait capture view
   - Kept Close at the top-right and Take Picture fixed to the bottom of the live view
@@ -581,7 +586,7 @@ body.appBackdropActive #capturePreview{display:none!important;}
 @media(max-width:720px){
   #homeInstruction .homeHeroTitle{font-size:28px!important;line-height:1.12!important;}
   #homeInstruction .homeHeroSupport{font-size:16px!important;margin-top:12px!important;}
-  #homeCaptureCard{width:min(92vw,460px)!important;height:min(84vh,760px)!important;min-height:min(480px,calc(100vh - 24px))!important;}
+  #homeCaptureCard{left:16px!important;right:16px!important;top:max(148px,calc(env(safe-area-inset-top) + 128px))!important;bottom:max(16px,env(safe-area-inset-bottom))!important;transform:none!important;width:auto!important;height:auto!important;min-height:0!important;max-height:none!important;}
   #homeTakePicture{left:14px!important;right:14px!important;bottom:14px!important;width:calc(100% - 28px)!important;font-size:15px!important;}
 }
 
@@ -5829,6 +5834,9 @@ function syncHomeControlStack(){
     liveVideo.style.removeProperty("filter");
     liveVideo.style.removeProperty("transform");
   }
+  if(typeof updateHomeCaptureCardVisibility === "function"){
+    updateHomeCaptureCardVisibility();
+  }
 }
 
 const homeControlObserver =
@@ -10507,10 +10515,25 @@ function takeHomePicture(event){
   captureImage();
 }
 
+function updateHomeCaptureCardVisibility(){
+  const card = document.getElementById("homeCaptureCard");
+  if(!card) return;
+  const main = document.getElementById("homeMainContent");
+  const roomOpen = getComputedStyle(roomOverlay).display === "flex";
+  const secondaryOpen = ["dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
+    .map(id => document.getElementById(id))
+    .some(screen => screen && getComputedStyle(screen).display !== "none");
+  const helperVisible = getComputedStyle(helper).display !== "none";
+  card.hidden = homeCaptureCardDismissed || !main || !helperVisible || roomOpen || secondaryOpen;
+}
+
 function ensureCanonicalHomeExperience(){
   const main = document.getElementById("homeMainContent");
   const instruction = document.getElementById("homeInstruction");
-  if(!main || !instruction) return;
+  if(!main || !instruction){
+    updateHomeCaptureCardVisibility();
+    return;
+  }
 
   // One source of truth prevents camera, reconnect, and no-room states from
   // replacing the approved two-level hero with the legacy uppercase sentence.
@@ -10532,10 +10555,10 @@ function ensureCanonicalHomeExperience(){
       </button>
       <button id="homeCaptureClose" type="button" aria-label="Close camera card" onclick="closeHomeCaptureCard(event)">×</button>
     `;
-    instruction.insertAdjacentElement("afterend", card);
+    document.body.appendChild(card);
   }
 
-  card.hidden = homeCaptureCardDismissed;
+  updateHomeCaptureCardVisibility();
   const cardVideo = document.getElementById("homeCaptureVideo");
   if(cardVideo && video.srcObject && cardVideo.srcObject !== video.srcObject){
     cardVideo.srcObject = video.srcObject;
