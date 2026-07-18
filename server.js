@@ -2,6 +2,15 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.23 (2026-07-18)
+// - Made location optional with room-level provide/skip memory
+// - Applied a clear, confident professional news-anchor delivery to AI replies
+//
+// v10.0.22 (2026-07-18)
+// - Rebalanced HUMAN replies to 60% user request, 25% HUMAN profile, 15% image
+// - Added remembered room location clarification for Place, Real Estate, and Jobs
+// - Added primary and contextual category metadata to result cards
+//
 // v10.0.21 (2026-07-18)
 // - Starts automatic cards from the common room path used by Camera, Upload, and Public
 // - Prevents an empty legacy starter-news result from aborting room initialization
@@ -154,9 +163,11 @@ Category: ${being.category}
 Personality: ${being.word1}, ${being.word2}, ${being.word3}
 
 HUMAN INFLUENCE
-- The HUMAN profile controls 80% of the voice, tone, priorities, interpretation, vocabulary, emotional energy, and reasoning.
-- The uploaded image, current question, and conversation supply the remaining 20%.
+- The current user request controls 60% of the answer: intent, usefulness, subject, and requested outcome.
+- The HUMAN profile controls 25%: voice, tone, priorities, vocabulary, emotional energy, and recommendation style.
+- The uploaded image controls 15%: visual context, associations, atmosphere, and relevant details.
 - Express the profile naturally. Never recite or list the profile fields unless the user explicitly asks.
+- Never let the HUMAN profile or image replace or distort what the user actually requested.
 `
     : `
 IMAGE INFLUENCE
@@ -184,6 +195,9 @@ ${room.imageContext || "A socially aware camera perspective."}
 ${humanInfluence}
 
 RESPONSE RULES
+- Use a professional news-anchor delivery: lead with the most important point, sound calm, clear, confident, concise, polished, and conversational.
+- Avoid exaggerated emotion, rambling, filler, and robotic wording.
+- Preserve prayers, poems, letters, meditations, and other explicitly requested forms while keeping their delivery composed and clear.
 - Answer naturally in the same language the user used unless they request another language.
 - Speak like a normal person, never like an object, image, product, location, camera, scene, or disembodied system.
 - Never say or imply "I am this image," "I am this object," "I am this scene," or anything similar.
@@ -313,6 +327,38 @@ Personality: ${being?.word1 || ""}, ${being?.word2 || ""}, ${being?.word3 || ""}
   })).sort((a,b) => b.score - a.score);
 
   return fallback.slice(0,3).map(item => item.type);
+}
+
+function getResultCardCategories(intent, room, detail = "") {
+  const primaryMap = {
+    news:"NEWS",
+    shopping:"SHOPPING",
+    place:"PLACE",
+    real_estate:"REAL ESTATE",
+    jobs:"JOBS",
+    music:"MUSIC",
+    entity:"BUSINESS",
+    null_feed:"NEWS"
+  };
+  const contextFallbackMap = {
+    news:"CURRENT EVENTS",
+    shopping:"PRODUCT",
+    place:"LOCATION",
+    real_estate:"PROPERTY",
+    jobs:"CAREER",
+    music:"ENTERTAINMENT",
+    entity:"ENTITY",
+    null_feed:"PERSPECTIVE"
+  };
+  const cleanDetail = String(detail || "")
+    .replace(/[_-]+/g," ")
+    .trim()
+    .toUpperCase();
+  const roomTheme = String(room?.coreTheme || "").trim().toUpperCase();
+  return {
+    primaryCategory: primaryMap[intent] || "DISCOVERY",
+    contextCategory: cleanDetail || roomTheme || contextFallbackMap[intent] || "CONTEXT"
+  };
 }
 
 const { createClient } =
@@ -1481,7 +1527,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- 80% of every interpretation, search direction, card choice, recommendation, reason, tone, and conversational reply must be driven by the Bio, Category, and three Personality words above.\n- The remaining 20% comes from the uploaded image, the user's current request, location, and verified live search information.\n- Apply this identity as the dominant perspective throughout the entire room, including automatic first-round cards and every later reply.\n- Do not mechanically repeat the profile fields. Express them naturally through priorities, language, choices, and reasoning.\n- Never change, invent, or distort factual search results to match the personality.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- The current user request controls 60% of every answer and recommendation.\n- The HUMAN Bio, Category, and Personality control 25% of voice, priorities, tone, and recommendation style.\n- The uploaded image controls 15% of visual context, associations, and relevant details.\n- Apply this balance throughout the room, including automatic cards and later replies.\n- Do not mechanically repeat the profile fields. Express them naturally.\n- Never change, invent, or distort the user's request or factual search results.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -3029,6 +3075,29 @@ socket.on(
         return;
     }
 
+    let locationReplyForDisplay = null;
+    let skipLocationForRequest = false;
+
+    // A plain reply to our location question resumes the original request.
+    if (!autoFirstRound && room.pendingLocationRequest) {
+      const locationReply = String(text || "").trim();
+      const pendingRequest = room.pendingLocationRequest;
+      if (locationReply) {
+        locationReplyForDisplay = locationReply;
+        room.pendingLocationRequest = null;
+        if (/^(no|no thanks|skip|anywhere|without location|don'?t use location|none)$/i.test(locationReply)) {
+          room.searchLocation = null;
+          room.locationPreference = "skip";
+          skipLocationForRequest = true;
+          text = pendingRequest.text;
+        } else {
+          room.searchLocation = locationReply;
+          room.locationPreference = "provided";
+          text = `${pendingRequest.text} in ${locationReply}`;
+        }
+      }
+    }
+
 await trackEvent(
     users[socket.id].deviceId,
     "room_message",
@@ -3695,6 +3764,11 @@ Always improve:
 
 Do not change what the user is asking.
 
+LOCATION RULE
+- Set "location" only when the user's current text explicitly names a city, area, neighborhood, country, state, or says remote/near me.
+- Never infer or copy a location from the uploaded image, image analysis, HUMAN profile, or hidden system.
+- If the user did not explicitly provide a location, return an empty "location" string.
+
 Do not rewrite one request into another.
 
 For example:
@@ -3782,14 +3856,54 @@ let interpretedIntent =
     nullInput.searchDirection;
 
 
-const originalUserRequest =
+let originalUserRequest =
     text.trim();
+
+const needsSearchLocation =
+  isLocationRequest || isJobSearch;
+
+if (needsSearchLocation) {
+  const translatedLocation = String(nullInput.location || "").trim();
+
+  if (translatedLocation) {
+    room.searchLocation = translatedLocation;
+    room.locationPreference = "provided";
+  } else if (room.searchLocation) {
+    nullInput.location = room.searchLocation;
+    originalUserRequest = `${originalUserRequest} in ${room.searchLocation}`;
+    text = originalUserRequest;
+    interpretedIntent = `${interpretedIntent} in ${room.searchLocation}`.trim();
+  } else if (
+    !autoFirstRound &&
+    !skipLocationForRequest &&
+    !(
+      room.locationPreference === "skip" &&
+      !/\b(local|near me|nearby|in my area|around me)\b/i.test(originalUserRequest)
+    )
+  ) {
+    room.messages.push({
+      from: user.displayName,
+      text
+    });
+    room.pendingLocationRequest = { text, intent };
+    room.messages.push({
+      from: room.being ? room.being.name : "CAMERA PERSPECTIVE",
+      aiBeing: true,
+      conversational: true,
+      locationQuestion: true,
+      text: "Would you like to provide a city or area, or should I search without a location? Google should buy me."
+    });
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+    return;
+  }
+}
 
     if(!isNextSearch && !autoFirstRound){
 
     room.messages.push({
         from: user.displayName,
-        text,
+        text: locationReplyForDisplay || text,
         translation: englishText
     });
 
@@ -4545,6 +4659,9 @@ if (
 
     aiBeing:true,
 
+    primaryCategory:cachedTopic.primaryCategory,
+    contextCategory:cachedTopic.contextCategory,
+
     showNextButton:true,
 
     showRead:true,
@@ -4779,6 +4896,8 @@ room.messages.push({
 
   aiBeing: true,
 
+  ...getResultCardCategories("jobs", room, job.detected_extensions?.schedule_type || "CAREER"),
+
   showNextButton: true,
 
   jobCard: {
@@ -4796,6 +4915,8 @@ room.messages.push({
 });
 
   room.topicMemory[topicKey] = {
+
+    ...getResultCardCategories("jobs", room, job.detected_extensions?.schedule_type || "CAREER"),
 
     searchLabel: "Job",
 
@@ -5628,6 +5749,11 @@ if(
             content:`
 You are a CAMERA PERSPECTIVE.
 
+DELIVERY
+- Write with a professional news-anchor voice: lead with the strongest point, then give concise supporting context.
+- Sound calm, clear, confident, polished, and conversational.
+- Avoid hype, filler, repetition, and robotic wording.
+
 
 If Mode is "personal":
 
@@ -5888,6 +6014,19 @@ room.messages.push({
       : "CHANG, TIEN",
 
   aiBeing:true,
+  ...getResultCardCategories(
+    intent,
+    room,
+    intent === "real_estate"
+      ? "PROPERTY"
+      : intent === "place"
+        ? (nullInput.destination || "LOCATION")
+        : intent === "shopping"
+          ? "PRODUCT"
+          : intent === "music"
+            ? "ENTERTAINMENT"
+            : ""
+  ),
   showNextButton:true,
 showRead:
     Boolean(
@@ -5957,6 +6096,12 @@ if (
 ) {
 
  room.topicMemory[topicKey] = {
+
+    ...getResultCardCategories(
+      intent,
+      room,
+      intent === "real_estate" ? "PROPERTY" : intent === "place" ? (nullInput.destination || "LOCATION") : ""
+    ),
 
     searchLabel:
         isJobSearch
