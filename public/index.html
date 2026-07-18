@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.97 (2026-07-18)
+  - Made the live-camera blur permanent from the first application screen
+  - Restored strong camera color with higher saturation and lighter translucent overlays
+
   v10.0.96 (2026-07-18)
   - Rebuilt Public cards with a compact fixed image rail and controlled text sizes
   - Enforced monochrome controls at runtime for static and generated buttons
@@ -419,14 +423,14 @@ input:focus,textarea:focus,select:focus,.beingInput:focus,#roomInput:focus{
 /* Live camera remains active as a blurred application backdrop. */
 body.appBackdropActive #cameraWrap{display:block!important;background:#6e7781!important;}
 body.appBackdropActive #video{
-  filter:blur(14px) brightness(.62) saturate(.75)!important;
+  filter:blur(18px) brightness(.76) saturate(1.55)!important;
   transform:scale(1.08)!important;
 }
 body.appBackdropActive #capturePreview{display:none!important;}
 #roomOverlay,#dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen,#createBeingScreen{
-  background:rgba(246,248,250,.82)!important;
-  backdrop-filter:blur(18px)!important;
-  -webkit-backdrop-filter:blur(18px)!important;
+  background:rgba(255,255,255,.34)!important;
+  backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important;
 }
 
 /* Every selected image is a persistent, compact chapter in the chat. */
@@ -4937,7 +4941,7 @@ html body #createBeingSubmit{
   border-radius:0!important;
 }
 
-/* v10.0.96 — direct Public-card redesign and enforced visual system. */
+/* v10.0.97 — permanent colorful live-camera blur canvas. */
 .humanChosenImageSequence{
   width:100%!important;
   margin:0 0 14px!important;
@@ -5756,23 +5760,24 @@ function syncHomeControlStack(){
   const secondaryScreenOpen = ["dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
     .map(id => document.getElementById(id))
     .some(screen => screen && getComputedStyle(screen).display !== "none");
-  document.body.classList.toggle("appBackdropActive",roomIsOpen || secondaryScreenOpen);
+  // The colorful live-camera blur is the permanent application canvas.
+  document.body.classList.add("appBackdropActive");
 
-  const backdropActive = roomIsOpen || secondaryScreenOpen;
+  const backdropActive = true;
   const liveVideo = document.getElementById("video");
   if(backdropActive){
     cameraWrap.style.setProperty("display","block","important");
     if(liveVideo){
-      liveVideo.style.setProperty("filter","blur(14px) brightness(.62) saturate(.75)","important");
+      liveVideo.style.setProperty("filter","blur(18px) brightness(.76) saturate(1.55)","important");
       liveVideo.style.setProperty("transform","scale(1.08)","important");
     }
     ["roomOverlay","dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
       .map(id => document.getElementById(id))
       .filter(Boolean)
       .forEach(screen => {
-        screen.style.setProperty("background","rgba(246,248,250,.82)","important");
-        screen.style.setProperty("backdrop-filter","blur(18px)","important");
-        screen.style.setProperty("-webkit-backdrop-filter","blur(18px)","important");
+        screen.style.setProperty("background","rgba(255,255,255,.34)","important");
+        screen.style.setProperty("backdrop-filter","blur(10px)","important");
+        screen.style.setProperty("-webkit-backdrop-filter","blur(10px)","important");
       });
   }else if(liveVideo){
     liveVideo.style.removeProperty("filter");
