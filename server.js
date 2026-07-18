@@ -2,6 +2,9 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.24 (2026-07-18)
+// - Matched backend release for the enforced frontend visual-system correction
+//
 // v10.0.23 (2026-07-18)
 // - Made location optional with room-level provide/skip memory
 // - Applied a clear, confident professional news-anchor delivery to AI replies
