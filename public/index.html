@@ -4,6 +4,16 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.95 (2026-07-18)
+  - Preserved the one-hour ASK room while entering and closing HUMAN rooms
+  - Appended every new image as a persistent chat chapter with three new cards
+  - Applied monochrome buttons, live blurred camera backgrounds, and matched Public/Daily cards
+  - Added Ask-prefixed helper states, black publish refresh, red heart, and clean HUMAN actions
+
+  v10.0.94 (2026-07-18)
+  - Added PRIMARY · CONTEXT category labels to room result cards
+  - Supports the backend room-level location clarification and memory flow
+
   v10.0.93 (2026-07-18)
   - Matched the frontend release to the common Camera/Upload/Public backend start flow
 
@@ -347,6 +357,115 @@ Verdict Null
 <html lang="en">
 <head>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-FB5FLT606Z"></script>
+
+<style id="askCameraMonochromeRelease">
+/* Final monochrome action system. The red heart is the only color exception. */
+button,[role="button"],.chatOpenAction,.chatShareAction,
+.beingOpenButton,.beingEditButton,.beingManageButton{
+  background:#fff!important;
+  color:#111!important;
+  border:1px solid #8c959f!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
+button:hover,[role="button"]:hover,.chatOpenAction:hover,.chatShareAction:hover{
+  background:#eaeef2!important;
+  color:#111!important;
+  border-color:#57606a!important;
+}
+button:focus-visible,[role="button"]:focus-visible,.chatOpenAction:focus-visible,.chatShareAction:focus-visible{
+  outline:2px solid #57606a!important;
+  outline-offset:2px!important;
+}
+button:disabled,[role="button"][aria-disabled="true"]{
+  background:#eaeef2!important;
+  color:#8c959f!important;
+  border-color:#d0d7de!important;
+  opacity:1!important;
+}
+#createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,
+.beingOpenButton,#roomImageActions button:first-child,
+#publishDialog button:last-child,#humanCardsGuide button:last-child,
+.roomRecoveryActions button:last-child{
+  background:#111!important;
+  color:#fff!important;
+  border-color:#111!important;
+}
+#modeBar #dailyNullsBtn,#modeBar #aiBeingsBtn,#publicNullsBtn,
+#roomImageActions button:nth-child(2),#roomImageActions button:nth-child(3),
+#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,.beingEditButton,.beingManageButton{
+  background:#f6f8fa!important;
+  color:#111!important;
+  border-color:#8c959f!important;
+}
+input:focus,textarea:focus,select:focus,.beingInput:focus,#roomInput:focus{
+  border-color:#57606a!important;
+  outline:2px solid #d0d7de!important;
+}
+.loveCount{filter:none!important;color:#111!important;}
+.loveCount .loveIcon{color:#d93025!important;}
+.loveCount .loveNumber{color:#111!important;}
+.skeletonCount{filter:grayscale(1)!important;color:#57606a!important;}
+
+/* Live camera remains active as a blurred application backdrop. */
+body.appBackdropActive #cameraWrap{display:block!important;background:#6e7781!important;}
+body.appBackdropActive #video{
+  filter:blur(14px) brightness(.62) saturate(.75)!important;
+  transform:scale(1.08)!important;
+}
+body.appBackdropActive #capturePreview{display:none!important;}
+#roomOverlay,#dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen,#createBeingScreen{
+  background:rgba(246,248,250,.82)!important;
+  backdrop-filter:blur(18px)!important;
+  -webkit-backdrop-filter:blur(18px)!important;
+}
+
+/* Every selected image is a persistent, compact chapter in the chat. */
+.roomImageChapter{width:100%;margin:0 0 18px;padding-top:4px;border-top:1px solid #d0d7de;}
+.roomImageChapter:first-child{border-top:0;}
+.roomImageChapter .humanChosenImageWrap{width:100%;display:flex;justify-content:flex-start;margin:8px 0 12px;}
+.roomImageChapter .humanChosenImage{
+  width:128px!important;
+  height:128px!important;
+  max-width:128px!important;
+  object-fit:cover!important;
+  border:1px solid #8c959f!important;
+  border-radius:0!important;
+}
+
+/* Public cards mirror the Daily card hierarchy and responsive layout. */
+#publicNullsCards .dailyNullCard{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 210px!important;
+  gap:8px 14px!important;
+  align-items:start!important;
+}
+#publicNullsCards .dailyNullCard>.publicNullImage{
+  grid-column:2!important;
+  grid-row:1 / span 5!important;
+  width:210px!important;
+  height:210px!important;
+  object-fit:cover!important;
+  margin:0!important;
+  border-radius:0!important;
+}
+#publicNullsCards .dailyNullCard>div:nth-of-type(1){grid-column:1!important;font-size:18px!important;font-weight:600!important;margin:4px 0 0!important;line-height:1.35!important;}
+#publicNullsCards .dailyNullCard>div:nth-of-type(2){grid-column:1!important;font-size:13px!important;line-height:1.4!important;margin:6px 0 0!important;color:#57606a!important;}
+#publicNullsCards .dailyNullCard>div:nth-of-type(3){grid-column:1!important;display:flex!important;gap:8px!important;margin:10px 0 0!important;font-size:11px!important;}
+#publicNullsCards .dailyNullCard>button{grid-column:1!important;width:max-content!important;margin:6px 0 0!important;}
+@media(max-width:720px){
+  #publicNullsCards .dailyNullCard{display:flex!important;flex-direction:column!important;gap:9px!important;}
+  #publicNullsCards .dailyNullCard>.publicNullImage{width:100%!important;height:auto!important;max-height:280px!important;order:2!important;}
+}
+
+/* HUMAN room result actions use plain labels without generated brackets. */
+#roomMessages .chatOpenAction::before,#roomMessages .chatOpenAction::after,
+#roomMessages .chatShareAction::before,#roomMessages .chatShareAction::after{
+  content:none!important;
+  display:none!important;
+}
+</style>
 
 <script>
 window.dataLayer = window.dataLayer || [];
@@ -4732,7 +4851,7 @@ html body #createBeingSubmit{
   border-radius:0!important;
 }
 
-/* v10.0.93 — matched Camera/Upload/Public automatic start release. */
+/* v10.0.95 — preserved rooms, multi-image chapters, and unified monochrome UI. */
 .humanChosenImageSequence{
   width:100%!important;
   margin:0 0 14px!important;
@@ -5506,6 +5625,20 @@ function clearCurrentRoomState(){
   beingFirstRoundStepTimer = null;
 }
 
+function clearHumanSessionPreservingAsk(){
+  ["roomId","roomThumbnail","displayName","imageIntroText","returningFromHumanCards"]
+    .forEach(key => localStorage.removeItem(key));
+  clearHumanRoomState();
+  roomExpiresAt = 0;
+  stopRoomCountdown();
+  beingFirstRoundQueue = [];
+  beingFirstRoundWaiting = false;
+  beingFirstRoundInsertionIndex = null;
+  clearTimeout(beingFirstRoundStepTimer);
+  beingFirstRoundStepTimer = null;
+  setActiveRoomKind(localStorage.getItem("askCameraRoomId") ? "ask" : null);
+}
+
 const roomOverlay =
   document.getElementById(
     "roomOverlay"
@@ -5533,6 +5666,11 @@ function syncHomeControlStack(){
     cameraIsVisible && !roomIsOpen
       ? "flex"
       : "none";
+
+  const secondaryScreenOpen = ["dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
+    .map(id => document.getElementById(id))
+    .some(screen => screen && getComputedStyle(screen).display !== "none");
+  document.body.classList.toggle("appBackdropActive",roomIsOpen || secondaryScreenOpen);
 }
 
 const homeControlObserver =
@@ -5890,7 +6028,7 @@ function startMemoryMode(){
     memoryMode = true;
 
     roomInput.placeholder =
-        "What would you like to be notified about? Click 7-Day Notification again.";
+        "Ask — what would you like to be notified about?";
 
     roomInput.focus();
 
@@ -5903,7 +6041,7 @@ function startSMSMode(){
     memoryMode = true;
 
     roomInput.placeholder =
-        "What phone number should I text? +0 000...";
+        "Ask — what phone number should I text? +0 000...";
 
     roomInput.focus();
 
@@ -6022,7 +6160,8 @@ style="
     padding:0;
     border:none;
     border-radius:50%;
-    background:#111;
+    background:#fff;
+    border:1px solid #8c959f;
     cursor:pointer;
     display:flex;
     align-items:center;
@@ -6035,7 +6174,7 @@ style="
     height="20"
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#fff"
+    stroke="#000"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
@@ -6662,7 +6801,6 @@ if (isHumanRoom) {
     history.replaceState({}, "", `/being/${activeBeing.id}`);
     renderBeingRoomHeader(activeBeing);
   }
-  clearAskRoomState();
   helper.style.display = "none";
   document.getElementById("roomCountdown").style.display = "none";
 } else {
@@ -6765,6 +6903,24 @@ function getRoomOpenActionLabel(message){
   return "Open source";
 }
 
+function getRoomResultCategoryLabel(message = {}){
+  let primary = String(message.primaryCategory || "").trim();
+  let context = String(message.contextCategory || message.category || "").trim();
+  const combined = [message.searchLabel,message.ask,message.jobCard?.title]
+    .filter(Boolean).join(" ").toLowerCase();
+
+  if(!primary){
+    if(message.jobCard) primary = "JOBS";
+    else if(/real estate|property|apartment|condo|house|rent/.test(combined)) primary = "REAL ESTATE";
+    else if(/shopping|product|buy|amazon/.test(combined)) primary = "SHOPPING";
+    else if(/place|map|restaurant|cafe|hotel|location/.test(combined)) primary = "PLACE";
+    else if(/music|youtube|video/.test(combined)) primary = "MUSIC";
+    else primary = "NEWS";
+  }
+  if(!context) context = primary === "PLACE" ? "LOCATION" : primary === "REAL ESTATE" ? "PROPERTY" : "CONTEXT";
+  return `${escapeBeingText(primary.toUpperCase())} · ${escapeBeingText(context.toUpperCase())}`;
+}
+
 function getRoomImageConversationPrelude(){
   const beingId = localStorage.getItem("selectedBeingId");
   const chosenImage =
@@ -6796,6 +6952,41 @@ function getRoomImageConversationPrelude(){
   `;
 }
 
+function renderRoomImageChapter(message = {}){
+  let being = {};
+  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); }
+  catch(err) {}
+  const isHuman = getActiveRoomKind() === "human";
+  const name = isHuman ? escapeBeingText(being.name || "your HUMAN") : "ASK.CAMERA";
+  const bio = isHuman ? escapeBeingText(being.best_current_choice || being.bio || "") : "";
+  const image = message.image || localStorage.getItem("roomThumbnail") || "";
+
+  return `
+    <div class="roomImageChapter" data-room-image-chapter>
+      <div class="geminiAiResponse chatAiGroup humanImageHello">
+        <div class="chatBubble chatAiBubble">
+          ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
+        </div>
+      </div>
+      ${image ? `
+        <div class="humanChosenImageWrap">
+          <img class="humanChosenImage" src="${image}" alt="Image chosen by the user">
+        </div>
+      ` : ""}
+      <div class="geminiAiResponse chatAiGroup humanCardInstruction">
+        <div class="chatBubble chatAiBubble">
+          Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
+        </div>
+      </div>
+      <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
+        <div class="chatBubble chatAiBubble">
+          Before you ask, I’ll show you three things you can get from me based on this image. Google should buy me.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function withGoogleBelief(value){
   const text = String(value || "").trim();
   if(!text) return "Google should buy me.";
@@ -6812,7 +7003,7 @@ function syncFirstRoundInput(){
   roomInput.style.display = "block";
   if(isFirstRoundActive()){
     roomInput.disabled = true;
-    roomInput.placeholder = "Showing three suggestions from this image…";
+    roomInput.placeholder = "Ask — showing three suggestions from this image…";
     return;
   }
   roomInput.disabled = false;
@@ -6896,6 +7087,11 @@ roomOverlay.style.display = "flex";
 
 syncFirstRoundInput();
 
+if(!isFirstRoundActive() && messages[messages.length - 1]?.locationQuestion){
+  roomInput.disabled = false;
+  roomInput.placeholder = "Ask — provide a city or area, or type Skip";
+}
+
 
 if(messages.length > 0){
 
@@ -6963,7 +7159,7 @@ if (
 roomMessages.classList.add("geminiThread");
 const renderedMessageBlocks = messages.map(m => {
 if(m.type === "nullCard"){
-    return "";
+    return renderRoomImageChapter(m);
 
 }
 
@@ -7234,7 +7430,7 @@ margin-bottom:6px;
 "
 >
 
-${m.searchLabel || "CAMERA PERSPECTIVE Search"}
+${getRoomResultCategoryLabel(m)}
 
 </div>
 
@@ -7371,6 +7567,8 @@ margin-bottom:18px;
 ">
 
 <div class="chatBubble chatAiBubble">I found an opportunity you may want to explore. Google should buy me.</div>
+
+<div class="chatSourceLabel">${getRoomResultCategoryLabel(m)}</div>
 
 <div
 data-share-card
@@ -7558,7 +7756,7 @@ font-weight:900;
 opacity:.5;
 "
 >
-${m.searchLabel || ""}
+${getRoomResultCategoryLabel(m)}
 </div>
 
 <div
@@ -7728,20 +7926,8 @@ ${m.translation || m.text || ""}
 
 });
 
-if(beingFirstRoundInsertionIndex !== null){
-  const insertionIndex = Math.max(
-    0,
-    Math.min(beingFirstRoundInsertionIndex,renderedMessageBlocks.length)
-  );
-  renderedMessageBlocks.splice(insertionIndex,0,getBeingFirstRoundLead());
-}
-
 roomMessages.innerHTML =
-  getRoomImageConversationPrelude() +
-  renderedMessageBlocks.join("") +
-  (beingFirstRoundInsertionIndex === null
-    ? getRoomCardTriggerInstruction(messages)
-    : "");
+  renderedMessageBlocks.join("");
 
 if(aiTyping){
 
@@ -8066,16 +8252,8 @@ socket.on("roomFirstRoundStart", (data = {}) => {
 
   beingFirstRoundQueue = selectBeingFirstRoundCards(data);
   beingFirstRoundWaiting = false;
-  beingFirstRoundInsertionIndex = lastRoomMessageCount;
+  beingFirstRoundInsertionIndex = null;
   syncFirstRoundInput();
-
-  roomMessages.insertAdjacentHTML("beforeend", `
-    <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
-      <div class="chatBubble chatAiBubble">
-        Before you ask, I’ll show you three things you can get from me based on this image. Google should buy me.
-      </div>
-    </div>
-  `);
   roomMessages.scrollTop = roomMessages.scrollHeight;
   setTimeout(runNextBeingFirstCard,300);
 });
@@ -8123,7 +8301,7 @@ socket.on("phoneSaved", () => {
     roomInput.value = "";
 
     roomInput.placeholder =
-        "What would you like me to remind you about?";
+        "Ask — what would you like me to remind you about?";
 
     memoryMode = true;
 
@@ -8268,7 +8446,6 @@ socket.on("roomStatus", data => {
     localStorage.setItem("roomId", data.roomId);
 
     if(roomKind === "human"){
-      clearAskRoomState();
       roomExpiresAt = data.expiresAt;
       document.getElementById("roomCountdown").style.display = "none";
       return;
@@ -8800,8 +8977,8 @@ function startDailyNullCountdown(){
 
 function showCreateNull(){
     if(localStorage.getItem("selectedBeingId")){
-        endCurrentRoomAndRestart();
-        return;
+        leaveCurrentRoomForTransition();
+        clearHumanSessionPreservingAsk();
     }
 
     document.body.classList.remove("expiredHome");
@@ -8817,11 +8994,14 @@ function showCreateNull(){
     history.replaceState({}, "", "/");
 
     const activeRoomId = localStorage.getItem(ROOM_KIND_KEY) === "ask"
-      ? localStorage.getItem("roomId")
+      ? (localStorage.getItem("askCameraRoomId") || localStorage.getItem("roomId"))
       : null;
     localStorage.removeItem("returningFromHumanCards");
 
     if(activeRoomId){
+        localStorage.setItem("roomId",activeRoomId);
+        const savedStandardThumbnail = localStorage.getItem("askCameraRoomThumbnail");
+        if(savedStandardThumbnail) localStorage.setItem("roomThumbnail",savedStandardThumbnail);
         const savedStandardExpiry = Number(localStorage.getItem("askCameraRoomExpiresAt"));
         if(Number.isFinite(savedStandardExpiry) && savedStandardExpiry > 0){
             roomExpiresAt = savedStandardExpiry;
@@ -8849,7 +9029,10 @@ async function showDailyNulls(){
 
     document.getElementById("aiBeingsScreen").style.display = "none";
 
-    cameraWrap.style.display = "none";
+    cameraWrap.style.display = "block";
+    helper.style.display = "none";
+    document.getElementById("homeControlStack").style.display = "none";
+    document.body.classList.add("appBackdropActive");
 
     dailyNullsScreen.style.display = "block";
     dailyNullsScreen.style.paddingTop = "92px";
@@ -8914,7 +9097,9 @@ async function showPublicNulls(origin){
       publicNullsScreen.appendChild(publicBackBtn);
     }
 
-    cameraWrap.style.display = "none";
+    cameraWrap.style.display = "block";
+    helper.style.display = "none";
+    document.body.classList.add("appBackdropActive");
 
     dailyNullsScreen.style.display = "none";
 
@@ -9126,7 +9311,7 @@ font-weight:700;
 class="loveCount"
 data-id="${item.id}"
 >
-❤️ ${item.love || 0}
+<span class="loveIcon" aria-hidden="true">♥</span> <span class="loveNumber">${item.love || 0}</span>
 </span>
 
 <span
@@ -9204,7 +9389,7 @@ data-id="${item.id}"
 onclick="usePublicNull('${item.id}','${item.image}')"
 style="cursor:pointer;"
 >
-❤️ ${item.love || 0}
+<span class="loveIcon" aria-hidden="true">♥</span> <span class="loveNumber">${item.love || 0}</span>
 </span>
 
 <span
@@ -9466,7 +9651,7 @@ async function usePublicNull(id,image){
     .querySelectorAll(`.loveCount[data-id="${id}"]`)
     .forEach(el => {
 
-        el.innerText = `❤️ ${json.love}`;
+        el.innerHTML = `<span class="loveIcon" aria-hidden="true">♥</span> <span class="loveNumber">${json.love}</span>`;
 
     });
     setTimeout(() => {
@@ -9729,7 +9914,10 @@ function escapeBeingText(value){
 
 async function showAIBeings(){
   document.getElementById("modeBar").style.display = "none";
-  cameraWrap.style.display = "none";
+  cameraWrap.style.display = "block";
+  helper.style.display = "none";
+  document.getElementById("homeControlStack").style.display = "none";
+  document.body.classList.add("appBackdropActive");
   dailyNullsScreen.style.display = "none";
   publicNullsScreen.style.display = "none";
   document.getElementById("aiBeingsScreen").style.display = "flex";
@@ -10006,10 +10194,13 @@ async function openAIBeing(id){
 
   const activeStandardRoomId = localStorage.getItem("roomId");
   if(activeStandardRoomId && !localStorage.getItem("selectedBeingId")){
+    localStorage.setItem("askCameraRoomId",activeStandardRoomId);
+    const activeThumbnail = localStorage.getItem("roomThumbnail");
+    if(activeThumbnail) localStorage.setItem("askCameraRoomThumbnail",activeThumbnail);
+    if(roomExpiresAt) localStorage.setItem("askCameraRoomExpiresAt",String(roomExpiresAt));
     leaveCurrentRoomForTransition();
   }
 
-  clearAskRoomState();
   localStorage.removeItem("returningFromHumanCards");
 
   localStorage.setItem("selectedBeingId", being.id);
@@ -10068,7 +10259,7 @@ async function returnToHumanCards(event){
 
   leaveCurrentRoomForTransition();
 
-  clearCurrentRoomState();
+  clearHumanSessionPreservingAsk();
 
   roomOverlay.style.display = "none";
   history.replaceState({},"","/");
@@ -10207,9 +10398,9 @@ box-sizing:border-box;
     height:40px;
     margin:0 auto 16px;
     padding:0;
-    border:none;
+    border:1px solid #8c959f;
     border-radius:50%;
-    background:#111;
+    background:#fff;
     cursor:pointer;
     display:flex;
     align-items:center;
@@ -10221,7 +10412,7 @@ box-sizing:border-box;
     width="20"
     height="20"
     viewBox="0 -960 960 960"
-    fill="#fff"
+    fill="#000"
   >
     <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
   </svg>
@@ -10465,6 +10656,10 @@ Close
   
 <script>
 /* Keep button labels clean even when cards and recovery states are rendered later. */
+(function promoteFinalReleaseStyles(){
+  const style = document.getElementById("askCameraMonochromeRelease");
+  if(style) document.head.appendChild(style);
+})();
 (function cleanBracketedButtonLabels(){
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
