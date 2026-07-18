@@ -8532,6 +8532,8 @@ async function createRoomFromPublicNull(publicNull){
 
     const imageDataUrl = publicNull.image;
     const publicNullId = publicNull.id;
+    const beingId = localStorage.getItem("selectedBeingId");
+    const beingSessionId = localStorage.getItem("selectedBeingSessionId");
 
     publicNullsScreen.style.display = "none";
     dailyNullsScreen.style.display = "none";
@@ -8568,6 +8570,11 @@ socket.emit("imageUpload",{
     roomMode: true,
     askMode: false,
     publishMode: "private",
+    // A public image is only the image source. If it was selected from a
+    // HUMAN room, keep the HUMAN identity/session so the backend does not
+    // create a normal ASK.CAMERA room.
+    beingId,
+    beingSessionId,
     publicNullId,
     publicNullIdentity: publicNull.identity,
     publicNullIntro: publicNull.intro,
