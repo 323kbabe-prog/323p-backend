@@ -6957,6 +6957,9 @@ console.log(err);
 
 
 }, 60 * 1000);
+// v10.0.27 (2026-07-18)
+// - Version-matched the floating portrait startup camera-card release.
+
 // v10.0.26 (2026-07-18)
 // - Version-matched the frontend home capture and Public Perspective card release.
 // - Confirmed existing imageUpload publishMode logic already stores public captures
