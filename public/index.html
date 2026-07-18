@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.87 (2026-07-18)
+  - Added the complete HUMAN first-image conversation flow
+  - Shows the HUMAN introduction, the exact chosen image, the HUMAN reading, and a card-trigger instruction
+
   v10.0.86 (2026-07-18)
   - Kept Public image selections inside the active HUMAN room and personality
   - Made Open, Edit profile, and Manage the same size
@@ -4699,6 +4703,39 @@ html body #createBeingSubmit{
 #dailyNullsCards .dailyNullCard button{
   border-radius:0!important;
 }
+
+/* v10.0.87 — HUMAN introduction, exact chosen image, reading, then card prompt. */
+.humanChosenImageSequence{
+  width:100%!important;
+  margin:0 0 14px!important;
+}
+.humanImageHello{
+  align-items:flex-start!important;
+  margin:0 0 10px!important;
+}
+.humanChosenImageWrap{
+  width:100%!important;
+  border:1px solid var(--google-border)!important;
+  background:var(--google-surface)!important;
+  padding:8px!important;
+  box-sizing:border-box!important;
+}
+.humanChosenImage{
+  display:block!important;
+  width:100%!important;
+  max-height:440px!important;
+  object-fit:contain!important;
+  border-radius:0!important;
+}
+.humanCardInstruction{
+  align-items:flex-start!important;
+  margin-top:4px!important;
+}
+.humanCardInstruction .chatBubble{
+  background:var(--google-blue-soft)!important;
+  color:var(--google-blue)!important;
+  border:1px solid var(--google-blue-line)!important;
+}
 </style>
 
 <div id="publicNullsScreen"
@@ -6651,6 +6688,58 @@ function getRoomOpenActionLabel(message){
   return "Open source";
 }
 
+function getHumanImageConversationPrelude(){
+  const beingId = localStorage.getItem("selectedBeingId");
+  const chosenImage = localStorage.getItem("roomThumbnail");
+  if(!beingId || !chosenImage) return "";
+
+  let being = {};
+  try {
+    being = JSON.parse(localStorage.getItem("selectedBeing") || "{}");
+  } catch(err) {}
+
+  const name = escapeBeingText(being.name || "your HUMAN");
+  const bio = escapeBeingText(being.best_current_choice || being.bio || "");
+
+  return `
+    <div class="humanChosenImageSequence">
+      <div class="geminiAiResponse chatAiGroup humanImageHello">
+        <div class="chatBubble chatAiBubble">
+          Hi, I am ${name}.${bio ? ` ${bio}` : ""}
+        </div>
+      </div>
+      <div class="humanChosenImageWrap">
+        <img class="humanChosenImage" src="${chosenImage}" alt="Image chosen by the user">
+      </div>
+    </div>
+  `;
+}
+
+function getHumanCardTriggerInstruction(messages){
+  if(!localStorage.getItem("selectedBeingId") || !localStorage.getItem("roomThumbnail") || !messages.length){
+    return "";
+  }
+
+  const hasUserQuestion = messages.some(m =>
+    m?.text &&
+    !m.aiBeing &&
+    !m.image &&
+    !m.ask &&
+    m.type !== "nullCard" &&
+    !m.reminderCard &&
+    !m.jobCard
+  );
+  if(hasUserQuestion) return "";
+
+  return `
+    <div class="geminiAiResponse chatAiGroup humanCardInstruction">
+      <div class="chatBubble chatAiBubble">
+        Ask me what this connects to today, what you could buy, where you could go, or where you could live.
+      </div>
+    </div>
+  `;
+}
+
 socket.on("roomMessages",messages => {
 
 if(!localStorage.getItem("selectedBeingId")){
@@ -6745,9 +6834,11 @@ if (
 
 roomMessages.classList.add("geminiThread");
 roomMessages.innerHTML =
-
+getHumanImageConversationPrelude() +
 messages.map(m => {
 if(m.type === "nullCard"){
+
+    if(localStorage.getItem("selectedBeingId")) return "";
 
     return `
 
@@ -6993,7 +7084,7 @@ gap:10px;
 <div data-share-content>
 
 <div class="chatBubble chatAiBubble" style="font-size:14px;line-height:1.55;">
-${isFirstImage ? "Hi" : (m.nullReason || m.aiText || "Here’s what I found.")}
+${m.nullReason || m.aiText || "Here’s what I notice in this image."}
 </div>
 
 ${m.ask ? `
@@ -7518,7 +7609,8 @@ ${m.translation || m.text || ""}
 
 `;
 
-}).join("");
+}).join("") +
+getHumanCardTriggerInstruction(messages);
 
 if(aiTyping){
 
@@ -9672,8 +9764,7 @@ async function openAIBeing(id){
       <img class="humanRoomIntroPhoto" src="${being.photo}" alt="${escapeBeingText(being.name)}">
       <div class="humanRoomIntroCopy">
         <div class="humanRoomIntroName">${escapeBeingText(being.name)}</div>
-        <div class="humanRoomIntroBio">${escapeBeingText(being.best_current_choice)}</div>
-        <div class="humanRoomIntroHint">Take a photo or upload an image to ask from this HUMAN perspective.</div>
+        <div class="humanRoomIntroHint">Choose Camera, Upload, or Public to start this HUMAN conversation.</div>
       </div>
     </div>
   `;
