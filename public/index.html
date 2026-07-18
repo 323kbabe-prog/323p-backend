@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.90 (2026-07-18)
+  - Added a HUMAN first-round preview before user input
+  - Selects exactly three existing card families from image and HUMAN context
+  - Keeps the two instruction messages before the generated preview cards
+
   v10.0.89 (2026-07-18)
   - Added one authoritative ASK/HUMAN room classification policy
   - Prevented HUMAN rooms from creating ASK active-room state or stale home UI
@@ -4715,7 +4720,7 @@ html body #createBeingSubmit{
   border-radius:0!important;
 }
 
-/* v10.0.89 — shared room introduction and authoritative ASK/HUMAN room state. */
+/* v10.0.90 — room state plus contextual three-card HUMAN preview. */
 .humanChosenImageSequence{
   width:100%!important;
   margin:0 0 14px!important;
@@ -4748,6 +4753,15 @@ html body #createBeingSubmit{
   background:var(--google-blue-soft)!important;
   color:var(--google-blue)!important;
   border:1px solid var(--google-blue-line)!important;
+}
+.humanFirstRoundNotice{
+  align-items:flex-start!important;
+  margin-top:4px!important;
+}
+.humanFirstRoundNotice .chatBubble{
+  background:var(--google-red-soft)!important;
+  color:var(--google-red)!important;
+  border:1px solid var(--google-red-line)!important;
 }
 </style>
 
@@ -5473,6 +5487,11 @@ function clearCurrentRoomState(){
   setActiveRoomKind(null);
   roomExpiresAt = 0;
   stopRoomCountdown();
+  beingFirstRoundQueue = [];
+  beingFirstRoundWaiting = false;
+  beingFirstRoundInsertionIndex = null;
+  clearTimeout(beingFirstRoundStepTimer);
+  beingFirstRoundStepTimer = null;
 }
 
 const roomOverlay =
@@ -5574,6 +5593,8 @@ let roomNullCard = null;
 let beingFirstRoundQueue = [];
 let beingFirstRoundWaiting = false;
 let beingFirstRoundBaseline = 0;
+let beingFirstRoundInsertionIndex = null;
+let beingFirstRoundStepTimer = null;
 let lastRoomMessageCount = 0;
 
 let pendingImageDataUrl = null;
@@ -6790,6 +6811,21 @@ function getRoomCardTriggerInstruction(messages){
   `;
 }
 
+function getBeingFirstRoundLead(){
+  return `
+    <div class="geminiAiResponse chatAiGroup humanCardInstruction">
+      <div class="chatBubble chatAiBubble">
+        Ask me what this image connects to today, what you could buy, where you could go, or where you could live.
+      </div>
+    </div>
+    <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
+      <div class="chatBubble chatAiBubble">
+        Before you ask, I’ll show you three things you can get from me based on this image.
+      </div>
+    </div>
+  `;
+}
+
 socket.on("roomMessages",messages => {
 
 if(getActiveRoomKind() === "ask"){
@@ -6802,6 +6838,8 @@ if (
   beingFirstRoundWaiting &&
   messages.length > beingFirstRoundBaseline
 ) {
+  clearTimeout(beingFirstRoundStepTimer);
+  beingFirstRoundStepTimer = null;
   beingFirstRoundWaiting = false;
   setTimeout(runNextBeingFirstCard, 500);
 }
@@ -6883,9 +6921,7 @@ if (
 }
 
 roomMessages.classList.add("geminiThread");
-roomMessages.innerHTML =
-getRoomImageConversationPrelude() +
-messages.map(m => {
+const renderedMessageBlocks = messages.map(m => {
 if(m.type === "nullCard"){
     return "";
 
@@ -7650,8 +7686,22 @@ ${m.translation || m.text || ""}
 
 `;
 
-}).join("") +
-getRoomCardTriggerInstruction(messages);
+});
+
+if(beingFirstRoundInsertionIndex !== null){
+  const insertionIndex = Math.max(
+    0,
+    Math.min(beingFirstRoundInsertionIndex,renderedMessageBlocks.length)
+  );
+  renderedMessageBlocks.splice(insertionIndex,0,getBeingFirstRoundLead());
+}
+
+roomMessages.innerHTML =
+  getRoomImageConversationPrelude() +
+  renderedMessageBlocks.join("") +
+  (beingFirstRoundInsertionIndex === null
+    ? getRoomCardTriggerInstruction(messages)
+    : "");
 
 if(aiTyping){
 
@@ -7882,12 +7932,112 @@ socket.on("aiTypingStop", () => {
 
 });
 
-socket.on("beingFirstRoundStart", () => {
-  beingFirstRoundQueue = [];
+function normalizeBeingCardType(value){
+  const type = String(value || "").toLowerCase().replace(/[^a-z]/g,"");
+  if(["news","today","feed","article"].includes(type)) return "news";
+  if(["shopping","shop","product","buy"].includes(type)) return "shopping";
+  if(["place","placetogo","go","map","travel"].includes(type)) return "place";
+  if(["realestate","property","home","live"].includes(type)) return "realEstate";
+  return "";
+}
+
+function selectBeingFirstRoundCards(data = {}){
+  data = data || {};
+  const definitions = {
+    news: {
+      type:"news",
+      text:"What does this image connect to in today’s news?",
+      keywords:["news","today","current","ai","technology","business","politics","culture","music","celebrity","sports","internet","trend"]
+    },
+    shopping: {
+      type:"shopping",
+      text:"What could I buy based on this image?",
+      keywords:["shop","shopping","product","buy","fashion","luxury","food","beauty","style","design","retail","deal","price"]
+    },
+    place: {
+      type:"place",
+      text:"Where could I go based on this image?",
+      keywords:["travel","place","restaurant","cafe","coffee","hotel","food","event","outdoor","city","culture","visit","tour","airline"]
+    },
+    realEstate: {
+      type:"realEstate",
+      text:"Where could I live based on this image?",
+      keywords:["real estate","property","home","house","apartment","condo","interior","architecture","neighborhood","living","rent"]
+    }
+  };
+
+  const suggested = [
+    ...(Array.isArray(data.cardTypes) ? data.cardTypes : []),
+    ...(Array.isArray(data.cards) ? data.cards : [])
+  ].map(item => normalizeBeingCardType(item?.type || item)).filter(Boolean);
+
+  const selectedSuggested = [...new Set(suggested)]
+    .filter(type => definitions[type])
+    .slice(0,3);
+  if(selectedSuggested.length === 3){
+    return selectedSuggested.map(type => definitions[type]);
+  }
+
+  let being = {};
+  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); }
+  catch(err) {}
+
+  const context = [
+    data.imageContext,
+    data.identity,
+    data.category,
+    data.reading,
+    localStorage.getItem("imageIntroText"),
+    roomNullCard?.ask,
+    roomNullCard?.nullReason,
+    roomNullCard?.category,
+    being.best_current_choice,
+    being.bio,
+    being.category,
+    being.word1,
+    being.word2,
+    being.word3
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  const basePriority = { news:0.4, place:0.3, shopping:0.2, realEstate:0.1 };
+  const ranked = Object.values(definitions)
+    .map(card => ({
+      ...card,
+      score:basePriority[card.type] + card.keywords.reduce(
+        (total,keyword) => total + (context.includes(keyword) ? 2 : 0),
+        0
+      )
+    }))
+    .sort((a,b) => b.score - a.score);
+
+  const chosen = [];
+  selectedSuggested.forEach(type => chosen.push(definitions[type]));
+  ranked.forEach(card => {
+    if(chosen.length < 3 && !chosen.some(item => item.type === card.type)){
+      chosen.push(card);
+    }
+  });
+  return chosen.slice(0,3);
+}
+
+socket.on("beingFirstRoundStart", (data = {}) => {
+  if(getActiveRoomKind() !== "human") return;
+
+  beingFirstRoundQueue = selectBeingFirstRoundCards(data);
   beingFirstRoundWaiting = false;
-  roomInput.style.display = "block";
-  roomInput.disabled = false;
-  roomInput.placeholder = "Ask";
+  beingFirstRoundInsertionIndex = lastRoomMessageCount;
+  roomInput.style.display = "none";
+  roomInput.disabled = true;
+
+  roomMessages.insertAdjacentHTML("beforeend", `
+    <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
+      <div class="chatBubble chatAiBubble">
+        Before you ask, I’ll show you three things you can get from me based on this image.
+      </div>
+    </div>
+  `);
+  roomMessages.scrollTop = roomMessages.scrollHeight;
+  setTimeout(runNextBeingFirstCard,300);
 });
 
 function runNextBeingFirstCard(){
@@ -7907,6 +8057,12 @@ function runNextBeingFirstCard(){
     autoCardType: next.type,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
   });
+
+  clearTimeout(beingFirstRoundStepTimer);
+  beingFirstRoundStepTimer = setTimeout(() => {
+    beingFirstRoundWaiting = false;
+    runNextBeingFirstCard();
+  },15000);
 }
 
   socket.on("reminderSaved", () => {
@@ -9819,6 +9975,11 @@ async function openAIBeing(id){
   localStorage.setItem("selectedBeing", JSON.stringify(being));
   localStorage.setItem("selectedBeingSessionId", crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
   setActiveRoomKind("human");
+  beingFirstRoundQueue = [];
+  beingFirstRoundWaiting = false;
+  beingFirstRoundInsertionIndex = null;
+  clearTimeout(beingFirstRoundStepTimer);
+  beingFirstRoundStepTimer = null;
   localStorage.removeItem("roomId");
   localStorage.removeItem("displayName");
   localStorage.removeItem("imageIntroText");
