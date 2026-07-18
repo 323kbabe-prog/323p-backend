@@ -4,10 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
-  v10.0.85 (2026-07-18)
-  - Enforced 90-degree corners on every static and runtime-generated button
-  - Made HUMAN Edit profile and Manage actions smaller than Open
-  - Colored Edit profile green and Manage red for clear action separation
+  v10.0.86 (2026-07-18)
+  - Kept Public image selections inside the active HUMAN room and personality
+  - Made Open, Edit profile, and Manage the same size
+  - Changed Edit profile and Manage to red; changed blue actions to the light Back-button blue
+  - Centered the Daily timer on the shared content rail and enforced square Daily UI
 
   v10.0.84 (2026-07-18)
   - Put the complete app on one shared left/right alignment frame
@@ -4628,7 +4629,7 @@ body *{border-radius:0!important;}
   #roomOverlay{padding-left:var(--app-edge)!important;padding-right:var(--app-edge)!important;}
 }
 
-/* v10.0.85 — strict square controls and compact HUMAN management actions */
+/* v10.0.86 — HUMAN public-room continuity and aligned square UI actions */
 html body button,
 html body button[class],
 html body button[id],
@@ -4639,36 +4640,64 @@ html body input[type="submit"]{
   border-radius:0!important;
 }
 
-.beingCardActions .beingOpenButton{
-  height:34px!important;
-  min-height:34px!important;
-  padding:0 12px!important;
-  background:var(--google-blue)!important;
-  color:#fff!important;
-  border:1px solid var(--google-blue)!important;
+html body .beingCardActions button.beingOpenButton{
+  height:36px!important;
+  min-height:36px!important;
+  width:96px!important;
+  padding:0 10px!important;
+  background:var(--google-blue-soft)!important;
+  color:var(--google-blue)!important;
+  border:1px solid var(--google-blue-line)!important;
   font-size:12px!important;
 }
-.beingCardActions .beingEditButton{
-  height:28px!important;
-  min-height:28px!important;
-  padding:0 8px!important;
-  align-self:center!important;
-  background:var(--google-green-soft)!important;
-  color:var(--google-green)!important;
-  border:1px solid var(--google-green-line)!important;
-  font-size:10px!important;
-  font-weight:500!important;
-}
-.beingCardActions .beingManageButton{
-  height:28px!important;
-  min-height:28px!important;
-  padding:0 8px!important;
-  align-self:center!important;
+html body .beingCardActions button.beingEditButton{
+  height:36px!important;
+  min-height:36px!important;
+  width:96px!important;
+  padding:0 10px!important;
   background:var(--google-red-soft)!important;
   color:var(--google-red)!important;
   border:1px solid var(--google-red-line)!important;
-  font-size:10px!important;
-  font-weight:500!important;
+  font-size:12px!important;
+  font-weight:600!important;
+}
+html body .beingCardActions button.beingManageButton{
+  height:36px!important;
+  min-height:36px!important;
+  width:96px!important;
+  padding:0 10px!important;
+  background:var(--google-red-soft)!important;
+  color:var(--google-red)!important;
+  border:1px solid var(--google-red-line)!important;
+  font-size:12px!important;
+  font-weight:600!important;
+}
+
+/* Light-blue system actions match the Back control instead of solid blue. */
+html body #aiBeingsScreen > div:first-of-type > button,
+html body #createBeingSubmit{
+  background:var(--google-blue-soft)!important;
+  color:var(--google-blue)!important;
+  border:1px solid var(--google-blue-line)!important;
+}
+
+/* Daily timer belongs to the same centered rail and all Daily UI is square. */
+#dailyNullCountdown{
+  display:flex!important;
+  width:var(--app-rail)!important;
+  max-width:var(--app-rail)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  border-radius:0!important;
+  box-sizing:border-box!important;
+}
+#dailyNullsScreen,
+#dailyNullsCards,
+#dailyNullsCards .dailyNullCard,
+#dailyNullsCards .dailyNullCard img,
+#dailyNullsCards .dailyNullCard a,
+#dailyNullsCards .dailyNullCard button{
+  border-radius:0!important;
 }
 </style>
 
