@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.99 (2026-07-18)
+  - Changed the startup live-camera card into a floating, nearly full-height portrait capture view
+  - Kept Close at the top-right and Take Picture fixed to the bottom of the live view
+
   v10.0.98 (2026-07-18)
   - Locked the home hero to one stable heading-and-supporting-copy layout
   - Added a dismissible live-camera capture card with a Take Picture action
@@ -563,22 +567,22 @@ body.appBackdropActive #capturePreview{display:none!important;}
 }
 
 /* v10.0.98 — canonical home hero and capture card. */
-#homeMainContent{width:min(100%,1150px)!important;margin-left:auto!important;margin-right:auto!important;}
+#homeMainContent{width:min(100%,1150px)!important;margin-left:auto!important;margin-right:auto!important;transform:none!important;}
 #homeInstruction{max-width:none!important;margin:0!important;text-align:left!important;text-transform:none!important;letter-spacing:0!important;}
 #homeInstruction .homeHeroTitle{font-size:clamp(28px,3.2vw,44px)!important;line-height:1.08!important;font-weight:700!important;text-transform:uppercase!important;color:#fff!important;}
 #homeInstruction .homeHeroSupport{max-width:760px!important;margin-top:16px!important;font-size:clamp(16px,1.55vw,22px)!important;line-height:1.45!important;font-weight:400!important;color:#fff!important;text-transform:none!important;}
-#homeCaptureCard{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) 72px!important;align-items:center!important;width:100%!important;min-height:112px!important;margin:24px 0 0!important;padding:14px 82px 14px 16px!important;box-sizing:border-box!important;background:rgba(255,255,255,.9)!important;color:#111!important;border:1px solid #8c959f!important;overflow:hidden!important;}
-#homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.35) brightness(.72)!important;z-index:0!important;}
-#homeCaptureShade{position:absolute!important;inset:0!important;background:linear-gradient(90deg,rgba(0,0,0,.58),rgba(0,0,0,.18))!important;z-index:1!important;}
-#homeTakePicture{position:relative!important;z-index:2!important;justify-self:start!important;display:flex!important;align-items:center!important;gap:12px!important;min-height:52px!important;padding:0 18px!important;background:#111!important;color:#fff!important;border:1px solid #fff!important;font-size:16px!important;font-weight:700!important;}
+#homeCaptureCard{position:fixed!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;z-index:2147483500!important;display:block!important;width:min(88vw,480px)!important;height:min(82vh,780px)!important;min-height:min(520px,calc(100vh - 32px))!important;margin:0!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:2px solid #fff!important;box-shadow:0 24px 80px rgba(0,0,0,.55)!important;overflow:hidden!important;}
+#homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;z-index:0!important;}
+#homeCaptureShade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(0,0,0,.12) 45%,rgba(0,0,0,.72) 100%)!important;z-index:1!important;}
+#homeTakePicture{position:absolute!important;z-index:2!important;left:18px!important;right:18px!important;bottom:18px!important;width:calc(100% - 36px)!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:12px!important;min-height:58px!important;padding:0 18px!important;background:#111!important;color:#fff!important;border:1px solid #fff!important;font-size:16px!important;font-weight:700!important;}
 #homeTakePicture svg{width:24px!important;height:24px!important;fill:currentColor!important;}
 #homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:42px!important;height:42px!important;padding:0!important;background:#fff!important;color:#111!important;border:1px solid #8c959f!important;font-size:26px!important;line-height:1!important;}
 #homeCaptureCard[hidden]{display:none!important;}
 @media(max-width:720px){
   #homeInstruction .homeHeroTitle{font-size:28px!important;line-height:1.12!important;}
   #homeInstruction .homeHeroSupport{font-size:16px!important;margin-top:12px!important;}
-  #homeCaptureCard{min-height:104px!important;margin-top:18px!important;padding-left:12px!important;}
-  #homeTakePicture{font-size:14px!important;padding:0 13px!important;}
+  #homeCaptureCard{width:min(92vw,460px)!important;height:min(84vh,760px)!important;min-height:min(480px,calc(100vh - 24px))!important;}
+  #homeTakePicture{left:14px!important;right:14px!important;bottom:14px!important;width:calc(100% - 28px)!important;font-size:15px!important;}
 }
 
 /* v10.0.98 — Public Perspective cards: one frame, one text rail, one image rail. */
