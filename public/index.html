@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.91 (2026-07-18)
+  - Matched first-round card types to backend intent names
+  - Sends the HUMAN session ID when closing so the backend deletes only the correct HUMAN room
+
   v10.0.90 (2026-07-18)
   - Added a HUMAN first-round preview before user input
   - Selects exactly three existing card families from image and HUMAN context
@@ -4720,7 +4724,7 @@ html body #createBeingSubmit{
   border-radius:0!important;
 }
 
-/* v10.0.90 — room state plus contextual three-card HUMAN preview. */
+/* v10.0.91 — synchronized HUMAN card preview and backend-owned room lifecycle. */
 .humanChosenImageSequence{
   width:100%!important;
   margin:0 0 14px!important;
@@ -5729,7 +5733,10 @@ function leaveCurrentRoomForTransition(){
     if(leavingRoomId) ignoredTransitionRoomIds.add(leavingRoomId);
     suppressRoomClosedUntil = Date.now() + 2500;
     if(socket.connected){
-        socket.emit("leaveCurrentRoom",{ deviceId });
+        socket.emit("leaveCurrentRoom",{
+          deviceId,
+          beingSessionId:localStorage.getItem("selectedBeingSessionId")
+        });
     }
 }
 
@@ -6472,6 +6479,9 @@ function endCurrentRoomAndRestart(){
   if (endingRoomSession) return;
   endingRoomSession = true;
 
+  // Preserve the HUMAN ownership token until the backend confirms the close.
+  const endingBeingSessionId = localStorage.getItem("selectedBeingSessionId");
+
   clearCurrentRoomState();
   history.replaceState({}, "", "/");
 
@@ -6486,7 +6496,10 @@ function endCurrentRoomAndRestart(){
 
   if (socket.connected) {
     suppressRoomClosedUntil = Date.now() + 2500;
-    socket.emit("leaveCurrentRoom", { deviceId }, () => {
+    socket.emit("leaveCurrentRoom", {
+      deviceId,
+      beingSessionId:endingBeingSessionId
+    }, () => {
       clearTimeout(fallback);
       restart();
     });
@@ -7937,7 +7950,7 @@ function normalizeBeingCardType(value){
   if(["news","today","feed","article"].includes(type)) return "news";
   if(["shopping","shop","product","buy"].includes(type)) return "shopping";
   if(["place","placetogo","go","map","travel"].includes(type)) return "place";
-  if(["realestate","property","home","live"].includes(type)) return "realEstate";
+  if(["realestate","property","home","live"].includes(type)) return "real_estate";
   return "";
 }
 
@@ -7959,8 +7972,8 @@ function selectBeingFirstRoundCards(data = {}){
       text:"Where could I go based on this image?",
       keywords:["travel","place","restaurant","cafe","coffee","hotel","food","event","outdoor","city","culture","visit","tour","airline"]
     },
-    realEstate: {
-      type:"realEstate",
+    real_estate: {
+      type:"real_estate",
       text:"Where could I live based on this image?",
       keywords:["real estate","property","home","house","apartment","condo","interior","architecture","neighborhood","living","rent"]
     }
@@ -7999,7 +8012,7 @@ function selectBeingFirstRoundCards(data = {}){
     being.word3
   ].filter(Boolean).join(" ").toLowerCase();
 
-  const basePriority = { news:0.4, place:0.3, shopping:0.2, realEstate:0.1 };
+  const basePriority = { news:0.4, place:0.3, shopping:0.2, real_estate:0.1 };
   const ranked = Object.values(definitions)
     .map(card => ({
       ...card,
