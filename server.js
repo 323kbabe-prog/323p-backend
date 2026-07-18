@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.19 (2026-07-18)
+// - Added AI selection of exactly three HUMAN first-round card families
+// - Enforced ASK/HUMAN room separation during upload, status, rejoin, and leave
+// - Deletes a HUMAN session room when its owner closes it
+
 // v10.0.18 (2026-07-18)
 // - Made conversational replies speak as a normal person carrying the image identity's personality and emotion
 // - Prevented replies from claiming to be the image, object, product, place, or scene
@@ -213,6 +218,89 @@ ${userText}
   }
 
   return reply;
+}
+
+async function chooseBeingFirstRoundCardTypes(room) {
+  const allowed = ["news", "shopping", "place", "real_estate"];
+  const being = room?.being;
+  if (!being) return ["news", "shopping", "place"];
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: `
+Choose exactly THREE useful card types for the selected HUMAN to preview before the user asks a question.
+
+Allowed card types:
+news
+shopping
+place
+real_estate
+
+Selection rules:
+- Use both the uploaded image interpretation and the HUMAN profile.
+- The HUMAN bio, category, and personality should strongly influence what is useful.
+- The uploaded image must also materially influence the selection.
+- Choose three different types.
+- Return only the three exact type names separated by commas.
+- No explanation, numbering, markdown, or extra words.
+          `.trim()
+        },
+        {
+          role: "user",
+          content: `
+IMAGE INTERPRETATION
+${room.imageContext || ""}
+
+HUMAN
+Name: ${being.name || ""}
+Bio: ${being.best_current_choice || ""}
+Category: ${being.category || ""}
+Personality: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}
+          `.trim()
+        }
+      ]
+    });
+
+    const selected = String(response.choices[0].message.content || "")
+      .toLowerCase()
+      .split(/[\s,]+/)
+      .map(value => value.trim())
+      .filter(value => allowed.includes(value));
+
+    const unique = [...new Set(selected)];
+    if (unique.length === 3) return unique;
+  } catch (error) {
+    console.log("HUMAN FIRST ROUND CARD SELECTION FAILED:", error.message);
+  }
+
+  const context = [
+    room.imageContext,
+    being.best_current_choice,
+    being.category,
+    being.word1,
+    being.word2,
+    being.word3
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  const fallback = [
+    { type:"news", score:0.4, words:["news","today","technology","business","politics","culture","music","sports","trend"] },
+    { type:"place", score:0.3, words:["travel","place","restaurant","cafe","coffee","hotel","food","event","city","visit","airline"] },
+    { type:"shopping", score:0.2, words:["shop","product","buy","fashion","luxury","food","beauty","style","retail","deal"] },
+    { type:"real_estate", score:0.1, words:["real estate","property","home","house","apartment","condo","interior","architecture","rent"] }
+  ].map(item => ({
+    ...item,
+    score:item.score + item.words.reduce(
+      (total,word) => total + (context.includes(word) ? 2 : 0),
+      0
+    )
+  })).sort((a,b) => b.score - a.score);
+
+  return fallback.slice(0,3).map(item => item.type);
 }
 
 const { createClient } =
@@ -773,14 +861,31 @@ io.on("connection", socket => {
 
     });
 
-    socket.on("leaveCurrentRoom", ({ deviceId } = {}, acknowledge) => {
+    socket.on("leaveCurrentRoom", ({ deviceId, beingSessionId } = {}, acknowledge) => {
         const user = users[socket.id];
         const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
 
+        const endingHumanRoom = !!(
+          roomId &&
+          rooms[roomId]?.being &&
+          beingSessionId &&
+          rooms[roomId].beingSessionId === beingSessionId
+        );
+
+        if (endingHumanRoom) {
+            io.to(roomId).emit("roomClosed");
+        }
+
         if (roomId) socket.leave(roomId);
 
-        if (deviceId && deviceRooms[deviceId] === roomId) {
-            delete deviceRooms[deviceId];
+        if (roomId) {
+            for (const id in deviceRooms) {
+                if (deviceRooms[id] === roomId) delete deviceRooms[id];
+            }
+        }
+
+        if (endingHumanRoom) {
+            delete rooms[roomId];
         }
 
         if (user) {
@@ -1216,7 +1321,11 @@ socket.on("getRoomStatus", ({ deviceId }) => {
 
         expiresAt: room.expiresAt,
 
-        permanent: !!room.permanent
+        permanent: !!room.permanent,
+
+        being: room.being || null,
+
+        roomKind: room.being ? "human" : "ask"
 
     });
 
@@ -1333,7 +1442,8 @@ deviceId,
     publicNullIdentity,
     publicNullIntro,
     beingId,
-    beingSessionId
+    beingSessionId,
+    roomId: requestedRoomId
 }) => {
 
 console.log(
@@ -1679,7 +1789,9 @@ ${user.imageContext}`
 if(roomMode){
 
 let roomId =
-    deviceRooms[deviceId];
+    requestedRoomId && rooms[requestedRoomId]
+      ? requestedRoomId
+      : deviceRooms[deviceId];
 
 if (
   selectedBeing &&
@@ -1689,6 +1801,11 @@ if (
     rooms[roomId]?.beingSessionId !== beingSessionId
   )
 ) {
+  roomId = null;
+}
+
+// A standard ASK upload must never reuse a HUMAN room left in device state.
+if (!selectedBeing && roomId && rooms[roomId]?.being) {
   roomId = null;
 }
 
@@ -2566,7 +2683,13 @@ io.to(roomId).emit(
 );
 
 if (selectedBeing) {
-  socket.emit("beingFirstRoundStart");
+  const firstRoundCardTypes = await chooseBeingFirstRoundCardTypes(rooms[roomId]);
+  socket.emit("beingFirstRoundStart", {
+    cardTypes:firstRoundCardTypes,
+    imageContext:rooms[roomId].imageContext,
+    category:rooms[roomId].coreTheme,
+    humanCategory:selectedBeing.category
+  });
 }
 
 //////////////////////////////////////////////////
