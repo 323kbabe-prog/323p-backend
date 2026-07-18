@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.20 (2026-07-18)
+// - Starts the contextual three-card preview for ASK and HUMAN rooms
+// - Uses one shared roomFirstRoundStart event for deterministic frontend timing
+// - Keeps ASK selection image-based and HUMAN selection image/profile-based
+//
 // v10.0.19 (2026-07-18)
 // - Added AI selection of exactly three HUMAN first-round card families
 // - Enforced ASK/HUMAN room separation during upload, status, rejoin, and leave
@@ -220,10 +225,9 @@ ${userText}
   return reply;
 }
 
-async function chooseBeingFirstRoundCardTypes(room) {
+async function chooseRoomFirstRoundCardTypes(room) {
   const allowed = ["news", "shopping", "place", "real_estate"];
   const being = room?.being;
-  if (!being) return ["news", "shopping", "place"];
 
   try {
     const response = await openai.chat.completions.create({
@@ -233,7 +237,7 @@ async function chooseBeingFirstRoundCardTypes(room) {
         {
           role: "system",
           content: `
-Choose exactly THREE useful card types for the selected HUMAN to preview before the user asks a question.
+Choose exactly THREE useful card types for this ASK.CAMERA room to preview before the user asks a question.
 
 Allowed card types:
 news
@@ -242,9 +246,9 @@ place
 real_estate
 
 Selection rules:
-- Use both the uploaded image interpretation and the HUMAN profile.
-- The HUMAN bio, category, and personality should strongly influence what is useful.
-- The uploaded image must also materially influence the selection.
+- The uploaded image interpretation must materially influence every selection.
+- If a HUMAN profile is provided, its bio, category, and personality must also strongly influence the selection.
+- If no HUMAN profile is provided, select entirely from the image interpretation and category.
 - Choose three different types.
 - Return only the three exact type names separated by commas.
 - No explanation, numbering, markdown, or extra words.
@@ -256,11 +260,14 @@ Selection rules:
 IMAGE INTERPRETATION
 ${room.imageContext || ""}
 
-HUMAN
-Name: ${being.name || ""}
-Bio: ${being.best_current_choice || ""}
-Category: ${being.category || ""}
-Personality: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}
+ROOM CATEGORY
+${room.coreTheme || ""}
+
+HUMAN (optional)
+Name: ${being?.name || ""}
+Bio: ${being?.best_current_choice || ""}
+Category: ${being?.category || ""}
+Personality: ${being?.word1 || ""}, ${being?.word2 || ""}, ${being?.word3 || ""}
           `.trim()
         }
       ]
@@ -275,16 +282,17 @@ Personality: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}
     const unique = [...new Set(selected)];
     if (unique.length === 3) return unique;
   } catch (error) {
-    console.log("HUMAN FIRST ROUND CARD SELECTION FAILED:", error.message);
+    console.log("ROOM FIRST ROUND CARD SELECTION FAILED:", error.message);
   }
 
   const context = [
     room.imageContext,
-    being.best_current_choice,
-    being.category,
-    being.word1,
-    being.word2,
-    being.word3
+    room.coreTheme,
+    being?.best_current_choice,
+    being?.category,
+    being?.word1,
+    being?.word2,
+    being?.word3
   ].filter(Boolean).join(" ").toLowerCase();
 
   const fallback = [
@@ -2682,13 +2690,14 @@ io.to(roomId).emit(
   adviceText
 );
 
-if (selectedBeing) {
-  const firstRoundCardTypes = await chooseBeingFirstRoundCardTypes(rooms[roomId]);
-  socket.emit("beingFirstRoundStart", {
+{
+  const firstRoundCardTypes = await chooseRoomFirstRoundCardTypes(rooms[roomId]);
+  socket.emit("roomFirstRoundStart", {
     cardTypes:firstRoundCardTypes,
     imageContext:rooms[roomId].imageContext,
     category:rooms[roomId].coreTheme,
-    humanCategory:selectedBeing.category
+    humanCategory:selectedBeing?.category || "",
+    roomKind:selectedBeing ? "human" : "ask"
   });
 }
 
