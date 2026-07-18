@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.88 (2026-07-18)
+  - Applied the same first-image conversation sequence to HUMAN and ASK rooms
+  - Reduced the chosen image to the shared small chat-image size
+  - Prevented an old ASK room from returning after a HUMAN session closes
+
   v10.0.87 (2026-07-18)
   - Added the complete HUMAN first-image conversation flow
   - Shows the HUMAN introduction, the exact chosen image, the HUMAN reading, and a card-trigger instruction
@@ -4704,7 +4709,7 @@ html body #createBeingSubmit{
   border-radius:0!important;
 }
 
-/* v10.0.87 — HUMAN introduction, exact chosen image, reading, then card prompt. */
+/* v10.0.88 — shared room introduction, small chosen image, reading, then card prompt. */
 .humanChosenImageSequence{
   width:100%!important;
   margin:0 0 14px!important;
@@ -4714,17 +4719,19 @@ html body #createBeingSubmit{
   margin:0 0 10px!important;
 }
 .humanChosenImageWrap{
-  width:100%!important;
+  width:140px!important;
+  height:140px!important;
   border:1px solid var(--google-border)!important;
-  background:var(--google-surface)!important;
-  padding:8px!important;
+  background:#fff!important;
+  padding:0!important;
   box-sizing:border-box!important;
+  overflow:hidden!important;
 }
 .humanChosenImage{
   display:block!important;
-  width:100%!important;
-  max-height:440px!important;
-  object-fit:contain!important;
+  width:140px!important;
+  height:140px!important;
+  object-fit:cover!important;
   border-radius:0!important;
 }
 .humanCardInstruction{
@@ -6364,9 +6371,6 @@ function endCurrentRoomAndRestart(){
   if (endingRoomSession) return;
   endingRoomSession = true;
 
-  const returnRoomId = localStorage.getItem("askCameraRoomId");
-  const returnThumbnail = localStorage.getItem("askCameraRoomThumbnail");
-
   [
     "displayName",
     "roomId",
@@ -6374,15 +6378,15 @@ function endCurrentRoomAndRestart(){
     "roomThumbnail",
     "selectedBeingId",
     "selectedBeing",
-    "selectedBeingSessionId"
+    "selectedBeingSessionId",
+    "askCameraRoomId",
+    "askCameraRoomThumbnail",
+    "askCameraRoomExpiresAt",
+    "returningFromHumanCards"
   ].forEach(key => localStorage.removeItem(key));
 
-  if(returnRoomId){
-    localStorage.setItem("roomId",returnRoomId);
-    if(returnThumbnail) localStorage.setItem("roomThumbnail",returnThumbnail);
-  }
-
-  history.replaceState({}, "", returnRoomId ? `/?room=${returnRoomId}` : "/");
+  document.body.classList.remove("connectedHome");
+  history.replaceState({}, "", "/");
 
   let restarted = false;
   const restart = () => {
@@ -6688,17 +6692,21 @@ function getRoomOpenActionLabel(message){
   return "Open source";
 }
 
-function getHumanImageConversationPrelude(){
+function getRoomImageConversationPrelude(){
   const beingId = localStorage.getItem("selectedBeingId");
-  const chosenImage = localStorage.getItem("roomThumbnail");
-  if(!beingId || !chosenImage) return "";
+  const chosenImage =
+    localStorage.getItem("roomThumbnail") ||
+    localStorage.getItem("askCameraRoomThumbnail");
+  if(!chosenImage) return "";
 
   let being = {};
   try {
     being = JSON.parse(localStorage.getItem("selectedBeing") || "{}");
   } catch(err) {}
 
-  const name = escapeBeingText(being.name || "your HUMAN");
+  const name = beingId
+    ? escapeBeingText(being.name || "your HUMAN")
+    : "ASK.CAMERA";
   const bio = escapeBeingText(being.best_current_choice || being.bio || "");
 
   return `
@@ -6715,10 +6723,21 @@ function getHumanImageConversationPrelude(){
   `;
 }
 
-function getHumanCardTriggerInstruction(messages){
-  if(!localStorage.getItem("selectedBeingId") || !localStorage.getItem("roomThumbnail") || !messages.length){
+function getRoomCardTriggerInstruction(messages){
+  const chosenImage =
+    localStorage.getItem("roomThumbnail") ||
+    localStorage.getItem("askCameraRoomThumbnail");
+  if(!chosenImage || !messages.length){
     return "";
   }
+
+  const hasImageReading = messages.some(m =>
+    m?.aiBeing ||
+    m?.image ||
+    m?.ask ||
+    (m?.text && m.type !== "nullCard")
+  );
+  if(!hasImageReading) return "";
 
   const hasUserQuestion = messages.some(m =>
     m?.text &&
@@ -6734,7 +6753,7 @@ function getHumanCardTriggerInstruction(messages){
   return `
     <div class="geminiAiResponse chatAiGroup humanCardInstruction">
       <div class="chatBubble chatAiBubble">
-        Ask me what this connects to today, what you could buy, where you could go, or where you could live.
+        Ask me what this image connects to today, what you could buy, where you could go, or where you could live.
       </div>
     </div>
   `;
@@ -6834,19 +6853,10 @@ if (
 
 roomMessages.classList.add("geminiThread");
 roomMessages.innerHTML =
-getHumanImageConversationPrelude() +
+getRoomImageConversationPrelude() +
 messages.map(m => {
 if(m.type === "nullCard"){
-
-    if(localStorage.getItem("selectedBeingId")) return "";
-
-    return `
-
-<div class="geminiAiResponse chatAiGroup">
-  <div class="chatBubble chatAiBubble">Hi</div>
-</div>
-
-`;
+    return "";
 
 }
 
@@ -7610,7 +7620,7 @@ ${m.translation || m.text || ""}
 `;
 
 }).join("") +
-getHumanCardTriggerInstruction(messages);
+getRoomCardTriggerInstruction(messages);
 
 if(aiTyping){
 
@@ -9723,16 +9733,15 @@ async function openAIBeing(id){
 
   const activeStandardRoomId = localStorage.getItem("roomId");
   if(activeStandardRoomId && !localStorage.getItem("selectedBeingId")){
-    localStorage.setItem("askCameraRoomId",activeStandardRoomId);
-    if(roomExpiresAt){
-      localStorage.setItem("askCameraRoomExpiresAt",String(roomExpiresAt));
-    }
-    const activeStandardThumbnail = localStorage.getItem("roomThumbnail");
-    if(activeStandardThumbnail){
-      localStorage.setItem("askCameraRoomThumbnail",activeStandardThumbnail);
-    }
     leaveCurrentRoomForTransition();
   }
+
+  [
+    "askCameraRoomId",
+    "askCameraRoomThumbnail",
+    "askCameraRoomExpiresAt",
+    "returningFromHumanCards"
+  ].forEach(key => localStorage.removeItem(key));
 
   localStorage.setItem("selectedBeingId", being.id);
   localStorage.setItem("selectedBeing", JSON.stringify(being));
@@ -9784,20 +9793,24 @@ async function returnToHumanCards(event){
 
   leaveCurrentRoomForTransition();
 
-  ["selectedBeingId","selectedBeing","selectedBeingSessionId","displayName","imageIntroText"]
+  [
+    "selectedBeingId",
+    "selectedBeing",
+    "selectedBeingSessionId",
+    "displayName",
+    "imageIntroText",
+    "roomId",
+    "roomThumbnail",
+    "askCameraRoomId",
+    "askCameraRoomThumbnail",
+    "askCameraRoomExpiresAt",
+    "returningFromHumanCards"
+  ]
     .forEach(key => localStorage.removeItem(key));
 
-  const returnRoomId = localStorage.getItem("askCameraRoomId");
-  const returnThumbnail = localStorage.getItem("askCameraRoomThumbnail");
-  const returnExpiresAt = Number(localStorage.getItem("askCameraRoomExpiresAt"));
-  localStorage.removeItem("roomId");
-  localStorage.removeItem("roomThumbnail");
-  if(returnRoomId) localStorage.setItem("roomId",returnRoomId);
-  if(returnThumbnail) localStorage.setItem("roomThumbnail",returnThumbnail);
-  if(Number.isFinite(returnExpiresAt) && returnExpiresAt > 0){
-    roomExpiresAt = returnExpiresAt;
-  }
-  localStorage.setItem("returningFromHumanCards","true");
+  roomExpiresAt = 0;
+  stopRoomCountdown();
+  document.body.classList.remove("connectedHome");
 
   roomOverlay.style.display = "none";
   history.replaceState({},"","/");
