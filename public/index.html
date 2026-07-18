@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.96 (2026-07-18)
+  - Rebuilt Public cards with a compact fixed image rail and controlled text sizes
+  - Enforced monochrome controls at runtime for static and generated buttons
+  - Enforced the blurred live-camera background directly on every application screen
+
   v10.0.95 (2026-07-18)
   - Preserved the one-hour ASK room while entering and closing HUMAN rooms
   - Appended every new image as a persistent chat chapter with three new cards
@@ -384,6 +389,9 @@ button:disabled,[role="button"][aria-disabled="true"]{
   border-color:#d0d7de!important;
   opacity:1!important;
 }
+button svg{color:inherit!important;}
+button svg[fill]:not([fill="none"]),button svg [fill]:not([fill="none"]){fill:currentColor!important;}
+button svg[stroke]:not([stroke="none"]),button svg [stroke]:not([stroke="none"]){stroke:currentColor!important;}
 #createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,
 .beingOpenButton,#roomImageActions button:first-child,
 #publishDialog button:last-child,#humanCardsGuide button:last-child,
@@ -464,6 +472,84 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #roomMessages .chatShareAction::before,#roomMessages .chatShareAction::after{
   content:none!important;
   display:none!important;
+}
+
+/* Direct Public-card redesign: compact copy, fixed image rail, no inherited Daily selectors. */
+#publicNullsCards .publicPerspectiveCardV2{
+  width:100%!important;
+  box-sizing:border-box!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 220px!important;
+  grid-template-rows:auto auto auto 1fr!important;
+  column-gap:20px!important;
+  row-gap:8px!important;
+  align-items:start!important;
+  padding:18px!important;
+  margin:0 0 16px!important;
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid #d0d7de!important;
+  box-shadow:none!important;
+}
+#publicNullsCards .publicPerspectiveCardV2>.publicNullImage{
+  grid-column:2!important;
+  grid-row:1 / span 4!important;
+  width:220px!important;
+  height:220px!important;
+  max-width:220px!important;
+  aspect-ratio:1/1!important;
+  object-fit:cover!important;
+  margin:0!important;
+  border:1px solid #d0d7de!important;
+  border-radius:0!important;
+}
+#publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(1){
+  grid-column:1!important;
+  grid-row:1!important;
+  min-width:0!important;
+  margin:0!important;
+  font-size:14px!important;
+  line-height:1.45!important;
+  font-weight:600!important;
+  overflow-wrap:anywhere!important;
+  max-height:10.2em!important;
+  overflow:auto!important;
+}
+#publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(2){
+  grid-column:1!important;
+  grid-row:2!important;
+  min-width:0!important;
+  margin:0!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+  font-weight:400!important;
+  color:#57606a!important;
+}
+#publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(3){
+  grid-column:1!important;
+  grid-row:3!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  margin:4px 0 0!important;
+  font-size:12px!important;
+  line-height:1!important;
+}
+#publicNullsCards .publicPerspectiveCardV2>button{
+  grid-column:1!important;
+  grid-row:4!important;
+  justify-self:start!important;
+  align-self:end!important;
+  margin:6px 0 0!important;
+  padding:6px 9px!important;
+  font-size:10px!important;
+}
+@media(max-width:720px){
+  #publicNullsCards .publicPerspectiveCardV2{display:flex!important;flex-direction:column!important;gap:10px!important;padding:14px!important;}
+  #publicNullsCards .publicPerspectiveCardV2>.publicNullImage{width:100%!important;height:auto!important;max-width:none!important;max-height:300px!important;order:1!important;}
+  #publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(1){order:2!important;max-height:none!important;overflow:visible!important;}
+  #publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(2){order:3!important;}
+  #publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(3){order:4!important;}
+  #publicNullsCards .publicPerspectiveCardV2>button{order:5!important;}
 }
 </style>
 
@@ -4851,7 +4937,7 @@ html body #createBeingSubmit{
   border-radius:0!important;
 }
 
-/* v10.0.95 — preserved rooms, multi-image chapters, and unified monochrome UI. */
+/* v10.0.96 — direct Public-card redesign and enforced visual system. */
 .humanChosenImageSequence{
   width:100%!important;
   margin:0 0 14px!important;
@@ -5671,6 +5757,27 @@ function syncHomeControlStack(){
     .map(id => document.getElementById(id))
     .some(screen => screen && getComputedStyle(screen).display !== "none");
   document.body.classList.toggle("appBackdropActive",roomIsOpen || secondaryScreenOpen);
+
+  const backdropActive = roomIsOpen || secondaryScreenOpen;
+  const liveVideo = document.getElementById("video");
+  if(backdropActive){
+    cameraWrap.style.setProperty("display","block","important");
+    if(liveVideo){
+      liveVideo.style.setProperty("filter","blur(14px) brightness(.62) saturate(.75)","important");
+      liveVideo.style.setProperty("transform","scale(1.08)","important");
+    }
+    ["roomOverlay","dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
+      .map(id => document.getElementById(id))
+      .filter(Boolean)
+      .forEach(screen => {
+        screen.style.setProperty("background","rgba(246,248,250,.82)","important");
+        screen.style.setProperty("backdrop-filter","blur(18px)","important");
+        screen.style.setProperty("-webkit-backdrop-filter","blur(18px)","important");
+      });
+  }else if(liveVideo){
+    liveVideo.style.removeProperty("filter");
+    liveVideo.style.removeProperty("transform");
+  }
 }
 
 const homeControlObserver =
@@ -9036,6 +9143,7 @@ async function showDailyNulls(){
 
     dailyNullsScreen.style.display = "block";
     dailyNullsScreen.style.paddingTop = "92px";
+    syncHomeControlStack();
 
 gtag('event', 'page_view', {
   page_title: 'Daily Camera Perspectives',
@@ -9106,6 +9214,7 @@ async function showPublicNulls(origin){
     document.getElementById("aiBeingsScreen").style.display = "none";
 
     publicNullsScreen.style.display = "block";
+    syncHomeControlStack();
 
 gtag('event', 'page_view', {
   page_title: 'Public Camera Perspectives',
@@ -9337,7 +9446,7 @@ style="cursor:pointer;"
 
 data.map((item, i) => `
 
-<div class="dailyNullCard">
+<div class="publicPerspectiveCardV2">
 
 ${item.image ? `
 <img
@@ -9921,6 +10030,7 @@ async function showAIBeings(){
   dailyNullsScreen.style.display = "none";
   publicNullsScreen.style.display = "none";
   document.getElementById("aiBeingsScreen").style.display = "flex";
+  syncHomeControlStack();
   await loadAIBeings();
 }
 
@@ -10661,6 +10771,7 @@ Close
   if(style) document.head.appendChild(style);
 })();
 (function cleanBracketedButtonLabels(){
+  const primarySelector = '#createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
     const buttons = root.matches && root.matches('button,[role="button"]')
@@ -10668,6 +10779,17 @@ Close
       : Array.from(root.querySelectorAll ? root.querySelectorAll('button,[role="button"]') : []);
     buttons.forEach(button => {
       button.style.setProperty('border-radius','0','important');
+      button.style.setProperty('box-shadow','none','important');
+      button.style.setProperty('text-shadow','none','important');
+      button.style.setProperty('border','1px solid #8c959f','important');
+      if(button.matches(primarySelector)){
+        button.style.setProperty('background','#111','important');
+        button.style.setProperty('color','#fff','important');
+        button.style.setProperty('border-color','#111','important');
+      }else{
+        button.style.setProperty('background','#fff','important');
+        button.style.setProperty('color','#111','important');
+      }
       const walker = document.createTreeWalker(button,NodeFilter.SHOW_TEXT);
       const textNodes = [];
       while(walker.nextNode()) textNodes.push(walker.currentNode);
@@ -10675,6 +10797,17 @@ Close
         const match = node.nodeValue.match(/^(\s*)\[\s*([^\[\]]+?)\s*\](\s*)$/);
         if(match) node.nodeValue = match[1] + match[2] + match[3];
       });
+    });
+
+    const actionLinks = root.matches && root.matches('.chatOpenAction,.chatShareAction')
+      ? [root]
+      : Array.from(root.querySelectorAll ? root.querySelectorAll('.chatOpenAction,.chatShareAction') : []);
+    actionLinks.forEach(action => {
+      action.style.setProperty('background','#fff','important');
+      action.style.setProperty('color','#111','important');
+      action.style.setProperty('border','1px solid #8c959f','important');
+      action.style.setProperty('border-radius','0','important');
+      action.style.setProperty('box-shadow','none','important');
     });
   };
   clean(document.body);
