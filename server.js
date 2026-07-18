@@ -2,6 +2,9 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.25 (2026-07-18)
+// - Matched backend release for the permanent colorful camera backdrop update
+//
 // v10.0.24 (2026-07-18)
 // - Matched backend release for the enforced frontend visual-system correction
 //
