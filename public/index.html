@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.103 (2026-07-18)
+  - Enlarged the live-camera action icon with safe white-space around it
+  - Made the camera instruction smaller, regular-weight, and left-aligned
+  - Centered the public/private publishing card in the mobile viewport
+
   v10.0.102 (2026-07-18)
   - Centered the floating live-camera card vertically on mobile
   - Enlarged the camera action icon and changed its instruction to regular weight
@@ -590,11 +595,39 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeCaptureCard{position:fixed!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;z-index:2147483500!important;display:block!important;width:min(88vw,480px)!important;height:min(82vh,780px)!important;min-height:min(520px,calc(100vh - 32px))!important;margin:0!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:0!important;box-shadow:0 24px 80px rgba(0,0,0,.55)!important;overflow:hidden!important;}
 #homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;z-index:0!important;}
 #homeCaptureShade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(0,0,0,.12) 45%,rgba(0,0,0,.72) 100%)!important;z-index:1!important;}
-#homeTakePicture{position:absolute!important;z-index:2!important;left:18px!important;right:18px!important;bottom:18px!important;width:calc(100% - 36px)!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:14px!important;min-height:58px!important;padding:10px 18px!important;background:#111!important;color:#fff!important;border:1px solid #fff!important;font-size:16px!important;font-weight:400!important;line-height:1.35!important;text-align:center!important;white-space:normal!important;}
+#homeTakePicture{position:absolute!important;z-index:2!important;left:18px!important;right:18px!important;bottom:18px!important;width:calc(100% - 36px)!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:16px!important;min-height:72px!important;padding:14px 18px!important;background:#111!important;color:#fff!important;border:1px solid #fff!important;font-size:14px!important;font-weight:400!important;line-height:1.35!important;text-align:left!important;white-space:normal!important;}
 #homeTakePicture span{font-weight:400!important;}
-#homeTakePicture svg{flex:0 0 30px!important;width:30px!important;height:30px!important;fill:currentColor!important;}
+#homeTakePicture svg{flex:0 0 42px!important;width:42px!important;height:42px!important;fill:currentColor!important;}
 #homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:34px!important;height:34px!important;padding:0!important;background:#fff!important;color:#111!important;border:1px solid #8c959f!important;font-size:21px!important;font-weight:400!important;line-height:1!important;}
 #homeCaptureCard[hidden]{display:none!important;}
+
+/* Publish choice uses the same centered, square monochrome dialog system. */
+#publishDialog{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  height:100dvh!important;
+  padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))!important;
+  box-sizing:border-box!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+}
+#publishDialog>div{
+  position:relative!important;
+  width:min(100%,360px)!important;
+  max-width:360px!important;
+  max-height:calc(100dvh - 32px)!important;
+  margin:auto!important;
+  padding:18px!important;
+  box-sizing:border-box!important;
+  overflow-y:auto!important;
+  border-radius:0!important;
+  transform:none!important;
+}
+#publishDialog label{align-items:flex-start!important;text-align:left!important;border-radius:0!important;}
+#publishThumbnail{border-radius:0!important;}
 
 /* Selected room images are image-only: no broken white mat or frame. */
 .roomImageChapter .humanChosenImageWrap,
@@ -630,8 +663,8 @@ body.appBackdropActive #capturePreview{display:none!important;}
   #homeInstruction .homeHeroTitle{font-size:28px!important;line-height:1.12!important;}
   #homeInstruction .homeHeroSupport{width:100%!important;max-width:100%!important;font-size:16px!important;margin-top:12px!important;overflow-wrap:anywhere!important;}
   #homeCaptureCard{left:16px!important;right:16px!important;top:50%!important;bottom:auto!important;transform:translateY(-50%)!important;width:auto!important;height:min(72dvh,680px)!important;min-height:min(460px,calc(100dvh - 32px))!important;max-height:calc(100dvh - 32px)!important;}
-  #homeTakePicture{left:14px!important;right:14px!important;bottom:14px!important;width:calc(100% - 28px)!important;min-height:68px!important;height:auto!important;padding:12px 14px!important;font-size:14px!important;font-weight:400!important;line-height:1.35!important;text-align:center!important;white-space:normal!important;}
-  #homeTakePicture svg{flex-basis:32px!important;width:32px!important;height:32px!important;}
+  #homeTakePicture{left:14px!important;right:14px!important;bottom:14px!important;width:calc(100% - 28px)!important;min-height:76px!important;height:auto!important;padding:14px 16px!important;gap:14px!important;font-size:13px!important;font-weight:400!important;line-height:1.35!important;text-align:left!important;white-space:normal!important;}
+  #homeTakePicture svg{flex-basis:42px!important;width:42px!important;height:42px!important;}
   #homeCaptureClose{top:8px!important;right:8px!important;width:32px!important;height:32px!important;font-size:20px!important;}
 }
 
