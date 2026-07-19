@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.128 (2026-07-19)
+  - Made ASK and HUMAN opening messages begin hidden instead of briefly rendering together
+  - Revealed identity, image, instruction, and examples notice strictly one at a time
+  - Added reading-aware pauses so every opening step is visibly separate before the next begins
+  - Preserved the automatic three-card queue behind the completed opening sequence
+
   v10.0.127 (2026-07-19)
   - Gave every captured, uploaded, and Public room image its own opening-sequence key
   - Invalidated stale opening timers when ASK or HUMAN starts a different image chapter
@@ -7514,22 +7520,22 @@ function renderRoomImageChapter(message = {}){
 
   return `
     <div class="roomImageChapter" data-room-image-chapter data-room-image-key="${sequenceKey}">
-      <div class="geminiAiResponse chatAiGroup humanImageHello" data-opening-message="intro">
+      <div class="geminiAiResponse chatAiGroup humanImageHello" data-opening-message="intro" style="display:none;">
         <div class="chatBubble chatAiBubble">
           ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
         </div>
       </div>
       ${image ? `
-        <div class="humanChosenImageWrap" data-opening-message="image">
+        <div class="humanChosenImageWrap" data-opening-message="image" style="display:none;">
           <img class="humanChosenImage" src="${image}" alt="Image chosen by the user">
         </div>
       ` : ""}
-      <div class="geminiAiResponse chatAiGroup humanCardInstruction" data-opening-message="instruction">
+      <div class="geminiAiResponse chatAiGroup humanCardInstruction" data-opening-message="instruction" style="display:none;">
         <div class="chatBubble chatAiBubble">
           Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
         </div>
       </div>
-      <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice" data-opening-message="examples">
+      <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice" data-opening-message="examples" style="display:none;">
         <div class="chatBubble chatAiBubble">
           Before you ask, I’ll show you three examples of what I can provide from this image. Google should buy me.
         </div>
@@ -7618,6 +7624,14 @@ function showSequenceTyping(){
   scrollRoomToLatest(shouldFollow);
 }
 
+function getOpeningStepPause(step){
+  const kind = step?.dataset?.openingMessage || "";
+  const textLength = String(step?.textContent || "").trim().length;
+  if(kind === "image") return 2200;
+  if(kind === "intro") return Math.max(2200,Math.min(3200,1200 + textLength * 28));
+  return Math.max(3000,Math.min(4600,1500 + textLength * 24));
+}
+
 function startRoomOpeningSequence(){
   const chapters = Array.from(roomMessages.querySelectorAll("[data-room-image-chapter]"));
   const chapter = chapters[chapters.length - 1];
@@ -7684,7 +7698,7 @@ function startRoomOpeningSequence(){
       step.style.display = "";
       roomOpeningRevealedCount += 1;
       scrollRoomToLatest(shouldFollow);
-      roomOpeningSequenceTimer = setTimeout(revealNext,1100);
+      roomOpeningSequenceTimer = setTimeout(revealNext,getOpeningStepPause(step));
     },750);
   };
   revealNext();
