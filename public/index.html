@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.132 (2026-07-19)
+  - Replaced low-contrast white opening dots with a dedicated dark three-dot loader
+  - Gave the opening loader its own visible GitHub-style gray bubble and bounce animation
+  - Increased the between-step loading interval so the dots are clearly noticeable
+  - Applied the loader consistently to ASK and HUMAN inert-template openings
+
   v10.0.131 (2026-07-19)
   - Added an animated three-dot loading reply between every ASK and HUMAN opening step
   - Anchored opening dots inside the active image chapter directly after the latest delivered item
@@ -5442,6 +5448,33 @@ html body #createBeingSubmit{
   color:var(--google-red)!important;
   border:1px solid var(--google-red-line)!important;
 }
+#sequenceTyping.openingSequenceLoader{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  width:max-content!important;
+  min-width:48px!important;
+  height:36px!important;
+  margin:6px 0 14px!important;
+  padding:0 12px!important;
+  gap:5px!important;
+  box-sizing:border-box!important;
+  background:#f6f8fa!important;
+  border:1px solid #d0d7de!important;
+  border-radius:18px!important;
+}
+#sequenceTyping.openingSequenceLoader .openingSequenceDot{
+  display:block!important;
+  width:7px!important;
+  height:7px!important;
+  flex:0 0 7px!important;
+  border-radius:50%!important;
+  background:#57606a!important;
+  opacity:.35;
+  animation:aiBounce 1s infinite;
+}
+#sequenceTyping.openingSequenceLoader .openingSequenceDot:nth-child(2){animation-delay:.15s;}
+#sequenceTyping.openingSequenceLoader .openingSequenceDot:nth-child(3){animation-delay:.3s;}
 </style>
 
 <div id="publicNullsScreen"
@@ -7644,6 +7677,10 @@ function sequenceTypingHtml(){
   return '<div id="sequenceTyping" class="geminiAiResponse chatAiGroup" role="status" aria-label="AI is preparing the next reply"><div class="chatBubble chatAiBubble" style="display:flex;gap:5px;width:max-content;"><span class="aiDot"></span><span class="aiDot"></span><span class="aiDot"></span></div></div>';
 }
 
+function openingSequenceTypingHtml(){
+  return '<div id="sequenceTyping" class="openingSequenceLoader" role="status" aria-label="Preparing the next opening reply"><span class="openingSequenceDot"></span><span class="openingSequenceDot"></span><span class="openingSequenceDot"></span></div>';
+}
+
 function hideSequenceTyping(){ document.getElementById("sequenceTyping")?.remove(); }
 function showSequenceTyping(){
   hideSequenceTyping();
@@ -7656,8 +7693,8 @@ function showOpeningSequenceTyping(chapter){
   hideSequenceTyping();
   const shouldFollow = isRoomNearBottom();
   const output = chapter?.querySelector?.("[data-opening-output]");
-  if(output) output.insertAdjacentHTML("beforeend",sequenceTypingHtml());
-  else roomMessages.insertAdjacentHTML("beforeend",sequenceTypingHtml());
+  if(output) output.insertAdjacentHTML("beforeend",openingSequenceTypingHtml());
+  else roomMessages.insertAdjacentHTML("beforeend",openingSequenceTypingHtml());
   scrollRoomToLatest(shouldFollow);
 }
 
@@ -7740,7 +7777,7 @@ function startRoomOpeningSequence(){
       syncOpeningOutput(currentChapter,roomOpeningRevealedCount);
       scrollRoomToLatest(shouldFollow);
       roomOpeningSequenceTimer = setTimeout(revealNext,getOpeningStepPause(step));
-    },750);
+    },1200);
   };
   revealNext();
 }
