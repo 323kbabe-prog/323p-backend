@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.131 (2026-07-19)
+  - Added an animated three-dot loading reply between every ASK and HUMAN opening step
+  - Anchored opening dots inside the active image chapter directly after the latest delivered item
+  - Removed the dots immediately before appending the next identity, image, instruction, or notice
+  - Preserved inert-template delivery and the automatic result-card queue
+
   v10.0.130 (2026-07-19)
   - Rebuilt ASK and HUMAN openings so future replies do not exist in the visible room DOM
   - Stored unrevealed opening steps inside inert templates immune to room CSS overrides
@@ -7646,6 +7652,15 @@ function showSequenceTyping(){
   scrollRoomToLatest(shouldFollow);
 }
 
+function showOpeningSequenceTyping(chapter){
+  hideSequenceTyping();
+  const shouldFollow = isRoomNearBottom();
+  const output = chapter?.querySelector?.("[data-opening-output]");
+  if(output) output.insertAdjacentHTML("beforeend",sequenceTypingHtml());
+  else roomMessages.insertAdjacentHTML("beforeend",sequenceTypingHtml());
+  scrollRoomToLatest(shouldFollow);
+}
+
 function getOpeningStepPause(step){
   const kind = step?.dataset?.openingTemplate || "";
   const textLength = String(step?.content?.textContent || step?.textContent || "").trim().length;
@@ -7706,7 +7721,7 @@ function startRoomOpeningSequence(){
       if(beingFirstRoundQueue.length) setTimeout(runNextBeingFirstCard,700);
       return;
     }
-    showSequenceTyping();
+    showOpeningSequenceTyping(liveChapter);
     roomOpeningSequenceTimer = setTimeout(() => {
       if(runId !== roomOpeningSequenceRunId || roomOpeningSequenceKey !== chapterKey) return;
       hideSequenceTyping();
