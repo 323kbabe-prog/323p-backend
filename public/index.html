@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.125 (2026-07-19)
+  - Made ASK and HUMAN automatic examples wait for the preceding result instead of skipping ahead on a fixed timeout
+  - Kept the final demo question behind all three delivered examples
+  - Added reading-aware room scrolling so new replies do not pull the viewport away from older content
+  - Preserved the full opening process whenever a new captured, uploaded, or Public image starts a room chapter
+
   v10.0.124 (2026-07-19)
   - Made the home Take Camera View action open the same simple floating camera card used in ASK and HUMAN rooms
   - Standardized Take Camera View, Upload Image, and Public Camera Perspectives to one 56px action height
@@ -6361,6 +6367,7 @@ let beingFirstRoundWaiting = false;
 let beingFirstRoundBaseline = 0;
 let beingFirstRoundInsertionIndex = null;
 let beingFirstRoundStepTimer = null;
+let beingFirstRoundDelayTimer = null;
 let lastRoomMessageCount = 0;
 let roomOpeningSequenceActive = false;
 let roomOpeningSequenceComplete = false;
@@ -7480,6 +7487,11 @@ function isFirstRoundActive(){
 }
 
 function resetRoomDeliverySequence(){
+  beingFirstRoundQueue = [];
+  beingFirstRoundWaiting = false;
+  beingFirstRoundBaseline = lastRoomMessageCount;
+  clearTimeout(beingFirstRoundStepTimer);
+  beingFirstRoundStepTimer = null;
   roomOpeningSequenceActive = false;
   roomOpeningSequenceComplete = false;
   clearTimeout(roomOpeningSequenceTimer);
@@ -7491,6 +7503,28 @@ function resetRoomDeliverySequence(){
   clearTimeout(roomReplyDeliveryTimer);
   roomReplyDeliveryTimer = null;
   roomReplyDeliveryActive = false;
+  clearTimeout(beingFirstRoundDelayTimer);
+  beingFirstRoundDelayTimer = null;
+  document.getElementById("sequenceDelayNotice")?.remove();
+}
+
+function isRoomNearBottom(threshold = 140){
+  return roomMessages.scrollHeight - roomMessages.scrollTop - roomMessages.clientHeight <= threshold;
+}
+
+function scrollRoomToLatest(shouldFollow = true){
+  if(!shouldFollow) return;
+  requestAnimationFrame(() => {
+    roomMessages.scrollTop = roomMessages.scrollHeight;
+  });
+}
+
+function showSequenceDelayNotice(){
+  if(!beingFirstRoundWaiting || document.getElementById("sequenceDelayNotice")) return;
+  const shouldFollow = isRoomNearBottom();
+  hideSequenceTyping();
+  roomMessages.insertAdjacentHTML("beforeend",'<div id="sequenceDelayNotice" class="geminiAiResponse chatAiGroup" role="status"><div class="chatBubble chatAiBubble">Still preparing this example…</div></div>');
+  scrollRoomToLatest(shouldFollow);
 }
 
 function sequenceTypingHtml(){
@@ -7500,8 +7534,9 @@ function sequenceTypingHtml(){
 function hideSequenceTyping(){ document.getElementById("sequenceTyping")?.remove(); }
 function showSequenceTyping(){
   hideSequenceTyping();
+  const shouldFollow = isRoomNearBottom();
   roomMessages.insertAdjacentHTML("beforeend",sequenceTypingHtml());
-  roomMessages.scrollTop = roomMessages.scrollHeight;
+  scrollRoomToLatest(shouldFollow);
 }
 
 function startRoomOpeningSequence(){
@@ -7530,8 +7565,9 @@ function startRoomOpeningSequence(){
     roomOpeningSequenceTimer = setTimeout(() => {
       hideSequenceTyping();
       const step = steps[index++];
+      const shouldFollow = isRoomNearBottom();
       step.style.display = "";
-      roomMessages.scrollTop = roomMessages.scrollHeight;
+      scrollRoomToLatest(shouldFollow);
       roomOpeningSequenceTimer = setTimeout(revealNext,700);
     },500);
   };
@@ -7551,8 +7587,9 @@ function deliverFirstRoundDemo(){
     firstRoundDemoPending = false;
     firstRoundDemoVisible = true;
     firstRoundDemoInsertionIndex = lastRoomMessageCount;
+    const shouldFollow = isRoomNearBottom();
     roomMessages.insertAdjacentHTML("beforeend",firstRoundDemoHtml());
-    roomMessages.scrollTop = roomMessages.scrollHeight;
+    scrollRoomToLatest(shouldFollow);
     syncFirstRoundInput();
   },700);
 }
@@ -7580,8 +7617,9 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
     showSequenceTyping();
     roomReplyDeliveryTimer = setTimeout(() => {
       hideSequenceTyping();
+      const shouldFollow = isRoomNearBottom();
       pending[index++].style.display = "contents";
-      roomMessages.scrollTop = roomMessages.scrollHeight;
+      scrollRoomToLatest(shouldFollow);
       roomReplyDeliveryTimer = setTimeout(reveal,700);
     },600);
   };
@@ -7652,6 +7690,8 @@ function getBeingFirstRoundLead(){
 
 socket.on("roomMessages",messages => {
 
+const shouldFollowLatest = isRoomNearBottom();
+
 if(getActiveRoomKind() === "ask"){
   renderStandardRoomHeader();
 }
@@ -7665,6 +7705,9 @@ if (
 ) {
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
+  clearTimeout(beingFirstRoundDelayTimer);
+  beingFirstRoundDelayTimer = null;
+  document.getElementById("sequenceDelayNotice")?.remove();
   beingFirstRoundWaiting = false;
   setTimeout(runNextBeingFirstCard, 700);
 }
@@ -8562,12 +8605,7 @@ typing
 );
 }
 
-requestAnimationFrame(() => {
-
-roomMessages.scrollTop =
-roomMessages.scrollHeight;
-
-});
+scrollRoomToLatest(shouldFollowLatest);
 
 
 
@@ -8645,6 +8683,7 @@ document.getElementById("homeRoomCountdown").innerText =
 
 function showAITyping(){
 
+  const shouldFollow = isRoomNearBottom();
   hideAITyping();
 
   aiTyping = true;
@@ -8679,8 +8718,7 @@ roomMessages.insertAdjacentElement(
   wrap
 );
 
-  roomMessages.scrollTop =
-    roomMessages.scrollHeight;
+  scrollRoomToLatest(shouldFollow);
 }
 
 function hideAITyping(){
@@ -8825,7 +8863,7 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   firstRoundDemoVisible = false;
   firstRoundDemoInsertionIndex = null;
   syncFirstRoundInput();
-  roomMessages.scrollTop = roomMessages.scrollHeight;
+  scrollRoomToLatest(isRoomNearBottom());
   const openingChapterExists = Boolean(roomMessages.querySelector("[data-room-image-chapter]"));
   if(roomOpeningSequenceComplete || !openingChapterExists){
     setTimeout(runNextBeingFirstCard,700);
@@ -8857,11 +8895,8 @@ function runNextBeingFirstCard(){
       autoCardType: next.type,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
-    beingFirstRoundStepTimer = setTimeout(() => {
-      beingFirstRoundWaiting = false;
-      syncFirstRoundInput();
-      runNextBeingFirstCard();
-    },15000);
+    clearTimeout(beingFirstRoundDelayTimer);
+    beingFirstRoundDelayTimer = setTimeout(showSequenceDelayNotice,15000);
   },700);
 }
 
