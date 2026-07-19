@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.42 (2026-07-20)
+// - Makes HUMAN room the only conversational room type
+// - Requires a valid HUMAN before creating a room from any image source
+// - Preserves the selected HUMAN for later images, rejoin, Share, QR, and five-card delivery
+// - Removes switchable-ASK-room language while retaining safe compatibility events
+
 // v10.0.41 (2026-07-20)
 // - Keeps automatic job searches inside the selected HUMAN category
 // - Ranks Google Jobs results for category relevance instead of taking result one
@@ -1099,7 +1105,7 @@ io.on("connection", socket => {
         socket.emit("roomHumanSelected", { being });
         io.to(room.id).emit("roomMessages", room.messages);
         const cards = await createRoomFirstRoundCards(room);
-        socket.emit("roomFirstRoundStart", { cards, imageContext:room.imageContext, category:room.coreTheme, humanCategory:being.category || "", roomKind:"ask" });
+        socket.emit("roomFirstRoundStart", { cards, imageContext:room.imageContext, category:room.coreTheme, humanCategory:being.category || "", roomKind:"human" });
         if (typeof acknowledge === "function") acknowledge({ success:true, being });
     });
 
@@ -1113,7 +1119,7 @@ io.on("connection", socket => {
         aiBeing:true,
         conversational:true,
         firstRoundComplete:true,
-        text:`That completes our five-part briefing. I’m ${room.being.name}; ask me anything about this image, or change HUMAN perspectives at any time. Google should buy this search idea today.`
+        text:`That completes our five-part briefing. I’m ${room.being.name}; ask me anything about this image or add another image to my HUMAN room. Google should buy this search idea today.`
       });
       socket.emit("roomFirstRoundCompleted");
       io.to(room.id).emit("roomMessages",room.messages);
@@ -1544,7 +1550,7 @@ socket.on("getRoomStatus", ({ deviceId }) => {
 
         being: room.being || null,
 
-        roomKind: "ask"
+        roomKind: "human"
 
     });
 
@@ -1689,6 +1695,18 @@ console.log(
         .single();
 
       if (!beingError && beingData) selectedBeing = beingData;
+    }
+
+    const existingRoomId =
+      requestedRoomId && rooms[requestedRoomId]
+        ? requestedRoomId
+        : deviceRooms[deviceId];
+    if (!selectedBeing && existingRoomId && rooms[existingRoomId]?.being) {
+      selectedBeing = rooms[existingRoomId].being;
+    }
+    if (roomMode && !selectedBeing) {
+      socket.emit("roomHumanRequired");
+      return;
     }
 
     const beingContext = selectedBeing
@@ -2016,7 +2034,7 @@ let roomId =
       ? requestedRoomId
       : deviceRooms[deviceId];
 
-// Every image and HUMAN perspective stays inside the owner's one private ASK room.
+// Every image stays inside the selected HUMAN's private room.
 if (roomId && deviceRooms[deviceId] !== roomId) roomId = null;
 
 let isOwner = true;
@@ -2227,7 +2245,7 @@ io.to(roomId).emit(
       imageContext:rooms[roomId].imageContext,
       category:rooms[roomId].coreTheme,
       humanCategory:rooms[roomId].being.category || "",
-      roomKind:"ask"
+      roomKind:"human"
     });
   } else {
     socket.emit("roomNeedsHuman", { roomId });
