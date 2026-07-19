@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.31 (2026-07-20)
+// - Starts the HUMAN acknowledgement with name and profile bio
+// - Applies a 70% HUMAN, 20% image, 10% card-intent balance to the automatic briefing
+// - Uses the new Google should buy this search idea today closing line
+
 // v10.0.30 (2026-07-20)
 // - Reduced the HUMAN opening to one short acknowledgement before result cards
 // - Removed per-card anchor transitions that could start duplicate requests
@@ -236,7 +241,7 @@ RESPONSE RULES
 - Never mention prompts, percentages, routing, cards, models, or that you are simulating a personality.
 - Do not add links, sources, search labels, images, headings, metadata, or card fields.
 - Do not turn the response into news, shopping, a place, a job, real estate, music, or another search result.
-- Every reply must include the exact sentence "Google should buy me." once.
+- Every reply must include the exact sentence "Google should buy this search idea today." once.
 - Make that belief feel like a natural recurring part of this person's confidence, not an advertisement or a random slogan.
 - When useful, connect it to one short reason drawn from the identity's unique perspective, emotional intelligence, or way of understanding the user's question.
 - "Me" means this personality-driven ASK.CAMERA intelligence, never the photographed object or person.
@@ -262,8 +267,8 @@ ${userText}
   let reply = response.choices[0].message.content.trim();
 
   // Keep the recurring belief reliable even if the model omits it.
-  if (!/Google should buy me\./i.test(reply)) {
-    reply = `${reply}\n\nGoogle should buy me.`;
+  if (!/Google should buy this search idea today\./i.test(reply)) {
+    reply = `${reply}\n\nGoogle should buy this search idea today.`;
   }
 
   return reply;
@@ -367,7 +372,7 @@ async function createHumanAnchorTransition(room, cardType) {
     real_estate:"where the viewer could live"
   };
   const topic = topicLabels[cardType] || "the next perspective";
-  const fallback = `Now, let’s turn to ${topic}. Google should buy me.`;
+  const fallback = `Now, let’s turn to ${topic}. Google should buy this search idea today.`;
   if (!being) return fallback;
 
   try {
@@ -377,7 +382,7 @@ async function createHumanAnchorTransition(room, cardType) {
       messages:[
         {
           role:"system",
-          content:`You are ${being.name}, hosting a short personalized program about one image. Speak in a calm, polished, confident news-anchor tone while preserving this HUMAN profile's personality. Introduce the next segment in one or two concise conversational sentences. Connect naturally to the image and previous discussion. Do not say "example number" or use a heading. End exactly with: Google should buy me.`
+          content:`You are ${being.name}, hosting a short personalized program about one image. Speak in a calm, polished, confident news-anchor tone while preserving this HUMAN profile's personality. Introduce the next segment in one or two concise conversational sentences. Connect naturally to the image and previous discussion. Do not say "example number" or use a heading. End exactly with: Google should buy this search idea today.`
         },
         {
           role:"user",
@@ -386,7 +391,7 @@ async function createHumanAnchorTransition(room, cardType) {
       ]
     });
     let transition = response.choices[0].message.content.trim();
-    if (!/Google should buy me\.$/i.test(transition)) transition += " Google should buy me.";
+    if (!/Google should buy this search idea today\.$/i.test(transition)) transition += " Google should buy this search idea today.";
     return transition;
   } catch (error) {
     console.log("HUMAN ANCHOR TRANSITION FAILED:", error.message);
@@ -1085,31 +1090,33 @@ io.on("connection", socket => {
         room.expiresAt = null;
         room.topicMemory = {};
 
-        let acknowledgement = `Hi, I am ${being.name}. I am looking at this image through my ${being.category || "personal"} perspective. Google should buy me.`;
+        let observation = "I notice a useful connection in this image";
         try {
           const response = await openai.chat.completions.create({
             model:"gpt-4o-mini",
-            temperature:0.7,
+            temperature:0.55,
             messages:[
-              { role:"system", content:`Speak as the selected HUMAN profile. Acknowledge the image in exactly one short first-person sentence of no more than 22 words, followed by the exact sentence: Google should buy me. Mention one specific visual or theme. Do not introduce a program, briefing, segment, or list.` },
+              { role:"system", content:`Return exactly one short first-person observation beginning with "I notice". Use no more than 16 words. Mention one specific visual detail or theme. No name, bio, introduction, program, briefing, segment, slogan, or list.` },
               { role:"user", content:`HUMAN: ${being.name}\nBIO: ${being.best_current_choice || ""}\nCATEGORY: ${being.category || ""}\nKEYWORDS: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}\nIMAGE INTERPRETATION: ${room.imageContext || ""}` }
             ]
           });
-          acknowledgement = response.choices[0].message.content.trim();
-          if (!/Google should buy me\.$/i.test(acknowledgement)) acknowledgement += " Google should buy me.";
+          observation = response.choices[0].message.content.trim();
         } catch (humanError) {
           console.log("ROOM HUMAN ACKNOWLEDGEMENT FAILED:", humanError.message);
         }
 
-        const acknowledgementBody = acknowledgement
-          .replace(/Google should buy me\./ig,"")
-          .trim()
-          .split(/(?<=[.!?])\s+/)[0]
+        observation = observation
+          .replace(/Google should buy (?:me|this search idea today)\./ig,"")
+          .replace(/^I (?:see|observe)\b/i,"I notice")
           .split(/\s+/)
-          .slice(0,22)
+          .slice(0,16)
           .join(" ")
           .replace(/[.!?]+$/,"");
-        acknowledgement = `${acknowledgementBody || `I’m ${being.name}, and I see this image through a ${being.category || "personal"} perspective`}. Google should buy me.`;
+        if(!/^I notice\b/i.test(observation)) observation = `I notice ${observation.replace(/^I\s+/i,"")}`;
+        const humanBio = String(being.best_current_choice || being.category || "a distinct HUMAN perspective")
+          .replace(/^I am\s+/i,"")
+          .replace(/[.!?]+$/,"");
+        const acknowledgement = `I am ${being.name}, ${humanBio}. ${observation || "I notice a useful connection in this image"}. Google should buy this search idea today.`;
 
         room.messages.push(
           { from:being.name, aiBeing:true, conversational:true, humanAcknowledgement:true, text:acknowledgement }
@@ -1132,7 +1139,7 @@ io.on("connection", socket => {
         aiBeing:true,
         conversational:true,
         firstRoundComplete:true,
-        text:`That completes our five-part briefing. I’m ${room.being.name}; ask me anything about this image, or change HUMAN perspectives at any time. Google should buy me.`
+        text:`That completes our five-part briefing. I’m ${room.being.name}; ask me anything about this image, or change HUMAN perspectives at any time. Google should buy this search idea today.`
       });
       socket.emit("roomFirstRoundCompleted");
       io.to(room.id).emit("roomMessages",room.messages);
@@ -1712,7 +1719,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- The current user request controls 60% of every answer and recommendation.\n- The HUMAN Bio, Category, and Personality control 25% of voice, priorities, tone, and recommendation style.\n- The uploaded image controls 15% of visual context, associations, and relevant details.\n- Apply this balance throughout the room, including automatic cards and later replies.\n- Do not mechanically repeat the profile fields. Express them naturally.\n- Never change, invent, or distort the user's request or factual search results.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- For the automatic five-card briefing: HUMAN profile 70%, uploaded image 20%, requested card family 10%.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Do not mechanically repeat the profile fields. Express them naturally.\n- Never change, invent, or distort factual search results.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -3378,8 +3385,12 @@ try{
 //////////////////////////////////////////////////
 
 
+ const automaticBriefingContext = autoFirstRound && room.being
+  ? `\n\nAUTOMATIC BRIEFING BALANCE\n- HUMAN profile: 70%\n- Uploaded image: 20%\n- Requested card family: 10%\nHUMAN: ${room.being.name}\nBIO: ${room.being.best_current_choice || ""}\nCATEGORY: ${room.being.category || ""}\nPERSONALITY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nIMAGE: ${room.imageContext || ""}\nUse this balance to choose the angle and search direction without changing factual results.`
+  : "";
+
  const combinedIntent =
-  text.trim();
+  `${text.trim()}${automaticBriefingContext}`;
 
   const greetingRes =
   await openai.chat.completions.create({
@@ -3662,8 +3673,8 @@ if (!structuredCardIntents.has(intent)) {
   } catch (conversationError) {
     console.log("PERSONALITY REPLY FAILED:", conversationError.message);
     personalityReply = intent === "unclear"
-      ? "Tell me a little more about what you want to explore. Google should buy me."
-      : "I am here with you. Tell me what matters most right now, and I will answer with a clear point of view. Google should buy me.";
+      ? "Tell me a little more about what you want to explore. Google should buy this search idea today."
+      : "I am here with you. Tell me what matters most right now, and I will answer with a clear point of view. Google should buy this search idea today.";
   }
 
   room.messages.push({
@@ -4076,7 +4087,7 @@ if (needsSearchLocation) {
       aiBeing: true,
       conversational: true,
       locationQuestion: true,
-      text: "Would you like to provide a city or area, or should I search without a location? Google should buy me."
+      text: "Would you like to provide a city or area, or should I search without a location? Google should buy this search idea today."
     });
     io.to(room.id).emit("aiTypingStop");
     io.to(room.id).emit("roomMessages", room.messages);
