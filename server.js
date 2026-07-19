@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.36 (2026-07-20)
+// - Generates and validates all five HUMAN search sentences before delivery starts
+// - Combines the HUMAN category with one useful image-identity concept per card
+// - Supplies deterministic type-safe searches if generation is incomplete
+//
 // v10.0.35 (2026-07-20)
 // - Prevents image-context real-estate words from overriding automatic card types
 // - Returns a matching search fallback when an automatic card lookup fails
@@ -294,9 +299,22 @@ ${userText}
   return reply;
 }
 
-async function chooseRoomFirstRoundCardTypes(room) {
+async function createRoomFirstRoundCards(room) {
   const allowed = ["news", "shopping", "place", "jobs", "real_estate"];
   const being = room?.being;
+  const category = String(being?.category || room?.coreTheme || "general discovery").trim();
+  const imageWords = String(room?.coreTheme || room?.hiddenSystem || room?.imageContext || "image")
+    .toLowerCase()
+    .match(/[a-z][a-z-]*/g) || ["image"];
+  const ignoredWords = new Set(["the","and","with","from","this","that","image","human","camera","category"]);
+  const imageWord = imageWords.find(word => word.length > 2 && !ignoredWords.has(word)) || "visual";
+  const fallbackQueries = {
+    news:`${category} ${imageWord} latest news`,
+    shopping:`${category} ${imageWord} products`,
+    place:`${category} ${imageWord} places to visit`,
+    jobs:`${category} ${imageWord} jobs`,
+    real_estate:`${category} ${imageWord} homes and property`
+  };
 
   try {
     const response = await openai.chat.completions.create({
@@ -306,7 +324,7 @@ async function chooseRoomFirstRoundCardTypes(room) {
         {
           role: "system",
           content: `
-Choose the order of exactly FIVE useful card types for this ASK.CAMERA room to preview before the user asks a question.
+Generate exactly FIVE concise internet search sentences for an ASK.CAMERA briefing.
 
 Allowed card types:
 news
@@ -315,13 +333,16 @@ place
 jobs
 real_estate
 
-Selection rules:
-- The uploaded image interpretation must materially influence every selection.
-- If a HUMAN profile is provided, its bio, category, and personality must also strongly influence the selection.
-- If no HUMAN profile is provided, select entirely from the image interpretation and category.
-- Use all five different types exactly once.
-- Return only the five exact type names separated by commas.
-- No explanation, numbering, markdown, or extra words.
+Rules:
+- Produce exactly one search for every allowed card type.
+- The selected HUMAN category is the main subject of every search.
+- Add one useful word or short visual concept from the image identity so the search fits this image.
+- Optimize each sentence for real current internet results in its assigned card type.
+- Keep each search between 3 and 12 words.
+- Do not use the HUMAN bio to choose the search subject.
+- Do not include instructions, explanations, percentages, quotation marks, or markdown.
+- Return valid JSON only in this exact shape:
+{"news":"","shopping":"","place":"","jobs":"","real_estate":""}
           `.trim()
         },
         {
@@ -343,43 +364,25 @@ Personality: ${being?.word1 || ""}, ${being?.word2 || ""}, ${being?.word3 || ""}
       ]
     });
 
-    const selected = String(response.choices[0].message.content || "")
-      .toLowerCase()
-      .split(/[\s,]+/)
-      .map(value => value.trim())
-      .filter(value => allowed.includes(value));
-
-    const unique = [...new Set(selected)];
-    if (unique.length === 5) return unique;
+    const raw = String(response.choices[0].message.content || "")
+      .replace(/^```(?:json)?\s*/i,"")
+      .replace(/\s*```$/,"")
+      .trim();
+    const generated = JSON.parse(raw);
+    const cards = allowed.map(type => ({
+      type,
+      text:String(generated?.[type] || "").replace(/[\r\n]+/g," ").trim()
+    }));
+    const valid = cards.every(card => {
+      const wordCount = card.text.split(/\s+/).filter(Boolean).length;
+      return wordCount >= 3 && wordCount <= 16;
+    });
+    if (valid) return cards;
   } catch (error) {
-    console.log("ROOM FIRST ROUND CARD SELECTION FAILED:", error.message);
+    console.log("ROOM FIRST ROUND SEARCH GENERATION FAILED:", error.message);
   }
 
-  const context = [
-    room.imageContext,
-    room.coreTheme,
-    being?.best_current_choice,
-    being?.category,
-    being?.word1,
-    being?.word2,
-    being?.word3
-  ].filter(Boolean).join(" ").toLowerCase();
-
-  const fallback = [
-    { type:"news", score:0.4, words:["news","today","technology","business","politics","culture","music","sports","trend"] },
-    { type:"place", score:0.3, words:["travel","place","restaurant","cafe","coffee","hotel","food","event","city","visit","airline"] },
-    { type:"shopping", score:0.2, words:["shop","product","buy","fashion","luxury","food","beauty","style","retail","deal"] },
-    { type:"jobs", score:0.15, words:["job","career","work","hiring","business","professional","opportunity"] },
-    { type:"real_estate", score:0.1, words:["real estate","property","home","house","apartment","condo","interior","architecture","rent"] }
-  ].map(item => ({
-    ...item,
-    score:item.score + item.words.reduce(
-      (total,word) => total + (context.includes(word) ? 2 : 0),
-      0
-    )
-  })).sort((a,b) => b.score - a.score);
-
-  return fallback.slice(0,5).map(item => item.type);
+  return allowed.map(type => ({ type, text:fallbackQueries[type] }));
 }
 
 async function createHumanAnchorTransition(room, cardType) {
@@ -1144,8 +1147,8 @@ io.on("connection", socket => {
 
         socket.emit("roomHumanSelected", { being });
         io.to(room.id).emit("roomMessages", room.messages);
-        const cardTypes = await chooseRoomFirstRoundCardTypes(room);
-        socket.emit("roomFirstRoundStart", { cardTypes, imageContext:room.imageContext, category:room.coreTheme, humanCategory:being.category || "", roomKind:"ask" });
+        const cards = await createRoomFirstRoundCards(room);
+        socket.emit("roomFirstRoundStart", { cards, imageContext:room.imageContext, category:room.coreTheme, humanCategory:being.category || "", roomKind:"ask" });
         if (typeof acknowledge === "function") acknowledge({ success:true, being });
     });
 
@@ -2271,9 +2274,9 @@ io.to(roomId).emit(
 {
   if (rooms[roomId].being) {
     socket.emit("roomHumanSelected", { being:rooms[roomId].being, invitation:true });
-    const firstRoundCardTypes = await chooseRoomFirstRoundCardTypes(rooms[roomId]);
+    const firstRoundCards = await createRoomFirstRoundCards(rooms[roomId]);
     socket.emit("roomFirstRoundStart", {
-      cardTypes:firstRoundCardTypes,
+      cards:firstRoundCards,
       imageContext:rooms[roomId].imageContext,
       category:rooms[roomId].coreTheme,
       humanCategory:rooms[roomId].being.category || "",
