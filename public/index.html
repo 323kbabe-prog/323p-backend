@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.141 (2026-07-20)
+  - Makes the server HUMAN-selection requirement authoritative for each new ASK room
+  - Clears stale HUMAN selection left by a previous room
+  - Opens HUMAN Cards synchronously without a handoff timer
+
   v10.0.140 (2026-07-20)
   - Opens HUMAN Cards directly after the final ASK opening instruction
   - Keeps one light-gray loading indicator visible during the handoff
@@ -6691,7 +6696,6 @@ let roomOpeningRevealedCount = 0;
 let roomOpeningBootstrapActive = false;
 let roomNeedsHumanSelection = false;
 let humanSelectionOpening = false;
-let humanSelectionHandoffTimer = null;
 let firstRoundDemoPending = false;
 let firstRoundDemoVisible = false;
 let firstRoundDemoInsertionIndex = null;
@@ -7894,8 +7898,6 @@ function resetRoomDeliverySequence(){
   roomOpeningBootstrapActive = false;
   roomNeedsHumanSelection = false;
   humanSelectionOpening = false;
-  clearTimeout(humanSelectionHandoffTimer);
-  humanSelectionHandoffTimer = null;
   clearTimeout(roomOpeningSequenceTimer);
   roomOpeningSequenceTimer = null;
   firstRoundDemoPending = false;
@@ -7982,21 +7984,14 @@ function syncOpeningOutput(chapter,revealedCount){
 }
 
 function openRequiredHumanSelection(){
-  clearTimeout(humanSelectionHandoffTimer);
-  humanSelectionHandoffTimer = null;
   const humanScreen = document.getElementById("aiBeingsScreen");
-  if(!roomNeedsHumanSelection || localStorage.getItem("selectedBeingId") || humanScreen?.style.display === "flex") return;
+  if(!roomNeedsHumanSelection || humanScreen?.style.display === "flex") return;
   humanSelectionOpening = true;
   roomOpeningSequenceActive = false;
   roomOpeningSequenceComplete = true;
   hideSequenceTyping();
   syncFirstRoundInput();
   showAIBeings();
-}
-
-function scheduleRequiredHumanSelection(delay = 700){
-  clearTimeout(humanSelectionHandoffTimer);
-  humanSelectionHandoffTimer = setTimeout(openRequiredHumanSelection,delay);
 }
 
 function startRoomOpeningSequence(){
@@ -8037,9 +8032,9 @@ function startRoomOpeningSequence(){
       roomOpeningSequenceActive = false;
       roomOpeningSequenceComplete = true;
       syncFirstRoundInput();
-      if(roomNeedsHumanSelection && !localStorage.getItem("selectedBeingId")){
+      if(roomNeedsHumanSelection){
         humanSelectionOpening = true;
-        scheduleRequiredHumanSelection();
+        openRequiredHumanSelection();
       }else if(beingFirstRoundQueue.length){
         setTimeout(runNextBeingFirstCard,700);
       }
@@ -8063,13 +8058,12 @@ function startRoomOpeningSequence(){
       roomOpeningRevealedCount += 1;
       syncOpeningOutput(currentChapter,roomOpeningRevealedCount);
       scrollRoomToLatest(shouldFollow);
-      if(roomOpeningRevealedCount >= currentSteps.length && roomNeedsHumanSelection && !localStorage.getItem("selectedBeingId")){
+      if(roomOpeningRevealedCount >= currentSteps.length && roomNeedsHumanSelection){
         roomOpeningSequenceActive = false;
         roomOpeningSequenceComplete = true;
         humanSelectionOpening = true;
-        showOpeningSequenceTyping(currentChapter);
         syncFirstRoundInput();
-        scheduleRequiredHumanSelection(700);
+        openRequiredHumanSelection();
         return;
       }
       roomOpeningSequenceTimer = setTimeout(revealNext,getOpeningStepPause(step));
@@ -9417,12 +9411,12 @@ function selectBeingFirstRoundCards(data = {}){
 
 socket.on("roomNeedsHuman", () => {
   roomNeedsHumanSelection = true;
+  localStorage.removeItem("selectedBeingId");
+  localStorage.removeItem("selectedBeing");
   syncFirstRoundInput();
-  if(roomOpeningSequenceComplete && !localStorage.getItem("selectedBeingId")){
+  if(roomOpeningSequenceComplete){
     humanSelectionOpening = true;
-    scheduleRequiredHumanSelection();
-  }else if(!localStorage.getItem("selectedBeingId")){
-    scheduleRequiredHumanSelection(9000);
+    openRequiredHumanSelection();
   }
 });
 
@@ -9433,8 +9427,6 @@ socket.on("roomHumanSelected", ({ being } = {}) => {
   setActiveRoomKind("ask");
   roomNeedsHumanSelection = false;
   humanSelectionOpening = false;
-  clearTimeout(humanSelectionHandoffTimer);
-  humanSelectionHandoffTimer = null;
   renderBeingRoomHeader(being);
   document.getElementById("aiBeingsScreen").style.display = "none";
   roomOverlay.style.display = "flex";
