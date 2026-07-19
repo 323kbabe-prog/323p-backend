@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.124 (2026-07-19)
+  - Made the home Take Camera View action open the same simple floating camera card used in ASK and HUMAN rooms
+  - Standardized Take Camera View, Upload Image, and Public Camera Perspectives to one 56px action height
+  - Preserved shutter-only capture, frozen publish preview, and safe close behavior
+
   v10.0.123 (2026-07-19)
   - Added an explicit Take Camera View button with a camera icon above Upload Image
   - Routed that button to the existing floating live-camera card
@@ -911,9 +916,10 @@ body.systemBlockingState #helper{
 #homeStartupTrial,.systemStateText a{color:var(--guide-blue-dark)!important;}
 #shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn{color:var(--guide-blue-dark)!important;border-color:var(--guide-blue-border)!important;background:#fff!important;}
 #publicNullsBtn,#dailyNullsBtn,#aiBeingsBtn{color:var(--guide-blue-dark)!important;border-color:var(--guide-blue-border)!important;background:var(--guide-blue-soft)!important;}
-#takeCameraViewBtn{width:100%!important;min-height:48px!important;background:var(--guide-blue)!important;color:#fff!important;border:1px solid var(--guide-blue)!important;}
+#takeCameraViewBtn,#uploadBtn,#publicNullsBtn{width:100%!important;height:56px!important;min-height:56px!important;max-height:56px!important;padding:0 18px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;}
+#takeCameraViewBtn{background:var(--guide-blue)!important;color:#fff!important;border:1px solid var(--guide-blue)!important;}
 #takeCameraViewBtn svg{flex:0 0 auto!important;}
-#uploadBtn{width:100%!important;margin-top:8px!important;background:var(--guide-blue-soft)!important;color:var(--guide-blue-dark)!important;border:1px solid var(--guide-blue-border)!important;}
+#uploadBtn,#publicNullsBtn{margin-top:8px!important;background:var(--guide-blue-soft)!important;color:var(--guide-blue-dark)!important;border:1px solid var(--guide-blue-border)!important;}
 .beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin{color:#cf222e!important;border-color:#ff8182!important;background:#fff!important;}
 </style>
 
@@ -11001,13 +11007,8 @@ const HOME_HERO_HTML = `
 let homeCaptureCardDismissed = false;
 
 async function openHomeFloatingCamera(event){
-  if(event){ event.preventDefault(); event.stopPropagation(); }
   clearSystemState("camera");
-  homeCaptureCardDismissed = false;
-  if(!video.srcObject) await ensureCameraStream();
-  ensureCanonicalHomeExperience();
-  const layer = document.getElementById("homeStartupLayer");
-  if(layer && video.srcObject) layer.hidden = false;
+  await openRoomFloatingCamera(event);
 }
 
 function closeHomeCaptureCard(event){
@@ -11033,7 +11034,7 @@ function ensureRoomFloatingCamera(){
     layer.hidden = true;
     layer.setAttribute("role","dialog");
     layer.setAttribute("aria-modal","true");
-    layer.setAttribute("aria-label","Room camera");
+    layer.setAttribute("aria-label","Camera view");
     layer.innerHTML = `
       <div id="roomFloatingCameraCard">
         <video id="roomFloatingCameraVideo" autoplay playsinline muted aria-hidden="true"></video>
@@ -11080,7 +11081,8 @@ function closeRoomFloatingCamera(event,keepStream = false){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   const layer = document.getElementById("roomFloatingCameraLayer");
   if(layer) layer.hidden = true;
-  if(!keepStream) stopCameraStream();
+  const returningToRoom = getComputedStyle(roomOverlay).display === "flex";
+  if(!keepStream && returningToRoom) stopCameraStream();
   if(roomCameraReturnFocus && typeof roomCameraReturnFocus.focus === "function") roomCameraReturnFocus.focus();
   roomCameraReturnFocus = null;
 }
@@ -11089,7 +11091,7 @@ async function takeRoomFloatingPicture(event){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   closeRoomFloatingCamera(null,true);
   await captureImage();
-  stopCameraStream();
+  if(getComputedStyle(roomOverlay).display === "flex") stopCameraStream();
 }
 
 document.addEventListener("keydown",event => {
