@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.155 (2026-07-20)
+  - Makes HUMAN room the only user-facing room and requires a HUMAN before room creation
+  - Supports image-first and HUMAN-first entry without creating an intermediate ASK room
+  - Keeps HUMAN Share and QR invitations private while preserving the five-card sequence
+  - Removes active-room HUMAN switching and updates room navigation, recovery, and copy
+
   v10.0.154 (2026-07-20)
   - Shows Use perspective only when HUMAN Cards opens from an active ASK room
   - Removes the former no-image HUMAN-room preview and hosted-room entry path
@@ -1822,7 +1828,7 @@ margin-right:auto;
 #roomUpgradeWarning .chatAiBubble{border-color:#ff8182!important;color:var(--ask-danger)!important;background:#fff8f8!important;}
 </style>
 <style id="askCameraOneRoomHumanActionsV153">
-/* HUMAN is a perspective inside the ASK room, never a second hosted room. */
+/* HUMAN room is the app's only conversational room. */
 html body #roomMessages.geminiThread .chatOpenAction,
 html body #roomMessages.geminiThread .geminiMediaResponse .chatShareAction,
 html body #roomMessages.geminiThread .chatShareAction{
@@ -1912,10 +1918,10 @@ ASK.CAMERA – AI Camera Search
 </div>
 
 <div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:92px 16px 24px;box-sizing:border-box;flex-direction:column;">
-  <button id="aiBeingsBackBtn" onclick="returnFromHumanCards()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK room</span></button>
+  <button id="aiBeingsBackBtn" onclick="returnFromHumanCards()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span></button>
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
-    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose the HUMAN perspective that will guide your ASK room results.</div>
+    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a HUMAN, then add an image to open their private room.</div>
     <button onclick="openCreateBeing()" style="display:block;width:100%;max-width:420px;margin:0 auto 18px;height:56px;border:1px solid #fff;border-radius:22px;background:transparent;color:#fff;font-size:18px;font-weight:900;">Create a HUMAN Card</button>
   </div>
   <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
@@ -6493,6 +6499,9 @@ const helper =
 
 const freshCameraHomeHTML = helper.innerHTML;
 const ROOM_KIND_KEY = "activeRoomKind";
+if(localStorage.getItem(ROOM_KIND_KEY) === "ask"){
+  localStorage.setItem(ROOM_KIND_KEY,"human");
+}
 let publicReturnContext = "home";
 let activeSystemState = "";
 
@@ -6551,12 +6560,12 @@ function showSystemState({ key, title, text = "", loading = false, primary = nul
 }
 
 function getActiveRoomKind(data){
-  return "ask";
+  return "human";
 }
 
 function setActiveRoomKind(kind){
-  if(kind === "ask"){
-    localStorage.setItem(ROOM_KIND_KEY,"ask");
+  if(kind === "human"){
+    localStorage.setItem(ROOM_KIND_KEY,"human");
   }else{
     localStorage.removeItem(ROOM_KIND_KEY);
   }
@@ -6908,7 +6917,7 @@ function leaveCurrentRoomForTransition(){
 }
 
 function renderConnectedHome(){
-    if(localStorage.getItem(ROOM_KIND_KEY) !== "ask") return;
+    if(localStorage.getItem(ROOM_KIND_KEY) !== "human") return;
 
     const standardRoomId = localStorage.getItem("askCameraRoomId") || localStorage.getItem("roomId");
     if(!standardRoomId) return;
@@ -6925,10 +6934,10 @@ function renderConnectedHome(){
         <div style="font-size:26px;font-weight:800;line-height:1.12;">YOUR ROOM<br>IS ACTIVE</div>
         <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:8px;width:100%;max-width:350px;min-height:62px;box-sizing:border-box;overflow:hidden;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
           <img src="${standardThumbnail}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex:0 0 auto;${standardThumbnail ? "" : "display:none;"}">
-          <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">ASK.CAMERA</span>
+          <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">${escapeBeingText(JSON.parse(localStorage.getItem("selectedBeing") || "{}").name || "HUMAN ROOM")}</span>
           <span style="flex:0 0 auto;margin-left:auto;padding:8px 10px;border-radius:999px;background:#000;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;">RETURN TO ROOM</span>
         </button>
-        <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your private room stays active until you close it with X. Change HUMAN perspectives without losing the conversation.</div>
+        <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your private HUMAN room stays active until you close it with X.</div>
         <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
           <button onclick="event.stopPropagation();showDailyNulls();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">Daily Camera Perspectives</button>
           <button onclick="event.stopPropagation();showAIBeings();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">HUMAN Cards</button>
@@ -6949,15 +6958,17 @@ function openHomeRoom(event){
 
     }
 
-    if(localStorage.getItem(ROOM_KIND_KEY) !== "ask") return;
+    if(localStorage.getItem(ROOM_KIND_KEY) !== "human") return;
 
     const roomId =
         localStorage.getItem("roomId");
 
     if(!roomId) return;
 
-    renderStandardRoomHeader();
-    roomMessages.innerHTML = '<div style="margin:auto;padding:24px;text-align:center;font-size:14px;font-weight:800;">RESTORING ASK.CAMERA ROOM...</div>';
+    let savedBeing = null;
+    try { savedBeing = JSON.parse(localStorage.getItem("selectedBeing") || "null"); } catch(error) {}
+    if(savedBeing) renderBeingRoomHeader(savedBeing);
+    roomMessages.innerHTML = '<div style="margin:auto;padding:24px;text-align:center;font-size:14px;font-weight:800;">RESTORING HUMAN ROOM...</div>';
     roomInput.style.display = "none";
     roomOverlay.style.display = "flex";
     cameraWrap.style.display = "block";
@@ -6993,7 +7004,7 @@ function openRoomImageUpload(){
 
 async function openRoomPublicPerspectives(){
     roomOverlay.style.display = "none";
-    await showPublicNulls("askRoom");
+    await showPublicNulls("humanRoom");
 }
 
 
@@ -7020,7 +7031,7 @@ async function shareRoom(){
 
                 title: "HUMAN on ASK.CAMERA",
 
-                text: "Choose this HUMAN perspective for your own ASK room.",
+                text: "Open this HUMAN and add your own image on ASK.CAMERA.",
 
                 url
 
@@ -7034,7 +7045,7 @@ async function shareRoom(){
 
     await navigator.clipboard.writeText(url);
 
-    alert("HUMAN Card link copied.");
+    alert("HUMAN room invitation copied.");
 
 }
 
@@ -7306,14 +7317,14 @@ function showPublishDialog(){
       publicOption.style.display = "none";
       privateOption.style.display = "flex";
       privateOption.querySelector('input').checked = true;
-      title.textContent = "Use in this private ASK room";
-      support.textContent = "The selected HUMAN will interpret this image inside your private ASK room.";
+      title.textContent = "Use in this private HUMAN room";
+      support.textContent = "Your selected HUMAN will interpret this image and keep it inside the private room.";
     }else{
-      publicOption.style.display = "flex";
+      publicOption.style.display = "none";
       privateOption.style.display = "flex";
-      publicOption.querySelector('input').checked = true;
-      title.textContent = "Create ASK.CAMERA Room";
-      support.textContent = "How would you like to publish your Camera Perspective?";
+      privateOption.querySelector('input').checked = true;
+      title.textContent = "Choose a HUMAN";
+      support.textContent = "Your image stays private. Choose the HUMAN whose room will interpret it.";
     }
     activeModalReturnFocus = document.activeElement;
     document.getElementById("publishDialog").style.display = "flex";
@@ -7390,7 +7401,14 @@ roomReady = true;
       publishMode = "private";
     }
 
-    setActiveRoomKind("ask");
+    if (!localStorage.getItem("selectedBeingId")) {
+      document.getElementById("publishDialog").style.display = "none";
+      capturePreview.style.display = "none";
+      showAIBeings("image");
+      return;
+    }
+
+    setActiveRoomKind("human");
 
     document.getElementById(
         "publishDialog"
@@ -7518,7 +7536,14 @@ function endCurrentRoomAndRestart(){
 }
 
 closeRoom.onclick = () => {
-    if(!confirm("Close this private ASK room permanently? You cannot return to this conversation.")) return;
+    if(!localStorage.getItem("roomId")){
+      clearSelectedHumanState();
+      setActiveRoomKind(null);
+      history.replaceState({},"","/");
+      showCreateNull();
+      return;
+    }
+    if(!confirm("Close this private HUMAN room permanently? You cannot return to this conversation.")) return;
     endCurrentRoomAndRestart();
 };
 
@@ -7635,7 +7660,7 @@ if(data?.roomId && ignoredTransitionRoomIds.has(data.roomId)){
   return;
 }
 
-setActiveRoomKind("ask");
+setActiveRoomKind("human");
 
 clearSystemState("rejoiningRoom");
 hideRoomLoadingScreen();
@@ -7674,8 +7699,6 @@ localStorage.setItem("askCameraRoomId",data.roomId);
     localStorage.setItem("selectedBeingId",data.being.id);
     localStorage.setItem("selectedBeing",JSON.stringify(data.being));
     renderBeingRoomHeader(data.being);
-  }else{
-    renderStandardRoomHeader();
   }
 
 if(imageIntroText){
@@ -8291,9 +8314,9 @@ socket.on("roomMessages",messages => {
 
 const shouldFollowLatest = isRoomNearBottom();
 
-if(getActiveRoomKind() === "ask"){
-  renderStandardRoomHeader();
-}
+let activeMessageHuman = null;
+try { activeMessageHuman = JSON.parse(localStorage.getItem("selectedBeing") || "null"); } catch(error) {}
+if(activeMessageHuman) renderBeingRoomHeader(activeMessageHuman);
 
 const previousDeliveredMessageCount = deliveredRoomMessageCount;
 lastRoomMessageCount = messages.length;
@@ -9380,11 +9403,17 @@ socket.on("roomNeedsHuman", () => {
   }
 });
 
+socket.on("roomHumanRequired", () => {
+  hideRoomLoadingScreen();
+  roomNeedsHumanSelection = true;
+  showAIBeings("image");
+});
+
 socket.on("roomHumanSelected", ({ being } = {}) => {
   if(!being) return;
   localStorage.setItem("selectedBeingId",being.id);
   localStorage.setItem("selectedBeing",JSON.stringify(being));
-  setActiveRoomKind("ask");
+  setActiveRoomKind("human");
   roomNeedsHumanSelection = false;
   humanSelectionOpening = false;
   renderBeingRoomHeader(being);
@@ -9557,7 +9586,7 @@ socket.on("roomStatus", data => {
     }
 
     clearSystemState("rejoiningRoom");
-    setActiveRoomKind("ask");
+    setActiveRoomKind("human");
     localStorage.setItem("roomId", data.roomId);
 
     localStorage.setItem("askCameraRoomId",data.roomId);
@@ -9660,9 +9689,9 @@ if(directHumanPath){
 if(urlRoomId){
     clearSelectedHumanState();
     clearAskRoomState();
-    setActiveRoomKind("ask");
+    setActiveRoomKind("human");
 }else if(savedRoomId && !localStorage.getItem(ROOM_KIND_KEY)){
-    setActiveRoomKind("ask");
+    setActiveRoomKind("human");
 }
 
 
@@ -10062,7 +10091,7 @@ function showCreateNull(){
     helper.style.display = "flex";
     history.replaceState({}, "", "/");
 
-    const activeRoomId = localStorage.getItem(ROOM_KIND_KEY) === "ask"
+    const activeRoomId = localStorage.getItem(ROOM_KIND_KEY) === "human"
       ? (localStorage.getItem("askCameraRoomId") || localStorage.getItem("roomId"))
       : null;
     localStorage.removeItem("returningFromHumanCards");
@@ -10133,6 +10162,11 @@ async function returnFromPublicPerspectives(){
       return;
     }
 
+    if(publicReturnContext === "humanRoom" && localStorage.getItem("selectedBeingId")){
+      await openAIBeing(localStorage.getItem("selectedBeingId"));
+      return;
+    }
+
     publicReturnContext = "home";
     showCreateNull();
 }
@@ -10141,7 +10175,7 @@ async function showPublicNulls(origin){
 
     publicReturnContext = origin || (
       roomOverlay.style.display === "flex"
-        ? "askRoom"
+        ? "humanRoom"
         : "home"
     );
 
@@ -10188,7 +10222,7 @@ async function createRoomFromPublicNull(publicNull){
     const imageDataUrl = publicNull.image;
     const publicNullId = publicNull.id;
     const beingId = localStorage.getItem("selectedBeingId");
-    setActiveRoomKind("ask");
+    setActiveRoomKind("human");
 
     publicNullsScreen.style.display = "none";
     dailyNullsScreen.style.display = "none";
@@ -10210,7 +10244,7 @@ socket.emit("imageUpload",{
     askMode: false,
     publishMode: "private",
     // A public image is only the image source. The selected HUMAN, if any,
-    // remains the perspective inside this same private ASK room.
+    // remains the identity of this same private HUMAN room.
     beingId,
     publicNullId,
     publicNullIdentity: publicNull.identity,
@@ -10958,6 +10992,7 @@ function closeHumanCardsGuide(){
 
 const AI_BEINGS_API = "https://three23p-backend.onrender.com";
 let humanCardsCanSelect = false;
+let humanCardsEntryMode = "home";
 
 function escapeBeingText(value){
   return String(value || "")
@@ -10967,12 +11002,12 @@ function escapeBeingText(value){
     .replace(/"/g,"&quot;");
 }
 
-async function showAIBeings(){
-  humanCardsCanSelect = Boolean(
-    localStorage.getItem("roomId") && roomOverlay.style.display === "flex"
-  );
+async function showAIBeings(origin = ""){
+  const hasActiveRoom = Boolean(localStorage.getItem("roomId"));
+  humanCardsEntryMode = origin || (pendingImageDataUrl && !hasActiveRoom ? "image" : hasActiveRoom ? "room" : "home");
+  humanCardsCanSelect = humanCardsEntryMode !== "room";
   const roomBusy = roomOpeningSequenceActive || beingFirstRoundWaiting || beingFirstRoundQueue.length > 0 || roomReplyDeliveryActive || firstRoundDemoPending || aiTyping;
-  if(humanCardsCanSelect && !roomNeedsHumanSelection && roomBusy){
+  if(hasActiveRoom && !roomNeedsHumanSelection && roomBusy){
     alert("Please wait for the current HUMAN briefing or reply to finish.");
     return;
   }
@@ -10987,7 +11022,7 @@ async function showAIBeings(){
   document.getElementById("aiBeingsScreen").style.display = "flex";
   const humanBackLabel = document.querySelector("#aiBeingsBackBtn span");
   if(humanBackLabel){
-    humanBackLabel.textContent = humanCardsCanSelect ? "Back to ASK room" : "Back to ASK.CAMERA";
+    humanBackLabel.textContent = humanCardsEntryMode === "room" ? "Back to HUMAN room" : "Back to ASK.CAMERA";
   }
   syncHomeControlStack();
   await loadAIBeings();
@@ -10996,6 +11031,14 @@ async function showAIBeings(){
 function returnFromHumanCards(){
   document.getElementById("aiBeingsScreen").style.display = "none";
   document.getElementById("createBeingScreen").style.display = "none";
+  if(humanCardsEntryMode === "image" && pendingImageDataUrl){
+    capturePreview.src = pendingImageDataUrl;
+    capturePreview.style.display = "block";
+    document.getElementById("publishDialog").style.display = "flex";
+    cameraWrap.style.display = "block";
+    helper.style.display = "none";
+    return;
+  }
   if(humanCardsCanSelect && localStorage.getItem("roomId")){
     roomOverlay.style.display = "flex";
     cameraWrap.style.display = "block";
@@ -11016,7 +11059,7 @@ function returnFromHumanCards(){
 
 async function loadAIBeings(){
   const holder = document.getElementById("aiBeingsCards");
-  const canUsePerspective = humanCardsCanSelect;
+  const canOpenHumanRoom = humanCardsCanSelect;
   holder.innerHTML = '<div style="padding:36px 16px;text-align:center;font-size:14px;font-weight:700;opacity:.72;">Loading HUMAN Cards…</div>';
 
   try{
@@ -11039,7 +11082,7 @@ async function loadAIBeings(){
           ${[being.word1,being.word2,being.word3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
         </div>
         <div class="beingCardActions">
-          ${canUsePerspective ? `<button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Use perspective</button>` : ""}
+          ${canOpenHumanRoom ? `<button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Open HUMAN Room</button>` : ""}
           <button class="beingShareButton" onclick="shareHumanCard('${being.id}')">Share card</button>
           <button class="beingQrShareButton" onclick="showHumanCardQR('${being.id}')">Card QR</button>
           <button class="beingEditButton" onclick="changeAIBeingProfile('${being.id}')">Edit profile</button>
@@ -11059,7 +11102,7 @@ async function shareHumanCard(id,name = "HUMAN"){
     try{
       await navigator.share({
         title:`${name} on ASK.CAMERA`,
-        text:"Choose this HUMAN perspective for your own ASK room.",
+        text:"Open this HUMAN and add your own image on ASK.CAMERA.",
         url
       });
       return;
@@ -11490,16 +11533,11 @@ async function openAIBeing(id){
   if(!response.ok){ alert(being.error || "HUMAN not found."); return; }
 
   const activeRoomId = localStorage.getItem("roomId");
-  if(!activeRoomId){
-    history.replaceState({},"","/");
-    await showAIBeings();
-    return;
-  }
 
   localStorage.removeItem("returningFromHumanCards");
   localStorage.setItem("selectedBeingId", being.id);
   localStorage.setItem("selectedBeing", JSON.stringify(being));
-  setActiveRoomKind("ask");
+  setActiveRoomKind("human");
 
   roomNeedsHumanSelection = false;
   humanSelectionOpening = false;
@@ -11516,6 +11554,26 @@ async function openAIBeing(id){
   cameraWrap.style.display = "block";
   roomOverlay.style.display = "flex";
   renderBeingRoomHeader(being);
+
+  if(!activeRoomId){
+    if(pendingImageDataUrl){
+      continueCreateRoom();
+      return;
+    }
+    roomMessages.innerHTML = `
+      <div class="roomRecoveryState" style="margin-top:18px;">
+        <img src="${escapeBeingText(being.photo || "")}" alt="${escapeBeingText(being.name)}" style="width:64px;height:64px;object-fit:cover;border-radius:0;">
+        <div style="font-size:16px;font-weight:700;">Open ${escapeBeingText(being.name)}’s HUMAN room</div>
+        <div style="font-size:13px;line-height:1.45;color:#57606a;">Take a photo, upload an image, or choose a Public Camera Perspective to begin.</div>
+      </div>`;
+    roomInput.style.display = "none";
+    document.getElementById("roomImageActions").style.display = "flex";
+    document.getElementById("beingQrBtn").style.display = "inline-block";
+    document.getElementById("shareRoomBtn").style.display = "inline-block";
+    document.getElementById("shareRoomBtn").innerText = "Share";
+    history.replaceState({},"",`/being/${being.id}`);
+    return;
+  }
   roomInput.style.display = "block";
   roomInput.disabled = true;
   roomInput.placeholder = `${being.name} is reading this image…`;
@@ -11583,8 +11641,9 @@ function renderBeingRoomHeader(being){
   `;
 
   document.getElementById("beingQrBtn").style.display = "none";
-  document.getElementById("changeHumanBtn").style.display = "inline-block";
-  document.getElementById("shareRoomBtn").style.display = "none";
+  document.getElementById("changeHumanBtn").style.display = "none";
+  document.getElementById("beingQrBtn").style.display = "inline-block";
+  document.getElementById("shareRoomBtn").style.display = "inline-block";
   document.getElementById("roomCountdown").style.display = "none";
   document.getElementById("homeRoomCard").style.display = "none";
 }
@@ -11601,7 +11660,7 @@ function showBeingQR(){
     overlay.onclick = () => overlay.style.display = "none";
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:24px;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:8px;">HUMAN Card QR</div><div style="font-size:12px;line-height:1.4;margin-bottom:14px;color:#57606a;">Choose this perspective in a new ASK room.</div><div id="beingQrCode" style="width:240px;height:240px;max-width:100%;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:999px;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
+  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:0;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:8px;">HUMAN Room QR</div><div style="font-size:12px;line-height:1.4;margin-bottom:14px;color:#57606a;">Open this HUMAN and add your own image.</div><div id="beingQrCode" style="width:240px;height:240px;max-width:100%;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:0;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
   overlay.style.display = "flex";
 
   const qrHolder = document.getElementById("beingQrCode");
@@ -11854,10 +11913,10 @@ if(directBeingMatch){
     <button onclick="closeHumanCardsGuide()" aria-label="Close HUMAN Cards guide" style="position:absolute;top:14px;right:14px;width:40px;height:40px;padding:0;border:none;border-radius:50%;background:#f2f2f2;color:#111;font-size:26px;line-height:1;cursor:pointer;">×</button>
     <div style="padding-right:48px;font-size:22px;font-weight:900;line-height:1.15;">What are HUMAN Cards?</div>
     <div style="margin-top:18px;font-size:14px;line-height:1.55;">
-      <p style="margin:0 0 12px;">HUMAN Cards are switchable perspectives inside one private ASK room.</p>
+      <p style="margin:0 0 12px;">Each HUMAN Card opens one private HUMAN room for images, questions, and five-part search briefings.</p>
       <p style="margin:0 0 12px;">Choose a HUMAN after adding an image. That HUMAN acknowledges the image, provides five examples, and answers your questions.</p>
       <p style="margin:0 0 12px;">You can change HUMAN perspectives without losing the room, image, or earlier conversation.</p>
-      <p style="margin:0;">A shared HUMAN link or QR is an AI name-card invitation. Each visitor starts a separate private ASK room; conversations are never shared.</p>
+      <p style="margin:0;">A shared HUMAN link or QR is a HUMAN-room invitation. Each visitor adds their own image and starts a separate private conversation.</p>
     </div>
     <button onclick="closeHumanCardsGuide()" style="width:100%;height:46px;margin-top:20px;border:none;border-radius:999px;background:#000;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Got it</button>
   </div>
@@ -12111,7 +12170,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Share a HUMAN Card or an individual result card.</b> A HUMAN Card lets someone choose that perspective in their own ASK room. ASK rooms remain private.
+<b>Share a HUMAN room or an individual result card.</b> A HUMAN invitation lets someone add their own image and start a separate private conversation.
 </div>
 
 </div>
