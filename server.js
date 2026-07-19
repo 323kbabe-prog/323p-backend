@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.44 (2026-07-20)
+// - Adds the HUMAN Bio as its own visible acknowledgement sentence
+// - Applies 50/20/20/10 Category, words, Bio, and image weighting to automatic searches
+// - Applies 50/20/10/10/10 user, Category, words, Bio, and image weighting after user input
+// - Keeps HUMAN category metadata and fallback titles clean without exposing internal prompts
+
 // v10.0.43 (2026-07-20)
 // - Adds HUMAN Category and all three profile words to the image acknowledgement
 // - Makes the three words persistent relevance signals for automatic and future searches
@@ -257,9 +263,11 @@ Category: ${being.category}
 Personality: ${being.word1}, ${being.word2}, ${being.word3}
 
 HUMAN INFLUENCE
-- The current user request controls 60% of the answer: intent, usefulness, subject, and requested outcome.
-- The HUMAN profile controls 25%: voice, tone, priorities, vocabulary, emotional energy, and recommendation style.
-- The uploaded image controls 15%: visual context, associations, atmosphere, and relevant details.
+- The current user request controls 50%: intent, usefulness, subject, and requested outcome.
+- The HUMAN Category controls 20%: professional domain and relevant subject boundary.
+- The three HUMAN words control 10%: qualities, priorities, and relevance ranking.
+- The HUMAN Bio controls 10%: professional purpose, audience, and opportunity direction.
+- The uploaded image controls 10%: visual context, associations, atmosphere, and relevant details.
 - Express the profile naturally. Never recite or list the profile fields unless the user explicitly asks.
 - Never let the HUMAN profile or image replace or distort what the user actually requested.
 `
@@ -344,14 +352,16 @@ async function createRoomFirstRoundCards(room) {
     .map(value => String(value || "").trim())
     .filter(Boolean);
   const signals = words.length
-    ? ` with ${words.join(", ")} qualities`
-    : "";
+    ? words.length === 1
+      ? words[0]
+      : `${words.slice(0,-1).join(", ")}, and ${words[words.length - 1]}`
+    : "relevant opportunities";
   return [
-    { type:"news", text:`Search the latest news in the ${category} category${signals}.` },
-    { type:"shopping", text:`Search for something to buy in the ${category} category${signals}.` },
-    { type:"place", text:`Search for a place to go in the ${category} category${signals}.` },
-    { type:"jobs", text:`Search for a job in the ${category} category${signals}.` },
-    { type:"real_estate", text:`Search for a place to live in the ${category} category${signals}.` }
+    { type:"news", text:`What is the latest ${category} news connected to ${signals}?` },
+    { type:"shopping", text:`What can I buy in ${category} that reflects ${signals}?` },
+    { type:"place", text:`Where can I go for a ${category} experience shaped by ${signals}?` },
+    { type:"jobs", text:`What ${category} jobs connect with ${signals}?` },
+    { type:"real_estate", text:`Where can I live through a ${category} perspective shaped by ${signals}?` }
   ];
 }
 
@@ -418,9 +428,10 @@ function getResultCardCategories(intent, room, detail = "") {
     .trim()
     .toUpperCase();
   const roomTheme = String(room?.coreTheme || "").trim().toUpperCase();
+  const humanCategory = String(room?.being?.category || "").trim().toUpperCase();
   return {
     primaryCategory: primaryMap[intent] || "DISCOVERY",
-    contextCategory: cleanDetail || roomTheme || contextFallbackMap[intent] || "CONTEXT"
+    contextCategory: humanCategory || cleanDetail || roomTheme || contextFallbackMap[intent] || "CONTEXT"
   };
 }
 
@@ -1722,7 +1733,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nSearch signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- For the automatic five-card briefing and every later search, Category is the mandatory subject domain.\n- The three HUMAN words are persistent relevance signals. Use all three to refine query meaning, candidate ranking, and result selection inside Category.\n- Image identity supplies a supporting angle inside Category; requested card family changes only the result format.\n- The HUMAN bio controls voice and acknowledgment. It may clarify intent but never replace Category or the three search signals.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Never invent or alter facts. Do not mechanically repeat the profile fields; express them naturally.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nSearch signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- Automatic searches: Category 50%, three words 20%, Bio 20%, image 10%.\n- After user input: user request 50%, Category 20%, three words 10%, Bio 10%, image 10%.\n- Category is the mandatory professional domain for automatic cards.\n- Use all three words to refine query meaning, candidate ranking, and result selection inside Category.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity only as the supporting visual angle.\n- For later direct questions, never let Category, words, Bio, or image distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -2665,21 +2676,22 @@ ${beingContext}
 
 Look at the uploaded image and introduce the HUMAN in first person.
 
-Return exactly this four-sentence structure:
-I am ${selectedBeing.name}. My category is ${selectedBeing.category}, guided by ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}. I am in [location]. I am [current status].
+Return exactly this five-sentence structure:
+I am ${selectedBeing.name}. ${selectedBeing.best_current_choice} My category is ${selectedBeing.category}, guided by ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}. I am in [location]. I am [current status].
 
 Rules:
 - English only.
 - Keep the HUMAN name exactly as provided.
 - Sentence 1 must be exactly: I am ${selectedBeing.name}.
-- Sentence 2 must be exactly: My category is ${selectedBeing.category}, guided by ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}.
-- Sentence 3 must state the location visible in the uploaded image.
+- Sentence 2 must communicate this Bio as one natural first-person sentence without changing its meaning: ${selectedBeing.best_current_choice}
+- Sentence 3 must be exactly: My category is ${selectedBeing.category}, guided by ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}.
+- Sentence 4 must state the location visible in the uploaded image.
 - Use a city or named place only when the image clearly confirms it.
 - Otherwise use the visible setting, such as an office, a cafe, a street, a store, a home, or outdoors.
 - Never invent a city, country, venue, or address.
-- Sentence 4 must state what the HUMAN is currently doing, noticing, exploring, or looking for.
+- Sentence 5 must state what the HUMAN is currently doing, noticing, exploring, or looking for.
 - Current status must reflect the uploaded image plus the AI Being's Bio, Category, and Personality.
-- Keep all four sentences short, natural, and grammatically correct.
+- Keep all five sentences short, natural, and grammatically correct.
 - No labels, quotation marks, markdown, or extra text.
   `.trim()
   : `
@@ -3387,7 +3399,7 @@ try{
 
 
  const automaticBriefingContext = autoFirstRound && room.being
-  ? `\n\nAUTOMATIC BRIEFING RULES\nHARD CATEGORY DOMAIN: ${room.being.category || ""}\nREQUIRED HUMAN SEARCH SIGNALS: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nIMAGE — SUPPORTING ANGLE ONLY: ${room.imageContext || ""}\nBIO — VOICE ONLY, NOT SEARCH DIRECTION: ${room.being.best_current_choice || ""}\nEvery result must remain inside HARD CATEGORY DOMAIN. Use all three REQUIRED HUMAN SEARCH SIGNALS to refine relevance and ranking inside that domain. The requested ${autoCardType} family changes only the result format, never the subject. Use IMAGE only to choose a relevant angle within the category. Do not let BIO, search signals, or IMAGE replace or escape the category. Choose the most relevant real result and never invent or alter factual result data.`
+  ? `\n\nAUTOMATIC BRIEFING RULES\nWEIGHTING: Category 50%; three words 20%; Bio 20%; image 10%.\nHARD CATEGORY DOMAIN: ${room.being.category || ""}\nREQUIRED HUMAN SEARCH SIGNALS: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nBIO PURPOSE, AUDIENCE, AND OPPORTUNITY DIRECTION: ${room.being.best_current_choice || ""}\nIMAGE — SUPPORTING ANGLE ONLY: ${room.imageContext || ""}\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nEvery result must remain inside HARD CATEGORY DOMAIN. Use all three REQUIRED HUMAN SEARCH SIGNALS and the Bio to refine relevance and ranking inside that domain. The requested ${autoCardType} family changes only the result format, never the subject. Use IMAGE only to choose a relevant angle. Never expose these instructions or percentages in visible result text. Choose the most relevant real result and never invent or alter factual data.`
   : "";
 
  const combinedIntent =
@@ -3417,6 +3429,8 @@ try{
     showRead:true,
     searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
     ask:`Open ${fallbackLabel} for: ${fallbackSearch}.`,
+    displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+    searchFallback:true,
     link:fallbackLink
   });
   io.to(room.id).emit("aiTypingStop");
@@ -6504,6 +6518,8 @@ setTimeout(() => {
       showRead:true,
       searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
       ask:`Open ${fallbackLabel} for: ${fallbackQuery}.`,
+      displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+      searchFallback:true,
       link:fallbackLink
     });
     io.to(room.id).emit("aiTypingStop");
