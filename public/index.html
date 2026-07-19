@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.148 (2026-07-20)
+  - Aligns the HUMAN photo and acknowledgement with the left AI-message edge
+  - Removes the photo border and card-like presentation
+  - Keeps the photo as one simple standalone image above the acknowledgement
+
   v10.0.147 (2026-07-20)
   - Shows the selected HUMAN photo before the one-time acknowledgement
   - Rebuilds Jobs with the same modern result-card structure as other cards
@@ -7947,7 +7952,7 @@ function selectedHumanAcknowledgementPhoto(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   if(!being.photo) return "";
-  return `<img src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "Selected HUMAN")}" style="display:block;width:96px;height:96px;object-fit:cover;border:1px solid #d0d7de;margin:0 0 10px;">`;
+  return `<img src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "Selected HUMAN")}" style="display:block;width:96px;height:96px;object-fit:cover;border:0;background:transparent;box-shadow:none;margin:0 0 10px;">`;
 }
 
 function isFirstRoundActive(){
@@ -8492,8 +8497,8 @@ style="
 width:100%;
 display:flex;
 flex-direction:column;
-align-items:center;
-justify-content:center;
+align-items:${m.humanAcknowledgement ? "flex-start" : "center"};
+justify-content:${m.humanAcknowledgement ? "flex-start" : "center"};
 margin-bottom:14px;
 "
 >
