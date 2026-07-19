@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.126 (2026-07-19)
+  - Restored category-aware result actions in ASK and HUMAN rooms
+  - Opened PLACE results in Google Maps and labeled Amazon, YouTube, shopping, listing, job, news, and business destinations correctly
+  - Made the action destination use explicit card metadata and the real link domain before falling back to text keywords
+
   v10.0.125 (2026-07-19)
   - Made ASK and HUMAN automatic examples wait for the preceding result instead of skipping ahead on a fixed timeout
   - Kept the final demo question behind all three delivered examples
@@ -7371,8 +7376,17 @@ document.getElementById(
 // ROOM MESSAGE CARDS
 //////////////////////////////////////////////////
 
-function getRoomOpenActionLabel(message){
+function getRoomOpenAction(message = {}){
+  const rawLink = String(message.link || message.jobCard?.link || "").trim();
+  let hostname = "";
+  try { hostname = new URL(rawLink,window.location.href).hostname.toLowerCase().replace(/^www\./,""); }
+  catch(error) {}
+
+  const primary = String(message.primaryCategory || message.autoCardType || "").trim().toLowerCase();
+  const context = String(message.contextCategory || message.category || "").trim().toLowerCase();
   const combined = [
+    primary,
+    context,
     message?.searchLabel,
     message?.ask,
     message?.nullReason,
@@ -7381,13 +7395,53 @@ function getRoomOpenActionLabel(message){
     message?.link
   ].filter(Boolean).join(" ").toLowerCase();
 
-  if(message?.jobCard || /\b(job|career|hiring|salary)\b/.test(combined)) return "Open job";
-  if(/\b(real estate|property|apartment|house|home listing|rent|condo)\b/.test(combined)) return "Open listing";
-  if(/\b(product|shopping|shop now|buy|price|store item)\b/.test(combined)) return "Open product";
-  if(/\b(cafe|coffee|restaurant|bar|hotel|museum|park|venue|place|location|map|nearby|shinjuku|tokyo)\b/.test(combined)) return "Open map";
-  if(/\b(business|company|service provider)\b/.test(combined)) return "Open business";
-  if(/\b(news|article|report|story|read|perspective feed)\b/.test(combined)) return "Open article";
-  return "Open source";
+  const isMapsDomain = hostname === "maps.app.goo.gl" || hostname.includes("google.") && /\/maps|maps\//.test(rawLink);
+  const isAmazon = /(^|\.)amazon\./.test(hostname) || hostname === "amzn.to";
+  const isYouTube = hostname === "youtu.be" || /(^|\.)youtube\.com$/.test(hostname);
+  const storeLabels = [
+    [/((^|\.)ebay\.)/,"Open eBay"],
+    [/((^|\.)etsy\.com$)/,"Open Etsy"],
+    [/((^|\.)walmart\.)/,"Open Walmart"],
+    [/((^|\.)target\.com$)/,"Open Target"]
+  ];
+  const matchedStore = storeLabels.find(([pattern]) => pattern.test(hostname));
+
+  if(isMapsDomain) return { label:"Open Google Maps", href:rawLink };
+  if(isAmazon) return { label:"Open Amazon", href:rawLink };
+  if(isYouTube) return { label:"Watch video", href:rawLink };
+  if(matchedStore) return { label:matchedStore[1], href:rawLink };
+
+  const isPlace = /\b(place|location|map|travel|restaurant|cafe|coffee|hotel|museum|park|venue|nearby)\b/.test(`${primary} ${context}`) || primary === "place";
+  if(isPlace){
+    const mapQuery = String(message.ask || message.title || message.searchLabel || context || "").trim();
+    const mapHref = mapQuery
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`
+      : rawLink;
+    return { label:"Open Google Maps", href:mapHref };
+  }
+
+  if(message.jobCard || /\b(job|jobs|career|hiring|salary)\b/.test(`${primary} ${context}`)) return { label:"Open job", href:rawLink };
+  if(/\b(real estate|property|apartment|house|home listing|rent|condo)\b/.test(`${primary} ${context}`)) return { label:"Open listing", href:rawLink };
+  if(/\b(product|shopping|shop|buy|commerce)\b/.test(`${primary} ${context}`)) return { label:"Open product", href:rawLink };
+  if(/\b(music|video|youtube)\b/.test(`${primary} ${context}`)) return { label:"Open media", href:rawLink };
+  if(/\b(business|company|service provider)\b/.test(`${primary} ${context}`)) return { label:"Open website", href:rawLink };
+  if(/\b(news|article|report|story|read|perspective feed)\b/.test(`${primary} ${context}`)) return { label:"Open article", href:rawLink };
+
+  if(/\b(job|career|hiring|salary)\b/.test(combined)) return { label:"Open job", href:rawLink };
+  if(/\b(real estate|property|apartment|house|home listing|rent|condo)\b/.test(combined)) return { label:"Open listing", href:rawLink };
+  if(/\b(product|shopping|shop now|buy|price|store item)\b/.test(combined)) return { label:"Open product", href:rawLink };
+  if(/\b(cafe|coffee|restaurant|bar|hotel|museum|park|venue|place|location|map|nearby|shinjuku|tokyo)\b/.test(combined)) return { label:"Open Google Maps", href:rawLink };
+  if(/\b(business|company|service provider)\b/.test(combined)) return { label:"Open website", href:rawLink };
+  if(/\b(news|article|report|story|read|perspective feed)\b/.test(combined)) return { label:"Open article", href:rawLink };
+  return { label:"Open source", href:rawLink };
+}
+
+function getRoomOpenActionLabel(message){
+  return getRoomOpenAction(message).label;
+}
+
+function getRoomOpenActionHref(message){
+  return getRoomOpenAction(message).href || "#";
 }
 
 function getRoomResultCategoryLabel(message = {}){
@@ -8134,7 +8188,7 @@ padding-top:2px;
 >
 
 ${m.link ? `
-<a class="chatOpenAction" href="${m.link}" target="_blank" rel="noopener noreferrer">
+<a class="chatOpenAction" href="${getRoomOpenActionHref(m)}" target="_blank" rel="noopener noreferrer">
 ${getRoomOpenActionLabel(m)}
 </a>
 ` : ""}
@@ -8407,7 +8461,7 @@ ${m.ask}
 
 ${m.image ? `
 <a
-href="${m.link || '#'}"
+href="${getRoomOpenActionHref(m)}"
 target="_blank"
 style="
 text-decoration:none;
