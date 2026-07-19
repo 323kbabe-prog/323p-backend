@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.157 (2026-07-20)
+  - Keeps Share card text contained with content-sized header controls
+  - Centers Public thumbnails and label as one button group
+  - Rebuilds Public cards and Featured content without empty grid space
+  - Matches Love/Skeleton sizing and prioritizes explicit card-type action labels
+
   v10.0.156 (2026-07-20)
   - Fits Share card inside its header button at every viewport size
   - Attributes HUMAN-room replies and result cards to the selected HUMAN
@@ -5809,25 +5815,177 @@ html body #firstNextBtn *,html body #memoryBtn *{
   stroke:currentColor!important;
 }
 
-/* v10.0.156 — authoritative HUMAN-room identity and header controls. */
+}
+
+/* v10.0.157 — active final HUMAN and Public UI rules. */
 :root{--active-human-name:"HUMAN";}
 html body #roomMessages.geminiThread .geminiAiResponse::before,
 html body #roomMessages.geminiThread .geminiMediaResponse::before{
   content:var(--active-human-name)!important;
 }
 html body #shareRoomBtn{
-  width:auto!important;
-  min-width:76px!important;
+  width:max-content!important;
+  min-width:max-content!important;
   max-width:none!important;
   flex:0 0 auto!important;
-  padding:0 10px!important;
+  padding:0 12px!important;
   box-sizing:border-box!important;
   white-space:nowrap!important;
-  overflow:visible!important;
+  overflow:hidden!important;
   line-height:1!important;
   text-align:center!important;
   border-radius:0!important;
 }
+html body #publicNullsBtn{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+}
+html body #publicNullsThumbs{
+  position:static!important;
+  inset:auto!important;
+  display:flex!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+  transform:none!important;
+}
+html body #publicNullsBtn > span{
+  flex:0 0 auto!important;
+  min-width:0!important;
+  padding:0!important;
+  text-align:left!important;
+}
+html body #publicNullsScreen{
+  padding-top:84px!important;
+}
+html body #publicNullsScreen .publicScreenIntro{
+  width:min(100%,660px)!important;
+  margin:0 auto 16px!important;
+}
+html body #publicNullsScreen .publicScreenTitle{
+  margin:0 0 4px!important;
+  font-size:20px!important;
+  font-weight:700!important;
+  line-height:1.25!important;
+}
+html body #publicNullsScreen .publicScreenSupport{
+  margin:0!important;
+  color:#656d76!important;
+  font-size:13px!important;
+  line-height:1.4!important;
+}
+html body #publicNullsCards .publicFeaturedSection{
+  width:100%!important;
+  max-width:660px!important;
+  min-height:0!important;
+  margin:0 auto 12px!important;
+  padding:12px!important;
+  box-sizing:border-box!important;
+}
+html body #publicNullsCards .publicFeaturedTitle{
+  margin:0 0 10px!important;
+  font-size:12px!important;
+  line-height:1.3!important;
+}
+html body #publicNullsCards .publicFeaturedGrid{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  flex-wrap:wrap!important;
+  gap:14px!important;
+  margin:0!important;
+}
+html body #publicNullsCards .publicFeaturedItem{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  gap:5px!important;
+}
+html body #publicNullsCards .publicFeaturedItem > img{
+  width:72px!important;
+  height:72px!important;
+  object-fit:cover!important;
+  border-radius:0!important;
+}
+html body #publicNullsCards .publicFeaturedMeta,
+html body #publicNullsCards .publicPerspectiveMeta{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:12px!important;
+  margin:0!important;
+}
+html body #publicNullsCards .loveCount,
+html body #publicNullsCards .skeletonCount{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:4px!important;
+  margin:0!important;
+  font-size:17px!important;
+  font-weight:700!important;
+  line-height:20px!important;
+}
+html body #publicNullsCards .loveIcon,
+html body #publicNullsCards .skeletonIcon{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:20px!important;
+  height:20px!important;
+  font-size:16px!important;
+  line-height:20px!important;
+}
+html body #publicNullsCards .loveNumber,
+html body #publicNullsCards .skeletonNumber{
+  font-size:17px!important;
+  line-height:20px!important;
+}
+html body #publicNullsCards .publicPerspectiveCardV2{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  width:100%!important;
+  max-width:660px!important;
+  min-height:0!important;
+  height:auto!important;
+  gap:10px!important;
+  margin:0 auto 12px!important;
+  padding:14px!important;
+  box-sizing:border-box!important;
+}
+html body #publicNullsCards .publicPerspectiveCardV2 > .publicNullImage{
+  order:1!important;
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  max-height:520px!important;
+  margin:0!important;
+  object-fit:contain!important;
+  justify-self:auto!important;
+  align-self:center!important;
+  border-radius:0!important;
+}
+html body #publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveIdentity,
+html body #publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveIntro{
+  display:none!important;
+}
+html body #publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveMeta{
+  order:2!important;
+  align-self:flex-start!important;
+}
+html body #publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveAdmin{
+  order:3!important;
+  align-self:flex-start!important;
+  margin:0!important;
+}
+@media(max-width:480px){
+  html body #roomTitle{max-width:70px!important;}
+  html body #shareRoomBtn{padding-left:9px!important;padding-right:9px!important;font-size:10px!important;}
+  html body #publicNullsBtn{gap:7px!important;}
+  html body #publicNullsThumbs img{width:24px!important;height:24px!important;}
+  html body #publicNullsBtn > span{font-size:14px!important;}
 }
 </style>
 
@@ -5843,24 +6001,9 @@ overflow-y:auto;
 padding:140px 16px 40px 16px;
 ">
 
-<div
-style="
-font-size:24px;
-font-weight:900;
-margin-bottom:8px;
-">
-Public camera perspectives
-</div>
-
-<div
-style="
-font-size:13px;
-line-height:1.5;
-opacity:.7;
-margin-bottom:24px;
-max-width:480px;
-">
-Public Camera Perspectives become part of the ASK.CAMERA network for others to discover.
+<div class="publicScreenIntro">
+  <div class="publicScreenTitle">Public Camera Perspectives</div>
+  <div class="publicScreenSupport">Public images become part of the ASK.CAMERA network for others to discover.</div>
 </div>
 
 
@@ -7811,6 +7954,19 @@ function getRoomOpenAction(message = {}){
     [/((^|\.)target\.com$)/,"Open Target"]
   ];
   const matchedStore = storeLabels.find(([pattern]) => pattern.test(hostname));
+
+  // The explicit card family is authoritative. HUMAN category is context only.
+  if(primary === "news") return { label:"Open article", href:rawLink };
+  if(primary === "jobs" || message.jobCard) return { label:"Open job", href:rawLink };
+  if(primary === "real estate" || primary === "real_estate") return { label:"Open listing", href:rawLink };
+  if(primary === "shopping") return { label:"Open product", href:rawLink };
+  if(primary === "place"){
+    const mapQuery = String(message.ask || message.title || message.searchLabel || context || "").trim();
+    return {
+      label:"Open Google Maps",
+      href:mapQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}` : rawLink
+    };
+  }
 
   if(isMapsDomain) return { label:"Open Google Maps", href:rawLink };
   if(isAmazon) return { label:"Open Amazon", href:rawLink };
@@ -10371,13 +10527,13 @@ window.publicNullLookup = Object.fromEntries(
 
 publicNullsCards.innerHTML = `
 
-<div
+<div class="publicFeaturedSection"
 style="
 margin-bottom:26px;
 "
 >
 
-<div
+<div class="publicFeaturedTitle"
 style="
 font-size:13px;
 font-weight:700;
@@ -10388,7 +10544,7 @@ margin-bottom:12px;
 ❤️ Featured Camera Perspectives
 </div>
 
-<div
+<div class="publicFeaturedGrid"
 style="
 display:flex;
 gap:12px;
@@ -10399,7 +10555,7 @@ margin-bottom:20px;
 
 ${top.map(item => `
 
-<div
+<div class="publicFeaturedItem"
 onclick="usePublicNull(decodeURIComponent('${encodePublicValue(item.id)}'),decodeURIComponent('${encodePublicValue(safePublicImageUrl(item.image))}'))"
 style="
 cursor:pointer;
@@ -10417,7 +10573,7 @@ border-radius:14px;
 "
 />
 
-<div
+<div class="publicFeaturedMeta"
 style="
 display:flex;
 justify-content:center;
@@ -10441,7 +10597,7 @@ data-id="${item.id}"
 onclick="kickPublicNull('${item.id}')"
 style="cursor:pointer;"
 >
-💀 ${escapePublicHtml(item.skeleton || 0)}
+<span class="skeletonIcon" aria-hidden="true">💀</span> <span class="skeletonNumber">${escapePublicHtml(item.skeleton || 0)}</span>
 </span>
 
 </div>
@@ -10506,7 +10662,7 @@ font-weight:700;
 margin-top:4px;
 "
 >
-💀 ${escapePublicHtml(item.skeleton || 0)}
+<span class="skeletonIcon" aria-hidden="true">💀</span> <span class="skeletonNumber">${escapePublicHtml(item.skeleton || 0)}</span>
 </span>
 
 </div>
@@ -10785,7 +10941,7 @@ async function kickPublicNull(id){
         .querySelectorAll(`.skeletonCount[data-id="${id}"]`)
         .forEach(el => {
 
-            el.innerText = `💀 ${json.skeleton}`;
+            el.innerHTML = `<span class="skeletonIcon" aria-hidden="true">💀</span> <span class="skeletonNumber">${json.skeleton}</span>`;
 
         });
 
