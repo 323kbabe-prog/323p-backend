@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.130 (2026-07-19)
+  - Rebuilt ASK and HUMAN openings so future replies do not exist in the visible room DOM
+  - Stored unrevealed opening steps inside inert templates immune to room CSS overrides
+  - Appended exactly one real message or image only when its queue turn arrives
+  - Reconstructed only already-delivered steps when live room messages rerender
+
   v10.0.129 (2026-07-19)
   - Fixed later room CSS rules overriding the opening sequence's display:none state
   - Switched ASK and HUMAN opening steps to the native hidden state with an enforced hidden rule
@@ -7527,26 +7533,35 @@ function renderRoomImageChapter(message = {}){
 
   return `
     <div class="roomImageChapter" data-room-image-chapter data-room-image-key="${sequenceKey}">
-      <div class="geminiAiResponse chatAiGroup humanImageHello" data-opening-message="intro" hidden>
-        <div class="chatBubble chatAiBubble">
-          ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
+      <template data-opening-template="intro">
+        <div class="geminiAiResponse chatAiGroup humanImageHello">
+          <div class="chatBubble chatAiBubble">
+            ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
+          </div>
         </div>
-      </div>
+      </template>
       ${image ? `
-        <div class="humanChosenImageWrap" data-opening-message="image" hidden>
-          <img class="humanChosenImage" src="${image}" alt="Image chosen by the user">
-        </div>
+        <template data-opening-template="image">
+          <div class="humanChosenImageWrap">
+            <img class="humanChosenImage" src="${image}" alt="Image chosen by the user">
+          </div>
+        </template>
       ` : ""}
-      <div class="geminiAiResponse chatAiGroup humanCardInstruction" data-opening-message="instruction" hidden>
-        <div class="chatBubble chatAiBubble">
-          Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
+      <template data-opening-template="instruction">
+        <div class="geminiAiResponse chatAiGroup humanCardInstruction">
+          <div class="chatBubble chatAiBubble">
+            Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
+          </div>
         </div>
-      </div>
-      <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice" data-opening-message="examples" hidden>
-        <div class="chatBubble chatAiBubble">
-          Before you ask, I’ll show you three examples of what I can provide from this image. Google should buy me.
+      </template>
+      <template data-opening-template="examples">
+        <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
+          <div class="chatBubble chatAiBubble">
+            Before you ask, I’ll show you three examples of what I can provide from this image. Google should buy me.
+          </div>
         </div>
-      </div>
+      </template>
+      <div data-opening-output></div>
     </div>
   `;
 }
@@ -7632,11 +7647,23 @@ function showSequenceTyping(){
 }
 
 function getOpeningStepPause(step){
-  const kind = step?.dataset?.openingMessage || "";
-  const textLength = String(step?.textContent || "").trim().length;
+  const kind = step?.dataset?.openingTemplate || "";
+  const textLength = String(step?.content?.textContent || step?.textContent || "").trim().length;
   if(kind === "image") return 2200;
   if(kind === "intro") return Math.max(2200,Math.min(3200,1200 + textLength * 28));
   return Math.max(3000,Math.min(4600,1500 + textLength * 24));
+}
+
+function syncOpeningOutput(chapter,revealedCount){
+  if(!chapter) return [];
+  const templates = Array.from(chapter.querySelectorAll("template[data-opening-template]"));
+  const output = chapter.querySelector("[data-opening-output]");
+  if(!output) return templates;
+  output.replaceChildren();
+  templates.slice(0,revealedCount).forEach(template => {
+    output.appendChild(template.content.cloneNode(true));
+  });
+  return templates;
 }
 
 function startRoomOpeningSequence(){
@@ -7644,7 +7671,7 @@ function startRoomOpeningSequence(){
   const chapter = chapters[chapters.length - 1];
   if(!chapter) return;
   const chapterKey = chapter.dataset.roomImageKey || "image-unknown";
-  const steps = Array.from(chapter.querySelectorAll("[data-opening-message]"));
+  const steps = syncOpeningOutput(chapter,roomOpeningRevealedCount);
 
   if(roomOpeningSequenceKey !== chapterKey){
     clearTimeout(roomOpeningSequenceTimer);
@@ -7658,12 +7685,9 @@ function startRoomOpeningSequence(){
   }
 
   if(roomOpeningSequenceComplete){
-    steps.forEach(step => { step.hidden = false; });
+    syncOpeningOutput(chapter,steps.length);
     return;
   }
-  steps.forEach((step,index) => {
-    step.hidden = index >= roomOpeningRevealedCount;
-  });
   if(roomOpeningSequenceActive || !steps.length) return;
   roomOpeningSequenceActive = true;
   const runId = ++roomOpeningSequenceRunId;
@@ -7672,12 +7696,7 @@ function startRoomOpeningSequence(){
     if(runId !== roomOpeningSequenceRunId || roomOpeningSequenceKey !== chapterKey) return;
     const liveChapters = Array.from(roomMessages.querySelectorAll(`[data-room-image-chapter][data-room-image-key="${chapterKey}"]`));
     const liveChapter = liveChapters[liveChapters.length - 1];
-    const liveSteps = liveChapter
-      ? Array.from(liveChapter.querySelectorAll("[data-opening-message]"))
-      : [];
-    liveSteps.forEach((step,index) => {
-      step.hidden = index >= roomOpeningRevealedCount;
-    });
+    const liveSteps = syncOpeningOutput(liveChapter,roomOpeningRevealedCount);
     if(!liveSteps.length) return;
     if(roomOpeningRevealedCount >= liveSteps.length){
       hideSequenceTyping();
@@ -7694,7 +7713,7 @@ function startRoomOpeningSequence(){
       const currentChapters = Array.from(roomMessages.querySelectorAll(`[data-room-image-chapter][data-room-image-key="${chapterKey}"]`));
       const currentChapter = currentChapters[currentChapters.length - 1];
       const currentSteps = currentChapter
-        ? Array.from(currentChapter.querySelectorAll("[data-opening-message]"))
+        ? Array.from(currentChapter.querySelectorAll("template[data-opening-template]"))
         : [];
       const step = currentSteps[roomOpeningRevealedCount];
       if(!step){
@@ -7702,8 +7721,8 @@ function startRoomOpeningSequence(){
         return;
       }
       const shouldFollow = isRoomNearBottom();
-      step.hidden = false;
       roomOpeningRevealedCount += 1;
+      syncOpeningOutput(currentChapter,roomOpeningRevealedCount);
       scrollRoomToLatest(shouldFollow);
       roomOpeningSequenceTimer = setTimeout(revealNext,getOpeningStepPause(step));
     },750);
