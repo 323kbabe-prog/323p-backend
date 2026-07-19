@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.118 (2026-07-19)
+  - Hid identity and intro copy on Public Camera Perspective cards
+  - Enlarged the complete love and skeleton counters, including emojis and numbers
+  - Changed the publish thumbnail to the captured still image instead of the continuing live feed
+
   v10.0.117 (2026-07-19)
   - Limited the blurred live-camera background to the home and startup experience
   - Restored solid white backgrounds across ASK rooms, HUMAN rooms, and all secondary app screens
@@ -841,6 +846,14 @@ body.systemBlockingState #helper{
   #publicNullsCards .publicPerspectiveMeta{grid-column:1!important;grid-row:4!important;}
   #publicNullsCards .publicPerspectiveAdmin{grid-column:1!important;grid-row:5!important;}
 }
+
+/* v10.0.118 — Public cards show the image and larger response counters only. */
+#publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveIdentity,
+#publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveIntro{display:none!important;}
+#publicNullsCards .loveCount,
+#publicNullsCards .skeletonCount{font-size:17px!important;line-height:1.2!important;font-weight:700!important;}
+#publicNullsCards .loveIcon,
+#publicNullsCards .loveNumber{font-size:inherit!important;line-height:inherit!important;}
 </style>
 
 <script>
@@ -6765,11 +6778,12 @@ function showPublishDialog(){
       livePreview.insertAdjacentElement("afterend",imagePreview);
     }
 
-    if(pendingImageSource === "upload"){
+    if(pendingImageDataUrl){
       livePreview.pause();
       livePreview.srcObject = null;
       livePreview.style.display = "none";
       imagePreview.src = pendingImageDataUrl || "";
+      imagePreview.alt = pendingImageSource === "camera" ? "Captured photo preview" : "Selected upload preview";
       imagePreview.style.display = "block";
     }else{
       imagePreview.style.display = "none";
