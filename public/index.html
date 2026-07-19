@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.137 (2026-07-19)
+  - Restored the unified loader immediately after every live roomMessages redraw
+  - Kept dots visible while waiting between the opening notice and each automatic example card
+  - Prevented incoming card renders from silently removing active loading feedback
+  - Preserved one loader, the v10.0.132 UI, and one-by-one ASK/HUMAN delivery
+
   v10.0.136 (2026-07-19)
   - Removed the remaining black loader created directly by the legacy aiTypingStart handler
   - Made normal socket-driven AI typing use the shared light-gray dark-dot component
@@ -8976,6 +8982,18 @@ roomMessages.innerHTML =
 startRoomOpeningSequence();
 deliverBatchedRoomReplies(previousDeliveredMessageCount,messages.length);
 
+if(
+  !roomOpeningSequenceActive &&
+  (
+    beingFirstRoundWaiting ||
+    beingFirstRoundQueue.length > 0 ||
+    firstRoundDemoPending ||
+    roomReplyDeliveryActive
+  )
+){
+  showSequenceTyping();
+}
+
 if(aiTyping && !isFirstRoundActive()){
 
 const typing =
@@ -9276,6 +9294,7 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   scrollRoomToLatest(isRoomNearBottom());
   const openingChapterExists = Boolean(roomMessages.querySelector("[data-room-image-chapter]"));
   if(roomOpeningSequenceComplete || !openingChapterExists){
+    showSequenceTyping();
     setTimeout(runNextBeingFirstCard,700);
   }
 });
