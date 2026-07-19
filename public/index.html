@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.149 (2026-07-20)
+  - Isolates HUMAN photo sizing from global result-image styles
+  - Advances the automatic briefing only after a valid matching card arrives
+  - Removes typed ellipses from the automatic-briefing input state
+  - Removes the unreachable legacy Jobs renderer
+
   v10.0.148 (2026-07-20)
   - Aligns the HUMAN photo and acknowledgement with the left AI-message edge
   - Removes the photo border and card-like presentation
@@ -4792,6 +4798,7 @@ body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
 }
 #roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{background:#ddf4ff!important;color:var(--final-text)!important;border:1px solid #54aeff!important;box-shadow:none!important;font-weight:400!important;}
 #roomMessages.geminiThread .chatReplyImage{width:min(180px,46vw)!important;max-width:180px!important;max-height:180px!important;object-fit:cover!important;border:1px solid var(--final-line)!important;box-shadow:none!important;}
+#roomMessages.geminiThread .geminiAiResponse img.humanAcknowledgementPhoto{display:block!important;width:96px!important;height:96px!important;min-width:96px!important;max-width:96px!important;min-height:96px!important;max-height:96px!important;object-fit:cover!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:0 0 10px!important;align-self:flex-start!important;}
 #roomMessages.geminiThread .chatOpenAction{background:#f1f8ff!important;color:var(--final-blue)!important;border:1px solid #b6d6f2!important;}
 #roomMessages.geminiThread .chatShareAction{background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;}
 #firstNextBtn{background:#f7f2ff!important;color:var(--final-purple)!important;border:1px solid #d8c7f3!important;font-weight:600!important;}
@@ -6727,6 +6734,7 @@ let roomNullCard = null;
 let beingFirstRoundQueue = [];
 let beingFirstRoundWaiting = false;
 let beingFirstRoundBaseline = 0;
+let beingFirstRoundExpectedType = "";
 let beingFirstRoundInsertionIndex = null;
 let beingFirstRoundStepTimer = null;
 let beingFirstRoundDelayTimer = null;
@@ -7952,7 +7960,7 @@ function selectedHumanAcknowledgementPhoto(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   if(!being.photo) return "";
-  return `<img src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "Selected HUMAN")}" style="display:block;width:96px;height:96px;object-fit:cover;border:0;background:transparent;box-shadow:none;margin:0 0 10px;">`;
+  return `<img class="humanAcknowledgementPhoto" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "Selected HUMAN")}">`;
 }
 
 function isFirstRoundActive(){
@@ -7962,6 +7970,7 @@ function isFirstRoundActive(){
 function resetRoomDeliverySequence(){
   beingFirstRoundQueue = [];
   beingFirstRoundWaiting = false;
+  beingFirstRoundExpectedType = "";
   beingFirstRoundBaseline = lastRoomMessageCount;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
@@ -8229,7 +8238,7 @@ function syncFirstRoundInput(){
   if(isFirstRoundActive()){
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Ask — showing five HUMAN examples from this image…";
+    roomInput.placeholder = "Preparing five HUMAN examples";
     return;
   }
   roomInput.disabled = false;
@@ -8301,7 +8310,9 @@ lastRoomMessageCount = messages.length;
 
 if (
   beingFirstRoundWaiting &&
-  messages.length > beingFirstRoundBaseline
+  messages.slice(beingFirstRoundBaseline).some(message =>
+    isValidBeingFirstRoundCard(message,beingFirstRoundExpectedType)
+  )
 ) {
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
@@ -8309,6 +8320,7 @@ if (
   beingFirstRoundDelayTimer = null;
   document.getElementById("sequenceDelayNotice")?.remove();
   beingFirstRoundWaiting = false;
+  beingFirstRoundExpectedType = "";
   setTimeout(runNextBeingFirstCard, 700);
 }
 
@@ -8813,187 +8825,6 @@ if (m.jobCard) {
       </div>
     </div>
   `;
-}
-
-if (false && m.jobCard) {
-
-return `
-
-<div class="geminiAiResponse geminiJobResponse"
-style="
-width:100%;
-display:flex;
-flex-direction:column;
-align-items:center;
-margin-bottom:18px;
-">
-
-<div class="chatBubble chatAiBubble">I found an opportunity you may want to explore. Google should buy this search idea today.</div>
-
-<div class="chatSourceLabel">${getRoomResultCategoryLabel(m)}</div>
-
-<div
-data-share-card
-data-share-read="true"
-style="
-border:1px solid #ececec;
-max-width:340px;
-background:#fff;
-color:#000;
-padding:16px;
-border-radius:24px;
-display:flex;
-flex-direction:column;
-gap:12px;
-box-shadow:0 2px 10px rgba(0,0,0,0.12);
-">
-
-<div data-share-content>
-
-<div
-style="
-font-size:14px;
-font-weight:300;
-opacity:.45;
-margin-bottom:8px;
-">
-CAMERA PERSPECTIVE FEED
-</div>
-
-<div
-style="
-font-size:13px;
-font-weight:300;
-opacity:.55;
-margin-bottom:10px;
-line-height:1.4;
-">
-One job I think you should notice today:
-</div>
-
-<div
-style="
-display:flex;
-justify-content:flex-start;
-align-items:center;
-gap:16px;
-margin-top:4px;
-margin-bottom:12px;
-">
-
-<a
-href="${m.jobCard.link}"
-target="_blank"
-style="
-cursor:pointer;
-font-size:11px;
-font-weight:600;
-background:#000;
-color:#fff;
-padding:6px 8px;
-border-radius:999px;
-display:inline-block;
-line-height:1;
-text-decoration:none;
-">
-Open job
-</a>
-
-<span
-data-link="${m.jobCard.link}"
-onclick="
-shareCard(
-  this,
-  this.dataset.link
-)
-"
-style="
-cursor:pointer;
-font-size:11px;
-font-weight:600;
-background:#000;
-color:#fff;
-padding:6px 8px;
-border-radius:999px;
-display:inline-block;
-line-height:1;
-">
-Share
-</span>
-
-</div>
-
-<div
-style="
-font-size:14px;
-line-height:1.45;
-font-weight:300;
-word-break:break-word;
-">
-${m.jobCard.title}
-</div>
-
-<div
-style="
-font-size:14px;
-line-height:1.45;
-font-weight:300;
-margin-top:4px;
-">
-${m.jobCard.company}
-</div>
-
-<div
-style="
-font-size:14px;
-line-height:1.45;
-font-weight:300;
-opacity:.55;
-">
-${m.jobCard.location}
-</div>
-
-${m.jobCard.salary ? `
-<div
-style="
-font-size:14px;
-line-height:1.45;
-font-weight:300;
-opacity:.55;
-">
-${m.jobCard.salary}
-</div>
-` : ""}
-
-${m.jobCard.type ? `
-<div
-style="
-font-size:14px;
-line-height:1.45;
-font-weight:300;
-opacity:.55;
-">
-${m.jobCard.type}
-</div>
-` : ""}
-
-${m.jobCard.posted ? `
-<div
-style="
-font-size:14px;
-line-height:1.45;
-font-weight:300;
-opacity:.55;
-">
-${m.jobCard.posted}
-</div>
-` : ""}
-
-</div>
-
-</div>
-
-`;
 }
 
 if(m.ask){
@@ -9528,6 +9359,17 @@ function selectBeingFirstRoundCards(data = {}){
   return chosen.slice(0,5);
 }
 
+function isValidBeingFirstRoundCard(message,expectedType){
+  if(!message || !expectedType) return false;
+  const detectedType = normalizeBeingCardType(
+    message.primaryCategory ||
+    message.autoCardType ||
+    (message.jobCard ? "jobs" : "")
+  );
+  const hasResult = Boolean(message.jobCard || message.ask || (message.link && message.image));
+  return hasResult && detectedType === expectedType;
+}
+
 socket.on("roomNeedsHuman", () => {
   roomNeedsHumanSelection = true;
   localStorage.removeItem("selectedBeingId");
@@ -9557,6 +9399,7 @@ socket.on("roomFirstRoundStart", (data = {}) => {
 
   beingFirstRoundQueue = selectBeingFirstRoundCards(data);
   beingFirstRoundWaiting = false;
+  beingFirstRoundExpectedType = "";
   beingFirstRoundInsertionIndex = null;
   firstRoundDemoPending = true;
   firstRoundDemoVisible = false;
@@ -9592,6 +9435,7 @@ function runNextBeingFirstCard(){
   const next = beingFirstRoundQueue.shift();
   beingFirstRoundBaseline = lastRoomMessageCount;
   beingFirstRoundWaiting = true;
+  beingFirstRoundExpectedType = next.type;
   syncFirstRoundInput();
   showSequenceTyping();
   clearTimeout(beingFirstRoundStepTimer);
