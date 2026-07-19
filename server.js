@@ -6372,6 +6372,49 @@ app.get("/ai-beings/:id", async (req, res) => {
   res.json(data);
 });
 
+app.post("/ai-beings/generate-bio", async (req, res) => {
+  const { category, word1, word2, word3 } = req.body || {};
+  const required = [category, word1, word2, word3].map(value => String(value || "").trim());
+  if(required.some(value => !value)){
+    return res.status(400).json({ error:"Choose a category and enter all three keywords first." });
+  }
+
+  try{
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.65,
+      response_format:{ type:"json_object" },
+      messages:[
+        {
+          role:"system",
+          content:`You write one-sentence professional introductions for ASK.CAMERA HUMAN Cards, a business and networking product.
+Return JSON only with exactly one key: bio.
+The sentence must:
+- be natural English and no more than 160 characters including spaces;
+- explain who should connect with this person and/or what business opportunity they could explore together;
+- reflect the professional category and the spirit of all three keywords;
+- use first person (for example, "I connect..." or "I build...");
+- sound credible, specific, warm, and concise;
+- avoid invented employers, achievements, locations, audience sizes, or other facts;
+- avoid mechanically listing all inputs;
+- never mention ASK.CAMERA, HUMAN Cards, AI, or that the sentence was generated unless AI is part of the supplied category.`
+        },
+        {
+          role:"user",
+          content:JSON.stringify({ category:required[0], word1:required[1], word2:required[2], word3:required[3] })
+        }
+      ]
+    });
+    const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+    const bio = String(parsed.bio || "").trim().slice(0,160);
+    if(!bio) throw new Error("Bio generation returned no text.");
+    res.json({ bio });
+  }catch(error){
+    console.error("HUMAN bio generation failed:",error);
+    res.status(502).json({ error:"Could not generate the business introduction. Please try again." });
+  }
+});
+
 app.post("/ai-beings", async (req, res) => {
   const {
     photo,
