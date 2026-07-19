@@ -2,6 +2,13 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.28 (2026-07-19)
+// - Added POST /ai-beings/generate-bio for HUMAN business introductions
+// - Generates one concise first-person networking sentence from category and three keywords
+// - Keeps generated bios within 160 characters and avoids invented professional facts
+// - Supports creator subtypes supplied by the frontend category flow
+// - Preserved the existing HUMAN create, edit, management-password, and recovery-code APIs
+
 // v10.0.25 (2026-07-18)
 // - Matched backend release for the permanent colorful camera backdrop update
 //
