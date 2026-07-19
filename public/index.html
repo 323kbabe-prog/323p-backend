@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.144 (2026-07-20)
+  - Replaces the input handoff with a floating HUMAN selection card
+  - Adds one primary Open HUMAN Cards button above the ASK input
+  - Keeps the ASK input disabled until a HUMAN is selected
+
   v10.0.143 (2026-07-20)
   - Replaces automatic HUMAN Cards opening with an explicit input action
   - Opens HUMAN Cards when the user presses Enter or clicks the selection input
@@ -6380,6 +6385,11 @@ border:1px solid #111;
 
 </div>
 
+  <div id="humanSelectionPrompt" role="status" style="display:none;position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:1003;width:min(620px,calc(100% - 24px));box-sizing:border-box;background:#f6f8fa;border:1px solid #8c959f;padding:12px;box-shadow:0 8px 24px rgba(31,35,40,.18);">
+    <div style="color:#24292f;font-size:13px;font-weight:600;line-height:1.4;margin:0 0 10px;">Choose a HUMAN perspective to continue this image.</div>
+    <button id="openHumanCardsButton" type="button" style="display:block;width:100%;min-height:46px;border:1px solid #0969da;background:#0969da;color:#fff;font:700 14px Arial,sans-serif;cursor:pointer;">Open HUMAN Cards</button>
+  </div>
+
   <input
     id="roomInput"
     placeholder="Ask"
@@ -6647,6 +6657,9 @@ const roomInput =
   document.getElementById(
     "roomInput"
   );
+
+const humanSelectionPrompt = document.getElementById("humanSelectionPrompt");
+const openHumanCardsButton = document.getElementById("openHumanCardsButton");
 
 const closeRoom =
   document.getElementById(
@@ -7477,13 +7490,7 @@ closeRoom.onclick = () => {
 
 roomInput.onkeydown = e => {
 
-    if (roomNeedsHumanSelection) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        openRequiredHumanSelection();
-      }
-      return;
-    }
+    if (roomNeedsHumanSelection) return;
 
     if (e.key !== "Enter") return;
 
@@ -7534,9 +7541,7 @@ roomInput.value = "";
 
 };
 
-roomInput.addEventListener("click",() => {
-  if(roomNeedsHumanSelection) openRequiredHumanSelection();
-});
+openHumanCardsButton.addEventListener("click",openRequiredHumanSelection);
 
 socket.on(
   "imageAiIntro",
@@ -8013,6 +8018,7 @@ function openRequiredHumanSelection(){
   roomOpeningSequenceComplete = true;
   hideSequenceTyping();
   syncFirstRoundInput();
+  humanSelectionPrompt.style.display = "none";
   showAIBeings();
 }
 
@@ -8153,10 +8159,11 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
 
 function syncFirstRoundInput(){
   roomInput.style.display = "block";
+  humanSelectionPrompt.style.display = roomNeedsHumanSelection ? "block" : "none";
   if(roomNeedsHumanSelection){
-    roomInput.disabled = false;
-    roomInput.readOnly = true;
-    roomInput.placeholder = "Press Enter to choose a HUMAN perspective";
+    roomInput.disabled = true;
+    roomInput.readOnly = false;
+    roomInput.placeholder = "Choose a HUMAN perspective above";
     return;
   }
   if(!localStorage.getItem("selectedBeingId") && (roomOpeningBootstrapActive || roomOpeningSequenceActive)){
@@ -11047,6 +11054,7 @@ function returnFromHumanCards(){
     cameraWrap.style.display = "block";
     helper.style.display = "none";
     history.replaceState({},"",`/?room=${localStorage.getItem("roomId")}`);
+    syncFirstRoundInput();
     return;
   }
   showCreateNull();
