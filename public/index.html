@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.143 (2026-07-20)
+  - Replaces automatic HUMAN Cards opening with an explicit input action
+  - Opens HUMAN Cards when the user presses Enter or clicks the selection input
+  - Keeps room-message submission blocked until a HUMAN is selected
+
   v10.0.142 (2026-07-20)
   - Decouples HUMAN Cards opening from opening-sequence and socket timing
   - Observes the rendered HUMAN instruction as the authoritative UI handoff point
@@ -7472,6 +7477,14 @@ closeRoom.onclick = () => {
 
 roomInput.onkeydown = e => {
 
+    if (roomNeedsHumanSelection) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        openRequiredHumanSelection();
+      }
+      return;
+    }
+
     if (e.key !== "Enter") return;
 
     const text = roomInput.value.trim();
@@ -7520,6 +7533,10 @@ roomInput.value = "";
 
 
 };
+
+roomInput.addEventListener("click",() => {
+  if(roomNeedsHumanSelection) openRequiredHumanSelection();
+});
 
 socket.on(
   "imageAiIntro",
@@ -7999,20 +8016,6 @@ function openRequiredHumanSelection(){
   showAIBeings();
 }
 
-function maybeOpenRequiredHumanSelection(){
-  if(!roomNeedsHumanSelection) return;
-  const humanScreen = document.getElementById("aiBeingsScreen");
-  if(humanScreen?.style.display === "flex") return;
-  const instructionIsVisible = Boolean(
-    roomMessages.querySelector("[data-opening-output] .humanCardInstruction")
-  );
-  if(!instructionIsVisible) return;
-  openRequiredHumanSelection();
-}
-
-const humanSelectionStateObserver = new MutationObserver(maybeOpenRequiredHumanSelection);
-humanSelectionStateObserver.observe(roomMessages,{ childList:true, subtree:true });
-
 function startRoomOpeningSequence(){
   const chapters = Array.from(roomMessages.querySelectorAll("[data-room-image-chapter]"));
   const chapter = chapters[chapters.length - 1];
@@ -8053,7 +8056,6 @@ function startRoomOpeningSequence(){
       syncFirstRoundInput();
       if(roomNeedsHumanSelection){
         humanSelectionOpening = true;
-        openRequiredHumanSelection();
       }else if(beingFirstRoundQueue.length){
         setTimeout(runNextBeingFirstCard,700);
       }
@@ -8082,7 +8084,6 @@ function startRoomOpeningSequence(){
         roomOpeningSequenceComplete = true;
         humanSelectionOpening = true;
         syncFirstRoundInput();
-        openRequiredHumanSelection();
         return;
       }
       roomOpeningSequenceTimer = setTimeout(revealNext,getOpeningStepPause(step));
@@ -8152,18 +8153,26 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
 
 function syncFirstRoundInput(){
   roomInput.style.display = "block";
-  if(roomNeedsHumanSelection || (!localStorage.getItem("selectedBeingId") && (roomOpeningBootstrapActive || roomOpeningSequenceActive))){
+  if(roomNeedsHumanSelection){
+    roomInput.disabled = false;
+    roomInput.readOnly = true;
+    roomInput.placeholder = "Press Enter to choose a HUMAN perspective";
+    return;
+  }
+  if(!localStorage.getItem("selectedBeingId") && (roomOpeningBootstrapActive || roomOpeningSequenceActive)){
     roomInput.disabled = true;
-    roomInput.placeholder = "Ask — choose a HUMAN perspective first";
-    queueMicrotask(maybeOpenRequiredHumanSelection);
+    roomInput.readOnly = false;
+    roomInput.placeholder = "ASK.CAMERA is preparing the image…";
     return;
   }
   if(isFirstRoundActive()){
     roomInput.disabled = true;
+    roomInput.readOnly = false;
     roomInput.placeholder = "Ask — showing five HUMAN examples from this image…";
     return;
   }
   roomInput.disabled = false;
+  roomInput.readOnly = false;
   roomInput.placeholder = "Ask";
 }
 
@@ -9436,7 +9445,6 @@ socket.on("roomNeedsHuman", () => {
   syncFirstRoundInput();
   if(roomOpeningSequenceComplete){
     humanSelectionOpening = true;
-    openRequiredHumanSelection();
   }
 });
 
