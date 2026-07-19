@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.117 (2026-07-19)
+  - Limited the blurred live-camera background to the home and startup experience
+  - Restored solid white backgrounds across ASK rooms, HUMAN rooms, and all secondary app screens
+  - Removed room-level translucent veils and backdrop blur
+
   v10.0.116 (2026-07-19)
   - Applied one colorful blurred live-camera background system to both ASK and HUMAN rooms
   - Increased live-camera saturation and blur while keeping foreground room content sharp
@@ -6146,10 +6151,9 @@ function syncHomeControlStack(){
   const secondaryScreenOpen = ["dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
     .map(id => document.getElementById(id))
     .some(screen => screen && getComputedStyle(screen).display !== "none");
-  // The colorful live-camera blur is the permanent application canvas.
-  document.body.classList.add("appBackdropActive");
-
-  const backdropActive = true;
+  // The colorful live-camera blur belongs only to the home experience.
+  const backdropActive = cameraIsVisible && !roomIsOpen && !secondaryScreenOpen;
+  document.body.classList.toggle("appBackdropActive",backdropActive);
   const liveVideo = document.getElementById("video");
   if(backdropActive){
     cameraWrap.style.setProperty("display","block","important");
@@ -6157,23 +6161,18 @@ function syncHomeControlStack(){
       liveVideo.style.setProperty("filter","blur(24px) brightness(.82) saturate(1.9)","important");
       liveVideo.style.setProperty("transform","scale(1.12)","important");
     }
-    ["roomOverlay","dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
-      .map(id => document.getElementById(id))
-      .filter(Boolean)
-      .forEach(screen => {
-        const isSharedAskOrHumanRoom = screen.id === "roomOverlay";
-        screen.style.setProperty(
-          "background",
-          isSharedAskOrHumanRoom ? "rgba(255,255,255,.20)" : "rgba(255,255,255,.34)",
-          "important"
-        );
-        screen.style.setProperty("backdrop-filter",isSharedAskOrHumanRoom ? "blur(14px)" : "blur(10px)","important");
-        screen.style.setProperty("-webkit-backdrop-filter",isSharedAskOrHumanRoom ? "blur(14px)" : "blur(10px)","important");
-      });
   }else if(liveVideo){
     liveVideo.style.removeProperty("filter");
     liveVideo.style.removeProperty("transform");
   }
+  ["roomOverlay","dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
+    .map(id => document.getElementById(id))
+    .filter(Boolean)
+    .forEach(screen => {
+      screen.style.setProperty("background","#fff","important");
+      screen.style.setProperty("backdrop-filter","none","important");
+      screen.style.setProperty("-webkit-backdrop-filter","none","important");
+    });
   if(typeof updateHomeCaptureCardVisibility === "function"){
     updateHomeCaptureCardVisibility();
   }
