@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.40 (2026-07-20)
+// - Replaces AI-planned automatic queries with five simple HUMAN-category inputs
+// - Sends those inputs through the original user search pipeline
+// - Removes the special direct-search bypass used only by automatic cards
+//
 // v10.0.39 (2026-07-20)
 // - Executes each saved automatic search sentence directly without legacy rewrites
 // - Bypasses image-first Shopping, Jobs, Place, and news-selection prompts during briefing
@@ -315,116 +320,15 @@ ${userText}
 }
 
 async function createRoomFirstRoundCards(room) {
-  const allowed = ["news", "shopping", "place", "jobs", "real_estate"];
   const being = room?.being;
   const category = String(being?.category || room?.coreTheme || "general discovery").trim();
-  const imageWords = String(room?.coreTheme || room?.hiddenSystem || room?.imageContext || "image")
-    .toLowerCase()
-    .match(/[a-z][a-z-]*/g) || ["image"];
-  const ignoredWords = new Set(["the","and","with","from","this","that","image","human","camera","category"]);
-  const imageWord = imageWords.find(word => word.length > 2 && !ignoredWords.has(word)) || "visual";
-  const fallbackQueries = {
-    news:`latest ${category} trends connected to ${imageWord}`,
-    shopping:`best ${imageWord} products for ${category}`,
-    place:`${imageWord} destinations connected to ${category}`,
-    jobs:`${category} careers connected to ${imageWord}`,
-    real_estate:`homes inspired by ${category} and ${imageWord}`
-  };
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content: `
-Generate exactly FIVE concise internet search sentences for an ASK.CAMERA briefing.
-
-Allowed card types:
-news
-shopping
-place
-jobs
-real_estate
-
-Rules:
-- Produce exactly one search for every allowed card type.
-- The selected HUMAN category is a HARD SUBJECT BOUNDARY for every search.
-- Every query must remain a genuine subtopic of that category. Never leave, replace, generalize, or merely mention the category.
-- The card type changes only the result format; it never changes the subject domain.
-- Translate one useful image detail or visual concept into a natural concept that fits the assigned card type.
-- Write how a person would actually search Google. Do not simply concatenate category, image, and card-type keywords.
-- Make every query specific enough to return a useful real result.
-- For real_estate, convert relevant visual ideas into housing language such as eco-friendly, green building, indoor garden, minimalist home, accessible housing, waterfront living, or another genuinely fitting property concept.
-- For jobs, convert the same context into a plausible profession, industry, skill, or employment opportunity.
-- For shopping, name a plausible product class rather than writing the word "products" when a more specific phrase is possible.
-- For place, name a plausible destination or place category.
-- For news, name a current trend, development, or issue.
-- Keep each search between 3 and 12 words.
-- Do not use the HUMAN bio to choose the search subject.
-- Do not include instructions, explanations, percentages, quotation marks, or markdown.
-- Return valid JSON only in this exact shape:
-{"news":"","shopping":"","place":"","jobs":"","real_estate":""}
-
-Example only:
-HUMAN category: Sustainability
-Image concept: green plants in a modern room
-Good real_estate search: eco-friendly homes with indoor gardens
-Good jobs search: sustainable interior design careers
-Good shopping search: smart indoor garden systems
-Good place search: urban botanical gardens and green architecture
-Good news search: latest biophilic design and green building trends
-
-Required category-boundary example:
-HUMAN category: Real Estate
-Image concept: green plants and smart devices
-Good news search: latest sustainable smart home real estate trends
-Good shopping search: smart energy systems for eco-friendly homes
-Good place search: green residential neighborhoods with smart homes
-Good jobs search: sustainable real estate technology careers
-Good real_estate search: eco-friendly smart homes with indoor gardens
-All five searches are about Real Estate. The card type changes the kind of result, not the category.
-          `.trim()
-        },
-        {
-          role: "user",
-          content: `
-IMAGE INTERPRETATION
-${room.imageContext || ""}
-
-ROOM CATEGORY
-${room.coreTheme || ""}
-
-HUMAN (optional)
-Name: ${being?.name || ""}
-Bio: ${being?.best_current_choice || ""}
-Category: ${being?.category || ""}
-Personality: ${being?.word1 || ""}, ${being?.word2 || ""}, ${being?.word3 || ""}
-          `.trim()
-        }
-      ]
-    });
-
-    const raw = String(response.choices[0].message.content || "")
-      .replace(/^```(?:json)?\s*/i,"")
-      .replace(/\s*```$/,"")
-      .trim();
-    const generated = JSON.parse(raw);
-    const cards = allowed.map(type => ({
-      type,
-      text:String(generated?.[type] || "").replace(/[\r\n]+/g," ").trim()
-    }));
-    const valid = cards.every(card => {
-      const wordCount = card.text.split(/\s+/).filter(Boolean).length;
-      return wordCount >= 3 && wordCount <= 16;
-    });
-    if (valid) return cards;
-  } catch (error) {
-    console.log("ROOM FIRST ROUND SEARCH GENERATION FAILED:", error.message);
-  }
-
-  return allowed.map(type => ({ type, text:fallbackQueries[type] }));
+  return [
+    { type:"news", text:`Search the latest news in the ${category} category.` },
+    { type:"shopping", text:`Search for something to buy in the ${category} category.` },
+    { type:"place", text:`Search for a place to go in the ${category} category.` },
+    { type:"jobs", text:`Search for a job in the ${category} category.` },
+    { type:"real_estate", text:`Search for a place to live in the ${category} category.` }
+  ];
 }
 
 async function createHumanAnchorTransition(room, cardType) {
@@ -1115,7 +1019,7 @@ io.on("connection", socket => {
         }
     });
 
-    socket.on("closePrivateRoom", ({ deviceId } = {}, acknowledge) => {
+    socket.on("closeAskRoom", ({ deviceId } = {}, acknowledge) => {
         const user = users[socket.id];
         const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
         if (roomId && rooms[roomId] && deviceRooms[deviceId] === roomId) {
@@ -1150,7 +1054,6 @@ io.on("connection", socket => {
         }
 
         room.being = being;
-        room.beingSessionId = null;
         room.permanent = true;
         room.expiresAt = null;
         room.topicMemory = {};
@@ -1757,7 +1660,6 @@ deviceId,
     publicNullIdentity,
     publicNullIntro,
     beingId,
-    beingSessionId,
     roomId: requestedRoomId
 }) => {
 
@@ -2155,8 +2057,6 @@ if (!roomId || !rooms[roomId]) {
 
         being: selectedBeing,
 
-        beingSessionId: selectedBeing ? beingSessionId : null,
-
         permanent: true,
 
         coreTheme: coreTheme,
@@ -2233,7 +2133,6 @@ deviceRooms[deviceId] = roomId;
 
     if (selectedBeing) {
       room.being = selectedBeing;
-      room.beingSessionId = beingSessionId;
       room.permanent = true;
       room.expiresAt = null;
     }
@@ -3457,10 +3356,6 @@ try{
  const combinedIntent =
   `${text.trim()}${automaticBriefingContext}`;
 
- const fixedAutomaticSearch = autoFirstRound
-  ? String(text || "").replace(/[\r\n]+/g," ").trim()
-  : "";
-
  const addAutomaticSearchFallback = () => {
   if (
     !autoFirstRound ||
@@ -3474,7 +3369,8 @@ try{
     real_estate:"properties"
   };
   const fallbackLabel = fallbackLabels[autoCardType];
-  const fallbackLink = `https://www.google.com/search?q=${encodeURIComponent(fixedAutomaticSearch)}`;
+  const fallbackSearch = String(text || "").replace(/[\r\n]+/g," ").trim();
+  const fallbackLink = `https://www.google.com/search?q=${encodeURIComponent(fallbackSearch)}`;
   room.messages.push({
     from:room.being?.name || "CAMERA PERSPECTIVE",
     aiBeing:true,
@@ -3483,7 +3379,7 @@ try{
     showNextButton:true,
     showRead:true,
     searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
-    ask:`Open ${fallbackLabel} for: ${fixedAutomaticSearch}.`,
+    ask:`Open ${fallbackLabel} for: ${fallbackSearch}.`,
     link:fallbackLink
   });
   io.to(room.id).emit("aiTypingStop");
@@ -4150,7 +4046,7 @@ const nullInput =
 const englishText =
     nullInput.userReality;
 
-let interpretedIntent = fixedAutomaticSearch || nullInput.searchDirection;
+let interpretedIntent = nullInput.searchDirection;
 
 
 let originalUserRequest =
@@ -4218,10 +4114,6 @@ if (
   !isNextSearch &&
   isShoppingIntent
 ) {
-
-  if (fixedAutomaticSearch) {
-    directShoppingSearch = fixedAutomaticSearch;
-  } else {
 
   const shoppingQueryRes =
     await openai.chat.completions.create({
@@ -4353,8 +4245,6 @@ ${originalUserRequest}
       .message
       .content
       .trim();
-
-  }
 
 }
 
@@ -4562,7 +4452,7 @@ const skipPlaceFlow =
   
 let emotionRes = null;
 
-if (!directNewsSearch && !fixedAutomaticSearch) {
+if (!directNewsSearch) {
 
   emotionRes =
     await openai.chat.completions.create({
@@ -4996,8 +4886,7 @@ if (
 }
     
 const searchQuery = (
-    fixedAutomaticSearch ||
-    (isNextSearch
+    isNextSearch
         ? (
             emotionSearch ||
             hiddenSystem ||
@@ -5012,7 +4901,7 @@ const searchQuery = (
             emotionSearch ||
             hiddenSystem ||
             "latest news"
-        ))
+        )
 ).trim();
 
 console.log("USER:", text);
@@ -5047,8 +4936,7 @@ room.usedSearches.push(
 
 if (isJobSearch) {
 
-const jobSearchRes = fixedAutomaticSearch ? null :
-  await openai.chat.completions.create({
+const jobSearchRes = await openai.chat.completions.create({
 
     model:"gpt-4o-mini",
 
@@ -5136,8 +5024,7 @@ ${text}
 
 });
 
-const jobSearch = fixedAutomaticSearch ||
-  jobSearchRes
+const jobSearch = jobSearchRes
     .choices[0]
     .message
     .content
@@ -5378,7 +5265,7 @@ const validNews =
 
 if(validNews.length > 0){
 
-if (fixedAutomaticSearch || validNews.length <= 2) {
+if (validNews.length <= 2) {
 
   selectedNews = validNews[0];
 
@@ -5588,8 +5475,7 @@ if(
   isLocationRequest
 ){
 
-const placeQueryRes = fixedAutomaticSearch ? null :
-  await openai.chat.completions.create({
+const placeQueryRes = await openai.chat.completions.create({
 
     model:"gpt-4o-mini",
 
@@ -5708,8 +5594,7 @@ console.log(
 );
 console.log("NEWS:", selectedNews?.title);
 
-const placeQuery = fixedAutomaticSearch ||
-  placeQueryRes
+const placeQuery = placeQueryRes
     .choices[0]
     .message
     .content
@@ -5788,7 +5673,7 @@ console.log(
 );
 }
 
-if (fixedAutomaticSearch && isLocationRequest && !placeName) {
+if (autoFirstRound && isLocationRequest && !placeName) {
   if (addAutomaticSearchFallback()) return;
 }
 
