@@ -4,6 +4,14 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.111 (2026-07-19)
+  - Rebuilt the startup screen with the shared GitHub-style information hierarchy
+  - Moved ASK.CAMERA branding and Refresh into one compact product utility row
+  - Changed FREE TRIAL into a small status label instead of the main title
+  - Added a functional headline and concise supporting instruction above the camera
+  - Removed duplicate bottom branding and retained one restrained slogan footer
+  - Applied exact rails, GitHub-gray borders, compact spacing, and shadow-free surfaces
+
   v10.0.110 (2026-07-19)
   - Added a square Refresh control to the FREE TRIAL startup header outside the camera card
   - Reorganized startup title, supporting copy, camera, and branding onto one exact alignment rail
@@ -643,21 +651,22 @@ body.appBackdropActive #capturePreview{display:none!important;}
 .homeStartupRail,#homeCaptureStage{width:min(88vw,480px)!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important;}
 .homeStartupRail{text-align:left!important;}
 #homeStartupTop{align-self:start!important;}
-#homeStartupHeadingRow{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important;}
-#homeStartupTitle{padding-top:3px!important;font-size:clamp(23px,5.4vw,31px)!important;line-height:1.08!important;font-weight:650!important;letter-spacing:-.025em!important;color:#111!important;}
-#homeStartupSubtext{max-width:420px!important;margin-top:8px!important;font-size:clamp(13px,3.5vw,16px)!important;line-height:1.4!important;font-weight:400!important;color:#57606a!important;}
-#homeStartupRefresh{flex:0 0 46px!important;width:46px!important;height:46px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid #8c959f!important;border-radius:0!important;background:#fff!important;color:#111!important;box-shadow:none!important;}
-#homeStartupRefresh svg{width:22px!important;height:22px!important;fill:currentColor!important;}
+#homeStartupProductRow{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;}
+#homeStartupProductName{font-size:14px!important;line-height:1.2!important;font-weight:600!important;letter-spacing:.01em!important;color:#1f2328!important;}
+#homeStartupRefresh{flex:0 0 40px!important;width:40px!important;height:40px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid #d0d7de!important;border-radius:0!important;background:#f6f8fa!important;color:#1f2328!important;box-shadow:none!important;}
+#homeStartupRefresh svg{width:19px!important;height:19px!important;fill:currentColor!important;}
+#homeStartupTrial{display:inline-flex!important;align-items:center!important;width:fit-content!important;min-height:24px!important;margin-top:12px!important;padding:0 8px!important;border:1px solid #d0d7de!important;background:#f6f8fa!important;color:#57606a!important;font-size:11px!important;line-height:1!important;font-weight:600!important;letter-spacing:.03em!important;}
+#homeStartupTitle{max-width:440px!important;margin-top:10px!important;font-size:clamp(23px,5.5vw,27px)!important;line-height:1.16!important;font-weight:600!important;letter-spacing:-.02em!important;color:#1f2328!important;}
+#homeStartupSubtext{max-width:430px!important;margin-top:7px!important;font-size:clamp(13px,3.5vw,15px)!important;line-height:1.45!important;font-weight:400!important;color:#57606a!important;}
 #homeCaptureStage{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:hidden!important;}
-#homeCaptureCard{position:relative!important;z-index:1!important;display:block!important;width:100%!important;height:100%!important;max-height:680px!important;min-height:0!important;margin:0 auto!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:0!important;box-shadow:0 16px 44px rgba(0,0,0,.2)!important;overflow:hidden!important;}
+#homeCaptureCard{position:relative!important;z-index:1!important;display:block!important;width:100%!important;height:100%!important;max-height:680px!important;min-height:0!important;margin:0 auto!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:1px solid #d0d7de!important;box-shadow:none!important;overflow:hidden!important;}
 #homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;z-index:0!important;}
 #homeCaptureShade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(0,0,0,.08),transparent 26%,transparent 70%,rgba(0,0,0,.16))!important;z-index:1!important;pointer-events:none!important;}
 #homeTakePicture{position:absolute!important;z-index:2!important;left:50%!important;bottom:16px!important;transform:translateX(-50%)!important;width:66px!important;height:66px!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;background:#fff!important;color:#111!important;border:3px solid rgba(255,255,255,.72)!important;border-radius:50%!important;box-shadow:0 2px 14px rgba(0,0,0,.28)!important;}
 #homeTakePicture svg{width:31px!important;height:31px!important;fill:currentColor!important;}
-#homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:34px!important;height:34px!important;padding:0!important;background:#fff!important;color:#111!important;border:1px solid #8c959f!important;font-size:21px!important;font-weight:400!important;line-height:1!important;}
+#homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:36px!important;height:36px!important;padding:0!important;background:#f6f8fa!important;color:#1f2328!important;border:1px solid #d0d7de!important;font-size:20px!important;font-weight:400!important;line-height:1!important;box-shadow:none!important;}
 #homeStartupBrand{align-self:end!important;}
-#homeStartupBrandName{font-size:18px!important;line-height:1.15!important;font-weight:650!important;letter-spacing:.01em!important;color:#111!important;}
-#homeStartupBrandLine{margin-top:6px!important;font-size:11px!important;line-height:1.3!important;font-weight:450!important;letter-spacing:.015em!important;color:#57606a!important;text-transform:uppercase!important;}
+#homeStartupBrandLine{font-size:11px!important;line-height:1.35!important;font-weight:400!important;letter-spacing:.015em!important;color:#6e7781!important;text-transform:uppercase!important;}
 
 /* Publish choice uses the same centered, square monochrome dialog system. */
 #publishDialog{
@@ -729,13 +738,14 @@ body.appBackdropActive #capturePreview{display:none!important;}
 }
 @media(max-height:650px){
   #homeStartupLayer{gap:9px!important;padding-top:max(10px,env(safe-area-inset-top))!important;padding-bottom:max(10px,env(safe-area-inset-bottom))!important;}
-  #homeStartupTitle{font-size:20px!important;}
+  #homeStartupTrial{margin-top:7px!important;min-height:21px!important;font-size:9px!important;}
+  #homeStartupTitle{margin-top:6px!important;font-size:19px!important;}
+  #homeStartupSubtext{margin-top:4px!important;font-size:11px!important;line-height:1.3!important;}
   #homeStartupRefresh{flex-basis:40px!important;width:40px!important;height:40px!important;}
   #homeStartupSubtext{margin-top:4px!important;font-size:12px!important;line-height:1.25!important;}
   #homeTakePicture{bottom:9px!important;width:54px!important;height:54px!important;}
   #homeTakePicture svg{width:25px!important;height:25px!important;}
-  #homeStartupBrandName{font-size:14px!important;}
-  #homeStartupBrandLine{margin-top:3px!important;font-size:9px!important;}
+  #homeStartupBrandLine{font-size:9px!important;}
 }
 
 /* v10.0.108 — one authoritative disconnected state. */
@@ -10716,13 +10726,15 @@ function ensureCanonicalHomeExperience(){
     layer.setAttribute("aria-label", "ASK.CAMERA free trial camera");
     layer.innerHTML = `
       <header id="homeStartupTop" class="homeStartupRail">
-        <div id="homeStartupHeadingRow">
-          <div id="homeStartupTitle">FREE TRIAL</div>
+        <div id="homeStartupProductRow">
+          <div id="homeStartupProductName">ASK.CAMERA</div>
           <button id="homeStartupRefresh" type="button" aria-label="Refresh camera" onclick="window.location.reload()">
             <svg aria-hidden="true" viewBox="0 -960 960 960"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/></svg>
           </button>
         </div>
-        <div id="homeStartupSubtext">Take a picture and see what this image connects you to today.</div>
+        <div id="homeStartupTrial">FREE TRIAL</div>
+        <div id="homeStartupTitle">See where this image connects you.</div>
+        <div id="homeStartupSubtext">Take a picture to discover today’s context and perspectives.</div>
       </header>
       <div id="homeCaptureStage">
         <div id="homeCaptureCard" aria-label="Live camera">
@@ -10735,7 +10747,6 @@ function ensureCanonicalHomeExperience(){
         </div>
       </div>
       <footer id="homeStartupBrand" class="homeStartupRail">
-        <div id="homeStartupBrandName">ASK.CAMERA</div>
         <div id="homeStartupBrandLine">THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.</div>
       </footer>
     `;
