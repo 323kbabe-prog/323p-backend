@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.109 (2026-07-19)
+  - Audited and unified every full-screen helper, loading, permission, error, expiry, and recovery state
+  - Added one shared blocking-state renderer with consistent navigation hiding and screen restoration
+  - Standardized camera unavailable, camera permission, camera loading, capture failure, connection loss, room creation, rejoining, room not found, and room expired states
+  - Limited each blocking state to essential text, progress, and one or two square recovery actions
+
   v10.0.108 (2026-07-19)
   - Replaced the crowded reconnecting helper with one clean connection-loss state
   - Shows only concise text and one square Refresh button while offline
@@ -722,18 +728,18 @@ body.appBackdropActive #capturePreview{display:none!important;}
 }
 
 /* v10.0.108 — one authoritative disconnected state. */
-body.connectionLost #modeBar,
-body.connectionLost #homeControlStack,
-body.connectionLost #homeUtilityButtons,
-body.connectionLost #homeStartupLayer,
-body.connectionLost #roomOverlay,
-body.connectionLost #dailyNullsScreen,
-body.connectionLost #publicNullsScreen,
-body.connectionLost #aiBeingsScreen,
-body.connectionLost #createBeingScreen,
-body.connectionLost #publishDialog,
-body.connectionLost #guidePopup{display:none!important;}
-body.connectionLost #helper{
+body.systemBlockingState #modeBar,
+body.systemBlockingState #homeControlStack,
+body.systemBlockingState #homeUtilityButtons,
+body.systemBlockingState #homeStartupLayer,
+body.systemBlockingState #roomOverlay,
+body.systemBlockingState #dailyNullsScreen,
+body.systemBlockingState #publicNullsScreen,
+body.systemBlockingState #aiBeingsScreen,
+body.systemBlockingState #createBeingScreen,
+body.systemBlockingState #publishDialog,
+body.systemBlockingState #guidePopup{display:none!important;}
+body.systemBlockingState #helper{
   position:fixed!important;
   inset:0!important;
   z-index:2147483600!important;
@@ -752,10 +758,14 @@ body.connectionLost #helper{
   transform:none!important;
   overflow:hidden!important;
 }
-#connectionLostState{width:min(100%,360px);display:flex;flex-direction:column;align-items:center;gap:0;}
-#connectionLostTitle{font-size:23px;line-height:1.15;font-weight:600;letter-spacing:-.01em;}
-#connectionLostText{margin-top:9px;font-size:14px;line-height:1.45;font-weight:400;color:#57606a;}
-#connectionLostRefresh{width:100%;height:48px;margin-top:22px;border:1px solid #111!important;border-radius:0!important;background:#111!important;color:#fff!important;font-size:15px;font-weight:600;box-shadow:none!important;}
+.systemState{width:min(100%,360px);display:flex;flex-direction:column;align-items:center;gap:0;}
+.systemStateTitle{font-size:23px;line-height:1.15;font-weight:600;letter-spacing:-.01em;}
+.systemStateText{margin-top:9px;font-size:14px;line-height:1.45;font-weight:400;color:#57606a;}
+.systemStateProgress{display:flex;gap:7px;align-items:center;justify-content:center;margin-top:20px;}
+.systemStateActions{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:22px;}
+.systemStateButton{width:100%;height:48px;border:1px solid #111!important;border-radius:0!important;font-size:15px;font-weight:600;box-shadow:none!important;}
+.systemStateButtonPrimary{background:#111!important;color:#fff!important;}
+.systemStateButtonSecondary{background:#fff!important;color:#111!important;}
 
 /* v10.0.98 — Public Perspective cards: one frame, one text rail, one image rail. */
 #publicNullsCards{width:min(100%,960px)!important;max-width:960px!important;}
@@ -5937,6 +5947,61 @@ const helper =
 const freshCameraHomeHTML = helper.innerHTML;
 const ROOM_KIND_KEY = "activeRoomKind";
 let publicReturnContext = "home";
+let activeSystemState = "";
+
+function clearSystemState(expectedState = ""){
+  if(expectedState && activeSystemState !== expectedState) return;
+  activeSystemState = "";
+  document.body.classList.remove("systemBlockingState");
+}
+
+function showSystemState({ key, title, text = "", loading = false, primary = null, secondary = null }){
+  activeSystemState = key || "system";
+  document.body.classList.add("systemBlockingState");
+  helper.style.display = "flex";
+  helper.innerHTML = "";
+
+  const state = document.createElement("div");
+  state.className = "systemState";
+  state.setAttribute("role", loading ? "status" : "alert");
+  state.setAttribute("aria-live", loading ? "polite" : "assertive");
+
+  const heading = document.createElement("div");
+  heading.className = "systemStateTitle";
+  heading.textContent = title;
+  state.appendChild(heading);
+
+  if(text){
+    const description = document.createElement("div");
+    description.className = "systemStateText";
+    description.textContent = text;
+    state.appendChild(description);
+  }
+
+  if(loading){
+    const progress = document.createElement("div");
+    progress.className = "systemStateProgress";
+    progress.innerHTML = '<div class="aiDot"></div><div class="aiDot"></div><div class="aiDot"></div>';
+    state.appendChild(progress);
+  }
+
+  const actions = [primary,secondary].filter(Boolean);
+  if(actions.length){
+    const actionWrap = document.createElement("div");
+    actionWrap.className = "systemStateActions";
+    actions.forEach((action,index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `systemStateButton ${index === 0 ? "systemStateButtonPrimary" : "systemStateButtonSecondary"}`;
+      button.textContent = action.label;
+      button.onclick = action.onClick;
+      actionWrap.appendChild(button);
+    });
+    state.appendChild(actionWrap);
+  }
+
+  helper.appendChild(state);
+}
 
 function getActiveRoomKind(data){
   if(
@@ -6455,6 +6520,7 @@ video.onloadedmetadata = async () => {
     await video.play();
 
 helper.style.display = "flex";
+clearSystemState("camera");
 
 
   }catch(err){
@@ -6478,40 +6544,13 @@ helper.style.display = "flex";
         !video.videoWidth
       ){
 
-        helper.style.display =
-          "flex";
-
-  helper.innerHTML = `
-<div style="font-size:21px;line-height:1.2;">CAMERA NOT AVAILABLE</div>
-<div style="margin-top:10px;max-width:300px;font-size:14px;line-height:1.45;font-weight:600;">Open ASK.CAMERA in Chrome and allow camera access, or use Upload a Photo.</div>
-<button onclick="event.stopPropagation();document.getElementById('uploadImage').click();" style="margin-top:16px;min-height:46px;padding:0 20px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:750;">UPLOAD A PHOTO</button>
-
-<button
-onclick="window.location.reload()"
-style="
-  width:48px;
-  height:48px;
-  margin-top:18px;
-  border:none;
-  border-radius:50%;
-  background:#111;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-"
->
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="22"
-    height="22"
-    viewBox="0 -960 960 960"
-    fill="#fff"
-  >
-    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-  </svg>
-</button>
-`;
+        showSystemState({
+          key:"camera",
+          title:"Camera not available.",
+          text:"Open ASK.CAMERA in Chrome and allow camera access, or upload a photo.",
+          primary:{ label:"Upload a photo", onClick:() => document.getElementById("uploadImage").click() },
+          secondary:{ label:"Refresh", onClick:() => window.location.reload() }
+        });
 
       }
 
@@ -6528,48 +6567,23 @@ style="
       ua.includes("LinkedIn")
     ){
 
-      helper.innerHTML =
-        '<div style="font-size:21px;line-height:1.2;">OPEN IN CHROME</div><div style="margin-top:10px;max-width:300px;font-size:14px;line-height:1.45;font-weight:600;">This in-app browser cannot use the camera. Open ASK.CAMERA in Chrome, or upload a photo here.</div><button onclick="event.stopPropagation();document.getElementById(\'uploadImage\').click();" style="margin-top:16px;min-height:46px;padding:0 20px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:750;">UPLOAD A PHOTO</button>';
+      showSystemState({
+        key:"camera",
+        title:"Open in Chrome.",
+        text:"This in-app browser cannot use the camera. Open ASK.CAMERA in Chrome, or upload a photo here.",
+        primary:{ label:"Upload a photo", onClick:() => document.getElementById("uploadImage").click() },
+        secondary:{ label:"Refresh", onClick:() => window.location.reload() }
+      });
 
     }else{
 
-      helper.innerHTML = `
-<button
-  onclick="window.location.reload()"
-  style="
-    width:40px;
-    height:40px;
-    margin:0 auto 16px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    border:1px solid #8c959f;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  "
->
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#000"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M21 2v6h-6"></path>
-    <path d="M20.49 15A9 9 0 1 1 21 8"></path>
-  </svg>
-</button>
-<div style="font-size:21px;line-height:1.2;">CAMERA ACCESS NEEDED</div>
-<div style="margin-top:10px;max-width:300px;font-size:14px;line-height:1.45;font-weight:600;">Allow camera access in your browser settings, then tap refresh. You can also upload a photo.</div>
-<button onclick="event.stopPropagation();document.getElementById('uploadImage').click();" style="margin-top:16px;min-height:46px;padding:0 20px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:750;">UPLOAD A PHOTO</button>
-`;
+      showSystemState({
+        key:"camera",
+        title:"Camera access needed.",
+        text:"Allow camera access in your browser settings, then refresh. You can also upload a photo.",
+        primary:{ label:"Upload a photo", onClick:() => document.getElementById("uploadImage").click() },
+        secondary:{ label:"Refresh", onClick:() => window.location.reload() }
+      });
 
     }
   }
@@ -6628,6 +6642,7 @@ uploadImage.onchange = e => {
   const file = e.target.files[0];
 
   if(!file) return;
+  clearSystemState("camera");
 
   const img = new Image();
 
@@ -6733,52 +6748,15 @@ function showRoomLoadingScreen(){
     );
   } catch (error) {}
 
-  let loadingScreen = document.getElementById("roomLoadingScreen");
-
-  if(!loadingScreen){
-    loadingScreen = document.createElement("div");
-    loadingScreen.id = "roomLoadingScreen";
-    loadingScreen.style.cssText = `
-      position:fixed;
-      inset:0;
-      z-index:2147483600;
-      display:none;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:18px;
-      padding:30px;
-      background:rgba(0,0,0,.82);
-      backdrop-filter:blur(24px) saturate(150%);
-      -webkit-backdrop-filter:blur(24px) saturate(150%);
-      color:#fff;
-      text-align:center;
-    `;
-    document.body.appendChild(loadingScreen);
-  }
-
   const loadingText = selectedBeing?.name
     ? `${escapeBeingText(selectedBeing.name)} is reading your image...`
     : "Creating AI Live Room...";
-
-  loadingScreen.innerHTML = `
-    ${selectedBeing?.photo ? `<img src="${selectedBeing.photo}" alt="" style="width:82px;height:82px;object-fit:cover;border-radius:22px;box-shadow:0 10px 35px rgba(0,0,0,.28);">` : ""}
-    <div style="font-size:20px;font-weight:900;line-height:1.3;max-width:320px;">${loadingText}</div>
-    <div style="display:flex;gap:7px;align-items:center;justify-content:center;">
-      <div class="aiDot" style="width:8px;height:8px;"></div>
-      <div class="aiDot" style="width:8px;height:8px;"></div>
-      <div class="aiDot" style="width:8px;height:8px;"></div>
-    </div>
-  `;
-
-  loadingScreen.style.display = "flex";
+  showSystemState({ key:"creatingRoom", title:loadingText, text:"Please keep this screen open.", loading:true });
 }
 
 function hideRoomLoadingScreen(){
   document.body.classList.remove("imageStage");
-
-  const loadingScreen = document.getElementById("roomLoadingScreen");
-  if(loadingScreen) loadingScreen.style.display = "none";
+  clearSystemState("creatingRoom");
 }
   
 function continueCreateRoom(){
@@ -6820,20 +6798,7 @@ roomReady = true;
 
   showRoomLoadingScreen();
 
-  helper.style.display = "flex";
 capturePreview.style.display = "none";
-  
-  
-  helper.innerHTML = `
-<div style="display:flex;align-items:center;gap:10px;">
-<span>CREATING AI LIVE ROOM...</span>
-<div style="display:flex;gap:4px;">
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-</div>
-</div>
-`;
 
 
 localStorage.setItem(
@@ -6881,78 +6846,13 @@ gtag('event', 'capture_image');
       !video.videoHeight
     ){
 
-      helper.innerHTML = `
-
-<div
-style="
-display:flex;
-justify-content:center;
-gap:10px;
-margin-bottom:18px;
-">
-
-<button
-  id="refreshCameraBtn"
-  onclick="
-    event.preventDefault();
-    event.stopPropagation();
-    window.location.reload();
-    return false;
-  "
-  style="
-    width:40px;
-    height:40px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
-  "
->
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 -960 960 960"
-    width="22"
-    height="22"
-    fill="#111"
-  >
-    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-  </svg>
-</button>
-
-<button
-  id="guideBtn"
-  onclick="openGuide()"
-  style="
-    width:40px;
-    height:40px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
-    font-size:18px;
-    font-weight:700;
-  "
->
-  ?
-</button>
-
-</div>
-
-<div>
-CAMERA STILL LOADING
-</div>
-
-`;
+      showSystemState({
+        key:"camera",
+        title:"Camera is still loading.",
+        text:"Wait a moment, or refresh and try again.",
+        loading:true,
+        primary:{ label:"Refresh", onClick:() => window.location.reload() }
+      });
 
       captureLock = false;
 
@@ -6976,8 +6876,13 @@ return;
 
   }catch(err){
 
-    helper.innerText =
-      "CAPTURE FAILED";
+    showSystemState({
+      key:"camera",
+      title:"Capture failed.",
+      text:"Refresh the camera or upload a photo instead.",
+      primary:{ label:"Upload a photo", onClick:() => document.getElementById("uploadImage").click() },
+      secondary:{ label:"Refresh", onClick:() => window.location.reload() }
+    });
 
   }finally{
 
@@ -7160,6 +7065,7 @@ const roomKind = getActiveRoomKind(data);
 const isHumanRoom = roomKind === "human";
 setActiveRoomKind(roomKind);
 
+clearSystemState("rejoiningRoom");
 hideRoomLoadingScreen();
 
 document.getElementById("roomHeader").style.display = "flex";
@@ -8417,44 +8323,12 @@ document.getElementById("homeRoomId").innerText =
 document.getElementById("homeRoomCountdown").innerText =
     "00:00";
   
-   helper.innerHTML = `
-<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:0 20px;">
-  <div style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;">Expired · 00:00</div>
-  <div style="font-size:25px;line-height:1.2;font-weight:800;">ROOM EXPIRED</div>
-  <div style="margin-top:10px;font-size:14px;line-height:1.45;font-weight:600;opacity:.8;">Refresh to start a new Camera Perspective.</div>
-  <button
-  onclick="
-    event.preventDefault();
-    event.stopPropagation();
-    window.location.reload();
-    return false;
-  "
-  style="
-    width:40px;
-    height:40px;
-    padding:0;
-    border:none;
-    border-radius:50%;
-    background:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
-  "
->
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 -960 960 960"
-    width="22"
-    height="22"
-    fill="#111"
-  >
-    <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-  </svg>
-</button>
-</div>
-`;
+   showSystemState({
+     key:"roomExpired",
+     title:"Room expired.",
+     text:"Refresh to start a new Camera Perspective.",
+     primary:{ label:"Refresh", onClick:() => window.location.reload() }
+   });
 
 });
 
@@ -8701,18 +8575,12 @@ socket.on(
   () => {
 
     roomReady = false;
-    document.body.classList.add("connectionLost");
-
-    helper.style.display =
-      "flex";
-
-   helper.innerHTML = `
-<div id="connectionLostState" role="alert" aria-live="assertive">
-  <div id="connectionLostTitle">Connection lost.</div>
-  <div id="connectionLostText">Check your internet connection and try again.</div>
-  <button id="connectionLostRefresh" type="button" onclick="window.location.reload()">Refresh</button>
-</div>
-`;
+    showSystemState({
+      key:"connectionLost",
+      title:"Connection lost.",
+      text:"Check your internet connection and try again.",
+      primary:{ label:"Refresh", onClick:() => window.location.reload() }
+    });
 
   }
 );
@@ -8757,6 +8625,7 @@ socket.on("roomStatus", data => {
 
     }
 
+    clearSystemState("rejoiningRoom");
     const roomKind = getActiveRoomKind(data);
     setActiveRoomKind(roomKind);
     localStorage.setItem("roomId", data.roomId);
@@ -8814,13 +8683,7 @@ function retryUnavailableRoom(roomId){
     return;
   }
 
-  helper.style.display = "flex";
-  helper.innerHTML = `
-    <div class="roomRecoveryState" role="status" aria-live="polite">
-      <div class="roomRecoveryTitle">REJOINING ROOM</div>
-      <div class="roomRecoveryText">Trying Room #${escapeBeingText(roomId)} again…</div>
-    </div>
-  `;
+  showSystemState({ key:"rejoiningRoom", title:"Rejoining room…", text:`Trying Room #${roomId} again.`, loading:true });
 
   socket.emit("rejoinRoom", { roomId, deviceId });
   clearTimeout(rejoinTimeout);
@@ -8831,27 +8694,20 @@ function showRoomUnavailable(roomId){
   hideRoomLoadingScreen();
   roomOverlay.style.display = "none";
   capturePreview.style.display = "none";
-  helper.style.display = "flex";
   document.body.classList.remove("connectedHome","expiredHome");
-
-  helper.innerHTML = `
-    <div class="roomRecoveryState" role="alert">
-      <div class="roomRecoveryTitle">ROOM NOT FOUND</div>
-      <div class="roomRecoveryText">This room may have expired or is no longer available.</div>
-      <div class="roomRecoveryActions">
-        <button id="retryUnavailableRoomBtn" type="button">Retry</button>
-        <button id="backFromUnavailableRoomBtn" type="button">Back to ASK.CAMERA</button>
-      </div>
-    </div>
-  `;
-  document.getElementById("retryUnavailableRoomBtn").onclick = () => retryUnavailableRoom(roomId);
-  document.getElementById("backFromUnavailableRoomBtn").onclick = returnFromUnavailableRoom;
+  showSystemState({
+    key:"roomNotFound",
+    title:"Room not found.",
+    text:"This room may have expired or is no longer available.",
+    primary:{ label:"Retry", onClick:() => retryUnavailableRoom(roomId) },
+    secondary:{ label:"Back to ASK.CAMERA", onClick:returnFromUnavailableRoom }
+  });
 }
   
 socket.on("connect", () => {
 
     roomReady = true;
-    document.body.classList.remove("connectionLost");
+    clearSystemState("connectionLost");
 
     const directHumanPath = /^\/being\/[^/]+$/.test(location.pathname);
 
@@ -8903,21 +8759,7 @@ if (!savedRoomId && !urlRoomId) {
 
 
 if(urlRoomId){
-
-    helper.innerHTML = `
-<div style="
-display:flex;
-align-items:center;
-gap:10px;
-">
-<span>REJOINING AI LIVE ROOM</span>
-<div style="display:flex;gap:4px;">
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-</div>
-</div>
-`;
+    showSystemState({ key:"rejoiningRoom", title:"Rejoining room…", text:`Opening Room #${urlRoomId}.`, loading:true });
 
     localStorage.setItem(
         "roomId",
@@ -8952,21 +8794,7 @@ setTimeout(() => {
 
 
 if (savedRoomId) {
-
-    helper.innerHTML = `
-<div style="
-display:flex;
-align-items:center;
-gap:10px;
-">
-<span>REJOINING AI LIVE ROOM</span>
-<div style="display:flex;gap:4px;">
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-</div>
-</div>
-`;
+    showSystemState({ key:"rejoiningRoom", title:"Rejoining room…", text:`Opening Room #${savedRoomId}.`, loading:true });
 
     rejoinTimeout = setTimeout(() => {
 
@@ -9026,7 +8854,8 @@ if (savedDisplayName) {
 
     if(
       roomOverlay.style.display !==
-      "flex"
+      "flex" &&
+      activeSystemState !== "rejoiningRoom"
     ){
 
       helper.style.display =
@@ -9447,25 +9276,8 @@ async function createRoomFromPublicNull(publicNull){
     dailyNullsScreen.style.display = "none";
     cameraWrap.style.display = "block";
     roomOverlay.style.display = "none";
-    document.body.classList.add("imageStage");
-
-    helper.style.display = "flex";
-
-
-
-helper.style.display = "flex";
-capturePreview.style.display = "none";
-
-helper.innerHTML = `
-<div style="display:flex;align-items:center;gap:10px;">
-<span>CREATING YOUR ROOM...</span>
-<div style="display:flex;gap:4px;">
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-</div>
-</div>
-`;
+    capturePreview.style.display = "none";
+    showRoomLoadingScreen();
 
 localStorage.setItem(
     "roomThumbnail",
@@ -11254,7 +11066,7 @@ Close
   if(style) document.head.appendChild(style);
 })();
 (function cleanBracketedButtonLabels(){
-  const primarySelector = '#createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,#connectionLostRefresh,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
+  const primarySelector = '#createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
     const buttons = root.matches && root.matches('button,[role="button"]')
