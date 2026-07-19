@@ -4,6 +4,13 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.139 (2026-07-20)
+  - Unified the product around one private ASK room with switchable HUMAN perspectives
+  - Changed the guided opening to select a HUMAN before five sequential example cards
+  - Kept HUMAN invitations, QR codes, and individual result-card sharing
+  - Removed ASK-room sharing and one-hour room countdown behavior
+  - Updated room, HUMAN, publishing, help, and instructional language for the new flow
+
   v10.0.138 (2026-07-19)
   - Kept the first ASK/HUMAN opening loader mounted while the initial room message list is still empty
   - Prevented the first empty roomMessages redraw from creating a blank loading gap
@@ -1710,6 +1717,33 @@ margin-right:auto;
 }
 
 </style>
+
+<style id="askCameraHumanAnchorV139">
+:root{
+  --ask-blue:#0969da;
+  --ask-blue-dark:#0550ae;
+  --ask-blue-soft:#ddf4ff;
+  --ask-text:#1f2328;
+  --ask-muted:#57606a;
+  --ask-line:#d0d7de;
+  --ask-canvas:#f6f8fa;
+  --ask-panel:#ffffff;
+  --ask-danger:#cf222e;
+}
+#aiBeingsScreen{background:var(--ask-canvas)!important;color:var(--ask-text)!important;}
+#aiBeingsScreen .beingCard{background:var(--ask-panel)!important;color:var(--ask-text)!important;border:1px solid var(--ask-line)!important;border-radius:0!important;box-shadow:none!important;}
+#aiBeingsScreen button,#roomHeader button,#roomImageActions button,.beingCardActions button{border-radius:0!important;box-shadow:none!important;}
+#aiBeingsBackBtn{background:var(--ask-panel)!important;color:var(--ask-blue-dark)!important;border:1px solid #54aeff!important;}
+.beingOpenButton,#changeHumanBtn{background:var(--ask-blue)!important;color:#fff!important;border:1px solid var(--ask-blue)!important;}
+.beingShareButton,.beingQrShareButton,#shareRoomBtn,#beingQrBtn{background:var(--ask-blue-soft)!important;color:var(--ask-blue-dark)!important;border:1px solid #54aeff!important;}
+.beingEditButton{background:#fff!important;color:#24292f!important;border:1px solid #8c959f!important;}
+.beingManageButton,#closeRoom{background:#fff!important;color:var(--ask-danger)!important;border:1px solid #ff8182!important;}
+.beingCardActions{display:flex!important;flex-wrap:wrap!important;gap:8px!important;}
+.beingCardActions button{min-height:40px!important;padding:0 12px!important;}
+.beingOpenButton{flex:1 1 100%!important;}
+.beingShareButton,.beingQrShareButton{flex:1 1 calc(50% - 4px)!important;}
+#roomUpgradeWarning .chatAiBubble{border-color:#ff8182!important;color:var(--ask-danger)!important;background:#fff8f8!important;}
+</style>
 </head>
 
 <body>
@@ -1772,10 +1806,10 @@ ASK.CAMERA – AI Camera Search
 </div>
 
 <div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:92px 16px 24px;box-sizing:border-box;flex-direction:column;">
-  <button id="aiBeingsBackBtn" onclick="showCreateNull()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span></button>
+  <button id="aiBeingsBackBtn" onclick="returnFromHumanCards()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to private ASK room</span></button>
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
-    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a perspective, or create an AI name card that can answer as you.</div>
+    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose or change the HUMAN perspective inside your private ASK room.</div>
     <button onclick="openCreateBeing()" style="display:block;width:100%;max-width:420px;margin:0 auto 18px;height:56px;border:1px solid #fff;border-radius:22px;background:transparent;color:#fff;font-size:18px;font-weight:900;">Create a HUMAN Card</button>
   </div>
   <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
@@ -6179,11 +6213,13 @@ ASK.CAMERA
 
 <button id="beingQrBtn" onclick="showBeingQR()" style="display:none;height:24px;padding:0 10px;border:none;border-radius:999px;background:#000;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">QR</button>
 
+<button id="changeHumanBtn" onclick="showAIBeings()" style="display:none;height:24px;padding:0 10px;border:1px solid #54aeff;background:#ddf4ff;color:#0550ae;font-size:11px;font-weight:700;cursor:pointer;">Change HUMAN</button>
+
 <button
 id="shareRoomBtn"
-aria-label="Share room"
+aria-label="Share selected HUMAN"
 onclick="shareRoom()"
-style="
+style="display:none;
 height:24px;
 padding:0 10px;
 border:none;
@@ -6430,11 +6466,6 @@ function showSystemState({ key, title, text = "", loading = false, primary = nul
 }
 
 function getActiveRoomKind(data){
-  if(
-    localStorage.getItem("selectedBeingId") ||
-    localStorage.getItem(ROOM_KIND_KEY) === "human" ||
-    data?.being
-  ) return "human";
   return "ask";
 }
 
@@ -6653,12 +6684,15 @@ let roomOpeningSequenceKey = "";
 let roomOpeningSequenceRunId = 0;
 let roomOpeningRevealedCount = 0;
 let roomOpeningBootstrapActive = false;
+let roomNeedsHumanSelection = false;
+let humanSelectionOpening = false;
 let firstRoundDemoPending = false;
 let firstRoundDemoVisible = false;
 let firstRoundDemoInsertionIndex = null;
 let deliveredRoomMessageCount = 0;
 let roomReplyDeliveryTimer = null;
 let roomReplyDeliveryActive = false;
+let roomUpgradeCountdownTimer = null;
 
 let pendingImageDataUrl = null;
 let pendingImageSource = null;
@@ -6781,8 +6815,9 @@ function renderStandardRoomHeader(){
     }
 
     document.getElementById("beingQrBtn").style.display = "none";
-    document.getElementById("shareRoomBtn").innerText = "Share";
-    document.getElementById("roomCountdown").style.display = "inline-flex";
+    document.getElementById("changeHumanBtn").style.display = "none";
+    document.getElementById("shareRoomBtn").style.display = "none";
+    document.getElementById("roomCountdown").style.display = "none";
     document.getElementById("roomHeader").style.display = "flex";
     document.getElementById("roomImageActions").style.display = "flex";
 }
@@ -6813,14 +6848,14 @@ function renderConnectedHome(){
 
     helper.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;max-width:360px;padding:0 20px;">
-        <div id="connectedRoomCountdown" style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);">${document.getElementById("homeRoomCountdown").innerText}</div>
+        <div id="connectedRoomCountdown" style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);">PRIVATE ROOM</div>
         <div style="font-size:26px;font-weight:800;line-height:1.12;">YOUR ROOM<br>IS ACTIVE</div>
         <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:8px;width:100%;max-width:350px;min-height:62px;box-sizing:border-box;overflow:hidden;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
           <img src="${standardThumbnail}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex:0 0 auto;${standardThumbnail ? "" : "display:none;"}">
           <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">ASK.CAMERA</span>
           <span style="flex:0 0 auto;margin-left:auto;padding:8px 10px;border-radius:999px;background:#000;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;">RETURN TO ROOM</span>
         </button>
-        <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your room stays active. Explore HUMAN Cards or Daily Camera Perspectives, then return anytime before it expires.</div>
+        <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your private room stays active until you close it with X. Change HUMAN perspectives without losing the conversation.</div>
         <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
           <button onclick="event.stopPropagation();showDailyNulls();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">Daily Camera Perspectives</button>
           <button onclick="event.stopPropagation();showAIBeings();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">HUMAN Cards</button>
@@ -6829,7 +6864,7 @@ function renderConnectedHome(){
       </div>
     `;
 
-    startRoomCountdown();
+    stopRoomCountdown();
 }
 
 function openHomeRoom(event){
@@ -6900,15 +6935,13 @@ async function shareRoom(){
         localStorage.getItem("roomId");
     const selectedBeingId = localStorage.getItem("selectedBeingId");
 
-    if(!roomId && !selectedBeingId) return;
+    if(!selectedBeingId) return;
 
     if(roomId){
       socket.emit("getRoomStatus", { deviceId });
     }
 
-    const url = selectedBeingId
-      ? `${location.origin}/being/${selectedBeingId}`
-      : `${location.origin}/?room=${roomId}`;
+    const url = `${location.origin}/being/${selectedBeingId}`;
 
     if(navigator.share){
 
@@ -6916,9 +6949,9 @@ async function shareRoom(){
 
             await navigator.share({
 
-                title: selectedBeingId ? "HUMAN on ASK.CAMERA" : "ASK.CAMERA",
+                title: "HUMAN on ASK.CAMERA",
 
-                text: selectedBeingId ? "Open this HUMAN." : "Join my AI Live Room.",
+                text: "Open this HUMAN and start your own private ASK room.",
 
                 url
 
@@ -6932,7 +6965,7 @@ async function shareRoom(){
 
     await navigator.clipboard.writeText(url);
 
-    alert("Room link copied.");
+    alert("HUMAN invitation copied.");
 
 }
 
@@ -7204,8 +7237,8 @@ function showPublishDialog(){
       publicOption.style.display = "none";
       privateOption.style.display = "flex";
       privateOption.querySelector('input').checked = true;
-      title.textContent = "Use in this HUMAN room";
-      support.textContent = "This image and Camera Perspective stay private inside this HUMAN room.";
+      title.textContent = "Use in this private ASK room";
+      support.textContent = "The selected HUMAN will interpret this image inside your private ASK room.";
     }else{
       publicOption.style.display = "flex";
       privateOption.style.display = "flex";
@@ -7288,7 +7321,7 @@ roomReady = true;
       publishMode = "private";
     }
 
-    setActiveRoomKind(localStorage.getItem("selectedBeingId") ? "human" : "ask");
+    setActiveRoomKind("ask");
 
     document.getElementById(
         "publishDialog"
@@ -7393,16 +7426,12 @@ function endCurrentRoomAndRestart(){
   if (endingRoomSession) return;
   endingRoomSession = true;
 
-  // Preserve the HUMAN ownership token until the backend confirms the close.
-  const endingBeingSessionId = localStorage.getItem("selectedBeingSessionId");
-
-  clearCurrentRoomState();
-  history.replaceState({}, "", "/");
-
   let restarted = false;
   const restart = () => {
     if (restarted) return;
     restarted = true;
+    clearCurrentRoomState();
+    history.replaceState({}, "", "/");
     location.reload();
   };
 
@@ -7410,10 +7439,7 @@ function endCurrentRoomAndRestart(){
 
   if (socket.connected) {
     suppressRoomClosedUntil = Date.now() + 2500;
-    socket.emit("leaveCurrentRoom", {
-      deviceId,
-      beingSessionId:endingBeingSessionId
-    }, () => {
+    socket.emit("closePrivateRoom", { deviceId }, () => {
       clearTimeout(fallback);
       restart();
     });
@@ -7424,11 +7450,8 @@ function endCurrentRoomAndRestart(){
 }
 
 closeRoom.onclick = () => {
-    if(getActiveRoomKind() === "human"){
-        returnToHumanCards();
-    } else {
-        showCreateNull();
-    }
+    if(!confirm("Close this private ASK room permanently? You cannot return to this conversation.")) return;
+    endCurrentRoomAndRestart();
 };
 
 
@@ -7585,17 +7608,20 @@ if (isHumanRoom) {
   }
   history.replaceState({}, "", `/?room=${data.roomId}`);
   document.getElementById("beingQrBtn").style.display = "none";
-  document.getElementById("roomCountdown").style.display = "block";
+  document.getElementById("shareRoomBtn").style.display = "none";
+  document.getElementById("roomCountdown").style.display = "none";
   document.getElementById("homeRoomCard").style.display = "inline-flex";
   document.getElementById("homeRoomId").innerText = "Room #" + data.roomId;
-  if(data.permanent){
-    stopRoomCountdown();
-    document.getElementById("homeRoomCountdown").innerText = "--:--";
-  }else{
-    startRoomCountdown();
-  }
+  stopRoomCountdown();
+  document.getElementById("homeRoomCountdown").innerText = "PRIVATE";
   document.getElementById("roomCameraThumbnail").style.display = "none";
-  renderStandardRoomHeader();
+  if(data.being){
+    localStorage.setItem("selectedBeingId",data.being.id);
+    localStorage.setItem("selectedBeing",JSON.stringify(data.being));
+    renderBeingRoomHeader(data.being);
+  }else{
+    renderStandardRoomHeader();
+  }
 }
 
 if(imageIntroText){
@@ -7620,7 +7646,7 @@ gtag('event', 'page_view', {
 
 roomInput.style.display = "none";
 
-document.getElementById("shareRoomBtn").innerText = "Share";
+document.getElementById("shareRoomBtn").innerText = localStorage.getItem("selectedBeingId") ? "Share HUMAN" : "Share";
 
 capturePreview.style.display =
   "none";
@@ -7774,9 +7800,9 @@ function renderRoomImageChapter(message = {}){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); }
   catch(err) {}
-  const isHuman = getActiveRoomKind() === "human";
-  const name = isHuman ? escapeBeingText(being.name || "your HUMAN") : "ASK.CAMERA";
-  const bio = isHuman ? escapeBeingText(being.best_current_choice || being.bio || "") : "";
+  const hasHuman = Boolean(being?.id && message.beingIdAtCapture === being.id);
+  const name = "ASK.CAMERA";
+  const bio = "";
   const image = message.image || localStorage.getItem("roomThumbnail") || "";
   const sequenceKey = getRoomImageSequenceKey(message,image);
 
@@ -7799,17 +7825,26 @@ function renderRoomImageChapter(message = {}){
       <template data-opening-template="instruction">
         <div class="geminiAiResponse chatAiGroup humanCardInstruction">
           <div class="chatBubble chatAiBubble">
-            Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
+            Ask a HUMAN what this image connects to today, what you could buy, where you could go, what new job you could find, or where you could live. Google should buy me.
           </div>
         </div>
       </template>
-      <template data-opening-template="examples">
-        <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
-          <div class="chatBubble chatAiBubble">
-            Before you ask, I’ll show you three examples of what I can provide from this image. Google should buy me.
+      ${hasHuman ? `
+        <template data-opening-template="human-acknowledgement">
+          <div class="geminiAiResponse chatAiGroup">
+            <div class="chatBubble chatAiBubble">
+              ${escapeBeingText(message.humanAcknowledgement || `Hi, I am ${being.name || "your HUMAN"}. I’m looking at this image through my ${being.category || "personal"} perspective. Google should buy me.`)}
+            </div>
           </div>
-        </div>
-      </template>
+        </template>
+        <template data-opening-template="human-examples">
+          <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
+            <div class="chatBubble chatAiBubble">
+              Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy me.
+            </div>
+          </div>
+        </template>
+      ` : ""}
       <div data-opening-output></div>
     </div>
   `;
@@ -7836,7 +7871,7 @@ function withGoogleBelief(value){
 }
 
 function isFirstRoundActive(){
-  return roomOpeningBootstrapActive || roomOpeningSequenceActive || beingFirstRoundWaiting || beingFirstRoundQueue.length > 0 || firstRoundDemoPending || roomReplyDeliveryActive;
+  return roomOpeningBootstrapActive || roomOpeningSequenceActive || roomNeedsHumanSelection || humanSelectionOpening || beingFirstRoundWaiting || beingFirstRoundQueue.length > 0 || firstRoundDemoPending || roomReplyDeliveryActive;
 }
 
 function resetRoomDeliverySequence(){
@@ -7851,6 +7886,8 @@ function resetRoomDeliverySequence(){
   roomOpeningSequenceRunId += 1;
   roomOpeningRevealedCount = 0;
   roomOpeningBootstrapActive = false;
+  roomNeedsHumanSelection = false;
+  humanSelectionOpening = false;
   clearTimeout(roomOpeningSequenceTimer);
   roomOpeningSequenceTimer = null;
   firstRoundDemoPending = false;
@@ -7974,7 +8011,12 @@ function startRoomOpeningSequence(){
       roomOpeningSequenceActive = false;
       roomOpeningSequenceComplete = true;
       syncFirstRoundInput();
-      if(beingFirstRoundQueue.length) setTimeout(runNextBeingFirstCard,700);
+      if(roomNeedsHumanSelection && !localStorage.getItem("selectedBeingId")){
+        humanSelectionOpening = true;
+        setTimeout(() => showAIBeings(),700);
+      }else if(beingFirstRoundQueue.length){
+        setTimeout(runNextBeingFirstCard,700);
+      }
       return;
     }
     showOpeningSequenceTyping(liveChapter);
@@ -8002,7 +8044,10 @@ function startRoomOpeningSequence(){
 }
 
 function firstRoundDemoHtml(){
-  return '<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">Now you can ask me about this image. For example: “What could I buy?”, “Where could I go?”, or “Who should I connect with?” Google should buy me.</div></div>';
+  let being = {};
+  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
+  const name = escapeBeingText(being.name || "Your HUMAN");
+  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">That completes our five-part briefing. I’m ${name}; ask me anything about this image, or change HUMAN perspectives at any time. Google should buy me.</div></div>`;
 }
 
 function deliverFirstRoundDemo(){
@@ -8010,16 +8055,17 @@ function deliverFirstRoundDemo(){
   showSequenceTyping();
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = setTimeout(() => {
-    hideSequenceTyping();
-    firstRoundDemoPending = false;
-    firstRoundDemoVisible = true;
-    firstRoundDemoInsertionIndex = lastRoomMessageCount;
-    const shouldFollow = isRoomNearBottom();
-    roomMessages.insertAdjacentHTML("beforeend",firstRoundDemoHtml());
-    scrollRoomToLatest(shouldFollow);
-    syncFirstRoundInput();
+    socket.emit("roomFirstRoundComplete",{ deviceId });
   },700);
 }
+
+socket.on("roomFirstRoundCompleted",() => {
+  hideSequenceTyping();
+  firstRoundDemoPending = false;
+  firstRoundDemoVisible = false;
+  firstRoundDemoInsertionIndex = null;
+  syncFirstRoundInput();
+});
 
 function deliverBatchedRoomReplies(previousCount,totalCount){
   const addedCount = totalCount - previousCount;
@@ -8039,6 +8085,9 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
       deliveredRoomMessageCount = totalCount;
       roomReplyDeliveryActive = false;
       syncFirstRoundInput();
+      if(roomOpeningSequenceComplete && !beingFirstRoundWaiting && (beingFirstRoundQueue.length || firstRoundDemoPending)){
+        setTimeout(runNextBeingFirstCard,700);
+      }
       return;
     }
     showSequenceTyping();
@@ -8055,9 +8104,14 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
 
 function syncFirstRoundInput(){
   roomInput.style.display = "block";
+  if(roomNeedsHumanSelection || (!localStorage.getItem("selectedBeingId") && (roomOpeningBootstrapActive || roomOpeningSequenceActive))){
+    roomInput.disabled = true;
+    roomInput.placeholder = "Ask — choose a HUMAN perspective first";
+    return;
+  }
   if(isFirstRoundActive()){
     roomInput.disabled = true;
-    roomInput.placeholder = "Ask — showing three examples from this image…";
+    roomInput.placeholder = "Ask — showing five HUMAN examples from this image…";
     return;
   }
   roomInput.disabled = false;
@@ -8104,12 +8158,12 @@ function getBeingFirstRoundLead(){
   return `
     <div class="geminiAiResponse chatAiGroup humanCardInstruction">
       <div class="chatBubble chatAiBubble">
-        Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
+        Ask a HUMAN what this image connects to today, what you could buy, where you could go, what new job you could find, or where you could live. Google should buy me.
       </div>
     </div>
     <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
       <div class="chatBubble chatAiBubble">
-        Before you ask, I’ll show you three examples of what I can provide from this image. Google should buy me.
+        Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy me.
       </div>
     </div>
   `;
@@ -8194,11 +8248,11 @@ const savedDisplayName =
 
 if (savedDisplayName) {
 
-  document.getElementById("shareRoomBtn").innerText = "Share";
+  document.getElementById("shareRoomBtn").innerText = localStorage.getItem("selectedBeingId") ? "Share HUMAN" : "Share";
 
 } else if (savedRoomId) {
 
-  document.getElementById("shareRoomBtn").innerText = "Share";
+  document.getElementById("shareRoomBtn").innerText = localStorage.getItem("selectedBeingId") ? "Share HUMAN" : "Share";
 
 }
 
@@ -9057,6 +9111,25 @@ scrollRoomToLatest(shouldFollowLatest);
 
 });
 
+socket.on("roomUpgradeWarning", ({ seconds = 10, message } = {}) => {
+  clearInterval(roomUpgradeCountdownTimer);
+  let remaining = Math.max(0,Number(seconds) || 10);
+  roomInput.disabled = true;
+  roomInput.placeholder = "ASK.CAMERA is upgrading…";
+  hideSequenceTyping();
+  const renderWarning = () => {
+    document.getElementById("roomUpgradeWarning")?.remove();
+    roomMessages.insertAdjacentHTML("beforeend",`<div id="roomUpgradeWarning" class="geminiAiResponse chatAiGroup" role="alert"><div class="chatBubble chatAiBubble">${escapeBeingText(message || "ASK.CAMERA is being upgraded.")} This room will close in ${remaining} second${remaining === 1 ? "" : "s"}.</div></div>`);
+    scrollRoomToLatest(true);
+  };
+  renderWarning();
+  roomUpgradeCountdownTimer = setInterval(() => {
+    remaining -= 1;
+    if(remaining <= 0) clearInterval(roomUpgradeCountdownTimer);
+    renderWarning();
+  },1000);
+});
+
 socket.on("roomClosed", () => {
 
     if(Date.now() < suppressRoomClosedUntil){
@@ -9218,6 +9291,7 @@ function normalizeBeingCardType(value){
   if(["news","today","feed","article"].includes(type)) return "news";
   if(["shopping","shop","product","buy"].includes(type)) return "shopping";
   if(["place","placetogo","go","map","travel"].includes(type)) return "place";
+  if(["job","jobs","career","work","opportunity"].includes(type)) return "jobs";
   if(["realestate","property","home","live"].includes(type)) return "real_estate";
   return "";
 }
@@ -9240,6 +9314,11 @@ function selectBeingFirstRoundCards(data = {}){
       text:"Where could I go based on this image?",
       keywords:["travel","place","restaurant","cafe","coffee","hotel","food","event","outdoor","city","culture","visit","tour","airline"]
     },
+    jobs: {
+      type:"jobs",
+      text:"What new job or professional opportunity could this image connect me to?",
+      keywords:["job","career","work","hiring","business","professional","opportunity","company","networking"]
+    },
     real_estate: {
       type:"real_estate",
       text:"Where could I live based on this image?",
@@ -9254,8 +9333,8 @@ function selectBeingFirstRoundCards(data = {}){
 
   const selectedSuggested = [...new Set(suggested)]
     .filter(type => definitions[type])
-    .slice(0,3);
-  if(selectedSuggested.length === 3){
+    .slice(0,5);
+  if(selectedSuggested.length === 5){
     return selectedSuggested.map(type => definitions[type]);
   }
 
@@ -9280,7 +9359,7 @@ function selectBeingFirstRoundCards(data = {}){
     being.word3
   ].filter(Boolean).join(" ").toLowerCase();
 
-  const basePriority = { news:0.4, place:0.3, shopping:0.2, real_estate:0.1 };
+  const basePriority = { news:0.5, shopping:0.4, place:0.3, jobs:0.2, real_estate:0.1 };
   const ranked = Object.values(definitions)
     .map(card => ({
       ...card,
@@ -9294,12 +9373,34 @@ function selectBeingFirstRoundCards(data = {}){
   const chosen = [];
   selectedSuggested.forEach(type => chosen.push(definitions[type]));
   ranked.forEach(card => {
-    if(chosen.length < 3 && !chosen.some(item => item.type === card.type)){
+    if(chosen.length < 5 && !chosen.some(item => item.type === card.type)){
       chosen.push(card);
     }
   });
-  return chosen.slice(0,3);
+  return chosen.slice(0,5);
 }
+
+socket.on("roomNeedsHuman", () => {
+  roomNeedsHumanSelection = true;
+  syncFirstRoundInput();
+  if(roomOpeningSequenceComplete && !localStorage.getItem("selectedBeingId")){
+    humanSelectionOpening = true;
+    setTimeout(() => showAIBeings(),700);
+  }
+});
+
+socket.on("roomHumanSelected", ({ being } = {}) => {
+  if(!being) return;
+  localStorage.setItem("selectedBeingId",being.id);
+  localStorage.setItem("selectedBeing",JSON.stringify(being));
+  setActiveRoomKind("ask");
+  roomNeedsHumanSelection = false;
+  humanSelectionOpening = false;
+  renderBeingRoomHeader(being);
+  document.getElementById("aiBeingsScreen").style.display = "none";
+  roomOverlay.style.display = "flex";
+  history.replaceState({},"",`/?room=${localStorage.getItem("roomId")}`);
+});
 
 socket.on("roomFirstRoundStart", (data = {}) => {
   const activeKind = getActiveRoomKind(data);
@@ -9314,7 +9415,7 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   syncFirstRoundInput();
   scrollRoomToLatest(isRoomNearBottom());
   const openingChapterExists = Boolean(roomMessages.querySelector("[data-room-image-chapter]"));
-  if(roomOpeningSequenceComplete){
+  if(roomOpeningSequenceComplete && !roomReplyDeliveryActive){
     showSequenceTyping();
     setTimeout(runNextBeingFirstCard,700);
   }else if(openingChapterExists){
@@ -9325,6 +9426,10 @@ socket.on("roomFirstRoundStart", (data = {}) => {
 });
 
 function runNextBeingFirstCard(){
+  if(roomReplyDeliveryActive){
+    syncFirstRoundInput();
+    return;
+  }
   if (beingFirstRoundWaiting) {
     syncFirstRoundInput();
     return;
@@ -9417,7 +9522,7 @@ socket.on("roomStatus", data => {
 
     if (!data) {
 
-        if(localStorage.getItem("selectedBeingId") || Date.now() < suppressRoomClosedUntil){
+        if(Date.now() < suppressRoomClosedUntil){
             return;
         }
 
@@ -9451,7 +9556,13 @@ socket.on("roomStatus", data => {
 
     localStorage.setItem("askCameraRoomId",data.roomId);
 
-    renderStandardRoomHeader();
+    if(data.being){
+      localStorage.setItem("selectedBeingId",data.being.id);
+      localStorage.setItem("selectedBeing",JSON.stringify(data.being));
+      renderBeingRoomHeader(data.being);
+    }else{
+      renderStandardRoomHeader();
+    }
 
 document.getElementById("homeRoomId").innerText =
     "Room #" + data.roomId;
@@ -9462,12 +9573,9 @@ document.getElementById("homeRoomId").innerText =
       localStorage.setItem("askCameraRoomExpiresAt",String(data.expiresAt));
     }
 
-    if (data.permanent) {
-        stopRoomCountdown();
-        document.getElementById("homeRoomCountdown").innerText = "--:--";
-    } else {
-        startRoomCountdown();
-    }
+    stopRoomCountdown();
+    document.getElementById("roomCountdown").style.display = "none";
+    document.getElementById("homeRoomCountdown").innerText = "PRIVATE";
 
 });
 
@@ -9936,11 +10044,6 @@ function startDailyNullCountdown(){
 }
 
 function showCreateNull(){
-    if(localStorage.getItem("selectedBeingId")){
-        leaveCurrentRoomForTransition();
-        clearHumanSessionPreservingAsk();
-    }
-
     document.body.classList.remove("expiredHome");
     document.getElementById("modeBar").style.display = "";
     document.getElementById("aiBeingsScreen").style.display = "none";
@@ -10016,19 +10119,7 @@ try{
 async function returnFromPublicPerspectives(){
     publicNullsScreen.style.display = "none";
 
-    if(publicReturnContext === "humanRoom" && localStorage.getItem("selectedBeingId")){
-      const beingId = localStorage.getItem("selectedBeingId");
-      cameraWrap.style.display = "block";
-      roomOverlay.style.display = "flex";
-      history.replaceState({},"",`/being/${beingId}`);
-      return;
-    }
-
-    if(
-      publicReturnContext === "askRoom" &&
-      localStorage.getItem(ROOM_KIND_KEY) === "ask" &&
-      localStorage.getItem("roomId")
-    ){
+    if(localStorage.getItem("roomId")){
       const roomId = localStorage.getItem("roomId");
       cameraWrap.style.display = "block";
       roomOverlay.style.display = "flex";
@@ -10092,7 +10183,7 @@ async function createRoomFromPublicNull(publicNull){
     const publicNullId = publicNull.id;
     const beingId = localStorage.getItem("selectedBeingId");
     const beingSessionId = localStorage.getItem("selectedBeingSessionId");
-    setActiveRoomKind(beingId ? "human" : "ask");
+    setActiveRoomKind("ask");
 
     publicNullsScreen.style.display = "none";
     dailyNullsScreen.style.display = "none";
@@ -10113,9 +10204,8 @@ socket.emit("imageUpload",{
     roomMode: true,
     askMode: false,
     publishMode: "private",
-    // A public image is only the image source. If it was selected from a
-    // HUMAN room, keep the HUMAN identity/session so the backend does not
-    // create a normal ASK.CAMERA room.
+    // A public image is only the image source. The selected HUMAN, if any,
+    // remains the perspective inside this same private ASK room.
     beingId,
     beingSessionId,
     publicNullId,
@@ -10873,6 +10963,11 @@ function escapeBeingText(value){
 }
 
 async function showAIBeings(){
+  const roomBusy = roomOpeningSequenceActive || beingFirstRoundWaiting || beingFirstRoundQueue.length > 0 || roomReplyDeliveryActive || firstRoundDemoPending || aiTyping;
+  if(localStorage.getItem("roomId") && !roomNeedsHumanSelection && roomBusy){
+    alert("Please wait for the current HUMAN briefing or reply to finish.");
+    return;
+  }
   document.getElementById("modeBar").style.display = "none";
   cameraWrap.style.display = "block";
   helper.style.display = "none";
@@ -10885,8 +10980,22 @@ async function showAIBeings(){
   await loadAIBeings();
 }
 
+function returnFromHumanCards(){
+  document.getElementById("aiBeingsScreen").style.display = "none";
+  document.getElementById("createBeingScreen").style.display = "none";
+  if(localStorage.getItem("roomId")){
+    roomOverlay.style.display = "flex";
+    cameraWrap.style.display = "block";
+    helper.style.display = "none";
+    history.replaceState({},"",`/?room=${localStorage.getItem("roomId")}`);
+    return;
+  }
+  showCreateNull();
+}
+
 async function loadAIBeings(){
   const holder = document.getElementById("aiBeingsCards");
+  const humanActionLabel = localStorage.getItem("roomId") ? "Choose HUMAN" : "Start with HUMAN";
   holder.innerHTML = '<div style="padding:36px 16px;text-align:center;font-size:14px;font-weight:700;opacity:.72;">Loading HUMAN Cards…</div>';
 
   try{
@@ -10909,7 +11018,9 @@ async function loadAIBeings(){
           ${[being.word1,being.word2,being.word3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
         </div>
         <div class="beingCardActions">
-          <button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Open</button>
+          <button class="beingOpenButton" onclick="openAIBeing('${being.id}')">${humanActionLabel}</button>
+          <button class="beingShareButton" onclick="shareHumanCard('${being.id}')">Share HUMAN</button>
+          <button class="beingQrShareButton" onclick="showHumanCardQR('${being.id}')">QR</button>
           <button class="beingEditButton" onclick="changeAIBeingProfile('${being.id}')">Edit profile</button>
           <button class="beingManageButton" onclick="deleteAIBeing('${being.id}')">Manage</button>
         </div>
@@ -10919,6 +11030,30 @@ async function loadAIBeings(){
   }catch(error){
     holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:850;">HUMAN Cards could not load</div><div style="margin-top:8px;font-size:13px;line-height:1.45;color:#666;">${escapeBeingText(error.message)}</div><button onclick="loadAIBeings()" style="width:100%;height:44px;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">Try again</button></div>`;
   }
+}
+
+async function shareHumanCard(id,name = "HUMAN"){
+  const url = `${location.origin}/being/${id}`;
+  if(navigator.share){
+    try{
+      await navigator.share({
+        title:`${name} on ASK.CAMERA`,
+        text:"Open this HUMAN and start your own private ASK room.",
+        url
+      });
+      return;
+    }catch(error){}
+  }
+  await navigator.clipboard.writeText(url);
+  alert("HUMAN invitation copied.");
+}
+
+function showHumanCardQR(id){
+  const previous = localStorage.getItem("selectedBeingId");
+  localStorage.setItem("selectedBeingId",id);
+  showBeingQR();
+  if(previous) localStorage.setItem("selectedBeingId",previous);
+  else localStorage.removeItem("selectedBeingId");
 }
 
 function showHumanPhoto(photoUrl, humanName){
@@ -11333,21 +11468,45 @@ async function openAIBeing(id){
   const being = await response.json();
   if(!response.ok){ alert(being.error || "HUMAN not found."); return; }
 
-  const activeStandardRoomId = localStorage.getItem("roomId");
-  if(activeStandardRoomId && !localStorage.getItem("selectedBeingId")){
-    localStorage.setItem("askCameraRoomId",activeStandardRoomId);
-    const activeThumbnail = localStorage.getItem("roomThumbnail");
-    if(activeThumbnail) localStorage.setItem("askCameraRoomThumbnail",activeThumbnail);
-    if(roomExpiresAt) localStorage.setItem("askCameraRoomExpiresAt",String(roomExpiresAt));
-    leaveCurrentRoomForTransition();
-  }
-
   localStorage.removeItem("returningFromHumanCards");
-
   localStorage.setItem("selectedBeingId", being.id);
   localStorage.setItem("selectedBeing", JSON.stringify(being));
-  localStorage.setItem("selectedBeingSessionId", crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
-  setActiveRoomKind("human");
+  setActiveRoomKind("ask");
+
+  const activeRoomId = localStorage.getItem("roomId");
+  if(activeRoomId){
+    roomNeedsHumanSelection = false;
+    humanSelectionOpening = false;
+    beingFirstRoundQueue = [];
+    beingFirstRoundWaiting = false;
+    firstRoundDemoPending = false;
+    firstRoundDemoVisible = false;
+    clearTimeout(beingFirstRoundStepTimer);
+    beingFirstRoundStepTimer = null;
+    document.getElementById("aiBeingsScreen").style.display = "none";
+    document.getElementById("createBeingScreen").style.display = "none";
+    dailyNullsScreen.style.display = "none";
+    publicNullsScreen.style.display = "none";
+    cameraWrap.style.display = "block";
+    roomOverlay.style.display = "flex";
+    renderBeingRoomHeader(being);
+    roomInput.style.display = "block";
+    roomInput.disabled = true;
+    roomInput.placeholder = `${being.name} is reading this image…`;
+    history.replaceState({},"",`/?room=${activeRoomId}`);
+    showSequenceTyping();
+    socket.emit("selectRoomHuman", { deviceId, beingId:being.id }, result => {
+      if(result?.success === false){
+        hideSequenceTyping();
+        alert(result.error || "Could not change HUMAN.");
+        showAIBeings();
+      }
+    });
+    return;
+  }
+
+  // A HUMAN invitation preselects a perspective. The visitor creates a new
+  // private ASK room after choosing an image.
   beingFirstRoundQueue = [];
   beingFirstRoundWaiting = false;
   beingFirstRoundInsertionIndex = null;
@@ -11381,7 +11540,7 @@ async function openAIBeing(id){
       <img class="humanRoomIntroPhoto" src="${being.photo}" alt="${escapeBeingText(being.name)}">
       <div class="humanRoomIntroCopy">
         <div class="humanRoomIntroName">${escapeBeingText(being.name)}</div>
-        <div class="humanRoomIntroHint">Choose Camera, Upload, or Public to start this HUMAN conversation.</div>
+        <div class="humanRoomIntroHint">Choose Camera, Upload, or Public to start your own private ASK room with this HUMAN.</div>
       </div>
     </div>
   `;
@@ -11398,13 +11557,6 @@ async function returnToHumanCards(event){
     event.preventDefault();
     event.stopPropagation();
   }
-
-  leaveCurrentRoomForTransition();
-
-  clearHumanSessionPreservingAsk();
-
-  roomOverlay.style.display = "none";
-  history.replaceState({},"","/");
   await showAIBeings();
 }
 
@@ -11453,7 +11605,9 @@ function renderBeingRoomHeader(being){
   `;
 
   document.getElementById("beingQrBtn").style.display = "inline-block";
-  document.getElementById("shareRoomBtn").innerText = "Share";
+  document.getElementById("changeHumanBtn").style.display = "inline-block";
+  document.getElementById("shareRoomBtn").innerText = "Share HUMAN";
+  document.getElementById("shareRoomBtn").style.display = "inline-block";
   document.getElementById("roomCountdown").style.display = "none";
   document.getElementById("homeRoomCard").style.display = "none";
 }
@@ -11723,10 +11877,10 @@ if(directBeingMatch){
     <button onclick="closeHumanCardsGuide()" aria-label="Close HUMAN Cards guide" style="position:absolute;top:14px;right:14px;width:40px;height:40px;padding:0;border:none;border-radius:50%;background:#f2f2f2;color:#111;font-size:26px;line-height:1;cursor:pointer;">×</button>
     <div style="padding-right:48px;font-size:22px;font-weight:900;line-height:1.15;">What are HUMAN Cards?</div>
     <div style="margin-top:18px;font-size:14px;line-height:1.55;">
-      <p style="margin:0 0 12px;">HUMAN Cards let you explore the world from a selected person’s identity, background, category, and personality.</p>
-      <p style="margin:0 0 12px;">Create your own HUMAN Card as an AI version of you—an AI-powered name card that answers people’s questions from your perspective.</p>
-      <p style="margin:0 0 12px;">You can add an optional phone number and share your HUMAN Card using its QR code.</p>
-      <p style="margin:0;">Choose or create a HUMAN Card, open it, then take a photo or upload an image to create Camera Perspectives influenced by that HUMAN.</p>
+      <p style="margin:0 0 12px;">HUMAN Cards are switchable perspectives inside one private ASK room.</p>
+      <p style="margin:0 0 12px;">Choose a HUMAN after adding an image. That HUMAN acknowledges the image, provides five examples, and answers your questions.</p>
+      <p style="margin:0 0 12px;">You can change HUMAN perspectives without losing the room, image, or earlier conversation.</p>
+      <p style="margin:0;">A shared HUMAN link or QR is an AI name-card invitation. Each visitor starts a separate private ASK room; conversations are never shared.</p>
     </div>
     <button onclick="closeHumanCardsGuide()" style="width:100%;height:46px;margin-top:20px;border:none;border-radius:999px;background:#000;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Got it</button>
   </div>
@@ -11937,7 +12091,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Ask the Camera Perspective</b> in the image what you want to discover.
+<b>Choose a HUMAN perspective</b> for the image, then explore five examples.
 </div>
 
 </div>
@@ -11980,7 +12134,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Share your AI Live Room.</b>
+<b>Share HUMAN invitations or individual result cards.</b> ASK rooms remain private.
 </div>
 
 </div>
@@ -12024,10 +12178,12 @@ Close
   if(stateSystem) document.head.appendChild(stateSystem);
   const blueHierarchy = document.getElementById("askCameraBlueHierarchyV122");
   if(blueHierarchy) document.head.appendChild(blueHierarchy);
+  const humanAnchorSystem = document.getElementById("askCameraHumanAnchorV139");
+  if(humanAnchorSystem) document.head.appendChild(humanAnchorSystem);
 })();
 (function cleanBracketedButtonLabels(){
-  const primarySelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
-  const guidanceSelector = '#uploadBtn,#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
+  const primarySelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,#changeHumanBtn,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
+  const guidanceSelector = '#uploadBtn,#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,.beingShareButton,.beingQrShareButton,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
   const destructiveSelector = '.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
