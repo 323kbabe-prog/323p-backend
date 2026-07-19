@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.135 (2026-07-19)
+  - Restored the v10.0.132 visual design and disabled the five-level color experiment
+  - Standardized opening, automatic-card, and normal AI loading on one light-gray dark-dot design
+  - Kept only one loading indicator active at a time across ASK and HUMAN rooms
+  - Preserved inert-template one-by-one delivery with no backend changes
+
   v10.0.134 (2026-07-19)
   - Replaced the legacy runtime light-blue repaint with the approved five-level button hierarchy
   - Stopped the v10.0.122 blue stylesheet from being promoted above the current color system
@@ -5460,7 +5466,7 @@ html body #createBeingSubmit{
   color:var(--google-red)!important;
   border:1px solid var(--google-red-line)!important;
 }
-#sequenceTyping.openingSequenceLoader{
+.openingSequenceLoader{
   display:flex!important;
   align-items:center!important;
   justify-content:flex-start!important;
@@ -5475,7 +5481,7 @@ html body #createBeingSubmit{
   border:1px solid #d0d7de!important;
   border-radius:18px!important;
 }
-#sequenceTyping.openingSequenceLoader .openingSequenceDot{
+.openingSequenceLoader .openingSequenceDot{
   display:block!important;
   width:7px!important;
   height:7px!important;
@@ -5485,10 +5491,11 @@ html body #createBeingSubmit{
   opacity:.35;
   animation:aiBounce 1s infinite;
 }
-#sequenceTyping.openingSequenceLoader .openingSequenceDot:nth-child(2){animation-delay:.15s;}
-#sequenceTyping.openingSequenceLoader .openingSequenceDot:nth-child(3){animation-delay:.3s;}
+.openingSequenceLoader .openingSequenceDot:nth-child(2){animation-delay:.15s;}
+.openingSequenceLoader .openingSequenceDot:nth-child(3){animation-delay:.3s;}
 
-/* v10.0.133 — ASK.CAMERA button and text color hierarchy. */
+@media not all {
+/* v10.0.133 — disabled; v10.0.135 restores the v10.0.132 visual system. */
 :root{
   --ui-button-1:#1a73e8;
   --ui-button-2:#202124;
@@ -5656,6 +5663,7 @@ html body #firstNextBtn *,html body #memoryBtn *{
   color:#fff!important;
   fill:currentColor!important;
   stroke:currentColor!important;
+}
 }
 </style>
 
@@ -7856,7 +7864,7 @@ function showSequenceDelayNotice(){
 }
 
 function sequenceTypingHtml(){
-  return '<div id="sequenceTyping" class="geminiAiResponse chatAiGroup" role="status" aria-label="AI is preparing the next reply"><div class="chatBubble chatAiBubble" style="display:flex;gap:5px;width:max-content;"><span class="aiDot"></span><span class="aiDot"></span><span class="aiDot"></span></div></div>';
+  return openingSequenceTypingHtml();
 }
 
 function openingSequenceTypingHtml(){
@@ -8968,14 +8976,16 @@ const typing =
 document.createElement("div");
 
 typing.id = "aiTyping";
+typing.className = "openingSequenceLoader";
 
 typing.style.display = "flex";
 typing.style.alignItems = "center";
 typing.style.gap = "4px";
 
-typing.style.padding = "10px 14px";
+typing.style.padding = "0 12px";
 
-typing.style.background = "#000";
+typing.style.background = "#f6f8fa";
+typing.style.border = "1px solid #d0d7de";
 
 typing.style.borderRadius = "18px";
 
@@ -8985,9 +8995,9 @@ typing.style.marginBottom = "18px";
 
 
 typing.innerHTML = `
-<div class="aiDot"></div>
-<div class="aiDot"></div>
-<div class="aiDot"></div>
+<span class="openingSequenceDot"></span>
+<span class="openingSequenceDot"></span>
+<span class="openingSequenceDot"></span>
 `;
 
 roomMessages.appendChild(
@@ -10985,10 +10995,9 @@ function syncBeingKeywordChips(){
   document.querySelectorAll("#beingKeywordChips .beingKeywordChip").forEach(chip => {
     const isSelected = selected.includes(chip.dataset.keyword.toLowerCase());
     chip.classList.toggle("isSelected",isSelected);
-    chip.setAttribute("aria-pressed",String(isSelected));
-    chip.style.setProperty("background",isSelected ? "#1a73e8" : "#f1f3f4","important");
-    chip.style.setProperty("color",isSelected ? "#fff" : "#202124","important");
-    chip.style.setProperty("border-color",isSelected ? "#1a73e8" : "#dadce0","important");
+    chip.style.setProperty("background",isSelected ? "#e8f0fe" : "#fff","important");
+    chip.style.setProperty("color",isSelected ? "#174ea6" : "#111","important");
+    chip.style.setProperty("border-color",isSelected ? "#1a73e8" : "#8c959f","important");
   });
 }
 
@@ -11959,12 +11968,12 @@ Close
   if(style) document.head.appendChild(style);
   const stateSystem = document.getElementById("askCameraStateSystemV120");
   if(stateSystem) document.head.appendChild(stateSystem);
+  const blueHierarchy = document.getElementById("askCameraBlueHierarchyV122");
+  if(blueHierarchy) document.head.appendChild(blueHierarchy);
 })();
 (function cleanBracketedButtonLabels(){
-  const levelOneSelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
-  const levelTwoSelector = '#dailyNullsBtn,#uploadBtn,#roomImageActions button:nth-child(2),#shareRoomBtn,#firstNextBtn,.chatOpenAction';
-  const levelThreeSelector = '#aiBeingsBtn,#publicNullsBtn,#roomImageActions button:nth-child(3),#beingQrBtn,#memoryBtn,#retryUnavailableRoomBtn,.chatShareAction';
-  const levelFourSelector = '#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,#copyBeingRecovery,#backFromUnavailableRoomBtn,.roomRecoveryState button';
+  const primarySelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
+  const guidanceSelector = '#uploadBtn,#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
   const destructiveSelector = '.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
@@ -11977,29 +11986,20 @@ Close
       button.style.setProperty('text-shadow','none','important');
       button.style.setProperty('border','1px solid #8c959f','important');
       if(button.matches(destructiveSelector)){
-        button.style.setProperty('background','#fce8e6','important');
-        button.style.setProperty('color','#d93025','important');
-        button.style.setProperty('border-color','#f6aea9','important');
-      }else if(button.matches(levelOneSelector)){
-        button.style.setProperty('background','#1a73e8','important');
+        button.style.setProperty('background','#fff','important');
+        button.style.setProperty('color','#cf222e','important');
+        button.style.setProperty('border-color','#ff8182','important');
+      }else if(button.matches(primarySelector)){
+        button.style.setProperty('background','#0969da','important');
         button.style.setProperty('color','#fff','important');
-        button.style.setProperty('border-color','#1a73e8','important');
-      }else if(button.matches(levelTwoSelector)){
-        button.style.setProperty('background','#202124','important');
-        button.style.setProperty('color','#fff','important');
-        button.style.setProperty('border-color','#202124','important');
-      }else if(button.matches(levelThreeSelector)){
-        button.style.setProperty('background','#3c4043','important');
-        button.style.setProperty('color','#fff','important');
-        button.style.setProperty('border-color','#3c4043','important');
-      }else if(button.matches(levelFourSelector)){
-        button.style.setProperty('background','#5f6368','important');
-        button.style.setProperty('color','#fff','important');
-        button.style.setProperty('border-color','#5f6368','important');
+        button.style.setProperty('border-color','#0969da','important');
+      }else if(button.matches(guidanceSelector)){
+        button.style.setProperty('background','#ddf4ff','important');
+        button.style.setProperty('color','#0550ae','important');
+        button.style.setProperty('border-color','#54aeff','important');
       }else{
-        button.style.setProperty('background','#f1f3f4','important');
-        button.style.setProperty('color','#202124','important');
-        button.style.setProperty('border-color','#dadce0','important');
+        button.style.setProperty('background','#fff','important');
+        button.style.setProperty('color','#111','important');
       }
       const walker = document.createTreeWalker(button,NodeFilter.SHOW_TEXT);
       const textNodes = [];
@@ -12014,10 +12014,9 @@ Close
       ? [root]
       : Array.from(root.querySelectorAll ? root.querySelectorAll('.chatOpenAction,.chatShareAction') : []);
     actionLinks.forEach(action => {
-      const isOpen = action.matches('.chatOpenAction');
-      action.style.setProperty('background',isOpen ? '#202124' : '#3c4043','important');
-      action.style.setProperty('color','#fff','important');
-      action.style.setProperty('border',`1px solid ${isOpen ? '#202124' : '#3c4043'}`,'important');
+      action.style.setProperty('background','#ddf4ff','important');
+      action.style.setProperty('color','#0550ae','important');
+      action.style.setProperty('border','1px solid #54aeff','important');
       action.style.setProperty('border-radius','0','important');
       action.style.setProperty('box-shadow','none','important');
     });
