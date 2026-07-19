@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.122 (2026-07-19)
+  - Added a restrained GitHub-style blue hierarchy for primary actions, active navigation, links, selection, and focus
+  - Preserved neutral camera and close controls plus red destructive HUMAN and Public management actions
+  - Kept white canvases, square corners, and existing spacing unchanged
+
   v10.0.121 (2026-07-19)
   - Delivered ASK and HUMAN opening replies and automatic cards one by one through one shared queue
   - Changed the opening copy from three things to three examples of what the AI can provide
@@ -889,6 +894,19 @@ body.systemBlockingState #helper{
 #publicNullsCards .loveCount,#publicNullsCards .skeletonCount{font-size:17px!important;line-height:1.2!important;font-weight:700!important;}
 #publishDialog[role="dialog"],#roomFloatingCameraLayer[role="dialog"]{overscroll-behavior:contain!important;}
 #publishDialogClose,#roomFloatingCameraClose{touch-action:manipulation!important;}
+</style>
+
+<style id="askCameraBlueHierarchyV122">
+:root{--guide-blue:#0969da;--guide-blue-dark:#0550ae;--guide-blue-soft:#ddf4ff;--guide-blue-border:#54aeff;}
+#roomInput:focus,.beingInput:focus,#publishDialog input:focus-visible{border-color:var(--guide-blue)!important;outline:2px solid var(--guide-blue-border)!important;outline-offset:1px!important;box-shadow:none!important;}
+#publishDialog label:has(input:checked){background:var(--guide-blue-soft)!important;color:#1f2328!important;border-color:var(--guide-blue-border)!important;}
+#publishDialog input[type="radio"]{accent-color:var(--guide-blue)!important;}
+.chatOpenAction,.chatShareAction{background:var(--guide-blue-soft)!important;color:var(--guide-blue-dark)!important;border-color:var(--guide-blue-border)!important;}
+#roomMessages a:not(.chatOpenAction):not(.chatShareAction),#guidePopup a,#humanCardsGuide a,.systemState a{color:var(--guide-blue)!important;text-decoration-color:var(--guide-blue-border)!important;}
+#homeStartupTrial,.systemStateText a{color:var(--guide-blue-dark)!important;}
+#shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn{color:var(--guide-blue-dark)!important;border-color:var(--guide-blue-border)!important;background:#fff!important;}
+#publicNullsBtn,#dailyNullsBtn,#aiBeingsBtn{color:var(--guide-blue-dark)!important;border-color:var(--guide-blue-border)!important;background:var(--guide-blue-soft)!important;}
+.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin{color:#cf222e!important;border-color:#ff8182!important;background:#fff!important;}
 </style>
 
 <script>
@@ -11507,9 +11525,13 @@ Close
   if(style) document.head.appendChild(style);
   const stateSystem = document.getElementById("askCameraStateSystemV120");
   if(stateSystem) document.head.appendChild(stateSystem);
+  const blueHierarchy = document.getElementById("askCameraBlueHierarchyV122");
+  if(blueHierarchy) document.head.appendChild(blueHierarchy);
 })();
 (function cleanBracketedButtonLabels(){
   const primarySelector = '#createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
+  const guidanceSelector = '#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
+  const destructiveSelector = '.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
     const buttons = root.matches && root.matches('button,[role="button"]')
@@ -11520,10 +11542,18 @@ Close
       button.style.setProperty('box-shadow','none','important');
       button.style.setProperty('text-shadow','none','important');
       button.style.setProperty('border','1px solid #8c959f','important');
-      if(button.matches(primarySelector)){
-        button.style.setProperty('background','#111','important');
+      if(button.matches(destructiveSelector)){
+        button.style.setProperty('background','#fff','important');
+        button.style.setProperty('color','#cf222e','important');
+        button.style.setProperty('border-color','#ff8182','important');
+      }else if(button.matches(primarySelector)){
+        button.style.setProperty('background','#0969da','important');
         button.style.setProperty('color','#fff','important');
-        button.style.setProperty('border-color','#111','important');
+        button.style.setProperty('border-color','#0969da','important');
+      }else if(button.matches(guidanceSelector)){
+        button.style.setProperty('background','#ddf4ff','important');
+        button.style.setProperty('color','#0550ae','important');
+        button.style.setProperty('border-color','#54aeff','important');
       }else{
         button.style.setProperty('background','#fff','important');
         button.style.setProperty('color','#111','important');
@@ -11541,9 +11571,9 @@ Close
       ? [root]
       : Array.from(root.querySelectorAll ? root.querySelectorAll('.chatOpenAction,.chatShareAction') : []);
     actionLinks.forEach(action => {
-      action.style.setProperty('background','#fff','important');
-      action.style.setProperty('color','#111','important');
-      action.style.setProperty('border','1px solid #8c959f','important');
+      action.style.setProperty('background','#ddf4ff','important');
+      action.style.setProperty('color','#0550ae','important');
+      action.style.setProperty('border','1px solid #54aeff','important');
       action.style.setProperty('border-radius','0','important');
       action.style.setProperty('box-shadow','none','important');
     });
