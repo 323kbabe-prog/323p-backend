@@ -1469,11 +1469,49 @@ ASK.CAMERA – AI Camera Search
     <img id="beingCurrentPhoto" alt="HUMAN profile preview" style="display:none;width:112px;height:112px;object-fit:cover;border-radius:22px;margin:0 auto 14px;box-shadow:0 8px 24px rgba(0,0,0,.14);">
     <input id="beingPhoto" type="file" accept="image/*" onchange="previewBeingPhoto(this)" style="margin-bottom:14px;width:100%;">
     <input id="beingName" placeholder="Name" class="beingInput">
-    <textarea id="beingChoice" placeholder="Bio — one sentence" maxlength="160" class="beingInput" rows="3"></textarea>
-    <input id="beingCategory" placeholder="Category" class="beingInput">
-    <input id="beingWord1" placeholder="Word 1" class="beingInput">
-    <input id="beingWord2" placeholder="Word 2" class="beingInput">
-    <input id="beingWord3" placeholder="Word 3" class="beingInput">
+    <select id="beingCategory" class="beingInput" onchange="handleBeingProfileInput()">
+      <option value="">Choose a business category</option>
+      <option>Technology &amp; AI</option>
+      <option>Business &amp; Entrepreneurship</option>
+      <option>Investment &amp; Finance</option>
+      <option>Real Estate</option>
+      <option>Marketing &amp; Media</option>
+      <option>Design &amp; Creative</option>
+      <option>Creators &amp; Influencers</option>
+      <option>Fashion &amp; Beauty</option>
+      <option>Entertainment &amp; Music</option>
+      <option>Food &amp; Hospitality</option>
+      <option>Retail &amp; E-commerce</option>
+      <option>Education &amp; Research</option>
+      <option>Health &amp; Wellness</option>
+      <option>Travel &amp; Tourism</option>
+      <option>Sustainability</option>
+      <option>Community &amp; Social Impact</option>
+      <option>Other</option>
+    </select>
+    <select id="beingCreatorType" class="beingInput" style="display:none;" onchange="handleBeingProfileInput()">
+      <option value="">Choose a creator type</option>
+      <option>YouTuber</option>
+      <option>TikTok Creator</option>
+      <option>Instagram Creator</option>
+      <option>Podcaster</option>
+      <option>Streamer</option>
+      <option>Blogger / Writer</option>
+      <option>KOL</option>
+      <option>UGC Creator</option>
+      <option>Photographer</option>
+      <option>Other Creator</option>
+    </select>
+    <div style="font-size:12px;line-height:1.4;color:#666;margin:0 2px 8px;">Add three words that describe how you work, connect, or create opportunities.</div>
+    <input id="beingWord1" placeholder="Keyword 1 — e.g. strategic" class="beingInput" oninput="handleBeingProfileInput()">
+    <input id="beingWord2" placeholder="Keyword 2 — e.g. collaborative" class="beingInput" oninput="handleBeingProfileInput()">
+    <input id="beingWord3" placeholder="Keyword 3 — e.g. global" class="beingInput" oninput="handleBeingProfileInput()" onblur="generateBeingBio()">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 2px 8px;">
+      <label for="beingChoice" style="font-size:12px;font-weight:700;">BUSINESS INTRODUCTION</label>
+      <button id="beingBioGenerate" type="button" onclick="generateBeingBio(true)" style="display:none;border:none;background:transparent;color:#1a73e8;padding:4px 0;font-size:12px;font-weight:700;">Regenerate bio</button>
+    </div>
+    <textarea id="beingChoice" placeholder="Generated after category and three keywords" maxlength="160" class="beingInput" rows="3" oninput="markBeingBioEdited()"></textarea>
+    <div id="beingBioStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Auto-generated and editable.</div>
     <input id="beingPhone" type="tel" inputmode="tel" placeholder="Public phone with country code (optional), e.g. +12125550123" class="beingInput">
     <div id="beingPasswordFields">
       <input id="beingPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Management password — minimum 8 characters" class="beingInput">
@@ -10238,6 +10276,79 @@ async function deleteAIBeing(id){
 let editingBeing = null;
 let editingBeingPassword = "";
 let beingPreviewUrl = "";
+let beingBioEdited = false;
+let beingBioSignature = "";
+let beingBioRequest = 0;
+
+function beingCategoryValue(){
+  const category = document.getElementById("beingCategory").value.trim();
+  const creatorType = document.getElementById("beingCreatorType").value.trim();
+  return category === "Creators & Influencers" && creatorType
+    ? `${category} — ${creatorType}`
+    : category;
+}
+
+function beingBioInputs(){
+  return {
+    category:beingCategoryValue(),
+    word1:document.getElementById("beingWord1").value.trim(),
+    word2:document.getElementById("beingWord2").value.trim(),
+    word3:document.getElementById("beingWord3").value.trim()
+  };
+}
+
+function beingBioInputSignature(){
+  return JSON.stringify(beingBioInputs()).toLowerCase();
+}
+
+function markBeingBioEdited(){
+  beingBioEdited = true;
+  document.getElementById("beingBioGenerate").style.display = "inline-block";
+  document.getElementById("beingBioStatus").innerText = "Edited by you. Regenerate only when you choose.";
+}
+
+function handleBeingProfileInput(){
+  const category = document.getElementById("beingCategory").value;
+  const creatorSelect = document.getElementById("beingCreatorType");
+  creatorSelect.style.display = category === "Creators & Influencers" ? "block" : "none";
+  if(category !== "Creators & Influencers") creatorSelect.value = "";
+
+  const complete = Object.values(beingBioInputs()).every(Boolean);
+  const changed = beingBioInputSignature() !== beingBioSignature;
+  document.getElementById("beingBioGenerate").style.display = complete && (changed || beingBioEdited) ? "inline-block" : "none";
+}
+
+async function generateBeingBio(force = false){
+  const inputs = beingBioInputs();
+  if(!Object.values(inputs).every(Boolean)) return;
+  if(document.getElementById("beingCategory").value === "Creators & Influencers" && !document.getElementById("beingCreatorType").value) return;
+  if(beingBioEdited && !force) return;
+
+  const requestId = ++beingBioRequest;
+  const status = document.getElementById("beingBioStatus");
+  const button = document.getElementById("beingBioGenerate");
+  status.innerText = "Generating your business introduction…";
+  button.disabled = true;
+  try{
+    const response = await fetch(`${AI_BEINGS_API}/ai-beings/generate-bio`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(inputs)
+    });
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || "Could not generate bio.");
+    if(requestId !== beingBioRequest) return;
+    document.getElementById("beingChoice").value = result.bio || "";
+    beingBioSignature = beingBioInputSignature();
+    beingBioEdited = false;
+    status.innerText = "Auto-generated and editable.";
+    button.style.display = "none";
+  }catch(error){
+    if(requestId === beingBioRequest) status.innerText = `${error.message} You can write the bio yourself or try again.`;
+  }finally{
+    if(requestId === beingBioRequest) button.disabled = false;
+  }
+}
 
 function toggleBeingPasswords(show){
   const type = show ? "text" : "password";
@@ -10263,13 +10374,19 @@ function resetBeingForm(){
   beingPreviewUrl = "";
   editingBeing = null;
   editingBeingPassword = "";
+  beingBioEdited = false;
+  beingBioSignature = "";
+  beingBioRequest++;
   document.getElementById("beingFormTitle").innerText = "Create HUMAN Card";
   const preview = document.getElementById("beingCurrentPhoto");
   preview.removeAttribute("src");
   preview.style.display = "none";
   document.getElementById("beingPhoto").value = "";
-  ["beingName","beingChoice","beingCategory","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
+  ["beingName","beingChoice","beingCategory","beingCreatorType","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
     .forEach(id => document.getElementById(id).value = "");
+  document.getElementById("beingCreatorType").style.display = "none";
+  document.getElementById("beingBioGenerate").style.display = "none";
+  document.getElementById("beingBioStatus").innerText = "Auto-generated and editable.";
   document.getElementById("beingShowPasswords").checked = false;
   toggleBeingPasswords(false);
   document.getElementById("beingPasswordFields").style.display = "block";
@@ -10299,10 +10416,21 @@ async function changeAIBeingProfile(id){
     document.getElementById("beingPhoto").value = "";
     document.getElementById("beingName").value = being.name || "";
     document.getElementById("beingChoice").value = being.best_current_choice || "";
-    document.getElementById("beingCategory").value = being.category || "";
+    const categoryParts = String(being.category || "").split(/\s+[—-]\s+/);
+    const categorySelect = document.getElementById("beingCategory");
+    const knownCategory = Array.from(categorySelect.options).some(option => option.value === categoryParts[0]);
+    categorySelect.value = knownCategory ? categoryParts[0] : "Other";
+    if(categoryParts[0] === "Creators & Influencers"){
+      document.getElementById("beingCreatorType").style.display = "block";
+      document.getElementById("beingCreatorType").value = categoryParts.slice(1).join(" — ");
+    }
     document.getElementById("beingWord1").value = being.word1 || "";
     document.getElementById("beingWord2").value = being.word2 || "";
     document.getElementById("beingWord3").value = being.word3 || "";
+    beingBioSignature = beingBioInputSignature();
+    beingBioEdited = true;
+    document.getElementById("beingBioGenerate").style.display = "inline-block";
+    document.getElementById("beingBioStatus").innerText = "Existing bio. Edit it or regenerate from the profile.";
     document.getElementById("beingPhone").value = being.phone || "";
     document.getElementById("beingPasswordFields").style.display = "none";
     document.getElementById("createBeingSubmit").innerText = "Save changes";
@@ -10341,7 +10469,7 @@ async function createAIBeing(){
   const payload = {
     name: document.getElementById("beingName").value.trim(),
     best_current_choice: document.getElementById("beingChoice").value.trim(),
-    category: document.getElementById("beingCategory").value.trim(),
+    category: beingCategoryValue(),
     word1: document.getElementById("beingWord1").value.trim(),
     word2: document.getElementById("beingWord2").value.trim(),
     word3: document.getElementById("beingWord3").value.trim(),
