@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.123 (2026-07-19)
+  - Added an explicit Take Camera View button with a camera icon above Upload Image
+  - Routed that button to the existing floating live-camera card
+  - Removed tap-anywhere capture so only the circular shutter takes a picture
+
   v10.0.122 (2026-07-19)
   - Added a restrained GitHub-style blue hierarchy for primary actions, active navigation, links, selection, and focus
   - Preserved neutral camera and close controls plus red destructive HUMAN and Public management actions
@@ -906,6 +911,9 @@ body.systemBlockingState #helper{
 #homeStartupTrial,.systemStateText a{color:var(--guide-blue-dark)!important;}
 #shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn{color:var(--guide-blue-dark)!important;border-color:var(--guide-blue-border)!important;background:#fff!important;}
 #publicNullsBtn,#dailyNullsBtn,#aiBeingsBtn{color:var(--guide-blue-dark)!important;border-color:var(--guide-blue-border)!important;background:var(--guide-blue-soft)!important;}
+#takeCameraViewBtn{width:100%!important;min-height:48px!important;background:var(--guide-blue)!important;color:#fff!important;border:1px solid var(--guide-blue)!important;}
+#takeCameraViewBtn svg{flex:0 0 auto!important;}
+#uploadBtn{width:100%!important;margin-top:8px!important;background:var(--guide-blue-soft)!important;color:var(--guide-blue-dark)!important;border:1px solid var(--guide-blue-border)!important;}
 .beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin{color:#cf222e!important;border-color:#ff8182!important;background:#fff!important;}
 </style>
 
@@ -5655,10 +5663,15 @@ margin:0;
   -webkit-text-stroke:0.2px currentColor;
 ">
   <div style="font-size:1.12em;line-height:1.05;">Point your camera at anything.</div>
-  <div style="margin-top:10px;font-size:.65em;font-weight:650;line-height:1.4;text-transform:none;letter-spacing:0;max-width:520px;">Tap the camera view to take a photo, or upload one. ASK.CAMERA turns what you see into new context and perspectives.</div>
+  <div style="margin-top:10px;font-size:.65em;font-weight:650;line-height:1.4;text-transform:none;letter-spacing:0;max-width:520px;">Open the camera view to take a photo, or upload one. ASK.CAMERA turns what you see into new context and perspectives.</div>
 </div>
 
 <div style="margin-top:16px;"></div>
+
+<button id="takeCameraViewBtn" type="button" onclick="openHomeFloatingCamera(event)" style="margin-top:18px;padding:10px 18px;border:none;background:#0969da;color:#fff;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;">
+  <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.8"/></svg>
+  <span>Take Camera View</span>
+</button>
 
 <button
 id="uploadBtn"
@@ -6778,6 +6791,8 @@ const uploadImage =
   document.getElementById("uploadImage");
 
 function bindFreshCameraHomeActions(){
+  const cameraButton = document.getElementById("takeCameraViewBtn");
+  if(cameraButton) cameraButton.onclick = openHomeFloatingCamera;
   const uploadButton = document.getElementById("uploadBtn");
   if(uploadButton){
     uploadButton.onclick = event => {
@@ -7079,26 +7094,6 @@ return;
     captureLock = false;
   }
 }
-
-cameraWrap.addEventListener(
-  "click",
-  async e => {
-
-
-  if (
-    e.target.closest("#uploadBtn") ||
-    e.target.closest("#uploadImage") ||
-    e.target.closest("#publicNullsBtn") ||
-    e.target.closest("#refreshCameraBtn")
-  ){
-    e.stopPropagation();
-    return;
-  }
-
-  e.preventDefault();
-  await captureImage();
-
-});
 
 function endCurrentRoomAndRestart(){
   if (endingRoomSession) return;
@@ -9263,14 +9258,15 @@ margin-bottom:18px;
   text-transform:uppercase;
   -webkit-text-stroke:0.2px currentColor;
 ">
-  POINT YOUR CAMERA AT THE WORLD.
-  <span style="animation:moreBlink 1.2s infinite;">
-    TAP THE SCREEN
-  </span>
-  OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.
+  POINT YOUR CAMERA AT THE WORLD. OPEN THE CAMERA VIEW OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.
 </div>
 
 <div style="margin-top:16px;"></div>
+
+<button id="takeCameraViewBtn" type="button" onclick="openHomeFloatingCamera(event)" style="margin-top:18px;padding:10px 18px;border:none;background:#0969da;color:#fff;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;">
+  <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.8"/></svg>
+  <span>Take Camera View</span>
+</button>
 
 <button
 id="uploadBtn"
@@ -10999,10 +10995,20 @@ function showBeingQR(){
 
 const HOME_HERO_HTML = `
   <div class="homeHeroTitle">POINT YOUR CAMERA AT ANYTHING.</div>
-  <div class="homeHeroSupport">Tap the camera view to take a photo, or upload one. ASK.CAMERA turns what you see into new context and perspectives.</div>
+  <div class="homeHeroSupport">Open the camera view to take a photo, or upload one. ASK.CAMERA turns what you see into new context and perspectives.</div>
 `;
 
 let homeCaptureCardDismissed = false;
+
+async function openHomeFloatingCamera(event){
+  if(event){ event.preventDefault(); event.stopPropagation(); }
+  clearSystemState("camera");
+  homeCaptureCardDismissed = false;
+  if(!video.srcObject) await ensureCameraStream();
+  ensureCanonicalHomeExperience();
+  const layer = document.getElementById("homeStartupLayer");
+  if(layer && video.srcObject) layer.hidden = false;
+}
 
 function closeHomeCaptureCard(event){
   if(event){ event.preventDefault(); event.stopPropagation(); }
@@ -11399,7 +11405,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Tap the screen or upload an image.</b>
+<b>Choose Take Camera View or upload an image.</b>
 </div>
 
 </div>
@@ -11491,7 +11497,7 @@ flex-shrink:0;
 <hr style="margin:20px 0;border:none;border-top:1px solid #eee;">
 
 <div style="text-align:center;">
-<b>POINT YOUR CAMERA AT THE WORLD. TAP THE SCREEN OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.</b><br><br>
+<b>POINT YOUR CAMERA AT THE WORLD. CHOOSE TAKE CAMERA VIEW OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.</b><br><br>
 
 <b>Capture. Ask. Discover.</b>
 </div>
@@ -11529,8 +11535,8 @@ Close
   if(blueHierarchy) document.head.appendChild(blueHierarchy);
 })();
 (function cleanBracketedButtonLabels(){
-  const primarySelector = '#createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
-  const guidanceSelector = '#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
+  const primarySelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
+  const guidanceSelector = '#uploadBtn,#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
   const destructiveSelector = '.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
