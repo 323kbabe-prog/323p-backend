@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.107 (2026-07-19)
+  - Shows the white FREE TRIAL startup experience on every normal ASK.CAMERA opening path
+  - Removed the incorrect exact-root-only restriction that hid startup UI on mobile paths such as /m
+  - Continues to bypass startup only for direct HUMAN links and shared ASK.CAMERA room links
+
   v10.0.106 (2026-07-19)
   - Rebuilt the fresh-opening camera experience on a completely white startup layer
   - Added left-aligned FREE TRIAL title and supporting copy above the live camera
@@ -10877,8 +10882,10 @@ function updateHomeCaptureCardVisibility(){
     .map(id => document.getElementById(id))
     .some(screen => screen && getComputedStyle(screen).display !== "none");
   const helperVisible = getComputedStyle(helper).display !== "none";
-  const freshRootStart = location.pathname === "/";
-  layer.hidden = homeCaptureCardDismissed || !freshRootStart || !main || !helperVisible || roomOpen || secondaryOpen;
+  const directHumanLink = /^\/being\/[^/]+\/?$/.test(location.pathname);
+  const sharedRoomLink = new URLSearchParams(location.search).has("room");
+  const normalAppOpening = !directHumanLink && !sharedRoomLink;
+  layer.hidden = homeCaptureCardDismissed || !normalAppOpening || !main || !helperVisible || roomOpen || secondaryOpen;
 }
 
 function enforceCircularHomeShutter(){
