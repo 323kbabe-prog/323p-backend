@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.35 (2026-07-20)
+// - Prevents image-context real-estate words from overriding automatic card types
+// - Returns a matching search fallback when an automatic card lookup fails
+// - Keeps all five automatic card families able to complete in sequence
+//
 // v10.0.34 (2026-07-20)
 // - Makes the selected HUMAN category the 60% automatic-search anchor
 // - Keeps image identity at 30% and requested card family at 10%
@@ -3649,8 +3654,9 @@ if (/^(camera perspective feed|null feed)$/i.test(combinedIntent.trim())) {
 }
 
 const hasRealEstateLanguage =
+  !autoFirstRound &&
   /\b(apartment|condo|house|home|property|real estate|land|rental|rent|lease|housing)\b/i
-    .test(combinedIntent);
+    .test(String(text || ""));
 
 if (hasRealEstateLanguage) {
   intent = "real_estate";
@@ -6407,6 +6413,40 @@ setTimeout(() => {
 }catch(err){
 
   console.log(err);
+  if (
+    autoFirstRound &&
+    ["news", "shopping", "place", "jobs", "real_estate"].includes(autoCardType)
+  ) {
+    const fallbackLabels = {
+      news:"current news",
+      shopping:"products",
+      place:"places to go",
+      jobs:"jobs",
+      real_estate:"homes and property"
+    };
+    const fallbackLabel = fallbackLabels[autoCardType];
+    const fallbackQuery = [
+      room.being?.category,
+      room.coreTheme,
+      fallbackLabel
+    ].filter(Boolean).join(" ");
+    const fallbackLink = `https://www.google.com/search?q=${encodeURIComponent(fallbackQuery)}`;
+    room.messages.push({
+      from:room.being?.name || "CAMERA PERSPECTIVE",
+      aiBeing:true,
+      autoCardType,
+      ...getResultCardCategories(autoCardType, room),
+      showNextButton:true,
+      showRead:true,
+      searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
+      ask:`Open current ${fallbackLabel} shaped by ${room.being?.category || "this HUMAN perspective"}.`,
+      link:fallbackLink
+    });
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages", room.messages);
+  } else {
+    io.to(room.id).emit("aiTypingStop");
+  }
 }
 });
 
