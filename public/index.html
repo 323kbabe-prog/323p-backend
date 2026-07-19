@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.134 (2026-07-19)
+  - Replaced the legacy runtime light-blue repaint with the approved five-level button hierarchy
+  - Stopped the v10.0.122 blue stylesheet from being promoted above the current color system
+  - Updated dynamically rendered action links and keyword chips to the same hierarchy
+  - Suppressed the legacy AI typing dots while the opening or automatic sequence owns loading feedback
+
   v10.0.133 (2026-07-19)
   - Applied a five-level button hierarchy: blue, black, dark gray, gray, and light gray
   - Applied a four-level text hierarchy: black, dark gray, gray, and light gray
@@ -5509,7 +5515,6 @@ html body [role="button"]{
 /* Level 1: primary, active, create, confirm, and open. */
 html body #createNullBtn,
 html body #takeCameraViewBtn,
-html body #uploadBtn,
 html body #createBeingSubmit,
 html body .beingOpenButton,
 html body #continueToBeing,
@@ -5524,7 +5529,7 @@ html body .roomRecoveryActions button:last-child{
 
 /* Level 2: major destinations and strong secondary actions. */
 html body #dailyNullsBtn,
-html body #publicNullsBtn,
+html body #uploadBtn,
 html body #roomImageActions button:nth-child(2),
 html body #shareRoomBtn,
 html body .chatOpenAction,
@@ -5536,6 +5541,7 @@ html body #firstNextBtn{
 
 /* Level 3: supporting destinations, sharing, and contextual actions. */
 html body #aiBeingsBtn,
+html body #publicNullsBtn,
 html body #roomImageActions button:nth-child(3),
 html body #beingQrBtn,
 html body .chatShareAction,
@@ -8956,7 +8962,7 @@ roomMessages.innerHTML =
 startRoomOpeningSequence();
 deliverBatchedRoomReplies(previousDeliveredMessageCount,messages.length);
 
-if(aiTyping){
+if(aiTyping && !isFirstRoundActive()){
 
 const typing =
 document.createElement("div");
@@ -10979,9 +10985,10 @@ function syncBeingKeywordChips(){
   document.querySelectorAll("#beingKeywordChips .beingKeywordChip").forEach(chip => {
     const isSelected = selected.includes(chip.dataset.keyword.toLowerCase());
     chip.classList.toggle("isSelected",isSelected);
-    chip.style.setProperty("background",isSelected ? "#e8f0fe" : "#fff","important");
-    chip.style.setProperty("color",isSelected ? "#174ea6" : "#111","important");
-    chip.style.setProperty("border-color",isSelected ? "#1a73e8" : "#8c959f","important");
+    chip.setAttribute("aria-pressed",String(isSelected));
+    chip.style.setProperty("background",isSelected ? "#1a73e8" : "#f1f3f4","important");
+    chip.style.setProperty("color",isSelected ? "#fff" : "#202124","important");
+    chip.style.setProperty("border-color",isSelected ? "#1a73e8" : "#dadce0","important");
   });
 }
 
@@ -11952,12 +11959,12 @@ Close
   if(style) document.head.appendChild(style);
   const stateSystem = document.getElementById("askCameraStateSystemV120");
   if(stateSystem) document.head.appendChild(stateSystem);
-  const blueHierarchy = document.getElementById("askCameraBlueHierarchyV122");
-  if(blueHierarchy) document.head.appendChild(blueHierarchy);
 })();
 (function cleanBracketedButtonLabels(){
-  const primarySelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
-  const guidanceSelector = '#uploadBtn,#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
+  const levelOneSelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
+  const levelTwoSelector = '#dailyNullsBtn,#uploadBtn,#roomImageActions button:nth-child(2),#shareRoomBtn,#firstNextBtn,.chatOpenAction';
+  const levelThreeSelector = '#aiBeingsBtn,#publicNullsBtn,#roomImageActions button:nth-child(3),#beingQrBtn,#memoryBtn,#retryUnavailableRoomBtn,.chatShareAction';
+  const levelFourSelector = '#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,#copyBeingRecovery,#backFromUnavailableRoomBtn,.roomRecoveryState button';
   const destructiveSelector = '.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
@@ -11970,20 +11977,29 @@ Close
       button.style.setProperty('text-shadow','none','important');
       button.style.setProperty('border','1px solid #8c959f','important');
       if(button.matches(destructiveSelector)){
-        button.style.setProperty('background','#fff','important');
-        button.style.setProperty('color','#cf222e','important');
-        button.style.setProperty('border-color','#ff8182','important');
-      }else if(button.matches(primarySelector)){
-        button.style.setProperty('background','#0969da','important');
+        button.style.setProperty('background','#fce8e6','important');
+        button.style.setProperty('color','#d93025','important');
+        button.style.setProperty('border-color','#f6aea9','important');
+      }else if(button.matches(levelOneSelector)){
+        button.style.setProperty('background','#1a73e8','important');
         button.style.setProperty('color','#fff','important');
-        button.style.setProperty('border-color','#0969da','important');
-      }else if(button.matches(guidanceSelector)){
-        button.style.setProperty('background','#ddf4ff','important');
-        button.style.setProperty('color','#0550ae','important');
-        button.style.setProperty('border-color','#54aeff','important');
+        button.style.setProperty('border-color','#1a73e8','important');
+      }else if(button.matches(levelTwoSelector)){
+        button.style.setProperty('background','#202124','important');
+        button.style.setProperty('color','#fff','important');
+        button.style.setProperty('border-color','#202124','important');
+      }else if(button.matches(levelThreeSelector)){
+        button.style.setProperty('background','#3c4043','important');
+        button.style.setProperty('color','#fff','important');
+        button.style.setProperty('border-color','#3c4043','important');
+      }else if(button.matches(levelFourSelector)){
+        button.style.setProperty('background','#5f6368','important');
+        button.style.setProperty('color','#fff','important');
+        button.style.setProperty('border-color','#5f6368','important');
       }else{
-        button.style.setProperty('background','#fff','important');
-        button.style.setProperty('color','#111','important');
+        button.style.setProperty('background','#f1f3f4','important');
+        button.style.setProperty('color','#202124','important');
+        button.style.setProperty('border-color','#dadce0','important');
       }
       const walker = document.createTreeWalker(button,NodeFilter.SHOW_TEXT);
       const textNodes = [];
@@ -11998,9 +12014,10 @@ Close
       ? [root]
       : Array.from(root.querySelectorAll ? root.querySelectorAll('.chatOpenAction,.chatShareAction') : []);
     actionLinks.forEach(action => {
-      action.style.setProperty('background','#ddf4ff','important');
-      action.style.setProperty('color','#0550ae','important');
-      action.style.setProperty('border','1px solid #54aeff','important');
+      const isOpen = action.matches('.chatOpenAction');
+      action.style.setProperty('background',isOpen ? '#202124' : '#3c4043','important');
+      action.style.setProperty('color','#fff','important');
+      action.style.setProperty('border',`1px solid ${isOpen ? '#202124' : '#3c4043'}`,'important');
       action.style.setProperty('border-radius','0','important');
       action.style.setProperty('box-shadow','none','important');
     });
