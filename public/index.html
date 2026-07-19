@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.121 (2026-07-19)
+  - Delivered ASK and HUMAN opening replies and automatic cards one by one through one shared queue
+  - Changed the opening copy from three things to three examples of what the AI can provide
+  - Added a final anchor-style demo-question message before enabling the Ask input
+
   v10.0.120 (2026-07-19)
   - Stabilized capture, publishing, camera lifecycle, recovery, routing, accessibility, and Public data rendering
   - Kept HUMAN image publishing private with an honest room-only publishing interface
@@ -6147,6 +6152,7 @@ function clearCurrentRoomState(){
   beingFirstRoundInsertionIndex = null;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
+  resetRoomDeliverySequence();
 }
 
 function clearHumanSessionPreservingAsk(){
@@ -6160,6 +6166,7 @@ function clearHumanSessionPreservingAsk(){
   beingFirstRoundInsertionIndex = null;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
+  resetRoomDeliverySequence();
   setActiveRoomKind(localStorage.getItem("askCameraRoomId") ? "ask" : null);
 }
 
@@ -6318,6 +6325,15 @@ let beingFirstRoundBaseline = 0;
 let beingFirstRoundInsertionIndex = null;
 let beingFirstRoundStepTimer = null;
 let lastRoomMessageCount = 0;
+let roomOpeningSequenceActive = false;
+let roomOpeningSequenceComplete = false;
+let roomOpeningSequenceTimer = null;
+let firstRoundDemoPending = false;
+let firstRoundDemoVisible = false;
+let firstRoundDemoInsertionIndex = null;
+let deliveredRoomMessageCount = 0;
+let roomReplyDeliveryTimer = null;
+let roomReplyDeliveryActive = false;
 
 let pendingImageDataUrl = null;
 let pendingImageSource = null;
@@ -6960,7 +6976,8 @@ localStorage.setItem(
     "roomThumbnail",
     pendingImageDataUrl
 );
-  
+
+resetRoomDeliverySequence();
 socket.emit("imageUpload",{
 deviceId,
     imageDataUrl: pendingImageDataUrl,
@@ -7384,7 +7401,7 @@ function getRoomImageConversationPrelude(){
 
   return `
     <div class="humanChosenImageSequence">
-      <div class="geminiAiResponse chatAiGroup humanImageHello">
+      <div class="geminiAiResponse chatAiGroup humanImageHello" data-opening-message="intro">
         <div class="chatBubble chatAiBubble">
           ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
         </div>
@@ -7407,24 +7424,24 @@ function renderRoomImageChapter(message = {}){
 
   return `
     <div class="roomImageChapter" data-room-image-chapter>
-      <div class="geminiAiResponse chatAiGroup humanImageHello">
+      <div class="geminiAiResponse chatAiGroup humanImageHello" data-opening-message="intro">
         <div class="chatBubble chatAiBubble">
           ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
         </div>
       </div>
       ${image ? `
-        <div class="humanChosenImageWrap">
+        <div class="humanChosenImageWrap" data-opening-message="image">
           <img class="humanChosenImage" src="${image}" alt="Image chosen by the user">
         </div>
       ` : ""}
-      <div class="geminiAiResponse chatAiGroup humanCardInstruction">
+      <div class="geminiAiResponse chatAiGroup humanCardInstruction" data-opening-message="instruction">
         <div class="chatBubble chatAiBubble">
           Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
         </div>
       </div>
-      <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
+      <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice" data-opening-message="examples">
         <div class="chatBubble chatAiBubble">
-          Before you ask, I’ll show you three things you can get from me based on this image. Google should buy me.
+          Before you ask, I’ll show you three examples of what I can provide from this image. Google should buy me.
         </div>
       </div>
     </div>
@@ -7440,14 +7457,123 @@ function withGoogleBelief(value){
 }
 
 function isFirstRoundActive(){
-  return beingFirstRoundWaiting || beingFirstRoundQueue.length > 0;
+  return roomOpeningSequenceActive || beingFirstRoundWaiting || beingFirstRoundQueue.length > 0 || firstRoundDemoPending || roomReplyDeliveryActive;
+}
+
+function resetRoomDeliverySequence(){
+  roomOpeningSequenceActive = false;
+  roomOpeningSequenceComplete = false;
+  clearTimeout(roomOpeningSequenceTimer);
+  roomOpeningSequenceTimer = null;
+  firstRoundDemoPending = false;
+  firstRoundDemoVisible = false;
+  firstRoundDemoInsertionIndex = null;
+  deliveredRoomMessageCount = 0;
+  clearTimeout(roomReplyDeliveryTimer);
+  roomReplyDeliveryTimer = null;
+  roomReplyDeliveryActive = false;
+}
+
+function sequenceTypingHtml(){
+  return '<div id="sequenceTyping" class="geminiAiResponse chatAiGroup" role="status" aria-label="AI is preparing the next reply"><div class="chatBubble chatAiBubble" style="display:flex;gap:5px;width:max-content;"><span class="aiDot"></span><span class="aiDot"></span><span class="aiDot"></span></div></div>';
+}
+
+function hideSequenceTyping(){ document.getElementById("sequenceTyping")?.remove(); }
+function showSequenceTyping(){
+  hideSequenceTyping();
+  roomMessages.insertAdjacentHTML("beforeend",sequenceTypingHtml());
+  roomMessages.scrollTop = roomMessages.scrollHeight;
+}
+
+function startRoomOpeningSequence(){
+  const chapter = roomMessages.querySelector("[data-room-image-chapter]");
+  if(!chapter) return;
+  const steps = Array.from(chapter.querySelectorAll("[data-opening-message]"));
+  if(roomOpeningSequenceComplete){
+    steps.forEach(step => { step.style.display = ""; });
+    return;
+  }
+  if(roomOpeningSequenceActive || !steps.length) return;
+  roomOpeningSequenceActive = true;
+  steps.forEach(step => { step.style.display = "none"; });
+  syncFirstRoundInput();
+  let index = 0;
+  const revealNext = () => {
+    if(index >= steps.length){
+      hideSequenceTyping();
+      roomOpeningSequenceActive = false;
+      roomOpeningSequenceComplete = true;
+      syncFirstRoundInput();
+      if(beingFirstRoundQueue.length) setTimeout(runNextBeingFirstCard,700);
+      return;
+    }
+    showSequenceTyping();
+    roomOpeningSequenceTimer = setTimeout(() => {
+      hideSequenceTyping();
+      const step = steps[index++];
+      step.style.display = "";
+      roomMessages.scrollTop = roomMessages.scrollHeight;
+      roomOpeningSequenceTimer = setTimeout(revealNext,700);
+    },500);
+  };
+  revealNext();
+}
+
+function firstRoundDemoHtml(){
+  return '<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">Now you can ask me about this image. For example: “What could I buy?”, “Where could I go?”, or “Who should I connect with?” Google should buy me.</div></div>';
+}
+
+function deliverFirstRoundDemo(){
+  if(!firstRoundDemoPending) return;
+  showSequenceTyping();
+  clearTimeout(beingFirstRoundStepTimer);
+  beingFirstRoundStepTimer = setTimeout(() => {
+    hideSequenceTyping();
+    firstRoundDemoPending = false;
+    firstRoundDemoVisible = true;
+    firstRoundDemoInsertionIndex = lastRoomMessageCount;
+    roomMessages.insertAdjacentHTML("beforeend",firstRoundDemoHtml());
+    roomMessages.scrollTop = roomMessages.scrollHeight;
+    syncFirstRoundInput();
+  },700);
+}
+
+function deliverBatchedRoomReplies(previousCount,totalCount){
+  const addedCount = totalCount - previousCount;
+  if(addedCount <= 1 || previousCount === 0){
+    deliveredRoomMessageCount = totalCount;
+    return;
+  }
+  const pending = Array.from(roomMessages.querySelectorAll('[data-room-delivery-index]'))
+    .filter(node => Number(node.dataset.roomDeliveryIndex) >= previousCount);
+  pending.forEach(node => { node.style.display = "none"; });
+  roomReplyDeliveryActive = true;
+  syncFirstRoundInput();
+  let index = 0;
+  const reveal = () => {
+    if(index >= pending.length){
+      hideSequenceTyping();
+      deliveredRoomMessageCount = totalCount;
+      roomReplyDeliveryActive = false;
+      syncFirstRoundInput();
+      return;
+    }
+    showSequenceTyping();
+    roomReplyDeliveryTimer = setTimeout(() => {
+      hideSequenceTyping();
+      pending[index++].style.display = "contents";
+      roomMessages.scrollTop = roomMessages.scrollHeight;
+      roomReplyDeliveryTimer = setTimeout(reveal,700);
+    },600);
+  };
+  reveal();
 }
 
 function syncFirstRoundInput(){
   roomInput.style.display = "block";
   if(isFirstRoundActive()){
     roomInput.disabled = true;
-    roomInput.placeholder = "Ask — showing three suggestions from this image…";
+    roomInput.placeholder = "Ask — showing three examples from this image…";
     return;
   }
   roomInput.disabled = false;
@@ -7499,7 +7625,7 @@ function getBeingFirstRoundLead(){
     </div>
     <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
       <div class="chatBubble chatAiBubble">
-        Before you ask, I’ll show you three things you can get from me based on this image. Google should buy me.
+        Before you ask, I’ll show you three examples of what I can provide from this image. Google should buy me.
       </div>
     </div>
   `;
@@ -7511,6 +7637,7 @@ if(getActiveRoomKind() === "ask"){
   renderStandardRoomHeader();
 }
 
+const previousDeliveredMessageCount = deliveredRoomMessageCount;
 lastRoomMessageCount = messages.length;
 
 if (
@@ -7520,7 +7647,7 @@ if (
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
   beingFirstRoundWaiting = false;
-  setTimeout(runNextBeingFirstCard, 500);
+  setTimeout(runNextBeingFirstCard, 700);
 }
 
 console.log("ROOM MESSAGES");
@@ -8370,8 +8497,18 @@ ${m.translation || m.text || ""}
 
 });
 
+const deliveryBlocks = renderedMessageBlocks.map((html,index) => `<div class="roomDeliveryBlock" data-room-delivery-index="${index}" style="display:contents;">${html}</div>`);
+
+if(firstRoundDemoVisible){
+  const insertAt = Math.max(0,Math.min(firstRoundDemoInsertionIndex ?? deliveryBlocks.length,deliveryBlocks.length));
+  deliveryBlocks.splice(insertAt,0,firstRoundDemoHtml());
+}
+
 roomMessages.innerHTML =
-  renderedMessageBlocks.join("");
+  deliveryBlocks.join("");
+
+startRoomOpeningSequence();
+deliverBatchedRoomReplies(previousDeliveredMessageCount,messages.length);
 
 if(aiTyping){
 
@@ -8665,14 +8802,25 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   beingFirstRoundQueue = selectBeingFirstRoundCards(data);
   beingFirstRoundWaiting = false;
   beingFirstRoundInsertionIndex = null;
+  firstRoundDemoPending = true;
+  firstRoundDemoVisible = false;
+  firstRoundDemoInsertionIndex = null;
   syncFirstRoundInput();
   roomMessages.scrollTop = roomMessages.scrollHeight;
-  setTimeout(runNextBeingFirstCard,300);
+  const openingChapterExists = Boolean(roomMessages.querySelector("[data-room-image-chapter]"));
+  if(roomOpeningSequenceComplete || !openingChapterExists){
+    setTimeout(runNextBeingFirstCard,700);
+  }
 });
 
 function runNextBeingFirstCard(){
-  if (beingFirstRoundWaiting || !beingFirstRoundQueue.length) {
+  if (beingFirstRoundWaiting) {
     syncFirstRoundInput();
+    return;
+  }
+  if(!beingFirstRoundQueue.length){
+    syncFirstRoundInput();
+    deliverFirstRoundDemo();
     return;
   }
 
@@ -8680,20 +8828,22 @@ function runNextBeingFirstCard(){
   beingFirstRoundBaseline = lastRoomMessageCount;
   beingFirstRoundWaiting = true;
   syncFirstRoundInput();
-
-  socket.emit("roomMessage", {
-    text: next.text,
-    autoFirstRound: true,
-    autoCardType: next.type,
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-  });
-
+  showSequenceTyping();
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = setTimeout(() => {
-    beingFirstRoundWaiting = false;
-    syncFirstRoundInput();
-    runNextBeingFirstCard();
-  },15000);
+    hideSequenceTyping();
+    socket.emit("roomMessage", {
+      text: next.text,
+      autoFirstRound: true,
+      autoCardType: next.type,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
+    beingFirstRoundStepTimer = setTimeout(() => {
+      beingFirstRoundWaiting = false;
+      syncFirstRoundInput();
+      runNextBeingFirstCard();
+    },15000);
+  },700);
 }
 
   socket.on("reminderSaved", () => {
@@ -9446,7 +9596,8 @@ localStorage.setItem(
     "roomThumbnail",
     imageDataUrl
 );
-  
+
+resetRoomDeliverySequence();
 socket.emit("imageUpload",{
     deviceId,
     imageDataUrl,
@@ -10693,6 +10844,7 @@ async function openAIBeing(id){
   beingFirstRoundInsertionIndex = null;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
+  resetRoomDeliverySequence();
   localStorage.removeItem("roomId");
   localStorage.removeItem("displayName");
   localStorage.removeItem("imageIntroText");
