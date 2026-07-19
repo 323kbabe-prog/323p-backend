@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.30 (2026-07-20)
+// - Reduced the HUMAN opening to one short acknowledgement before result cards
+// - Removed per-card anchor transitions that could start duplicate requests
+// - Forces Jobs routing during the five-card briefing
+// - Provides a Google Jobs search card when no individual listing is returned
+
 // v10.0.29 (2026-07-20)
 // - Unified ASK and HUMAN experiences into one private ASK room
 // - Added switchable HUMAN perspectives inside the active room
@@ -569,6 +575,32 @@ await smsClient.messages.create({
 const users = {};
 const questions = [];
 const rooms = {};
+let upgradeShutdownPending = false;
+
+function announceUpgradeAndCloseRooms() {
+  if (upgradeShutdownPending) {
+    return { success:false, error:"An upgrade shutdown is already in progress." };
+  }
+  upgradeShutdownPending = true;
+  const activeRooms = Object.keys(rooms).length;
+  const seconds = 10;
+
+  io.emit("roomUpgradeWarning", {
+    seconds,
+    message:"ASK.CAMERA is being upgraded."
+  });
+
+  setTimeout(() => {
+    for (const roomId of Object.keys(rooms)) {
+      io.to(roomId).emit("roomClosed", { reason:"upgrade" });
+      delete rooms[roomId];
+    }
+    for (const deviceId of Object.keys(deviceRooms)) delete deviceRooms[deviceId];
+    upgradeShutdownPending = false;
+  }, seconds * 1000);
+
+  return { success:true, rooms:activeRooms, closesInSeconds:seconds };
+}
 
 app.post("/admin/upgrade-rooms", (req,res) => {
   const configuredSecret = process.env.ASK_CAMERA_ADMIN_SECRET;
@@ -583,21 +615,8 @@ app.post("/admin/upgrade-rooms", (req,res) => {
     return;
   }
 
-  const seconds = 10;
-  io.emit("roomUpgradeWarning", {
-    seconds,
-    message:"ASK.CAMERA is being upgraded."
-  });
-
-  setTimeout(() => {
-    for (const roomId of Object.keys(rooms)) {
-      io.to(roomId).emit("roomClosed", { reason:"upgrade" });
-      delete rooms[roomId];
-    }
-    for (const deviceId of Object.keys(deviceRooms)) delete deviceRooms[deviceId];
-  }, seconds * 1000);
-
-  res.json({ success:true, rooms:Object.keys(rooms).length, closesInSeconds:seconds });
+  const result = announceUpgradeAndCloseRooms();
+  res.status(result.success ? 200 : 409).json(result);
 });
 const deviceRooms = {};
 
@@ -1072,7 +1091,7 @@ io.on("connection", socket => {
             model:"gpt-4o-mini",
             temperature:0.7,
             messages:[
-              { role:"system", content:`Speak as the selected HUMAN profile. Acknowledge the image in one concise first-person paragraph. Mention one specific visual or thematic observation from the image interpretation. Naturally reflect the profile bio, category, and keywords without listing them. End exactly with: Google should buy me.` },
+              { role:"system", content:`Speak as the selected HUMAN profile. Acknowledge the image in exactly one short first-person sentence of no more than 22 words, followed by the exact sentence: Google should buy me. Mention one specific visual or theme. Do not introduce a program, briefing, segment, or list.` },
               { role:"user", content:`HUMAN: ${being.name}\nBIO: ${being.best_current_choice || ""}\nCATEGORY: ${being.category || ""}\nKEYWORDS: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}\nIMAGE INTERPRETATION: ${room.imageContext || ""}` }
             ]
           });
@@ -1082,9 +1101,18 @@ io.on("connection", socket => {
           console.log("ROOM HUMAN ACKNOWLEDGEMENT FAILED:", humanError.message);
         }
 
+        const acknowledgementBody = acknowledgement
+          .replace(/Google should buy me\./ig,"")
+          .trim()
+          .split(/(?<=[.!?])\s+/)[0]
+          .split(/\s+/)
+          .slice(0,22)
+          .join(" ")
+          .replace(/[.!?]+$/,"");
+        acknowledgement = `${acknowledgementBody || `I’m ${being.name}, and I see this image through a ${being.category || "personal"} perspective`}. Google should buy me.`;
+
         room.messages.push(
-          { from:being.name, aiBeing:true, conversational:true, humanAcknowledgement:true, text:acknowledgement },
-          { from:being.name, aiBeing:true, conversational:true, humanExamplesNotice:true, text:"Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy me." }
+          { from:being.name, aiBeing:true, conversational:true, humanAcknowledgement:true, text:acknowledgement }
         );
 
         socket.emit("roomHumanSelected", { being });
@@ -3232,18 +3260,6 @@ socket.on(
         return;
     }
 
-    if (autoFirstRound && room.being) {
-      const transition = await createHumanAnchorTransition(room, autoCardType);
-      room.messages.push({
-        from:room.being.name,
-        aiBeing:true,
-        conversational:true,
-        anchorTransition:true,
-        autoCardType,
-        text:transition
-      });
-    }
-
     let locationReplyForDisplay = null;
     let skipLocationForRequest = false;
 
@@ -3597,7 +3613,7 @@ let intent =
 
 if (
   autoFirstRound &&
-  ["news", "shopping", "place", "real_estate"].includes(autoCardType)
+  ["news", "shopping", "place", "jobs", "real_estate"].includes(autoCardType)
 ) {
   intent = autoCardType;
 }
@@ -5012,22 +5028,36 @@ console.log(
   jobSearch
 );
 
+const jobsUrl =
+  "https://www.google.com/search?q=" +
+  encodeURIComponent(jobSearch) +
+  "&ibp=htl;jobs";
+
+const addJobSearchFallback = () => {
+  const fallbackTitle = `View current ${jobSearch.replace(/^search:?\s*/i,"")} openings`;
+  room.messages.push({
+    from: room.being?.name || "CAMERA PERSPECTIVE",
+    aiBeing: true,
+    ...getResultCardCategories("jobs", room, "CAREER"),
+    showNextButton: true,
+    jobCard: {
+      title: fallbackTitle,
+      company: "Google Jobs",
+      location: room.searchLocation || "Search online",
+      link: jobsUrl
+    },
+    link: jobsUrl
+  });
+  io.to(room.id).emit("aiTypingStop");
+  io.to(room.id).emit("roomMessages", room.messages);
+};
+
 const serpFetch = await fetch(
   `https://serpapi.com/search.json?engine=google_jobs&q=${encodeURIComponent(jobSearch)}&api_key=${process.env.SERPAPI_KEY}`
 );
 
 if (!serpFetch.ok) {
-
-    room.messages.push({
-        from: "CAMERA PERSPECTIVE",
-        aiBeing: true,
-        showNextButton: true,
-        text: "Search service unavailable."
-    });
-
-    io.to(room.id).emit("aiTypingStop");
-    io.to(room.id).emit("roomMessages", room.messages);
-
+    addJobSearchFallback();
     return;
 }
 
@@ -5039,24 +5069,9 @@ console.log(JSON.stringify(serpRes, null, 2));
 const job = serpRes.jobs_results?.[0];
 
 if (!job) {
-
-    room.messages.push({
-        from: "CHANG, TIEN",
-        aiBeing: true,
-        showNextButton: true,
-        text: "No jobs found."
-    });
-
-    io.to(room.id).emit("aiTypingStop");
-    io.to(room.id).emit("roomMessages", room.messages);
-
+    addJobSearchFallback();
     return;
 }
-
-const jobsUrl =
-  "https://www.google.com/search?q=" +
-  encodeURIComponent(jobSearch) +
-  "&ibp=htl;jobs";
 
 
 room.messages.push({
