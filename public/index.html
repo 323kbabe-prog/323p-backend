@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.133 (2026-07-19)
+  - Applied a five-level button hierarchy: blue, black, dark gray, gray, and light gray
+  - Applied a four-level text hierarchy: black, dark gray, gray, and light gray
+  - Reserved white text for dark filled controls and blue for active or interactive text
+  - Preserved red only for destructive actions and love indicators with no logic changes
+
   v10.0.132 (2026-07-19)
   - Replaced low-contrast white opening dots with a dedicated dark three-dot loader
   - Gave the opening loader its own visible GitHub-style gray bubble and bounce animation
@@ -5475,6 +5481,176 @@ html body #createBeingSubmit{
 }
 #sequenceTyping.openingSequenceLoader .openingSequenceDot:nth-child(2){animation-delay:.15s;}
 #sequenceTyping.openingSequenceLoader .openingSequenceDot:nth-child(3){animation-delay:.3s;}
+
+/* v10.0.133 — ASK.CAMERA button and text color hierarchy. */
+:root{
+  --ui-button-1:#1a73e8;
+  --ui-button-2:#202124;
+  --ui-button-3:#3c4043;
+  --ui-button-4:#5f6368;
+  --ui-button-5:#f1f3f4;
+  --ui-text-1:#202124;
+  --ui-text-2:#3c4043;
+  --ui-text-3:#5f6368;
+  --ui-text-4:#9aa0a6;
+  --ui-line:#dadce0;
+  --ui-red:#d93025;
+  --ui-red-soft:#fce8e6;
+}
+
+/* Fifth level is the quiet default for utility and newly rendered controls. */
+html body button,
+html body [role="button"]{
+  background:var(--ui-button-5)!important;
+  color:var(--ui-text-1)!important;
+  border:1px solid var(--ui-line)!important;
+}
+
+/* Level 1: primary, active, create, confirm, and open. */
+html body #createNullBtn,
+html body #takeCameraViewBtn,
+html body #uploadBtn,
+html body #createBeingSubmit,
+html body .beingOpenButton,
+html body #continueToBeing,
+html body #publishDialog button:last-child,
+html body #humanCardsGuide button:last-child,
+html body #roomImageActions button:first-child,
+html body .roomRecoveryActions button:last-child{
+  background:var(--ui-button-1)!important;
+  color:#fff!important;
+  border-color:var(--ui-button-1)!important;
+}
+
+/* Level 2: major destinations and strong secondary actions. */
+html body #dailyNullsBtn,
+html body #publicNullsBtn,
+html body #roomImageActions button:nth-child(2),
+html body #shareRoomBtn,
+html body .chatOpenAction,
+html body #firstNextBtn{
+  background:var(--ui-button-2)!important;
+  color:#fff!important;
+  border-color:var(--ui-button-2)!important;
+}
+
+/* Level 3: supporting destinations, sharing, and contextual actions. */
+html body #aiBeingsBtn,
+html body #roomImageActions button:nth-child(3),
+html body #beingQrBtn,
+html body .chatShareAction,
+html body #memoryBtn,
+html body .roomRecoveryActions button:first-child,
+html body #retryUnavailableRoomBtn{
+  background:var(--ui-button-3)!important;
+  color:#fff!important;
+  border-color:var(--ui-button-3)!important;
+}
+
+/* Level 4: navigation, retry, copy, and other tertiary controls. */
+html body #dailyBackBtn,
+html body #publicBackBtn,
+html body #aiBeingsBackBtn,
+html body #copyBeingRecovery,
+html body #backFromUnavailableRoomBtn,
+html body .roomRecoveryState button,
+html body .beingKeywordChip[aria-pressed="true"]{
+  background:var(--ui-button-4)!important;
+  color:#fff!important;
+  border-color:var(--ui-button-4)!important;
+}
+
+/* Level 5: close, refresh, help, cancel, and unselected controls. */
+html body #refreshCameraBtn,
+html body #guideBtn,
+html body #closeRoom,
+html body #roomFloatingCameraClose,
+html body #homeCaptureClose,
+html body #homeStartupRefresh,
+html body #publishDialogClose,
+html body #createBeingScreen button[onclick="closeCreateBeing()"],
+html body .beingKeywordChip:not([aria-pressed="true"]){
+  background:var(--ui-button-5)!important;
+  color:var(--ui-text-1)!important;
+  border-color:var(--ui-line)!important;
+}
+
+/* Red is semantic, never a general hierarchy level. */
+html body .beingEditButton,
+html body .beingManageButton,
+html body .publicPerspectiveAdmin{
+  background:var(--ui-red-soft)!important;
+  color:var(--ui-red)!important;
+  border-color:#f6aea9!important;
+}
+html body .loveBtn,
+html body [data-love],
+html body [aria-label*="love" i]{color:var(--ui-red)!important;}
+
+/* Disabled controls use the fifth-level surface and fourth-level text. */
+html body button:disabled,
+html body [role="button"][aria-disabled="true"]{
+  background:var(--ui-button-5)!important;
+  color:var(--ui-text-4)!important;
+  border-color:var(--ui-line)!important;
+  opacity:1!important;
+}
+
+/* Text hierarchy: black titles, dark-gray reading text, gray metadata. */
+html body,
+html body #roomTitle,
+html body #roomTitle *,
+html body h1,
+html body h2,
+html body h3,
+html body h4,
+html body strong,
+html body b,
+html body .chatSourceTitle,
+html body .beingCardName{
+  color:var(--ui-text-1)!important;
+}
+html body p,
+html body .chatBubble,
+html body .beingCardBio,
+html body .publicPerspectiveIntro,
+html body .dailyNullCard [data-share-content]{
+  color:var(--ui-text-2)!important;
+}
+html body .chatSourceLabel,
+html body .beingCardWords,
+html body .beingCardWords span,
+html body .beingCardBioLabel,
+html body .publicPerspectiveMeta,
+html body time,
+html body small{
+  color:var(--ui-text-3)!important;
+}
+html body input::placeholder,
+html body textarea::placeholder,
+html body .disabledText{
+  color:var(--ui-text-4)!important;
+  opacity:1!important;
+}
+
+/* Blue text is restricted to links and active interactive text. */
+html body a:not(.chatOpenAction),
+html body #beingBioGenerate,
+html body [aria-current="page"]{
+  color:var(--ui-button-1)!important;
+}
+
+/* Dark controls always keep white labels and icons after text rules. */
+html body #createNullBtn *,html body #takeCameraViewBtn *,html body #uploadBtn *,
+html body #createBeingSubmit *,html body .beingOpenButton *,html body #continueToBeing *,
+html body #dailyNullsBtn *,html body #publicNullsBtn *,html body #shareRoomBtn *,
+html body #aiBeingsBtn *,html body #beingQrBtn *,html body .chatOpenAction *,
+html body .chatShareAction *,html body #roomImageActions button *,
+html body #firstNextBtn *,html body #memoryBtn *{
+  color:#fff!important;
+  fill:currentColor!important;
+  stroke:currentColor!important;
+}
 </style>
 
 <div id="publicNullsScreen"
