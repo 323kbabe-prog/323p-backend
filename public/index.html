@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.150 (2026-07-20)
+  - Accepts valid automatic result cards that omit category metadata
+  - Still rejects cards explicitly labeled as the wrong result type
+  - Retries one stalled automatic card request before showing the delay notice
+
   v10.0.149 (2026-07-20)
   - Isolates HUMAN photo sizing from global result-image styles
   - Advances the automatic briefing only after a valid matching card arrives
@@ -6735,6 +6740,8 @@ let beingFirstRoundQueue = [];
 let beingFirstRoundWaiting = false;
 let beingFirstRoundBaseline = 0;
 let beingFirstRoundExpectedType = "";
+let beingFirstRoundCurrentCard = null;
+let beingFirstRoundRetryCount = 0;
 let beingFirstRoundInsertionIndex = null;
 let beingFirstRoundStepTimer = null;
 let beingFirstRoundDelayTimer = null;
@@ -7971,6 +7978,8 @@ function resetRoomDeliverySequence(){
   beingFirstRoundQueue = [];
   beingFirstRoundWaiting = false;
   beingFirstRoundExpectedType = "";
+  beingFirstRoundCurrentCard = null;
+  beingFirstRoundRetryCount = 0;
   beingFirstRoundBaseline = lastRoomMessageCount;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
@@ -8321,6 +8330,8 @@ if (
   document.getElementById("sequenceDelayNotice")?.remove();
   beingFirstRoundWaiting = false;
   beingFirstRoundExpectedType = "";
+  beingFirstRoundCurrentCard = null;
+  beingFirstRoundRetryCount = 0;
   setTimeout(runNextBeingFirstCard, 700);
 }
 
@@ -9367,7 +9378,7 @@ function isValidBeingFirstRoundCard(message,expectedType){
     (message.jobCard ? "jobs" : "")
   );
   const hasResult = Boolean(message.jobCard || message.ask || (message.link && message.image));
-  return hasResult && detectedType === expectedType;
+  return hasResult && (!detectedType || detectedType === expectedType);
 }
 
 socket.on("roomNeedsHuman", () => {
@@ -9400,6 +9411,8 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   beingFirstRoundQueue = selectBeingFirstRoundCards(data);
   beingFirstRoundWaiting = false;
   beingFirstRoundExpectedType = "";
+  beingFirstRoundCurrentCard = null;
+  beingFirstRoundRetryCount = 0;
   beingFirstRoundInsertionIndex = null;
   firstRoundDemoPending = true;
   firstRoundDemoVisible = false;
@@ -9436,6 +9449,8 @@ function runNextBeingFirstCard(){
   beingFirstRoundBaseline = lastRoomMessageCount;
   beingFirstRoundWaiting = true;
   beingFirstRoundExpectedType = next.type;
+  beingFirstRoundCurrentCard = next;
+  beingFirstRoundRetryCount = 0;
   syncFirstRoundInput();
   showSequenceTyping();
   clearTimeout(beingFirstRoundStepTimer);
@@ -9448,7 +9463,23 @@ function runNextBeingFirstCard(){
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
     clearTimeout(beingFirstRoundDelayTimer);
-    beingFirstRoundDelayTimer = setTimeout(showSequenceDelayNotice,15000);
+    beingFirstRoundDelayTimer = setTimeout(() => {
+      if(!beingFirstRoundWaiting || !beingFirstRoundCurrentCard) return;
+      if(beingFirstRoundRetryCount < 1){
+        beingFirstRoundRetryCount += 1;
+        beingFirstRoundBaseline = lastRoomMessageCount;
+        showSequenceTyping();
+        socket.emit("roomMessage", {
+          text: beingFirstRoundCurrentCard.text,
+          autoFirstRound: true,
+          autoCardType: beingFirstRoundCurrentCard.type,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        });
+        beingFirstRoundDelayTimer = setTimeout(showSequenceDelayNotice,15000);
+        return;
+      }
+      showSequenceDelayNotice();
+    },15000);
   },700);
 }
 
