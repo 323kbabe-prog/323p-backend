@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.136 (2026-07-19)
+  - Removed the remaining black loader created directly by the legacy aiTypingStart handler
+  - Made normal socket-driven AI typing use the shared light-gray dark-dot component
+  - Ignored socket typing-start events while opening or automatic delivery already owns the loader
+  - Preserved the restored v10.0.132 UI and one-by-one ASK/HUMAN sequence
+
   v10.0.135 (2026-07-19)
   - Restored the v10.0.132 visual design and disabled the five-level color experiment
   - Standardized opening, automatic-card, and normal AI loading on one light-gray dark-dot design
@@ -9086,20 +9092,24 @@ function showAITyping(){
   const shouldFollow = isRoomNearBottom();
   hideAITyping();
 
+  if(isFirstRoundActive()) return;
+
   aiTyping = true;
 
   const wrap =
     document.createElement("div");
 
   wrap.id = "aiTyping";
+  wrap.className = "openingSequenceLoader";
 
   wrap.style.display = "flex";
   wrap.style.alignItems = "center";
   wrap.style.gap = "4px";
 
-  wrap.style.padding = "10px 14px";
+  wrap.style.padding = "0 12px";
 
-  wrap.style.background = "#000";
+  wrap.style.background = "#f6f8fa";
+  wrap.style.border = "1px solid #d0d7de";
 
   wrap.style.borderRadius = "18px";
 
@@ -9108,9 +9118,9 @@ function showAITyping(){
   wrap.style.marginBottom = "14px";
 
   wrap.innerHTML = `
-    <div class="aiDot"></div>
-    <div class="aiDot"></div>
-    <div class="aiDot"></div>
+    <span class="openingSequenceDot"></span>
+    <span class="openingSequenceDot"></span>
+    <span class="openingSequenceDot"></span>
   `;
 
 roomMessages.insertAdjacentElement(
