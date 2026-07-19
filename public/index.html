@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.147 (2026-07-20)
+  - Shows the selected HUMAN photo before the one-time acknowledgement
+  - Rebuilds Jobs with the same modern result-card structure as other cards
+  - Uses the new Google should buy this search idea today closing line
+
   v10.0.146 (2026-07-20)
   - Compacts HUMAN first-round speech and result-card paragraphs
   - Shows the standard dark three-dot loader on the create-room screen
@@ -7873,7 +7878,7 @@ function renderRoomImageChapter(message = {}){
       <template data-opening-template="instruction">
         <div class="geminiAiResponse chatAiGroup humanCardInstruction">
           <div class="chatBubble chatAiBubble">
-            Ask a HUMAN what this image connects to today, what you could buy, where you could go, what new job you could find, or where you could live. Google should buy me.
+            Ask a HUMAN what this image connects to today, what you could buy, where you could go, what new job you could find, or where you could live. Google should buy this search idea today.
           </div>
         </div>
       </template>
@@ -7881,14 +7886,14 @@ function renderRoomImageChapter(message = {}){
         <template data-opening-template="human-acknowledgement">
           <div class="geminiAiResponse chatAiGroup">
             <div class="chatBubble chatAiBubble">
-              ${escapeBeingText(message.humanAcknowledgement || `Hi, I am ${being.name || "your HUMAN"}. I’m looking at this image through my ${being.category || "personal"} perspective. Google should buy me.`)}
+              ${escapeBeingText(message.humanAcknowledgement || `Hi, I am ${being.name || "your HUMAN"}. I’m looking at this image through my ${being.category || "personal"} perspective. Google should buy this search idea today.`)}
             </div>
           </div>
         </template>
         <template data-opening-template="human-examples">
           <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
             <div class="chatBubble chatAiBubble">
-              Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy me.
+              Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy this search idea today.
             </div>
           </div>
         </template>
@@ -7911,24 +7916,24 @@ function getRoomImageSequenceKey(message = {},image = ""){
 }
 
 function withGoogleBelief(value){
-  const text = String(value || "").trim();
-  if(!text) return "Google should buy me.";
-  return /Google should buy me\./i.test(text)
+  const text = String(value || "").replace(/Google should buy me\./ig,"Google should buy this search idea today.").trim();
+  if(!text) return "Google should buy this search idea today.";
+  return /Google should buy this search idea today\./i.test(text)
     ? text
-    : `${text} Google should buy me.`;
+    : `${text} Google should buy this search idea today.`;
 }
 
 function compactRoomCopy(value,maxLength = 220){
   const original = String(value || "").replace(/\s+/g," ").trim();
   if(!original) return "";
-  const hasBelief = /Google should buy me\./i.test(original);
-  let text = original.replace(/\s*Google should buy me\.\s*/ig," ").trim();
+  const hasBelief = /Google should buy (?:me|this search idea today)\./i.test(original);
+  let text = original.replace(/\s*Google should buy (?:me|this search idea today)\.\s*/ig," ").trim();
   const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
   text = sentences.slice(0,2).join(" ").trim();
   if(text.length > maxLength){
     text = text.slice(0,maxLength + 1).replace(/\s+\S*$/,"").replace(/[,:;\s]+$/,"") + "…";
   }
-  return `${text}${hasBelief ? " Google should buy me." : ""}`.trim();
+  return `${text}${hasBelief ? " Google should buy this search idea today." : ""}`.trim();
 }
 
 function compactFirstRoundSpeech(message){
@@ -7936,6 +7941,13 @@ function compactFirstRoundSpeech(message){
   return message?.humanAcknowledgement || message?.humanExamplesNotice || message?.anchorTransition || message?.firstRoundComplete
     ? compactRoomCopy(text,180)
     : text;
+}
+
+function selectedHumanAcknowledgementPhoto(){
+  let being = {};
+  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
+  if(!being.photo) return "";
+  return `<img src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "Selected HUMAN")}" style="display:block;width:96px;height:96px;object-fit:cover;border:1px solid #d0d7de;margin:0 0 10px;">`;
 }
 
 function isFirstRoundActive(){
@@ -8133,7 +8145,7 @@ function firstRoundDemoHtml(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   const name = escapeBeingText(being.name || "Your HUMAN");
-  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">That completes our five-part briefing. I’m ${name}; ask me anything about this image, or change HUMAN perspectives at any time. Google should buy me.</div></div>`;
+  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">That completes our five-part briefing. I’m ${name}; ask me anything about this image, or change HUMAN perspectives at any time. Google should buy this search idea today.</div></div>`;
 }
 
 function deliverFirstRoundDemo(){
@@ -8250,7 +8262,7 @@ function getRoomCardTriggerInstruction(messages){
   return `
     <div class="geminiAiResponse chatAiGroup humanCardInstruction">
       <div class="chatBubble chatAiBubble">
-        Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy me.
+        Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy this search idea today.
       </div>
     </div>
   `;
@@ -8260,12 +8272,12 @@ function getBeingFirstRoundLead(){
   return `
     <div class="geminiAiResponse chatAiGroup humanCardInstruction">
       <div class="chatBubble chatAiBubble">
-        Ask a HUMAN what this image connects to today, what you could buy, where you could go, what new job you could find, or where you could live. Google should buy me.
+        Ask a HUMAN what this image connects to today, what you could buy, where you could go, what new job you could find, or where you could live. Google should buy this search idea today.
       </div>
     </div>
     <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
       <div class="chatBubble chatAiBubble">
-        Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy me.
+        Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy this search idea today.
       </div>
     </div>
   `;
@@ -8479,10 +8491,14 @@ return `
 style="
 width:100%;
 display:flex;
+flex-direction:column;
+align-items:center;
 justify-content:center;
 margin-bottom:14px;
 "
 >
+
+${m.humanAcknowledgement ? selectedHumanAcknowledgementPhoto() : ""}
 
 <div class="chatBubble chatAiBubble"
 style="
@@ -8770,6 +8786,31 @@ ${messages.filter(x => x.image).slice(-1)[0] === m && !nextClicked ? `
 //////////////////////////////////////////////////
 
 if (m.jobCard) {
+  const job = m.jobCard;
+  const jobLink = job.link || m.link || "#";
+  const jobDetails = [job.location,job.salary,job.type,job.posted]
+    .filter(Boolean)
+    .map(value => `<span style="display:inline-block;padding:5px 8px;border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.2;">${escapeBeingText(value)}</span>`)
+    .join("");
+
+  return `
+    <div class="dailyNullCard geminiAiResponse modernJobResult" data-share-card data-share-read="true" data-link="${escapeBeingText(jobLink)}" style="margin-bottom:18px;">
+      <div class="chatBubble chatAiBubble">I found a career opportunity connected to this image. Google should buy this search idea today.</div>
+      <div data-share-content style="border:1px solid #d0d7de;background:#fff;padding:18px;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.04em;color:#57606a;">${getRoomResultCategoryLabel(m)}</div>
+        <div style="margin-top:12px;font-size:20px;font-weight:700;line-height:1.25;color:#24292f;overflow-wrap:anywhere;">${escapeBeingText(job.title || "Current career opportunities")}</div>
+        ${job.company ? `<div style="margin-top:8px;font-size:15px;font-weight:600;line-height:1.35;color:#24292f;">${escapeBeingText(job.company)}</div>` : ""}
+        ${jobDetails ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;">${jobDetails}</div>` : ""}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <a class="chatOpenAction" href="${escapeBeingText(jobLink)}" target="_blank" rel="noopener noreferrer">Open job</a>
+        <span class="chatShareAction" data-link="${escapeBeingText(jobLink)}" onclick="shareCard(this,this.dataset.link)" role="button" tabindex="0">Share</span>
+      </div>
+    </div>
+  `;
+}
+
+if (false && m.jobCard) {
 
 return `
 
@@ -8782,7 +8823,7 @@ align-items:center;
 margin-bottom:18px;
 ">
 
-<div class="chatBubble chatAiBubble">I found an opportunity you may want to explore. Google should buy me.</div>
+<div class="chatBubble chatAiBubble">I found an opportunity you may want to explore. Google should buy this search idea today.</div>
 
 <div class="chatSourceLabel">${getRoomResultCategoryLabel(m)}</div>
 
@@ -8961,7 +9002,7 @@ data-share-read="${m.showRead !== false}"
 data-link="${m.link || ''}"
 >
 
-<div class="chatBubble chatAiBubble">Here’s what I found. Google should buy me.</div>
+<div class="chatBubble chatAiBubble">Here’s what I found. Google should buy this search idea today.</div>
 
 <div data-share-content>
 
