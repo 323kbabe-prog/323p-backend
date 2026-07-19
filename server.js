@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.37 (2026-07-20)
+// - Makes each generated card search a natural, semantically useful query
+// - Translates visual ideas into card-specific concepts such as eco-friendly real estate
+// - Replaces keyword-stacking fallbacks with readable search phrases
+//
 // v10.0.36 (2026-07-20)
 // - Generates and validates all five HUMAN search sentences before delivery starts
 // - Combines the HUMAN category with one useful image-identity concept per card
@@ -309,11 +314,11 @@ async function createRoomFirstRoundCards(room) {
   const ignoredWords = new Set(["the","and","with","from","this","that","image","human","camera","category"]);
   const imageWord = imageWords.find(word => word.length > 2 && !ignoredWords.has(word)) || "visual";
   const fallbackQueries = {
-    news:`${category} ${imageWord} latest news`,
-    shopping:`${category} ${imageWord} products`,
-    place:`${category} ${imageWord} places to visit`,
-    jobs:`${category} ${imageWord} jobs`,
-    real_estate:`${category} ${imageWord} homes and property`
+    news:`latest ${category} trends connected to ${imageWord}`,
+    shopping:`best ${imageWord} products for ${category}`,
+    place:`${imageWord} destinations connected to ${category}`,
+    jobs:`${category} careers connected to ${imageWord}`,
+    real_estate:`homes inspired by ${category} and ${imageWord}`
   };
 
   try {
@@ -335,14 +340,29 @@ real_estate
 
 Rules:
 - Produce exactly one search for every allowed card type.
-- The selected HUMAN category is the main subject of every search.
-- Add one useful word or short visual concept from the image identity so the search fits this image.
-- Optimize each sentence for real current internet results in its assigned card type.
+- The selected HUMAN category supplies the perspective and main direction of every search.
+- Translate one useful image detail or visual concept into a natural concept that fits the assigned card type.
+- Write how a person would actually search Google. Do not simply concatenate category, image, and card-type keywords.
+- Make every query specific enough to return a useful real result.
+- For real_estate, convert relevant visual ideas into housing language such as eco-friendly, green building, indoor garden, minimalist home, accessible housing, waterfront living, or another genuinely fitting property concept.
+- For jobs, convert the same context into a plausible profession, industry, skill, or employment opportunity.
+- For shopping, name a plausible product class rather than writing the word "products" when a more specific phrase is possible.
+- For place, name a plausible destination or place category.
+- For news, name a current trend, development, or issue.
 - Keep each search between 3 and 12 words.
 - Do not use the HUMAN bio to choose the search subject.
 - Do not include instructions, explanations, percentages, quotation marks, or markdown.
 - Return valid JSON only in this exact shape:
 {"news":"","shopping":"","place":"","jobs":"","real_estate":""}
+
+Example only:
+HUMAN category: Sustainability
+Image concept: green plants in a modern room
+Good real_estate search: eco-friendly homes with indoor gardens
+Good jobs search: sustainable interior design careers
+Good shopping search: smart indoor garden systems
+Good place search: urban botanical gardens and green architecture
+Good news search: latest biophilic design and green building trends
           `.trim()
         },
         {
