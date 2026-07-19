@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.32 (2026-07-20)
+// - Rebalances automatic search direction to 60% HUMAN bio, 30% image identity, 10% card intent
+// - Keeps factual search results real while using the weighting for direction and selection
+
 // v10.0.31 (2026-07-20)
 // - Starts the HUMAN acknowledgement with name and profile bio
 // - Applies a 70% HUMAN, 20% image, 10% card-intent balance to the automatic briefing
@@ -1719,7 +1723,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- For the automatic five-card briefing: HUMAN profile 70%, uploaded image 20%, requested card family 10%.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Do not mechanically repeat the profile fields. Express them naturally.\n- Never change, invent, or distort factual search results.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- For the automatic five-card briefing: HUMAN bio and profile 60%, uploaded image identity 30%, requested card family 10%.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Use weighting to shape search direction and result selection, never to invent or alter facts.\n- Do not mechanically repeat the profile fields. Express them naturally.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -3386,7 +3390,7 @@ try{
 
 
  const automaticBriefingContext = autoFirstRound && room.being
-  ? `\n\nAUTOMATIC BRIEFING BALANCE\n- HUMAN profile: 70%\n- Uploaded image: 20%\n- Requested card family: 10%\nHUMAN: ${room.being.name}\nBIO: ${room.being.best_current_choice || ""}\nCATEGORY: ${room.being.category || ""}\nPERSONALITY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nIMAGE: ${room.imageContext || ""}\nUse this balance to choose the angle and search direction without changing factual results.`
+  ? `\n\nAUTOMATIC BRIEFING BALANCE\n- HUMAN bio and profile: 60%\n- Uploaded image identity: 30%\n- Requested card family: 10%\nHUMAN: ${room.being.name}\nBIO: ${room.being.best_current_choice || ""}\nCATEGORY: ${room.being.category || ""}\nPERSONALITY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nIMAGE: ${room.imageContext || ""}\nUse this balance to choose the search direction and select the most relevant real result. Never invent or alter factual result data.`
   : "";
 
  const combinedIntent =
