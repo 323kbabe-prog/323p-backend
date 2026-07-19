@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.127 (2026-07-19)
+  - Gave every captured, uploaded, and Public room image its own opening-sequence key
+  - Invalidated stale opening timers when ASK or HUMAN starts a different image chapter
+  - Delivered identity, still image, instruction, and examples notice with deliberate one-by-one pacing
+  - Kept the automatic result-card queue behind the completed opening sequence
+
   v10.0.126 (2026-07-19)
   - Restored category-aware result actions in ASK and HUMAN rooms
   - Opened PLACE results in Google Maps and labeled Amazon, YouTube, shopping, listing, job, news, and business destinations correctly
@@ -6377,6 +6383,9 @@ let lastRoomMessageCount = 0;
 let roomOpeningSequenceActive = false;
 let roomOpeningSequenceComplete = false;
 let roomOpeningSequenceTimer = null;
+let roomOpeningSequenceKey = "";
+let roomOpeningSequenceRunId = 0;
+let roomOpeningRevealedCount = 0;
 let firstRoundDemoPending = false;
 let firstRoundDemoVisible = false;
 let firstRoundDemoInsertionIndex = null;
@@ -7501,9 +7510,10 @@ function renderRoomImageChapter(message = {}){
   const name = isHuman ? escapeBeingText(being.name || "your HUMAN") : "ASK.CAMERA";
   const bio = isHuman ? escapeBeingText(being.best_current_choice || being.bio || "") : "";
   const image = message.image || localStorage.getItem("roomThumbnail") || "";
+  const sequenceKey = getRoomImageSequenceKey(message,image);
 
   return `
-    <div class="roomImageChapter" data-room-image-chapter>
+    <div class="roomImageChapter" data-room-image-chapter data-room-image-key="${sequenceKey}">
       <div class="geminiAiResponse chatAiGroup humanImageHello" data-opening-message="intro">
         <div class="chatBubble chatAiBubble">
           ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
@@ -7528,6 +7538,18 @@ function renderRoomImageChapter(message = {}){
   `;
 }
 
+function getRoomImageSequenceKey(message = {},image = ""){
+  const explicitId = String(message.publicNullId || message.imageId || message.id || "").trim();
+  const source = String(image || message.image || "");
+  const fingerprint = explicitId || `${source.length}:${source.slice(0,72)}:${source.slice(-72)}`;
+  let hash = 2166136261;
+  for(let index = 0; index < fingerprint.length; index += 1){
+    hash ^= fingerprint.charCodeAt(index);
+    hash = Math.imul(hash,16777619);
+  }
+  return `image-${(hash >>> 0).toString(36)}`;
+}
+
 function withGoogleBelief(value){
   const text = String(value || "").trim();
   if(!text) return "Google should buy me.";
@@ -7548,6 +7570,9 @@ function resetRoomDeliverySequence(){
   beingFirstRoundStepTimer = null;
   roomOpeningSequenceActive = false;
   roomOpeningSequenceComplete = false;
+  roomOpeningSequenceKey = "";
+  roomOpeningSequenceRunId += 1;
+  roomOpeningRevealedCount = 0;
   clearTimeout(roomOpeningSequenceTimer);
   roomOpeningSequenceTimer = null;
   firstRoundDemoPending = false;
@@ -7594,20 +7619,46 @@ function showSequenceTyping(){
 }
 
 function startRoomOpeningSequence(){
-  const chapter = roomMessages.querySelector("[data-room-image-chapter]");
+  const chapters = Array.from(roomMessages.querySelectorAll("[data-room-image-chapter]"));
+  const chapter = chapters[chapters.length - 1];
   if(!chapter) return;
+  const chapterKey = chapter.dataset.roomImageKey || "image-unknown";
   const steps = Array.from(chapter.querySelectorAll("[data-opening-message]"));
+
+  if(roomOpeningSequenceKey !== chapterKey){
+    clearTimeout(roomOpeningSequenceTimer);
+    roomOpeningSequenceTimer = null;
+    hideSequenceTyping();
+    roomOpeningSequenceKey = chapterKey;
+    roomOpeningSequenceActive = false;
+    roomOpeningSequenceComplete = false;
+    roomOpeningSequenceRunId += 1;
+    roomOpeningRevealedCount = 0;
+  }
+
   if(roomOpeningSequenceComplete){
     steps.forEach(step => { step.style.display = ""; });
     return;
   }
+  steps.forEach((step,index) => {
+    step.style.display = index < roomOpeningRevealedCount ? "" : "none";
+  });
   if(roomOpeningSequenceActive || !steps.length) return;
   roomOpeningSequenceActive = true;
-  steps.forEach(step => { step.style.display = "none"; });
+  const runId = ++roomOpeningSequenceRunId;
   syncFirstRoundInput();
-  let index = 0;
   const revealNext = () => {
-    if(index >= steps.length){
+    if(runId !== roomOpeningSequenceRunId || roomOpeningSequenceKey !== chapterKey) return;
+    const liveChapters = Array.from(roomMessages.querySelectorAll(`[data-room-image-chapter][data-room-image-key="${chapterKey}"]`));
+    const liveChapter = liveChapters[liveChapters.length - 1];
+    const liveSteps = liveChapter
+      ? Array.from(liveChapter.querySelectorAll("[data-opening-message]"))
+      : [];
+    liveSteps.forEach((step,index) => {
+      step.style.display = index < roomOpeningRevealedCount ? "" : "none";
+    });
+    if(!liveSteps.length) return;
+    if(roomOpeningRevealedCount >= liveSteps.length){
       hideSequenceTyping();
       roomOpeningSequenceActive = false;
       roomOpeningSequenceComplete = true;
@@ -7617,13 +7668,24 @@ function startRoomOpeningSequence(){
     }
     showSequenceTyping();
     roomOpeningSequenceTimer = setTimeout(() => {
+      if(runId !== roomOpeningSequenceRunId || roomOpeningSequenceKey !== chapterKey) return;
       hideSequenceTyping();
-      const step = steps[index++];
+      const currentChapters = Array.from(roomMessages.querySelectorAll(`[data-room-image-chapter][data-room-image-key="${chapterKey}"]`));
+      const currentChapter = currentChapters[currentChapters.length - 1];
+      const currentSteps = currentChapter
+        ? Array.from(currentChapter.querySelectorAll("[data-opening-message]"))
+        : [];
+      const step = currentSteps[roomOpeningRevealedCount];
+      if(!step){
+        roomOpeningSequenceTimer = setTimeout(revealNext,250);
+        return;
+      }
       const shouldFollow = isRoomNearBottom();
       step.style.display = "";
+      roomOpeningRevealedCount += 1;
       scrollRoomToLatest(shouldFollow);
-      roomOpeningSequenceTimer = setTimeout(revealNext,700);
-    },500);
+      roomOpeningSequenceTimer = setTimeout(revealNext,1100);
+    },750);
   };
   revealNext();
 }
