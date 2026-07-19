@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.138 (2026-07-19)
+  - Kept the first ASK/HUMAN opening loader mounted while the initial room message list is still empty
+  - Prevented the first empty roomMessages redraw from creating a blank loading gap
+  - Handed loader ownership to the image opening sequence only after its chapter exists
+  - Preserved the unified light-gray dark-dot loader and one-by-one delivery
+
   v10.0.137 (2026-07-19)
   - Restored the unified loader immediately after every live roomMessages redraw
   - Kept dots visible while waiting between the opening notice and each automatic example card
@@ -6646,6 +6652,7 @@ let roomOpeningSequenceTimer = null;
 let roomOpeningSequenceKey = "";
 let roomOpeningSequenceRunId = 0;
 let roomOpeningRevealedCount = 0;
+let roomOpeningBootstrapActive = false;
 let firstRoundDemoPending = false;
 let firstRoundDemoVisible = false;
 let firstRoundDemoInsertionIndex = null;
@@ -7603,6 +7610,7 @@ if(imageIntroText){
   if(!isHumanRoom) renderConnectedHome();
 
 roomOverlay.style.display = "flex";
+startRoomOpeningBootstrap();
 
 gtag('event', 'page_view', {
   page_title: 'AI Live Room',
@@ -7828,7 +7836,7 @@ function withGoogleBelief(value){
 }
 
 function isFirstRoundActive(){
-  return roomOpeningSequenceActive || beingFirstRoundWaiting || beingFirstRoundQueue.length > 0 || firstRoundDemoPending || roomReplyDeliveryActive;
+  return roomOpeningBootstrapActive || roomOpeningSequenceActive || beingFirstRoundWaiting || beingFirstRoundQueue.length > 0 || firstRoundDemoPending || roomReplyDeliveryActive;
 }
 
 function resetRoomDeliverySequence(){
@@ -7842,6 +7850,7 @@ function resetRoomDeliverySequence(){
   roomOpeningSequenceKey = "";
   roomOpeningSequenceRunId += 1;
   roomOpeningRevealedCount = 0;
+  roomOpeningBootstrapActive = false;
   clearTimeout(roomOpeningSequenceTimer);
   roomOpeningSequenceTimer = null;
   firstRoundDemoPending = false;
@@ -7891,6 +7900,13 @@ function showSequenceTyping(){
   scrollRoomToLatest(shouldFollow);
 }
 
+function startRoomOpeningBootstrap(){
+  roomOpeningBootstrapActive = true;
+  hideAITyping();
+  showSequenceTyping();
+  syncFirstRoundInput();
+}
+
 function showOpeningSequenceTyping(chapter){
   hideSequenceTyping();
   const shouldFollow = isRoomNearBottom();
@@ -7924,6 +7940,7 @@ function startRoomOpeningSequence(){
   const chapters = Array.from(roomMessages.querySelectorAll("[data-room-image-chapter]"));
   const chapter = chapters[chapters.length - 1];
   if(!chapter) return;
+  roomOpeningBootstrapActive = false;
   const chapterKey = chapter.dataset.roomImageKey || "image-unknown";
   const steps = syncOpeningOutput(chapter,roomOpeningRevealedCount);
 
@@ -8982,6 +8999,10 @@ roomMessages.innerHTML =
 startRoomOpeningSequence();
 deliverBatchedRoomReplies(previousDeliveredMessageCount,messages.length);
 
+if(roomOpeningBootstrapActive && !roomMessages.querySelector("[data-room-image-chapter]")){
+  showSequenceTyping();
+}
+
 if(
   !roomOpeningSequenceActive &&
   (
@@ -9293,9 +9314,13 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   syncFirstRoundInput();
   scrollRoomToLatest(isRoomNearBottom());
   const openingChapterExists = Boolean(roomMessages.querySelector("[data-room-image-chapter]"));
-  if(roomOpeningSequenceComplete || !openingChapterExists){
+  if(roomOpeningSequenceComplete){
     showSequenceTyping();
     setTimeout(runNextBeingFirstCard,700);
+  }else if(openingChapterExists){
+    startRoomOpeningSequence();
+  }else{
+    showSequenceTyping();
   }
 });
 
