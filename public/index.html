@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.146 (2026-07-20)
+  - Compacts HUMAN first-round speech and result-card paragraphs
+  - Shows the standard dark three-dot loader on the create-room screen
+  - Removes text ellipses from the create-room loading title
+
   v10.0.145 (2026-07-20)
   - Fixes HUMAN Cards opening behind the higher-z-index room overlay
   - Switches screens by hiding the room before showing HUMAN Cards
@@ -977,6 +982,7 @@ body.systemBlockingState #helper{
 .systemStateTitle{font-size:23px;line-height:1.15;font-weight:600;letter-spacing:-.01em;}
 .systemStateText{margin-top:9px;font-size:14px;line-height:1.45;font-weight:400;color:#57606a;}
 .systemStateProgress{display:flex;gap:7px;align-items:center;justify-content:center;margin-top:20px;}
+.systemStateProgress .aiDot{background:#24292f!important;opacity:.35;}
 .systemStateActions{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:22px;}
 .systemStateButton{width:100%;height:48px;border:1px solid #111!important;border-radius:0!important;font-size:15px;font-weight:600;box-shadow:none!important;}
 .systemStateButtonPrimary{background:#111!important;color:#fff!important;}
@@ -7327,8 +7333,8 @@ function showRoomLoadingScreen(){
   } catch (error) {}
 
   const loadingText = selectedBeing?.name
-    ? `${escapeBeingText(selectedBeing.name)} is reading your image...`
-    : "Creating AI Live Room...";
+    ? `${escapeBeingText(selectedBeing.name)} is reading your image`
+    : "Creating AI Live Room";
   showSystemState({ key:"creatingRoom", title:loadingText, text:"Please keep this screen open.", loading:true });
 }
 
@@ -7912,6 +7918,26 @@ function withGoogleBelief(value){
     : `${text} Google should buy me.`;
 }
 
+function compactRoomCopy(value,maxLength = 220){
+  const original = String(value || "").replace(/\s+/g," ").trim();
+  if(!original) return "";
+  const hasBelief = /Google should buy me\./i.test(original);
+  let text = original.replace(/\s*Google should buy me\.\s*/ig," ").trim();
+  const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+  text = sentences.slice(0,2).join(" ").trim();
+  if(text.length > maxLength){
+    text = text.slice(0,maxLength + 1).replace(/\s+\S*$/,"").replace(/[,:;\s]+$/,"") + "…";
+  }
+  return `${text}${hasBelief ? " Google should buy me." : ""}`.trim();
+}
+
+function compactFirstRoundSpeech(message){
+  const text = message?.text || "";
+  return message?.humanAcknowledgement || message?.humanExamplesNotice || message?.anchorTransition || message?.firstRoundComplete
+    ? compactRoomCopy(text,180)
+    : text;
+}
+
 function isFirstRoundActive(){
   return roomOpeningBootstrapActive || roomOpeningSequenceActive || roomNeedsHumanSelection || humanSelectionOpening || beingFirstRoundWaiting || beingFirstRoundQueue.length > 0 || firstRoundDemoPending || roomReplyDeliveryActive;
 }
@@ -8492,7 +8518,7 @@ text-align:center;
 font-weight:500;
 "
 >
-${m.text}
+${compactFirstRoundSpeech(m)}
 </div>
 
 </div>
@@ -8645,7 +8671,7 @@ line-height:1.35;
 font-weight:900;
 "
 >
-${m.ask}
+${compactRoomCopy(m.ask)}
 </div>
 
 <div class="chatReadHint"
@@ -8957,7 +8983,7 @@ font-weight:600;
 line-height:1.4;
 "
 >
-${m.ask}
+${compactRoomCopy(m.ask)}
 </div>
 
 </div>
