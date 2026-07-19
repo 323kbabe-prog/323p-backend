@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.140 (2026-07-20)
+  - Opens HUMAN Cards directly after the final ASK opening instruction
+  - Keeps one light-gray loading indicator visible during the handoff
+  - Adds an idempotent fallback so HUMAN selection cannot remain stuck
+
   v10.0.139 (2026-07-20)
   - Unified the product around one private ASK room with switchable HUMAN perspectives
   - Changed the guided opening to select a HUMAN before five sequential example cards
@@ -6686,6 +6691,7 @@ let roomOpeningRevealedCount = 0;
 let roomOpeningBootstrapActive = false;
 let roomNeedsHumanSelection = false;
 let humanSelectionOpening = false;
+let humanSelectionHandoffTimer = null;
 let firstRoundDemoPending = false;
 let firstRoundDemoVisible = false;
 let firstRoundDemoInsertionIndex = null;
@@ -7888,6 +7894,8 @@ function resetRoomDeliverySequence(){
   roomOpeningBootstrapActive = false;
   roomNeedsHumanSelection = false;
   humanSelectionOpening = false;
+  clearTimeout(humanSelectionHandoffTimer);
+  humanSelectionHandoffTimer = null;
   clearTimeout(roomOpeningSequenceTimer);
   roomOpeningSequenceTimer = null;
   firstRoundDemoPending = false;
@@ -7973,6 +7981,24 @@ function syncOpeningOutput(chapter,revealedCount){
   return templates;
 }
 
+function openRequiredHumanSelection(){
+  clearTimeout(humanSelectionHandoffTimer);
+  humanSelectionHandoffTimer = null;
+  const humanScreen = document.getElementById("aiBeingsScreen");
+  if(!roomNeedsHumanSelection || localStorage.getItem("selectedBeingId") || humanScreen?.style.display === "flex") return;
+  humanSelectionOpening = true;
+  roomOpeningSequenceActive = false;
+  roomOpeningSequenceComplete = true;
+  hideSequenceTyping();
+  syncFirstRoundInput();
+  showAIBeings();
+}
+
+function scheduleRequiredHumanSelection(delay = 700){
+  clearTimeout(humanSelectionHandoffTimer);
+  humanSelectionHandoffTimer = setTimeout(openRequiredHumanSelection,delay);
+}
+
 function startRoomOpeningSequence(){
   const chapters = Array.from(roomMessages.querySelectorAll("[data-room-image-chapter]"));
   const chapter = chapters[chapters.length - 1];
@@ -8013,7 +8039,7 @@ function startRoomOpeningSequence(){
       syncFirstRoundInput();
       if(roomNeedsHumanSelection && !localStorage.getItem("selectedBeingId")){
         humanSelectionOpening = true;
-        setTimeout(() => showAIBeings(),700);
+        scheduleRequiredHumanSelection();
       }else if(beingFirstRoundQueue.length){
         setTimeout(runNextBeingFirstCard,700);
       }
@@ -8037,6 +8063,15 @@ function startRoomOpeningSequence(){
       roomOpeningRevealedCount += 1;
       syncOpeningOutput(currentChapter,roomOpeningRevealedCount);
       scrollRoomToLatest(shouldFollow);
+      if(roomOpeningRevealedCount >= currentSteps.length && roomNeedsHumanSelection && !localStorage.getItem("selectedBeingId")){
+        roomOpeningSequenceActive = false;
+        roomOpeningSequenceComplete = true;
+        humanSelectionOpening = true;
+        showOpeningSequenceTyping(currentChapter);
+        syncFirstRoundInput();
+        scheduleRequiredHumanSelection(700);
+        return;
+      }
       roomOpeningSequenceTimer = setTimeout(revealNext,getOpeningStepPause(step));
     },1200);
   };
@@ -9385,7 +9420,9 @@ socket.on("roomNeedsHuman", () => {
   syncFirstRoundInput();
   if(roomOpeningSequenceComplete && !localStorage.getItem("selectedBeingId")){
     humanSelectionOpening = true;
-    setTimeout(() => showAIBeings(),700);
+    scheduleRequiredHumanSelection();
+  }else if(!localStorage.getItem("selectedBeingId")){
+    scheduleRequiredHumanSelection(9000);
   }
 });
 
@@ -9396,6 +9433,8 @@ socket.on("roomHumanSelected", ({ being } = {}) => {
   setActiveRoomKind("ask");
   roomNeedsHumanSelection = false;
   humanSelectionOpening = false;
+  clearTimeout(humanSelectionHandoffTimer);
+  humanSelectionHandoffTimer = null;
   renderBeingRoomHeader(being);
   document.getElementById("aiBeingsScreen").style.display = "none";
   roomOverlay.style.display = "flex";
