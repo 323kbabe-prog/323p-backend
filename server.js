@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.33 (2026-07-20)
+// - Gives each automatic card type an isolated topic-memory lane
+// - Bypasses the normal duplicate-topic fallback during the automatic briefing
+// - Makes the requested card family a hard search boundary
+// - Uses the selected HUMAN name for cached-result attribution
+
 // v10.0.32 (2026-07-20)
 // - Rebalances automatic search direction to 60% HUMAN bio, 30% image identity, 10% card intent
 // - Keeps factual search results real while using the weighting for direction and selection
@@ -3390,7 +3396,7 @@ try{
 
 
  const automaticBriefingContext = autoFirstRound && room.being
-  ? `\n\nAUTOMATIC BRIEFING BALANCE\n- HUMAN bio and profile: 60%\n- Uploaded image identity: 30%\n- Requested card family: 10%\nHUMAN: ${room.being.name}\nBIO: ${room.being.best_current_choice || ""}\nCATEGORY: ${room.being.category || ""}\nPERSONALITY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nIMAGE: ${room.imageContext || ""}\nUse this balance to choose the search direction and select the most relevant real result. Never invent or alter factual result data.`
+  ? `\n\nAUTOMATIC BRIEFING BALANCE\n- HUMAN bio and profile: 60%\n- Uploaded image identity: 30%\n- Requested card family: 10%\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nBIO: ${room.being.best_current_choice || ""}\nCATEGORY: ${room.being.category || ""}\nPERSONALITY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nIMAGE: ${room.imageContext || ""}\nUse this balance only inside the required ${autoCardType} result family. Never drift into another card type. Choose the most relevant real result and never invent or alter factual result data.`
   : "";
 
  const combinedIntent =
@@ -3907,7 +3913,9 @@ const isNextSearch =
 const isLocationRequest =
   intent === "place" || intent === "real_estate";   
 
-const topicKey = userIntent.trim().toLowerCase();
+const topicKey = autoFirstRound
+  ? `first-round:${autoCardType}`
+  : userIntent.trim().toLowerCase();
 
 const cachedTopic = room.topicMemory[topicKey];
 
@@ -4837,12 +4845,13 @@ const emotionSearch =
 
 if (
     cachedTopic &&
-    !isNextSearch
+    !isNextSearch &&
+    !autoFirstRound
 ) {
 
     room.messages.push({
 
-        from: "CAMERA PERSPECTIVE",
+        from: room.being?.name || "CAMERA PERSPECTIVE",
 
         aiBeing: true,
 
