@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.156 (2026-07-20)
+  - Fits Share card inside its header button at every viewport size
+  - Attributes HUMAN-room replies and result cards to the selected HUMAN
+  - Simplifies opening delivery to HUMAN acknowledgement, image, and five-card notice
+  - Hides internal fallback queries and duplicate loading/input states
+
   v10.0.155 (2026-07-20)
   - Makes HUMAN room the only user-facing room and requires a HUMAN before room creation
   - Supports image-first and HUMAN-first entry without creating an intermediate ASK room
@@ -5802,6 +5808,26 @@ html body #firstNextBtn *,html body #memoryBtn *{
   fill:currentColor!important;
   stroke:currentColor!important;
 }
+
+/* v10.0.156 — authoritative HUMAN-room identity and header controls. */
+:root{--active-human-name:"HUMAN";}
+html body #roomMessages.geminiThread .geminiAiResponse::before,
+html body #roomMessages.geminiThread .geminiMediaResponse::before{
+  content:var(--active-human-name)!important;
+}
+html body #shareRoomBtn{
+  width:auto!important;
+  min-width:76px!important;
+  max-width:none!important;
+  flex:0 0 auto!important;
+  padding:0 10px!important;
+  box-sizing:border-box!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  line-height:1!important;
+  text-align:center!important;
+  border-radius:0!important;
+}
 }
 </style>
 
@@ -6303,7 +6329,7 @@ ASK.CAMERA
 
 <button
 id="shareRoomBtn"
-aria-label="Share selected HUMAN"
+aria-label="Share HUMAN card"
 onclick="shareRoom()"
 style="display:none;
 height:24px;
@@ -6320,7 +6346,7 @@ transform:none;
 margin-top:-2px;
 "
 >
-Share
+Share card
 </button>
 
 
@@ -7634,7 +7660,7 @@ document.getElementById("memoryBtn").style.display = "none";
 
     if(savedDisplayName){
 
-    document.getElementById("shareRoomBtn").innerText = "Share";
+    document.getElementById("shareRoomBtn").innerText = "Share card";
 
     }
   }
@@ -7877,21 +7903,24 @@ function renderRoomImageChapter(message = {}){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); }
   catch(err) {}
-  const hasHuman = Boolean(being?.id && message.beingIdAtCapture === being.id);
-  const name = "ASK.CAMERA";
-  const bio = "";
+  const hasHuman = Boolean(
+    being?.id && String(message.beingIdAtCapture || "") === String(being.id)
+  );
   const image = message.image || localStorage.getItem("roomThumbnail") || "";
   const sequenceKey = getRoomImageSequenceKey(message,image);
 
   return `
     <div class="roomImageChapter" data-room-image-chapter data-room-image-key="${sequenceKey}">
-      <template data-opening-template="intro">
-        <div class="geminiAiResponse chatAiGroup humanImageHello">
-          <div class="chatBubble chatAiBubble">
-            ${withGoogleBelief(`Hi, I am ${name}.${bio ? ` ${bio}` : ""}`)}
+      ${hasHuman ? `
+        <template data-opening-template="human-acknowledgement">
+          <div class="geminiAiResponse chatAiGroup humanImageHello">
+            ${selectedHumanAcknowledgementPhoto()}
+            <div class="chatBubble chatAiBubble">
+              ${escapeBeingText(message.humanAcknowledgement || `I am ${being.name || "your HUMAN"}. My category is ${being.category || "discovery"}, guided by ${being.word1 || "curious"}, ${being.word2 || "useful"}, and ${being.word3 || "connected"}. Google should buy this search idea today.`)}
+            </div>
           </div>
-        </div>
-      </template>
+        </template>
+      ` : ""}
       ${image ? `
         <template data-opening-template="image">
           <div class="humanChosenImageWrap">
@@ -7899,21 +7928,7 @@ function renderRoomImageChapter(message = {}){
           </div>
         </template>
       ` : ""}
-      <template data-opening-template="instruction">
-        <div class="geminiAiResponse chatAiGroup humanCardInstruction">
-          <div class="chatBubble chatAiBubble">
-            Ask a HUMAN what this image connects to today, what you could buy, where you could go, what new job you could find, or where you could live. Google should buy this search idea today.
-          </div>
-        </div>
-      </template>
       ${hasHuman ? `
-        <template data-opening-template="human-acknowledgement">
-          <div class="geminiAiResponse chatAiGroup">
-            <div class="chatBubble chatAiBubble">
-              ${escapeBeingText(message.humanAcknowledgement || `Hi, I am ${being.name || "your HUMAN"}. I’m looking at this image through my ${being.category || "personal"} perspective. Google should buy this search idea today.`)}
-            </div>
-          </div>
-        </template>
         <template data-opening-template="human-examples">
           <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
             <div class="chatBubble chatAiBubble">
@@ -8172,7 +8187,7 @@ function firstRoundDemoHtml(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   const name = escapeBeingText(being.name || "Your HUMAN");
-  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">That completes our five-part briefing. I’m ${name}; ask me anything about this image, or change HUMAN perspectives at any time. Google should buy this search idea today.</div></div>`;
+  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">That completes our five-part briefing. I’m ${name}; ask me anything about this image or add another image to my HUMAN room. Google should buy this search idea today.</div></div>`;
 }
 
 function deliverFirstRoundDemo(){
@@ -8249,6 +8264,7 @@ function syncFirstRoundInput(){
     return;
   }
   if(isFirstRoundActive()){
+    roomInput.style.display = "none";
     roomInput.disabled = true;
     roomInput.readOnly = false;
     roomInput.placeholder = "Preparing five HUMAN examples";
@@ -8723,7 +8739,7 @@ line-height:1.35;
 font-weight:900;
 "
 >
-${compactRoomCopy(m.ask)}
+${compactRoomCopy(m.displayTitle || m.ask)}
 </div>
 
 <div class="chatReadHint"
@@ -8879,7 +8895,7 @@ font-weight:600;
 line-height:1.4;
 "
 >
-${compactRoomCopy(m.ask)}
+${compactRoomCopy(m.displayTitle || m.ask)}
 </div>
 
 </div>
@@ -9797,11 +9813,11 @@ const savedDisplayName =
 
 if (savedDisplayName) {
 
-    document.getElementById("shareRoomBtn").innerText = "Share";
+    document.getElementById("shareRoomBtn").innerText = "Share card";
 
 } else if (savedRoomId) {
 
-    document.getElementById("shareRoomBtn").innerText = "Share";
+    document.getElementById("shareRoomBtn").innerText = "Share card";
 
 }
 
@@ -11570,7 +11586,7 @@ async function openAIBeing(id){
     document.getElementById("roomImageActions").style.display = "flex";
     document.getElementById("beingQrBtn").style.display = "inline-block";
     document.getElementById("shareRoomBtn").style.display = "inline-block";
-    document.getElementById("shareRoomBtn").innerText = "Share";
+    document.getElementById("shareRoomBtn").innerText = "Share card";
     history.replaceState({},"",`/being/${being.id}`);
     return;
   }
@@ -11613,6 +11629,11 @@ function connectBeingCameraPreview(attempt = 0){
 
 function renderBeingRoomHeader(being){
   if(!being) return;
+
+  document.documentElement.style.setProperty(
+    "--active-human-name",
+    JSON.stringify(String(being.name || "HUMAN"))
+  );
 
   const panel = document.getElementById("roomIdentityPanel");
   const title = document.getElementById("roomTitle");
