@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.115 (2026-07-19)
+  - Replaced the solid startup background with a blurred view of the same live camera stream
+  - Added a light veil over the blurred camera to preserve text readability
+  - Kept the foreground camera card sharp and avoided a second camera request
+
   v10.0.114 (2026-07-19)
   - Restored the startup background to solid white
   - Restored the standard camera glyph inside the circular shutter
@@ -663,8 +668,10 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeInstruction{max-width:none!important;margin:0!important;text-align:left!important;text-transform:none!important;letter-spacing:0!important;}
 #homeInstruction .homeHeroTitle{font-size:clamp(28px,3.2vw,44px)!important;line-height:1.08!important;font-weight:700!important;text-transform:uppercase!important;color:#fff!important;}
 #homeInstruction .homeHeroSupport{max-width:760px!important;margin-top:16px!important;font-size:clamp(16px,1.55vw,22px)!important;line-height:1.45!important;font-weight:400!important;color:#fff!important;text-transform:none!important;}
-#homeStartupLayer{position:fixed!important;inset:0!important;z-index:2147483499!important;display:grid!important;grid-template-rows:max-content minmax(0,1fr) max-content!important;gap:clamp(12px,2.2dvh,22px)!important;width:100vw!important;height:100vh!important;height:100dvh!important;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom))!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;overflow:hidden!important;}
+#homeStartupLayer{position:fixed!important;inset:0!important;z-index:2147483499!important;display:grid!important;grid-template-rows:max-content minmax(0,1fr) max-content!important;gap:clamp(12px,2.2dvh,22px)!important;width:100vw!important;height:100vh!important;height:100dvh!important;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom))!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;overflow:hidden!important;isolation:isolate!important;}
 #homeStartupLayer[hidden]{display:none!important;}
+#homeStartupBackground{position:absolute!important;inset:-36px!important;z-index:-2!important;width:calc(100% + 72px)!important;height:calc(100% + 72px)!important;object-fit:cover!important;transform:scale(1.08)!important;filter:blur(28px) saturate(1.15) brightness(.96)!important;pointer-events:none!important;}
+#homeStartupVeil{position:absolute!important;inset:0!important;z-index:-1!important;background:rgba(255,255,255,.72)!important;pointer-events:none!important;}
 .homeStartupRail,#homeCaptureStage{width:min(88vw,480px)!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important;}
 .homeStartupRail{text-align:left!important;}
 #homeStartupTop{align-self:start!important;}
@@ -10745,6 +10752,8 @@ function ensureCanonicalHomeExperience(){
     layer.id = "homeStartupLayer";
     layer.setAttribute("aria-label", "ASK.CAMERA free trial camera");
     layer.innerHTML = `
+      <video id="homeStartupBackground" autoplay playsinline muted aria-hidden="true"></video>
+      <div id="homeStartupVeil" aria-hidden="true"></div>
       <header id="homeStartupTop" class="homeStartupRail">
         <div id="homeStartupProductRow">
           <div id="homeStartupTextFrame">
@@ -10784,6 +10793,11 @@ function ensureCanonicalHomeExperience(){
   if(cardVideo && video.srcObject && cardVideo.srcObject !== video.srcObject){
     cardVideo.srcObject = video.srcObject;
     cardVideo.play().catch(() => {});
+  }
+  const backgroundVideo = document.getElementById("homeStartupBackground");
+  if(backgroundVideo && video.srcObject && backgroundVideo.srcObject !== video.srcObject){
+    backgroundVideo.srcObject = video.srcObject;
+    backgroundVideo.play().catch(() => {});
   }
 }
 
