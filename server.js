@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.43 (2026-07-20)
+// - Adds HUMAN Category and all three profile words to the image acknowledgement
+// - Makes the three words persistent relevance signals for automatic and future searches
+// - Keeps Category as the mandatory domain while words refine ranking inside it
+// - Carries the same HUMAN search identity through all five fallback sentences
+
 // v10.0.42 (2026-07-20)
 // - Makes HUMAN room the only conversational room type
 // - Requires a valid HUMAN before creating a room from any image source
@@ -334,12 +340,18 @@ ${userText}
 async function createRoomFirstRoundCards(room) {
   const being = room?.being;
   const category = String(being?.category || room?.coreTheme || "general discovery").trim();
+  const words = [being?.word1,being?.word2,being?.word3]
+    .map(value => String(value || "").trim())
+    .filter(Boolean);
+  const signals = words.length
+    ? ` with ${words.join(", ")} qualities`
+    : "";
   return [
-    { type:"news", text:`Search the latest news in the ${category} category.` },
-    { type:"shopping", text:`Search for something to buy in the ${category} category.` },
-    { type:"place", text:`Search for a place to go in the ${category} category.` },
-    { type:"jobs", text:`Search for a job in the ${category} category.` },
-    { type:"real_estate", text:`Search for a place to live in the ${category} category.` }
+    { type:"news", text:`Search the latest news in the ${category} category${signals}.` },
+    { type:"shopping", text:`Search for something to buy in the ${category} category${signals}.` },
+    { type:"place", text:`Search for a place to go in the ${category} category${signals}.` },
+    { type:"jobs", text:`Search for a job in the ${category} category${signals}.` },
+    { type:"real_estate", text:`Search for a place to live in the ${category} category${signals}.` }
   ];
 }
 
@@ -1096,7 +1108,7 @@ io.on("connection", socket => {
         const humanBio = String(being.best_current_choice || being.category || "a distinct HUMAN perspective")
           .replace(/^I am\s+/i,"")
           .replace(/[.!?]+$/,"");
-        const acknowledgement = `I am ${being.name}, ${humanBio}. ${observation || "I notice a useful connection in this image"}. Google should buy this search idea today.`;
+        const acknowledgement = `I am ${being.name}. My category is ${being.category}, guided by ${being.word1}, ${being.word2}, and ${being.word3}. My perspective is ${humanBio}. ${observation || "I notice a useful connection in this image"}. Google should buy this search idea today.`;
 
         room.messages.push(
           { from:being.name, aiBeing:true, conversational:true, humanAcknowledgement:true, text:acknowledgement }
@@ -1710,7 +1722,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- For the automatic five-card briefing, Category is the hard subject domain for every result.\n- Image identity supplies a supporting angle inside Category; requested card family changes only the result format.\n- The HUMAN bio and personality control voice and acknowledgment, but never replace the category as the automatic search domain.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Never invent or alter facts. Do not mechanically repeat the profile fields; express them naturally.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nSearch signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- For the automatic five-card briefing and every later search, Category is the mandatory subject domain.\n- The three HUMAN words are persistent relevance signals. Use all three to refine query meaning, candidate ranking, and result selection inside Category.\n- Image identity supplies a supporting angle inside Category; requested card family changes only the result format.\n- The HUMAN bio controls voice and acknowledgment. It may clarify intent but never replace Category or the three search signals.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Never invent or alter facts. Do not mechanically repeat the profile fields; express them naturally.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -2646,27 +2658,28 @@ ${validStarterNews.map(
 
 const beingRoomIntroPrompt = selectedBeing
   ? `
-You are the ASK.CAMERA ENGLISH REWRITE SYSTEM speaking as the selected AI Being.
+You are the ASK.CAMERA ENGLISH REWRITE SYSTEM speaking as the selected HUMAN.
 
 AI Being:
 ${beingContext}
 
-Look at the uploaded image and introduce the AI Being in first person.
+Look at the uploaded image and introduce the HUMAN in first person.
 
-Return exactly this three-sentence structure:
-I am ${selectedBeing.name}. I am in [location]. I am [current status].
+Return exactly this four-sentence structure:
+I am ${selectedBeing.name}. My category is ${selectedBeing.category}, guided by ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}. I am in [location]. I am [current status].
 
 Rules:
 - English only.
-- Keep the AI Being name exactly as provided.
+- Keep the HUMAN name exactly as provided.
 - Sentence 1 must be exactly: I am ${selectedBeing.name}.
-- Sentence 2 must state the location visible in the uploaded image.
+- Sentence 2 must be exactly: My category is ${selectedBeing.category}, guided by ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}.
+- Sentence 3 must state the location visible in the uploaded image.
 - Use a city or named place only when the image clearly confirms it.
 - Otherwise use the visible setting, such as an office, a cafe, a street, a store, a home, or outdoors.
 - Never invent a city, country, venue, or address.
-- Sentence 3 must state what the AI Being is currently doing, noticing, exploring, or looking for.
+- Sentence 4 must state what the HUMAN is currently doing, noticing, exploring, or looking for.
 - Current status must reflect the uploaded image plus the AI Being's Bio, Category, and Personality.
-- Keep all three sentences short, natural, and grammatically correct.
+- Keep all four sentences short, natural, and grammatically correct.
 - No labels, quotation marks, markdown, or extra text.
   `.trim()
   : `
@@ -3374,7 +3387,7 @@ try{
 
 
  const automaticBriefingContext = autoFirstRound && room.being
-  ? `\n\nAUTOMATIC BRIEFING RULES\nHARD CATEGORY DOMAIN: ${room.being.category || ""}\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nIMAGE — SUPPORTING ANGLE ONLY: ${room.imageContext || ""}\nBIO — VOICE ONLY, NOT SEARCH DIRECTION: ${room.being.best_current_choice || ""}\nPERSONALITY — VOICE ONLY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nEvery result must remain inside HARD CATEGORY DOMAIN. The requested ${autoCardType} family changes only the result format, never the subject. Use IMAGE only to choose a relevant angle within the category. Do not use BIO, PERSONALITY, or IMAGE to replace or escape the category. Choose the most relevant real result and never invent or alter factual result data.`
+  ? `\n\nAUTOMATIC BRIEFING RULES\nHARD CATEGORY DOMAIN: ${room.being.category || ""}\nREQUIRED HUMAN SEARCH SIGNALS: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nIMAGE — SUPPORTING ANGLE ONLY: ${room.imageContext || ""}\nBIO — VOICE ONLY, NOT SEARCH DIRECTION: ${room.being.best_current_choice || ""}\nEvery result must remain inside HARD CATEGORY DOMAIN. Use all three REQUIRED HUMAN SEARCH SIGNALS to refine relevance and ranking inside that domain. The requested ${autoCardType} family changes only the result format, never the subject. Use IMAGE only to choose a relevant angle within the category. Do not let BIO, search signals, or IMAGE replace or escape the category. Choose the most relevant real result and never invent or alter factual result data.`
   : "";
 
  const combinedIntent =
@@ -4961,6 +4974,9 @@ room.usedSearches.push(
 if (isJobSearch) {
 
 const humanJobCategory = String(room.being?.category || "").trim();
+const humanJobSignals = [room.being?.word1,room.being?.word2,room.being?.word3]
+  .map(value => String(value || "").trim())
+  .filter(Boolean);
 const isAutomaticJobCard = Boolean(autoFirstRound && autoCardType === "jobs");
 
 const jobSearchRes = await openai.chat.completions.create({
@@ -4978,7 +4994,9 @@ Create ONE Google Jobs search.
 Understand exactly what career the user is looking for.
 
 ${isAutomaticJobCard ? `The required career domain is: ${humanJobCategory || "general"}.
+The HUMAN relevance signals are: ${humanJobSignals.join(", ") || "none"}.
 This domain is mandatory. The final search must describe a job inside it.
+Use all HUMAN relevance signals to refine the job specialization and result ranking inside the required career domain.
 Use the image only to add one useful specialization when it naturally fits.
 Never replace the required career domain with an image object, hidden system, or HUMAN biography.` : ""}
 
@@ -5050,6 +5068,9 @@ ${room.imageContext}
 Required HUMAN category:
 ${isAutomaticJobCard ? humanJobCategory : "none"}
 
+Required HUMAN relevance signals:
+${isAutomaticJobCard ? humanJobSignals.join(", ") : "none"}
+
 User:
 ${text}
 `
@@ -5110,7 +5131,7 @@ const jobResults = Array.isArray(serpRes.jobs_results)
   : [];
 
 const relevanceTerms = Array.from(new Set(
-  `${humanJobCategory} ${jobSearch}`
+  `${humanJobCategory} ${humanJobSignals.join(" ")} ${jobSearch}`
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
