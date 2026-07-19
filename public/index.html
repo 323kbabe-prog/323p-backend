@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.151 (2026-07-20)
+  - Keeps five-card validation working when persistent-room history is trimmed
+  - Checks the newest emitted result when the backend message count stays capped
+  - Preserves strict matching for the expected automatic card family
+
   v10.0.150 (2026-07-20)
   - Accepts valid automatic result cards that omit category metadata
   - Still rejects cards explicitly labeled as the wrong result type
@@ -8317,9 +8322,13 @@ if(getActiveRoomKind() === "ask"){
 const previousDeliveredMessageCount = deliveredRoomMessageCount;
 lastRoomMessageCount = messages.length;
 
+const beingFirstRoundCandidates = messages.length > beingFirstRoundBaseline
+  ? messages.slice(beingFirstRoundBaseline)
+  : messages.slice(-1);
+
 if (
   beingFirstRoundWaiting &&
-  messages.slice(beingFirstRoundBaseline).some(message =>
+  beingFirstRoundCandidates.some(message =>
     isValidBeingFirstRoundCard(message,beingFirstRoundExpectedType)
   )
 ) {
