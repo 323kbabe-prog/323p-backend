@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.119 (2026-07-19)
+  - Made the Camera action in ASK and HUMAN rooms open one shared floating live-camera card
+  - Kept the active room and conversation intact while the camera card is open or closed
+  - Routed the in-room captured still into the existing frozen publish preview and room-analysis flow
+
   v10.0.118 (2026-07-19)
   - Hid identity and intro copy on Public Camera Perspective cards
   - Enlarged the complete love and skeleton counters, including emojis and numbers
@@ -854,6 +859,15 @@ body.systemBlockingState #helper{
 #publicNullsCards .skeletonCount{font-size:17px!important;line-height:1.2!important;font-weight:700!important;}
 #publicNullsCards .loveIcon,
 #publicNullsCards .loveNumber{font-size:inherit!important;line-height:inherit!important;}
+
+/* v10.0.119 — shared in-room floating live-camera card. */
+#roomFloatingCameraLayer{position:fixed!important;inset:0!important;z-index:2147483646!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:18px!important;box-sizing:border-box!important;background:#fff!important;}
+#roomFloatingCameraLayer[hidden]{display:none!important;}
+#roomFloatingCameraCard{position:relative!important;width:min(100%,480px)!important;height:min(78dvh,680px)!important;min-height:360px!important;background:#111!important;border:1px solid #d0d7de!important;overflow:hidden!important;}
+#roomFloatingCameraVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;}
+#roomFloatingCameraClose{position:absolute!important;z-index:2!important;top:10px!important;right:10px!important;width:38px!important;height:38px!important;padding:0!important;border:1px solid #8c959f!important;border-radius:0!important;background:#fff!important;color:#111!important;font-size:22px!important;line-height:1!important;}
+#roomFloatingCameraShutter{position:absolute!important;z-index:2!important;left:50%!important;bottom:18px!important;transform:translateX(-50%)!important;width:66px!important;height:66px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:3px solid rgba(255,255,255,.75)!important;border-radius:50%!important;background:#fff!important;color:#111!important;box-shadow:0 2px 14px rgba(0,0,0,.28)!important;}
+#roomFloatingCameraShutter svg{width:34px!important;height:34px!important;fill:none!important;stroke:currentColor!important;}
 </style>
 
 <script>
@@ -5907,7 +5921,7 @@ width:100%;
 margin:12px 0 4px;
 "
 >
-  <button onclick="captureImage()" aria-label="Take a photo"><span class="roomActionIcon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h3l1.4-2h7.2L17 7h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span class="roomActionLabel">Camera</span></button>
+  <button onclick="openRoomFloatingCamera(event)" aria-label="Take a photo"><span class="roomActionIcon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h3l1.4-2h7.2L17 7h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span class="roomActionLabel">Camera</span></button>
   <button onclick="openRoomImageUpload()" aria-label="Upload a photo"><span class="roomActionIcon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V5m0 0-4 4m4-4 4 4M5 15v4h14v-4"/></svg></span><span class="roomActionLabel">Upload</span></button>
   <button onclick="openRoomPublicPerspectives()" aria-label="Choose a public perspective"><span class="roomActionIcon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.4 3.8 5.4 3.8 9S14.5 18.6 12 21M12 3C9.5 5.4 8.2 8.4 8.2 12S9.5 18.6 12 21"/></svg></span><span class="roomActionLabel">Public</span></button>
 </div>
@@ -10730,6 +10744,60 @@ function takeHomePicture(event){
   const layer = document.getElementById("homeStartupLayer");
   if(layer) layer.hidden = true;
   captureImage();
+}
+
+function ensureRoomFloatingCamera(){
+  let layer = document.getElementById("roomFloatingCameraLayer");
+  if(!layer){
+    layer = document.createElement("section");
+    layer.id = "roomFloatingCameraLayer";
+    layer.hidden = true;
+    layer.setAttribute("aria-label","Room camera");
+    layer.innerHTML = `
+      <div id="roomFloatingCameraCard">
+        <video id="roomFloatingCameraVideo" autoplay playsinline muted aria-hidden="true"></video>
+        <button id="roomFloatingCameraClose" type="button" aria-label="Close camera" onclick="closeRoomFloatingCamera(event)">×</button>
+        <button id="roomFloatingCameraShutter" type="button" aria-label="Take picture" onclick="takeRoomFloatingPicture(event)">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke-width="1.8"/></svg>
+        </button>
+      </div>`;
+    document.body.appendChild(layer);
+  }
+  const shutter = document.getElementById("roomFloatingCameraShutter");
+  if(shutter){
+    requestAnimationFrame(() => {
+      shutter.style.setProperty("border-radius","50%","important");
+      shutter.style.setProperty("background","#fff","important");
+      shutter.style.setProperty("color","#111","important");
+    });
+  }
+  return layer;
+}
+
+async function openRoomFloatingCamera(event){
+  if(event){ event.preventDefault(); event.stopPropagation(); }
+  const layer = ensureRoomFloatingCamera();
+  layer.hidden = false;
+  if(!video.srcObject){
+    await startCamera();
+  }
+  const roomCameraVideo = document.getElementById("roomFloatingCameraVideo");
+  if(roomCameraVideo && video.srcObject){
+    roomCameraVideo.srcObject = video.srcObject;
+    roomCameraVideo.play().catch(() => {});
+  }
+}
+
+function closeRoomFloatingCamera(event){
+  if(event){ event.preventDefault(); event.stopPropagation(); }
+  const layer = document.getElementById("roomFloatingCameraLayer");
+  if(layer) layer.hidden = true;
+}
+
+async function takeRoomFloatingPicture(event){
+  if(event){ event.preventDefault(); event.stopPropagation(); }
+  closeRoomFloatingCamera();
+  await captureImage();
 }
 
 function updateHomeCaptureCardVisibility(){
