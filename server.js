@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.41 (2026-07-20)
+// - Keeps automatic job searches inside the selected HUMAN category
+// - Ranks Google Jobs results for category relevance instead of taking result one
+// - Uses a direct listing/application URL when Google Jobs supplies one
+// - Attributes job cards to the selected HUMAN and preserves the search fallback
+//
 // v10.0.40 (2026-07-20)
 // - Replaces AI-planned automatic queries with five simple HUMAN-category inputs
 // - Sends those inputs through the original user search pipeline
@@ -4936,6 +4942,9 @@ room.usedSearches.push(
 
 if (isJobSearch) {
 
+const humanJobCategory = String(room.being?.category || "").trim();
+const isAutomaticJobCard = Boolean(autoFirstRound && autoCardType === "jobs");
+
 const jobSearchRes = await openai.chat.completions.create({
 
     model:"gpt-4o-mini",
@@ -4950,6 +4959,11 @@ Create ONE Google Jobs search.
 
 Understand exactly what career the user is looking for.
 
+${isAutomaticJobCard ? `The required career domain is: ${humanJobCategory || "general"}.
+This domain is mandatory. The final search must describe a job inside it.
+Use the image only to add one useful specialization when it naturally fits.
+Never replace the required career domain with an image object, hidden system, or HUMAN biography.` : ""}
+
 If the user specifies a city, state, country, or remote,
 ALWAYS preserve it in the search.
 
@@ -4959,7 +4973,7 @@ The uploaded image and hidden system provide context only.
 
 Prioritize:
 
-1. User's career goal (90%)
+1. User's career goal and required career domain (90%)
 2. User's location (required if provided)
 3. Hidden system (10%)
 
@@ -5014,6 +5028,9 @@ ${hiddenSystem}
 
 Image identity:
 ${room.imageContext}
+
+Required HUMAN category:
+${isAutomaticJobCard ? humanJobCategory : "none"}
 
 User:
 ${text}
@@ -5070,20 +5087,52 @@ if (!serpFetch.ok) {
 
 const serpRes = await serpFetch.json();
 
-console.log("SERP RESPONSE:");
-console.log(JSON.stringify(serpRes, null, 2));
+const jobResults = Array.isArray(serpRes.jobs_results)
+  ? serpRes.jobs_results
+  : [];
 
-const job = serpRes.jobs_results?.[0];
+const relevanceTerms = Array.from(new Set(
+  `${humanJobCategory} ${jobSearch}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(term => term.length > 2)
+));
+
+const scoreJob = job => {
+  const searchable = [
+    job?.title,
+    job?.company_name,
+    job?.description,
+    job?.location,
+    ...(job?.extensions || [])
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  return relevanceTerms.reduce(
+    (score, term) => score + (searchable.includes(term) ? 1 : 0),
+    0
+  );
+};
+
+const job = jobResults
+  .map((result, index) => ({ result, index, score: scoreJob(result) }))
+  .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.result;
 
 if (!job) {
     addJobSearchFallback();
     return;
 }
 
+const jobLink =
+  job.apply_options?.find(option => option?.link)?.link ||
+  job.related_links?.find(related => related?.link)?.link ||
+  job.share_link ||
+  jobsUrl;
+
 
 room.messages.push({
 
-  from: "CHANG, TIEN",
+  from: room.being?.name || "CAMERA PERSPECTIVE",
 
   aiBeing: true,
 
@@ -5099,7 +5148,7 @@ room.messages.push({
     salary: job.detected_extensions?.salary,
     type: job.detected_extensions?.schedule_type,
     posted: job.detected_extensions?.posted_at,
-    link: jobsUrl
+    link: jobLink
 
   }
 
@@ -5115,7 +5164,7 @@ room.messages.push({
 
     image: null,
 
-    link: jobsUrl,
+    link: jobLink,
 
     jobCard: {
 
@@ -5131,7 +5180,7 @@ room.messages.push({
 
         posted: job.detected_extensions?.posted_at,
 
-        link: jobsUrl
+        link: jobLink
 
     }
 
