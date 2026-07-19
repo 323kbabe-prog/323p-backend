@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.145 (2026-07-20)
+  - Fixes HUMAN Cards opening behind the higher-z-index room overlay
+  - Switches screens by hiding the room before showing HUMAN Cards
+  - Shows the floating selection card only after the final instruction is rendered
+
   v10.0.144 (2026-07-20)
   - Replaces the input handoff with a floating HUMAN selection card
   - Adds one primary Open HUMAN Cards button above the ASK input
@@ -8159,11 +8164,17 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
 
 function syncFirstRoundInput(){
   roomInput.style.display = "block";
-  humanSelectionPrompt.style.display = roomNeedsHumanSelection ? "block" : "none";
+  const humanInstructionVisible = Boolean(
+    roomMessages.querySelector("[data-opening-output] .humanCardInstruction")
+  );
+  const humanSelectionReady = roomNeedsHumanSelection && humanInstructionVisible;
+  humanSelectionPrompt.style.display = humanSelectionReady ? "block" : "none";
   if(roomNeedsHumanSelection){
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Choose a HUMAN perspective above";
+    roomInput.placeholder = humanSelectionReady
+      ? "Choose a HUMAN perspective above"
+      : "ASK.CAMERA is preparing the HUMAN choice…";
     return;
   }
   if(!localStorage.getItem("selectedBeingId") && (roomOpeningBootstrapActive || roomOpeningSequenceActive)){
@@ -11041,6 +11052,7 @@ async function showAIBeings(){
   document.body.classList.add("appBackdropActive");
   dailyNullsScreen.style.display = "none";
   publicNullsScreen.style.display = "none";
+  roomOverlay.style.display = "none";
   document.getElementById("aiBeingsScreen").style.display = "flex";
   syncHomeControlStack();
   await loadAIBeings();
