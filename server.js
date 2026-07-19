@@ -2,6 +2,13 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.29 (2026-07-20)
+// - Unified ASK and HUMAN experiences into one private ASK room
+// - Added switchable HUMAN perspectives inside the active room
+// - Expanded the automatic preview to five fixed result families
+// - Removed one-hour expiry and blocked non-owner room rejoining
+// - Kept HUMAN invitations and individual result sharing
+
 // v10.0.28 (2026-07-19)
 // - Added POST /ai-beings/generate-bio for HUMAN business introductions
 // - Generates one concise first-person networking sentence from category and three keywords
@@ -257,7 +264,7 @@ ${userText}
 }
 
 async function chooseRoomFirstRoundCardTypes(room) {
-  const allowed = ["news", "shopping", "place", "real_estate"];
+  const allowed = ["news", "shopping", "place", "jobs", "real_estate"];
   const being = room?.being;
 
   try {
@@ -268,20 +275,21 @@ async function chooseRoomFirstRoundCardTypes(room) {
         {
           role: "system",
           content: `
-Choose exactly THREE useful card types for this ASK.CAMERA room to preview before the user asks a question.
+Choose the order of exactly FIVE useful card types for this ASK.CAMERA room to preview before the user asks a question.
 
 Allowed card types:
 news
 shopping
 place
+jobs
 real_estate
 
 Selection rules:
 - The uploaded image interpretation must materially influence every selection.
 - If a HUMAN profile is provided, its bio, category, and personality must also strongly influence the selection.
 - If no HUMAN profile is provided, select entirely from the image interpretation and category.
-- Choose three different types.
-- Return only the three exact type names separated by commas.
+- Use all five different types exactly once.
+- Return only the five exact type names separated by commas.
 - No explanation, numbering, markdown, or extra words.
           `.trim()
         },
@@ -311,7 +319,7 @@ Personality: ${being?.word1 || ""}, ${being?.word2 || ""}, ${being?.word3 || ""}
       .filter(value => allowed.includes(value));
 
     const unique = [...new Set(selected)];
-    if (unique.length === 3) return unique;
+    if (unique.length === 5) return unique;
   } catch (error) {
     console.log("ROOM FIRST ROUND CARD SELECTION FAILED:", error.message);
   }
@@ -330,6 +338,7 @@ Personality: ${being?.word1 || ""}, ${being?.word2 || ""}, ${being?.word3 || ""}
     { type:"news", score:0.4, words:["news","today","technology","business","politics","culture","music","sports","trend"] },
     { type:"place", score:0.3, words:["travel","place","restaurant","cafe","coffee","hotel","food","event","city","visit","airline"] },
     { type:"shopping", score:0.2, words:["shop","product","buy","fashion","luxury","food","beauty","style","retail","deal"] },
+    { type:"jobs", score:0.15, words:["job","career","work","hiring","business","professional","opportunity"] },
     { type:"real_estate", score:0.1, words:["real estate","property","home","house","apartment","condo","interior","architecture","rent"] }
   ].map(item => ({
     ...item,
@@ -339,7 +348,44 @@ Personality: ${being?.word1 || ""}, ${being?.word2 || ""}, ${being?.word3 || ""}
     )
   })).sort((a,b) => b.score - a.score);
 
-  return fallback.slice(0,3).map(item => item.type);
+  return fallback.slice(0,5).map(item => item.type);
+}
+
+async function createHumanAnchorTransition(room, cardType) {
+  const being = room?.being;
+  const topicLabels = {
+    news:"what this image connects to today",
+    shopping:"what the viewer could buy",
+    place:"where the viewer could go",
+    jobs:"a new job or professional opportunity",
+    real_estate:"where the viewer could live"
+  };
+  const topic = topicLabels[cardType] || "the next perspective";
+  const fallback = `Now, let’s turn to ${topic}. Google should buy me.`;
+  if (!being) return fallback;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.75,
+      messages:[
+        {
+          role:"system",
+          content:`You are ${being.name}, hosting a short personalized program about one image. Speak in a calm, polished, confident news-anchor tone while preserving this HUMAN profile's personality. Introduce the next segment in one or two concise conversational sentences. Connect naturally to the image and previous discussion. Do not say "example number" or use a heading. End exactly with: Google should buy me.`
+        },
+        {
+          role:"user",
+          content:`NEXT SEGMENT: ${topic}\nIMAGE: ${room.imageContext || ""}\nBIO: ${being.best_current_choice || ""}\nCATEGORY: ${being.category || ""}\nKEYWORDS: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}\nRECENT ROOM CONTEXT: ${(room.messages || []).slice(-3).map(message => message.ask || message.text || "").filter(Boolean).join(" | ")}`
+        }
+      ]
+    });
+    let transition = response.choices[0].message.content.trim();
+    if (!/Google should buy me\.$/i.test(transition)) transition += " Google should buy me.";
+    return transition;
+  } catch (error) {
+    console.log("HUMAN ANCHOR TRANSITION FAILED:", error.message);
+    return fallback;
+  }
 }
 
 function getResultCardCategories(intent, room, detail = "") {
@@ -523,6 +569,36 @@ await smsClient.messages.create({
 const users = {};
 const questions = [];
 const rooms = {};
+
+app.post("/admin/upgrade-rooms", (req,res) => {
+  const configuredSecret = process.env.ASK_CAMERA_ADMIN_SECRET;
+  const suppliedSecret = req.get("x-admin-secret");
+  const suppliedBuffer = Buffer.from(String(suppliedSecret || ""));
+  const configuredBuffer = Buffer.from(String(configuredSecret || ""));
+  const authorized = configuredBuffer.length > 0 &&
+    suppliedBuffer.length === configuredBuffer.length &&
+    crypto.timingSafeEqual(suppliedBuffer,configuredBuffer);
+  if (!authorized) {
+    res.status(403).json({ error:"Forbidden" });
+    return;
+  }
+
+  const seconds = 10;
+  io.emit("roomUpgradeWarning", {
+    seconds,
+    message:"ASK.CAMERA is being upgraded."
+  });
+
+  setTimeout(() => {
+    for (const roomId of Object.keys(rooms)) {
+      io.to(roomId).emit("roomClosed", { reason:"upgrade" });
+      delete rooms[roomId];
+    }
+    for (const deviceId of Object.keys(deviceRooms)) delete deviceRooms[deviceId];
+  }, seconds * 1000);
+
+  res.json({ success:true, rooms:Object.keys(rooms).length, closesInSeconds:seconds });
+});
 const deviceRooms = {};
 
 let publicNulls = [];
@@ -932,32 +1008,11 @@ io.on("connection", socket => {
 
     });
 
-    socket.on("leaveCurrentRoom", ({ deviceId, beingSessionId } = {}, acknowledge) => {
+    socket.on("leaveCurrentRoom", ({ deviceId } = {}, acknowledge) => {
         const user = users[socket.id];
         const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
 
-        const endingHumanRoom = !!(
-          roomId &&
-          rooms[roomId]?.being &&
-          beingSessionId &&
-          rooms[roomId].beingSessionId === beingSessionId
-        );
-
-        if (endingHumanRoom) {
-            io.to(roomId).emit("roomClosed");
-        }
-
         if (roomId) socket.leave(roomId);
-
-        if (roomId) {
-            for (const id in deviceRooms) {
-                if (deviceRooms[id] === roomId) delete deviceRooms[id];
-            }
-        }
-
-        if (endingHumanRoom) {
-            delete rooms[roomId];
-        }
 
         if (user) {
             user.currentRoom = null;
@@ -969,6 +1024,90 @@ io.on("connection", socket => {
         if (typeof acknowledge === "function") {
             acknowledge({ success: true });
         }
+    });
+
+    socket.on("closePrivateRoom", ({ deviceId } = {}, acknowledge) => {
+        const user = users[socket.id];
+        const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
+        if (roomId && rooms[roomId] && deviceRooms[deviceId] === roomId) {
+            io.to(roomId).emit("roomClosed");
+            delete rooms[roomId];
+            for (const id in deviceRooms) {
+                if (deviceRooms[id] === roomId) delete deviceRooms[id];
+            }
+        }
+        if (user) user.currentRoom = null;
+        if (typeof acknowledge === "function") acknowledge({ success:true });
+    });
+
+    socket.on("selectRoomHuman", async ({ deviceId, beingId } = {}, acknowledge) => {
+        const user = users[socket.id];
+        const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
+        const room = rooms[roomId];
+        if (!room || deviceRooms[deviceId] !== roomId) {
+            if (typeof acknowledge === "function") acknowledge({ success:false, error:"Room unavailable." });
+            return;
+        }
+
+        const { data:being, error } = await supabase
+          .from("ai_beings")
+          .select("*")
+          .eq("id", beingId)
+          .eq("public", true)
+          .single();
+        if (error || !being) {
+            if (typeof acknowledge === "function") acknowledge({ success:false, error:"HUMAN not found." });
+            return;
+        }
+
+        room.being = being;
+        room.beingSessionId = null;
+        room.permanent = true;
+        room.expiresAt = null;
+        room.topicMemory = {};
+
+        let acknowledgement = `Hi, I am ${being.name}. I am looking at this image through my ${being.category || "personal"} perspective. Google should buy me.`;
+        try {
+          const response = await openai.chat.completions.create({
+            model:"gpt-4o-mini",
+            temperature:0.7,
+            messages:[
+              { role:"system", content:`Speak as the selected HUMAN profile. Acknowledge the image in one concise first-person paragraph. Mention one specific visual or thematic observation from the image interpretation. Naturally reflect the profile bio, category, and keywords without listing them. End exactly with: Google should buy me.` },
+              { role:"user", content:`HUMAN: ${being.name}\nBIO: ${being.best_current_choice || ""}\nCATEGORY: ${being.category || ""}\nKEYWORDS: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}\nIMAGE INTERPRETATION: ${room.imageContext || ""}` }
+            ]
+          });
+          acknowledgement = response.choices[0].message.content.trim();
+          if (!/Google should buy me\.$/i.test(acknowledgement)) acknowledgement += " Google should buy me.";
+        } catch (humanError) {
+          console.log("ROOM HUMAN ACKNOWLEDGEMENT FAILED:", humanError.message);
+        }
+
+        room.messages.push(
+          { from:being.name, aiBeing:true, conversational:true, humanAcknowledgement:true, text:acknowledgement },
+          { from:being.name, aiBeing:true, conversational:true, humanExamplesNotice:true, text:"Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy me." }
+        );
+
+        socket.emit("roomHumanSelected", { being });
+        io.to(room.id).emit("roomMessages", room.messages);
+        const cardTypes = await chooseRoomFirstRoundCardTypes(room);
+        socket.emit("roomFirstRoundStart", { cardTypes, imageContext:room.imageContext, category:room.coreTheme, humanCategory:being.category || "", roomKind:"ask" });
+        if (typeof acknowledge === "function") acknowledge({ success:true, being });
+    });
+
+    socket.on("roomFirstRoundComplete", ({ deviceId } = {}) => {
+      const user = users[socket.id];
+      const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
+      const room = rooms[roomId];
+      if (!room || deviceRooms[deviceId] !== roomId || !room.being) return;
+      room.messages.push({
+        from:room.being.name,
+        aiBeing:true,
+        conversational:true,
+        firstRoundComplete:true,
+        text:`That completes our five-part briefing. I’m ${room.being.name}; ask me anything about this image, or change HUMAN perspectives at any time. Google should buy me.`
+      });
+      socket.emit("roomFirstRoundCompleted");
+      io.to(room.id).emit("roomMessages",room.messages);
     });
 
 socket.on(
@@ -1396,7 +1535,7 @@ socket.on("getRoomStatus", ({ deviceId }) => {
 
         being: room.being || null,
 
-        roomKind: room.being ? "human" : "ask"
+        roomKind: "ask"
 
     });
 
@@ -1417,7 +1556,7 @@ console.log("ROOMS:", Object.keys(rooms));
     const room =
       rooms[roomId];
 
-if (!room || (!room.permanent && Date.now() > room.expiresAt)) {
+if (!room) {
     socket.emit("roomExpired");
     return;
 }
@@ -1426,6 +1565,11 @@ if (!room || (!room.permanent && Date.now() > room.expiresAt)) {
 
 const isOwner =
     deviceRooms[deviceId] === roomId;
+
+if (!isOwner) {
+    socket.emit("roomClosed");
+    return;
+}
 
 
     if(!room){
@@ -1864,21 +2008,8 @@ let roomId =
       ? requestedRoomId
       : deviceRooms[deviceId];
 
-if (
-  selectedBeing &&
-  roomId &&
-  (
-    rooms[roomId]?.being?.id !== selectedBeing.id ||
-    rooms[roomId]?.beingSessionId !== beingSessionId
-  )
-) {
-  roomId = null;
-}
-
-// A standard ASK upload must never reuse a HUMAN room left in device state.
-if (!selectedBeing && roomId && rooms[roomId]?.being) {
-  roomId = null;
-}
+// Every image and HUMAN perspective stays inside the owner's one private ASK room.
+if (roomId && deviceRooms[deviceId] !== roomId) roomId = null;
 
 let isOwner = true;
 
@@ -1926,7 +2057,7 @@ if (!roomId || !rooms[roomId]) {
 
         beingSessionId: selectedBeing ? beingSessionId : null,
 
-        permanent: !!selectedBeing,
+        permanent: true,
 
         coreTheme: coreTheme,
 
@@ -1953,9 +2084,7 @@ nullCard: null,
 
         createdAt: Date.now(),
 
-        expiresAt: selectedBeing
-            ? null
-            : Date.now() + 60 * 60 * 1000
+        expiresAt: null
     };
 
     await trackEvent(
@@ -1999,13 +2128,14 @@ deviceRooms[deviceId] = roomId;
     room.coreTheme =
         coreTheme;
     room.topicMemory = {};
+    room.permanent = true;
+    room.expiresAt = null;
 
     if (selectedBeing) {
       room.being = selectedBeing;
       room.beingSessionId = beingSessionId;
       room.permanent = true;
       room.expiresAt = null;
-      room.displayName = selectedBeing.name;
     }
 
 }
@@ -2018,6 +2148,7 @@ if (sourcePublicNull) {
         image: sourcePublicNull.image,
         identity: sourcePublicNull.identity,
         intro: sourcePublicNull.intro,
+        beingIdAtCapture: selectedBeing?.id || null,
         publicNullId: sourcePublicNull.id
     };
 
@@ -2083,14 +2214,19 @@ io.to(roomId).emit(
 // This common point runs after the room/image context exists and before any
 // optional legacy starter-news work can delay or abort the experience.
 {
-  const firstRoundCardTypes = await chooseRoomFirstRoundCardTypes(rooms[roomId]);
-  socket.emit("roomFirstRoundStart", {
-    cardTypes:firstRoundCardTypes,
-    imageContext:rooms[roomId].imageContext,
-    category:rooms[roomId].coreTheme,
-    humanCategory:selectedBeing?.category || "",
-    roomKind:selectedBeing ? "human" : "ask"
-  });
+  if (rooms[roomId].being) {
+    socket.emit("roomHumanSelected", { being:rooms[roomId].being, invitation:true });
+    const firstRoundCardTypes = await chooseRoomFirstRoundCardTypes(rooms[roomId]);
+    socket.emit("roomFirstRoundStart", {
+      cardTypes:firstRoundCardTypes,
+      imageContext:rooms[roomId].imageContext,
+      category:rooms[roomId].coreTheme,
+      humanCategory:rooms[roomId].being.category || "",
+      roomKind:"ask"
+    });
+  } else {
+    socket.emit("roomNeedsHuman", { roomId });
+  }
 }
 
 
@@ -2656,7 +2792,11 @@ rooms[roomId].nullCard = {
 
     identity: visibleCardIdentity,
 
-    intro: visibleCardIntro
+    intro: visibleCardIntro,
+
+    beingIdAtCapture: selectedBeing?.id || null,
+
+    humanAcknowledgement: selectedBeing ? adviceText : ""
 
 };
 
@@ -2668,7 +2808,11 @@ rooms[roomId].messages.push({
 
     identity: visibleCardIdentity,
 
-    intro: visibleCardIntro
+    intro: visibleCardIntro,
+
+    beingIdAtCapture: selectedBeing?.id || null,
+
+    humanAcknowledgement: selectedBeing ? adviceText : ""
 
 });
 
@@ -3086,6 +3230,18 @@ socket.on(
     if (!room) {
         socket.emit("roomClosed");
         return;
+    }
+
+    if (autoFirstRound && room.being) {
+      const transition = await createHumanAnchorTransition(room, autoCardType);
+      room.messages.push({
+        from:room.being.name,
+        aiBeing:true,
+        conversational:true,
+        anchorTransition:true,
+        autoCardType,
+        text:transition
+      });
     }
 
     let locationReplyForDisplay = null;
