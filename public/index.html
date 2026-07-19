@@ -4,6 +4,13 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.105 (2026-07-19)
+  - Added six business and networking keyword suggestions for every HUMAN category
+  - Lets users tap up to three suggested keywords or enter custom keywords
+  - Confirms before clearing keywords when the selected category changes
+  - Replaced the browser Choose File control with a square Google-system profile-photo upload button
+  - Added clear No photo selected / Photo selected feedback while preserving immediate preview
+
   v10.0.104 (2026-07-19)
   - Rebuilt HUMAN creation around business and professional networking
   - Replaced free-text Category with a fixed professional category selector
@@ -1476,9 +1483,14 @@ ASK.CAMERA – AI Camera Search
       <button onclick="closeCreateBeing()" style="border:none;background:#f2f2f2;border-radius:50%;width:40px;height:40px;font-size:22px;">×</button>
     </div>
     <img id="beingCurrentPhoto" alt="HUMAN profile preview" style="display:none;width:112px;height:112px;object-fit:cover;border-radius:22px;margin:0 auto 14px;box-shadow:0 8px 24px rgba(0,0,0,.14);">
-    <input id="beingPhoto" type="file" accept="image/*" onchange="previewBeingPhoto(this)" style="margin-bottom:14px;width:100%;">
+    <input id="beingPhoto" type="file" accept="image/*" onchange="previewBeingPhoto(this)" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;clip-path:inset(50%);">
+    <label for="beingPhoto" class="beingPhotoUpload">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span>Upload profile photo</span>
+    </label>
+    <div id="beingPhotoStatus" style="font-size:11px;line-height:1.4;color:#666;margin:-6px 2px 12px;">No photo selected.</div>
     <input id="beingName" placeholder="Name" class="beingInput">
-    <select id="beingCategory" class="beingInput" onchange="handleBeingProfileInput()">
+    <select id="beingCategory" class="beingInput" onchange="handleBeingCategoryChange(this)">
       <option value="">Choose a business category</option>
       <option>Technology &amp; AI</option>
       <option>Business &amp; Entrepreneurship</option>
@@ -1498,6 +1510,10 @@ ASK.CAMERA – AI Camera Search
       <option>Community &amp; Social Impact</option>
       <option>Other</option>
     </select>
+    <div id="beingKeywordSuggestions" style="display:none;margin:-2px 0 12px;">
+      <div style="font-size:11px;line-height:1.4;color:#666;margin:0 2px 7px;">Choose up to three, or type your own.</div>
+      <div id="beingKeywordChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
     <select id="beingCreatorType" class="beingInput" style="display:none;" onchange="handleBeingProfileInput()">
       <option value="">Choose a creator type</option>
       <option>YouTuber</option>
@@ -1537,6 +1553,9 @@ ASK.CAMERA – AI Camera Search
 
 <style>
 .beingInput{width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:16px;padding:13px 14px;margin-bottom:12px;font:inherit;background:#fff;color:#111;}
+.beingPhotoUpload{width:100%;min-height:48px;box-sizing:border-box;border:1px solid #8c959f;border-radius:0;padding:12px 14px;margin-bottom:10px;background:#fff;color:#1a73e8;display:flex;align-items:center;justify-content:flex-start;gap:10px;font-size:14px;font-weight:600;cursor:pointer;}
+.beingKeywordChip{min-height:34px;border:1px solid #8c959f!important;border-radius:0!important;background:#fff!important;color:#111!important;padding:7px 10px;font-size:12px;font-weight:600;box-shadow:none!important;}
+.beingKeywordChip.isSelected{border-color:#1a73e8!important;background:#e8f0fe!important;color:#174ea6!important;}
 .beingCard{background:#fff;color:#111;border-radius:24px;padding:16px;margin:0 auto 16px;max-width:420px;}
 
 /* v10.0.61 — shared responsive UI system */
@@ -10288,6 +10307,86 @@ let beingPreviewUrl = "";
 let beingBioEdited = false;
 let beingBioSignature = "";
 let beingBioRequest = 0;
+let beingLastCategory = "";
+
+const BEING_KEYWORD_SUGGESTIONS = {
+  "Technology & AI":["innovative","practical","visionary","technical","collaborative","future-focused"],
+  "Business & Entrepreneurship":["strategic","ambitious","resourceful","collaborative","growth-minded","decisive"],
+  "Investment & Finance":["analytical","trustworthy","disciplined","ambitious","global","long-term"],
+  "Real Estate":["strategic","local","trusted","residential","commercial","luxury"],
+  "Marketing & Media":["creative","insightful","persuasive","digital","data-driven","collaborative"],
+  "Design & Creative":["bold","visual","thoughtful","cultural","experimental","multidisciplinary"],
+  "Creators & Influencers":["authentic","entertaining","educational","visual","trend-focused","community-led"],
+  "Fashion & Beauty":["stylish","bold","inclusive","trend-aware","premium","collaborative"],
+  "Entertainment & Music":["expressive","original","energetic","cultural","collaborative","audience-focused"],
+  "Food & Hospitality":["welcoming","local","quality-driven","social","creative","service-minded"],
+  "Retail & E-commerce":["customer-focused","commercial","digital","curious","efficient","growth-minded"],
+  "Education & Research":["curious","evidence-based","thoughtful","accessible","collaborative","future-focused"],
+  "Health & Wellness":["empathetic","trusted","holistic","practical","community-minded","evidence-based"],
+  "Travel & Tourism":["global","adventurous","local","welcoming","cultural","experience-led"],
+  "Sustainability":["responsible","innovative","long-term","community-led","practical","impact-driven"],
+  "Community & Social Impact":["inclusive","empathetic","purpose-driven","collaborative","local","impact-focused"],
+  "Other":["strategic","creative","trusted","collaborative","ambitious","community-minded"]
+};
+
+function handleBeingCategoryChange(select){
+  const nextCategory = select.value;
+  const hasKeywords = ["beingWord1","beingWord2","beingWord3"].some(id => document.getElementById(id).value.trim());
+  if(beingLastCategory && nextCategory !== beingLastCategory && hasKeywords){
+    const shouldChange = confirm("Changing category will clear the three current keywords. Continue?");
+    if(!shouldChange){
+      select.value = beingLastCategory;
+      return;
+    }
+    ["beingWord1","beingWord2","beingWord3"].forEach(id => document.getElementById(id).value = "");
+    if(!beingBioEdited) document.getElementById("beingChoice").value = "";
+    document.getElementById("beingBioStatus").innerText = beingBioEdited
+      ? "Your edited bio was kept. Regenerate when the new profile is ready."
+      : "Choose three keywords to generate your business introduction.";
+  }
+  beingLastCategory = nextCategory;
+  renderBeingKeywordSuggestions();
+  handleBeingProfileInput();
+}
+
+function renderBeingKeywordSuggestions(){
+  const category = document.getElementById("beingCategory").value;
+  const suggestions = BEING_KEYWORD_SUGGESTIONS[category] || [];
+  const wrap = document.getElementById("beingKeywordSuggestions");
+  const chips = document.getElementById("beingKeywordChips");
+  wrap.style.display = suggestions.length ? "block" : "none";
+  chips.innerHTML = suggestions.map(word => `<button type="button" class="beingKeywordChip" data-keyword="${word}" onclick="toggleBeingKeyword('${word}',this)">${word}</button>`).join("");
+  syncBeingKeywordChips();
+}
+
+function toggleBeingKeyword(word,button){
+  const fields = ["beingWord1","beingWord2","beingWord3"].map(id => document.getElementById(id));
+  const existing = fields.find(field => field.value.trim().toLowerCase() === word.toLowerCase());
+  if(existing){
+    existing.value = "";
+  }else{
+    const empty = fields.find(field => !field.value.trim());
+    if(!empty){
+      document.getElementById("beingBioStatus").innerText = "Three keywords selected. Remove one before choosing another.";
+      return;
+    }
+    empty.value = word;
+  }
+  syncBeingKeywordChips();
+  handleBeingProfileInput();
+  if(fields.every(field => field.value.trim())) generateBeingBio();
+}
+
+function syncBeingKeywordChips(){
+  const selected = ["beingWord1","beingWord2","beingWord3"].map(id => document.getElementById(id).value.trim().toLowerCase());
+  document.querySelectorAll("#beingKeywordChips .beingKeywordChip").forEach(chip => {
+    const isSelected = selected.includes(chip.dataset.keyword.toLowerCase());
+    chip.classList.toggle("isSelected",isSelected);
+    chip.style.setProperty("background",isSelected ? "#e8f0fe" : "#fff","important");
+    chip.style.setProperty("color",isSelected ? "#174ea6" : "#111","important");
+    chip.style.setProperty("border-color",isSelected ? "#1a73e8" : "#8c959f","important");
+  });
+}
 
 function beingCategoryValue(){
   const category = document.getElementById("beingCategory").value.trim();
@@ -10321,6 +10420,7 @@ function handleBeingProfileInput(){
   const creatorSelect = document.getElementById("beingCreatorType");
   creatorSelect.style.display = category === "Creators & Influencers" ? "block" : "none";
   if(category !== "Creators & Influencers") creatorSelect.value = "";
+  syncBeingKeywordChips();
 
   const complete = Object.values(beingBioInputs()).every(Boolean);
   const changed = beingBioInputSignature() !== beingBioSignature;
@@ -10370,12 +10470,14 @@ function previewBeingPhoto(input){
   const file = input?.files?.[0];
   if(!file){
     if(!editingBeing) preview.style.display = "none";
+    document.getElementById("beingPhotoStatus").innerText = editingBeing ? "Current profile photo retained." : "No photo selected.";
     return;
   }
   if(beingPreviewUrl) URL.revokeObjectURL(beingPreviewUrl);
   beingPreviewUrl = URL.createObjectURL(file);
   preview.src = beingPreviewUrl;
   preview.style.display = "block";
+  document.getElementById("beingPhotoStatus").innerText = "Photo selected.";
 }
 
 function resetBeingForm(){
@@ -10386,6 +10488,7 @@ function resetBeingForm(){
   beingBioEdited = false;
   beingBioSignature = "";
   beingBioRequest++;
+  beingLastCategory = "";
   document.getElementById("beingFormTitle").innerText = "Create HUMAN Card";
   const preview = document.getElementById("beingCurrentPhoto");
   preview.removeAttribute("src");
@@ -10394,6 +10497,9 @@ function resetBeingForm(){
   ["beingName","beingChoice","beingCategory","beingCreatorType","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
     .forEach(id => document.getElementById(id).value = "");
   document.getElementById("beingCreatorType").style.display = "none";
+  document.getElementById("beingKeywordSuggestions").style.display = "none";
+  document.getElementById("beingKeywordChips").innerHTML = "";
+  document.getElementById("beingPhotoStatus").innerText = "No photo selected.";
   document.getElementById("beingBioGenerate").style.display = "none";
   document.getElementById("beingBioStatus").innerText = "Auto-generated and editable.";
   document.getElementById("beingShowPasswords").checked = false;
@@ -10422,6 +10528,7 @@ async function changeAIBeingProfile(id){
     const preview = document.getElementById("beingCurrentPhoto");
     preview.src = being.photo;
     preview.style.display = "block";
+    document.getElementById("beingPhotoStatus").innerText = "Current profile photo retained.";
     document.getElementById("beingPhoto").value = "";
     document.getElementById("beingName").value = being.name || "";
     document.getElementById("beingChoice").value = being.best_current_choice || "";
@@ -10429,6 +10536,7 @@ async function changeAIBeingProfile(id){
     const categorySelect = document.getElementById("beingCategory");
     const knownCategory = Array.from(categorySelect.options).some(option => option.value === categoryParts[0]);
     categorySelect.value = knownCategory ? categoryParts[0] : "Other";
+    beingLastCategory = categorySelect.value;
     if(categoryParts[0] === "Creators & Influencers"){
       document.getElementById("beingCreatorType").style.display = "block";
       document.getElementById("beingCreatorType").value = categoryParts.slice(1).join(" — ");
@@ -10436,6 +10544,7 @@ async function changeAIBeingProfile(id){
     document.getElementById("beingWord1").value = being.word1 || "";
     document.getElementById("beingWord2").value = being.word2 || "";
     document.getElementById("beingWord3").value = being.word3 || "";
+    renderBeingKeywordSuggestions();
     beingBioSignature = beingBioInputSignature();
     beingBioEdited = true;
     document.getElementById("beingBioGenerate").style.display = "inline-block";
