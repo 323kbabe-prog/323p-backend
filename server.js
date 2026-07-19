@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.45 (2026-07-20)
+// - Keeps the approved "I picked..." opening while naming the specific result
+// - Prevents generic HUMAN-category phrases such as "the real estate market"
+// - Attributes result messages to the selected HUMAN
+// - Preserves Google Jobs and all existing card-family search routes
+
 // v10.0.44 (2026-07-20)
 // - Adds the HUMAN Bio as its own visible acknowledgement sentence
 // - Applies 50/20/20/10 Category, words, Bio, and image weighting to automatic searches
@@ -5947,11 +5953,15 @@ Instead explain why someone visiting this place would better understand, observe
 
 Rules:
 - first person
-- begin with "I picked..."
-- include the place name
+- begin with "I picked..." followed by the specific result name or its defining feature
+- identify the actual place, article, product, job, property, company, report, or opportunity selected
+- include the place name when it is a real named place
 - include the news naturally
 - one sentence only
 - factual and believable
+- Never use the HUMAN Category as a generic noun after "I picked".
+- Never begin "I picked the real estate", "I picked real estate", "I picked the real estate market", or an equivalent generic category phrase.
+- If Place is only a broad category, use the selected result title or its most distinctive factual subject instead.
 
 `
         },
@@ -5964,6 +5974,9 @@ ${placeName || userIntent}
 
 News:
 ${selectedNews?.title || ""}
+
+Specific selected result title:
+${selectedNews?.title || placeName || userIntent}
 `
         }
 
@@ -5981,7 +5994,7 @@ ${selectedNews?.title || ""}
   }catch(err){
 
     placeStory =
-      `I picked ${placeName} because it connects to one of the biggest stories unfolding in this location right now.`;
+      `I picked ${selectedNews?.title || placeName || "this specific result"} because it connects to one of the biggest stories unfolding in this location right now.`;
 
   }
 
@@ -6308,10 +6321,7 @@ console.log({
     
 room.messages.push({
 
-  from:
-    isNextSearch
-      ? "CAMERA PERSPECTIVE"
-      : "CHANG, TIEN",
+  from:room.being?.name || "CAMERA PERSPECTIVE",
 
   aiBeing:true,
   ...getResultCardCategories(
@@ -6359,7 +6369,7 @@ ask:
           placeStory ||
           `I picked ${
 isLocationRequest
-    ? userIntent
+    ? (selectedNews?.title || placeName || "this specific place")
               : isYoutubeIntent
                 ? "this video"
                 : isShoppingIntent
