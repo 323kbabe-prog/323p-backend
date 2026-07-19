@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.116 (2026-07-19)
+  - Applied one colorful blurred live-camera background system to both ASK and HUMAN rooms
+  - Increased live-camera saturation and blur while keeping foreground room content sharp
+  - Reduced the room's white veil so more camera color remains visible
+
   v10.0.115 (2026-07-19)
   - Replaced the solid startup background with a blurred view of the same live camera stream
   - Added a light veil over the blurred camera to preserve text readability
@@ -6149,16 +6154,21 @@ function syncHomeControlStack(){
   if(backdropActive){
     cameraWrap.style.setProperty("display","block","important");
     if(liveVideo){
-      liveVideo.style.setProperty("filter","blur(18px) brightness(.76) saturate(1.55)","important");
-      liveVideo.style.setProperty("transform","scale(1.08)","important");
+      liveVideo.style.setProperty("filter","blur(24px) brightness(.82) saturate(1.9)","important");
+      liveVideo.style.setProperty("transform","scale(1.12)","important");
     }
     ["roomOverlay","dailyNullsScreen","publicNullsScreen","aiBeingsScreen","createBeingScreen"]
       .map(id => document.getElementById(id))
       .filter(Boolean)
       .forEach(screen => {
-        screen.style.setProperty("background","rgba(255,255,255,.34)","important");
-        screen.style.setProperty("backdrop-filter","blur(10px)","important");
-        screen.style.setProperty("-webkit-backdrop-filter","blur(10px)","important");
+        const isSharedAskOrHumanRoom = screen.id === "roomOverlay";
+        screen.style.setProperty(
+          "background",
+          isSharedAskOrHumanRoom ? "rgba(255,255,255,.20)" : "rgba(255,255,255,.34)",
+          "important"
+        );
+        screen.style.setProperty("backdrop-filter",isSharedAskOrHumanRoom ? "blur(14px)" : "blur(10px)","important");
+        screen.style.setProperty("-webkit-backdrop-filter",isSharedAskOrHumanRoom ? "blur(14px)" : "blur(10px)","important");
       });
   }else if(liveVideo){
     liveVideo.style.removeProperty("filter");
