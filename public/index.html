@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.142 (2026-07-20)
+  - Decouples HUMAN Cards opening from opening-sequence and socket timing
+  - Observes the rendered HUMAN instruction as the authoritative UI handoff point
+  - Rechecks the handoff whenever the disabled ASK input state is synchronized
+
   v10.0.141 (2026-07-20)
   - Makes the server HUMAN-selection requirement authoritative for each new ASK room
   - Clears stale HUMAN selection left by a previous room
@@ -7994,6 +7999,20 @@ function openRequiredHumanSelection(){
   showAIBeings();
 }
 
+function maybeOpenRequiredHumanSelection(){
+  if(!roomNeedsHumanSelection) return;
+  const humanScreen = document.getElementById("aiBeingsScreen");
+  if(humanScreen?.style.display === "flex") return;
+  const instructionIsVisible = Boolean(
+    roomMessages.querySelector("[data-opening-output] .humanCardInstruction")
+  );
+  if(!instructionIsVisible) return;
+  openRequiredHumanSelection();
+}
+
+const humanSelectionStateObserver = new MutationObserver(maybeOpenRequiredHumanSelection);
+humanSelectionStateObserver.observe(roomMessages,{ childList:true, subtree:true });
+
 function startRoomOpeningSequence(){
   const chapters = Array.from(roomMessages.querySelectorAll("[data-room-image-chapter]"));
   const chapter = chapters[chapters.length - 1];
@@ -8136,6 +8155,7 @@ function syncFirstRoundInput(){
   if(roomNeedsHumanSelection || (!localStorage.getItem("selectedBeingId") && (roomOpeningBootstrapActive || roomOpeningSequenceActive))){
     roomInput.disabled = true;
     roomInput.placeholder = "Ask — choose a HUMAN perspective first";
+    queueMicrotask(maybeOpenRequiredHumanSelection);
     return;
   }
   if(isFirstRoundActive()){
