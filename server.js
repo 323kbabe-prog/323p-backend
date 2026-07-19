@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.38 (2026-07-20)
+// - Makes the selected HUMAN category a hard subject boundary for all five cards
+// - Uses card type only to change result format, never the category domain
+// - Adds a complete Real Estate five-card example to prevent subject drift
+//
 // v10.0.37 (2026-07-20)
 // - Makes each generated card search a natural, semantically useful query
 // - Translates visual ideas into card-specific concepts such as eco-friendly real estate
@@ -340,7 +345,9 @@ real_estate
 
 Rules:
 - Produce exactly one search for every allowed card type.
-- The selected HUMAN category supplies the perspective and main direction of every search.
+- The selected HUMAN category is a HARD SUBJECT BOUNDARY for every search.
+- Every query must remain a genuine subtopic of that category. Never leave, replace, generalize, or merely mention the category.
+- The card type changes only the result format; it never changes the subject domain.
 - Translate one useful image detail or visual concept into a natural concept that fits the assigned card type.
 - Write how a person would actually search Google. Do not simply concatenate category, image, and card-type keywords.
 - Make every query specific enough to return a useful real result.
@@ -363,6 +370,16 @@ Good jobs search: sustainable interior design careers
 Good shopping search: smart indoor garden systems
 Good place search: urban botanical gardens and green architecture
 Good news search: latest biophilic design and green building trends
+
+Required category-boundary example:
+HUMAN category: Real Estate
+Image concept: green plants and smart devices
+Good news search: latest sustainable smart home real estate trends
+Good shopping search: smart energy systems for eco-friendly homes
+Good place search: green residential neighborhoods with smart homes
+Good jobs search: sustainable real estate technology careers
+Good real_estate search: eco-friendly smart homes with indoor gardens
+All five searches are about Real Estate. The card type changes the kind of result, not the category.
           `.trim()
         },
         {
@@ -1762,7 +1779,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- For the automatic five-card briefing: selected HUMAN category 60%, uploaded image identity 30%, requested card family 10%.\n- The HUMAN bio and personality control voice and acknowledgment, but they do not replace the category as the automatic search anchor.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Use weighting to shape search direction and result selection, never to invent or alter facts.\n- Do not mechanically repeat the profile fields. Express them naturally.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- For the automatic five-card briefing, Category is the hard subject domain for every result.\n- Image identity supplies a supporting angle inside Category; requested card family changes only the result format.\n- The HUMAN bio and personality control voice and acknowledgment, but never replace the category as the automatic search domain.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Never invent or alter facts. Do not mechanically repeat the profile fields; express them naturally.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -3429,7 +3446,7 @@ try{
 
 
  const automaticBriefingContext = autoFirstRound && room.being
-  ? `\n\nAUTOMATIC BRIEFING BALANCE\n- Selected HUMAN category: 60%\n- Uploaded image identity: 30%\n- Requested card family: 10%\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nCATEGORY — PRIMARY SEARCH ANCHOR: ${room.being.category || ""}\nIMAGE — SECONDARY SEARCH CONTEXT: ${room.imageContext || ""}\nBIO — VOICE ONLY, NOT SEARCH DIRECTION: ${room.being.best_current_choice || ""}\nPERSONALITY — VOICE ONLY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nBuild the search direction primarily from CATEGORY, then connect it to IMAGE, while remaining strictly inside the required ${autoCardType} result family. Do not use BIO or PERSONALITY to replace or override CATEGORY. Choose the most relevant real result and never invent or alter factual result data.`
+  ? `\n\nAUTOMATIC BRIEFING RULES\nHARD CATEGORY DOMAIN: ${room.being.category || ""}\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nIMAGE — SUPPORTING ANGLE ONLY: ${room.imageContext || ""}\nBIO — VOICE ONLY, NOT SEARCH DIRECTION: ${room.being.best_current_choice || ""}\nPERSONALITY — VOICE ONLY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nEvery result must remain inside HARD CATEGORY DOMAIN. The requested ${autoCardType} family changes only the result format, never the subject. Use IMAGE only to choose a relevant angle within the category. Do not use BIO, PERSONALITY, or IMAGE to replace or escape the category. Choose the most relevant real result and never invent or alter factual result data.`
   : "";
 
  const combinedIntent =
