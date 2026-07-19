@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.114 (2026-07-19)
+  - Restored the startup background to solid white
+  - Restored the standard camera glyph inside the circular shutter
+  - Moved FREE TRIAL and the complete Take a picture instruction inside the live image below the shutter
+
   v10.0.113 (2026-07-19)
   - Moved the Take a picture instruction from the upper text stack to below the live camera
   - Replaced the generic shutter camera glyph with the existing ASK.CAMERA icon.png logo
@@ -658,7 +663,7 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeInstruction{max-width:none!important;margin:0!important;text-align:left!important;text-transform:none!important;letter-spacing:0!important;}
 #homeInstruction .homeHeroTitle{font-size:clamp(28px,3.2vw,44px)!important;line-height:1.08!important;font-weight:700!important;text-transform:uppercase!important;color:#fff!important;}
 #homeInstruction .homeHeroSupport{max-width:760px!important;margin-top:16px!important;font-size:clamp(16px,1.55vw,22px)!important;line-height:1.45!important;font-weight:400!important;color:#fff!important;text-transform:none!important;}
-#homeStartupLayer{position:fixed!important;inset:0!important;z-index:2147483499!important;display:grid!important;grid-template-rows:max-content minmax(0,1fr) max-content!important;gap:clamp(12px,2.2dvh,22px)!important;width:100vw!important;height:100vh!important;height:100dvh!important;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom))!important;box-sizing:border-box!important;background:rgba(255,255,255,.8)!important;color:#111!important;overflow:hidden!important;}
+#homeStartupLayer{position:fixed!important;inset:0!important;z-index:2147483499!important;display:grid!important;grid-template-rows:max-content minmax(0,1fr) max-content!important;gap:clamp(12px,2.2dvh,22px)!important;width:100vw!important;height:100vh!important;height:100dvh!important;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom))!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;overflow:hidden!important;}
 #homeStartupLayer[hidden]{display:none!important;}
 .homeStartupRail,#homeCaptureStage{width:min(88vw,480px)!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important;}
 .homeStartupRail{text-align:left!important;}
@@ -668,19 +673,19 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeStartupProductName{font-size:14px!important;line-height:1.2!important;font-weight:600!important;letter-spacing:.01em!important;color:#1f2328!important;}
 #homeStartupRefresh{flex:0 0 40px!important;width:40px!important;height:40px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid #d0d7de!important;border-radius:0!important;background:#f6f8fa!important;color:#1f2328!important;box-shadow:none!important;}
 #homeStartupRefresh svg{width:19px!important;height:19px!important;fill:currentColor!important;}
-#homeStartupTrial{margin-top:3px!important;color:#1f2328!important;font-size:clamp(20px,5vw,23px)!important;line-height:1.15!important;font-weight:600!important;letter-spacing:-.015em!important;}
 #homeStartupTitle{max-width:100%!important;margin-top:14px!important;font-size:clamp(22px,5.3vw,25px)!important;line-height:1.18!important;font-weight:600!important;letter-spacing:-.02em!important;color:#1f2328!important;overflow-wrap:anywhere!important;}
 #homeCaptureStage{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:hidden!important;}
 #homeCaptureCard{position:relative!important;z-index:1!important;display:block!important;width:100%!important;height:100%!important;max-height:680px!important;min-height:0!important;margin:0 auto!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:1px solid #d0d7de!important;box-shadow:none!important;overflow:hidden!important;}
 #homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;z-index:0!important;}
 #homeCaptureShade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(0,0,0,.08),transparent 26%,transparent 70%,rgba(0,0,0,.16))!important;z-index:1!important;pointer-events:none!important;}
-#homeTakePicture{position:absolute!important;z-index:2!important;left:50%!important;bottom:16px!important;transform:translateX(-50%)!important;width:66px!important;height:66px!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;background:#fff!important;color:#111!important;border:3px solid rgba(255,255,255,.72)!important;border-radius:50%!important;box-shadow:0 2px 14px rgba(0,0,0,.28)!important;}
-#homeTakePicture img{display:block!important;width:36px!important;height:36px!important;object-fit:contain!important;}
+#homeCapturePrompt{position:absolute!important;z-index:2!important;left:16px!important;right:16px!important;bottom:14px!important;text-align:center!important;color:#fff!important;text-shadow:0 1px 4px rgba(0,0,0,.8)!important;}
+#homeTakePicture{position:relative!important;left:auto!important;bottom:auto!important;transform:none!important;width:66px!important;height:66px!important;margin:0 auto!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;background:#fff!important;color:#111!important;border:3px solid rgba(255,255,255,.72)!important;border-radius:50%!important;box-shadow:0 2px 14px rgba(0,0,0,.28)!important;}
+#homeTakePicture svg{display:block!important;width:36px!important;height:36px!important;fill:none!important;stroke:currentColor!important;}
+#homeCaptureTrial{margin-top:8px!important;font-size:17px!important;line-height:1.15!important;font-weight:700!important;letter-spacing:.01em!important;}
+#homeCaptureInstruction{margin-top:4px!important;font-size:13px!important;line-height:1.35!important;font-weight:500!important;}
 #homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:36px!important;height:36px!important;padding:0!important;background:#f6f8fa!important;color:#1f2328!important;border:1px solid #d0d7de!important;font-size:20px!important;font-weight:400!important;line-height:1!important;box-shadow:none!important;}
 #homeStartupBrand{align-self:end!important;padding-right:56px!important;}
-#homeStartupInstruction{font-size:clamp(13px,3.5vw,15px)!important;line-height:1.45!important;font-weight:400!important;color:#57606a!important;overflow-wrap:anywhere!important;}
 #homeStartupBrandLine{font-size:11px!important;line-height:1.35!important;font-weight:600!important;letter-spacing:.01em!important;color:#1f2328!important;text-transform:uppercase!important;overflow-wrap:anywhere!important;}
-#homeStartupInstruction + #homeStartupBrandLine{margin-top:12px!important;}
 
 /* Publish choice uses the same centered, square monochrome dialog system. */
 #publishDialog{
@@ -746,19 +751,20 @@ body.appBackdropActive #capturePreview{display:none!important;}
   #homeStartupLayer{padding-left:16px!important;padding-right:16px!important;}
   .homeStartupRail,#homeCaptureStage{width:100%!important;}
   #homeCaptureCard{width:100%!important;height:100%!important;max-width:480px!important;max-height:none!important;}
-  #homeTakePicture{bottom:13px!important;width:62px!important;height:62px!important;}
-  #homeTakePicture img{width:33px!important;height:33px!important;}
+  #homeTakePicture{width:62px!important;height:62px!important;}
+  #homeTakePicture svg{width:33px!important;height:33px!important;}
   #homeCaptureClose{top:8px!important;right:8px!important;width:32px!important;height:32px!important;font-size:20px!important;}
 }
 @media(max-height:650px){
   #homeStartupLayer{gap:9px!important;padding-top:max(10px,env(safe-area-inset-top))!important;padding-bottom:max(10px,env(safe-area-inset-bottom))!important;}
   #homeStartupBrand{padding-right:56px!important;}
-  #homeStartupTrial{margin-top:2px!important;font-size:17px!important;}
   #homeStartupTitle{margin-top:7px!important;font-size:18px!important;}
-  #homeStartupInstruction{font-size:11px!important;line-height:1.3!important;}
   #homeStartupRefresh{flex-basis:40px!important;width:40px!important;height:40px!important;}
-  #homeTakePicture{bottom:9px!important;width:54px!important;height:54px!important;}
-  #homeTakePicture img{width:29px!important;height:29px!important;}
+  #homeCapturePrompt{bottom:8px!important;}
+  #homeTakePicture{width:54px!important;height:54px!important;}
+  #homeTakePicture svg{width:29px!important;height:29px!important;}
+  #homeCaptureTrial{margin-top:5px!important;font-size:14px!important;}
+  #homeCaptureInstruction{margin-top:2px!important;font-size:10px!important;line-height:1.2!important;}
   #homeStartupBrandLine{font-size:9px!important;}
 }
 
@@ -10743,7 +10749,6 @@ function ensureCanonicalHomeExperience(){
         <div id="homeStartupProductRow">
           <div id="homeStartupTextFrame">
             <div id="homeStartupProductName">ASK.CAMERA</div>
-            <div id="homeStartupTrial">FREE TRIAL</div>
             <div id="homeStartupTitle">See where this image connects you.</div>
           </div>
           <button id="homeStartupRefresh" type="button" aria-label="Refresh camera" onclick="window.location.reload()">
@@ -10755,14 +10760,17 @@ function ensureCanonicalHomeExperience(){
         <div id="homeCaptureCard" aria-label="Live camera">
           <video id="homeCaptureVideo" autoplay playsinline muted aria-hidden="true"></video>
           <div id="homeCaptureShade" aria-hidden="true"></div>
-          <button id="homeTakePicture" type="button" aria-label="Take picture" onclick="takeHomePicture(event)">
-            <img src="/icon.png" alt="" aria-hidden="true">
-          </button>
+          <div id="homeCapturePrompt">
+            <button id="homeTakePicture" type="button" aria-label="Take picture" onclick="takeHomePicture(event)">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke-width="1.8"/></svg>
+            </button>
+            <div id="homeCaptureTrial">FREE TRIAL</div>
+            <div id="homeCaptureInstruction">Take a picture to discover today’s context and perspectives.</div>
+          </div>
           <button id="homeCaptureClose" type="button" aria-label="Close camera and show home screen" onclick="closeHomeCaptureCard(event)">×</button>
         </div>
       </div>
       <footer id="homeStartupBrand" class="homeStartupRail">
-        <div id="homeStartupInstruction">Take a picture to discover today’s context and perspectives.</div>
         <div id="homeStartupBrandLine">THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.</div>
       </footer>
     `;
