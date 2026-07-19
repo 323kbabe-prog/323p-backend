@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.153 (2026-07-20)
+  - Removes remaining language that implies a separate HUMAN-hosted room
+  - Treats HUMAN sharing as sharing a perspective card for another ASK room
+  - Matches Share result actions to their compact Open result actions
+
   v10.0.152 (2026-07-20)
   - Uses the backend's five pre-generated HUMAN search sentences unchanged
   - Validates one unique sentence for every required automatic card family
@@ -1811,6 +1816,35 @@ margin-right:auto;
 .beingShareButton,.beingQrShareButton{flex:1 1 calc(50% - 4px)!important;}
 #roomUpgradeWarning .chatAiBubble{border-color:#ff8182!important;color:var(--ask-danger)!important;background:#fff8f8!important;}
 </style>
+<style id="askCameraOneRoomHumanActionsV153">
+/* HUMAN is a perspective inside the ASK room, never a second hosted room. */
+html body #roomMessages.geminiThread .chatOpenAction,
+html body #roomMessages.geminiThread .geminiMediaResponse .chatShareAction,
+html body #roomMessages.geminiThread .chatShareAction{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  width:auto!important;
+  min-width:0!important;
+  height:36px!important;
+  min-height:36px!important;
+  max-height:36px!important;
+  margin:0!important;
+  padding:0 12px!important;
+  border-radius:0!important;
+  font-size:13px!important;
+  line-height:1!important;
+  font-weight:600!important;
+  vertical-align:top!important;
+}
+html body #roomMessages.geminiThread .geminiMediaResponse .chatShareAction,
+html body #roomMessages.geminiThread .chatShareAction{
+  background:#f6f8fa!important;
+  color:#24292f!important;
+  border:1px solid #d0d7de!important;
+}
+</style>
 </head>
 
 <body>
@@ -1873,10 +1907,10 @@ ASK.CAMERA – AI Camera Search
 </div>
 
 <div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:92px 16px 24px;box-sizing:border-box;flex-direction:column;">
-  <button id="aiBeingsBackBtn" onclick="returnFromHumanCards()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to private ASK room</span></button>
+  <button id="aiBeingsBackBtn" onclick="returnFromHumanCards()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK room</span></button>
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
-    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose or change the HUMAN perspective inside your private ASK room.</div>
+    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose the HUMAN perspective that will guide your ASK room results.</div>
     <button onclick="openCreateBeing()" style="display:block;width:100%;max-width:420px;margin:0 auto 18px;height:56px;border:1px solid #fff;border-radius:22px;background:transparent;color:#fff;font-size:18px;font-weight:900;">Create a HUMAN Card</button>
   </div>
   <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
@@ -7030,7 +7064,7 @@ async function shareRoom(){
 
                 title: "HUMAN on ASK.CAMERA",
 
-                text: "Open this HUMAN and start your own private ASK room.",
+                text: "Choose this HUMAN perspective for your own ASK room.",
 
                 url
 
@@ -7044,7 +7078,7 @@ async function shareRoom(){
 
     await navigator.clipboard.writeText(url);
 
-    alert("HUMAN invitation copied.");
+    alert("HUMAN Card link copied.");
 
 }
 
@@ -7729,7 +7763,7 @@ gtag('event', 'page_view', {
 
 roomInput.style.display = "none";
 
-document.getElementById("shareRoomBtn").innerText = localStorage.getItem("selectedBeingId") ? "Share HUMAN" : "Share";
+document.getElementById("shareRoomBtn").innerText = "Share card";
 
 capturePreview.style.display =
   "none";
@@ -8404,11 +8438,11 @@ const savedDisplayName =
 
 if (savedDisplayName) {
 
-  document.getElementById("shareRoomBtn").innerText = localStorage.getItem("selectedBeingId") ? "Share HUMAN" : "Share";
+  document.getElementById("shareRoomBtn").innerText = "Share card";
 
 } else if (savedRoomId) {
 
-  document.getElementById("shareRoomBtn").innerText = localStorage.getItem("selectedBeingId") ? "Share HUMAN" : "Share";
+  document.getElementById("shareRoomBtn").innerText = "Share card";
 
 }
 
@@ -8801,7 +8835,7 @@ border:1px solid #111;
 margin-left:4px;
 "
 >
-share
+Share result
 </span>
 
 </div>
@@ -8846,7 +8880,7 @@ if (m.jobCard) {
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <a class="chatOpenAction" href="${escapeBeingText(jobLink)}" target="_blank" rel="noopener noreferrer">Open job</a>
-        <span class="chatShareAction" data-link="${escapeBeingText(jobLink)}" onclick="shareCard(this,this.dataset.link)" role="button" tabindex="0">Share</span>
+        <span class="chatShareAction" data-link="${escapeBeingText(jobLink)}" onclick="shareCard(this,this.dataset.link)" role="button" tabindex="0">Share result</span>
       </div>
     </div>
   `;
@@ -11049,7 +11083,7 @@ function returnFromHumanCards(){
 
 async function loadAIBeings(){
   const holder = document.getElementById("aiBeingsCards");
-  const humanActionLabel = localStorage.getItem("roomId") ? "Choose HUMAN" : "Start with HUMAN";
+  const humanActionLabel = "Use perspective";
   holder.innerHTML = '<div style="padding:36px 16px;text-align:center;font-size:14px;font-weight:700;opacity:.72;">Loading HUMAN Cards…</div>';
 
   try{
@@ -11073,8 +11107,8 @@ async function loadAIBeings(){
         </div>
         <div class="beingCardActions">
           <button class="beingOpenButton" onclick="openAIBeing('${being.id}')">${humanActionLabel}</button>
-          <button class="beingShareButton" onclick="shareHumanCard('${being.id}')">Share HUMAN</button>
-          <button class="beingQrShareButton" onclick="showHumanCardQR('${being.id}')">QR</button>
+          <button class="beingShareButton" onclick="shareHumanCard('${being.id}')">Share card</button>
+          <button class="beingQrShareButton" onclick="showHumanCardQR('${being.id}')">Card QR</button>
           <button class="beingEditButton" onclick="changeAIBeingProfile('${being.id}')">Edit profile</button>
           <button class="beingManageButton" onclick="deleteAIBeing('${being.id}')">Manage</button>
         </div>
@@ -11092,14 +11126,14 @@ async function shareHumanCard(id,name = "HUMAN"){
     try{
       await navigator.share({
         title:`${name} on ASK.CAMERA`,
-        text:"Open this HUMAN and start your own private ASK room.",
+        text:"Choose this HUMAN perspective for your own ASK room.",
         url
       });
       return;
     }catch(error){}
   }
   await navigator.clipboard.writeText(url);
-  alert("HUMAN invitation copied.");
+  alert("HUMAN Card link copied.");
 }
 
 function showHumanCardQR(id){
@@ -11658,10 +11692,9 @@ function renderBeingRoomHeader(being){
     ${being.phone ? `<a href="tel:${escapeBeingText(being.phone)}" style="font-size:8px;line-height:1.2;margin-top:3px;color:#111;text-decoration:none;white-space:nowrap;">${escapeBeingText(being.phone)}</a>` : ""}
   `;
 
-  document.getElementById("beingQrBtn").style.display = "inline-block";
+  document.getElementById("beingQrBtn").style.display = "none";
   document.getElementById("changeHumanBtn").style.display = "inline-block";
-  document.getElementById("shareRoomBtn").innerText = "Share HUMAN";
-  document.getElementById("shareRoomBtn").style.display = "inline-block";
+  document.getElementById("shareRoomBtn").style.display = "none";
   document.getElementById("roomCountdown").style.display = "none";
   document.getElementById("homeRoomCard").style.display = "none";
 }
@@ -11678,7 +11711,7 @@ function showBeingQR(){
     overlay.onclick = () => overlay.style.display = "none";
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:24px;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:14px;">HUMAN QR</div><div id="beingQrCode" style="width:240px;height:240px;max-width:100%;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:999px;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
+  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:24px;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:8px;">HUMAN Card QR</div><div style="font-size:12px;line-height:1.4;margin-bottom:14px;color:#57606a;">Choose this perspective in a new ASK room.</div><div id="beingQrCode" style="width:240px;height:240px;max-width:100%;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:999px;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
   overlay.style.display = "flex";
 
   const qrHolder = document.getElementById("beingQrCode");
@@ -12188,7 +12221,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Share HUMAN invitations or individual result cards.</b> ASK rooms remain private.
+<b>Share a HUMAN Card or an individual result card.</b> A HUMAN Card lets someone choose that perspective in their own ASK room. ASK rooms remain private.
 </div>
 
 </div>
