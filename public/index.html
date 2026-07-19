@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.152 (2026-07-20)
+  - Uses the backend's five pre-generated HUMAN search sentences unchanged
+  - Validates one unique sentence for every required automatic card family
+  - Falls back to local prompts only when the generated five-search plan is invalid
+
   v10.0.151 (2026-07-20)
   - Keeps five-card validation working when persistent-room history is trimmed
   - Checks the newest emitted result when the backend message count stays capped
@@ -9325,9 +9330,23 @@ function selectBeingFirstRoundCards(data = {}){
     }
   };
 
+  const providedCards = Array.isArray(data.cards)
+    ? data.cards.map(item => ({
+        type:normalizeBeingCardType(item?.type),
+        text:String(item?.text || "").replace(/[\r\n]+/g," ").trim()
+      }))
+    : [];
+  const providedTypes = new Set(providedCards.map(card => card.type));
+  if(
+    providedCards.length === 5 &&
+    providedTypes.size === 5 &&
+    providedCards.every(card => definitions[card.type] && card.text)
+  ){
+    return providedCards;
+  }
+
   const suggested = [
     ...(Array.isArray(data.cardTypes) ? data.cardTypes : []),
-    ...(Array.isArray(data.cards) ? data.cards : [])
   ].map(item => normalizeBeingCardType(item?.type || item)).filter(Boolean);
 
   const selectedSuggested = [...new Set(suggested)]
