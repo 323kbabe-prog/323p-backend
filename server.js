@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.34 (2026-07-20)
+// - Makes the selected HUMAN category the 60% automatic-search anchor
+// - Keeps image identity at 30% and requested card family at 10%
+// - Keeps HUMAN bio and personality for voice without letting them set search direction
+//
 // v10.0.33 (2026-07-20)
 // - Gives each automatic card type an isolated topic-memory lane
 // - Bypasses the normal duplicate-topic fallback during the automatic briefing
@@ -1729,7 +1734,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- For the automatic five-card briefing: HUMAN bio and profile 60%, uploaded image identity 30%, requested card family 10%.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Use weighting to shape search direction and result selection, never to invent or alter facts.\n- Do not mechanically repeat the profile fields. Express them naturally.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE INFLUENCE\n- For the automatic five-card briefing: selected HUMAN category 60%, uploaded image identity 30%, requested card family 10%.\n- The HUMAN bio and personality control voice and acknowledgment, but they do not replace the category as the automatic search anchor.\n- For later direct questions: user request 60%, HUMAN profile 25%, uploaded image 15%.\n- Use weighting to shape search direction and result selection, never to invent or alter facts.\n- Do not mechanically repeat the profile fields. Express them naturally.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -3396,7 +3401,7 @@ try{
 
 
  const automaticBriefingContext = autoFirstRound && room.being
-  ? `\n\nAUTOMATIC BRIEFING BALANCE\n- HUMAN bio and profile: 60%\n- Uploaded image identity: 30%\n- Requested card family: 10%\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nBIO: ${room.being.best_current_choice || ""}\nCATEGORY: ${room.being.category || ""}\nPERSONALITY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nIMAGE: ${room.imageContext || ""}\nUse this balance only inside the required ${autoCardType} result family. Never drift into another card type. Choose the most relevant real result and never invent or alter factual result data.`
+  ? `\n\nAUTOMATIC BRIEFING BALANCE\n- Selected HUMAN category: 60%\n- Uploaded image identity: 30%\n- Requested card family: 10%\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nCATEGORY — PRIMARY SEARCH ANCHOR: ${room.being.category || ""}\nIMAGE — SECONDARY SEARCH CONTEXT: ${room.imageContext || ""}\nBIO — VOICE ONLY, NOT SEARCH DIRECTION: ${room.being.best_current_choice || ""}\nPERSONALITY — VOICE ONLY: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nBuild the search direction primarily from CATEGORY, then connect it to IMAGE, while remaining strictly inside the required ${autoCardType} result family. Do not use BIO or PERSONALITY to replace or override CATEGORY. Choose the most relevant real result and never invent or alter factual result data.`
   : "";
 
  const combinedIntent =
