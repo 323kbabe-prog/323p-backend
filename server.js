@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.39 (2026-07-20)
+// - Executes each saved automatic search sentence directly without legacy rewrites
+// - Bypasses image-first Shopping, Jobs, Place, and news-selection prompts during briefing
+// - Keeps automatic results inside the HUMAN category through the final SERP request
+//
 // v10.0.38 (2026-07-20)
 // - Makes the selected HUMAN category a hard subject boundary for all five cards
 // - Uses card type only to change result format, never the category domain
@@ -3452,6 +3457,40 @@ try{
  const combinedIntent =
   `${text.trim()}${automaticBriefingContext}`;
 
+ const fixedAutomaticSearch = autoFirstRound
+  ? String(text || "").replace(/[\r\n]+/g," ").trim()
+  : "";
+
+ const addAutomaticSearchFallback = () => {
+  if (
+    !autoFirstRound ||
+    !["news", "shopping", "place", "jobs", "real_estate"].includes(autoCardType)
+  ) return false;
+  const fallbackLabels = {
+    news:"current news",
+    shopping:"products",
+    place:"places",
+    jobs:"jobs",
+    real_estate:"properties"
+  };
+  const fallbackLabel = fallbackLabels[autoCardType];
+  const fallbackLink = `https://www.google.com/search?q=${encodeURIComponent(fixedAutomaticSearch)}`;
+  room.messages.push({
+    from:room.being?.name || "CAMERA PERSPECTIVE",
+    aiBeing:true,
+    autoCardType,
+    ...getResultCardCategories(autoCardType, room),
+    showNextButton:true,
+    showRead:true,
+    searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
+    ask:`Open ${fallbackLabel} for: ${fixedAutomaticSearch}.`,
+    link:fallbackLink
+  });
+  io.to(room.id).emit("aiTypingStop");
+  io.to(room.id).emit("roomMessages", room.messages);
+  return true;
+ };
+
   const greetingRes =
   await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -4111,8 +4150,7 @@ const nullInput =
 const englishText =
     nullInput.userReality;
 
-let interpretedIntent =
-    nullInput.searchDirection;
+let interpretedIntent = fixedAutomaticSearch || nullInput.searchDirection;
 
 
 let originalUserRequest =
@@ -4180,6 +4218,10 @@ if (
   !isNextSearch &&
   isShoppingIntent
 ) {
+
+  if (fixedAutomaticSearch) {
+    directShoppingSearch = fixedAutomaticSearch;
+  } else {
 
   const shoppingQueryRes =
     await openai.chat.completions.create({
@@ -4311,6 +4353,8 @@ ${originalUserRequest}
       .message
       .content
       .trim();
+
+  }
 
 }
 
@@ -4518,7 +4562,7 @@ const skipPlaceFlow =
   
 let emotionRes = null;
 
-if (!directNewsSearch) {
+if (!directNewsSearch && !fixedAutomaticSearch) {
 
   emotionRes =
     await openai.chat.completions.create({
@@ -4952,7 +4996,8 @@ if (
 }
     
 const searchQuery = (
-    isNextSearch
+    fixedAutomaticSearch ||
+    (isNextSearch
         ? (
             emotionSearch ||
             hiddenSystem ||
@@ -4967,7 +5012,7 @@ const searchQuery = (
             emotionSearch ||
             hiddenSystem ||
             "latest news"
-        )
+        ))
 ).trim();
 
 console.log("USER:", text);
@@ -5002,7 +5047,7 @@ room.usedSearches.push(
 
 if (isJobSearch) {
 
-const jobSearchRes =
+const jobSearchRes = fixedAutomaticSearch ? null :
   await openai.chat.completions.create({
 
     model:"gpt-4o-mini",
@@ -5091,7 +5136,7 @@ ${text}
 
 });
 
-const jobSearch =
+const jobSearch = fixedAutomaticSearch ||
   jobSearchRes
     .choices[0]
     .message
@@ -5224,6 +5269,8 @@ const serpFetch = await fetch(
 
 if (!serpFetch.ok) {
 
+    if (addAutomaticSearchFallback()) return;
+
     room.messages.push({
         from: "CAMERA PERSPECTIVE",
         aiBeing: true,
@@ -5331,7 +5378,7 @@ const validNews =
 
 if(validNews.length > 0){
 
-if (validNews.length <= 2) {
+if (fixedAutomaticSearch || validNews.length <= 2) {
 
   selectedNews = validNews[0];
 
@@ -5541,7 +5588,7 @@ if(
   isLocationRequest
 ){
 
-const placeQueryRes =
+const placeQueryRes = fixedAutomaticSearch ? null :
   await openai.chat.completions.create({
 
     model:"gpt-4o-mini",
@@ -5661,7 +5708,7 @@ console.log(
 );
 console.log("NEWS:", selectedNews?.title);
 
-const placeQuery =
+const placeQuery = fixedAutomaticSearch ||
   placeQueryRes
     .choices[0]
     .message
@@ -5739,7 +5786,12 @@ console.log(
   "PLACE LINK:",
   placeLink
 );
-}    
+}
+
+if (fixedAutomaticSearch && isLocationRequest && !placeName) {
+  if (addAutomaticSearchFallback()) return;
+}
+
     //////////////////////////////////////////////////
     // SAFETY FALLBACK
     //////////////////////////////////////////////////
@@ -5817,6 +5869,8 @@ if(!imageUrl){
 //////////////////////////////////////////////////
 
 if (!selectedNews?.title) {
+
+    if (addAutomaticSearchFallback()) return;
 
     room.messages.push({
         from: "CAMERA PERSPECTIVE",
@@ -6465,11 +6519,8 @@ setTimeout(() => {
       real_estate:"homes and property"
     };
     const fallbackLabel = fallbackLabels[autoCardType];
-    const fallbackQuery = [
-      room.being?.category,
-      room.coreTheme,
-      fallbackLabel
-    ].filter(Boolean).join(" ");
+    const fallbackQuery = String(text || "").replace(/[\r\n]+/g," ").trim() ||
+      [room.being?.category, fallbackLabel].filter(Boolean).join(" ");
     const fallbackLink = `https://www.google.com/search?q=${encodeURIComponent(fallbackQuery)}`;
     room.messages.push({
       from:room.being?.name || "CAMERA PERSPECTIVE",
@@ -6479,7 +6530,7 @@ setTimeout(() => {
       showNextButton:true,
       showRead:true,
       searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
-      ask:`Open current ${fallbackLabel} shaped by ${room.being?.category || "this HUMAN perspective"}.`,
+      ask:`Open ${fallbackLabel} for: ${fallbackQuery}.`,
       link:fallbackLink
     });
     io.to(room.id).emit("aiTypingStop");
