@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.108 (2026-07-19)
+  - Replaced the crowded reconnecting helper with one clean connection-loss state
+  - Shows only concise text and one square Refresh button while offline
+  - Hides home, room, Daily, HUMAN, Public, guide, and utility controls during disconnection
+  - Automatically restores the appropriate app screen when Socket.IO reconnects
+
   v10.0.107 (2026-07-19)
   - Shows the white FREE TRIAL startup experience on every normal ASK.CAMERA opening path
   - Removed the incorrect exact-root-only restriction that hid startup UI on mobile paths such as /m
@@ -714,6 +720,42 @@ body.appBackdropActive #capturePreview{display:none!important;}
   #homeStartupBrandName{font-size:14px!important;}
   #homeStartupBrandLine{margin-top:3px!important;font-size:9px!important;}
 }
+
+/* v10.0.108 — one authoritative disconnected state. */
+body.connectionLost #modeBar,
+body.connectionLost #homeControlStack,
+body.connectionLost #homeUtilityButtons,
+body.connectionLost #homeStartupLayer,
+body.connectionLost #roomOverlay,
+body.connectionLost #dailyNullsScreen,
+body.connectionLost #publicNullsScreen,
+body.connectionLost #aiBeingsScreen,
+body.connectionLost #createBeingScreen,
+body.connectionLost #publishDialog,
+body.connectionLost #guidePopup{display:none!important;}
+body.connectionLost #helper{
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483600!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100vw!important;
+  height:100vh!important;
+  height:100dvh!important;
+  margin:0!important;
+  padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom))!important;
+  box-sizing:border-box!important;
+  background:#fff!important;
+  color:#111!important;
+  text-align:center!important;
+  transform:none!important;
+  overflow:hidden!important;
+}
+#connectionLostState{width:min(100%,360px);display:flex;flex-direction:column;align-items:center;gap:0;}
+#connectionLostTitle{font-size:23px;line-height:1.15;font-weight:600;letter-spacing:-.01em;}
+#connectionLostText{margin-top:9px;font-size:14px;line-height:1.45;font-weight:400;color:#57606a;}
+#connectionLostRefresh{width:100%;height:48px;margin-top:22px;border:1px solid #111!important;border-radius:0!important;background:#111!important;color:#fff!important;font-size:15px;font-weight:600;box-shadow:none!important;}
 
 /* v10.0.98 — Public Perspective cards: one frame, one text rail, one image rail. */
 #publicNullsCards{width:min(100%,960px)!important;max-width:960px!important;}
@@ -8659,84 +8701,17 @@ socket.on(
   () => {
 
     roomReady = false;
-
-
-
+    document.body.classList.add("connectionLost");
 
     helper.style.display =
       "flex";
 
    helper.innerHTML = `
-
-<div
-style="
-display:flex;
-justify-content:center;
-gap:10px;
-margin-bottom:18px;
-">
-
-<button
-id="refreshCameraBtn"
-onclick="
-event.preventDefault();
-event.stopPropagation();
-window.location.reload();
-return false;
-"
-style="
-width:40px;
-height:40px;
-padding:0;
-border:none;
-border-radius:50%;
-background:#fff;
-cursor:pointer;
-display:flex;
-align-items:center;
-justify-content:center;
-box-shadow:0 2px 8px rgba(0,0,0,.15);
-"
->
-<svg
-xmlns="http://www.w3.org/2000/svg"
-viewBox="0 -960 960 960"
-width="22"
-height="22"
-fill="#111"
->
-<path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/>
-</svg>
-</button>
-
-<button
-id="guideBtn"
-onclick="openGuide()"
-style="
-width:40px;
-height:40px;
-padding:0;
-border:none;
-border-radius:50%;
-background:#fff;
-cursor:pointer;
-display:flex;
-align-items:center;
-justify-content:center;
-box-shadow:0 2px 8px rgba(0,0,0,.15);
-font-size:18px;
-font-weight:700;
-"
->
-?
-</button>
-
+<div id="connectionLostState" role="alert" aria-live="assertive">
+  <div id="connectionLostTitle">Connection lost.</div>
+  <div id="connectionLostText">Check your internet connection and try again.</div>
+  <button id="connectionLostRefresh" type="button" onclick="window.location.reload()">Refresh</button>
 </div>
-
-<div>
-RECONNECTING...
-</div>
-
 `;
 
   }
@@ -8876,6 +8851,7 @@ function showRoomUnavailable(roomId){
 socket.on("connect", () => {
 
     roomReady = true;
+    document.body.classList.remove("connectionLost");
 
     const directHumanPath = /^\/being\/[^/]+$/.test(location.pathname);
 
@@ -11278,7 +11254,7 @@ Close
   if(style) document.head.appendChild(style);
 })();
 (function cleanBracketedButtonLabels(){
-  const primarySelector = '#createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
+  const primarySelector = '#createNullBtn,#uploadBtn,#createBeingSubmit,#continueToBeing,#connectionLostRefresh,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
     const buttons = root.matches && root.matches('button,[role="button"]')
