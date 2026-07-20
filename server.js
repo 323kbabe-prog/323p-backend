@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.46 (2026-07-20)
+// - Requires HUMAN acknowledgements to include Bio, Category, three words, and image detail
+// - Keeps Public-image metadata intact when the private HUMAN room is created
+// - Starts the five cards only after the image-aware HUMAN acknowledgement is ready
+
 // v10.0.45 (2026-07-20)
 // - Keeps the approved "I picked..." opening while naming the specific result
 // - Prevents generic HUMAN-category phrases such as "the real estate market"
@@ -2195,25 +2200,15 @@ deviceRooms[deviceId] = roomId;
 if (sourcePublicNull) {
 
     const room = rooms[roomId];
-    const publicPerspectiveMessage = {
-        type: "nullCard",
-        image: sourcePublicNull.image,
-        identity: sourcePublicNull.identity,
-        intro: sourcePublicNull.intro,
-        beingIdAtCapture: selectedBeing?.id || null,
-        publicNullId: sourcePublicNull.id
-    };
-
     room.imageContext = sourcePublicNull.identity;
     room.hiddenSystem = sourcePublicNull.identity;
     room.nullCard = {
         image: sourcePublicNull.image,
         identity: sourcePublicNull.identity,
         intro: sourcePublicNull.intro,
-        publicNullId: sourcePublicNull.id
+        publicNullId: sourcePublicNull.id,
+        beingIdAtCapture: selectedBeing?.id || null
     };
-
-    room.messages.push(publicPerspectiveMessage);
 }
 
 
@@ -2268,14 +2263,6 @@ io.to(roomId).emit(
 {
   if (rooms[roomId].being) {
     socket.emit("roomHumanSelected", { being:rooms[roomId].being, invitation:true });
-    const firstRoundCards = await createRoomFirstRoundCards(rooms[roomId]);
-    socket.emit("roomFirstRoundStart", {
-      cards:firstRoundCards,
-      imageContext:rooms[roomId].imageContext,
-      category:rooms[roomId].coreTheme,
-      humanCategory:rooms[roomId].being.category || "",
-      roomKind:"human"
-    });
   } else {
     socket.emit("roomNeedsHuman", { roomId });
   }
@@ -2288,7 +2275,7 @@ io.to(roomId).emit(
 //////////////////////////////////////////////////
 // GENERATE FIRST AI MESSAGE ASYNC
 //////////////////////////////////////////////////
-if(!sourcePublicNull){
+{
 
 io.to(roomId).emit(
   "aiTypingStart"
@@ -2787,33 +2774,66 @@ Trend:
 ${starterNewsTitle}
   `.trim();
 
-const adviceRes =
-  await openai.chat.completions.create({
+const normalizedHumanBio = being => {
+  const raw = String(being?.best_current_choice || "I offer a distinct HUMAN perspective")
+    .trim()
+    .replace(/[.!?]+$/,"");
+  if(/^I\b/i.test(raw)) return `${raw}.`;
+  const thirdPerson = raw.match(/^\S+\s+(enjoys|helps|explores|connects|creates|finds|shares|guides|builds|designs)\b\s*(.*)$/i);
+  if(thirdPerson){
+    const verbs = { enjoys:"enjoy", helps:"help", explores:"explore", connects:"connect", creates:"create", finds:"find", shares:"share", guides:"guide", builds:"build", designs:"design" };
+    return `I ${verbs[thirdPerson[1].toLowerCase()] || thirdPerson[1]} ${thirdPerson[2]}`.trim() + ".";
+  }
+  return `My perspective is ${raw}.`;
+};
 
-  model:"gpt-4o-mini",
+const acknowledgementIsComplete = (text,being) => {
+  const value = String(text || "");
+  const required = [being?.name,being?.category,being?.word1,being?.word2,being?.word3]
+    .filter(Boolean)
+    .every(item => value.toLowerCase().includes(String(item).toLowerCase()));
+  return required && /^I am\s+/i.test(value) && /\b(I see|I notice|I am in|I am indoors|I am outdoors)\b/i.test(value);
+};
 
-  messages:[
+const fallbackHumanAcknowledgement = (being,imageContext) => {
+  const imageDetail = String(imageContext || "the visible scene")
+    .replace(/\s+/g," ")
+    .split(/[.!?]/)[0]
+    .trim()
+    .split(/\s+/)
+    .slice(0,28)
+    .join(" ");
+  return `I am ${being.name}. ${normalizedHumanBio(being)} My category is ${being.category}, guided by ${being.word1}, ${being.word2}, and ${being.word3}. I see ${imageDetail || "the visible scene"}. I’m exploring how this image can connect to useful ${being.category} searches.`;
+};
 
-    {
-      role:"system",
-
-      content: beingRoomIntroPrompt
-    },
-
-    {
-      role:"user",
-
-      content: beingRoomIntroUserContent
+const generateRoomAcknowledgement = async () => {
+  const makeRequest = () => openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    temperature:0.45,
+    messages:[
+      { role:"system", content:beingRoomIntroPrompt },
+      { role:"user", content:beingRoomIntroUserContent }
+    ]
+  });
+  try {
+    let response = await makeRequest();
+    let text = String(response?.choices?.[0]?.message?.content || "").trim();
+    if(selectedBeing && !acknowledgementIsComplete(text,selectedBeing)){
+      response = await makeRequest();
+      text = String(response?.choices?.[0]?.message?.content || "").trim();
     }
-  ]
-});
+    return selectedBeing && !acknowledgementIsComplete(text,selectedBeing)
+      ? fallbackHumanAcknowledgement(selectedBeing,sourcePublicNull?.identity || user.imageContext)
+      : text;
+  } catch(error) {
+    console.log("HUMAN IMAGE ACKNOWLEDGEMENT FAILED:",error.message);
+    return selectedBeing
+      ? fallbackHumanAcknowledgement(selectedBeing,sourcePublicNull?.identity || user.imageContext)
+      : `I am ${String(user.imageContext || "this image").split(/[.!?]/)[0].trim()}.`;
+  }
+};
 
-const adviceText =
-  adviceRes
-    .choices[0]
-    .message
-    .content
-    .trim();
+const adviceText = await generateRoomAcknowledgement();
 
 let visibleCardIdentity = user.imageContext;
 let visibleCardIntro = adviceText;
@@ -2850,7 +2870,9 @@ rooms[roomId].nullCard = {
 
     beingIdAtCapture: selectedBeing?.id || null,
 
-    humanAcknowledgement: selectedBeing ? adviceText : ""
+    humanAcknowledgement: selectedBeing ? adviceText : "",
+
+    publicNullId: sourcePublicNull?.id || null
 
 };
 
@@ -2866,7 +2888,9 @@ rooms[roomId].messages.push({
 
     beingIdAtCapture: selectedBeing?.id || null,
 
-    humanAcknowledgement: selectedBeing ? adviceText : ""
+    humanAcknowledgement: selectedBeing ? adviceText : "",
+
+    publicNullId: sourcePublicNull?.id || null
 
 });
 
@@ -2878,6 +2902,17 @@ io.to(roomId).emit(
     "roomMessages",
     rooms[roomId].messages
 );
+
+if(selectedBeing && adviceText){
+  const firstRoundCards = await createRoomFirstRoundCards(rooms[roomId]);
+  socket.emit("roomFirstRoundStart", {
+    cards:firstRoundCards,
+    imageContext:rooms[roomId].imageContext,
+    category:rooms[roomId].coreTheme,
+    humanCategory:selectedBeing.category || "",
+    roomKind:"human"
+  });
+}
 
 await trackEvent(
     deviceId,
