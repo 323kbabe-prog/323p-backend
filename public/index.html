@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.03 (2026-07-20)
+  - Keeps the rejoin indicator visible through restored-chat redraws until recovery completes
+  - Keeps every active three-dot loader inside one consistent visible status box
+  - Shows the boxed rejoin state immediately and suppresses separate dots-only loaders
+
   v10.1.02 (2026-07-20)
   - Unifies every active loading indicator around the same three round animated dots
   - Shows rejoin progress inside the room conversation instead of blocking the whole app
@@ -5107,6 +5112,11 @@ html body .appStartupDots{
   display:flex!important;
   align-items:center!important;
   gap:7px!important;
+  width:fit-content!important;
+  padding:8px 10px!important;
+  background:var(--final-panel,#f6f8fa)!important;
+  border:1px solid var(--final-line,#d0d7de)!important;
+  box-sizing:border-box!important;
 }
 html body .defaultLoadingDot,
 html body .openingSequenceDot,
@@ -5145,7 +5155,13 @@ html body .appStartupDots span:nth-child(3){animation-delay:.3s!important;}
   text-align:left!important;
 }
 .rejoinRoomLabel{font-size:14px!important;line-height:1.5!important;}
-.rejoinRoomStatus .defaultLoadingDots{justify-content:flex-start!important;margin-top:9px!important;}
+.rejoinRoomStatus .defaultLoadingDots{
+  justify-content:flex-start!important;
+  margin-top:9px!important;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+}
 .rejoinRoomRefresh{
   width:auto!important;
   min-width:112px!important;
@@ -6964,6 +6980,7 @@ if(localStorage.getItem(ROOM_KIND_KEY) === "ask"){
 }
 let publicReturnContext = "home";
 let activeSystemState = "";
+let rejoinRoomLoadingActive = false;
 
 function clearSystemState(expectedState = ""){
   if(expectedState && activeSystemState !== expectedState) return;
@@ -7433,7 +7450,7 @@ function openHomeRoom(event){
     let savedBeing = null;
     try { savedBeing = JSON.parse(localStorage.getItem("selectedBeing") || "null"); } catch(error) {}
     if(savedBeing) renderBeingRoomHeader(savedBeing);
-    roomMessages.innerHTML = '<div style="margin:auto;padding:24px;text-align:center;font-size:14px;font-weight:800;">RESTORING HUMAN ROOM...</div>';
+    roomMessages.innerHTML = "";
     roomInput.style.display = "block";
     roomInput.disabled = true;
     roomInput.placeholder = "Ask — restoring this HUMAN room";
@@ -7441,6 +7458,9 @@ function openHomeRoom(event){
     cameraWrap.style.display = "block";
     helper.style.display = "none";
     history.replaceState({}, "", "/?room=" + roomId);
+    showRejoinLoading();
+    clearTimeout(rejoinTimeout);
+    rejoinTimeout = setTimeout(showRejoinFailure,8000);
 
     if(socket.connected){
         socket.emit("rejoinRoom", { roomId, deviceId });
@@ -8177,7 +8197,9 @@ if(data?.roomId && ignoredTransitionRoomIds.has(data.roomId)){
 setActiveRoomKind("human");
 
 clearSystemState("rejoiningRoom");
-hideRejoinLoading();
+if(!data.rejoined || data.firstRoundComplete){
+  hideRejoinLoading();
+}
 hideRoomLoadingScreen();
 
 document.getElementById("roomHeader").style.display = "flex";
@@ -8609,6 +8631,7 @@ function openingSequenceTypingHtml(){
 function hideSequenceTyping(){ document.getElementById("sequenceTyping")?.remove(); }
 function showSequenceTyping(){
   hideSequenceTyping();
+  if(rejoinRoomLoadingActive) return;
   const shouldFollow = isRoomNearBottom();
   roomMessages.insertAdjacentHTML("beforeend",sequenceTypingHtml());
   scrollRoomToLatest(shouldFollow);
@@ -8756,6 +8779,8 @@ function deliverFirstRoundDemo(){
 
 socket.on("roomFirstRoundCompleted",() => {
   hideSequenceTyping();
+  hideAITyping();
+  hideRejoinLoading();
   firstRoundDemoPending = false;
   firstRoundDemoVisible = false;
   firstRoundDemoInsertionIndex = null;
@@ -9670,6 +9695,10 @@ roomMessages.innerHTML =
 
 normalizeHumanRoomUI();
 
+if(rejoinRoomLoadingActive){
+  renderRejoinLoading();
+}
+
 startRoomOpeningSequence();
 deliverBatchedRoomReplies(previousDeliveredMessageCount,messages.length);
 
@@ -9689,7 +9718,7 @@ if(
   showSequenceTyping();
 }
 
-if(aiTyping && !isFirstRoundActive()){
+if(aiTyping && !isFirstRoundActive() && !rejoinRoomLoadingActive){
 
 const typing =
 document.createElement("div");
@@ -10213,7 +10242,6 @@ socket.on("roomStatus", data => {
     }
 
     clearSystemState("rejoiningRoom");
-    hideRejoinLoading();
     setActiveRoomKind("human");
     localStorage.setItem("roomId", data.roomId);
 
@@ -10262,16 +10290,12 @@ function returnFromUnavailableRoom(){
 }
 
 function hideRejoinLoading(){
+  rejoinRoomLoadingActive = false;
   document.getElementById("rejoinRoomStatus")?.remove();
 }
 
-function showRejoinLoading(){
-  clearSystemState("rejoiningRoom");
-  hideRejoinLoading();
-  document.body.classList.remove("systemBlockingState");
-  roomOverlay.style.display = "flex";
-  roomMessages.classList.add("geminiThread");
-
+function renderRejoinLoading(){
+  document.getElementById("rejoinRoomStatus")?.remove();
   const status = document.createElement("div");
   status.id = "rejoinRoomStatus";
   status.className = "rejoinRoomStatus";
@@ -10279,6 +10303,15 @@ function showRejoinLoading(){
   status.innerHTML = `<div class="rejoinRoomLabel">Rejoining room</div>${defaultLoadingDotsHtml("Rejoining room")}`;
   roomMessages.appendChild(status);
   scrollRoomToLatest(true);
+}
+
+function showRejoinLoading(){
+  clearSystemState("rejoiningRoom");
+  rejoinRoomLoadingActive = true;
+  document.body.classList.remove("systemBlockingState");
+  roomOverlay.style.display = "flex";
+  roomMessages.classList.add("geminiThread");
+  renderRejoinLoading();
 }
 
 function showRejoinFailure(){
@@ -10289,6 +10322,7 @@ function showRejoinFailure(){
     showRejoinLoading();
     status = document.getElementById("rejoinRoomStatus");
   }
+  rejoinRoomLoadingActive = false;
   status.setAttribute("aria-live","assertive");
   status.innerHTML = '<div class="rejoinRoomLabel">Room could not reconnect</div><button type="button" class="rejoinRoomRefresh">Refresh app</button>';
   status.querySelector(".rejoinRoomRefresh").onclick = () => window.location.reload();
