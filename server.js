@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.05 (2026-07-20)
+// - Allows one to three concise HUMAN relevance points before each result card
+// - Leaves numbering and the recurring Google closing sentence to the card renderer
+
 // v10.1.04 (2026-07-20)
 // - Reweights automatic searches to 30% Category, 15% three words, 15% Bio, and 40% image identity
 
@@ -638,7 +642,7 @@ async function createHumanResultExplanation(room, cardType, result = {}) {
       messages:[
         {
           role:"system",
-          content:`Speak as the selected HUMAN in a calm, clear, confident, polished news-anchor tone. Lead with the exact result and its strongest relevance. Write exactly one concise, lively natural-English sentence explaining why this exact result belongs here. Name the exact result. Vary the opening naturally: examples include "I picked [name]", "[name] caught my eye", "I'd start with [name]", "This one surprised me: [name]", or another warm first-person opening. If you use "I picked", never continue with "the" or a generic Category; put the exact result name or a distinctive feature immediately after it. Mention one concrete image connection and naturally reflect the Bio, Category, and three words without listing fields or percentages. Be a little curious or playful, never corporate or silly. Do not invent facts. End with a period. No labels, markdown, quotation marks, or slogan.`
+          content:`Speak as the selected HUMAN in a calm, clear, confident, polished news-anchor tone. Lead with the exact result and its strongest relevance. Write one to three concise, lively natural-English sentences explaining why this exact result belongs here. Name the exact result. Each sentence must be a distinct useful point and the complete reply must contain no more than three points. Vary the opening naturally: examples include "I picked [name]", "[name] caught my eye", "I'd start with [name]", "This one surprised me: [name]", or another warm first-person opening. If you use "I picked", never continue with "the" or a generic Category; put the exact result name or a distinctive feature immediately after it. Mention one concrete image connection and naturally reflect the Bio, Category, and three words without listing fields or percentages. Be a little curious or playful, never corporate or silly. Do not invent facts. End every point with a period. Do not add numbers; the interface adds them. No labels, markdown, quotation marks, or slogan.`
         },
         {
           role:"user",
