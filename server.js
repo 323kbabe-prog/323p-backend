@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.51 (2026-07-20)
+// - Adds a dedicated confirmed Public Image publishing event
+// - Analyzes and stores Public captures without creating ASK or HUMAN rooms
+// - Returns the saved Public item so the frontend can refresh the Public screen
+
 // v10.0.50 (2026-07-20)
 // - Gives every automatic HUMAN card an explicit, type-safe result contract
 // - Uses dedicated Shopping, Local, Real Estate, and Google Jobs discovery routes
@@ -1875,6 +1880,85 @@ setTimeout(() => {
   }
 );
 
+
+  //////////////////////////////////////////////////
+  // ADD PUBLIC IMAGE
+  //////////////////////////////////////////////////
+
+  socket.on("addPublicImage", async ({ deviceId, imageDataUrl } = {}) => {
+    try {
+      const image = String(imageDataUrl || "");
+      if(!/^data:image\/(?:png|jpe?g|webp);base64,/i.test(image)){
+        throw new Error("Choose a valid camera image.");
+      }
+      if(image.length > 12_000_000){
+        throw new Error("This image is too large. Please take another picture.");
+      }
+
+      const response = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        response_format:{ type:"json_object" },
+        messages:[
+          {
+            role:"system",
+            content:`Analyze this image for ASK.CAMERA's public image network.
+Return valid JSON with exactly:
+- "identity": a concise, socially-aware image identity using 4 to 12 words
+- "intro": one clear sentence describing what this image could connect people to today
+
+Rules:
+- Be specific to visible content.
+- Do not identify private people.
+- Do not invent names, addresses, or personal information.
+- No markdown.`
+          },
+          {
+            role:"user",
+            content:[
+              { type:"text", text:"Create the public image identity and introduction." },
+              { type:"image_url", image_url:{ url:image } }
+            ]
+          }
+        ]
+      });
+
+      const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+      const identity = String(parsed.identity || "A new public camera perspective").trim().slice(0,180);
+      const intro = String(parsed.intro || "See what this image connects to today.").trim().slice(0,420);
+      const id = Date.now().toString();
+      const createdAt = Date.now();
+      const item = { id, image, identity, intro, love:0, skeleton:0, createdAt };
+
+      publicNulls = publicNulls.filter(existing =>
+        existing?.image !== image &&
+        existing?.identity !== identity &&
+        existing?.intro !== intro
+      );
+      publicNulls.unshift(item);
+      publicNulls = publicNulls.slice(0,50);
+
+      const { error } = await supabase.from("public_nulls").upsert({
+        id,
+        image,
+        identity,
+        intro,
+        love:0,
+        skeleton:0,
+        created_at:createdAt
+      });
+      if(error) throw error;
+
+      await trackEvent(deviceId || users[socket.id]?.deviceId || socket.id,"public_null",{
+        publicNullId:id,
+        source:"public_screen"
+      });
+
+      socket.emit("publicImageAdded",item);
+    }catch(error){
+      console.error("ADD PUBLIC IMAGE ERROR:",error);
+      socket.emit("publicImageAddError",error?.message || "Public image could not be added.");
+    }
+  });
 
   //////////////////////////////////////////////////
   // IMAGE UPLOAD
