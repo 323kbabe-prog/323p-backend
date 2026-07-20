@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.23 (2026-07-21)
+  - Shows an immediate persistent loading perspective when Ask skips the demo
+  - Keeps takeover loading visible across room refresh and News Gate retries
+  - Prevents duplicate submissions while the user request is processing
+  - Automatically opens the user-requested result when it arrives
+
   v10.1.22 (2026-07-21)
   - Lets a submitted question immediately take over from the automatic demo
   - Cancels remaining automatic perspective timers and requests on user submission
@@ -7383,6 +7389,9 @@ let perspectiveScrollTimer = null;
 let perspectiveRestoreFrame = null;
 let perspectiveUserOverrideActive = false;
 let perspectiveUserOverrideStartIndex = -1;
+let perspectiveUserRequestPending = false;
+let perspectiveUserRequestText = "";
+let perspectiveUserNewsGateBlocked = false;
 
 let pendingImageDataUrl = null;
 let pendingImageSource = null;
@@ -8210,12 +8219,14 @@ roomInput.onkeydown = e => {
 
     if (e.key !== "Enter") return;
 
+    if(perspectiveUserRequestPending) return;
+
     const text = roomInput.value.trim();
 
     if (!text) return;
 
     if(perspectiveTourStarted && !perspectiveInvitationViewed){
-      skipAutomaticPerspectivesForUserAsk();
+      skipAutomaticPerspectivesForUserAsk(text);
     }
 
     gtag('event', 'send_room_message');
@@ -8261,9 +8272,36 @@ roomInput.value = "";
 
 };
 
-function skipAutomaticPerspectivesForUserAsk(){
+function perspectiveUserRequestLoadingHtml(){
+  const status = perspectiveUserNewsGateBlocked
+    ? "Verified News is taking longer than expected."
+    : "Finding verified News for your question…";
+  return `<section class="perspectiveUserRequestLoading" role="status" aria-live="polite">
+    <div class="perspectiveUserRequestEyebrow">YOUR ASK</div>
+    <div class="perspectiveUserRequestQuestion">${escapeBeingText(perspectiveUserRequestText || "Your question")}</div>
+    <div class="perspectiveUserRequestStatus">${status}</div>
+    ${perspectiveUserNewsGateBlocked ? `<button type="button" onclick="retryNewsGate()">Retry verified News</button>` : `<span class="perspectiveArrivalDots" aria-hidden="true"><i></i><i></i><i></i></span>`}
+  </section>`;
+}
+
+function showPerspectiveUserRequestLoading(){
+  if(!perspectiveUserRequestPending) return;
+  roomMessages.querySelector("[data-room-delivery-index='user-request-loading']")?.remove();
+  const block = document.createElement("div");
+  block.className = "roomDeliveryBlock perspectiveUserRequestLoadingBlock";
+  block.dataset.roomDeliveryIndex = "user-request-loading";
+  block.innerHTML = perspectiveUserRequestLoadingHtml();
+  roomMessages.appendChild(block);
+  localStorage.setItem(perspectiveStorageKey(),"user-request-loading");
+  requestAnimationFrame(() => roomMessages.scrollTo({ top:block.offsetTop, behavior:"smooth" }));
+}
+
+function skipAutomaticPerspectivesForUserAsk(text){
   perspectiveUserOverrideActive = true;
   perspectiveUserOverrideStartIndex = lastRoomMessageCount;
+  perspectiveUserRequestPending = true;
+  perspectiveUserRequestText = String(text || "").trim();
+  perspectiveUserNewsGateBlocked = false;
   beingFirstRoundQueue = [];
   beingFirstRoundWaiting = false;
   beingFirstRoundExpectedType = "";
@@ -8289,9 +8327,10 @@ function skipAutomaticPerspectivesForUserAsk(){
   hideSequenceTyping();
   hideAITyping();
   document.getElementById("sequenceDelayNotice")?.remove();
-  roomInput.disabled = false;
+  roomInput.disabled = true;
   roomInput.readOnly = false;
   roomInput.placeholder = "Ask — finding verified News";
+  showPerspectiveUserRequestLoading();
 }
 
 openHumanCardsButton.addEventListener("click",openRequiredHumanSelection);
@@ -8797,6 +8836,9 @@ function resetRoomDeliverySequence(){
   perspectiveInvitationViewed = false;
   perspectiveUserOverrideActive = false;
   perspectiveUserOverrideStartIndex = -1;
+  perspectiveUserRequestPending = false;
+  perspectiveUserRequestText = "";
+  perspectiveUserNewsGateBlocked = false;
   beingFirstRoundBaseline = lastRoomMessageCount;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
@@ -8913,9 +8955,11 @@ function updatePerspectiveViewportState(){
       ? "Ask — swipe up for the next perspective"
       : "Ask — next perspective is loading";
   }else if(perspectiveInvitationViewed){
-    roomInput.disabled = false;
+    roomInput.disabled = perspectiveUserRequestPending;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Ask";
+    roomInput.placeholder = perspectiveUserRequestPending
+      ? "Ask — finding verified News"
+      : "Ask";
   }
   updatePerspectiveDensity();
 }
@@ -9174,8 +9218,10 @@ function retryNewsGate(){
   } : null);
   if(!payload) return;
   document.getElementById("sequenceDelayNotice")?.remove();
-  roomInput.disabled = !perspectiveTourStarted;
+  perspectiveUserNewsGateBlocked = false;
+  roomInput.disabled = perspectiveUserRequestPending || !perspectiveTourStarted;
   roomInput.placeholder = "Ask — finding local news";
+  showPerspectiveUserRequestLoading();
   showSequenceTyping();
   socket.emit("roomMessage",{
     ...payload,
@@ -9185,7 +9231,8 @@ function retryNewsGate(){
 
 socket.on("newsGateBlocked",payload => {
   newsGateRetryPayload = payload || null;
-  roomInput.disabled = !perspectiveTourStarted;
+  perspectiveUserNewsGateBlocked = perspectiveUserRequestPending;
+  roomInput.disabled = perspectiveUserRequestPending || !perspectiveTourStarted;
   roomInput.placeholder = beingFirstRoundWaiting
     ? "Ask — next perspective is loading"
     : "Ask — finding local news";
@@ -9196,6 +9243,7 @@ socket.on("newsGateBlocked",payload => {
     newsGateDirectWaiting = true;
     newsGateBaseline = lastRoomMessageCount;
   }
+  showPerspectiveUserRequestLoading();
 });
 
 function sequenceTypingHtml(){
@@ -9419,6 +9467,13 @@ function syncFirstRoundInput(){
   roomInput.style.display = "block";
   roomInput.placeholder = "Ask";
   const perspectiveLocked = perspectiveTourStarted && !perspectiveInvitationViewed;
+  if(perspectiveUserRequestPending){
+    roomInput.disabled = true;
+    roomInput.readOnly = false;
+    roomInput.placeholder = "Ask — finding verified News";
+    humanSelectionPrompt.style.display = "none";
+    return;
+  }
   if(rejoinRoomLoadingActive && !rejoinedRoomAskReady){
     roomInput.disabled = true;
     roomInput.readOnly = false;
@@ -9525,6 +9580,24 @@ if(activeMessageHuman) renderBeingRoomHeader(activeMessageHuman);
 const previousDeliveredMessageCount = deliveredRoomMessageCount;
 lastRoomMessageCount = messages.length;
 
+const perspectiveUserResultIndex = perspectiveUserRequestPending
+  ? messages.findIndex((message,index) =>
+      index >= perspectiveUserOverrideStartIndex &&
+      !message?.autoCardType &&
+      !message?.firstRoundComplete &&
+      !message?.anchorTransition &&
+      Boolean(message?.aiBeing && (message?.resultType || message?.ask || message?.jobCard || message?.image || message?.resultUrl || message?.link))
+    )
+  : -1;
+if(perspectiveUserResultIndex >= 0){
+  perspectiveUserRequestPending = false;
+  perspectiveUserNewsGateBlocked = false;
+  roomInput.disabled = false;
+  roomInput.readOnly = false;
+  roomInput.placeholder = "Ask";
+  localStorage.setItem(perspectiveStorageKey(),String(perspectiveUserResultIndex));
+}
+
 const beingFirstRoundCandidates = messages.length > beingFirstRoundBaseline
   ? messages.slice(beingFirstRoundBaseline)
   : messages.slice(-1);
@@ -9532,7 +9605,9 @@ const beingFirstRoundCandidates = messages.length > beingFirstRoundBaseline
 if(
   newsGateDirectWaiting &&
   messages.slice(newsGateBaseline).some(message =>
-    message?.aiBeing && (message.ask || message.jobCard || message.resultUrl || message.link)
+    message?.aiBeing &&
+    !message?.autoCardType &&
+    (message.ask || message.jobCard || message.resultUrl || message.link)
   )
 ){
   newsGateDirectWaiting = false;
@@ -9541,8 +9616,8 @@ if(
   beingFirstRoundDelayTimer = null;
   document.getElementById("sequenceDelayNotice")?.remove();
   hideSequenceTyping();
-  roomInput.disabled = false;
-  roomInput.placeholder = "Ask";
+  roomInput.disabled = perspectiveUserRequestPending;
+  roomInput.placeholder = perspectiveUserRequestPending ? "Ask — finding verified News" : "Ask";
 }
 
 if (
@@ -10360,6 +10435,9 @@ if(!automaticPerspectiveIndexes.length && !hasOverridePerspective){
 if(firstRoundDemoVisible){
   const insertAt = Math.max(0,Math.min(firstRoundDemoInsertionIndex ?? deliveryBlocks.length,deliveryBlocks.length));
   deliveryBlocks.splice(insertAt,0,firstRoundDemoHtml());
+}
+if(perspectiveUserRequestPending){
+  deliveryBlocks.push(`<div class="roomDeliveryBlock perspectiveUserRequestLoadingBlock" data-room-delivery-index="user-request-loading">${perspectiveUserRequestLoadingHtml()}</div>`);
 }
 
 roomMessages.innerHTML =
@@ -14616,6 +14694,58 @@ html body #closeRoom{
   flex:0 0 40px!important;
   padding:0!important;
   box-sizing:border-box!important;
+}
+
+/* v10.1.23 — persistent user-request takeover feedback. */
+#roomMessages.perspectiveSwipeThread .perspectiveUserRequestLoadingBlock{
+  align-items:stretch;
+  justify-content:stretch;
+  padding:6px;
+}
+#roomMessages .perspectiveUserRequestLoading{
+  width:100%;
+  height:100%;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:12px;
+  padding:clamp(20px,6vw,42px);
+  box-sizing:border-box;
+  border:1px solid #d0d7de;
+  background:#fff;
+  color:#24292f;
+}
+#roomMessages .perspectiveUserRequestEyebrow{
+  color:#0550ae;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.06em;
+}
+#roomMessages .perspectiveUserRequestQuestion{
+  max-width:100%;
+  font-size:clamp(20px,5.5vw,30px);
+  font-weight:650;
+  line-height:1.2;
+}
+#roomMessages .perspectiveUserRequestStatus{color:#57606a;font-size:14px;line-height:1.4;}
+#roomMessages .perspectiveUserRequestLoading .perspectiveArrivalDots{display:flex;gap:5px;}
+#roomMessages .perspectiveUserRequestLoading .perspectiveArrivalDots i{
+  width:7px;
+  height:7px;
+  background:#8c959f;
+  animation:perspectiveDot 1s infinite alternate;
+}
+#roomMessages .perspectiveUserRequestLoading .perspectiveArrivalDots i:nth-child(2){animation-delay:.15s;}
+#roomMessages .perspectiveUserRequestLoading .perspectiveArrivalDots i:nth-child(3){animation-delay:.3s;}
+#roomMessages .perspectiveUserRequestLoading button{
+  min-height:40px;
+  padding:0 14px;
+  border:1px solid #54aeff;
+  background:#ddf4ff;
+  color:#0550ae;
+  font:600 13px Arial,sans-serif;
 }
 </style>
 </body>
