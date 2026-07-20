@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.20 (2026-07-21)
+  - Lowers the Ask bar to the device safe-area boundary
+  - Removes the legacy relative bottom offset that left unused space below the composer
+  - Preserves a small system-navigation breathing space across mobile devices
+  - Returns the recovered vertical space to the perspective viewport
+
   v10.1.19 (2026-07-21)
   - Displays the complete HUMAN category and phone beneath the full header name
   - Removes the redundant HUMAN prefix and header category ellipsis
@@ -14462,6 +14468,15 @@ html body #shareRoomBtn::after{
   padding:0!important;
 }
 #roomMessages .unifiedDailyRoomCard > .unifiedResultActions{margin-bottom:2px;}
+
+/* v10.1.20 — place the Ask bar at the true system-safe lower edge. */
+html body #roomOverlay{
+  padding-bottom:max(4px,env(safe-area-inset-bottom,0px))!important;
+}
+html body #roomInput{
+  bottom:0!important;
+  margin-bottom:0!important;
+}
 </style>
 </body>
 </html>
