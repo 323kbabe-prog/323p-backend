@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.09 (2026-07-20)
+  - Removes HUMAN narration above every automatic and chat result card
+  - Renders one local-context News card before every non-News result card
+  - Keeps a News request to one News card without duplication
+
   v10.1.08 (2026-07-20)
   - Uses one universal I picked exact result because sentence above every result card
   - Applies the same lead format to all five automatic cards and later HUMAN-chat cards
@@ -8575,24 +8580,29 @@ function compactRoomCopy(value,maxLength = 220){
   return `${text}${hasBelief ? " Google should buy this search idea today." : ""}`.trim();
 }
 
-function numberedResultCardLead(value,resultTitle = "this specific result"){
-  const slogan = "Google should buy this search idea today.";
-  const text = String(value || "")
-    .replace(/Google should buy (?:me|this search idea today)\.?/gi,"")
-    .replace(/\s+/g," ")
-    .trim();
-  const firstSentence = String((text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text])[0] || "").trim();
-  const exactTitle = String(resultTitle || "this specific result").replace(/\s+/g," ").trim();
-  const isExactLead = /^I picked\s+.+\s+because\s+/i.test(firstSentence);
-  const isGenericLead = /^(?:Here.?s what I notice|What stands out|I notice|This caught my eye)\b/i.test(firstSentence);
-  const existingBecauseReason = firstSentence.match(/\bbecause\s+(.+)$/i)?.[1] || "";
-  const reason = isGenericLead || !firstSentence
-    ? "it directly connects this request to the image and the selected HUMAN perspective."
-    : String(existingBecauseReason || firstSentence).replace(/[.!?]+$/,"").replace(/^because\s+/i,"").trim() + ".";
-  const lead = isExactLead
-    ? firstSentence
-    : `I picked ${exactTitle} because ${reason.charAt(0).toLowerCase()}${reason.slice(1)}`;
-  return `1. ${/[.!?]$/.test(lead) ? lead : `${lead}.`}\n${slogan}`;
+function localContextNewsCardHtml(context){
+  if(!context?.resultTitle || !context?.resultUrl) return "";
+  const action = getRoomOpenAction(context);
+  const details = (Array.isArray(context.resultDetails) ? context.resultDetails : [])
+    .filter(Boolean)
+    .slice(0,2)
+    .map(value => `<span class="humanResultDetail">${escapeBeingText(String(value))}</span>`)
+    .join("");
+  return `
+    <div class="dailyNullCard geminiAiResponse humanContractResult localContextNewsCard" data-share-card data-share-read="true" data-link="${escapeBeingText(action.href || context.resultUrl)}">
+      <div class="humanResultBody" data-share-content>
+        <div class="humanResultCategory">NEWS · LOCAL CONTEXT</div>
+        ${context.resultImage ? `<img class="humanResultImage" src="${escapeBeingText(context.resultImage)}" alt="">` : ""}
+        <div class="humanResultTitle">${escapeBeingText(context.resultTitle)}</div>
+        ${context.resultSource ? `<div class="humanResultSource">${escapeBeingText(context.resultSource)}</div>` : ""}
+        ${details ? `<div class="humanResultDetails">${details}</div>` : ""}
+      </div>
+      <div class="humanResultActions">
+        <a class="chatOpenAction" href="${escapeBeingText(action.href || context.resultUrl)}" target="_blank" rel="noopener noreferrer">${context.searchFallback ? "Search news" : "Open article"}</a>
+        <span class="chatShareAction" data-link="${escapeBeingText(action.href || context.resultUrl)}" onclick="shareCard(this,this.dataset.link)" role="button" tabindex="0">Share result</span>
+      </div>
+    </div>
+  `;
 }
 
 function compactFirstRoundSpeech(message){
@@ -9182,11 +9192,7 @@ Enable Notifications
 // longer change the speech or button family.
 if(m.resultType && m.resultTitle){
   const action = getRoomOpenAction(m);
-  const talk = numberedResultCardLead(
-    m.humanReason ||
-    `it gives this image a useful ${m.resultType.replace("_"," ")} direction.`,
-    m.resultTitle
-  );
+  const localContextCard = m.resultType === "news" ? "" : localContextNewsCardHtml(m.localContextNews);
   const details = (Array.isArray(m.resultDetails) ? m.resultDetails : [])
     .filter(Boolean)
     .slice(0,4)
@@ -9198,8 +9204,8 @@ if(m.resultType && m.resultTitle){
     : "";
 
   return `
+    ${localContextCard}
     <div class="dailyNullCard geminiAiResponse humanContractResult" data-share-card data-share-read="true" data-link="${escapeBeingText(action.href || "")}">
-      <div class="chatBubble chatAiBubble">${escapeBeingText(talk)}</div>
       <div class="humanResultBody" data-share-content>
         <div class="humanResultCategory">${getRoomResultCategoryLabel(m)}</div>
         ${resultImage ? `<img class="humanResultImage" src="${escapeBeingText(resultImage)}" alt="">` : ""}
@@ -9327,13 +9333,13 @@ const isLatestImage =
     .filter(x => x.image)
     .length - 1;
 
-const mediaResultTitle = m.displayTitle || m.ask || "this specific result";
-const mediaResultLead = numberedResultCardLead(
-  m.humanReason || m.nullReason || m.aiText || "it directly connects this request to the image.",
-  mediaResultTitle
-);
+const localContextCard = m.primaryCategory === "NEWS" || m.resultType === "news"
+  ? ""
+  : localContextNewsCardHtml(m.localContextNews);
 
 return `
+
+${localContextCard}
 
 <div class="geminiAiResponse geminiMediaResponse"
 style="
@@ -9371,10 +9377,6 @@ gap:10px;
 
 
 <div data-share-content>
-
-<div class="chatBubble chatAiBubble" style="font-size:14px;line-height:1.55;">
-${escapeBeingText(mediaResultLead)}
-</div>
 
 ${m.ask ? `
 <div class="chatSourceBlock"
@@ -9519,19 +9521,15 @@ if (m.jobCard) {
   const job = m.jobCard;
   const jobLink = job.link || m.link || "#";
   const jobActionLabel = (m.searchFallback || job.searchFallback) ? "Search jobs" : "Open job";
-  const jobTalk = numberedResultCardLead(
-    m.humanReason ||
-    `it connects this image to a current professional direction.`,
-    job.title || "this specific career opportunity"
-  );
+  const localContextCard = localContextNewsCardHtml(m.localContextNews);
   const jobDetails = [job.location,job.salary,job.type,job.posted]
     .filter(Boolean)
     .map(value => `<span style="display:inline-block;padding:5px 8px;border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.2;">${escapeBeingText(value)}</span>`)
     .join("");
 
   return `
+    ${localContextCard}
     <div class="dailyNullCard geminiAiResponse modernJobResult" data-share-card data-share-read="true" data-link="${escapeBeingText(jobLink)}" style="margin-bottom:18px;">
-      <div class="chatBubble chatAiBubble">${escapeBeingText(jobTalk)}</div>
       <div data-share-content style="border:1px solid #d0d7de;background:#fff;padding:18px;">
         <div style="font-size:11px;font-weight:800;letter-spacing:.04em;color:#57606a;">${getRoomResultCategoryLabel(m)}</div>
         <div style="margin-top:12px;font-size:20px;font-weight:700;line-height:1.25;color:#24292f;overflow-wrap:anywhere;">${escapeBeingText(job.title || "Current career opportunities")}</div>
@@ -9548,15 +9546,13 @@ if (m.jobCard) {
 
 if(m.ask){
 
-const resultTalk = numberedResultCardLead(
-  m.humanReason ||
-  (/^I picked\b/i.test(String(m.ask || ""))
-    ? m.ask
-    : "it gives this image a useful direction."),
-  m.displayTitle || m.ask || "this specific result"
-);
+const localContextCard = m.primaryCategory === "NEWS" || m.resultType === "news"
+  ? ""
+  : localContextNewsCardHtml(m.localContextNews);
 
 return `
+
+${localContextCard}
 
 <div
 class="dailyNullCard geminiAiResponse"
@@ -9564,8 +9560,6 @@ data-share-card
 data-share-read="${m.showRead !== false}"
 data-link="${m.link || ''}"
 >
-
-<div class="chatBubble chatAiBubble">${escapeBeingText(resultTalk)}</div>
 
 <div data-share-content>
 
