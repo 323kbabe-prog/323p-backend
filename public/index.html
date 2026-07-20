@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.24 (2026-07-21)
+  - Bypasses every legacy staged-delivery screen after a user takeover
+  - Opens the requested result directly as soon as it reaches the room
+  - Prevents the HUMAN invitation and old opening sequence from interrupting a takeover
+  - Gives the takeover loader its own visible bouncing-dot animation
+
   v10.1.23 (2026-07-21)
   - Shows an immediate persistent loading perspective when Ask skips the demo
   - Keeps takeover loading visible across room refresh and News Gate retries
@@ -8280,7 +8286,7 @@ function perspectiveUserRequestLoadingHtml(){
     <div class="perspectiveUserRequestEyebrow">YOUR ASK</div>
     <div class="perspectiveUserRequestQuestion">${escapeBeingText(perspectiveUserRequestText || "Your question")}</div>
     <div class="perspectiveUserRequestStatus">${status}</div>
-    ${perspectiveUserNewsGateBlocked ? `<button type="button" onclick="retryNewsGate()">Retry verified News</button>` : `<span class="perspectiveArrivalDots" aria-hidden="true"><i></i><i></i><i></i></span>`}
+    ${perspectiveUserNewsGateBlocked ? `<button type="button" onclick="retryNewsGate()">Retry verified News</button>` : `<span class="perspectiveUserRequestDots" aria-hidden="true"><i></i><i></i><i></i></span>`}
   </section>`;
 }
 
@@ -10450,8 +10456,22 @@ if(rejoinRoomLoadingActive){
   renderRejoinLoading();
 }
 
-startRoomOpeningSequence();
-deliverBatchedRoomReplies(previousDeliveredMessageCount,messages.length);
+if(perspectiveUserOverrideActive){
+  clearTimeout(roomReplyDeliveryTimer);
+  roomReplyDeliveryTimer = null;
+  roomReplyDeliveryActive = false;
+  deliveredRoomMessageCount = messages.length;
+}else{
+  startRoomOpeningSequence();
+  deliverBatchedRoomReplies(previousDeliveredMessageCount,messages.length);
+}
+
+if(perspectiveUserResultIndex >= 0){
+  requestAnimationFrame(() => {
+    const result = roomMessages.querySelector(`[data-room-delivery-index="${perspectiveUserResultIndex}"]`);
+    if(result) roomMessages.scrollTo({ top:result.offsetTop, behavior:"auto" });
+  });
+}
 
 if(roomOpeningBootstrapActive && !roomMessages.querySelector("[data-room-image-chapter]")){
   showSequenceTyping();
@@ -14730,15 +14750,21 @@ html body #closeRoom{
   line-height:1.2;
 }
 #roomMessages .perspectiveUserRequestStatus{color:#57606a;font-size:14px;line-height:1.4;}
-#roomMessages .perspectiveUserRequestLoading .perspectiveArrivalDots{display:flex;gap:5px;}
-#roomMessages .perspectiveUserRequestLoading .perspectiveArrivalDots i{
+#roomMessages .perspectiveUserRequestDots{display:flex;align-items:center;gap:7px;height:16px;}
+#roomMessages .perspectiveUserRequestDots i{
+  display:block;
   width:7px;
   height:7px;
   background:#8c959f;
-  animation:perspectiveDot 1s infinite alternate;
+  animation:perspectiveUserAskBounce .72s ease-in-out infinite alternate!important;
+  will-change:transform,opacity;
 }
-#roomMessages .perspectiveUserRequestLoading .perspectiveArrivalDots i:nth-child(2){animation-delay:.15s;}
-#roomMessages .perspectiveUserRequestLoading .perspectiveArrivalDots i:nth-child(3){animation-delay:.3s;}
+#roomMessages .perspectiveUserRequestDots i:nth-child(2){animation-delay:.14s!important;}
+#roomMessages .perspectiveUserRequestDots i:nth-child(3){animation-delay:.28s!important;}
+@keyframes perspectiveUserAskBounce{
+  from{transform:translateY(4px);opacity:.35;}
+  to{transform:translateY(-4px);opacity:1;}
+}
 #roomMessages .perspectiveUserRequestLoading button{
   min-height:40px;
   padding:0 14px;
