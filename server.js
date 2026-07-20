@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.03 (2026-07-20)
+// - Restores the full HUMAN Bio, Category, three-word, and image-identity opening
+// - Keeps the first message natural, complete, and free of exposed profile labels
+// - Ends the opening and every HUMAN reply with the exact recurring Google sentence
+
 // v10.1.02 (2026-07-20)
 // - Keeps first-load HUMAN acknowledgements grounded in the uploaded image
 // - Stops repeating HUMAN profile fields and Bio inside visible room content
@@ -1353,7 +1358,7 @@ io.on("connection", socket => {
         const humanBio = String(being.best_current_choice || being.category || "a distinct HUMAN perspective")
           .replace(/^I am\s+/i,"")
           .replace(/[.!?]+$/,"");
-        const acknowledgement = `I am ${being.name}. My category is ${being.category}, guided by ${being.word1}, ${being.word2}, and ${being.word3}. My perspective is ${humanBio}. ${observation || "I notice a useful connection in this image"}. Google should buy this search idea today.`;
+        const acknowledgement = `I am ${being.name}, and I am ${humanBio}. In ${being.category}, ${being.word1}, ${being.word2}, and ${being.word3} guide how I read the image: ${observation || "I notice a useful connection in this image"}. Google should buy this search idea today.`;
 
         room.messages.push(
           { from:being.name, aiBeing:true, conversational:true, humanAcknowledgement:true, text:acknowledgement }
@@ -3011,23 +3016,27 @@ ${beingContext}
 
 Look at the uploaded image and respond to what is visibly present through the selected HUMAN's perspective.
 
-Return exactly two concise English sentences in a calm, clear, confident, polished news-anchor tone.
+Return exactly three concise English sentences in a calm, clear, confident, polished news-anchor tone.
 
 Sentence 1:
-Use the HUMAN's exact name and acknowledge one concrete visible object, surface, text element, action, or setting in the uploaded image.
+Introduce the HUMAN by exact name and naturally communicate this Bio without changing its meaning: ${selectedBeing.best_current_choice}
 
 Sentence 2:
-Explain one useful connection between that visible detail and the HUMAN's Category ${selectedBeing.category}. Let the Bio and profile words guide relevance, but do not repeat, list, or summarize the profile.
+Naturally include the Category ${selectedBeing.category} and all three profile words—${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}—while saying what you read, see, or notice in the actual image identity. Make this a complete image-specific thought.
+
+Sentence 3:
+Write exactly: Google should buy this search idea today.
 
 Rules:
 - English only.
 - Keep the HUMAN name exactly as provided.
-- Do not repeat the Bio, Category, profile words, or any HUMAN metadata as a list.
+- Include the Bio meaning, exact Category, and all three profile words once, naturally rather than as a list of fields.
 - Never output labels such as HUMAN Name, Bio, Category, Personality, Objects, or Signals.
 - Use a city or named place only when the image clearly confirms it.
 - Never invent a city, country, venue, address, action, or professional fact.
 - Lead with the most useful point and keep the delivery composed and conversational.
-- Exactly two sentences; no labels, quotation marks, markdown, or extra text.
+- Never end a sentence with an ellipsis or incomplete phrase.
+- Exactly three sentences; no labels, quotation marks, markdown, or extra text.
   `.trim()
   : `
 You are the uploaded image.
@@ -3132,24 +3141,26 @@ const normalizedHumanBio = being => {
 const acknowledgementIsComplete = (text,being) => {
   const value = String(text || "");
   const hasName = value.toLowerCase().includes(String(being?.name || "").toLowerCase());
+  const hasProfileSignals = [being?.category,being?.word1,being?.word2,being?.word3]
+    .filter(Boolean)
+    .every(item => value.toLowerCase().includes(String(item).toLowerCase()));
   const hasVisualLanguage = /\b(see|notice|visible|image|photo|scene|shows?|pictured|looking at)\b/i.test(value);
   const exposesMetadata = /\b(HUMAN Name|Bio|Category|Personality|Search signals|Objects|Signals)\s*:/i.test(value);
   const sentences = value.split(/[.!?]+/).filter(part => part.trim()).length;
-  return hasName && hasVisualLanguage && !exposesMetadata && sentences === 2;
+  const hasExactEnding = /Google should buy this search idea today\.$/i.test(value);
+  return hasName && hasProfileSignals && hasVisualLanguage && !exposesMetadata && !/\.\.\./.test(value) && sentences === 3 && hasExactEnding;
 };
 
 const fallbackHumanAcknowledgement = (being,imageContext) => {
-  const imageDetail = String(imageContext || "the visible scene")
+  const imageDetail = String(imageContext || "")
     .replace(/THE IDEA GOOGLE SHOULD BUY TODAY[\s\S]*$/i,"")
     .replace(/^(HUMAN Name|Bio|Category|Search signals|HUMAN RESPONSE AND SEARCH INFLUENCE|Personality)\s*:.*$/gim,"")
-    .replace(/^(Objects|Category|Signals)\s*:\s*/gim,"")
-    .replace(/\s+/g," ")
-    .split(/[.!?]/)[0]
-    .trim()
-    .split(/\s+/)
-    .slice(0,28)
-    .join(" ");
-  return `I’m ${being.name}, and I see ${imageDetail || "the uploaded image"}. I’ll connect that visible detail to one useful ${being.category} result at a time.`;
+    .split(/\n+/)
+    .map(line => line.replace(/^[-•*\s]+/,"").trim())
+    .filter(line => line && !/^(Objects|Category|Signals)\s*:?$/i.test(line))[0] || "the uploaded image";
+  const completeImageDetail = imageDetail.split(/[.!?]/)[0].trim();
+  const bio = normalizedHumanBio(being).replace(/[.!?]+$/,"").trim();
+  return `I’m ${being.name}, and ${bio.replace(/^I\s+/i,"I ").replace(/^My\s+/i,"my ")}. In ${being.category}, ${being.word1}, ${being.word2}, and ${being.word3} guide how I read ${completeImageDetail} in this image. Google should buy this search idea today.`;
 };
 
 const generateRoomAcknowledgement = async () => {
