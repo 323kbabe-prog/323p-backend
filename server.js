@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.47 (2026-07-20)
+// - Restores completed HUMAN rooms and resumes only missing five-card results on rejoin
+// - Blocks late automatic retries after the completion message
+// - Returns one best real job and labels a plain search fallback honestly
+// - Varies "I picked..." explanations by requiring a specific result instead of a repeated category
+
 // v10.0.46 (2026-07-20)
 // - Requires HUMAN acknowledgements to include Bio, Category, three words, and image detail
 // - Keeps Public-image metadata intact when the private HUMAN room is created
@@ -1148,6 +1154,11 @@ io.on("connection", socket => {
       const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
       const room = rooms[roomId];
       if (!room || deviceRooms[deviceId] !== roomId || !room.being) return;
+      if (room.firstRoundComplete) {
+        socket.emit("roomFirstRoundCompleted");
+        return;
+      }
+      room.firstRoundComplete = true;
       room.messages.push({
         from:room.being.name,
         aiBeing:true,
@@ -1592,7 +1603,7 @@ socket.on("getRoomStatus", ({ deviceId }) => {
     
 socket.on(
   "rejoinRoom",
-  ({
+  async ({
       roomId,
       deviceId
   }) => {
@@ -1658,7 +1669,11 @@ socket.emit("roomCreated", {
 
     ,being: room.being || null,
 
-    permanent: !!room.permanent
+    permanent: !!room.permanent,
+
+    rejoined: true,
+
+    firstRoundComplete: !!room.firstRoundComplete
 
 });
 
@@ -1669,6 +1684,35 @@ io.to(roomId).emit(
   "roomMessages",
   rooms[roomId].messages
 );
+
+if(room.being){
+  if(room.firstRoundComplete){
+    socket.emit("roomFirstRoundCompleted");
+  }else{
+    const normalizeCardType = value => {
+      const clean = String(value || "").toLowerCase().replace(/[^a-z]/g,"");
+      if(["news","today","feed","article"].includes(clean)) return "news";
+      if(["shopping","shop","product","buy"].includes(clean)) return "shopping";
+      if(["place","placetogo","go","map","travel"].includes(clean)) return "place";
+      if(["job","jobs","career","work","opportunity"].includes(clean)) return "jobs";
+      if(["realestate","property","home","live"].includes(clean)) return "real_estate";
+      return "";
+    };
+    const deliveredTypes = new Set(room.messages.map(message => normalizeCardType(
+      message?.autoCardType || message?.primaryCategory || (message?.jobCard ? "jobs" : "")
+    )).filter(Boolean));
+    const allCards = await createRoomFirstRoundCards(room);
+    const missingCards = allCards.filter(card => !deliveredTypes.has(card.type));
+    socket.emit("roomFirstRoundStart", {
+      cards:missingCards,
+      resume:true,
+      imageContext:room.imageContext,
+      category:room.coreTheme,
+      humanCategory:room.being.category || "",
+      roomKind:"human"
+    });
+  }
+}
 
 
 
@@ -3321,6 +3365,13 @@ socket.on(
         return;
     }
 
+    // A retry timer can fire at the same moment the fifth card completes.
+    // Never allow that late automatic request below the completion message.
+    if (autoFirstRound && room.firstRoundComplete) {
+      socket.emit("roomFirstRoundCompleted");
+      return;
+    }
+
     let locationReplyForDisplay = null;
     let skipLocationForRequest = false;
 
@@ -3447,6 +3498,7 @@ try{
   `${text.trim()}${automaticBriefingContext}`;
 
  const addAutomaticSearchFallback = () => {
+  if (autoFirstRound && room.firstRoundComplete) return true;
   if (
     !autoFirstRound ||
     !["news", "shopping", "place", "jobs", "real_estate"].includes(autoCardType)
@@ -5148,21 +5200,23 @@ console.log(
 
 const jobsUrl =
   "https://www.google.com/search?q=" +
-  encodeURIComponent(jobSearch) +
-  "&ibp=htl;jobs";
+  encodeURIComponent(`${jobSearch} jobs`);
 
 const addJobSearchFallback = () => {
+  if(isAutomaticJobCard && room.firstRoundComplete) return;
   const fallbackTitle = `View current ${jobSearch.replace(/^search:?\s*/i,"")} openings`;
   room.messages.push({
     from: room.being?.name || "CAMERA PERSPECTIVE",
     aiBeing: true,
+    autoCardType:isAutomaticJobCard ? "jobs" : null,
     ...getResultCardCategories("jobs", room, "CAREER"),
     showNextButton: true,
     jobCard: {
       title: fallbackTitle,
       company: "Google Jobs",
       location: room.searchLocation || "Search online",
-      link: jobsUrl
+      link: jobsUrl,
+      searchFallback:true
     },
     link: jobsUrl
   });
@@ -5175,11 +5229,13 @@ const serpFetch = await fetch(
 );
 
 if (!serpFetch.ok) {
+    console.log("GOOGLE JOBS HTTP ERROR:",serpFetch.status,await serpFetch.text().catch(() => ""));
     addJobSearchFallback();
     return;
 }
 
 const serpRes = await serpFetch.json();
+if(serpRes?.error) console.log("GOOGLE JOBS API ERROR:",serpRes.error);
 
 const jobResults = Array.isArray(serpRes.jobs_results)
   ? serpRes.jobs_results
@@ -5223,12 +5279,15 @@ const jobLink =
   job.share_link ||
   jobsUrl;
 
+if(isAutomaticJobCard && room.firstRoundComplete) return;
 
 room.messages.push({
 
   from: room.being?.name || "CAMERA PERSPECTIVE",
 
   aiBeing: true,
+
+  autoCardType:isAutomaticJobCard ? "jobs" : null,
 
   ...getResultCardCategories("jobs", room, job.detected_extensions?.schedule_type || "CAREER"),
 
@@ -5989,6 +6048,8 @@ Instead explain why someone visiting this place would better understand, observe
 Rules:
 - first person
 - begin with "I picked..." followed by the specific result name or its defining feature
+- Vary the words immediately after "I picked" across cards.
+- Never begin with "I picked the". Begin with the exact result name or "this" plus a distinctive factual feature.
 - identify the actual place, article, product, job, property, company, report, or opportunity selected
 - include the place name when it is a real named place
 - include the news naturally
@@ -6029,7 +6090,7 @@ ${selectedNews?.title || placeName || userIntent}
   }catch(err){
 
     placeStory =
-      `I picked ${selectedNews?.title || placeName || "this specific result"} because it connects to one of the biggest stories unfolding in this location right now.`;
+          `I picked ${selectedNews?.title || placeName || "this specific result"} because it connects to one of the biggest stories unfolding in this location right now.`;
 
   }
 
@@ -6346,6 +6407,8 @@ console.log({
                 : placeStory
 });
 
+if(autoFirstRound && room.firstRoundComplete) return;
+
     console.log("NEXT NULL LINK:", {
   youtubeLink,
   amazonLink,
@@ -6403,13 +6466,9 @@ ask:
       : (
           placeStory ||
           `I picked ${
-isLocationRequest
-    ? (selectedNews?.title || placeName || "this specific place")
-              : isYoutubeIntent
-                ? "this video"
-                : isShoppingIntent
-                  ? "this product"
-                  : "this topic"
+            selectedNews?.title ||
+            placeName ||
+            (isYoutubeIntent ? "this specific video" : isShoppingIntent ? "this specific product" : "this specific result")
           } because ${selectedNews.title}.`
         ),
 
