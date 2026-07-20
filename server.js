@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.09 (2026-07-20)
+// - Keeps valid News articles even when Google does not return a thumbnail
+// - Retries progressively broader local News queries before using a search fallback
+// - Ensures requested News and local-context News prioritize a real linked article
+
 // v10.1.08 (2026-07-20)
 // - Removes pre-card HUMAN narration from every automatic and chat result
 // - Adds one relevant local-context News card before every non-News result card
@@ -676,15 +681,39 @@ async function createLocalContextNews(room, targetQuery, targetType, location = 
   }
 
   try {
-    const newsFetch = await fetch(`https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d7&q=${encodeURIComponent(newsQuery)}&api_key=${process.env.SERPAPI_KEY}`);
-    if(!newsFetch.ok) return buildNewsFallback();
-    const newsData = await newsFetch.json();
+    const queryCandidates = [
+      newsQuery,
+      [mandatoryIntent,localArea,"latest news"].filter(Boolean).join(" "),
+      [category,localArea,"latest news"].filter(Boolean).join(" "),
+      [localArea,"latest local news"].filter(Boolean).join(" ")
+    ].map(value => value.replace(/\s+/g," ").trim()).filter(Boolean);
+    const uniqueQueries = [...new Set(queryCandidates.map(value => value.toLowerCase()))]
+      .map(key => queryCandidates.find(value => value.toLowerCase() === key));
     room.usedLocalContextNews = Array.isArray(room.usedLocalContextNews) ? room.usedLocalContextNews : [];
     const used = new Set(room.usedLocalContextNews.map(value => String(value).toLowerCase()));
-    const article = (newsData.news_results || []).find(item => {
-      const url = item?.link || item?.news_link || "";
-      return item?.title && url && !used.has(url.toLowerCase());
-    }) || (newsData.news_results || []).find(item => item?.title && (item?.link || item?.news_link));
+    let article = null;
+    for(const candidateQuery of uniqueQueries){
+      let linkedArticles = [];
+      const newsEndpoints = [
+        `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:m&q=${encodeURIComponent(candidateQuery)}&api_key=${process.env.SERPAPI_KEY}`,
+        `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(candidateQuery)}&api_key=${process.env.SERPAPI_KEY}`
+      ];
+      for(const newsEndpoint of newsEndpoints){
+        const newsFetch = await fetch(newsEndpoint);
+        if(!newsFetch.ok) continue;
+        const newsData = await newsFetch.json();
+        linkedArticles = (newsData.news_results || []).filter(item => item?.title && (item?.link || item?.news_link));
+        if(linkedArticles.length) break;
+      }
+      article = linkedArticles.find(item => {
+        const url = item.link || item.news_link || "";
+        return url && !used.has(url.toLowerCase());
+      }) || linkedArticles[0] || null;
+      if(article){
+        newsQuery = candidateQuery;
+        break;
+      }
+    }
     if(!article) return buildNewsFallback();
     const url = article.link || article.news_link;
     room.usedLocalContextNews.push(url);
@@ -5919,17 +5948,22 @@ const validNews =
   item.thumbnail ||
   item.thumbnail_small;
 
+    const articleUrl =
+  item.link ||
+  item.news_link;
+
     return (
-
-      possibleImage &&
-
       item.title &&
 
-      !possibleImage.includes("logo") &&
-      !possibleImage.includes("icon") &&
-      !possibleImage.includes("placeholder") &&
-      !possibleImage.includes("default") &&
-      !possibleImage.includes("avatar")
+      articleUrl &&
+
+      (!possibleImage || (
+        !possibleImage.includes("logo") &&
+        !possibleImage.includes("icon") &&
+        !possibleImage.includes("placeholder") &&
+        !possibleImage.includes("default") &&
+        !possibleImage.includes("avatar")
+      ))
 
     );
 
@@ -6430,6 +6464,42 @@ if(!imageUrl){
 //////////////////////////////////////////////////
 // V5.4.2 EMOTIONALLY CHOSEN TITLE
 //////////////////////////////////////////////////
+
+if (!selectedNews?.title) {
+  const being = room.being || {};
+  const retryQueries = [
+    searchQuery,
+    localLanguageNewsSearch,
+    [nullInput.location || room.searchLocation,being.category || room.coreTheme,"latest local news"].filter(Boolean).join(" "),
+    [being.category || room.coreTheme,"latest news"].filter(Boolean).join(" ")
+  ].map(value => String(value || "").replace(/\s+/g," ").trim()).filter(Boolean);
+  const uniqueRetryQueries = [...new Set(retryQueries.map(value => value.toLowerCase()))]
+    .map(key => retryQueries.find(value => value.toLowerCase() === key));
+
+  for(const retryQuery of uniqueRetryQueries){
+    try {
+      const retryEndpoints = [
+        `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:m&q=${encodeURIComponent(retryQuery)}&api_key=${process.env.SERPAPI_KEY}`,
+        `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(retryQuery)}&api_key=${process.env.SERPAPI_KEY}`
+      ];
+      for(const retryEndpoint of retryEndpoints){
+        const retryFetch = await fetch(retryEndpoint);
+        if(!retryFetch.ok) continue;
+        const retryData = await retryFetch.json();
+        selectedNews = (retryData.news_results || []).find(item =>
+          item?.title && (item?.link || item?.news_link)
+        ) || null;
+        if(selectedNews) break;
+      }
+      if(selectedNews){
+        imageUrl = selectedNews.original || selectedNews.thumbnail || selectedNews.thumbnail_small || null;
+        break;
+      }
+    } catch(retryError) {
+      console.log("NEWS RETRY FAILED:",retryError.message);
+    }
+  }
+}
 
 if (!selectedNews?.title) {
 
