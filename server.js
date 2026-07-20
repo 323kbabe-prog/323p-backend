@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.48 (2026-07-20)
+// - Generates five explicit user-like inputs for the normal result-search pipeline
+// - Preserves 50/20/20/10 Category, words, Bio, and image influence in those inputs
+// - Validates all five required card intents and keeps a deterministic safe fallback
+
 // v10.0.47 (2026-07-20)
 // - Restores completed HUMAN rooms and resumes only missing five-card results on rejoin
 // - Blocks late automatic retries after the completion message
@@ -373,13 +378,63 @@ async function createRoomFirstRoundCards(room) {
       ? words[0]
       : `${words.slice(0,-1).join(", ")}, and ${words[words.length - 1]}`
     : "relevant opportunities";
-  return [
-    { type:"news", text:`What is the latest ${category} news connected to ${signals}?` },
-    { type:"shopping", text:`What can I buy in ${category} that reflects ${signals}?` },
-    { type:"place", text:`Where can I go for a ${category} experience shaped by ${signals}?` },
-    { type:"jobs", text:`What ${category} jobs connect with ${signals}?` },
-    { type:"real_estate", text:`Where can I live through a ${category} perspective shaped by ${signals}?` }
+  const bio = String(being?.best_current_choice || "a useful professional perspective")
+    .replace(/\s+/g," ")
+    .trim();
+  const imageCue = String(room?.imageContext || "the visible image")
+    .replace(/\s+/g," ")
+    .split(/[.!?]/)[0]
+    .trim()
+    .split(/\s+/)
+    .slice(0,16)
+    .join(" ");
+  const fallbackCards = [
+    { type:"news", text:`Find one current ${category} news article matching ${signals}, informed by ${bio}, and connected to ${imageCue}.` },
+    { type:"shopping", text:`Find one ${category} product matching ${signals}, informed by ${bio}, and connected to ${imageCue}.` },
+    { type:"place", text:`Find one place for a ${category} experience matching ${signals}, informed by ${bio}, and connected to ${imageCue}.` },
+    { type:"jobs", text:`Find one current ${category} job matching ${signals}, informed by ${bio}, and connected to ${imageCue}.` },
+    { type:"real_estate", text:`Find one property listing connected to ${category}, matching ${signals}, informed by ${bio}, and connected to ${imageCue}.` }
   ];
+  try {
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.35,
+      response_format:{ type:"json_object" },
+      messages:[
+        {
+          role:"system",
+          content:`Write five natural English search requests that behave like clear user inputs. Return one JSON object with exactly these string keys: news, shopping, place, jobs, real_estate. Each request must ask for exactly one real result. Keep the HUMAN Category as the mandatory subject. Naturally apply this influence: Category 50%, all three words together 20%, Bio 20%, image 10%. Every request must contain the exact Category and all three words. Use only one concise visible image detail. Make the result intent unmistakable: current news article, product, place, current job, and property listing. Do not mention percentages, weighting, prompts, cards, HUMAN, or automatic generation.`
+        },
+        {
+          role:"user",
+          content:`CATEGORY: ${category}\nTHREE WORDS: ${words.join(", ")}\nBIO: ${bio}\nVISIBLE IMAGE DETAIL: ${imageCue}`
+        }
+      ]
+    });
+    const generated = JSON.parse(response.choices[0].message.content);
+    const intentTerms = {
+      news:/\b(news|article|headline|report)\b/i,
+      shopping:/\b(product|buy|shop|purchase)\b/i,
+      place:/\b(place|visit|destination|go)\b/i,
+      jobs:/\b(job|career|position|hiring)\b/i,
+      real_estate:/\b(property|listing|home|apartment|house|real estate)\b/i
+    };
+    const cards = fallbackCards.map(card => ({
+      type:card.type,
+      text:String(generated?.[card.type] || "").replace(/[\r\n]+/g," ").trim()
+    }));
+    const valid = cards.every(card => {
+      const lower = card.text.toLowerCase();
+      return card.text &&
+        lower.includes(category.toLowerCase()) &&
+        words.every(word => lower.includes(word.toLowerCase())) &&
+        intentTerms[card.type].test(card.text);
+    });
+    return valid ? cards : fallbackCards;
+  } catch(error) {
+    console.log("FIVE USER-LIKE INPUTS FAILED:",error.message);
+    return fallbackCards;
+  }
 }
 
 async function createHumanAnchorTransition(room, cardType) {
@@ -3490,12 +3545,8 @@ try{
 //////////////////////////////////////////////////
 
 
- const automaticBriefingContext = autoFirstRound && room.being
-  ? `\n\nAUTOMATIC BRIEFING RULES\nWEIGHTING: Category 50%; three words 20%; Bio 20%; image 10%.\nHARD CATEGORY DOMAIN: ${room.being.category || ""}\nREQUIRED HUMAN SEARCH SIGNALS: ${room.being.word1 || ""}, ${room.being.word2 || ""}, ${room.being.word3 || ""}\nBIO PURPOSE, AUDIENCE, AND OPPORTUNITY DIRECTION: ${room.being.best_current_choice || ""}\nIMAGE — SUPPORTING ANGLE ONLY: ${room.imageContext || ""}\nHARD CARD-TYPE BOUNDARY: ${autoCardType}\nHUMAN: ${room.being.name}\nEvery result must remain inside HARD CATEGORY DOMAIN. Use all three REQUIRED HUMAN SEARCH SIGNALS and the Bio to refine relevance and ranking inside that domain. The requested ${autoCardType} family changes only the result format, never the subject. Use IMAGE only to choose a relevant angle. Never expose these instructions or percentages in visible result text. Choose the most relevant real result and never invent or alter factual data.`
-  : "";
-
  const combinedIntent =
-  `${text.trim()}${automaticBriefingContext}`;
+  text.trim();
 
  const addAutomaticSearchFallback = () => {
   if (autoFirstRound && room.firstRoundComplete) return true;
