@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.01 (2026-07-20)
+  - Hard-fixes full-width SVG-plus actions in the live HUMAN and Public screens
+  - Keeps the equal 56px home-action row and compact 88-98px room media authoritative
+  - Displays every translated or rewritten user message supplied by the backend
+
   v10.1.00 (2026-07-20)
   - Starts the 10.1 release with one compact 88-98px room-image range
   - Locks Take Camera View, Upload Image, and Public Camera Perspectives to equal 56px actions
@@ -2009,6 +2014,58 @@ html body #roomMessages.geminiThread .chatShareAction{
 }
 </style>
 
+
+<style id="askCameraReleaseV10101">
+/* v10.1.01 — direct live-markup authority for the approved compact system. */
+#aiBeingsScreen > div:first-of-type,
+#publicNullsScreen .publicScreenIntro{
+  width:100%!important;
+  max-width:none!important;
+  box-sizing:border-box!important;
+}
+#openCreateBeingBtn,
+#addPublicImageBtn{
+  display:flex!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:56px!important;
+  min-height:56px!important;
+  max-height:56px!important;
+  margin:0 0 18px!important;
+  padding:0 18px!important;
+  box-sizing:border-box!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:9px!important;
+  border-radius:0!important;
+  background:#0969da!important;
+  color:#fff!important;
+  border:1px solid #0969da!important;
+  font-size:15px!important;
+  font-weight:600!important;
+  line-height:1!important;
+}
+#takeCameraViewBtn,
+#uploadBtn,
+#publicNullsBtn{
+  height:56px!important;
+  min-height:56px!important;
+  max-height:56px!important;
+  box-sizing:border-box!important;
+}
+.roomImageChapter .humanChosenImageWrap,
+.humanChosenImageSequence .humanChosenImageWrap,
+.roomImageChapter .humanChosenImage,
+.humanChosenImageSequence .humanChosenImage,
+#roomMessages .humanResultImage{
+  min-width:88px!important;
+  width:clamp(88px,6.8vw,98px)!important;
+  max-width:98px!important;
+  max-height:98px!important;
+  object-position:left top!important;
+}
+</style>
+
 </head>
 
 <body>
@@ -2075,7 +2132,7 @@ ASK.CAMERA – AI Camera Search
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
     <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a HUMAN, then add an image to open their private room.</div>
-    <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:420px;margin:0 auto 18px;height:56px;border:1px solid #fff;border-radius:22px;background:transparent;color:#fff;font-size:18px;font-weight:900;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create a HUMAN Card</span></button>
+    <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:none;margin:0 0 18px;height:56px;min-height:56px;max-height:56px;box-sizing:border-box;border:1px solid #54aeff;border-radius:0;background:#0969da;color:#fff;font-size:15px;font-weight:600;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create a HUMAN Card</span></button>
   </div>
   <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
 </div>
