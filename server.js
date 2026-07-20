@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.10 (2026-07-20)
+// - Adds a strict News Gate that never advances with a generic search fallback
+// - Retries real local articles with 1, 2, and 4 second backoff before pausing
+// - Emits a retry-required state while preserving the current five-result step
+
 // v10.1.09 (2026-07-20)
 // - Keeps valid News articles even when Google does not return a thumbnail
 // - Retries progressively broader local News queries before using a search fallback
@@ -645,18 +650,12 @@ async function createLocalContextNews(room, targetQuery, targetType, location = 
   const localArea = String(location || room.searchLocation || "").replace(/\s+/g," ").trim();
 
   let newsQuery = [mandatoryIntent,localArea,"local news"].filter(Boolean).join(" ");
-  const buildNewsFallback = () => ({
-    resultType:"news",
-    resultTitle:`Search local news for ${mandatoryIntent}`,
-    resultUrl:`https://news.google.com/search?q=${encodeURIComponent(newsQuery)}`,
-    resultImage:null,
-    resultSource:"Google News search",
-    resultDetails:[localArea || "Current local context"],
-    primaryCategory:"NEWS",
-    contextCategory:"LOCAL CONTEXT",
-    localContextNews:true,
-    searchFallback:true
-  });
+  const newsGateError = () => {
+    const error = new Error("A verified local News article is required before continuing.");
+    error.code = "NEWS_GATE_BLOCKED";
+    error.newsQuery = newsQuery;
+    return error;
+  };
   try {
     const queryResponse = await openai.chat.completions.create({
       model:"gpt-4o-mini",
@@ -714,7 +713,26 @@ async function createLocalContextNews(room, targetQuery, targetType, location = 
         break;
       }
     }
-    if(!article) return buildNewsFallback();
+    if(!article){
+      const retryQuery = [localArea,category,"latest local news"].filter(Boolean).join(" ");
+      const retryDelays = [1000,2000,4000];
+      for(let retryIndex = 0; retryIndex < retryDelays.length && !article; retryIndex += 1){
+        await new Promise(resolve => setTimeout(resolve,retryDelays[retryIndex]));
+        const retryEngine = retryIndex % 2 === 0 ? "google_news" : "google";
+        const retryUrl = retryEngine === "google_news"
+          ? `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(retryQuery)}&api_key=${process.env.SERPAPI_KEY}`
+          : `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:m&q=${encodeURIComponent(retryQuery)}&api_key=${process.env.SERPAPI_KEY}`;
+        const retryFetch = await fetch(retryUrl);
+        if(!retryFetch.ok) continue;
+        const retryData = await retryFetch.json();
+        const linkedArticles = (retryData.news_results || []).filter(item => item?.title && (item?.link || item?.news_link));
+        article = linkedArticles.find(item => {
+          const url = item.link || item.news_link || "";
+          return url && !used.has(url.toLowerCase());
+        }) || linkedArticles[0] || null;
+      }
+    }
+    if(!article) throw newsGateError();
     const url = article.link || article.news_link;
     room.usedLocalContextNews.push(url);
     return {
@@ -730,7 +748,8 @@ async function createLocalContextNews(room, targetQuery, targetType, location = 
     };
   } catch(error) {
     console.log("LOCAL CONTEXT NEWS SEARCH FAILED:",error.message);
-    return buildNewsFallback();
+    if(error.code === "NEWS_GATE_BLOCKED") throw error;
+    throw newsGateError();
   }
 }
 
@@ -5851,28 +5870,15 @@ return;
 
 // Existing Google News search
 
-const serpFetch = await fetch(
-  `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
-);
-
-if (!serpFetch.ok) {
-
-    if (await addAutomaticSearchFallback()) return;
-
-    room.messages.push({
-        from: "CAMERA PERSPECTIVE",
-        aiBeing: true,
-        showNextButton: true,
-        text: "Search service unavailable."
-    });
-
-    io.to(room.id).emit("aiTypingStop");
-    io.to(room.id).emit("roomMessages", room.messages);
-
-    return;
+let serpRes = { news_results:[] };
+try {
+  const serpFetch = await fetch(
+    `https://serpapi.com/search.json?engine=google&tbm=nws&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`
+  );
+  if(serpFetch.ok) serpRes = await serpFetch.json();
+} catch(initialNewsError) {
+  console.log("INITIAL NEWS SEARCH FAILED:",initialNewsError.message);
 }
-
-const serpRes = await serpFetch.json();
 
 if (
   isLocationRequest &&
@@ -6502,20 +6508,38 @@ if (!selectedNews?.title) {
 }
 
 if (!selectedNews?.title) {
+  const fallbackLocalQuery = [
+    nullInput.location || room.searchLocation,
+    room.being?.category || room.coreTheme,
+    "latest local news"
+  ].filter(Boolean).join(" ");
+  const retryDelays = [1000,2000,4000];
+  for(let retryIndex = 0; retryIndex < retryDelays.length && !selectedNews; retryIndex += 1){
+    await new Promise(resolve => setTimeout(resolve,retryDelays[retryIndex]));
+    try {
+      const retryEngine = retryIndex % 2 === 0 ? "google_news" : "google";
+      const retryUrl = retryEngine === "google_news"
+        ? `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(fallbackLocalQuery)}&api_key=${process.env.SERPAPI_KEY}`
+        : `https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:m&q=${encodeURIComponent(fallbackLocalQuery)}&api_key=${process.env.SERPAPI_KEY}`;
+      const retryFetch = await fetch(retryUrl);
+      if(!retryFetch.ok) continue;
+      const retryData = await retryFetch.json();
+      selectedNews = (retryData.news_results || []).find(item =>
+        item?.title && (item?.link || item?.news_link)
+      ) || null;
+      if(selectedNews){
+        imageUrl = selectedNews.original || selectedNews.thumbnail || selectedNews.thumbnail_small || null;
+      }
+    } catch(backoffNewsError) {
+      console.log("BACKOFF NEWS RETRY FAILED:",backoffNewsError.message);
+    }
+  }
+}
 
-    if (await addAutomaticSearchFallback()) return;
-
-    room.messages.push({
-        from: "CAMERA PERSPECTIVE",
-        aiBeing: true,
-        showNextButton: true,
-        text: "No results found."
-    });
-
-    io.to(room.id).emit("aiTypingStop");
-    io.to(room.id).emit("roomMessages", room.messages);
-
-    return;
+if (!selectedNews?.title) {
+    const newsGateError = new Error("A verified News article is required before continuing.");
+    newsGateError.code = "NEWS_GATE_BLOCKED";
+    throw newsGateError;
 }
 
 let newsTitle =
@@ -7179,6 +7203,16 @@ setTimeout(() => {
 }catch(err){
 
   console.log(err);
+  if(err?.code === "NEWS_GATE_BLOCKED"){
+    io.to(room.id).emit("aiTypingStop");
+    socket.emit("newsGateBlocked",{
+      text:String(text || "").trim(),
+      autoFirstRound:Boolean(autoFirstRound),
+      autoCardType:autoCardType || null,
+      message:"Finding a verified local News article before continuing."
+    });
+    return;
+  }
   if (
     autoFirstRound &&
     ["news", "shopping", "place", "jobs", "real_estate"].includes(autoCardType)
