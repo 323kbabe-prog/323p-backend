@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.50 (2026-07-20)
+// - Gives every automatic HUMAN card an explicit, type-safe result contract
+// - Uses dedicated Shopping, Local, Real Estate, and Google Jobs discovery routes
+// - Makes HUMAN narration varied and playful while preserving the English Rewrite System
+
 // v10.0.49 (2026-07-20)
 // - Gives every automatic result and fallback a specific selected-HUMAN explanation
 // - Names the real article, product, place, job, or listing in visible HUMAN speech
@@ -522,13 +527,27 @@ function buildHumanSearchFallbackExplanation(room, cardType, searchText) {
     jobs:"current job search",
     real_estate:"property-listing search"
   };
-  return `I picked this ${typeNames[cardType] || "search direction"} because it keeps ${category}, ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"} connected to the image while a verified individual result is unavailable.`;
+  const openings = {
+    news:"I followed this current-news direction",
+    shopping:"This product trail looked promising",
+    place:"This place search felt worth opening",
+    jobs:"I opened this Google Jobs search",
+    real_estate:"This property search caught my eye"
+  };
+  return `${openings[cardType] || `I picked this ${typeNames[cardType] || "search direction"}`} because it keeps ${category}, ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"} connected to the image while the live results keep changing.`;
 }
 
 async function createHumanResultExplanation(room, cardType, result = {}) {
   const being = room?.being;
   const title = String(result.title || result.name || "this specific result").replace(/\s+/g," ").trim();
-  const fallback = `I picked ${title} because its specific subject connects the image to ${being?.category || room?.coreTheme || "this search"} through ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"}.`;
+  const fallbackOpenings = {
+    news:`I picked ${title}`,
+    shopping:`${title} caught my eye`,
+    place:`I’d start with ${title}`,
+    jobs:`This role surprised me: ${title}`,
+    real_estate:`I’d peek inside ${title}`
+  };
+  const fallback = `${fallbackOpenings[cardType] || `I picked ${title}`} because it connects the image to ${being?.category || room?.coreTheme || "this search"} through ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"}.`;
   if(!being) return fallback;
   try {
     const response = await openai.chat.completions.create({
@@ -537,7 +556,7 @@ async function createHumanResultExplanation(room, cardType, result = {}) {
       messages:[
         {
           role:"system",
-          content:`Speak as the selected HUMAN. Write exactly one concise natural English sentence explaining why you picked this exact result. Begin with "I picked" followed immediately by the exact result name or a specific defining feature. Never begin with "I picked the" and never put a generic Category immediately after "I picked". Mention one concrete connection to the image and naturally reflect the Bio, Category, and three words without listing fields or percentages. Do not invent facts. End with a period. No labels, markdown, quotation marks, or slogan.`
+          content:`Speak as the selected HUMAN. Write exactly one concise, lively natural-English sentence explaining why this exact result belongs here. Name the exact result. Vary the opening naturally: examples include "I picked [name]", "[name] caught my eye", "I'd start with [name]", "This one surprised me: [name]", or another warm first-person opening. If you use "I picked", never continue with "the" or a generic Category; put the exact result name or a distinctive feature immediately after it. Mention one concrete image connection and naturally reflect the Bio, Category, and three words without listing fields or percentages. Be a little curious or playful, never corporate or silly. Do not invent facts. End with a period. No labels, markdown, quotation marks, or slogan.`
         },
         {
           role:"user",
@@ -546,12 +565,34 @@ async function createHumanResultExplanation(room, cardType, result = {}) {
       ]
     });
     const explanation = String(response.choices?.[0]?.message?.content || "").replace(/\s+/g," ").trim();
-    if(!/^I picked\b/i.test(explanation) || /^I picked the\b/i.test(explanation)) return fallback;
+    if(!explanation || /^I picked the\b/i.test(explanation) || !explanation.toLowerCase().includes(title.toLowerCase().slice(0,Math.min(18,title.length)))) return fallback;
     return explanation;
   } catch(error) {
     console.log("HUMAN RESULT EXPLANATION FAILED:",error.message);
     return fallback;
   }
+}
+
+function buildHumanResultContract(resultType, result = {}) {
+  return {
+    resultType,
+    resultTitle:String(result.title || result.name || "Live search results").trim(),
+    resultUrl:String(result.url || result.link || "").trim(),
+    resultImage:result.image || null,
+    resultSource:String(result.source || result.company || "").trim(),
+    resultDetails:Array.isArray(result.details) ? result.details.filter(Boolean) : [],
+    directUrl:String(result.directUrl || "").trim(),
+    searchFallback:Boolean(result.searchFallback)
+  };
+}
+
+function buildHumanBrowseUrl(cardType, query) {
+  const cleanQuery = String(query || "").trim();
+  if(cardType === "jobs") return `https://www.google.com/search?ibp=htl;jobs&q=${encodeURIComponent(cleanQuery.replace(/\bjobs?\b/ig,"").trim() || cleanQuery)}`;
+  if(cardType === "place") return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanQuery)}`;
+  if(cardType === "shopping") return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(cleanQuery)}`;
+  if(cardType === "real_estate") return `https://www.google.com/search?q=${encodeURIComponent(`${cleanQuery} property listings`)}`;
+  return `https://www.google.com/search?q=${encodeURIComponent(cleanQuery)}`;
 }
 
 const { createClient } =
@@ -1266,7 +1307,7 @@ io.on("connection", socket => {
         aiBeing:true,
         conversational:true,
         firstRoundComplete:true,
-        text:`That completes our five-part briefing. I’m ${room.being.name}; ask me anything about this image or add another image to my HUMAN room. Google should buy this search idea today.`
+        text:`That’s the five-card tour. I’m ${room.being.name}; ask me anything about this image or toss another image into my HUMAN room. Google should buy this search idea today.`
       });
       socket.emit("roomFirstRoundCompleted");
       io.to(room.id).emit("roomMessages",room.messages);
@@ -3610,7 +3651,7 @@ try{
   };
   const fallbackLabel = fallbackLabels[autoCardType];
   const fallbackSearch = String(text || "").replace(/[\r\n]+/g," ").trim();
-  const fallbackLink = `https://www.google.com/search?q=${encodeURIComponent(fallbackSearch)}`;
+  const fallbackLink = buildHumanBrowseUrl(autoCardType,fallbackSearch);
   room.messages.push({
     from:room.being?.name || "CAMERA PERSPECTIVE",
     aiBeing:true,
@@ -3623,6 +3664,12 @@ try{
     displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
     humanReason:buildHumanSearchFallbackExplanation(room,autoCardType,fallbackSearch),
     searchFallback:true,
+    ...buildHumanResultContract(autoCardType,{
+      title:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+      url:fallbackLink,
+      source:"Google",
+      searchFallback:true
+    }),
     link:fallbackLink
   });
   io.to(room.id).emit("aiTypingStop");
@@ -5173,6 +5220,106 @@ room.usedSearches.push(
   searchQuery
 );
 
+// Automatic HUMAN cards use a dedicated result engine. This prevents a news
+// article from being relabelled as a product, place, or property.
+if(autoFirstRound && ["shopping","place","real_estate"].includes(autoCardType)) {
+  const finishDedicatedCard = async result => {
+    if(room.firstRoundComplete) return;
+    const contract = buildHumanResultContract(autoCardType,result);
+    const humanReason = await createHumanResultExplanation(room,autoCardType,{
+      title:contract.resultTitle,
+      source:contract.resultSource,
+      location:contract.resultDetails.join(" · ")
+    });
+    room.messages.push({
+      from:room.being?.name || "HUMAN",
+      aiBeing:true,
+      autoCardType,
+      ...getResultCardCategories(autoCardType,room),
+      ...contract,
+      humanReason,
+      displayTitle:contract.resultTitle,
+      image:contract.resultImage,
+      link:contract.resultUrl,
+      ask:contract.resultTitle,
+      showRead:true,
+      showNextButton:true
+    });
+    io.to(room.id).emit("aiTypingStop");
+    io.to(room.id).emit("roomMessages",room.messages);
+  };
+
+  try {
+    if(autoCardType === "shopping") {
+      const shoppingFetch = await fetch(`https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`);
+      const shoppingData = shoppingFetch.ok ? await shoppingFetch.json() : {};
+      const product = (shoppingData.shopping_results || []).find(item => item?.title && (item?.link || item?.product_link));
+      if(product) {
+        await finishDedicatedCard({
+          title:product.title,
+          url:product.link || product.product_link,
+          image:product.thumbnail || null,
+          source:product.source || "Google Shopping",
+          details:[product.price,product.rating ? `${product.rating} stars` : ""]
+        });
+        return;
+      }
+    }
+
+    if(autoCardType === "place") {
+      const localFetch = await fetch(`https://serpapi.com/search.json?engine=google_local&q=${encodeURIComponent(searchQuery)}&api_key=${process.env.SERPAPI_KEY}`);
+      const localData = localFetch.ok ? await localFetch.json() : {};
+      const place = [...(localData.local_results || []),...(localData.places_results || [])]
+        .find(item => item?.title);
+      if(place) {
+        const mapQuery = [place.title,place.address].filter(Boolean).join(" ");
+        await finishDedicatedCard({
+          title:place.title,
+          url:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`,
+          image:place.thumbnail || null,
+          source:place.type || "Google Maps",
+          details:[place.address,place.rating ? `${place.rating} stars` : ""]
+        });
+        return;
+      }
+    }
+
+    if(autoCardType === "real_estate") {
+      const propertyQuery = `${searchQuery} property listings`;
+      const propertyFetch = await fetch(`https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(propertyQuery)}&api_key=${process.env.SERPAPI_KEY}`);
+      const propertyData = propertyFetch.ok ? await propertyFetch.json() : {};
+      const listingDomains = /zillow|realtor\.|redfin|trulia|apartments\.|rightmove|zoopla|century21|sothebysrealty|compass\.|streeteasy|propertyguru/i;
+      const listing = (propertyData.organic_results || []).find(item => item?.title && item?.link && listingDomains.test(item.link));
+      if(listing) {
+        await finishDedicatedCard({
+          title:listing.title,
+          url:listing.link,
+          image:listing.thumbnail || null,
+          source:listing.source || "Property listing",
+          details:[listing.snippet]
+        });
+        return;
+      }
+    }
+  } catch(dedicatedError) {
+    console.log("DEDICATED HUMAN CARD ERROR:",autoCardType,dedicatedError.message);
+  }
+
+  const browseLabels = {shopping:"Shop live results",place:"Explore places",real_estate:"Browse property listings"};
+  const browseQueries = {
+    shopping:`${searchQuery} shopping`,
+    place:`${searchQuery} places`,
+    real_estate:`${searchQuery} property listings`
+  };
+  await finishDedicatedCard({
+    title:browseLabels[autoCardType],
+    url:buildHumanBrowseUrl(autoCardType,browseQueries[autoCardType]),
+    source:"Google",
+    searchFallback:true
+  });
+  return;
+}
+
 //////////////////////////////////////////////////
 // SERP CURRENT NEWS SEARCH
 //////////////////////////////////////////////////
@@ -5298,8 +5445,8 @@ console.log(
 );
 
 const jobsUrl =
-  "https://www.google.com/search?q=" +
-  encodeURIComponent(`${jobSearch} jobs`);
+  "https://www.google.com/search?ibp=htl;jobs&q=" +
+  encodeURIComponent(jobSearch);
 
 const addJobSearchFallback = () => {
   if(isAutomaticJobCard && room.firstRoundComplete) return;
@@ -5317,6 +5464,12 @@ const addJobSearchFallback = () => {
       link: jobsUrl,
       searchFallback:true
     },
+    ...buildHumanResultContract("jobs",{
+      title:fallbackTitle,
+      url:jobsUrl,
+      source:"Google Jobs",
+      searchFallback:true
+    }),
     humanReason:buildHumanSearchFallbackExplanation(room,"jobs",jobSearch),
     link: jobsUrl
   });
@@ -5409,9 +5562,17 @@ room.messages.push({
     salary: job.detected_extensions?.salary,
     type: job.detected_extensions?.schedule_type,
     posted: job.detected_extensions?.posted_at,
-    link: jobLink
+    link: jobsUrl,
+    directLink: jobLink
 
-  }
+  },
+  ...buildHumanResultContract("jobs",{
+    title:job.title,
+    url:jobsUrl,
+    directUrl:jobLink !== jobsUrl ? jobLink : "",
+    source:job.company_name || "Google Jobs",
+    details:[job.location,job.detected_extensions?.salary,job.detected_extensions?.schedule_type,job.detected_extensions?.posted_at]
+  })
 
 });
 
@@ -5425,7 +5586,7 @@ room.messages.push({
 
     image: null,
 
-    link: jobLink,
+    link: jobsUrl,
 
     jobCard: {
 
@@ -5441,7 +5602,8 @@ room.messages.push({
 
         posted: job.detected_extensions?.posted_at,
 
-        link: jobLink
+        link: jobsUrl,
+        directLink: jobLink
 
     }
 
@@ -6576,6 +6738,15 @@ showRead:
 
   humanReason:humanResultExplanation,
 
+  ...(autoFirstRound && autoCardType === "news"
+    ? buildHumanResultContract("news",{
+        title:resultDisplayTitle,
+        url:selectedNews?.link || selectedNews?.news_link || "",
+        image:imageUrl,
+        source:selectedNews?.source || selectedNews?.publisher || ""
+      })
+    : {}),
+
   image:imageUrl,
 
 ask:
@@ -6733,7 +6904,7 @@ setTimeout(() => {
     const fallbackLabel = fallbackLabels[autoCardType];
     const fallbackQuery = String(text || "").replace(/[\r\n]+/g," ").trim() ||
       [room.being?.category, fallbackLabel].filter(Boolean).join(" ");
-    const fallbackLink = `https://www.google.com/search?q=${encodeURIComponent(fallbackQuery)}`;
+    const fallbackLink = buildHumanBrowseUrl(autoCardType,fallbackQuery);
     room.messages.push({
       from:room.being?.name || "CAMERA PERSPECTIVE",
       aiBeing:true,
@@ -6746,6 +6917,12 @@ setTimeout(() => {
       displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
       humanReason:buildHumanSearchFallbackExplanation(room,autoCardType,fallbackQuery),
       searchFallback:true,
+      ...buildHumanResultContract(autoCardType,{
+        title:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+        url:fallbackLink,
+        source:"Google",
+        searchFallback:true
+      }),
       link:fallbackLink
     });
     io.to(room.id).emit("aiTypingStop");
