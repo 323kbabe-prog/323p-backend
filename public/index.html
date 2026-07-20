@@ -4,6 +4,13 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.21 (2026-07-21)
+  - Keeps the HUMAN header name on one responsive line
+  - Uses a pure white stage behind both demo photos
+  - Converts Camera, Upload, and Public to equal icon-only controls
+  - Matches the header Share control exactly to the Close control size
+  - Lets people type during the demo and safely holds early questions until the News sequence is ready
+
   v10.1.20 (2026-07-21)
   - Lowers the Ask bar to the device safe-area boundary
   - Removes the legacy relative bottom offset that left unused space below the composer
@@ -7368,6 +7375,7 @@ let perspectiveTourStarted = false;
 let perspectiveInvitationViewed = false;
 let perspectiveScrollTimer = null;
 let perspectiveRestoreFrame = null;
+let queuedPerspectiveAsk = "";
 
 let pendingImageDataUrl = null;
 let pendingImageSource = null;
@@ -8199,6 +8207,17 @@ roomInput.onkeydown = e => {
 
     if (!text) return;
 
+    if(
+      perspectiveTourStarted &&
+      (isFirstRoundActive() || beingFirstRoundWaiting || newsGateDirectWaiting || !perspectiveInvitationViewed)
+    ){
+      queuedPerspectiveAsk = text;
+      roomInput.value = "";
+      roomInput.disabled = false;
+      roomInput.placeholder = "Ask saved — preparing perspectives";
+      return;
+    }
+
     gtag('event', 'send_room_message');
 
 if (memoryMode) {
@@ -8241,6 +8260,22 @@ roomInput.value = "";
 
 
 };
+
+function flushQueuedPerspectiveAsk(){
+  if(
+    !queuedPerspectiveAsk ||
+    isFirstRoundActive() ||
+    beingFirstRoundWaiting ||
+    newsGateDirectWaiting ||
+    (perspectiveTourStarted && !perspectiveInvitationViewed)
+  ) return;
+  const text = queuedPerspectiveAsk;
+  queuedPerspectiveAsk = "";
+  roomInput.disabled = false;
+  roomInput.readOnly = false;
+  roomInput.value = text;
+  roomInput.dispatchEvent(new KeyboardEvent("keydown",{ key:"Enter", bubbles:true }));
+}
 
 openHumanCardsButton.addEventListener("click",openRequiredHumanSelection);
 
@@ -8848,20 +8883,23 @@ function updatePerspectiveViewportState(){
   }
 
   if(current.querySelector(".perspectiveArrival")){
-    roomInput.disabled = true;
+    roomInput.disabled = false;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Ask — preparing perspectives";
+    roomInput.placeholder = queuedPerspectiveAsk ? "Ask saved — preparing perspectives" : "Ask during the demo";
   }else if(perspectiveTourStarted && !perspectiveInvitationViewed){
     const currentIndex = slides.indexOf(current);
-    roomInput.disabled = true;
+    roomInput.disabled = false;
     roomInput.readOnly = false;
-    roomInput.placeholder = currentIndex >= 0 && currentIndex < slides.length - 1
+    roomInput.placeholder = queuedPerspectiveAsk
+      ? "Ask saved — preparing perspectives"
+      : currentIndex >= 0 && currentIndex < slides.length - 1
       ? "Ask — swipe up for the next perspective"
       : "Ask — next perspective is loading";
   }else if(perspectiveInvitationViewed){
     roomInput.disabled = false;
     roomInput.readOnly = false;
     roomInput.placeholder = "Ask";
+    flushQueuedPerspectiveAsk();
   }
   updatePerspectiveDensity();
 }
@@ -9120,7 +9158,7 @@ function retryNewsGate(){
   } : null);
   if(!payload) return;
   document.getElementById("sequenceDelayNotice")?.remove();
-  roomInput.disabled = true;
+  roomInput.disabled = !perspectiveTourStarted;
   roomInput.placeholder = "Ask — finding local news";
   showSequenceTyping();
   socket.emit("roomMessage",{
@@ -9131,7 +9169,7 @@ function retryNewsGate(){
 
 socket.on("newsGateBlocked",payload => {
   newsGateRetryPayload = payload || null;
-  roomInput.disabled = true;
+  roomInput.disabled = !perspectiveTourStarted;
   roomInput.placeholder = beingFirstRoundWaiting
     ? "Ask — next perspective is loading"
     : "Ask — finding local news";
@@ -9395,11 +9433,13 @@ function syncFirstRoundInput(){
     return;
   }
   if(isFirstRoundActive() || perspectiveLocked){
-    roomInput.disabled = true;
+    roomInput.disabled = false;
     roomInput.readOnly = false;
     const slides = getPerspectiveSlides();
     const currentIndex = slides.indexOf(getCurrentPerspectiveSlide());
-    roomInput.placeholder = currentIndex >= 0 && currentIndex < slides.length - 1
+    roomInput.placeholder = queuedPerspectiveAsk
+      ? "Ask saved — preparing perspectives"
+      : currentIndex >= 0 && currentIndex < slides.length - 1
       ? "Ask — swipe up for the next perspective"
       : "Ask — next perspective is loading";
     return;
@@ -9407,6 +9447,7 @@ function syncFirstRoundInput(){
   roomInput.disabled = false;
   roomInput.readOnly = false;
   roomInput.placeholder = "Ask";
+  flushQueuedPerspectiveAsk();
 }
 
 function getRoomCardTriggerInstruction(messages){
@@ -14476,6 +14517,73 @@ html body #roomOverlay{
 html body #roomInput{
   bottom:0!important;
   margin-bottom:0!important;
+}
+
+/* v10.1.21 — compact icon utilities, white media stage, and one-line identity. */
+#roomTitle .roomHumanFullName{
+  width:100%;
+  min-width:0;
+  font-size:clamp(12px,3.8vw,17px);
+  letter-spacing:-.02em;
+  line-height:1.08;
+  white-space:nowrap;
+  overflow:visible;
+}
+#roomMessages.perspectiveSwipeThread .perspectiveArrivalMedia,
+#roomMessages.perspectiveSwipeThread .perspectiveArrivalHuman,
+#roomMessages.perspectiveSwipeThread .perspectiveArrivalImage{
+  background:#fff!important;
+}
+html body #roomImageActions,
+html body #roomOverlay.perspectiveDemoViewing #roomImageActions{
+  width:max-content!important;
+  max-width:100%!important;
+  height:44px!important;
+  min-height:44px!important;
+  margin-left:0!important;
+  margin-right:auto!important;
+  justify-content:flex-start!important;
+}
+html body #roomImageActions button,
+html body #roomOverlay.perspectiveDemoViewing #roomImageActions button{
+  flex:0 0 44px!important;
+  width:44px!important;
+  min-width:44px!important;
+  max-width:44px!important;
+  height:44px!important;
+  min-height:44px!important;
+  padding:0!important;
+}
+html body #roomImageActions .roomActionIcon,
+html body #roomOverlay.perspectiveDemoViewing #roomImageActions .roomActionIcon{
+  flex-basis:20px!important;
+  width:20px!important;
+  height:20px!important;
+}
+html body #roomImageActions .roomActionIcon svg{width:20px!important;height:20px!important;}
+html body #roomImageActions .roomActionLabel,
+html body #roomOverlay.perspectiveDemoViewing #roomImageActions .roomActionLabel{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0 0 0 0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+html body #shareRoomBtn,
+html body #closeRoom{
+  width:40px!important;
+  min-width:40px!important;
+  max-width:40px!important;
+  height:40px!important;
+  min-height:40px!important;
+  max-height:40px!important;
+  flex:0 0 40px!important;
+  padding:0!important;
+  box-sizing:border-box!important;
 }
 </style>
 </body>
