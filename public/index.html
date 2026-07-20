@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.07 (2026-07-20)
+  - Shows Ask — available after the five results only during a new room's five-card run
+  - Restores Ask when the sequence finishes while preserving rejoin activation behavior
+
   v10.1.06 (2026-07-20)
   - Formats result-card lead replies as one to three numbered points plus the Google closing sentence
   - Keeps the boxed rejoin dots visible for at least one second before activating Ask
@@ -8293,7 +8297,9 @@ gtag('event', 'page_view', {
 roomInput.style.display = "block";
 roomInput.disabled = true;
 roomInput.readOnly = false;
-roomInput.placeholder = "Ask";
+roomInput.placeholder = !data.rejoined && !data.firstRoundComplete
+  ? "Ask — available after the five results"
+  : "Ask";
 if(data.rejoined){
   activateAskAfterRejoinDelay();
 }
@@ -8896,7 +8902,7 @@ function syncFirstRoundInput(){
   if(isFirstRoundActive()){
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Ask";
+    roomInput.placeholder = "Ask — available after the five results";
     return;
   }
   roomInput.disabled = false;
