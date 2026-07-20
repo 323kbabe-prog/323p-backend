@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.07 (2026-07-20)
+// - Uses exactly one result-specific HUMAN sentence before every automatic or chat result card
+// - Requires the sentence to begin I picked the exact result because
+
 // v10.1.06 (2026-07-20)
 // - Limits card lead copy to one to three concrete reasons for selecting that exact result
 // - Grounds those reasons in result fit, image/HUMAN relevance, and verified result details
@@ -610,34 +614,14 @@ function getResultCardCategories(intent, room, detail = "") {
 function buildHumanSearchFallbackExplanation(room, cardType, searchText) {
   const being = room?.being;
   const category = being?.category || room?.coreTheme || "this category";
-  const typeNames = {
-    news:"current-news direction",
-    shopping:"specific product search",
-    place:"specific place search",
-    jobs:"current job search",
-    real_estate:"property-listing search"
-  };
-  const openings = {
-    news:"I followed this current-news direction",
-    shopping:"This product trail looked promising",
-    place:"This place search felt worth opening",
-    jobs:"I opened this Google Jobs search",
-    real_estate:"This property search caught my eye"
-  };
-  return `${openings[cardType] || `I picked this ${typeNames[cardType] || "search direction"}`} because it keeps ${category}, ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"} connected to the image while the live results keep changing.`;
+  const exactSearch = String(searchText || `${category} ${cardType || "result"}`).replace(/[.!?]+$/g,"").trim();
+  return `I picked ${exactSearch} because it keeps ${category}, ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"} connected to the image while the live results keep changing.`;
 }
 
 async function createHumanResultExplanation(room, cardType, result = {}) {
   const being = room?.being;
   const title = String(result.title || result.name || "this specific result").replace(/\s+/g," ").trim();
-  const fallbackOpenings = {
-    news:`I picked ${title}`,
-    shopping:`${title} caught my eye`,
-    place:`I’d start with ${title}`,
-    jobs:`This role surprised me: ${title}`,
-    real_estate:`I’d peek inside ${title}`
-  };
-  const fallback = `${fallbackOpenings[cardType] || `I picked ${title}`} because it connects the image to ${being?.category || room?.coreTheme || "this search"} through ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"}.`;
+  const fallback = `I picked ${title} because it connects the image to ${being?.category || room?.coreTheme || "this search"} through ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"}.`;
   if(!being) return fallback;
   try {
     const response = await openai.chat.completions.create({
@@ -646,7 +630,7 @@ async function createHumanResultExplanation(room, cardType, result = {}) {
       messages:[
         {
           role:"system",
-          content:`Speak as the selected HUMAN in a calm, clear, confident, polished news-anchor tone. Write one to three concise natural-English reasons for selecting this exact result. Every reason must be specifically about this result, not generic narration. Across the available reasons, prioritize: direct fit for the requested result type; a concrete connection to the uploaded image and selected HUMAN perspective; and one verified advantage or useful fact supported by the supplied result title, source, company, or location. Name the exact result in the first reason. Each sentence must be one distinct reason, and the complete reply must contain no more than three reasons. Never say only "Here’s what I notice", "this caught my eye", or another generic transition without explaining why. Naturally reflect the Bio, Category, and three words without listing fields or percentages. Do not invent facts or repeat the same reason. End every reason with a period. Do not add numbers; the interface adds them. No labels, markdown, quotation marks, or slogan.`
+          content:`Speak as the selected HUMAN in a calm, clear, confident, polished news-anchor tone. Write exactly one concise natural-English sentence explaining why this exact result was selected. It must begin exactly with "I picked [exact result name] because" using the supplied exact result title in place of the brackets. Give one specific reason grounded in result fit, the uploaded image and selected HUMAN perspective, or a verified useful fact supplied in the title, source, company, or location. Never use generic narration such as "Here’s what I notice". Naturally reflect the Bio, Category, and three words without listing fields or percentages. Do not invent facts. End with a period. Do not add a number; the interface adds "1.". No labels, markdown, quotation marks, or slogan.`
         },
         {
           role:"user",
@@ -655,7 +639,8 @@ async function createHumanResultExplanation(room, cardType, result = {}) {
       ]
     });
     const explanation = String(response.choices?.[0]?.message?.content || "").replace(/\s+/g," ").trim();
-    if(!explanation || /^I picked the\b/i.test(explanation) || !explanation.toLowerCase().includes(title.toLowerCase().slice(0,Math.min(18,title.length)))) return fallback;
+    const sentenceCount = (explanation.match(/[.!?]+/g) || []).length;
+    if(!explanation || !/^I picked\s+.+\s+because\s+/i.test(explanation) || sentenceCount !== 1 || !explanation.toLowerCase().includes(title.toLowerCase().slice(0,Math.min(18,title.length)))) return fallback;
     return explanation;
   } catch(error) {
     console.log("HUMAN RESULT EXPLANATION FAILED:",error.message);
