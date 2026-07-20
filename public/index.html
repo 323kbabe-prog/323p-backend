@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.16 (2026-07-21)
+  - Guarantees at least one loaded visual in every automatic perspective
+  - Restores visible icons and labels for Camera, Upload, and Public controls
+  - Replaces wide QR and Share Card header buttons with one compact Share menu
+  - Gives the full HUMAN name the primary header width without squeezing
+
   v10.1.15 (2026-07-21)
   - Auto-fits News, HUMAN connection, requested result, actions, and swipe cue into one screen
   - Adds comfortable, compact, tight, and ultra density levels based on real room height
@@ -6844,7 +6850,7 @@ ASK.CAMERA
 <button
 id="shareRoomBtn"
 aria-label="Share HUMAN card"
-onclick="shareRoom()"
+onclick="openRoomShareMenu(event)"
 style="display:none;
 height:24px;
 padding:0 10px;
@@ -7612,6 +7618,31 @@ async function shareRoom(){
 
     alert("HUMAN room invitation copied.");
 
+}
+
+function closeRoomShareMenu(){
+  document.getElementById("roomShareMenu")?.remove();
+}
+
+function openRoomShareMenu(event){
+  event?.preventDefault();
+  event?.stopPropagation();
+  closeRoomShareMenu();
+  let being = {};
+  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
+  const overlay = document.createElement("div");
+  overlay.id = "roomShareMenu";
+  overlay.setAttribute("role","dialog");
+  overlay.setAttribute("aria-modal","true");
+  overlay.setAttribute("aria-label","Share HUMAN");
+  overlay.innerHTML = `<div class="roomShareMenuPanel" onclick="event.stopPropagation()">
+    <div class="roomShareMenuTitle">Share ${escapeBeingText(being.name || "HUMAN")}</div>
+    <button type="button" onclick="closeRoomShareMenu();shareRoom()">Share HUMAN card</button>
+    <button type="button" onclick="closeRoomShareMenu();showBeingQR()">Show QR</button>
+    <button type="button" class="roomShareMenuCancel" onclick="closeRoomShareMenu()">Cancel</button>
+  </div>`;
+  overlay.onclick = closeRoomShareMenu;
+  document.body.appendChild(overlay);
 }
 
 function startMemoryMode(){
@@ -8624,9 +8655,21 @@ function compactRoomCopy(value,maxLength = 220){
   return `${text}${hasBelief ? " Google should buy this search idea today." : ""}`.trim();
 }
 
+function perspectiveFallbackImage(preferred = ""){
+  if(preferred) return preferred;
+  const roomImage = localStorage.getItem("roomThumbnail") || localStorage.getItem("askCameraRoomThumbnail") || "";
+  if(roomImage) return roomImage;
+  try {
+    return JSON.parse(localStorage.getItem("selectedBeing") || "{}").photo || "";
+  } catch(error) {
+    return "";
+  }
+}
+
 function localContextNewsCardHtml(context){
   if(!context?.resultTitle || !context?.resultUrl) return "";
   const action = getRoomOpenAction(context);
+  const contextImage = perspectiveFallbackImage(context.resultImage || context.image || "");
   const details = (Array.isArray(context.resultDetails) ? context.resultDetails : [])
     .filter(Boolean)
     .slice(0,2)
@@ -8636,7 +8679,7 @@ function localContextNewsCardHtml(context){
     <div class="dailyNullCard geminiAiResponse humanContractResult localContextNewsCard" data-share-card data-share-read="true" data-link="${escapeBeingText(action.href || context.resultUrl)}">
       <div class="humanResultBody" data-share-content>
         <div class="humanResultCategory">NEWS · LOCAL CONTEXT</div>
-        ${context.resultImage ? `<img class="humanResultImage" src="${escapeBeingText(context.resultImage)}" alt="">` : ""}
+        ${contextImage ? `<img class="humanResultImage" src="${escapeBeingText(contextImage)}" alt="Local context">` : ""}
         <div class="humanResultTitle">${escapeBeingText(context.resultTitle)}</div>
         ${context.resultSource ? `<div class="humanResultSource">${escapeBeingText(context.resultSource)}</div>` : ""}
         ${details ? `<div class="humanResultDetails">${details}</div>` : ""}
@@ -9566,7 +9609,7 @@ if(m.resultType && m.resultTitle){
     .slice(0,4)
     .map(value => `<span class="humanResultDetail">${escapeBeingText(String(value))}</span>`)
     .join("");
-  const resultImage = m.resultImage || m.image || "";
+  const resultImage = perspectiveFallbackImage(m.resultImage || m.image || "");
   const directApply = m.resultType === "jobs" && m.directUrl
     ? `<a class="chatOpenAction humanSecondaryAction" href="${escapeBeingText(m.directUrl)}" target="_blank" rel="noopener noreferrer">Apply</a>`
     : "";
@@ -12847,8 +12890,9 @@ function renderBeingRoomHeader(being){
 
   document.getElementById("beingQrBtn").style.display = "none";
   document.getElementById("changeHumanBtn").style.display = "none";
-  document.getElementById("beingQrBtn").style.display = "inline-block";
+  document.getElementById("beingQrBtn").style.display = "none";
   document.getElementById("shareRoomBtn").style.display = "inline-block";
+  document.getElementById("shareRoomBtn").setAttribute("aria-label","Share HUMAN card or show QR");
   document.getElementById("roomCountdown").style.display = "none";
   document.getElementById("homeRoomCard").style.display = "none";
 }
@@ -13893,6 +13937,129 @@ Close
   #roomMessages.perspectiveSwipeThread .perspectiveArrivalImage{height:20vh!important;min-height:110px!important;}
   #roomMessages.perspectiveSwipeThread .perspectiveArrivalIntro{font-size:12px;line-height:1.35;}
   #roomMessages.perspectiveSwipeThread .perspectiveArrivalGuide{font-size:11px;line-height:1.3;}
+}
+
+/* v10.1.16 — stable room utilities, complete identity, and guaranteed visuals. */
+#beingQrBtn{display:none!important;}
+html body #shareRoomBtn{
+  width:52px!important;
+  min-width:52px!important;
+  max-width:52px!important;
+  height:38px!important;
+  min-height:38px!important;
+  padding:0!important;
+  font-size:0!important;
+  overflow:visible!important;
+  flex:0 0 52px!important;
+}
+html body #shareRoomBtn::after{
+  content:"Share";
+  display:block;
+  color:#0550ae;
+  font-size:11px;
+  font-weight:700;
+  line-height:36px;
+}
+html body #shareRoomBtn::before{content:none!important;display:none!important;}
+#roomIdentityPanel{flex:1 1 auto!important;width:auto!important;max-width:none!important;}
+#roomIdentityPanel > div > div:first-child{gap:7px!important;}
+#roomTitle{flex:1 1 auto!important;width:auto!important;}
+
+#roomShareMenu{
+  position:fixed;
+  inset:0;
+  z-index:2147483647;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  box-sizing:border-box;
+  background:rgba(0,0,0,.58);
+}
+#roomShareMenu .roomShareMenuPanel{
+  width:min(100%,340px);
+  padding:18px;
+  box-sizing:border-box;
+  border:1px solid #d0d7de;
+  background:#fff;
+}
+#roomShareMenu .roomShareMenuTitle{margin-bottom:12px;font-size:17px;font-weight:700;line-height:1.25;overflow-wrap:anywhere;}
+#roomShareMenu button{
+  width:100%;
+  min-height:44px;
+  margin-top:8px;
+  border:1px solid #54aeff!important;
+  border-radius:0!important;
+  background:#ddf4ff!important;
+  color:#0550ae!important;
+  font-size:14px;
+  font-weight:600;
+}
+#roomShareMenu .roomShareMenuCancel{border-color:#d0d7de!important;background:#fff!important;color:#24292f!important;}
+
+html body #roomImageActions,
+html body #roomOverlay.perspectiveDemoViewing #roomImageActions{
+  width:100%!important;
+  height:44px!important;
+  min-height:44px!important;
+  margin:5px auto 3px!important;
+  gap:6px!important;
+  display:flex!important;
+}
+html body #roomImageActions button,
+html body #roomOverlay.perspectiveDemoViewing #roomImageActions button{
+  position:relative!important;
+  flex:1 1 0!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  height:44px!important;
+  min-height:44px!important;
+  padding:0 8px!important;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  overflow:hidden!important;
+}
+html body #roomImageActions .roomActionIcon,
+html body #roomOverlay.perspectiveDemoViewing #roomImageActions .roomActionIcon{
+  position:static!important;
+  display:inline-flex!important;
+  flex:0 0 18px!important;
+  width:18px!important;
+  height:18px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:inherit!important;
+}
+html body #roomImageActions .roomActionIcon svg{display:block!important;width:18px!important;height:18px!important;fill:none!important;stroke:currentColor!important;}
+html body #roomImageActions .roomActionLabel,
+html body #roomOverlay.perspectiveDemoViewing #roomImageActions .roomActionLabel{
+  position:static!important;
+  display:inline!important;
+  width:auto!important;
+  height:auto!important;
+  clip:auto!important;
+  overflow:visible!important;
+  color:inherit!important;
+  font-size:12px!important;
+  line-height:1!important;
+  font-weight:600!important;
+  text-transform:none!important;
+}
+html body #roomImageActions .roomActionLabel::before,
+html body #roomImageActions .roomActionLabel::after{content:none!important;}
+
+/* Ultra density may remove a secondary image, but never the only visible image. */
+#roomMessages.perspectiveDensityUltra .automaticPerspective .localContextNewsCard .humanResultImage,
+#roomMessages.perspectiveDensityUltra .automaticPerspective.result-news .humanContractResult .humanResultImage{
+  display:block!important;
 }
 </style>
 </body>
