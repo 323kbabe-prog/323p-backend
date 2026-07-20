@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.18 (2026-07-21)
+  - Keeps the room strongly image-driven while sizing every text section to its real content
+  - Removes flexible empty HUMAN/result rows and gives all remaining height to the hero image
+  - Adds HUMAN photo, full name, and category to the integrated card connection
+  - Replaces half-width Share text blocks with compact icon actions and compacts the header Share control
+
   v10.1.17 (2026-07-21)
   - Rebuilds every automatic room perspective as one unified Daily-style image card
   - Leads with News imagery and hierarchy, integrates HUMAN anchor copy, and finishes with the requested result
@@ -8931,7 +8937,13 @@ function unifiedHumanConnectionHtml(anchor = {}){
   const mediumText = completeAnchorFallback(anchor?.anchorMedium || fallback);
   const longText = completeAnchorFallback(anchor?.anchorLong || fallback);
   return `<section class="unifiedHumanConnection">
-    <div class="unifiedHumanName">${escapeBeingText(being.name || "HUMAN")}</div>
+    <div class="unifiedHumanIdentity">
+      ${being.photo ? `<img class="unifiedHumanPhoto" src="${escapeBeingText(being.photo)}" alt="">` : ""}
+      <div class="unifiedHumanIdentityText">
+        <div class="unifiedHumanName">${escapeBeingText(being.name || "HUMAN")}</div>
+        <div class="unifiedHumanCategory">${escapeBeingText(being.category || "HUMAN")}</div>
+      </div>
+    </div>
     <div class="unifiedHumanCopy unifiedHumanCopyShort">${escapeBeingText(shortText)}</div>
     <div class="unifiedHumanCopy unifiedHumanCopyMedium">${escapeBeingText(mediumText)}</div>
     <div class="unifiedHumanCopy unifiedHumanCopyLong">${escapeBeingText(longText)}</div>
@@ -8982,7 +8994,7 @@ function unifiedDailyPerspectiveHtml(message = {},anchor = {}){
       <div class="unifiedResultActions">
         <a class="unifiedAction" href="${resultHref}" target="_blank" rel="noopener noreferrer">${escapeBeingText(resultAction.label || "Open result")}</a>
         ${directApply}
-        <button class="unifiedAction unifiedShareAction" type="button" data-link="${resultHref}" onclick="shareCard(this,this.dataset.link)">Share result</button>
+        <button class="unifiedAction unifiedShareAction" type="button" aria-label="Share result" data-link="${resultHref}" onclick="shareCard(this,this.dataset.link)"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M5 14v5h14v-5"/></svg></button>
       </div>
       <div class="perspectiveSwipeCue">↑ Swipe up for the next perspective</div>
     </article>
@@ -14282,6 +14294,123 @@ html body #shareRoomBtn{margin-left:auto!important;}
 #roomMessages.perspectiveDensityUltra .unifiedNewsLink{font-size:9px;}
 #roomMessages.perspectiveDensityUltra .unifiedResultActions{min-height:28px;gap:4px;}
 #roomMessages.perspectiveDensityUltra .unifiedAction{min-height:28px;padding:3px 5px;font-size:9px!important;}
+
+/* v10.1.18 — natural content stack; the hero image owns all remaining height. */
+html body #shareRoomBtn{
+  width:40px!important;
+  min-width:40px!important;
+  max-width:40px!important;
+  height:40px!important;
+  min-height:40px!important;
+  flex-basis:40px!important;
+}
+html body #shareRoomBtn::after{
+  content:"↗";
+  font-size:21px;
+  font-weight:500;
+  line-height:38px;
+}
+#roomThumbnail,#roomCameraThumbnail{
+  width:48px!important;
+  height:48px!important;
+  flex:0 0 48px!important;
+  object-fit:cover!important;
+  border-radius:0!important;
+}
+#roomTitle .roomHumanCategory{font-size:9px;line-height:1.1;}
+#roomTitle .roomHumanFullName{font-size:clamp(14px,4vw,17px);line-height:1.08;overflow-wrap:normal;word-break:normal;}
+#roomTitle .roomHumanPhone{font-size:9px;line-height:1.1;}
+
+#roomMessages.perspectiveSwipeThread .unifiedDailyRoomCard,
+#roomMessages.perspectiveSwipeThread .unifiedDailyRoomPerspective.result-news .unifiedDailyRoomCard,
+#roomMessages.perspectiveDensityCompact .unifiedDailyRoomCard,
+#roomMessages.perspectiveDensityTight .unifiedDailyRoomCard,
+#roomMessages.perspectiveDensityUltra .unifiedDailyRoomCard{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:flex-start;
+  gap:6px;
+  padding:8px;
+}
+#roomMessages .unifiedPerspectiveImageFrame{
+  flex:1 1 0;
+  width:100%;
+  min-height:120px;
+  max-height:none;
+}
+#roomMessages .unifiedNewsSection,
+#roomMessages .unifiedHumanConnection,
+#roomMessages .unifiedResultSection,
+#roomMessages .unifiedResultActions,
+#roomMessages .unifiedDailyRoomCard > .perspectiveSwipeCue{flex:0 0 auto;}
+#roomMessages .unifiedNewsSection{padding:1px 66px 1px 0;}
+#roomMessages .unifiedNewsTitle,
+#roomMessages .unifiedResultTitle{
+  display:block;
+  overflow:visible;
+  margin-top:3px;
+  font-size:clamp(14px,3.8vw,17px);
+  line-height:1.22;
+  -webkit-line-clamp:unset;
+}
+#roomMessages .unifiedHumanConnection{min-height:auto;height:auto;padding:7px 9px;}
+#roomMessages .unifiedHumanIdentity{display:flex;align-items:center;gap:7px;min-width:0;}
+#roomMessages .unifiedHumanPhoto{
+  display:block!important;
+  width:30px!important;
+  height:30px!important;
+  min-width:30px!important;
+  max-width:30px!important;
+  max-height:30px!important;
+  margin:0!important;
+  object-fit:cover!important;
+  border:0!important;
+  border-radius:0!important;
+}
+#roomMessages .unifiedHumanIdentityText{min-width:0;}
+#roomMessages .unifiedHumanName{font-size:11px;line-height:1.12;white-space:normal;overflow-wrap:anywhere;}
+#roomMessages .unifiedHumanCategory{margin-top:2px;color:#57606a;font-size:9px;line-height:1.1;text-transform:uppercase;}
+#roomMessages .unifiedHumanCopy{margin-top:5px;font-size:12px;line-height:1.28;}
+#roomMessages .unifiedHumanClosing{margin-top:3px;font-size:10px;line-height:1.2;}
+#roomMessages .unifiedResultSection{min-height:auto;padding:2px 0;}
+#roomMessages .unifiedResultActions{min-height:36px;height:36px;gap:6px;}
+#roomMessages .unifiedAction{min-height:36px;height:36px;flex:1 1 auto;padding:5px 10px;font-size:11px!important;}
+#roomMessages .unifiedSecondaryAction{flex:0 1 auto;min-width:64px;}
+#roomMessages .unifiedShareAction{
+  flex:0 0 38px!important;
+  width:38px!important;
+  min-width:38px!important;
+  max-width:38px!important;
+  padding:0!important;
+  background:#fff!important;
+  color:#24292f!important;
+  border-color:#8c959f!important;
+}
+#roomMessages .unifiedShareAction svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+#roomMessages .unifiedDailyRoomCard > .perspectiveSwipeCue{height:auto;min-height:12px;}
+
+#roomMessages.perspectiveDensityCompact .unifiedDailyRoomCard{gap:5px;padding:7px;}
+#roomMessages.perspectiveDensityCompact .unifiedPerspectiveImageFrame{min-height:100px;}
+#roomMessages.perspectiveDensityCompact .unifiedHumanConnection{padding:6px 8px;}
+#roomMessages.perspectiveDensityCompact .unifiedHumanPhoto{width:27px!important;height:27px!important;min-width:27px!important;max-width:27px!important;max-height:27px!important;}
+
+#roomMessages.perspectiveDensityTight .unifiedDailyRoomCard{gap:4px;padding:6px;}
+#roomMessages.perspectiveDensityTight .unifiedPerspectiveImageFrame{min-height:82px;}
+#roomMessages.perspectiveDensityTight .unifiedNewsTitle,
+#roomMessages.perspectiveDensityTight .unifiedResultTitle{display:-webkit-box;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:12px;}
+#roomMessages.perspectiveDensityTight .unifiedHumanPhoto{width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;max-height:24px!important;}
+#roomMessages.perspectiveDensityTight .unifiedHumanCopy{font-size:10px;line-height:1.18;}
+#roomMessages.perspectiveDensityTight .unifiedResultActions{height:32px;min-height:32px;}
+#roomMessages.perspectiveDensityTight .unifiedAction{height:32px;min-height:32px;}
+
+#roomMessages.perspectiveDensityUltra .unifiedDailyRoomCard{gap:3px;padding:4px;}
+#roomMessages.perspectiveDensityUltra .unifiedPerspectiveImageFrame{min-height:68px;}
+#roomMessages.perspectiveDensityUltra .unifiedHumanConnection{padding:4px 6px;}
+#roomMessages.perspectiveDensityUltra .unifiedHumanPhoto{width:21px!important;height:21px!important;min-width:21px!important;max-width:21px!important;max-height:21px!important;}
+#roomMessages.perspectiveDensityUltra .unifiedResultActions{height:28px;min-height:28px;}
+#roomMessages.perspectiveDensityUltra .unifiedAction{height:28px;min-height:28px;}
+#roomMessages.perspectiveDensityUltra .unifiedShareAction{width:30px!important;min-width:30px!important;max-width:30px!important;flex-basis:30px!important;}
 </style>
 </body>
 </html>
