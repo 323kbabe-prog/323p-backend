@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.04 (2026-07-20)
+  - Preserves every visible room message, image, and result card while rejoining
+  - Appends the boxed rejoin loader below existing content instead of replacing it
+
   v10.1.03 (2026-07-20)
   - Keeps the rejoin indicator visible through restored-chat redraws until recovery completes
   - Keeps every active three-dot loader inside one consistent visible status box
@@ -7450,7 +7454,6 @@ function openHomeRoom(event){
     let savedBeing = null;
     try { savedBeing = JSON.parse(localStorage.getItem("selectedBeing") || "null"); } catch(error) {}
     if(savedBeing) renderBeingRoomHeader(savedBeing);
-    roomMessages.innerHTML = "";
     roomInput.style.display = "block";
     roomInput.disabled = true;
     roomInput.placeholder = "Ask — restoring this HUMAN room";
