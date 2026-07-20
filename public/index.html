@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.11 (2026-07-20)
+  - Inserts one HUMAN anchor-tone instruction between each automatic result card
+  - Keeps transitions out of the space before card one and after card five
+  - Preserves each transition across News Gate retries without duplication
+
   v10.1.10 (2026-07-20)
   - Keeps the current result step blocked until a verified News article arrives
   - Shows the standard boxed dots while the News Gate retries
@@ -7282,6 +7287,7 @@ let beingFirstRoundBaseline = 0;
 let beingFirstRoundExpectedType = "";
 let beingFirstRoundCurrentCard = null;
 let beingFirstRoundRetryCount = 0;
+let beingFirstRoundCompletedCount = 0;
 let beingFirstRoundInsertionIndex = null;
 let beingFirstRoundStepTimer = null;
 let beingFirstRoundDelayTimer = null;
@@ -8637,6 +8643,7 @@ function resetRoomDeliverySequence(){
   beingFirstRoundExpectedType = "";
   beingFirstRoundCurrentCard = null;
   beingFirstRoundRetryCount = 0;
+  beingFirstRoundCompletedCount = 0;
   beingFirstRoundBaseline = lastRoomMessageCount;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
@@ -9072,6 +9079,7 @@ if (
   beingFirstRoundExpectedType = "";
   beingFirstRoundCurrentCard = null;
   beingFirstRoundRetryCount = 0;
+  beingFirstRoundCompletedCount += 1;
   newsGateRetryPayload = null;
   setTimeout(runNextBeingFirstCard, 700);
 }
@@ -10204,6 +10212,7 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   beingFirstRoundExpectedType = "";
   beingFirstRoundCurrentCard = null;
   beingFirstRoundRetryCount = 0;
+  beingFirstRoundCompletedCount = 0;
   beingFirstRoundInsertionIndex = null;
   firstRoundDemoPending = true;
   firstRoundDemoVisible = false;
@@ -10251,6 +10260,7 @@ function runNextBeingFirstCard(){
       text: next.text,
       autoFirstRound: true,
       autoCardType: next.type,
+      autoCardIndex: beingFirstRoundCompletedCount,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
     clearTimeout(beingFirstRoundDelayTimer);
@@ -10264,6 +10274,7 @@ function runNextBeingFirstCard(){
           text: beingFirstRoundCurrentCard.text,
           autoFirstRound: true,
           autoCardType: beingFirstRoundCurrentCard.type,
+          autoCardIndex: beingFirstRoundCompletedCount,
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
         });
         beingFirstRoundDelayTimer = setTimeout(showSequenceDelayNotice,15000);
