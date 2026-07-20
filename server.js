@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.08 (2026-07-20)
+// - Removes pre-card HUMAN narration from every automatic and chat result
+// - Adds one relevant local-context News card before every non-News result card
+// - Ranks result context by image 40%, Category 15%, words 15%, Bio 15%, and local news 15%
+
 // v10.1.07 (2026-07-20)
 // - Uses exactly one result-specific HUMAN sentence before every automatic or chat result card
 // - Requires the sentence to begin I picked the exact result because
@@ -507,7 +512,7 @@ async function createRoomFirstRoundCards(room) {
       messages:[
         {
           role:"system",
-          content:`Write five natural English search requests that behave like clear user inputs. Return one JSON object with exactly these string keys: news, shopping, place, jobs, real_estate. Each request must ask for exactly one real result. Keep the HUMAN Category as the mandatory subject. Naturally apply this influence: Category 30%, all three words together 15%, Bio 15%, image identity 40%. Every request must contain the exact Category and all three words. Use only one concise visible image detail. Make the result intent unmistakable: current news article, product, place, current job, and property listing. Do not mention percentages, weighting, prompts, cards, HUMAN, or automatic generation.`
+          content:`Write five natural English search requests that behave like clear user inputs. Return one JSON object with exactly these string keys: news, shopping, place, jobs, real_estate. Each request must ask for exactly one real result. Keep each required card type mandatory. Rank relevance using: image identity 40%, HUMAN Category 15%, all three words together 15%, Bio 15%, and relevant local news 15%. Every request must contain the exact Category and all three words. Use only one concise visible image detail and one current local-context direction. Make the result intent unmistakable: current news article, product, place, current job, and property listing. Do not mention percentages, weighting, prompts, cards, HUMAN, or automatic generation.`
         },
         {
           role:"user",
@@ -611,43 +616,6 @@ function getResultCardCategories(intent, room, detail = "") {
   };
 }
 
-function buildHumanSearchFallbackExplanation(room, cardType, searchText) {
-  const being = room?.being;
-  const category = being?.category || room?.coreTheme || "this category";
-  const exactSearch = String(searchText || `${category} ${cardType || "result"}`).replace(/[.!?]+$/g,"").trim();
-  return `I picked ${exactSearch} because it keeps ${category}, ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"} connected to the image while the live results keep changing.`;
-}
-
-async function createHumanResultExplanation(room, cardType, result = {}) {
-  const being = room?.being;
-  const title = String(result.title || result.name || "this specific result").replace(/\s+/g," ").trim();
-  const fallback = `I picked ${title} because it connects the image to ${being?.category || room?.coreTheme || "this search"} through ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"}.`;
-  if(!being) return fallback;
-  try {
-    const response = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.55,
-      messages:[
-        {
-          role:"system",
-          content:`Speak as the selected HUMAN in a calm, clear, confident, polished news-anchor tone. Write exactly one concise natural-English sentence explaining why this exact result was selected. It must begin exactly with "I picked [exact result name] because" using the supplied exact result title in place of the brackets. Give one specific reason grounded in result fit, the uploaded image and selected HUMAN perspective, or a verified useful fact supplied in the title, source, company, or location. Never use generic narration such as "Here’s what I notice". Naturally reflect the Bio, Category, and three words without listing fields or percentages. Do not invent facts. End with a period. Do not add a number; the interface adds "1.". No labels, markdown, quotation marks, or slogan.`
-        },
-        {
-          role:"user",
-          content:`HUMAN: ${being.name}\nBIO: ${being.best_current_choice || ""}\nCATEGORY: ${being.category || ""}\nTHREE WORDS: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}\nIMAGE: ${room.imageContext || ""}\nRESULT TYPE: ${cardType}\nEXACT RESULT: ${title}\nCOMPANY OR SOURCE: ${result.company || result.source || ""}\nLOCATION: ${result.location || ""}`
-        }
-      ]
-    });
-    const explanation = String(response.choices?.[0]?.message?.content || "").replace(/\s+/g," ").trim();
-    const sentenceCount = (explanation.match(/[.!?]+/g) || []).length;
-    if(!explanation || !/^I picked\s+.+\s+because\s+/i.test(explanation) || sentenceCount !== 1 || !explanation.toLowerCase().includes(title.toLowerCase().slice(0,Math.min(18,title.length)))) return fallback;
-    return explanation;
-  } catch(error) {
-    console.log("HUMAN RESULT EXPLANATION FAILED:",error.message);
-    return fallback;
-  }
-}
-
 function buildHumanResultContract(resultType, result = {}) {
   return {
     resultType,
@@ -659,6 +627,82 @@ function buildHumanResultContract(resultType, result = {}) {
     directUrl:String(result.directUrl || "").trim(),
     searchFallback:Boolean(result.searchFallback)
   };
+}
+
+async function createLocalContextNews(room, targetQuery, targetType, location = "") {
+  if(!room || targetType === "news") return null;
+  const being = room.being || {};
+  const imageIdentity = String(room.imageContext || "the uploaded image").replace(/\s+/g," ").trim();
+  const category = String(being.category || room.coreTheme || "current context").trim();
+  const words = [being.word1,being.word2,being.word3].filter(Boolean).join(", ");
+  const bio = String(being.best_current_choice || "").replace(/\s+/g," ").trim();
+  const mandatoryIntent = String(targetQuery || targetType || "current local context").replace(/\s+/g," ").trim();
+  const localArea = String(location || room.searchLocation || "").replace(/\s+/g," ").trim();
+
+  let newsQuery = [mandatoryIntent,localArea,"local news"].filter(Boolean).join(" ");
+  const buildNewsFallback = () => ({
+    resultType:"news",
+    resultTitle:`Search local news for ${mandatoryIntent}`,
+    resultUrl:`https://news.google.com/search?q=${encodeURIComponent(newsQuery)}`,
+    resultImage:null,
+    resultSource:"Google News search",
+    resultDetails:[localArea || "Current local context"],
+    primaryCategory:"NEWS",
+    contextCategory:"LOCAL CONTEXT",
+    localContextNews:true,
+    searchFallback:true
+  });
+  try {
+    const queryResponse = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.25,
+      messages:[
+        {
+          role:"system",
+          content:`Create one concise Google News query for a local-context card that will appear before a requested result. The user's requested result intent is mandatory and must not be changed. Rank query relevance using: uploaded image identity 40%, HUMAN Category 15%, all three profile words together 15%, HUMAN Bio 15%, and relevant local news 15%. Use the supplied location when present. Output only one natural search query of 6 to 12 words. No labels, percentages, punctuation, quotation marks, or explanation.`
+        },
+        {
+          role:"user",
+          content:`MANDATORY RESULT INTENT: ${mandatoryIntent}\nLOCATION: ${localArea}\nIMAGE IDENTITY: ${imageIdentity}\nHUMAN CATEGORY: ${category}\nTHREE WORDS: ${words}\nHUMAN BIO: ${bio}`
+        }
+      ]
+    });
+    newsQuery = String(queryResponse.choices?.[0]?.message?.content || newsQuery)
+      .replace(/["'`]/g,"")
+      .replace(/\s+/g," ")
+      .trim() || newsQuery;
+  } catch(error) {
+    console.log("LOCAL CONTEXT NEWS QUERY FAILED:",error.message);
+  }
+
+  try {
+    const newsFetch = await fetch(`https://serpapi.com/search.json?engine=google&tbm=nws&tbs=qdr:d7&q=${encodeURIComponent(newsQuery)}&api_key=${process.env.SERPAPI_KEY}`);
+    if(!newsFetch.ok) return buildNewsFallback();
+    const newsData = await newsFetch.json();
+    room.usedLocalContextNews = Array.isArray(room.usedLocalContextNews) ? room.usedLocalContextNews : [];
+    const used = new Set(room.usedLocalContextNews.map(value => String(value).toLowerCase()));
+    const article = (newsData.news_results || []).find(item => {
+      const url = item?.link || item?.news_link || "";
+      return item?.title && url && !used.has(url.toLowerCase());
+    }) || (newsData.news_results || []).find(item => item?.title && (item?.link || item?.news_link));
+    if(!article) return buildNewsFallback();
+    const url = article.link || article.news_link;
+    room.usedLocalContextNews.push(url);
+    return {
+      resultType:"news",
+      resultTitle:String(article.title || "Local context").trim(),
+      resultUrl:String(url || "").trim(),
+      resultImage:article.original || article.thumbnail || article.thumbnail_small || null,
+      resultSource:String(article.source || article.publisher || "Google News").trim(),
+      resultDetails:[article.snippet || article.date || ""].filter(Boolean),
+      primaryCategory:"NEWS",
+      contextCategory:"LOCAL CONTEXT",
+      localContextNews:true
+    };
+  } catch(error) {
+    console.log("LOCAL CONTEXT NEWS SEARCH FAILED:",error.message);
+    return buildNewsFallback();
+  }
 }
 
 function buildHumanBrowseUrl(cardType, query) {
@@ -2085,7 +2129,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nSearch signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- Automatic searches: Category 30%, three words 15%, Bio 15%, image identity 40%.\n- After user input: user request 50%, Category 20%, three words 10%, Bio 10%, image 10%.\n- Category is the mandatory professional domain for automatic cards.\n- Use all three words to refine query meaning, candidate ranking, and result selection inside Category.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest automatic-search relevance signal.\n- For later direct questions, never let Category, words, Bio, or image distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nSearch signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- The user's requested result type and intent are mandatory and must never be changed.\n- Within that required intent, rank every automatic and chat result using: image identity 40%, HUMAN Category 15%, three words 15%, Bio 15%, and relevant local news 15%.\n- Use all three words to refine query meaning and candidate ranking.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest relevance signal.\n- Use local news for current context without turning a non-News request into a News result.\n- For later direct questions, never let Category, words, Bio, image, or news distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -3793,7 +3837,7 @@ try{
  const combinedIntent =
   text.trim();
 
- const addAutomaticSearchFallback = () => {
+ const addAutomaticSearchFallback = async () => {
   if (autoFirstRound && room.firstRoundComplete) return true;
   if (
     !autoFirstRound ||
@@ -3809,6 +3853,7 @@ try{
   const fallbackLabel = fallbackLabels[autoCardType];
   const fallbackSearch = String(text || "").replace(/[\r\n]+/g," ").trim();
   const fallbackLink = buildHumanBrowseUrl(autoCardType,fallbackSearch);
+  const localContextNews = await createLocalContextNews(room,fallbackSearch,autoCardType,room.searchLocation || "");
   room.messages.push({
     from:room.being?.name || "CAMERA PERSPECTIVE",
     aiBeing:true,
@@ -3819,7 +3864,7 @@ try{
     searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
     ask:`Open ${fallbackLabel} for: ${fallbackSearch}.`,
     displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
-    humanReason:buildHumanSearchFallbackExplanation(room,autoCardType,fallbackSearch),
+    localContextNews,
     searchFallback:true,
     ...buildHumanResultContract(autoCardType,{
       title:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
@@ -5292,20 +5337,6 @@ if (
     !isNextSearch &&
     !autoFirstRound
 ) {
-
-    room.messages.push({
-
-        from: room.being?.name || "CAMERA PERSPECTIVE",
-
-        aiBeing: true,
-
-        showNextButton: true,
-
-        text:
-        "This is still my best answer for now. I've already searched this topic from my identity. Select another Public Camera Perspective to explore a different direction."
-
-    });
-
   room.messages.push({
 
     from:"CHANG, TIEN",
@@ -5327,7 +5358,8 @@ if (
 
     link:cachedTopic.link,
 
-    jobCard:cachedTopic.jobCard
+    jobCard:cachedTopic.jobCard,
+    localContextNews:cachedTopic.localContextNews || null
 
 });
 
@@ -5395,18 +5427,19 @@ if(autoFirstRound && ["shopping","place","real_estate"].includes(autoCardType)) 
   const finishDedicatedCard = async result => {
     if(room.firstRoundComplete) return;
     const contract = buildHumanResultContract(autoCardType,result);
-    const humanReason = await createHumanResultExplanation(room,autoCardType,{
-      title:contract.resultTitle,
-      source:contract.resultSource,
-      location:contract.resultDetails.join(" · ")
-    });
+    const localContextNews = await createLocalContextNews(
+      room,
+      searchQuery,
+      autoCardType,
+      contract.resultDetails.join(" · ")
+    );
     room.messages.push({
       from:room.being?.name || "HUMAN",
       aiBeing:true,
       autoCardType,
       ...getResultCardCategories(autoCardType,room),
       ...contract,
-      humanReason,
+      localContextNews,
       displayTitle:contract.resultTitle,
       image:contract.resultImage,
       link:contract.resultUrl,
@@ -5617,9 +5650,10 @@ const jobsUrl =
   "https://www.google.com/search?ibp=htl;jobs&q=" +
   encodeURIComponent(jobSearch);
 
-const addJobSearchFallback = () => {
+const addJobSearchFallback = async () => {
   if(isAutomaticJobCard && room.firstRoundComplete) return;
   const fallbackTitle = `View current ${jobSearch.replace(/^search:?\s*/i,"")} openings`;
+  const localContextNews = await createLocalContextNews(room,jobSearch,"jobs",room.searchLocation || "");
   room.messages.push({
     from: room.being?.name || "CAMERA PERSPECTIVE",
     aiBeing: true,
@@ -5639,7 +5673,7 @@ const addJobSearchFallback = () => {
       source:"Google Jobs",
       searchFallback:true
     }),
-    humanReason:buildHumanSearchFallbackExplanation(room,"jobs",jobSearch),
+    localContextNews,
     link: jobsUrl
   });
   io.to(room.id).emit("aiTypingStop");
@@ -5652,7 +5686,7 @@ const serpFetch = await fetch(
 
 if (!serpFetch.ok) {
     console.log("GOOGLE JOBS HTTP ERROR:",serpFetch.status,await serpFetch.text().catch(() => ""));
-    addJobSearchFallback();
+    await addJobSearchFallback();
     return;
 }
 
@@ -5691,7 +5725,7 @@ const job = jobResults
   .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.result;
 
 if (!job) {
-    addJobSearchFallback();
+    await addJobSearchFallback();
     return;
 }
 
@@ -5703,11 +5737,7 @@ const jobLink =
 
 if(isAutomaticJobCard && room.firstRoundComplete) return;
 
-const jobHumanReason = await createHumanResultExplanation(room,"jobs",{
-  title:job.title,
-  company:job.company_name,
-  location:job.location
-});
+const localContextNews = await createLocalContextNews(room,jobSearch,"jobs",job.location || room.searchLocation || "");
 
 room.messages.push({
 
@@ -5721,7 +5751,7 @@ room.messages.push({
 
   showNextButton: true,
 
-  humanReason:jobHumanReason,
+  localContextNews,
 
   jobCard: {
 
@@ -5774,7 +5804,8 @@ room.messages.push({
         link: jobsUrl,
         directLink: jobLink
 
-    }
+    },
+    localContextNews
 
 };
 
@@ -5797,7 +5828,7 @@ const serpFetch = await fetch(
 
 if (!serpFetch.ok) {
 
-    if (addAutomaticSearchFallback()) return;
+    if (await addAutomaticSearchFallback()) return;
 
     room.messages.push({
         from: "CAMERA PERSPECTIVE",
@@ -5868,6 +5899,10 @@ let selectedNews = null;
 let placeName = null;
 
 let placeLink = null;
+
+let placeImage = null;
+
+let placeAddress = null;
 
 const newsResults =
   serpRes?.news_results || [];
@@ -6276,12 +6311,14 @@ console.log(
   )
 );
 
-placeName =
-  placeSearchRes?.local_results?.[0]?.title ||
-
-  placeSearchRes?.places_results?.[0]?.title ||
-
+const selectedPlaceResult =
+  placeSearchRes?.local_results?.[0] ||
+  placeSearchRes?.places_results?.[0] ||
   null;
+
+placeName = selectedPlaceResult?.title || null;
+placeImage = selectedPlaceResult?.thumbnail || selectedPlaceResult?.image || null;
+placeAddress = selectedPlaceResult?.address || null;
 
 placeLink =
   placeSearchRes?.local_results?.[0]?.website ||
@@ -6315,7 +6352,7 @@ console.log(
 }
 
 if (autoFirstRound && isLocationRequest && !placeName) {
-  if (addAutomaticSearchFallback()) return;
+  if (await addAutomaticSearchFallback()) return;
 }
 
     //////////////////////////////////////////////////
@@ -6396,7 +6433,7 @@ if(!imageUrl){
 
 if (!selectedNews?.title) {
 
-    if (addAutomaticSearchFallback()) return;
+    if (await addAutomaticSearchFallback()) return;
 
     room.messages.push({
         from: "CAMERA PERSPECTIVE",
@@ -6848,13 +6885,25 @@ console.log({
 
 if(autoFirstRound && room.firstRoundComplete) return;
 
-const resultDisplayTitle = String(selectedNews?.title || placeName || "this specific result").trim();
-const humanResultExplanation = await createHumanResultExplanation(room,intent,{
-  title:resultDisplayTitle,
-  source:selectedNews?.source || selectedNews?.publisher || "",
-  location:nullInput?.location || room.searchLocation || ""
-});
-
+const activeResultType = autoFirstRound ? autoCardType : intent;
+const resultDisplayTitle = String(
+  ["place","real_estate"].includes(activeResultType)
+    ? (placeName || selectedNews?.title || "this specific result")
+    : (selectedNews?.title || placeName || "this specific result")
+).trim();
+const localContextNews = activeResultType !== "news" && selectedNews
+  ? {
+      resultType:"news",
+      resultTitle:String(selectedNews.title || "Local context").trim(),
+      resultUrl:String(selectedNews.link || selectedNews.news_link || "").trim(),
+      resultImage:selectedNews.original || selectedNews.thumbnail || selectedNews.thumbnail_small || null,
+      resultSource:String(selectedNews.source || selectedNews.publisher || "Google News").trim(),
+      resultDetails:[selectedNews.snippet || selectedNews.date || ""].filter(Boolean),
+      primaryCategory:"NEWS",
+      contextCategory:"LOCAL CONTEXT",
+      localContextNews:true
+    }
+  : null;
     console.log("NEXT NULL LINK:", {
   youtubeLink,
   amazonLink,
@@ -6885,6 +6934,7 @@ room.messages.push({
   showNextButton:true,
 showRead:
     Boolean(
+        placeLink ||
         selectedNews?.link ||
         selectedNews?.news_link
     ),
@@ -6905,7 +6955,7 @@ showRead:
 
   displayTitle:resultDisplayTitle,
 
-  humanReason:humanResultExplanation,
+  localContextNews,
 
   ...(autoFirstRound && autoCardType === "news"
     ? buildHumanResultContract("news",{
@@ -6916,7 +6966,7 @@ showRead:
       })
     : {}),
 
-  image:imageUrl,
+  image:["place","real_estate"].includes(activeResultType) ? (placeImage || imageUrl) : imageUrl,
 
 ask:
   isNextSearch
@@ -6986,7 +7036,7 @@ ask:
           selectedNews.title
         ),
 
-    image: imageUrl,
+    image:["place","real_estate"].includes(activeResultType) ? (placeImage || imageUrl) : imageUrl,
 
     link:
         isYoutubeIntent
@@ -7000,7 +7050,8 @@ ask:
                     ""
                 ),
 
-    jobCard: null
+    jobCard: null,
+    localContextNews
 
 };
     } 
@@ -7074,6 +7125,7 @@ setTimeout(() => {
     const fallbackQuery = String(text || "").replace(/[\r\n]+/g," ").trim() ||
       [room.being?.category, fallbackLabel].filter(Boolean).join(" ");
     const fallbackLink = buildHumanBrowseUrl(autoCardType,fallbackQuery);
+    const localContextNews = await createLocalContextNews(room,fallbackQuery,autoCardType,room.searchLocation || "");
     room.messages.push({
       from:room.being?.name || "CAMERA PERSPECTIVE",
       aiBeing:true,
@@ -7084,7 +7136,7 @@ setTimeout(() => {
       searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
       ask:`Open ${fallbackLabel} for: ${fallbackQuery}.`,
       displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
-      humanReason:buildHumanSearchFallbackExplanation(room,autoCardType,fallbackQuery),
+      localContextNews,
       searchFallback:true,
       ...buildHumanResultContract(autoCardType,{
         title:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
