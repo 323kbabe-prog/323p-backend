@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.163 (2026-07-20)
+  - Adds an SVG-plus ADD PUBLIC IMAGE action to Public Camera Perspectives
+  - Publishes confirmed captures directly to Public without creating a room
+  - Uses the same SVG-plus treatment for Create a HUMAN Card
+
   v10.0.162 (2026-07-20)
   - Renders every new HUMAN result from one explicit result contract
   - Opens Google Jobs discovery first and keeps direct Apply as a secondary action
@@ -1099,6 +1104,9 @@ body.systemBlockingState #helper{
 #roomFloatingCameraClose{position:absolute!important;z-index:2!important;top:10px!important;right:10px!important;width:38px!important;height:38px!important;padding:0!important;border:1px solid #8c959f!important;border-radius:0!important;background:#fff!important;color:#111!important;font-size:22px!important;line-height:1!important;}
 #roomFloatingCameraShutter{position:absolute!important;z-index:2!important;left:50%!important;bottom:18px!important;transform:translateX(-50%)!important;width:66px!important;height:66px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:3px solid rgba(255,255,255,.75)!important;border-radius:50%!important;background:#fff!important;color:#111!important;box-shadow:0 2px 14px rgba(0,0,0,.28)!important;}
 #roomFloatingCameraShutter svg{width:34px!important;height:34px!important;fill:none!important;stroke:currentColor!important;}
+#addPublicImageBtn,#openCreateBeingBtn{display:flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;}
+#addPublicImageBtn{width:100%!important;min-height:48px!important;margin:18px 0 22px!important;background:#1f2328!important;color:#fff!important;border:1px solid #1f2328!important;border-radius:0!important;font-size:14px!important;font-weight:600!important;letter-spacing:.02em!important;}
+#addPublicImageBtn svg,#openCreateBeingBtn svg{flex:0 0 auto!important;}
 </style>
   
 <style id="askCameraStateSystemV120">
@@ -1950,7 +1958,7 @@ ASK.CAMERA – AI Camera Search
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
     <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a HUMAN, then add an image to open their private room.</div>
-    <button onclick="openCreateBeing()" style="display:block;width:100%;max-width:420px;margin:0 auto 18px;height:56px;border:1px solid #fff;border-radius:22px;background:transparent;color:#fff;font-size:18px;font-weight:900;">Create a HUMAN Card</button>
+    <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:420px;margin:0 auto 18px;height:56px;border:1px solid #fff;border-radius:22px;background:transparent;color:#fff;font-size:18px;font-weight:900;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create a HUMAN Card</span></button>
   </div>
   <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
 </div>
@@ -6043,6 +6051,10 @@ padding:140px 16px 40px 16px;
 <div class="publicScreenIntro">
   <div class="publicScreenTitle">Public Camera Perspectives</div>
   <div class="publicScreenSupport">Public images become part of the ASK.CAMERA network for others to discover.</div>
+  <button id="addPublicImageBtn" type="button" onclick="openPublicImageCamera(event)">
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
+    <span>ADD PUBLIC IMAGE</span>
+  </button>
 </div>
 
 
@@ -7524,7 +7536,15 @@ function showPublishDialog(){
     const privateOption = document.getElementById("publishPrivateOption");
     const title = document.getElementById("publishDialogTitle");
     const support = document.getElementById("publishDialogSupport");
-    if(isHumanPublish){
+    const continueButton = document.getElementById("publishContinueButton");
+    if(publicImageAddMode){
+      publicOption.style.display = "flex";
+      privateOption.style.display = "none";
+      publicOption.querySelector('input').checked = true;
+      title.textContent = "Add to Public";
+      support.textContent = "This image will be visible to everyone.";
+      if(continueButton) continueButton.textContent = "ADD TO PUBLIC";
+    }else if(isHumanPublish){
       publicOption.style.display = "none";
       privateOption.style.display = "flex";
       privateOption.querySelector('input').checked = true;
@@ -7537,6 +7557,7 @@ function showPublishDialog(){
       title.textContent = "Choose a HUMAN";
       support.textContent = "Your image stays private. Choose the HUMAN whose room will interpret it.";
     }
+    if(!publicImageAddMode && continueButton) continueButton.textContent = "Continue";
     activeModalReturnFocus = document.activeElement;
     document.getElementById("publishDialog").style.display = "flex";
     requestAnimationFrame(() => document.getElementById("publishDialogClose")?.focus());
@@ -7551,6 +7572,7 @@ function cancelPublishDialog(event){
   if(imagePreview){ imagePreview.style.display = "none"; imagePreview.removeAttribute("src"); }
   pendingImageDataUrl = null;
   pendingImageSource = null;
+  publicImageAddMode = false;
   capturePreview.style.display = "none";
   if(activeModalReturnFocus && typeof activeModalReturnFocus.focus === "function") activeModalReturnFocus.focus();
   activeModalReturnFocus = null;
@@ -7607,6 +7629,19 @@ roomReady = true;
         document.querySelector(
             'input[name="publishMode"]:checked'
         ).value;
+
+    if(publicImageAddMode){
+      const continueButton = document.getElementById("publishContinueButton");
+      if(continueButton){
+        continueButton.disabled = true;
+        continueButton.textContent = "ADDING...";
+      }
+      socket.emit("addPublicImage",{
+        deviceId,
+        imageDataUrl: pendingImageDataUrl
+      });
+      return;
+    }
 
     if (localStorage.getItem("selectedBeingId")) {
       publishMode = "private";
@@ -7862,6 +7897,30 @@ socket.on(
 );
 
 
+
+socket.on("publicImageAdded", async data => {
+  const continueButton = document.getElementById("publishContinueButton");
+  if(continueButton){
+    continueButton.disabled = false;
+    continueButton.textContent = "Continue";
+  }
+  document.getElementById("publishDialog").style.display = "none";
+  pendingImageDataUrl = null;
+  pendingImageSource = null;
+  capturePreview.style.display = "none";
+  publicImageAddMode = false;
+  stopCameraStream();
+  await showPublicNulls(publicReturnContext);
+});
+
+socket.on("publicImageAddError", message => {
+  const continueButton = document.getElementById("publishContinueButton");
+  if(continueButton){
+    continueButton.disabled = false;
+    continueButton.textContent = "ADD TO PUBLIC";
+  }
+  alert(message || "Public image could not be added. Please try again.");
+});
 
 socket.on("roomCreated", data => {
 
@@ -12088,6 +12147,13 @@ function ensureRoomFloatingCamera(){
   return layer;
 }
 
+let publicImageAddMode = false;
+
+async function openPublicImageCamera(event){
+  publicImageAddMode = true;
+  await openRoomFloatingCamera(event);
+}
+
 async function openRoomFloatingCamera(event){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   roomCameraReturnFocus = document.activeElement;
@@ -12113,6 +12179,7 @@ function closeRoomFloatingCamera(event,keepStream = false){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   const layer = document.getElementById("roomFloatingCameraLayer");
   if(layer) layer.hidden = true;
+  if(publicImageAddMode && !keepStream) publicImageAddMode = false;
   const returningToRoom = getComputedStyle(roomOverlay).display === "flex";
   if(!keepStream && returningToRoom) stopCameraStream();
   if(roomCameraReturnFocus && typeof roomCameraReturnFocus.focus === "function") roomCameraReturnFocus.focus();
@@ -12372,6 +12439,7 @@ How would you like to publish your Camera Perspective?
 </label>
 
 <button
+id="publishContinueButton"
 onclick="continueCreateRoom()"
 style="
 width:100%;
