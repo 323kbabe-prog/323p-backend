@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.05 (2026-07-20)
+  - Activates the Ask bar as soon as a HUMAN room successfully rejoins
+  - Removes the boxed rejoin loader only after the Ask bar becomes active
+  - Keeps the room input placeholder consistently set to Ask
+
   v10.1.04 (2026-07-20)
   - Preserves every visible room message, image, and result card while rejoining
   - Appends the boxed rejoin loader below existing content instead of replacing it
@@ -6985,6 +6990,7 @@ if(localStorage.getItem(ROOM_KIND_KEY) === "ask"){
 let publicReturnContext = "home";
 let activeSystemState = "";
 let rejoinRoomLoadingActive = false;
+let rejoinedRoomAskReady = false;
 
 function clearSystemState(expectedState = ""){
   if(expectedState && activeSystemState !== expectedState) return;
@@ -7082,6 +7088,7 @@ function clearCurrentRoomState(){
   beingFirstRoundInsertionIndex = null;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
+  rejoinedRoomAskReady = false;
   resetRoomDeliverySequence();
 }
 
@@ -7456,7 +7463,7 @@ function openHomeRoom(event){
     if(savedBeing) renderBeingRoomHeader(savedBeing);
     roomInput.style.display = "block";
     roomInput.disabled = true;
-    roomInput.placeholder = "Ask — restoring this HUMAN room";
+    roomInput.placeholder = "Ask";
     roomOverlay.style.display = "flex";
     cameraWrap.style.display = "block";
     helper.style.display = "none";
@@ -7543,8 +7550,7 @@ function startMemoryMode(){
 
     memoryMode = true;
 
-    roomInput.placeholder =
-        "Ask — what would you like to be notified about?";
+    roomInput.placeholder = "Ask";
 
     roomInput.focus();
 
@@ -7556,8 +7562,7 @@ function startSMSMode(){
 
     memoryMode = true;
 
-    roomInput.placeholder =
-        "Ask — what phone number should I text? +0 000...";
+    roomInput.placeholder = "Ask";
 
     roomInput.focus();
 
@@ -8200,7 +8205,8 @@ if(data?.roomId && ignoredTransitionRoomIds.has(data.roomId)){
 setActiveRoomKind("human");
 
 clearSystemState("rejoiningRoom");
-if(!data.rejoined || data.firstRoundComplete){
+rejoinedRoomAskReady = Boolean(data.rejoined);
+if(!data.rejoined){
   hideRejoinLoading();
 }
 hideRoomLoadingScreen();
@@ -8273,8 +8279,12 @@ gtag('event', 'page_view', {
 
 
 roomInput.style.display = "block";
-roomInput.disabled = true;
-roomInput.placeholder = data.firstRoundComplete ? "Ask" : "Ask — available after the five examples";
+roomInput.disabled = !data.rejoined;
+roomInput.readOnly = false;
+roomInput.placeholder = "Ask";
+if(data.rejoined){
+  hideRejoinLoading();
+}
 
 document.getElementById("shareRoomBtn").innerText = "Share card";
 
@@ -8827,6 +8837,13 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
 
 function syncFirstRoundInput(){
   roomInput.style.display = "block";
+  roomInput.placeholder = "Ask";
+  if(rejoinedRoomAskReady){
+    roomInput.disabled = false;
+    roomInput.readOnly = false;
+    humanSelectionPrompt.style.display = "none";
+    return;
+  }
   const humanInstructionVisible = Boolean(
     roomMessages.querySelector("[data-opening-output] .humanCardInstruction")
   );
@@ -8835,21 +8852,19 @@ function syncFirstRoundInput(){
   if(roomNeedsHumanSelection){
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = humanSelectionReady
-      ? "Choose a HUMAN perspective above"
-      : "ASK.CAMERA is preparing the HUMAN choice…";
+    roomInput.placeholder = "Ask";
     return;
   }
   if(!localStorage.getItem("selectedBeingId") && (roomOpeningBootstrapActive || roomOpeningSequenceActive)){
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = "ASK.CAMERA is preparing the image…";
+    roomInput.placeholder = "Ask";
     return;
   }
   if(isFirstRoundActive()){
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Ask — available after the five examples";
+    roomInput.placeholder = "Ask";
     return;
   }
   roomInput.disabled = false;
@@ -8951,7 +8966,7 @@ syncFirstRoundInput();
 
 if(!isFirstRoundActive() && messages[messages.length - 1]?.locationQuestion){
   roomInput.disabled = false;
-  roomInput.placeholder = "Ask — provide a city or area, or type Skip";
+  roomInput.placeholder = "Ask";
 }
 
 
@@ -9767,7 +9782,7 @@ socket.on("roomUpgradeWarning", ({ seconds = 10, message } = {}) => {
   clearInterval(roomUpgradeCountdownTimer);
   let remaining = Math.max(0,Number(seconds) || 10);
   roomInput.disabled = true;
-  roomInput.placeholder = "ASK.CAMERA is upgrading…";
+  roomInput.placeholder = "Ask";
   hideSequenceTyping();
   const renderWarning = () => {
     document.getElementById("roomUpgradeWarning")?.remove();
@@ -10176,8 +10191,7 @@ socket.on("phoneSaved", () => {
 
     roomInput.value = "";
 
-    roomInput.placeholder =
-        "Ask — what would you like me to remind you about?";
+    roomInput.placeholder = "Ask";
 
     memoryMode = true;
 
@@ -10310,10 +10324,15 @@ function renderRejoinLoading(){
 
 function showRejoinLoading(){
   clearSystemState("rejoiningRoom");
+  rejoinedRoomAskReady = false;
   rejoinRoomLoadingActive = true;
   document.body.classList.remove("systemBlockingState");
   roomOverlay.style.display = "flex";
   roomMessages.classList.add("geminiThread");
+  roomInput.style.display = "block";
+  roomInput.disabled = true;
+  roomInput.readOnly = false;
+  roomInput.placeholder = "Ask";
   renderRejoinLoading();
 }
 
@@ -12285,7 +12304,7 @@ async function openAIBeing(id){
       </div>`;
     roomInput.style.display = "block";
     roomInput.disabled = true;
-    roomInput.placeholder = "Ask — add an image to begin";
+    roomInput.placeholder = "Ask";
     document.getElementById("roomImageActions").style.display = "flex";
     document.getElementById("beingQrBtn").style.display = "inline-block";
     document.getElementById("shareRoomBtn").style.display = "inline-block";
@@ -12295,7 +12314,7 @@ async function openAIBeing(id){
   }
   roomInput.style.display = "block";
   roomInput.disabled = true;
-  roomInput.placeholder = `${being.name} is reading this image…`;
+  roomInput.placeholder = "Ask";
   history.replaceState({},"",`/?room=${activeRoomId}`);
   showSequenceTyping();
   socket.emit("selectRoomHuman", { deviceId, beingId:being.id }, result => {
