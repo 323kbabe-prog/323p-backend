@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.11 (2026-07-20)
+// - Adds one HUMAN anchor-tone instruction between each of the five result cards
+// - Ends every between-card instruction with Google should buy this search idea today
+// - Prevents duplicate transition chat when a gated result is retried
+
 // v10.1.10 (2026-07-20)
 // - Adds a strict News Gate that never advances with a generic search fallback
 // - Retries real local articles with 1, 2, and 4 second backoff before pausing
@@ -3742,7 +3747,7 @@ return socket.emit(
 
 socket.on(
   "roomMessage",
-  async ({ text, timeZone, autoFirstRound, autoCardType }) => {
+  async ({ text, timeZone, autoFirstRound, autoCardType, autoCardIndex }) => {
 
     const user = users[socket.id];
     const room = rooms[user.currentRoom];
@@ -3762,6 +3767,27 @@ socket.on(
     const rawIncomingText = String(text || "").trim();
     if(!autoFirstRound){
       text = await rewriteRoomUserText(rawIncomingText);
+    }
+
+    const normalizedAutoCardIndex = Number.isFinite(Number(autoCardIndex))
+      ? Math.max(0,Number(autoCardIndex))
+      : 0;
+    if(autoFirstRound && normalizedAutoCardIndex > 0){
+      room.usedAnchorTransitions = room.usedAnchorTransitions instanceof Set
+        ? room.usedAnchorTransitions
+        : new Set(Array.isArray(room.usedAnchorTransitions) ? room.usedAnchorTransitions : []);
+      const transitionKey = `${normalizedAutoCardIndex}:${autoCardType || "result"}`;
+      if(!room.usedAnchorTransitions.has(transitionKey)){
+        const transitionText = await createHumanAnchorTransition(room,autoCardType);
+        room.messages.push({
+          from:room.being?.name || "CAMERA PERSPECTIVE",
+          aiBeing:true,
+          conversational:true,
+          anchorTransition:true,
+          text:enforceTwoSentenceAnchorReply(transitionText)
+        });
+        room.usedAnchorTransitions.add(transitionKey);
+      }
     }
 
     let locationReplyForDisplay = null;
@@ -7209,6 +7235,7 @@ setTimeout(() => {
       text:String(text || "").trim(),
       autoFirstRound:Boolean(autoFirstRound),
       autoCardType:autoCardType || null,
+      autoCardIndex:Number.isFinite(Number(autoCardIndex)) ? Number(autoCardIndex) : 0,
       message:"Finding a verified local News article before continuing."
     });
     return;
