@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.0.49 (2026-07-20)
+// - Gives every automatic result and fallback a specific selected-HUMAN explanation
+// - Names the real article, product, place, job, or listing in visible HUMAN speech
+// - Preserves the HUMAN English Rewrite System for create, edit, Bio, words, and acknowledgements
+
 // v10.0.48 (2026-07-20)
 // - Generates five explicit user-like inputs for the normal result-search pipeline
 // - Preserves 50/20/20/10 Category, words, Bio, and image influence in those inputs
@@ -505,6 +510,48 @@ function getResultCardCategories(intent, room, detail = "") {
     primaryCategory: primaryMap[intent] || "DISCOVERY",
     contextCategory: humanCategory || cleanDetail || roomTheme || contextFallbackMap[intent] || "CONTEXT"
   };
+}
+
+function buildHumanSearchFallbackExplanation(room, cardType, searchText) {
+  const being = room?.being;
+  const category = being?.category || room?.coreTheme || "this category";
+  const typeNames = {
+    news:"current-news direction",
+    shopping:"specific product search",
+    place:"specific place search",
+    jobs:"current job search",
+    real_estate:"property-listing search"
+  };
+  return `I picked this ${typeNames[cardType] || "search direction"} because it keeps ${category}, ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"} connected to the image while a verified individual result is unavailable.`;
+}
+
+async function createHumanResultExplanation(room, cardType, result = {}) {
+  const being = room?.being;
+  const title = String(result.title || result.name || "this specific result").replace(/\s+/g," ").trim();
+  const fallback = `I picked ${title} because its specific subject connects the image to ${being?.category || room?.coreTheme || "this search"} through ${being?.word1 || "relevance"}, ${being?.word2 || "context"}, and ${being?.word3 || "opportunity"}.`;
+  if(!being) return fallback;
+  try {
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.55,
+      messages:[
+        {
+          role:"system",
+          content:`Speak as the selected HUMAN. Write exactly one concise natural English sentence explaining why you picked this exact result. Begin with "I picked" followed immediately by the exact result name or a specific defining feature. Never begin with "I picked the" and never put a generic Category immediately after "I picked". Mention one concrete connection to the image and naturally reflect the Bio, Category, and three words without listing fields or percentages. Do not invent facts. End with a period. No labels, markdown, quotation marks, or slogan.`
+        },
+        {
+          role:"user",
+          content:`HUMAN: ${being.name}\nBIO: ${being.best_current_choice || ""}\nCATEGORY: ${being.category || ""}\nTHREE WORDS: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}\nIMAGE: ${room.imageContext || ""}\nRESULT TYPE: ${cardType}\nEXACT RESULT: ${title}\nCOMPANY OR SOURCE: ${result.company || result.source || ""}\nLOCATION: ${result.location || ""}`
+        }
+      ]
+    });
+    const explanation = String(response.choices?.[0]?.message?.content || "").replace(/\s+/g," ").trim();
+    if(!/^I picked\b/i.test(explanation) || /^I picked the\b/i.test(explanation)) return fallback;
+    return explanation;
+  } catch(error) {
+    console.log("HUMAN RESULT EXPLANATION FAILED:",error.message);
+    return fallback;
+  }
 }
 
 const { createClient } =
@@ -3574,6 +3621,7 @@ try{
     searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
     ask:`Open ${fallbackLabel} for: ${fallbackSearch}.`,
     displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+    humanReason:buildHumanSearchFallbackExplanation(room,autoCardType,fallbackSearch),
     searchFallback:true,
     link:fallbackLink
   });
@@ -5269,6 +5317,7 @@ const addJobSearchFallback = () => {
       link: jobsUrl,
       searchFallback:true
     },
+    humanReason:buildHumanSearchFallbackExplanation(room,"jobs",jobSearch),
     link: jobsUrl
   });
   io.to(room.id).emit("aiTypingStop");
@@ -5332,6 +5381,12 @@ const jobLink =
 
 if(isAutomaticJobCard && room.firstRoundComplete) return;
 
+const jobHumanReason = await createHumanResultExplanation(room,"jobs",{
+  title:job.title,
+  company:job.company_name,
+  location:job.location
+});
+
 room.messages.push({
 
   from: room.being?.name || "CAMERA PERSPECTIVE",
@@ -5343,6 +5398,8 @@ room.messages.push({
   ...getResultCardCategories("jobs", room, job.detected_extensions?.schedule_type || "CAREER"),
 
   showNextButton: true,
+
+  humanReason:jobHumanReason,
 
   jobCard: {
 
@@ -6460,6 +6517,13 @@ console.log({
 
 if(autoFirstRound && room.firstRoundComplete) return;
 
+const resultDisplayTitle = String(selectedNews?.title || placeName || "this specific result").trim();
+const humanResultExplanation = await createHumanResultExplanation(room,intent,{
+  title:resultDisplayTitle,
+  source:selectedNews?.source || selectedNews?.publisher || "",
+  location:nullInput?.location || room.searchLocation || ""
+});
+
     console.log("NEXT NULL LINK:", {
   youtubeLink,
   amazonLink,
@@ -6473,6 +6537,7 @@ room.messages.push({
   from:room.being?.name || "CAMERA PERSPECTIVE",
 
   aiBeing:true,
+  autoCardType:autoFirstRound ? autoCardType : null,
   ...getResultCardCategories(
     intent,
     room,
@@ -6506,6 +6571,10 @@ showRead:
     isNextSearch
       ? nullReason
       : null,
+
+  displayTitle:resultDisplayTitle,
+
+  humanReason:humanResultExplanation,
 
   image:imageUrl,
 
@@ -6653,6 +6722,7 @@ setTimeout(() => {
     autoFirstRound &&
     ["news", "shopping", "place", "jobs", "real_estate"].includes(autoCardType)
   ) {
+    if(room.firstRoundComplete) return;
     const fallbackLabels = {
       news:"current news",
       shopping:"products",
@@ -6674,6 +6744,7 @@ setTimeout(() => {
       searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
       ask:`Open ${fallbackLabel} for: ${fallbackQuery}.`,
       displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+      humanReason:buildHumanSearchFallbackExplanation(room,autoCardType,fallbackQuery),
       searchFallback:true,
       link:fallbackLink
     });
