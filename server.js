@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.02 (2026-07-20)
+// - Keeps first-load HUMAN acknowledgements grounded in the uploaded image
+// - Stops repeating HUMAN profile fields and Bio inside visible room content
+// - Keeps clean visual context separate from HUMAN metadata for all five result searches
+
 // v10.1.01 (2026-07-20)
 // - Routes every normal HUMAN-room message into the real result-card pipeline
 // - Converts personal, dating, emotional, greeting, creative, and unclear intents into one relevant sourced result
@@ -2107,6 +2112,13 @@ console.log(
       }
     }
 
+    const cleanImageContext = value => String(value || "")
+      .replace(/THE IDEA GOOGLE SHOULD BUY TODAY[\s\S]*$/i,"")
+      .replace(/^(HUMAN Name|Bio|Search signals|HUMAN RESPONSE AND SEARCH INFLUENCE|Personality)\s*:.*$/gim,"")
+      .replace(/^- (Automatic searches|After user input|Category is|Use all three words|Use Bio|Use image identity|For later direct questions|Never invent).*$/gim,"")
+      .replace(/\n{3,}/g,"\n\n")
+      .trim();
+
     await trackEvent(
     deviceId,
     "image_upload",
@@ -2131,7 +2143,7 @@ console.log("CURRENT ROOM:", user.currentRoom);
       let coreTheme = "culture";
 
       if (sourcePublicNull) {
-        user.imageContext = sourcePublicNull.identity;
+        user.imageContext = cleanImageContext(sourcePublicNull.identity) || "the uploaded image";
       } else {
       
       const res =
@@ -2218,7 +2230,7 @@ Rules:
 //////////////////////////////////////////////////
 
 user.imageContext =
-  res.choices[0]
+  cleanImageContext(res.choices[0]
     .message
     .content
     .replace(/\*\*/g,"")
@@ -2229,11 +2241,7 @@ user.imageContext =
     .replace(
       /Emotional Tone:/gi,
       "Presence:"
-    );
-
-if (selectedBeing) {
-  user.imageContext = `${beingContext}\n\n${user.imageContext}`;
-}
+    ));
 
 //////////////////////////////////////////////////
 // DETECT CORE THEME
@@ -2357,7 +2365,6 @@ Rules:
     user.googleBuyThought = "Let camera search understand what matters in a scene, not only what objects are visible.";
   }
 
-  user.imageContext = `${user.imageContext}\n\nTHE IDEA GOOGLE SHOULD BUY TODAY: ${user.googleBuyThought}`;
 } else {
   user.googleBuyThought = String(user.imageContext)
     .split(/THE IDEA GOOGLE SHOULD BUY TODAY\s*:/i)
@@ -3002,20 +3009,21 @@ You are the ASK.CAMERA ENGLISH REWRITE SYSTEM speaking as the selected HUMAN.
 AI Being:
 ${beingContext}
 
-Look at the uploaded image and introduce the HUMAN in first person.
+Look at the uploaded image and respond to what is visibly present through the selected HUMAN's perspective.
 
 Return exactly two concise English sentences in a calm, clear, confident, polished news-anchor tone.
 
 Sentence 1:
-Introduce the HUMAN by exact name and naturally communicate this Bio without changing its meaning: ${selectedBeing.best_current_choice}
+Use the HUMAN's exact name and acknowledge one concrete visible object, surface, text element, action, or setting in the uploaded image.
 
 Sentence 2:
-State the Category ${selectedBeing.category}, naturally include ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}, and acknowledge one concrete visible image detail or setting.
+Explain one useful connection between that visible detail and the HUMAN's Category ${selectedBeing.category}. Let the Bio and profile words guide relevance, but do not repeat, list, or summarize the profile.
 
 Rules:
 - English only.
 - Keep the HUMAN name exactly as provided.
-- Include the exact Category and all three words.
+- Do not repeat the Bio, Category, profile words, or any HUMAN metadata as a list.
+- Never output labels such as HUMAN Name, Bio, Category, Personality, Objects, or Signals.
 - Use a city or named place only when the image clearly confirms it.
 - Never invent a city, country, venue, address, action, or professional fact.
 - Lead with the most useful point and keep the delivery composed and conversational.
@@ -3123,25 +3131,25 @@ const normalizedHumanBio = being => {
 
 const acknowledgementIsComplete = (text,being) => {
   const value = String(text || "");
-  const required = [being?.name,being?.category,being?.word1,being?.word2,being?.word3]
-    .filter(Boolean)
-    .every(item => value.toLowerCase().includes(String(item).toLowerCase()));
-  return required && /^I am\s+/i.test(value) && /\b(I see|I notice|I am in|I am indoors|I am outdoors)\b/i.test(value);
+  const hasName = value.toLowerCase().includes(String(being?.name || "").toLowerCase());
+  const hasVisualLanguage = /\b(see|notice|visible|image|photo|scene|shows?|pictured|looking at)\b/i.test(value);
+  const exposesMetadata = /\b(HUMAN Name|Bio|Category|Personality|Search signals|Objects|Signals)\s*:/i.test(value);
+  const sentences = value.split(/[.!?]+/).filter(part => part.trim()).length;
+  return hasName && hasVisualLanguage && !exposesMetadata && sentences === 2;
 };
 
 const fallbackHumanAcknowledgement = (being,imageContext) => {
   const imageDetail = String(imageContext || "the visible scene")
+    .replace(/THE IDEA GOOGLE SHOULD BUY TODAY[\s\S]*$/i,"")
+    .replace(/^(HUMAN Name|Bio|Category|Search signals|HUMAN RESPONSE AND SEARCH INFLUENCE|Personality)\s*:.*$/gim,"")
+    .replace(/^(Objects|Category|Signals)\s*:\s*/gim,"")
     .replace(/\s+/g," ")
     .split(/[.!?]/)[0]
     .trim()
     .split(/\s+/)
     .slice(0,28)
     .join(" ");
-  const normalizedBio = normalizedHumanBio(being).replace(/[.!?]+$/,"").trim();
-  const bioClause = /^I\s+/i.test(normalizedBio)
-    ? normalizedBio
-    : normalizedBio.charAt(0).toLowerCase() + normalizedBio.slice(1);
-  return `I am ${being.name}, and ${bioClause}. From ${being.category}, guided by ${being.word1}, ${being.word2}, and ${being.word3}, I see ${imageDetail || "the visible scene"} and will connect it to useful results.`;
+  return `I’m ${being.name}, and I see ${imageDetail || "the uploaded image"}. I’ll connect that visible detail to one useful ${being.category} result at a time.`;
 };
 
 const generateRoomAcknowledgement = async () => {
@@ -3177,21 +3185,7 @@ let visibleCardIdentity = user.imageContext;
 let visibleCardIntro = adviceText;
 
 if (selectedBeing) {
-  const beingNameSentence = `I am ${selectedBeing.name}.`;
-  const beingStatusText = adviceText
-    .toLowerCase()
-    .startsWith(beingNameSentence.toLowerCase())
-      ? adviceText.slice(beingNameSentence.length).trim()
-      : adviceText;
-
-  visibleCardIdentity = [
-    `HUMAN Name: ${selectedBeing.name}`,
-    `Bio: ${selectedBeing.best_current_choice}`,
-    `Category: ${selectedBeing.category}`,
-    `Personality: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}.`,
-    beingStatusText,
-    `THE IDEA GOOGLE SHOULD BUY TODAY: ${user.googleBuyThought}`
-  ].join(" ");
+  visibleCardIdentity = String(user.imageContext || sourcePublicNull?.identity || "the uploaded image").trim();
 
   visibleCardIntro = "";
 }
