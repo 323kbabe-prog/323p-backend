@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.158 (2026-07-20)
+  - Preserves the selected Public image while the user chooses a HUMAN
+  - Creates the private HUMAN room only after both the image and HUMAN are ready
+  - Keeps Public image metadata and the visible room thumbnail through the handoff
+
   v10.0.157 (2026-07-20)
   - Keeps Share card text contained with content-sized header controls
   - Centers Public thumbnails and label as one button group
@@ -6950,6 +6955,7 @@ let roomUpgradeCountdownTimer = null;
 
 let pendingImageDataUrl = null;
 let pendingImageSource = null;
+let pendingPublicNull = null;
 let publishMode = "public";
 
 let roomReady = true;
@@ -7843,6 +7849,9 @@ roomNullCard = data.nullCard;
 roomExpiresAt = data.expiresAt;
 localStorage.setItem("roomId",data.roomId);
 localStorage.setItem("displayName",data.displayName || "");
+pendingPublicNull = null;
+pendingImageDataUrl = null;
+pendingImageSource = null;
 
 localStorage.setItem("askCameraRoomId",data.roomId);
   if(data.expiresAt){
@@ -8072,7 +8081,7 @@ function renderRoomImageChapter(message = {}){
           <div class="geminiAiResponse chatAiGroup humanImageHello">
             ${selectedHumanAcknowledgementPhoto()}
             <div class="chatBubble chatAiBubble">
-              ${escapeBeingText(message.humanAcknowledgement || `I am ${being.name || "your HUMAN"}. My category is ${being.category || "discovery"}, guided by ${being.word1 || "curious"}, ${being.word2 || "useful"}, and ${being.word3 || "connected"}. Google should buy this search idea today.`)}
+              ${escapeBeingText(message.humanAcknowledgement || buildFallbackHumanAcknowledgement(being,message))}
             </div>
           </div>
         </template>
@@ -8096,6 +8105,21 @@ function renderRoomImageChapter(message = {}){
       <div data-opening-output></div>
     </div>
   `;
+}
+
+function buildFallbackHumanAcknowledgement(being = {},message = {}){
+  const rawBio = String(being.best_current_choice || being.bio || "I offer a distinct HUMAN perspective")
+    .trim()
+    .replace(/[.!?]+$/,"");
+  const bio = /^I\b/i.test(rawBio) ? rawBio : `My perspective is ${rawBio}`;
+  const detail = String(message.identity || imageIntroText || "the visible scene")
+    .replace(/\s+/g," ")
+    .split(/[.!?]/)[0]
+    .trim()
+    .split(/\s+/)
+    .slice(0,24)
+    .join(" ");
+  return `I am ${being.name || "your HUMAN"}. ${bio}. My category is ${being.category || "discovery"}, guided by ${being.word1 || "curious"}, ${being.word2 || "useful"}, and ${being.word3 || "connected"}. I see ${detail || "the visible scene"}. I’m exploring how this image can shape future searches.`;
 }
 
 function getRoomImageSequenceKey(message = {},image = ""){
@@ -10391,9 +10415,25 @@ gtag('event', 'page_view', {
 
 async function createRoomFromPublicNull(publicNull){
 
-    const imageDataUrl = publicNull.image;
-    const publicNullId = publicNull.id;
+    if(!publicNull?.image) return;
+    pendingPublicNull = {
+      id: publicNull.id,
+      image: publicNull.image,
+      identity: publicNull.identity || "",
+      intro: publicNull.intro || ""
+    };
+    pendingImageDataUrl = pendingPublicNull.image;
+    pendingImageSource = "public";
+
     const beingId = localStorage.getItem("selectedBeingId");
+    if(!beingId){
+      publicNullsScreen.style.display = "none";
+      await showAIBeings("public-image");
+      return;
+    }
+
+    const imageDataUrl = pendingPublicNull.image;
+    const publicNullId = pendingPublicNull.id;
     setActiveRoomKind("human");
 
     publicNullsScreen.style.display = "none";
@@ -10419,8 +10459,8 @@ socket.emit("imageUpload",{
     // remains the identity of this same private HUMAN room.
     beingId,
     publicNullId,
-    publicNullIdentity: publicNull.identity,
-    publicNullIntro: publicNull.intro,
+    publicNullIdentity: pendingPublicNull.identity,
+    publicNullIntro: pendingPublicNull.intro,
     roomId: localStorage.getItem("roomId")
 });
 
@@ -11203,7 +11243,11 @@ async function showAIBeings(origin = ""){
 function returnFromHumanCards(){
   document.getElementById("aiBeingsScreen").style.display = "none";
   document.getElementById("createBeingScreen").style.display = "none";
-  if(humanCardsEntryMode === "image" && pendingImageDataUrl){
+  if((humanCardsEntryMode === "image" || humanCardsEntryMode === "public-image") && pendingImageDataUrl){
+    if(humanCardsEntryMode === "public-image" && pendingPublicNull){
+      showPublicNulls(publicReturnContext);
+      return;
+    }
     capturePreview.src = pendingImageDataUrl;
     capturePreview.style.display = "block";
     document.getElementById("publishDialog").style.display = "flex";
@@ -11726,6 +11770,11 @@ async function openAIBeing(id){
   cameraWrap.style.display = "block";
   roomOverlay.style.display = "flex";
   renderBeingRoomHeader(being);
+
+  if(pendingPublicNull?.image){
+    await createRoomFromPublicNull(pendingPublicNull);
+    return;
+  }
 
   if(!activeRoomId){
     if(pendingImageDataUrl){
