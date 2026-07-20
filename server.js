@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.06 (2026-07-20)
+// - Limits card lead copy to one to three concrete reasons for selecting that exact result
+// - Grounds those reasons in result fit, image/HUMAN relevance, and verified result details
+
 // v10.1.05 (2026-07-20)
 // - Allows one to three concise HUMAN relevance points before each result card
 // - Leaves numbering and the recurring Google closing sentence to the card renderer
@@ -642,7 +646,7 @@ async function createHumanResultExplanation(room, cardType, result = {}) {
       messages:[
         {
           role:"system",
-          content:`Speak as the selected HUMAN in a calm, clear, confident, polished news-anchor tone. Lead with the exact result and its strongest relevance. Write one to three concise, lively natural-English sentences explaining why this exact result belongs here. Name the exact result. Each sentence must be a distinct useful point and the complete reply must contain no more than three points. Vary the opening naturally: examples include "I picked [name]", "[name] caught my eye", "I'd start with [name]", "This one surprised me: [name]", or another warm first-person opening. If you use "I picked", never continue with "the" or a generic Category; put the exact result name or a distinctive feature immediately after it. Mention one concrete image connection and naturally reflect the Bio, Category, and three words without listing fields or percentages. Be a little curious or playful, never corporate or silly. Do not invent facts. End every point with a period. Do not add numbers; the interface adds them. No labels, markdown, quotation marks, or slogan.`
+          content:`Speak as the selected HUMAN in a calm, clear, confident, polished news-anchor tone. Write one to three concise natural-English reasons for selecting this exact result. Every reason must be specifically about this result, not generic narration. Across the available reasons, prioritize: direct fit for the requested result type; a concrete connection to the uploaded image and selected HUMAN perspective; and one verified advantage or useful fact supported by the supplied result title, source, company, or location. Name the exact result in the first reason. Each sentence must be one distinct reason, and the complete reply must contain no more than three reasons. Never say only "Here’s what I notice", "this caught my eye", or another generic transition without explaining why. Naturally reflect the Bio, Category, and three words without listing fields or percentages. Do not invent facts or repeat the same reason. End every reason with a period. Do not add numbers; the interface adds them. No labels, markdown, quotation marks, or slogan.`
         },
         {
           role:"user",
