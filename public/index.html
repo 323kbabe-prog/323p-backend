@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.00 (2026-07-20)
+  - Starts the 10.1 release with one compact 88-98px room-image range
+  - Locks Take Camera View, Upload Image, and Public Camera Perspectives to equal 56px actions
+  - Makes all SVG-plus creation actions full content width with one shared hierarchy
+
   v10.0.163 (2026-07-20)
   - Adds an SVG-plus ADD PUBLIC IMAGE action to Public Camera Perspectives
   - Publishes confirmed captures directly to Public without creating a room
@@ -1892,6 +1897,118 @@ html body #roomMessages.geminiThread .chatShareAction{
   border:1px solid #d0d7de!important;
 }
 </style>
+
+<style id="askCameraReleaseV10100">
+/* v10.1.00 — compact room media and one full-width action system. */
+:root{
+  --room-compact-image:clamp(88px,6.8vw,98px);
+}
+
+/* Captured, uploaded, Public-source, and search-result images stay compact and left aligned. */
+.roomImageChapter .humanChosenImageWrap,
+.humanChosenImageSequence .humanChosenImageWrap{
+  display:inline-flex!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  width:var(--room-compact-image)!important;
+  height:auto!important;
+  min-width:88px!important;
+  max-width:98px!important;
+  max-height:98px!important;
+  margin:8px 0 12px!important;
+  padding:0!important;
+  overflow:hidden!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.roomImageChapter .humanChosenImage,
+.humanChosenImageSequence .humanChosenImage,
+#roomMessages .humanResultImage{
+  display:block!important;
+  width:var(--room-compact-image)!important;
+  height:auto!important;
+  min-width:88px!important;
+  max-width:98px!important;
+  max-height:98px!important;
+  margin:0!important;
+  object-fit:contain!important;
+  object-position:left top!important;
+  align-self:start!important;
+  justify-self:start!important;
+  border-radius:0!important;
+}
+#roomMessages .humanResultBody{
+  justify-items:start!important;
+  align-items:start!important;
+}
+
+/* All three home image actions use the exact same box. */
+#takeCameraViewBtn,
+#uploadBtn,
+#publicNullsBtn{
+  width:100%!important;
+  height:56px!important;
+  min-height:56px!important;
+  max-height:56px!important;
+  padding:0 18px!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:9px!important;
+  line-height:1!important;
+  overflow:hidden!important;
+}
+#publicNullsThumbs{
+  flex:0 0 auto!important;
+  height:28px!important;
+  min-height:28px!important;
+  max-height:28px!important;
+  display:flex!important;
+  align-items:center!important;
+}
+#publicNullsThumbs img{
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+  max-width:28px!important;
+  min-height:28px!important;
+  max-height:28px!important;
+  object-fit:cover!important;
+}
+#publicNullsBtn > span{
+  line-height:1!important;
+}
+
+/* Every SVG-plus create action spans its screen's content rail. */
+#openCreateBeingBtn,
+#addPublicImageBtn{
+  width:100%!important;
+  max-width:none!important;
+  height:56px!important;
+  min-height:56px!important;
+  max-height:56px!important;
+  margin:0 0 18px!important;
+  padding:0 18px!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:9px!important;
+  line-height:1!important;
+}
+#openCreateBeingBtn svg,
+#addPublicImageBtn svg{
+  width:20px!important;
+  height:20px!important;
+  flex:0 0 20px!important;
+}
+@media(max-width:480px){
+  :root{--room-compact-image:88px;}
+}
+</style>
+
 </head>
 
 <body>
