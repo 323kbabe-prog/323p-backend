@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.159 (2026-07-20)
+  - Keeps the ASK bar visible while clearly showing when the five examples are still running
+  - Resumes only missing briefing cards when a live HUMAN room is rejoined
+  - Prevents late automatic cards from appearing below the completion message
+  - Distinguishes a real job link from an honest job-search fallback
+
   v10.0.158 (2026-07-20)
   - Preserves the selected Public image while the user chooses a HUMAN
   - Creates the private HUMAN room only after both the image and HUMAN are ready
@@ -1070,12 +1076,6 @@ body.systemBlockingState #helper{
 }
 
 /* v10.0.118 — Public cards show the image and larger response counters only. */
-#publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveIdentity,
-#publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveIntro{display:none!important;}
-#publicNullsCards .loveCount,
-#publicNullsCards .skeletonCount{font-size:17px!important;line-height:1.2!important;font-weight:700!important;}
-#publicNullsCards .loveIcon,
-#publicNullsCards .loveNumber{font-size:inherit!important;line-height:inherit!important;}
 
 /* v10.0.119 — shared in-room floating live-camera card. */
 #roomFloatingCameraLayer{position:fixed!important;inset:0!important;z-index:2147483646!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:18px!important;box-sizing:border-box!important;background:#fff!important;}
@@ -1090,9 +1090,6 @@ body.systemBlockingState #helper{
 <style id="askCameraStateSystemV120">
 /* Authoritative release layer: screen canvases, Public cards, and capture modals. */
 #roomOverlay,#dailyNullsScreen,#publicNullsScreen,#aiBeingsScreen,#createBeingScreen{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
-#publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveIdentity,
-#publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveIntro{display:none!important;}
-#publicNullsCards .loveCount,#publicNullsCards .skeletonCount{font-size:17px!important;line-height:1.2!important;font-weight:700!important;}
 #publishDialog[role="dialog"],#roomFloatingCameraLayer[role="dialog"]{overscroll-behavior:contain!important;}
 #publishDialogClose,#roomFloatingCameraClose{touch-action:manipulation!important;}
 </style>
@@ -7144,7 +7141,9 @@ function openHomeRoom(event){
     try { savedBeing = JSON.parse(localStorage.getItem("selectedBeing") || "null"); } catch(error) {}
     if(savedBeing) renderBeingRoomHeader(savedBeing);
     roomMessages.innerHTML = '<div style="margin:auto;padding:24px;text-align:center;font-size:14px;font-weight:800;">RESTORING HUMAN ROOM...</div>';
-    roomInput.style.display = "none";
+    roomInput.style.display = "block";
+    roomInput.disabled = true;
+    roomInput.placeholder = "Ask — restoring this HUMAN room";
     roomOverlay.style.display = "flex";
     cameraWrap.style.display = "block";
     helper.style.display = "none";
@@ -7847,6 +7846,14 @@ clearTimeout(rejoinTimeout);
 window.isRoomOwner = data.isOwner;
 roomNullCard = data.nullCard;
 roomExpiresAt = data.expiresAt;
+if(data.rejoined){
+  resetRoomDeliverySequence();
+  roomOpeningBootstrapActive = false;
+  roomOpeningSequenceActive = false;
+  roomOpeningSequenceComplete = true;
+  roomOpeningRevealedCount = Number.MAX_SAFE_INTEGER;
+  firstRoundDemoPending = !data.firstRoundComplete;
+}
 localStorage.setItem("roomId",data.roomId);
 localStorage.setItem("displayName",data.displayName || "");
 pendingPublicNull = null;
@@ -7891,7 +7898,7 @@ if(imageIntroText){
 renderConnectedHome();
 
 roomOverlay.style.display = "flex";
-startRoomOpeningBootstrap();
+if(!data.rejoined) startRoomOpeningBootstrap();
 
 gtag('event', 'page_view', {
   page_title: 'AI Live Room',
@@ -7899,7 +7906,9 @@ gtag('event', 'page_view', {
 });
 
 
-roomInput.style.display = "none";
+roomInput.style.display = "block";
+roomInput.disabled = true;
+roomInput.placeholder = data.firstRoundComplete ? "Ask" : "Ask — available after the five examples";
 
 document.getElementById("shareRoomBtn").innerText = "Share card";
 
@@ -7966,7 +7975,10 @@ function getRoomOpenAction(message = {}){
 
   // The explicit card family is authoritative. HUMAN category is context only.
   if(primary === "news") return { label:"Open article", href:rawLink };
-  if(primary === "jobs" || message.jobCard) return { label:"Open job", href:rawLink };
+  if(primary === "jobs" || message.jobCard) return {
+    label:(message.searchFallback || message.jobCard?.searchFallback) ? "Search jobs" : "Open job",
+    href:rawLink
+  };
   if(primary === "real estate" || primary === "real_estate") return { label:"Open listing", href:rawLink };
   if(primary === "shopping") return { label:"Open product", href:rawLink };
   if(primary === "place"){
@@ -8444,10 +8456,9 @@ function syncFirstRoundInput(){
     return;
   }
   if(isFirstRoundActive()){
-    roomInput.style.display = "none";
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Preparing five HUMAN examples";
+    roomInput.placeholder = "Ask — available after the five examples";
     return;
   }
   roomInput.disabled = false;
@@ -9020,6 +9031,7 @@ ${messages.filter(x => x.image).slice(-1)[0] === m && !nextClicked ? `
 if (m.jobCard) {
   const job = m.jobCard;
   const jobLink = job.link || m.link || "#";
+  const jobActionLabel = (m.searchFallback || job.searchFallback) ? "Search jobs" : "Open job";
   const jobDetails = [job.location,job.salary,job.type,job.posted]
     .filter(Boolean)
     .map(value => `<span style="display:inline-block;padding:5px 8px;border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.2;">${escapeBeingText(value)}</span>`)
@@ -9035,7 +9047,7 @@ if (m.jobCard) {
         ${jobDetails ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;">${jobDetails}</div>` : ""}
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <a class="chatOpenAction" href="${escapeBeingText(jobLink)}" target="_blank" rel="noopener noreferrer">Open job</a>
+        <a class="chatOpenAction" href="${escapeBeingText(jobLink)}" target="_blank" rel="noopener noreferrer">${jobActionLabel}</a>
         <span class="chatShareAction" data-link="${escapeBeingText(jobLink)}" onclick="shareCard(this,this.dataset.link)" role="button" tabindex="0">Share result</span>
       </div>
     </div>
@@ -9517,6 +9529,9 @@ function selectBeingFirstRoundCards(data = {}){
       }))
     : [];
   const providedTypes = new Set(providedCards.map(card => card.type));
+  if(data.resume === true){
+    return providedCards.filter(card => definitions[card.type] && card.text);
+  }
   if(
     providedCards.length === 5 &&
     providedTypes.size === 5 &&
@@ -11787,7 +11802,9 @@ async function openAIBeing(id){
         <div style="font-size:16px;font-weight:700;">Open ${escapeBeingText(being.name)}’s HUMAN room</div>
         <div style="font-size:13px;line-height:1.45;color:#57606a;">Take a photo, upload an image, or choose a Public Camera Perspective to begin.</div>
       </div>`;
-    roomInput.style.display = "none";
+    roomInput.style.display = "block";
+    roomInput.disabled = true;
+    roomInput.placeholder = "Ask — add an image to begin";
     document.getElementById("roomImageActions").style.display = "flex";
     document.getElementById("beingQrBtn").style.display = "inline-block";
     document.getElementById("shareRoomBtn").style.display = "inline-block";
