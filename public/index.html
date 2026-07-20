@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.19 (2026-07-21)
+  - Displays the complete HUMAN category and phone beneath the full header name
+  - Removes the redundant HUMAN prefix and header category ellipsis
+  - Moves swipe guidance above result actions so the fixed Ask bar cannot cover it
+  - Preserves image-driven card sizing and compact actions
+
   v10.1.18 (2026-07-21)
   - Keeps the room strongly image-driven while sizing every text section to its real content
   - Removes flexible empty HUMAN/result rows and gives all remaining height to the hero image
@@ -8991,12 +8997,12 @@ function unifiedDailyPerspectiveHtml(message = {},anchor = {}){
         ${resultSource ? `<div class="unifiedResultSource">${escapeBeingText(resultSource)}</div>` : ""}
         ${resultDetails ? `<div class="unifiedResultDetails">${resultDetails}</div>` : ""}
       </section>`}
+      <div class="perspectiveSwipeCue">↑ Swipe up for the next perspective</div>
       <div class="unifiedResultActions">
         <a class="unifiedAction" href="${resultHref}" target="_blank" rel="noopener noreferrer">${escapeBeingText(resultAction.label || "Open result")}</a>
         ${directApply}
         <button class="unifiedAction unifiedShareAction" type="button" aria-label="Share result" data-link="${resultHref}" onclick="shareCard(this,this.dataset.link)"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M5 14v5h14v-5"/></svg></button>
       </div>
-      <div class="perspectiveSwipeCue">↑ Swipe up for the next perspective</div>
     </article>
   </section>`;
 }
@@ -12975,9 +12981,11 @@ function renderBeingRoomHeader(being){
   title.style.maxWidth = "none";
   title.style.flex = "1 1 auto";
   title.innerHTML = `
-    <span class="roomHumanCategory">HUMAN · ${escapeBeingText(being.category || "UNCATEGORIZED")}</span>
     <span class="roomHumanFullName">${escapeBeingText(being.name)}</span>
-    ${being.phone ? `<a class="roomHumanPhone" href="tel:${escapeBeingText(being.phone)}">${escapeBeingText(being.phone)}</a>` : ""}
+    <span class="roomHumanMeta">
+      <span class="roomHumanCategory">${escapeBeingText(being.category || "UNCATEGORIZED")}</span>
+      ${being.phone ? `<span class="roomHumanMetaSeparator" aria-hidden="true">·</span><a class="roomHumanPhone" href="tel:${escapeBeingText(being.phone)}">${escapeBeingText(being.phone)}</a>` : ""}
+    </span>
   `;
 
   document.getElementById("beingQrBtn").style.display = "none";
@@ -14411,6 +14419,49 @@ html body #shareRoomBtn::after{
 #roomMessages.perspectiveDensityUltra .unifiedResultActions{height:28px;min-height:28px;}
 #roomMessages.perspectiveDensityUltra .unifiedAction{height:28px;min-height:28px;}
 #roomMessages.perspectiveDensityUltra .unifiedShareAction{width:30px!important;min-width:30px!important;max-width:30px!important;flex-basis:30px!important;}
+
+/* v10.1.19 — complete HUMAN metadata and unobstructed swipe guidance. */
+#roomTitle .roomHumanFullName{
+  display:block;
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+}
+#roomTitle .roomHumanMeta{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:2px 4px;
+  min-width:0;
+  margin-top:3px;
+  color:#57606a;
+  font-size:9px;
+  line-height:1.15;
+}
+#roomTitle .roomHumanCategory{
+  font-size:inherit;
+  line-height:inherit;
+  letter-spacing:.02em;
+  opacity:1;
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+  text-transform:uppercase;
+}
+#roomTitle .roomHumanPhone{
+  margin:0;
+  color:inherit;
+  font-size:inherit;
+  line-height:inherit;
+  white-space:nowrap;
+}
+#roomTitle .roomHumanMetaSeparator{color:#8c959f;}
+#roomMessages .unifiedDailyRoomCard > .perspectiveSwipeCue{
+  min-height:13px;
+  margin:0 0 1px;
+  padding:0!important;
+}
+#roomMessages .unifiedDailyRoomCard > .unifiedResultActions{margin-bottom:2px;}
 </style>
 </body>
 </html>
