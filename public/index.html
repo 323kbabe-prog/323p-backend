@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.160 (2026-07-20)
+  - Removes the remaining active pill shapes from HUMAN-room messages and result controls
+  - Keeps room conversation, metadata, result titles, and actions on the sharp-corner UI system
+
   v10.0.159 (2026-07-20)
   - Keeps the ASK bar visible while clearly showing when the five examples are still running
   - Resumes only missing briefing cards when a live HUMAN room is rejoined
@@ -5981,6 +5985,11 @@ html body #publicNullsCards .publicPerspectiveCardV2 .publicPerspectiveAdmin{
   order:3!important;
   align-self:flex-start!important;
   margin:0!important;
+}
+/* v10.0.160 — the HUMAN room has one authoritative square geometry. */
+html body #roomMessages,
+html body #roomMessages *{
+  border-radius:0!important;
 }
 @media(max-width:480px){
   html body #roomTitle{max-width:70px!important;}
