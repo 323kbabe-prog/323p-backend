@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.10 (2026-07-20)
+  - Keeps the current result step blocked until a verified News article arrives
+  - Shows the standard boxed dots while the News Gate retries
+  - Adds a Retry action without enabling Ask or advancing the five-result queue
+
   v10.1.09 (2026-07-20)
   - Removes HUMAN narration above every automatic and chat result card
   - Renders one local-context News card before every non-News result card
@@ -7280,6 +7285,9 @@ let beingFirstRoundRetryCount = 0;
 let beingFirstRoundInsertionIndex = null;
 let beingFirstRoundStepTimer = null;
 let beingFirstRoundDelayTimer = null;
+let newsGateRetryPayload = null;
+let newsGateDirectWaiting = false;
+let newsGateBaseline = 0;
 let lastRoomMessageCount = 0;
 let roomOpeningSequenceActive = false;
 let roomOpeningSequenceComplete = false;
@@ -8651,6 +8659,9 @@ function resetRoomDeliverySequence(){
   roomReplyDeliveryActive = false;
   clearTimeout(beingFirstRoundDelayTimer);
   beingFirstRoundDelayTimer = null;
+  newsGateRetryPayload = null;
+  newsGateDirectWaiting = false;
+  newsGateBaseline = 0;
   document.getElementById("sequenceDelayNotice")?.remove();
 }
 
@@ -8665,13 +8676,45 @@ function scrollRoomToLatest(shouldFollow = true){
   });
 }
 
-function showSequenceDelayNotice(){
-  if(!beingFirstRoundWaiting || document.getElementById("sequenceDelayNotice")) return;
+function showSequenceDelayNotice(forceNewsGate = false){
+  if((!beingFirstRoundWaiting && !forceNewsGate) || document.getElementById("sequenceDelayNotice")) return;
   const shouldFollow = isRoomNearBottom();
   hideSequenceTyping();
-  roomMessages.insertAdjacentHTML("beforeend",'<div id="sequenceDelayNotice" class="geminiAiResponse chatAiGroup" role="status"><div class="chatBubble chatAiBubble">Still preparing this example…</div></div>');
+  roomMessages.insertAdjacentHTML("beforeend",'<div id="sequenceDelayNotice" class="geminiAiResponse chatAiGroup" role="status"><div class="chatBubble chatAiBubble">Finding a verified local News article.</div><button class="chatOpenAction" type="button" onclick="retryNewsGate()">Retry</button></div>');
   scrollRoomToLatest(shouldFollow);
 }
+
+function retryNewsGate(){
+  const payload = newsGateRetryPayload || (beingFirstRoundCurrentCard ? {
+    text:beingFirstRoundCurrentCard.text,
+    autoFirstRound:true,
+    autoCardType:beingFirstRoundCurrentCard.type
+  } : null);
+  if(!payload) return;
+  document.getElementById("sequenceDelayNotice")?.remove();
+  roomInput.disabled = true;
+  roomInput.placeholder = "Ask — finding local news";
+  showSequenceTyping();
+  socket.emit("roomMessage",{
+    ...payload,
+    timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+}
+
+socket.on("newsGateBlocked",payload => {
+  newsGateRetryPayload = payload || null;
+  roomInput.disabled = true;
+  roomInput.placeholder = beingFirstRoundWaiting
+    ? "Ask — available after the five results"
+    : "Ask — finding local news";
+  showSequenceTyping();
+  clearTimeout(beingFirstRoundDelayTimer);
+  beingFirstRoundDelayTimer = setTimeout(() => showSequenceDelayNotice(!beingFirstRoundWaiting),1000);
+  if(!beingFirstRoundWaiting){
+    newsGateDirectWaiting = true;
+    newsGateBaseline = lastRoomMessageCount;
+  }
+});
 
 function sequenceTypingHtml(){
   return openingSequenceTypingHtml();
@@ -8998,6 +9041,22 @@ const beingFirstRoundCandidates = messages.length > beingFirstRoundBaseline
   ? messages.slice(beingFirstRoundBaseline)
   : messages.slice(-1);
 
+if(
+  newsGateDirectWaiting &&
+  messages.slice(newsGateBaseline).some(message =>
+    message?.aiBeing && (message.ask || message.jobCard || message.resultUrl || message.link)
+  )
+){
+  newsGateDirectWaiting = false;
+  newsGateRetryPayload = null;
+  clearTimeout(beingFirstRoundDelayTimer);
+  beingFirstRoundDelayTimer = null;
+  document.getElementById("sequenceDelayNotice")?.remove();
+  hideSequenceTyping();
+  roomInput.disabled = false;
+  roomInput.placeholder = "Ask";
+}
+
 if (
   beingFirstRoundWaiting &&
   beingFirstRoundCandidates.some(message =>
@@ -9013,6 +9072,7 @@ if (
   beingFirstRoundExpectedType = "";
   beingFirstRoundCurrentCard = null;
   beingFirstRoundRetryCount = 0;
+  newsGateRetryPayload = null;
   setTimeout(runNextBeingFirstCard, 700);
 }
 
