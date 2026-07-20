@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.22 (2026-07-21)
+  - Lets a submitted question immediately take over from the automatic demo
+  - Cancels remaining automatic perspective timers and requests on user submission
+  - Suppresses late automatic cards while preserving perspectives already completed
+  - Sends the user request directly through the existing strict News Gate
+
   v10.1.21 (2026-07-21)
   - Keeps the HUMAN header name on one responsive line
   - Uses a pure white stage behind both demo photos
@@ -7375,7 +7381,8 @@ let perspectiveTourStarted = false;
 let perspectiveInvitationViewed = false;
 let perspectiveScrollTimer = null;
 let perspectiveRestoreFrame = null;
-let queuedPerspectiveAsk = "";
+let perspectiveUserOverrideActive = false;
+let perspectiveUserOverrideStartIndex = -1;
 
 let pendingImageDataUrl = null;
 let pendingImageSource = null;
@@ -8207,15 +8214,8 @@ roomInput.onkeydown = e => {
 
     if (!text) return;
 
-    if(
-      perspectiveTourStarted &&
-      (isFirstRoundActive() || beingFirstRoundWaiting || newsGateDirectWaiting || !perspectiveInvitationViewed)
-    ){
-      queuedPerspectiveAsk = text;
-      roomInput.value = "";
-      roomInput.disabled = false;
-      roomInput.placeholder = "Ask saved — preparing perspectives";
-      return;
+    if(perspectiveTourStarted && !perspectiveInvitationViewed){
+      skipAutomaticPerspectivesForUserAsk();
     }
 
     gtag('event', 'send_room_message');
@@ -8261,20 +8261,37 @@ roomInput.value = "";
 
 };
 
-function flushQueuedPerspectiveAsk(){
-  if(
-    !queuedPerspectiveAsk ||
-    isFirstRoundActive() ||
-    beingFirstRoundWaiting ||
-    newsGateDirectWaiting ||
-    (perspectiveTourStarted && !perspectiveInvitationViewed)
-  ) return;
-  const text = queuedPerspectiveAsk;
-  queuedPerspectiveAsk = "";
+function skipAutomaticPerspectivesForUserAsk(){
+  perspectiveUserOverrideActive = true;
+  perspectiveUserOverrideStartIndex = lastRoomMessageCount;
+  beingFirstRoundQueue = [];
+  beingFirstRoundWaiting = false;
+  beingFirstRoundExpectedType = "";
+  beingFirstRoundCurrentCard = null;
+  firstRoundDemoPending = false;
+  firstRoundDemoVisible = false;
+  clearTimeout(beingFirstRoundStepTimer);
+  clearTimeout(beingFirstRoundDelayTimer);
+  clearTimeout(roomOpeningSequenceTimer);
+  clearTimeout(roomReplyDeliveryTimer);
+  beingFirstRoundStepTimer = null;
+  beingFirstRoundDelayTimer = null;
+  roomOpeningSequenceTimer = null;
+  roomReplyDeliveryTimer = null;
+  roomOpeningSequenceRunId += 1;
+  roomOpeningSequenceActive = false;
+  roomOpeningSequenceComplete = true;
+  roomOpeningBootstrapActive = false;
+  roomReplyDeliveryActive = false;
+  perspectiveInvitationViewed = true;
+  localStorage.setItem(`${perspectiveStorageKey()}:askReady`,"1");
+  socket.emit("roomFirstRoundComplete",{ deviceId, skippedByUser:true });
+  hideSequenceTyping();
+  hideAITyping();
+  document.getElementById("sequenceDelayNotice")?.remove();
   roomInput.disabled = false;
   roomInput.readOnly = false;
-  roomInput.value = text;
-  roomInput.dispatchEvent(new KeyboardEvent("keydown",{ key:"Enter", bubbles:true }));
+  roomInput.placeholder = "Ask — finding verified News";
 }
 
 openHumanCardsButton.addEventListener("click",openRequiredHumanSelection);
@@ -8778,6 +8795,8 @@ function resetRoomDeliverySequence(){
   beingFirstRoundCompletedCount = 0;
   perspectiveTourStarted = false;
   perspectiveInvitationViewed = false;
+  perspectiveUserOverrideActive = false;
+  perspectiveUserOverrideStartIndex = -1;
   beingFirstRoundBaseline = lastRoomMessageCount;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
@@ -8885,21 +8904,18 @@ function updatePerspectiveViewportState(){
   if(current.querySelector(".perspectiveArrival")){
     roomInput.disabled = false;
     roomInput.readOnly = false;
-    roomInput.placeholder = queuedPerspectiveAsk ? "Ask saved — preparing perspectives" : "Ask during the demo";
+    roomInput.placeholder = "Ask during the demo";
   }else if(perspectiveTourStarted && !perspectiveInvitationViewed){
     const currentIndex = slides.indexOf(current);
     roomInput.disabled = false;
     roomInput.readOnly = false;
-    roomInput.placeholder = queuedPerspectiveAsk
-      ? "Ask saved — preparing perspectives"
-      : currentIndex >= 0 && currentIndex < slides.length - 1
+    roomInput.placeholder = currentIndex >= 0 && currentIndex < slides.length - 1
       ? "Ask — swipe up for the next perspective"
       : "Ask — next perspective is loading";
   }else if(perspectiveInvitationViewed){
     roomInput.disabled = false;
     roomInput.readOnly = false;
     roomInput.placeholder = "Ask";
-    flushQueuedPerspectiveAsk();
   }
   updatePerspectiveDensity();
 }
@@ -9437,9 +9453,7 @@ function syncFirstRoundInput(){
     roomInput.readOnly = false;
     const slides = getPerspectiveSlides();
     const currentIndex = slides.indexOf(getCurrentPerspectiveSlide());
-    roomInput.placeholder = queuedPerspectiveAsk
-      ? "Ask saved — preparing perspectives"
-      : currentIndex >= 0 && currentIndex < slides.length - 1
+    roomInput.placeholder = currentIndex >= 0 && currentIndex < slides.length - 1
       ? "Ask — swipe up for the next perspective"
       : "Ask — next perspective is loading";
     return;
@@ -9447,7 +9461,6 @@ function syncFirstRoundInput(){
   roomInput.disabled = false;
   roomInput.readOnly = false;
   roomInput.placeholder = "Ask";
-  flushQueuedPerspectiveAsk();
 }
 
 function getRoomCardTriggerInstruction(messages){
@@ -10297,9 +10310,16 @@ ${m.translation || m.text || ""}
 });
 
 const automaticPerspectiveIndexes = messages
-  .map((message,index) => isAutomaticPerspectiveMessage(message) ? index : -1)
+  .map((message,index) =>
+    isAutomaticPerspectiveMessage(message) &&
+    !(perspectiveUserOverrideActive && index >= perspectiveUserOverrideStartIndex)
+      ? index
+      : -1
+  )
   .filter(index => index >= 0);
-const invitationMessageIndex = messages.findIndex(message => message?.firstRoundComplete);
+const invitationMessageIndex = perspectiveUserOverrideActive
+  ? -1
+  : messages.findIndex(message => message?.firstRoundComplete);
 const permanentPerspectiveIndexes = new Set(automaticPerspectiveIndexes);
 if(invitationMessageIndex >= 0){
   permanentPerspectiveIndexes.add(invitationMessageIndex);
@@ -10307,9 +10327,20 @@ if(invitationMessageIndex >= 0){
     if(!messages[index]?.anchorTransition) permanentPerspectiveIndexes.add(index);
   }
 }
+if(perspectiveUserOverrideActive){
+  for(let index = Math.max(0,perspectiveUserOverrideStartIndex); index < messages.length; index += 1){
+    const message = messages[index];
+    if(message?.autoCardType || message?.anchorTransition) continue;
+    if(message?.aiBeing || message?.resultType || message?.jobCard || message?.ask || message?.image){
+      permanentPerspectiveIndexes.add(index);
+    }
+  }
+}
 
 const deliveryBlocks = [];
-if(!automaticPerspectiveIndexes.length){
+const hasOverridePerspective = perspectiveUserOverrideActive &&
+  Array.from(permanentPerspectiveIndexes).some(index => index >= perspectiveUserOverrideStartIndex);
+if(!automaticPerspectiveIndexes.length && !hasOverridePerspective){
   deliveryBlocks.push(`<div class="roomDeliveryBlock perspectiveArrivalBlock" data-room-delivery-index="arrival">${perspectiveArrivalHtml(messages)}</div>`);
   const openingStageHtml = renderedMessageBlocks
     .filter((html,index) => messages[index]?.type === "nullCard")
@@ -10723,6 +10754,7 @@ socket.on("roomHumanSelected", ({ being } = {}) => {
 socket.on("roomFirstRoundStart", (data = {}) => {
   const activeKind = getActiveRoomKind(data);
   if(data.roomKind && data.roomKind !== activeKind) return;
+  if(perspectiveUserOverrideActive) return;
 
   beingFirstRoundQueue = selectBeingFirstRoundCards(data);
   beingFirstRoundWaiting = false;
