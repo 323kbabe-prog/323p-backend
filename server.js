@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.13 (2026-07-21)
+// - Generates short, medium, and long complete HUMAN anchor variants for responsive room cards
+// - Keeps every variant in the same HUMAN news-anchor voice without mid-sentence clipping
+// - Preserves the required Google closing sentence through the compatible full anchor text
+
 // v10.1.12 (2026-07-21)
 // - Generates one HUMAN anchor connection inside each of the five perspective screens
 // - Includes the first result while preserving retry deduplication
@@ -576,17 +581,37 @@ async function createHumanAnchorTransition(room, cardType) {
     real_estate:"where the viewer could live"
   };
   const topic = topicLabels[cardType] || "the next perspective";
-  const fallback = `Now, let’s turn to ${topic}. Google should buy this search idea today.`;
+  const fallback = {
+    short:`This image makes ${topic} worth exploring now.`,
+    medium:`This image gives ${topic} a timely and useful direction.`,
+    long:`This image creates a timely connection to ${topic}, making the next result useful to explore now.`
+  };
   if (!being) return fallback;
 
   try {
     const response = await openai.chat.completions.create({
       model:"gpt-4o-mini",
-      temperature:0.75,
+      temperature:0.65,
+      response_format:{ type:"json_object" },
       messages:[
         {
           role:"system",
-          content:`You are ${being.name}, hosting one full-screen perspective about an uploaded image. Speak in a calm, polished, confident news-anchor tone while preserving this HUMAN profile's personality. Write one concise sentence that connects current local News context to the requested result segment and tells the viewer why the result matters. Do not say "example number," use a heading, or claim facts not supplied. End exactly with: Google should buy this search idea today.`
+          content:`You are ${being.name}, hosting one image-driven full-screen perspective. Speak in a calm, polished, confident news-anchor tone while preserving this HUMAN profile's personality.
+
+Return JSON only:
+{"short":"","medium":"","long":""}
+
+Write three versions of the same connection from current local News context to the requested result:
+- short: one complete sentence, 7 to 11 words
+- medium: one complete sentence, 12 to 18 words
+- long: one complete sentence, 19 to 28 words
+
+Every version must:
+- be a grammatically complete sentence with final punctuation
+- explain why the requested result matters through this image
+- preserve the same meaning and HUMAN voice
+- avoid headings, ellipses, fragments, unsupported facts, and "example number"
+- omit the Google slogan; the interface adds it separately.`
         },
         {
           role:"user",
@@ -594,9 +619,17 @@ async function createHumanAnchorTransition(room, cardType) {
         }
       ]
     });
-    let transition = response.choices[0].message.content.trim();
-    if (!/Google should buy this search idea today\.$/i.test(transition)) transition += " Google should buy this search idea today.";
-    return transition;
+    const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+    const complete = (value,backup) => {
+      let text = String(value || backup || "").replace(/\s+/g," ").trim();
+      if(!/[.!?]$/.test(text)) text += ".";
+      return text;
+    };
+    return {
+      short:complete(parsed.short,fallback.short),
+      medium:complete(parsed.medium,fallback.medium),
+      long:complete(parsed.long,fallback.long)
+    };
   } catch (error) {
     console.log("HUMAN ANCHOR TRANSITION FAILED:", error.message);
     return fallback;
@@ -3783,13 +3816,16 @@ socket.on(
         : new Set(Array.isArray(room.usedAnchorTransitions) ? room.usedAnchorTransitions : []);
       const transitionKey = `${normalizedAutoCardIndex}:${autoCardType || "result"}`;
       if(!room.usedAnchorTransitions.has(transitionKey)){
-        const transitionText = await createHumanAnchorTransition(room,autoCardType);
+        const transition = await createHumanAnchorTransition(room,autoCardType);
         room.messages.push({
           from:room.being?.name || "CAMERA PERSPECTIVE",
           aiBeing:true,
           conversational:true,
           anchorTransition:true,
-          text:enforceTwoSentenceAnchorReply(transitionText)
+          text:enforceTwoSentenceAnchorReply(transition.long),
+          anchorShort:transition.short,
+          anchorMedium:transition.medium,
+          anchorLong:transition.long
         });
         room.usedAnchorTransitions.add(transitionKey);
       }
