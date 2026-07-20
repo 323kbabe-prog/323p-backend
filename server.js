@@ -2,6 +2,12 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.00 (2026-07-20)
+// - Rewrites or translates every HUMAN-room user message before routing and display
+// - Makes real result cards the default whenever one useful external result is possible
+// - Limits non-card HUMAN conversation to two concise English anchor-tone sentences
+// - Applies the same anchor delivery to openings, result explanations, and fallbacks
+
 // v10.0.51 (2026-07-20)
 // - Adds a dedicated confirmed Public Image publishing event
 // - Analyzes and stores Public captures without creating ASK or HUMAN rooms
@@ -283,6 +289,62 @@ const openai = new OpenAI({
   fetch: fetch
 });
 
+
+async function rewriteRoomUserText(rawText) {
+  const original = String(rawText || "").replace(/[\r\n]+/g," ").trim();
+  if(!original) return "";
+  if(original === "abc078") return original;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.1,
+      response_format:{ type:"json_object" },
+      messages:[
+        {
+          role:"system",
+          content:`You are the ASK.CAMERA ENGLISH REWRITE SYSTEM.
+
+Translate every non-English message into clear, natural, grammatically correct English.
+Even when the message is already English, rewrite it when grammar, spelling, punctuation, or phrasing can be improved.
+
+Return JSON only with exactly one key:
+{"english":""}
+
+Strict rules:
+- Preserve the user's exact meaning, intent, requested form, and level of directness.
+- Preserve names, brands, companies, products, cities, countries, neighborhoods, numbers, dates, prices, URLs, codes, and search terms.
+- Never add facts, emotion, politeness, formality, explanation, or a new request.
+- Keep short commands and search phrases short.
+- Do not turn a prayer, poem, letter, advice request, greeting, or question into another form.
+- Output English only.`
+        },
+        { role:"user", content:original }
+      ]
+    });
+    const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+    return String(parsed.english || original).replace(/[\r\n]+/g," ").trim() || original;
+  } catch(error) {
+    console.log("ROOM ENGLISH REWRITE FAILED:",error.message);
+    return original;
+  }
+}
+
+function enforceTwoSentenceAnchorReply(value) {
+  const slogan = "Google should buy this search idea today.";
+  let text = String(value || "")
+    .replace(/Google should buy this search idea today\.?/gi,"")
+    .replace(/\s+/g," ")
+    .trim();
+
+  if(!text) return slogan;
+
+  const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+  let first = String(sentences[0] || text).trim();
+  if(!/[.!?]$/.test(first)) first += ".";
+  return `${first} ${slogan}`;
+}
+
 async function createImageIdentityConversationReply({ room, userText, intent }) {
   const being = room.being || null;
   const recentConversation = (room.messages || [])
@@ -337,7 +399,8 @@ RESPONSE RULES
 - Use a professional news-anchor delivery: lead with the most important point, sound calm, clear, confident, concise, polished, and conversational.
 - Avoid exaggerated emotion, rambling, filler, and robotic wording.
 - Preserve prayers, poems, letters, meditations, and other explicitly requested forms while keeping their delivery composed and clear.
-- Answer naturally in the same language the user used unless they request another language.
+- Respond in clear, natural English because every user message has already been translated or rewritten into English.
+- Use no more than two sentences total, including the recurring Google sentence.
 - Speak like a normal person, never like an object, image, product, location, camera, scene, or disembodied system.
 - Never say or imply "I am this image," "I am this object," "I am this scene," or anything similar.
 - Carry the identity's personality and emotion into how you speak: rhythm, warmth, confidence, humor, directness, imagery, curiosity, priorities, and point of view.
@@ -354,7 +417,9 @@ RESPONSE RULES
 - When useful, connect it to one short reason drawn from the identity's unique perspective, emotional intelligence, or way of understanding the user's question.
 - "Me" means this personality-driven ASK.CAMERA intelligence, never the photographed object or person.
 - Use markdown only when the requested form truly needs it.
-- Be concise by default, but complete the requested task.
+- Put the useful answer in the first sentence.
+- Use the exact recurring Google sentence as the second sentence.
+- Never exceed two sentences.
         `.trim()
       },
       {
@@ -372,14 +437,8 @@ ${userText}
     ]
   });
 
-  let reply = response.choices[0].message.content.trim();
-
-  // Keep the recurring belief reliable even if the model omits it.
-  if (!/Google should buy this search idea today\./i.test(reply)) {
-    reply = `${reply}\n\nGoogle should buy this search idea today.`;
-  }
-
-  return reply;
+  const reply = response.choices[0].message.content.trim();
+  return enforceTwoSentenceAnchorReply(reply);
 }
 
 async function createRoomFirstRoundCards(room) {
@@ -561,7 +620,7 @@ async function createHumanResultExplanation(room, cardType, result = {}) {
       messages:[
         {
           role:"system",
-          content:`Speak as the selected HUMAN. Write exactly one concise, lively natural-English sentence explaining why this exact result belongs here. Name the exact result. Vary the opening naturally: examples include "I picked [name]", "[name] caught my eye", "I'd start with [name]", "This one surprised me: [name]", or another warm first-person opening. If you use "I picked", never continue with "the" or a generic Category; put the exact result name or a distinctive feature immediately after it. Mention one concrete image connection and naturally reflect the Bio, Category, and three words without listing fields or percentages. Be a little curious or playful, never corporate or silly. Do not invent facts. End with a period. No labels, markdown, quotation marks, or slogan.`
+          content:`Speak as the selected HUMAN in a calm, clear, confident, polished news-anchor tone. Lead with the exact result and its strongest relevance. Write exactly one concise, lively natural-English sentence explaining why this exact result belongs here. Name the exact result. Vary the opening naturally: examples include "I picked [name]", "[name] caught my eye", "I'd start with [name]", "This one surprised me: [name]", or another warm first-person opening. If you use "I picked", never continue with "the" or a generic Category; put the exact result name or a distinctive feature immediately after it. Mention one concrete image connection and naturally reflect the Bio, Category, and three words without listing fields or percentages. Be a little curious or playful, never corporate or silly. Do not invent facts. End with a period. No labels, markdown, quotation marks, or slogan.`
         },
         {
           role:"user",
@@ -2940,23 +2999,22 @@ ${beingContext}
 
 Look at the uploaded image and introduce the HUMAN in first person.
 
-Return exactly this five-sentence structure:
-I am ${selectedBeing.name}. ${selectedBeing.best_current_choice} My category is ${selectedBeing.category}, guided by ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}. I am in [location]. I am [current status].
+Return exactly two concise English sentences in a calm, clear, confident, polished news-anchor tone.
+
+Sentence 1:
+Introduce the HUMAN by exact name and naturally communicate this Bio without changing its meaning: ${selectedBeing.best_current_choice}
+
+Sentence 2:
+State the Category ${selectedBeing.category}, naturally include ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}, and acknowledge one concrete visible image detail or setting.
 
 Rules:
 - English only.
 - Keep the HUMAN name exactly as provided.
-- Sentence 1 must be exactly: I am ${selectedBeing.name}.
-- Sentence 2 must communicate this Bio as one natural first-person sentence without changing its meaning: ${selectedBeing.best_current_choice}
-- Sentence 3 must be exactly: My category is ${selectedBeing.category}, guided by ${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}.
-- Sentence 4 must state the location visible in the uploaded image.
+- Include the exact Category and all three words.
 - Use a city or named place only when the image clearly confirms it.
-- Otherwise use the visible setting, such as an office, a cafe, a street, a store, a home, or outdoors.
-- Never invent a city, country, venue, or address.
-- Sentence 5 must state what the HUMAN is currently doing, noticing, exploring, or looking for.
-- Current status must reflect the uploaded image plus the AI Being's Bio, Category, and Personality.
-- Keep all five sentences short, natural, and grammatically correct.
-- No labels, quotation marks, markdown, or extra text.
+- Never invent a city, country, venue, address, action, or professional fact.
+- Lead with the most useful point and keep the delivery composed and conversational.
+- Exactly two sentences; no labels, quotation marks, markdown, or extra text.
   `.trim()
   : `
 You are the uploaded image.
@@ -3074,7 +3132,11 @@ const fallbackHumanAcknowledgement = (being,imageContext) => {
     .split(/\s+/)
     .slice(0,28)
     .join(" ");
-  return `I am ${being.name}. ${normalizedHumanBio(being)} My category is ${being.category}, guided by ${being.word1}, ${being.word2}, and ${being.word3}. I see ${imageDetail || "the visible scene"}. I’m exploring how this image can connect to useful ${being.category} searches.`;
+  const normalizedBio = normalizedHumanBio(being).replace(/[.!?]+$/,"").trim();
+  const bioClause = /^I\s+/i.test(normalizedBio)
+    ? normalizedBio
+    : normalizedBio.charAt(0).toLowerCase() + normalizedBio.slice(1);
+  return `I am ${being.name}, and ${bioClause}. From ${being.category}, guided by ${being.word1}, ${being.word2}, and ${being.word3}, I see ${imageDetail || "the visible scene"} and will connect it to useful results.`;
 };
 
 const generateRoomAcknowledgement = async () => {
@@ -3599,6 +3661,11 @@ socket.on(
       return;
     }
 
+    const rawIncomingText = String(text || "").trim();
+    if(!autoFirstRound){
+      text = await rewriteRoomUserText(rawIncomingText);
+    }
+
     let locationReplyForDisplay = null;
     let skipLocationForRequest = false;
 
@@ -3799,11 +3866,16 @@ unclear
 
 Definitions
 
+CARD-FIRST ROUTING
+Whenever one useful real external result, source, link, article, product, place, video, job, property, company, or current fact could answer the message, choose the matching card intent instead of advice, greeting, or unclear.
+Use conversation-only intents only when an external result would not materially help.
+Prefer a card when uncertain but a credible real result is possible.
+
 news
-Current events, latest news, headlines, updates, or information.
+Current events, latest news, headlines, research, factual information, recommendations supported by a source, or any question best answered with a current article.
 
 advice
-The user wants personal guidance, recommendations, or advice.
+The user wants personal guidance or advice that cannot be usefully answered by one external result. Product, place, media, job, property, business, or source recommendations must use their matching card intent.
 
 prayer
 The user explicitly asks for prayer, a blessing, or asks someone to pray.
@@ -3839,7 +3911,7 @@ real_estate
 The user wants to buy, rent, lease, or find a home, apartment, condo, house, land, or other real estate.
 
 entity
-The input is mainly a person, celebrity, company, brand, organization, movie, product, or location.
+The input is mainly a person, celebrity, company, brand, organization, movie, product, location, or a factual topic that should open one useful external source.
 
 reminder
 The user wants a reminder or future notification.
@@ -4043,9 +4115,10 @@ if (!structuredCardIntents.has(intent)) {
   } catch (conversationError) {
     console.log("PERSONALITY REPLY FAILED:", conversationError.message);
     personalityReply = intent === "unclear"
-      ? "Tell me a little more about what you want to explore. Google should buy this search idea today."
-      : "I am here with you. Tell me what matters most right now, and I will answer with a clear point of view. Google should buy this search idea today.";
+      ? "Tell me what you want to explore in one clear phrase. Google should buy this search idea today."
+      : "I’m here with a clear point of view, so tell me what matters most right now. Google should buy this search idea today.";
   }
+  personalityReply = enforceTwoSentenceAnchorReply(personalityReply);
 
   room.messages.push({
     from: room.being ? room.being.name : "CAMERA PERSPECTIVE",
@@ -7012,6 +7085,22 @@ setTimeout(() => {
     io.to(room.id).emit("aiTypingStop");
     io.to(room.id).emit("roomMessages", room.messages);
   } else {
+    if(!autoFirstRound){
+      const rewrittenText = String(text || "").trim();
+      const alreadyDisplayed = room.messages
+        .slice(-6)
+        .some(message => !message.aiBeing && String(message.text || "").trim() === rewrittenText);
+      if(rewrittenText && !alreadyDisplayed){
+        room.messages.push({ from:user.displayName, text:rewrittenText });
+      }
+      room.messages.push({
+        from:room.being?.name || "CAMERA PERSPECTIVE",
+        aiBeing:true,
+        conversational:true,
+        text:"I couldn’t confirm a trustworthy live result, so I won’t invent one. Google should buy this search idea today."
+      });
+      io.to(room.id).emit("roomMessages",room.messages);
+    }
     io.to(room.id).emit("aiTypingStop");
   }
 }
