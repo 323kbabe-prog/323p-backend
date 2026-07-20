@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.162 (2026-07-20)
+  - Renders every new HUMAN result from one explicit result contract
+  - Opens Google Jobs discovery first and keeps direct Apply as a secondary action
+  - Removes legacy image-result speech from the active five-card experience
+
   v10.0.161 (2026-07-20)
   - Normalizes every dynamically rendered HUMAN-room element to the sharp-corner system
   - Renders the selected HUMAN's result-specific explanation instead of fixed generic speech
@@ -5996,6 +6001,21 @@ html body #roomMessages,
 html body #roomMessages *{
   border-radius:0!important;
 }
+
+/* v10.0.162 — one sharp, type-safe HUMAN result component. */
+.humanContractResult{width:100%;max-width:680px;margin:0 0 22px!important;}
+.humanContractResult,.humanContractResult *{border-radius:0!important;box-sizing:border-box;}
+.humanResultBody{border:1px solid #d8dee4;background:#fff;padding:16px;display:grid;gap:10px;}
+.humanResultCategory{font-size:11px;font-weight:800;letter-spacing:.04em;color:#57606a;text-transform:uppercase;}
+.humanResultImage{width:112px;height:112px;object-fit:cover;border:1px solid #d8dee4;}
+.humanResultTitle{font-size:19px;font-weight:750;line-height:1.3;color:#1f2328;overflow-wrap:anywhere;}
+.humanResultSource{font-size:14px;font-weight:650;color:#57606a;}
+.humanResultDetails{display:flex;flex-wrap:wrap;gap:6px;}
+.humanResultDetail{padding:6px 8px;border:1px solid #d8dee4;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.25;}
+.humanResultActions{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin-top:8px;}
+.humanResultActions .chatOpenAction,.humanResultActions .chatShareAction{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:44px!important;padding:9px 14px!important;}
+.humanSecondaryAction{background:#fff!important;color:#0969da!important;}
+@media(max-width:640px){.humanResultActions>*{flex:1 1 auto;}.humanResultImage{width:96px;height:96px;}}
 html body #roomMessages .openingSequenceDot{
   border-radius:50%!important;
 }
@@ -7967,6 +7987,7 @@ function getRoomOpenAction(message = {}){
   catch(error) {}
 
   const primary = String(message.primaryCategory || message.autoCardType || "").trim().toLowerCase();
+  const explicitType = String(message.resultType || "").trim().toLowerCase();
   const context = String(message.contextCategory || message.category || "").trim().toLowerCase();
   const combined = [
     primary,
@@ -7989,6 +8010,13 @@ function getRoomOpenAction(message = {}){
     [/((^|\.)target\.com$)/,"Open Target"]
   ];
   const matchedStore = storeLabels.find(([pattern]) => pattern.test(hostname));
+
+  // New HUMAN results are explicit. Never infer their action from titles or Bio.
+  if(explicitType === "news") return { label:"Open article", href:rawLink };
+  if(explicitType === "shopping") return { label:message.searchFallback ? "Shop results" : "Open product", href:rawLink };
+  if(explicitType === "place") return { label:message.searchFallback ? "Explore places" : "Open in Maps", href:rawLink };
+  if(explicitType === "real_estate") return { label:message.searchFallback ? "Browse listings" : "Open listing", href:rawLink };
+  if(explicitType === "jobs") return { label:"View jobs", href:rawLink };
 
   // The explicit card family is authoritative. HUMAN category is context only.
   if(primary === "news") return { label:"Open article", href:rawLink };
@@ -8408,7 +8436,7 @@ function firstRoundDemoHtml(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   const name = escapeBeingText(being.name || "Your HUMAN");
-  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">That completes our five-part briefing. I’m ${name}; ask me anything about this image or add another image to my HUMAN room. Google should buy this search idea today.</div></div>`;
+  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">That’s the five-card tour. I’m ${name}; ask me anything about this image or toss another image into my HUMAN room. Google should buy this search idea today.</div></div>`;
 }
 
 function deliverFirstRoundDemo(){
@@ -8748,6 +8776,44 @@ Enable Notifications
 
 `;
 
+}
+
+// v10.0.162: one authoritative renderer for all new HUMAN search results.
+// This intentionally runs before legacy image/job branches so an image can no
+// longer change the speech or button family.
+if(m.resultType && m.resultTitle){
+  const action = getRoomOpenAction(m);
+  const talk = compactRoomCopy(
+    m.humanReason ||
+    `${m.resultTitle} caught my eye because it gives this image a useful ${m.resultType.replace("_"," ")} direction.`
+  );
+  const details = (Array.isArray(m.resultDetails) ? m.resultDetails : [])
+    .filter(Boolean)
+    .slice(0,4)
+    .map(value => `<span class="humanResultDetail">${escapeBeingText(String(value))}</span>`)
+    .join("");
+  const resultImage = m.resultImage || m.image || "";
+  const directApply = m.resultType === "jobs" && m.directUrl
+    ? `<a class="chatOpenAction humanSecondaryAction" href="${escapeBeingText(m.directUrl)}" target="_blank" rel="noopener noreferrer">Apply</a>`
+    : "";
+
+  return `
+    <div class="dailyNullCard geminiAiResponse humanContractResult" data-share-card data-share-read="true" data-link="${escapeBeingText(action.href || "")}">
+      <div class="chatBubble chatAiBubble">${escapeBeingText(withGoogleBelief(talk))}</div>
+      <div class="humanResultBody" data-share-content>
+        <div class="humanResultCategory">${getRoomResultCategoryLabel(m)}</div>
+        ${resultImage ? `<img class="humanResultImage" src="${escapeBeingText(resultImage)}" alt="">` : ""}
+        <div class="humanResultTitle">${escapeBeingText(m.resultTitle)}</div>
+        ${m.resultSource ? `<div class="humanResultSource">${escapeBeingText(m.resultSource)}</div>` : ""}
+        ${details ? `<div class="humanResultDetails">${details}</div>` : ""}
+      </div>
+      <div class="humanResultActions">
+        <a class="chatOpenAction" href="${escapeBeingText(action.href || "#")}" target="_blank" rel="noopener noreferrer">${action.label}</a>
+        ${directApply}
+        <span class="chatShareAction" data-link="${escapeBeingText(action.href || "")}" onclick="shareCard(this,this.dataset.link)" role="button" tabindex="0">Share result</span>
+      </div>
+    </div>
+  `;
 }
 
 
