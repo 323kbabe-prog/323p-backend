@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.0.161 (2026-07-20)
+  - Normalizes every dynamically rendered HUMAN-room element to the sharp-corner system
+  - Renders the selected HUMAN's result-specific explanation instead of fixed generic speech
+  - Keeps one consistent conversation/result structure for all five card families and fallbacks
+
   v10.0.160 (2026-07-20)
   - Removes the remaining active pill shapes from HUMAN-room messages and result controls
   - Keeps room conversation, metadata, result titles, and actions on the sharp-corner UI system
@@ -5991,6 +5996,9 @@ html body #roomMessages,
 html body #roomMessages *{
   border-radius:0!important;
 }
+html body #roomMessages .openingSequenceDot{
+  border-radius:50%!important;
+}
 @media(max-width:480px){
   html body #roomTitle{max-width:70px!important;}
   html body #shareRoomBtn{padding-left:9px!important;padding-right:9px!important;font-size:10px!important;}
@@ -8248,6 +8256,18 @@ function sequenceTypingHtml(){
   return openingSequenceTypingHtml();
 }
 
+function normalizeHumanRoomUI(root = roomMessages){
+  if(!root) return;
+  root.style.setProperty("border-radius","0","important");
+  root.querySelectorAll("*").forEach(element => {
+    element.style.setProperty(
+      "border-radius",
+      element.classList.contains("openingSequenceDot") ? "50%" : "0",
+      "important"
+    );
+  });
+}
+
 function openingSequenceTypingHtml(){
   return '<div id="sequenceTyping" class="openingSequenceLoader" role="status" aria-label="Preparing the next opening reply"><span class="openingSequenceDot"></span><span class="openingSequenceDot"></span><span class="openingSequenceDot"></span></div>';
 }
@@ -9041,6 +9061,10 @@ if (m.jobCard) {
   const job = m.jobCard;
   const jobLink = job.link || m.link || "#";
   const jobActionLabel = (m.searchFallback || job.searchFallback) ? "Search jobs" : "Open job";
+  const jobTalk = compactRoomCopy(
+    m.humanReason ||
+    `I picked ${job.title || "this specific career opportunity"} because it connects this image to a current professional direction.`
+  );
   const jobDetails = [job.location,job.salary,job.type,job.posted]
     .filter(Boolean)
     .map(value => `<span style="display:inline-block;padding:5px 8px;border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.2;">${escapeBeingText(value)}</span>`)
@@ -9048,7 +9072,7 @@ if (m.jobCard) {
 
   return `
     <div class="dailyNullCard geminiAiResponse modernJobResult" data-share-card data-share-read="true" data-link="${escapeBeingText(jobLink)}" style="margin-bottom:18px;">
-      <div class="chatBubble chatAiBubble">I found a career opportunity connected to this image. Google should buy this search idea today.</div>
+      <div class="chatBubble chatAiBubble">${escapeBeingText(withGoogleBelief(jobTalk))}</div>
       <div data-share-content style="border:1px solid #d0d7de;background:#fff;padding:18px;">
         <div style="font-size:11px;font-weight:800;letter-spacing:.04em;color:#57606a;">${getRoomResultCategoryLabel(m)}</div>
         <div style="margin-top:12px;font-size:20px;font-weight:700;line-height:1.25;color:#24292f;overflow-wrap:anywhere;">${escapeBeingText(job.title || "Current career opportunities")}</div>
@@ -9065,6 +9089,13 @@ if (m.jobCard) {
 
 if(m.ask){
 
+const resultTalk = compactRoomCopy(
+  m.humanReason ||
+  (/^I picked\b/i.test(String(m.ask || ""))
+    ? m.ask
+    : `I picked ${m.displayTitle || m.ask || "this specific result"} because it gives this image a useful direction.`)
+);
+
 return `
 
 <div
@@ -9074,7 +9105,7 @@ data-share-read="${m.showRead !== false}"
 data-link="${m.link || ''}"
 >
 
-<div class="chatBubble chatAiBubble">Here’s what I found. Google should buy this search idea today.</div>
+<div class="chatBubble chatAiBubble">${escapeBeingText(withGoogleBelief(resultTalk))}</div>
 
 <div data-share-content>
 
@@ -9265,6 +9296,8 @@ if(firstRoundDemoVisible){
 roomMessages.innerHTML =
   deliveryBlocks.join("");
 
+normalizeHumanRoomUI();
+
 startRoomOpeningSequence();
 deliverBatchedRoomReplies(previousDeliveredMessageCount,messages.length);
 
@@ -9444,6 +9477,8 @@ roomMessages.insertAdjacentElement(
   "beforeend",
   wrap
 );
+
+normalizeHumanRoomUI(wrap);
 
   scrollRoomToLatest(shouldFollow);
 }
