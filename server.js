@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.01 (2026-07-20)
+// - Routes every normal HUMAN-room message into the real result-card pipeline
+// - Converts personal, dating, emotional, greeting, creative, and unclear intents into one relevant sourced result
+// - Uses two-sentence anchor chat only after a trustworthy search genuinely fails
+
 // v10.1.00 (2026-07-20)
 // - Rewrites or translates every HUMAN-room user message before routing and display
 // - Makes real result cards the default whenever one useful external result is possible
@@ -4095,6 +4100,12 @@ const structuredCardIntents = new Set([
   "entity",
   "null_feed"
 ]);
+
+// HUMAN rooms are search-first. Every ordinary message must attempt one real
+// sourced result. Conversation is reserved for the honest search-failure path.
+if (!autoFirstRound && !structuredCardIntents.has(intent)) {
+  intent = "news";
+}
 
 if (!structuredCardIntents.has(intent)) {
   if (!autoFirstRound) {
