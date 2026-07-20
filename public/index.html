@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.17 (2026-07-21)
+  - Rebuilds every automatic room perspective as one unified Daily-style image card
+  - Leads with News imagery and hierarchy, integrates HUMAN anchor copy, and finishes with the requested result
+  - Selects complete short, medium, or long HUMAN sentences instead of clipping text
+  - Keeps News and result actions inside one screen with one visual anchor
+
   v10.1.16 (2026-07-21)
   - Guarantees at least one loaded visual in every automatic perspective
   - Restores visible icons and labels for Camera, Upload, and Public controls
@@ -8906,6 +8912,83 @@ function perspectiveHumanConnectionHtml(text){
   </div>`;
 }
 
+function completeAnchorFallback(value){
+  const slogan = "Google should buy this search idea today.";
+  let text = String(value || "")
+    .replace(/Google should buy this search idea today\.?/ig,"")
+    .replace(/\s+/g," ")
+    .trim();
+  if(!text) text = "This image gives the next result a timely direction.";
+  const firstSentence = (text.match(/[^.!?]+[.!?]+|[^.!?]+$/) || [text])[0].trim();
+  return /[.!?]$/.test(firstSentence) ? firstSentence : `${firstSentence}.`;
+}
+
+function unifiedHumanConnectionHtml(anchor = {}){
+  let being = {};
+  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
+  const fallback = completeAnchorFallback(typeof anchor === "string" ? anchor : (anchor?.text || ""));
+  const shortText = completeAnchorFallback(anchor?.anchorShort || fallback);
+  const mediumText = completeAnchorFallback(anchor?.anchorMedium || fallback);
+  const longText = completeAnchorFallback(anchor?.anchorLong || fallback);
+  return `<section class="unifiedHumanConnection">
+    <div class="unifiedHumanName">${escapeBeingText(being.name || "HUMAN")}</div>
+    <div class="unifiedHumanCopy unifiedHumanCopyShort">${escapeBeingText(shortText)}</div>
+    <div class="unifiedHumanCopy unifiedHumanCopyMedium">${escapeBeingText(mediumText)}</div>
+    <div class="unifiedHumanCopy unifiedHumanCopyLong">${escapeBeingText(longText)}</div>
+    <div class="unifiedHumanClosing">Google should buy this search idea today.</div>
+  </section>`;
+}
+
+function unifiedDailyPerspectiveHtml(message = {},anchor = {}){
+  const resultType = String(message.resultType || message.autoCardType || "result").toLowerCase();
+  const isNewsResult = resultType === "news";
+  const news = isNewsResult ? message : (message.localContextNews || {});
+  const resultAction = getRoomOpenAction(message);
+  const newsAction = news?.resultUrl ? getRoomOpenAction(news) : null;
+  const image = perspectiveFallbackImage(
+    news?.resultImage || news?.image || message.resultImage || message.image || ""
+  );
+  const resultTitle = message.resultTitle || message.jobCard?.title || message.displayTitle || message.ask || "Live result";
+  const resultSource = message.resultSource || message.jobCard?.company || "";
+  const rawDetails = Array.isArray(message.resultDetails)
+    ? message.resultDetails
+    : [message.jobCard?.location,message.jobCard?.salary,message.jobCard?.type].filter(Boolean);
+  const resultDetails = rawDetails
+    .filter(Boolean)
+    .slice(0,2)
+    .map(value => `<span>${escapeBeingText(String(value))}</span>`)
+    .join("");
+  const directApply = resultType === "jobs" && message.directUrl
+    ? `<a class="unifiedAction unifiedSecondaryAction" href="${escapeBeingText(message.directUrl)}" target="_blank" rel="noopener noreferrer">Apply</a>`
+    : "";
+  const resultHref = escapeBeingText(resultAction.href || message.resultUrl || message.link || "#");
+
+  return `<section class="perspectiveSlide automaticPerspective unifiedDailyRoomPerspective result-${escapeBeingText(resultType)}">
+    <article class="unifiedDailyRoomCard" data-share-card data-share-read="true" data-link="${resultHref}">
+      ${image ? `<div class="unifiedPerspectiveImageFrame"><img class="unifiedPerspectiveImage" src="${escapeBeingText(image)}" alt=""></div>` : ""}
+      <section class="unifiedNewsSection">
+        <div class="unifiedEyebrow">NEWS · LOCAL CONTEXT</div>
+        <div class="unifiedNewsTitle">${escapeBeingText(news.resultTitle || message.resultTitle || "Current News context")}</div>
+        ${news.resultSource || message.resultSource ? `<div class="unifiedNewsSource">${escapeBeingText(news.resultSource || message.resultSource)}</div>` : ""}
+        ${!isNewsResult && newsAction ? `<a class="unifiedNewsLink" href="${escapeBeingText(newsAction.href || news.resultUrl)}" target="_blank" rel="noopener noreferrer">Open News</a>` : ""}
+      </section>
+      ${unifiedHumanConnectionHtml(anchor)}
+      ${isNewsResult ? "" : `<section class="unifiedResultSection" data-share-content>
+        <div class="unifiedEyebrow">${getRoomResultCategoryLabel(message)}</div>
+        <div class="unifiedResultTitle">${escapeBeingText(resultTitle)}</div>
+        ${resultSource ? `<div class="unifiedResultSource">${escapeBeingText(resultSource)}</div>` : ""}
+        ${resultDetails ? `<div class="unifiedResultDetails">${resultDetails}</div>` : ""}
+      </section>`}
+      <div class="unifiedResultActions">
+        <a class="unifiedAction" href="${resultHref}" target="_blank" rel="noopener noreferrer">${escapeBeingText(resultAction.label || "Open result")}</a>
+        ${directApply}
+        <button class="unifiedAction unifiedShareAction" type="button" data-link="${resultHref}" onclick="shareCard(this,this.dataset.link)">Share result</button>
+      </div>
+      <div class="perspectiveSwipeCue">↑ Swipe up for the next perspective</div>
+    </article>
+  </section>`;
+}
+
 function humanInvitationPerspectiveHtml(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
@@ -8959,24 +9042,21 @@ function isAutomaticPerspectiveMessage(message){
   );
 }
 
-function wrapPerspectiveMessage(message,html,messageIndex,anchorText = ""){
+function wrapPerspectiveMessage(message,html,messageIndex,anchor = {}){
   if(message?.anchorTransition) return { html:"", skip:true };
   if(message?.firstRoundComplete) return { html, skip:false };
   const isAutomaticResult = Boolean(
     message?.autoCardType &&
     (message?.resultType || message?.jobCard || message?.ask || message?.image)
   );
-  if(isAutomaticResult){
-    const resultType = String(message.resultType || message.autoCardType || "result").toLowerCase();
+  const isLaterRoomResult = Boolean(
+    message?.localContextNews &&
+    (message?.resultTitle || message?.ask || message?.jobCard)
+  );
+  if(isAutomaticResult || isLaterRoomResult){
     return {
       skip:false,
-      html:`<section class="perspectiveSlide automaticPerspective result-${escapeBeingText(resultType)}">
-        <div class="perspectivePayload">
-          ${html}
-          ${perspectiveHumanConnectionHtml(anchorText)}
-          <div class="perspectiveSwipeCue">↑ Swipe up for the next perspective</div>
-        </div>
-      </section>`
+      html:unifiedDailyPerspectiveHtml(message,anchor)
     };
   }
   return { skip:false, html:`<section class="perspectiveSlide standardPerspective">${html}</section>` };
@@ -9486,10 +9566,10 @@ if (
 
 roomMessages.classList.add("geminiThread","perspectiveSwipeThread");
 const anchorConnectionByMessageIndex = new Map();
-let pendingAnchorConnection = "";
+let pendingAnchorConnection = null;
 messages.forEach((message,messageIndex) => {
   if(message?.anchorTransition){
-    pendingAnchorConnection = message.text || "";
+    pendingAnchorConnection = message;
     return;
   }
   if(
@@ -9498,7 +9578,7 @@ messages.forEach((message,messageIndex) => {
     (message?.resultType || message?.jobCard || message?.ask || message?.image)
   ){
     anchorConnectionByMessageIndex.set(messageIndex,pendingAnchorConnection);
-    pendingAnchorConnection = "";
+    pendingAnchorConnection = null;
   }
 });
 const renderedMessageBlocks = messages.map((m,messageIndex) => {
@@ -10175,7 +10255,7 @@ if(!automaticPerspectiveIndexes.length){
 }else{
   renderedMessageBlocks.forEach((html,index) => {
     if(!permanentPerspectiveIndexes.has(index)) return;
-    const wrapped = wrapPerspectiveMessage(messages[index],html,index,anchorConnectionByMessageIndex.get(index) || "");
+    const wrapped = wrapPerspectiveMessage(messages[index],html,index,anchorConnectionByMessageIndex.get(index) || {});
     if(wrapped.skip) return;
     deliveryBlocks.push(`<div class="roomDeliveryBlock" data-room-delivery-index="${index}">${wrapped.html}</div>`);
   });
@@ -14061,6 +14141,147 @@ html body #roomImageActions .roomActionLabel::after{content:none!important;}
 #roomMessages.perspectiveDensityUltra .automaticPerspective.result-news .humanContractResult .humanResultImage{
   display:block!important;
 }
+
+/* v10.1.17 — one image-driven Daily card for every automatic room perspective. */
+html body #shareRoomBtn{margin-left:auto!important;}
+#roomMessages.perspectiveSwipeThread .unifiedDailyRoomPerspective{padding:6px!important;}
+#roomMessages.perspectiveSwipeThread .unifiedDailyRoomCard{
+  width:100%;
+  height:100%;
+  min-height:0;
+  display:grid;
+  grid-template-areas:"image" "news" "human" "result" "actions" "cue";
+  grid-template-rows:minmax(108px,29%) auto auto minmax(54px,1fr) auto auto;
+  gap:7px;
+  padding:10px;
+  box-sizing:border-box;
+  overflow:hidden;
+  border:1px solid #d0d7de;
+  background:#fff;
+}
+#roomMessages.perspectiveSwipeThread .unifiedDailyRoomPerspective.result-news .unifiedDailyRoomCard{
+  grid-template-areas:"image" "news" "human" "actions" "cue";
+  grid-template-rows:minmax(130px,38%) minmax(58px,auto) minmax(72px,1fr) auto auto;
+}
+#roomMessages .unifiedPerspectiveImageFrame{
+  grid-area:image;
+  width:100%;
+  min-height:0;
+  overflow:hidden;
+  background:#f6f8fa;
+}
+#roomMessages .unifiedPerspectiveImage{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  border:0!important;
+}
+#roomMessages .unifiedNewsSection{grid-area:news;position:relative;min-width:0;padding:1px 70px 1px 0;}
+#roomMessages .unifiedEyebrow{color:#57606a;font-size:10px;font-weight:800;line-height:1.15;letter-spacing:.045em;text-transform:uppercase;}
+#roomMessages .unifiedNewsTitle,
+#roomMessages .unifiedResultTitle{
+  margin-top:3px;
+  color:#24292f;
+  font-size:15px;
+  font-weight:650;
+  line-height:1.22;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+#roomMessages .unifiedNewsTitle{-webkit-line-clamp:2;}
+#roomMessages .unifiedNewsSource,
+#roomMessages .unifiedResultSource{margin-top:3px;color:#57606a;font-size:10px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#roomMessages .unifiedNewsLink{position:absolute;right:0;top:0;color:#0550ae!important;font-size:10px;font-weight:700;text-decoration:none;}
+#roomMessages .unifiedHumanConnection{
+  grid-area:human;
+  min-height:0;
+  padding:7px 9px;
+  overflow:hidden;
+  border-left:3px solid #0969da;
+  background:#f6f8fa;
+}
+#roomMessages .unifiedHumanName{color:#57606a;font-size:10px;font-weight:800;line-height:1.15;letter-spacing:.025em;text-transform:uppercase;}
+#roomMessages .unifiedHumanCopy{margin-top:3px;color:#24292f;font-size:12px;line-height:1.3;}
+#roomMessages .unifiedHumanCopyShort,
+#roomMessages .unifiedHumanCopyMedium{display:none;}
+#roomMessages .unifiedHumanClosing{margin-top:3px;color:#24292f;font-size:10px;font-weight:600;line-height:1.25;}
+#roomMessages .unifiedResultSection{grid-area:result;min-height:0;padding:3px 0;overflow:hidden;}
+#roomMessages .unifiedResultTitle{-webkit-line-clamp:2;}
+#roomMessages .unifiedResultDetails{display:flex;gap:5px;margin-top:4px;overflow:hidden;}
+#roomMessages .unifiedResultDetails span{padding:3px 5px;border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;font-size:9px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#roomMessages .unifiedResultActions{grid-area:actions;display:flex;gap:7px;min-height:36px;}
+#roomMessages .unifiedAction{
+  flex:1 1 0;
+  min-width:0;
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:5px 8px;
+  box-sizing:border-box;
+  border:1px solid #54aeff!important;
+  border-radius:0!important;
+  background:#ddf4ff!important;
+  color:#0550ae!important;
+  font:inherit;
+  font-size:11px!important;
+  font-weight:650!important;
+  line-height:1.1;
+  text-align:center;
+  text-decoration:none;
+  cursor:pointer;
+}
+#roomMessages .unifiedSecondaryAction{background:#fff!important;}
+#roomMessages .unifiedShareAction{margin:0!important;}
+#roomMessages .unifiedDailyRoomCard > .perspectiveSwipeCue{grid-area:cue;align-self:end;padding:0!important;font-size:10px!important;}
+
+#roomMessages.perspectiveDensityCompact .unifiedDailyRoomCard{
+  grid-template-rows:minmax(92px,25%) auto auto minmax(48px,1fr) auto auto;
+  gap:5px;
+  padding:7px;
+}
+#roomMessages.perspectiveDensityCompact .unifiedHumanCopyLong{display:none;}
+#roomMessages.perspectiveDensityCompact .unifiedHumanCopyMedium{display:block;}
+#roomMessages.perspectiveDensityCompact .unifiedHumanConnection{padding:5px 7px;}
+#roomMessages.perspectiveDensityCompact .unifiedNewsTitle,
+#roomMessages.perspectiveDensityCompact .unifiedResultTitle{font-size:13px;}
+
+#roomMessages.perspectiveDensityTight .unifiedDailyRoomCard{
+  grid-template-rows:minmax(76px,23%) auto auto minmax(42px,1fr) auto auto;
+  gap:4px;
+  padding:6px;
+}
+#roomMessages.perspectiveDensityTight .unifiedHumanCopyLong,
+#roomMessages.perspectiveDensityTight .unifiedHumanCopyMedium{display:none;}
+#roomMessages.perspectiveDensityTight .unifiedHumanCopyShort{display:block;}
+#roomMessages.perspectiveDensityTight .unifiedHumanCopy{font-size:10px;line-height:1.2;}
+#roomMessages.perspectiveDensityTight .unifiedHumanClosing{font-size:9px;line-height:1.15;}
+#roomMessages.perspectiveDensityTight .unifiedNewsTitle,
+#roomMessages.perspectiveDensityTight .unifiedResultTitle{font-size:12px;-webkit-line-clamp:1;}
+#roomMessages.perspectiveDensityTight .unifiedNewsSource,
+#roomMessages.perspectiveDensityTight .unifiedResultSource,
+#roomMessages.perspectiveDensityTight .unifiedResultDetails{display:none;}
+#roomMessages.perspectiveDensityTight .unifiedResultActions{min-height:32px;}
+#roomMessages.perspectiveDensityTight .unifiedAction{min-height:32px;font-size:10px!important;}
+
+#roomMessages.perspectiveDensityUltra .unifiedDailyRoomCard{
+  grid-template-rows:minmax(62px,21%) auto auto minmax(36px,1fr) auto auto;
+  gap:3px;
+  padding:4px;
+}
+#roomMessages.perspectiveDensityUltra .unifiedHumanConnection{padding:4px 6px;}
+#roomMessages.perspectiveDensityUltra .unifiedHumanName{font-size:9px;}
+#roomMessages.perspectiveDensityUltra .unifiedNewsSection{padding-right:54px;}
+#roomMessages.perspectiveDensityUltra .unifiedNewsLink{font-size:9px;}
+#roomMessages.perspectiveDensityUltra .unifiedResultActions{min-height:28px;gap:4px;}
+#roomMessages.perspectiveDensityUltra .unifiedAction{min-height:28px;padding:3px 5px;font-size:9px!important;}
 </style>
 </body>
 </html>
