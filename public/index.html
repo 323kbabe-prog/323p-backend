@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.14 (2026-07-21)
+  - Labels the arrival screen as a five-perspective demo with clear swipe guidance
+  - Adds reliable touch-swipe navigation that advances exactly one perspective per gesture
+  - Keeps native snap scrolling, keyboard navigation, rejoin position, and sixth-screen Ask activation
+
   v10.1.13 (2026-07-21)
   - Replaces the opening conversation with one temporary full-screen arrival state
   - Keeps the permanent room feed to five automatic perspectives plus the HUMAN invitation
@@ -8770,8 +8775,35 @@ function movePerspective(direction){
   const current = getCurrentPerspectiveSlide();
   const currentIndex = Math.max(0,slides.indexOf(current));
   const target = slides[Math.max(0,Math.min(slides.length - 1,currentIndex + direction))];
-  if(target) target.scrollIntoView({ behavior:"smooth", block:"start" });
+  if(target) roomMessages.scrollTo({ top:target.offsetTop, behavior:"smooth" });
 }
+
+let perspectiveTouchStartY = null;
+let perspectiveTouchStartIndex = -1;
+roomMessages.addEventListener("touchstart",event => {
+  if(!roomMessages.classList.contains("perspectiveSwipeThread") || event.touches.length !== 1) return;
+  perspectiveTouchStartY = event.touches[0].clientY;
+  perspectiveTouchStartIndex = getPerspectiveSlides().indexOf(getCurrentPerspectiveSlide());
+},{ passive:true });
+
+roomMessages.addEventListener("touchend",event => {
+  if(perspectiveTouchStartY === null || perspectiveTouchStartIndex < 0) return;
+  const endY = event.changedTouches?.[0]?.clientY;
+  const distance = typeof endY === "number" ? perspectiveTouchStartY - endY : 0;
+  const startIndex = perspectiveTouchStartIndex;
+  perspectiveTouchStartY = null;
+  perspectiveTouchStartIndex = -1;
+  if(Math.abs(distance) < 44) return;
+  const slides = getPerspectiveSlides();
+  const targetIndex = Math.max(0,Math.min(slides.length - 1,startIndex + (distance > 0 ? 1 : -1)));
+  const target = slides[targetIndex];
+  if(target) roomMessages.scrollTo({ top:target.offsetTop, behavior:"smooth" });
+},{ passive:true });
+
+roomMessages.addEventListener("touchcancel",() => {
+  perspectiveTouchStartY = null;
+  perspectiveTouchStartIndex = -1;
+},{ passive:true });
 
 function choosePerspectivePrompt(text){
   roomInput.value = String(text || "");
@@ -8822,11 +8854,13 @@ function perspectiveArrivalHtml(messages = []){
       ${selectedImage ? `<img class="perspectiveArrivalImage" src="${escapeBeingText(selectedImage)}" alt="Image chosen by the user">` : ""}
     </div>
     <div class="perspectiveArrivalIdentity">
+      <div class="perspectiveArrivalDemoLabel">5-PERSPECTIVE DEMO</div>
       <div class="perspectiveArrivalName">${escapeBeingText(name)}</div>
       <div class="perspectiveArrivalIntro">${escapeBeingText(intro)}</div>
+      <div class="perspectiveArrivalGuide">I’ll show you five example perspectives from this image. When the first one is ready, swipe up to move through them one at a time.</div>
     </div>
     <div class="perspectiveArrivalLoading">
-      <span>Preparing five perspectives</span>
+      <span>Preparing demo 1 of 5</span>
       <span class="perspectiveArrivalDots" aria-hidden="true"><i></i><i></i><i></i></span>
     </div>
   </section>`;
@@ -13636,8 +13670,16 @@ Close
   background:#f6f8fa;
 }
 #roomMessages.perspectiveSwipeThread .perspectiveArrivalMedia .perspectiveArrivalImage:only-child{width:100%!important;}
+#roomMessages.perspectiveSwipeThread .perspectiveArrivalDemoLabel{
+  margin-bottom:7px;
+  color:#0550ae;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.06em;
+}
 #roomMessages.perspectiveSwipeThread .perspectiveArrivalName{font-size:22px;font-weight:700;line-height:1.15;}
 #roomMessages.perspectiveSwipeThread .perspectiveArrivalIntro{margin-top:6px;color:#57606a;font-size:14px;line-height:1.45;}
+#roomMessages.perspectiveSwipeThread .perspectiveArrivalGuide{margin-top:8px;color:#24292f;font-size:13px;line-height:1.42;}
 #roomMessages.perspectiveSwipeThread .perspectiveArrivalLoading{
   display:flex;
   align-items:center;
@@ -13709,6 +13751,7 @@ Close
   #roomMessages.perspectiveSwipeThread .perspectiveArrivalHuman,
   #roomMessages.perspectiveSwipeThread .perspectiveArrivalImage{height:20vh!important;min-height:110px!important;}
   #roomMessages.perspectiveSwipeThread .perspectiveArrivalIntro{font-size:12px;line-height:1.35;}
+  #roomMessages.perspectiveSwipeThread .perspectiveArrivalGuide{font-size:11px;line-height:1.3;}
 }
 </style>
 </body>
