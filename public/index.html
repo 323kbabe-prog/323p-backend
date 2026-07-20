@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.12 (2026-07-21)
+  - Converts every room reply into one full-screen vertical snap perspective
+  - Bundles local News, HUMAN connection, and requested result into one automatic screen
+  - Adds a sixth HUMAN photo invitation screen that activates Ask when viewed
+  - Preloads later perspectives without automatic navigation and restores the viewed screen
+
   v10.1.11 (2026-07-20)
   - Inserts one HUMAN anchor-tone instruction between each automatic result card
   - Keeps transitions out of the space before card one and after card five
@@ -7311,6 +7317,10 @@ let deliveredRoomMessageCount = 0;
 let roomReplyDeliveryTimer = null;
 let roomReplyDeliveryActive = false;
 let roomUpgradeCountdownTimer = null;
+let perspectiveTourStarted = false;
+let perspectiveInvitationViewed = false;
+let perspectiveScrollTimer = null;
+let perspectiveRestoreFrame = null;
 
 let pendingImageDataUrl = null;
 let pendingImageSource = null;
@@ -8269,6 +8279,9 @@ if(data.rejoined){
 }
 localStorage.setItem("roomId",data.roomId);
 localStorage.setItem("displayName",data.displayName || "");
+perspectiveTourStarted = Boolean(data.being);
+perspectiveInvitationViewed = localStorage.getItem(`askCameraPerspective:${data.roomId}:askReady`) === "1";
+if(!data.firstRoundComplete) perspectiveInvitationViewed = false;
 pendingPublicNull = null;
 pendingImageDataUrl = null;
 pendingImageSource = null;
@@ -8323,7 +8336,7 @@ roomInput.style.display = "block";
 roomInput.disabled = true;
 roomInput.readOnly = false;
 roomInput.placeholder = !data.rejoined && !data.firstRoundComplete
-  ? "Ask — available after the five results"
+  ? "Ask — next perspective is loading"
   : "Ask";
 if(data.rejoined){
   activateAskAfterRejoinDelay();
@@ -8644,6 +8657,8 @@ function resetRoomDeliverySequence(){
   beingFirstRoundCurrentCard = null;
   beingFirstRoundRetryCount = 0;
   beingFirstRoundCompletedCount = 0;
+  perspectiveTourStarted = false;
+  perspectiveInvitationViewed = false;
   beingFirstRoundBaseline = lastRoomMessageCount;
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
@@ -8678,10 +8693,151 @@ function isRoomNearBottom(threshold = 140){
 
 function scrollRoomToLatest(shouldFollow = true){
   if(!shouldFollow) return;
+  if(roomMessages.classList.contains("perspectiveSwipeThread")) return;
   requestAnimationFrame(() => {
     roomMessages.scrollTop = roomMessages.scrollHeight;
   });
 }
+
+function perspectiveStorageKey(){
+  const roomId = localStorage.getItem("roomId") || localStorage.getItem("askCameraRoomId") || "current";
+  return `askCameraPerspective:${roomId}`;
+}
+
+function getPerspectiveSlides(){
+  return Array.from(roomMessages.querySelectorAll(".roomDeliveryBlock:not([data-skip-slide='true'])"))
+    .filter(slide => getComputedStyle(slide).display !== "none");
+}
+
+function getCurrentPerspectiveSlide(){
+  const slides = getPerspectiveSlides();
+  if(!slides.length) return null;
+  const viewportTop = roomMessages.scrollTop;
+  return slides.reduce((best,slide) =>
+    Math.abs(slide.offsetTop - viewportTop) < Math.abs(best.offsetTop - viewportTop) ? slide : best
+  ,slides[0]);
+}
+
+function updatePerspectiveViewportState(){
+  if(!roomMessages.classList.contains("perspectiveSwipeThread")) return;
+  const slides = getPerspectiveSlides();
+  const current = getCurrentPerspectiveSlide();
+  if(!current) return;
+  localStorage.setItem(perspectiveStorageKey(),String(current.dataset.roomDeliveryIndex || "0"));
+
+  if(current.querySelector(".humanInvitationPerspective")){
+    perspectiveInvitationViewed = true;
+    localStorage.setItem(`${perspectiveStorageKey()}:askReady`,"1");
+  }
+
+  if(perspectiveTourStarted && !perspectiveInvitationViewed){
+    const currentIndex = slides.indexOf(current);
+    roomInput.disabled = true;
+    roomInput.readOnly = false;
+    roomInput.placeholder = currentIndex >= 0 && currentIndex < slides.length - 1
+      ? "Ask — swipe up for the next perspective"
+      : "Ask — next perspective is loading";
+  }else if(perspectiveInvitationViewed){
+    roomInput.disabled = false;
+    roomInput.readOnly = false;
+    roomInput.placeholder = "Ask";
+  }
+}
+
+function restorePerspectivePosition(){
+  cancelAnimationFrame(perspectiveRestoreFrame);
+  perspectiveRestoreFrame = requestAnimationFrame(() => {
+    const savedIndex = localStorage.getItem(perspectiveStorageKey());
+    const slides = getPerspectiveSlides();
+    const target = slides.find(slide => slide.dataset.roomDeliveryIndex === savedIndex) || slides[0];
+    if(target) roomMessages.scrollTop = target.offsetTop;
+    updatePerspectiveViewportState();
+  });
+}
+
+function movePerspective(direction){
+  const slides = getPerspectiveSlides();
+  const current = getCurrentPerspectiveSlide();
+  const currentIndex = Math.max(0,slides.indexOf(current));
+  const target = slides[Math.max(0,Math.min(slides.length - 1,currentIndex + direction))];
+  if(target) target.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+function choosePerspectivePrompt(text){
+  roomInput.value = String(text || "");
+  roomInput.focus();
+}
+
+function perspectiveHumanConnectionHtml(text){
+  if(!text) return "";
+  let being = {};
+  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
+  return `<div class="perspectiveHumanConnection">
+    <div class="perspectiveHumanName">${escapeBeingText(being.name || "HUMAN")}</div>
+    <div class="perspectiveHumanText">${escapeBeingText(compactRoomCopy(text,220))}</div>
+  </div>`;
+}
+
+function humanInvitationPerspectiveHtml(){
+  let being = {};
+  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
+  const words = [being.word1,being.word2,being.word3].filter(Boolean).join(" · ");
+  const invitation = `You’ve seen five ways I can connect this image to what is happening now. Ask me what you want to discover next, or add another image to begin a new direction. Google should buy this search idea today.`;
+  return `<section class="humanInvitationPerspective">
+    ${being.photo ? `<img class="humanInvitationPhoto" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "HUMAN")}">` : ""}
+    <div class="humanInvitationIdentity">
+      <div class="humanInvitationName">${escapeBeingText(being.name || "HUMAN")}</div>
+      <div class="humanInvitationCategory">${escapeBeingText(being.category || "HUMAN")}${words ? ` · ${escapeBeingText(words)}` : ""}</div>
+    </div>
+    <div class="humanInvitationText">${escapeBeingText(invitation)}</div>
+    <div class="humanInvitationPrompts">
+      <button type="button" onclick="choosePerspectivePrompt('What should I know today?')">What should I know today?</button>
+      <button type="button" onclick="choosePerspectivePrompt('Find something near me.')">Find something near me</button>
+      <button type="button" onclick="choosePerspectivePrompt('Show me another opportunity.')">Show me another opportunity</button>
+    </div>
+    <div class="perspectiveSwipeCue">Ask me anything, or swipe down to revisit the five perspectives.</div>
+  </section>`;
+}
+
+function wrapPerspectiveMessage(message,html,messageIndex,anchorText = ""){
+  if(message?.anchorTransition) return { html:"", skip:true };
+  if(message?.firstRoundComplete) return { html, skip:false };
+  const isAutomaticResult = Boolean(
+    message?.autoCardType &&
+    (message?.resultType || message?.jobCard || message?.ask || message?.image)
+  );
+  if(isAutomaticResult){
+    const resultType = String(message.resultType || message.autoCardType || "result").toLowerCase();
+    return {
+      skip:false,
+      html:`<section class="perspectiveSlide automaticPerspective result-${escapeBeingText(resultType)}">
+        <div class="perspectivePayload">
+          ${html}
+          ${perspectiveHumanConnectionHtml(anchorText)}
+          <div class="perspectiveSwipeCue">↑ Swipe up for the next perspective</div>
+        </div>
+      </section>`
+    };
+  }
+  return { skip:false, html:`<section class="perspectiveSlide standardPerspective">${html}</section>` };
+}
+
+roomMessages.addEventListener("scroll",() => {
+  clearTimeout(perspectiveScrollTimer);
+  perspectiveScrollTimer = setTimeout(updatePerspectiveViewportState,80);
+},{ passive:true });
+
+document.addEventListener("keydown",event => {
+  if(roomOverlay.style.display === "none" || !roomMessages.classList.contains("perspectiveSwipeThread")) return;
+  if(document.activeElement === roomInput) return;
+  if(event.key === "ArrowDown" || event.key === "PageDown"){
+    event.preventDefault();
+    movePerspective(1);
+  }else if(event.key === "ArrowUp" || event.key === "PageUp"){
+    event.preventDefault();
+    movePerspective(-1);
+  }
+});
 
 function showSequenceDelayNotice(forceNewsGate = false){
   if((!beingFirstRoundWaiting && !forceNewsGate) || document.getElementById("sequenceDelayNotice")) return;
@@ -8695,7 +8851,8 @@ function retryNewsGate(){
   const payload = newsGateRetryPayload || (beingFirstRoundCurrentCard ? {
     text:beingFirstRoundCurrentCard.text,
     autoFirstRound:true,
-    autoCardType:beingFirstRoundCurrentCard.type
+    autoCardType:beingFirstRoundCurrentCard.type,
+    autoCardIndex:beingFirstRoundCompletedCount
   } : null);
   if(!payload) return;
   document.getElementById("sequenceDelayNotice")?.remove();
@@ -8712,7 +8869,7 @@ socket.on("newsGateBlocked",payload => {
   newsGateRetryPayload = payload || null;
   roomInput.disabled = true;
   roomInput.placeholder = beingFirstRoundWaiting
-    ? "Ask — available after the five results"
+    ? "Ask — next perspective is loading"
     : "Ask — finding local news";
   showSequenceTyping();
   clearTimeout(beingFirstRoundDelayTimer);
@@ -8901,6 +9058,7 @@ socket.on("roomFirstRoundCompleted",() => {
   firstRoundDemoPending = false;
   firstRoundDemoVisible = false;
   firstRoundDemoInsertionIndex = null;
+  perspectiveTourStarted = true;
   syncFirstRoundInput();
 });
 
@@ -8911,7 +9069,7 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
     return;
   }
   const pending = Array.from(roomMessages.querySelectorAll('[data-room-delivery-index]'))
-    .filter(node => Number(node.dataset.roomDeliveryIndex) >= previousCount);
+    .filter(node => node.dataset.skipSlide !== "true" && Number(node.dataset.roomDeliveryIndex) >= previousCount);
   pending.forEach(node => { node.style.display = "none"; });
   roomReplyDeliveryActive = true;
   syncFirstRoundInput();
@@ -8931,7 +9089,7 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
     roomReplyDeliveryTimer = setTimeout(() => {
       hideSequenceTyping();
       const shouldFollow = isRoomNearBottom();
-      pending[index++].style.display = "contents";
+      pending[index++].style.display = "";
       scrollRoomToLatest(shouldFollow);
       roomReplyDeliveryTimer = setTimeout(reveal,700);
     },600);
@@ -8942,13 +9100,14 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
 function syncFirstRoundInput(){
   roomInput.style.display = "block";
   roomInput.placeholder = "Ask";
+  const perspectiveLocked = perspectiveTourStarted && !perspectiveInvitationViewed;
   if(rejoinRoomLoadingActive && !rejoinedRoomAskReady){
     roomInput.disabled = true;
     roomInput.readOnly = false;
     humanSelectionPrompt.style.display = "none";
     return;
   }
-  if(rejoinedRoomAskReady){
+  if(rejoinedRoomAskReady && !perspectiveLocked){
     roomInput.disabled = false;
     roomInput.readOnly = false;
     humanSelectionPrompt.style.display = "none";
@@ -8971,10 +9130,14 @@ function syncFirstRoundInput(){
     roomInput.placeholder = "Ask";
     return;
   }
-  if(isFirstRoundActive()){
+  if(isFirstRoundActive() || perspectiveLocked){
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Ask — available after the five results";
+    const slides = getPerspectiveSlides();
+    const currentIndex = slides.indexOf(getCurrentPerspectiveSlide());
+    roomInput.placeholder = currentIndex >= 0 && currentIndex < slides.length - 1
+      ? "Ask — swipe up for the next perspective"
+      : "Ask — next perspective is loading";
     return;
   }
   roomInput.disabled = false;
@@ -9161,8 +9324,24 @@ if (
   
 }
 
-roomMessages.classList.add("geminiThread");
-const renderedMessageBlocks = messages.map(m => {
+roomMessages.classList.add("geminiThread","perspectiveSwipeThread");
+const anchorConnectionByMessageIndex = new Map();
+let pendingAnchorConnection = "";
+messages.forEach((message,messageIndex) => {
+  if(message?.anchorTransition){
+    pendingAnchorConnection = message.text || "";
+    return;
+  }
+  if(
+    pendingAnchorConnection &&
+    message?.autoCardType &&
+    (message?.resultType || message?.jobCard || message?.ask || message?.image)
+  ){
+    anchorConnectionByMessageIndex.set(messageIndex,pendingAnchorConnection);
+    pendingAnchorConnection = "";
+  }
+});
+const renderedMessageBlocks = messages.map((m,messageIndex) => {
 if(m.type === "nullCard"){
     return renderRoomImageChapter(m);
 
@@ -9253,6 +9432,10 @@ Enable Notifications
 
 `;
 
+}
+
+if(m.firstRoundComplete){
+  return humanInvitationPerspectiveHtml();
 }
 
 // v10.0.162: one authoritative renderer for all new HUMAN search results.
@@ -9808,7 +9991,10 @@ ${m.translation || m.text || ""}
 
 });
 
-const deliveryBlocks = renderedMessageBlocks.map((html,index) => `<div class="roomDeliveryBlock" data-room-delivery-index="${index}" style="display:contents;">${html}</div>`);
+const deliveryBlocks = renderedMessageBlocks.map((html,index) => {
+  const wrapped = wrapPerspectiveMessage(messages[index],html,index,anchorConnectionByMessageIndex.get(index) || "");
+  return `<div class="roomDeliveryBlock" data-room-delivery-index="${index}" data-skip-slide="${wrapped.skip ? "true" : "false"}">${wrapped.html}</div>`;
+});
 
 if(firstRoundDemoVisible){
   const insertAt = Math.max(0,Math.min(firstRoundDemoInsertionIndex ?? deliveryBlocks.length,deliveryBlocks.length));
@@ -9819,6 +10005,7 @@ roomMessages.innerHTML =
   deliveryBlocks.join("");
 
 normalizeHumanRoomUI();
+restorePerspectivePosition();
 
 if(rejoinRoomLoadingActive){
   renderRejoinLoading();
@@ -10213,6 +10400,9 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   beingFirstRoundCurrentCard = null;
   beingFirstRoundRetryCount = 0;
   beingFirstRoundCompletedCount = 0;
+  perspectiveTourStarted = true;
+  perspectiveInvitationViewed = false;
+  localStorage.removeItem(`${perspectiveStorageKey()}:askReady`);
   beingFirstRoundInsertionIndex = null;
   firstRoundDemoPending = true;
   firstRoundDemoVisible = false;
@@ -10457,10 +10647,9 @@ function activateAskAfterRejoinDelay(){
     rejoinAskActivationTimer = null;
     rejoinedRoomAskReady = true;
     roomInput.style.display = "block";
-    roomInput.disabled = false;
-    roomInput.readOnly = false;
-    roomInput.placeholder = "Ask";
     hideRejoinLoading();
+    syncFirstRoundInput();
+    restorePerspectivePosition();
   },remaining);
 }
 
@@ -13155,5 +13344,240 @@ Close
   }).observe(document.body,{childList:true,subtree:true});
 })();
 </script>
+<style id="perspectiveSwipeStyles">
+/* v10.1.12 — full-screen perspective room */
+#roomMessages.perspectiveSwipeThread{
+  align-items:stretch!important;
+  scroll-snap-type:y mandatory!important;
+  scroll-behavior:smooth!important;
+  overscroll-behavior-y:contain!important;
+  scrollbar-width:none!important;
+  padding:0!important;
+}
+#roomMessages.perspectiveSwipeThread::-webkit-scrollbar{display:none!important;}
+#roomMessages.perspectiveSwipeThread .roomDeliveryBlock{
+  width:100%!important;
+  min-width:100%!important;
+  height:100%!important;
+  min-height:100%!important;
+  flex:0 0 100%!important;
+  display:flex;
+  align-items:stretch;
+  justify-content:stretch;
+  overflow:hidden;
+  scroll-snap-align:start;
+  scroll-snap-stop:always;
+  box-sizing:border-box;
+}
+#roomMessages.perspectiveSwipeThread .roomDeliveryBlock[data-skip-slide="true"]{display:none!important;}
+#roomMessages.perspectiveSwipeThread .perspectiveSlide,
+#roomMessages.perspectiveSwipeThread .humanInvitationPerspective{
+  width:100%;
+  height:100%;
+  min-height:100%;
+  box-sizing:border-box;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:12px 8px 44px;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:center;
+  background:#fff;
+}
+#roomMessages.perspectiveSwipeThread .standardPerspective > *{
+  width:100%!important;
+  margin-top:auto!important;
+  margin-bottom:auto!important;
+}
+#roomMessages.perspectiveSwipeThread .perspectivePayload{
+  width:100%;
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  gap:10px;
+}
+#roomMessages.perspectiveSwipeThread .perspectivePayload > *{margin-top:0!important;margin-bottom:0!important;}
+#roomMessages.perspectiveSwipeThread .automaticPerspective:not(.result-news) .localContextNewsCard{order:1;}
+#roomMessages.perspectiveSwipeThread .automaticPerspective:not(.result-news) .perspectiveHumanConnection{order:2;}
+#roomMessages.perspectiveSwipeThread .automaticPerspective:not(.result-news) .perspectivePayload > *:not(.localContextNewsCard):not(.perspectiveHumanConnection):not(.perspectiveSwipeCue){order:3;}
+#roomMessages.perspectiveSwipeThread .automaticPerspective.result-news .perspectivePayload > *:not(.perspectiveHumanConnection):not(.perspectiveSwipeCue){order:1;}
+#roomMessages.perspectiveSwipeThread .automaticPerspective.result-news .perspectiveHumanConnection{order:2;}
+#roomMessages.perspectiveSwipeThread .perspectiveSwipeCue{order:4;}
+
+/* Compact local News context at the top of the same perspective. */
+#roomMessages.perspectiveSwipeThread .localContextNewsCard{
+  flex:0 0 auto!important;
+  padding:10px!important;
+  border:1px solid #d0d7de!important;
+  background:#f6f8fa!important;
+}
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .humanResultBody{padding:0!important;}
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .humanResultCategory{font-size:10px!important;}
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .humanResultImage{
+  width:76px!important;
+  height:76px!important;
+  max-height:76px!important;
+  object-fit:cover!important;
+  float:left;
+  margin:6px 10px 4px 0!important;
+}
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .humanResultTitle{
+  font-size:14px!important;
+  line-height:1.25!important;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .humanResultSource,
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .humanResultDetails{font-size:11px!important;}
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .humanResultActions{
+  clear:both;
+  display:flex!important;
+  gap:8px!important;
+  margin-top:8px!important;
+}
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .chatOpenAction,
+#roomMessages.perspectiveSwipeThread .localContextNewsCard .chatShareAction{
+  min-height:34px!important;
+  padding:7px 10px!important;
+  font-size:12px!important;
+}
+
+/* HUMAN bridge between context and result. */
+#roomMessages.perspectiveSwipeThread .perspectiveHumanConnection{
+  flex:0 0 auto;
+  padding:12px 14px;
+  border-left:3px solid #0969da;
+  background:#f6f8fa;
+  color:#24292f;
+}
+#roomMessages.perspectiveSwipeThread .perspectiveHumanName{
+  margin-bottom:5px;
+  color:#57606a;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+#roomMessages.perspectiveSwipeThread .perspectiveHumanText{font-size:14px;line-height:1.42;}
+
+/* Requested result remains the main section with persistent actions. */
+#roomMessages.perspectiveSwipeThread .automaticPerspective .humanContractResult:not(.localContextNewsCard),
+#roomMessages.perspectiveSwipeThread .automaticPerspective .modernJobResult,
+#roomMessages.perspectiveSwipeThread .automaticPerspective .geminiMediaResponse{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:flex-start!important;
+  padding:12px!important;
+  border:1px solid #d0d7de!important;
+  background:#fff!important;
+  overflow-y:auto!important;
+}
+#roomMessages.perspectiveSwipeThread .automaticPerspective .humanResultBody{padding:0!important;}
+#roomMessages.perspectiveSwipeThread .automaticPerspective .humanResultImage,
+#roomMessages.perspectiveSwipeThread .automaticPerspective .chatReplyImage{
+  width:100%!important;
+  height:auto!important;
+  max-height:27vh!important;
+  object-fit:contain!important;
+  margin:8px 0!important;
+}
+#roomMessages.perspectiveSwipeThread .automaticPerspective .humanResultTitle{
+  font-size:18px!important;
+  line-height:1.25!important;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+#roomMessages.perspectiveSwipeThread .automaticPerspective .humanResultDetails{
+  max-height:48px;
+  overflow:hidden;
+}
+#roomMessages.perspectiveSwipeThread .automaticPerspective .humanResultActions,
+#roomMessages.perspectiveSwipeThread .automaticPerspective [data-share-card] > div:last-child{
+  position:sticky;
+  bottom:0;
+  z-index:2;
+  display:flex!important;
+  gap:8px!important;
+  margin-top:auto!important;
+  padding-top:8px!important;
+  background:#fff!important;
+}
+#roomMessages.perspectiveSwipeThread .automaticPerspective .chatOpenAction,
+#roomMessages.perspectiveSwipeThread .automaticPerspective .chatShareAction{
+  flex:1 1 0!important;
+  min-height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  touch-action:manipulation;
+}
+#roomMessages.perspectiveSwipeThread .perspectiveSwipeCue{
+  flex:0 0 auto;
+  padding:6px 0 0;
+  color:#57606a;
+  font-size:12px;
+  line-height:1.3;
+  text-align:center;
+}
+
+/* Sixth swipe: HUMAN invitation and Ask activation. */
+#roomMessages.perspectiveSwipeThread .humanInvitationPerspective{
+  justify-content:flex-start;
+  gap:12px;
+  padding-top:16px;
+}
+#roomMessages.perspectiveSwipeThread .humanInvitationPhoto{
+  width:100%!important;
+  height:40%!important;
+  min-height:180px;
+  max-height:42vh!important;
+  object-fit:contain!important;
+  background:#f6f8fa;
+}
+#roomMessages.perspectiveSwipeThread .humanInvitationIdentity{padding-top:2px;}
+#roomMessages.perspectiveSwipeThread .humanInvitationName{font-size:24px;font-weight:700;line-height:1.15;}
+#roomMessages.perspectiveSwipeThread .humanInvitationCategory{margin-top:4px;color:#57606a;font-size:12px;line-height:1.35;}
+#roomMessages.perspectiveSwipeThread .humanInvitationText{font-size:15px;line-height:1.48;}
+#roomMessages.perspectiveSwipeThread .humanInvitationPrompts{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+#roomMessages.perspectiveSwipeThread .humanInvitationPrompts button{
+  width:100%;
+  min-height:40px;
+  padding:8px 12px;
+  border:1px solid #54aeff!important;
+  background:#ddf4ff!important;
+  color:#0550ae!important;
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+
+@media(min-width:760px){
+  #roomMessages.perspectiveSwipeThread .perspectiveSlide,
+  #roomMessages.perspectiveSwipeThread .humanInvitationPerspective{padding-left:18px;padding-right:18px;}
+  #roomMessages.perspectiveSwipeThread .humanInvitationPrompts{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media(max-height:720px){
+  #roomMessages.perspectiveSwipeThread .perspectiveSlide,
+  #roomMessages.perspectiveSwipeThread .humanInvitationPerspective{padding-top:6px;padding-bottom:30px;gap:6px;}
+  #roomMessages.perspectiveSwipeThread .localContextNewsCard .humanResultImage{width:58px!important;height:58px!important;}
+  #roomMessages.perspectiveSwipeThread .perspectiveHumanConnection{padding:8px 10px;}
+  #roomMessages.perspectiveSwipeThread .automaticPerspective .humanResultImage,
+  #roomMessages.perspectiveSwipeThread .automaticPerspective .chatReplyImage{max-height:20vh!important;}
+  #roomMessages.perspectiveSwipeThread .humanInvitationPhoto{height:32%!important;min-height:130px;}
+}
+</style>
 </body>
 </html>
