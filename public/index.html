@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.02 (2026-07-20)
+  - Unifies every active loading indicator around the same three round animated dots
+  - Shows rejoin progress inside the room conversation instead of blocking the whole app
+  - Adds an eight-second reconnect recovery with an explicit Refresh app action
+
   v10.1.01 (2026-07-20)
   - Hard-fixes full-width SVG-plus actions in the live HUMAN and Public screens
   - Keeps the equal 56px home-action row and compact 88-98px room media authoritative
@@ -5095,6 +5100,67 @@ body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
 #roomLoadingScreen,#aiTypingIndicator{background:#fff!important;color:var(--final-text)!important;}
 #aiBeingsCards:empty,#publicNullsCards:empty,#dailyNullsCards:empty{min-height:80px!important;border:1px solid var(--final-line)!important;background:var(--final-panel)!important;}
 
+/* v10.1.02 — one loading language across startup, reading, typing, and room rejoin. */
+html body .defaultLoadingDots,
+html body .openingSequenceLoader,
+html body .appStartupDots{
+  display:flex!important;
+  align-items:center!important;
+  gap:7px!important;
+}
+html body .defaultLoadingDot,
+html body .openingSequenceDot,
+html body .aiDot,
+html body .appStartupDots span{
+  display:block!important;
+  width:7px!important;
+  height:7px!important;
+  min-width:7px!important;
+  min-height:7px!important;
+  flex:0 0 7px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:#57606a!important;
+  opacity:.35!important;
+  animation:aiBounce 1s infinite!important;
+}
+html body .defaultLoadingDot:nth-child(2),
+html body .openingSequenceDot:nth-child(2),
+html body .aiDot:nth-child(2),
+html body .appStartupDots span:nth-child(2){animation-delay:.15s!important;}
+html body .defaultLoadingDot:nth-child(3),
+html body .openingSequenceDot:nth-child(3),
+html body .aiDot:nth-child(3),
+html body .appStartupDots span:nth-child(3){animation-delay:.3s!important;}
+.systemStateProgress .defaultLoadingDots{justify-content:center!important;}
+.rejoinRoomStatus{
+  width:fit-content!important;
+  max-width:min(82%,520px)!important;
+  margin:0 0 14px!important;
+  padding:10px 14px!important;
+  color:var(--final-text)!important;
+  background:var(--final-panel)!important;
+  border:1px solid var(--final-line)!important;
+  text-align:left!important;
+}
+.rejoinRoomLabel{font-size:14px!important;line-height:1.5!important;}
+.rejoinRoomStatus .defaultLoadingDots{justify-content:flex-start!important;margin-top:9px!important;}
+.rejoinRoomRefresh{
+  width:auto!important;
+  min-width:112px!important;
+  height:40px!important;
+  margin-top:10px!important;
+  padding:0 16px!important;
+  border:1px solid var(--final-blue)!important;
+  border-radius:0!important;
+  color:var(--final-blue)!important;
+  background:#f1f8ff!important;
+  font:inherit!important;
+  font-weight:600!important;
+  cursor:pointer!important;
+}
+
 /* Connected/expired screens */
 body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{background:#fff!important;color:var(--final-text)!important;}
 body.connectedHome #helper,body.expiredHome #helper{color:var(--final-text)!important;}
@@ -6905,6 +6971,10 @@ function clearSystemState(expectedState = ""){
   document.body.classList.remove("systemBlockingState");
 }
 
+function defaultLoadingDotsHtml(label = "Loading"){
+  return `<div class="defaultLoadingDots" role="status" aria-label="${escapeBeingText(label)}"><span class="defaultLoadingDot"></span><span class="defaultLoadingDot"></span><span class="defaultLoadingDot"></span></div>`;
+}
+
 function showSystemState({ key, title, text = "", loading = false, primary = null, secondary = null }){
   activeSystemState = key || "system";
   document.body.classList.add("systemBlockingState");
@@ -6931,7 +7001,7 @@ function showSystemState({ key, title, text = "", loading = false, primary = nul
   if(loading){
     const progress = document.createElement("div");
     progress.className = "systemStateProgress";
-    progress.innerHTML = '<div class="aiDot"></div><div class="aiDot"></div><div class="aiDot"></div>';
+    progress.innerHTML = defaultLoadingDotsHtml(title || "Loading");
     state.appendChild(progress);
   }
 
@@ -8107,6 +8177,7 @@ if(data?.roomId && ignoredTransitionRoomIds.has(data.roomId)){
 setActiveRoomKind("human");
 
 clearSystemState("rejoiningRoom");
+hideRejoinLoading();
 hideRoomLoadingScreen();
 
 document.getElementById("roomHeader").style.display = "flex";
@@ -8523,7 +8594,9 @@ function normalizeHumanRoomUI(root = roomMessages){
   root.querySelectorAll("*").forEach(element => {
     element.style.setProperty(
       "border-radius",
-      element.classList.contains("openingSequenceDot") ? "50%" : "0",
+      element.classList.contains("openingSequenceDot") ||
+      element.classList.contains("defaultLoadingDot") ||
+      element.classList.contains("aiDot") ? "50%" : "0",
       "important"
     );
   });
@@ -10140,6 +10213,7 @@ socket.on("roomStatus", data => {
     }
 
     clearSystemState("rejoiningRoom");
+    hideRejoinLoading();
     setActiveRoomKind("human");
     localStorage.setItem("roomId", data.roomId);
 
@@ -10187,20 +10261,55 @@ function returnFromUnavailableRoom(){
   window.location.replace("/");
 }
 
+function hideRejoinLoading(){
+  document.getElementById("rejoinRoomStatus")?.remove();
+}
+
+function showRejoinLoading(){
+  clearSystemState("rejoiningRoom");
+  hideRejoinLoading();
+  document.body.classList.remove("systemBlockingState");
+  roomOverlay.style.display = "flex";
+  roomMessages.classList.add("geminiThread");
+
+  const status = document.createElement("div");
+  status.id = "rejoinRoomStatus";
+  status.className = "rejoinRoomStatus";
+  status.setAttribute("aria-live","polite");
+  status.innerHTML = `<div class="rejoinRoomLabel">Rejoining room</div>${defaultLoadingDotsHtml("Rejoining room")}`;
+  roomMessages.appendChild(status);
+  scrollRoomToLatest(true);
+}
+
+function showRejoinFailure(){
+  clearTimeout(rejoinTimeout);
+  rejoinTimeout = null;
+  let status = document.getElementById("rejoinRoomStatus");
+  if(!status){
+    showRejoinLoading();
+    status = document.getElementById("rejoinRoomStatus");
+  }
+  status.setAttribute("aria-live","assertive");
+  status.innerHTML = '<div class="rejoinRoomLabel">Room could not reconnect</div><button type="button" class="rejoinRoomRefresh">Refresh app</button>';
+  status.querySelector(".rejoinRoomRefresh").onclick = () => window.location.reload();
+  scrollRoomToLatest(true);
+}
+
 function retryUnavailableRoom(roomId){
   if(!roomId){
     returnFromUnavailableRoom();
     return;
   }
 
-  showSystemState({ key:"rejoiningRoom", title:"Rejoining room…", text:`Trying Room #${roomId} again.`, loading:true });
+  showRejoinLoading();
 
   socket.emit("rejoinRoom", { roomId, deviceId });
   clearTimeout(rejoinTimeout);
-  rejoinTimeout = setTimeout(() => showRoomUnavailable(roomId),5000);
+  rejoinTimeout = setTimeout(showRejoinFailure,8000);
 }
 
 function showRoomUnavailable(roomId){
+  hideRejoinLoading();
   hideRoomLoadingScreen();
   roomOverlay.style.display = "none";
   capturePreview.style.display = "none";
@@ -10269,18 +10378,14 @@ if (!savedRoomId && !urlRoomId) {
 
 
 if(urlRoomId){
-    showSystemState({ key:"rejoiningRoom", title:"Rejoining room…", text:`Opening Room #${urlRoomId}.`, loading:true });
+    showRejoinLoading();
 
     localStorage.setItem(
         "roomId",
         urlRoomId
     );
 
-rejoinTimeout = setTimeout(() => {
-
-    showRoomUnavailable(urlRoomId);
-
-},5000);
+rejoinTimeout = setTimeout(showRejoinFailure,8000);
 
 console.log("REJOINING:", savedRoomId);
 
@@ -10304,13 +10409,9 @@ setTimeout(() => {
 
 
 if (savedRoomId) {
-    showSystemState({ key:"rejoiningRoom", title:"Rejoining room…", text:`Opening Room #${savedRoomId}.`, loading:true });
+    showRejoinLoading();
 
-    rejoinTimeout = setTimeout(() => {
-
-        showRoomUnavailable(savedRoomId);
-
-    }, 5000);
+    rejoinTimeout = setTimeout(showRejoinFailure,8000);
 
     const thumb = localStorage.getItem("roomThumbnail");
 
