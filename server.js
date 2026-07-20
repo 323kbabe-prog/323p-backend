@@ -2,6 +2,9 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.04 (2026-07-20)
+// - Reweights automatic searches to 30% Category, 15% three words, 15% Bio, and 40% image identity
+
 // v10.1.03 (2026-07-20)
 // - Restores the full HUMAN Bio, Category, three-word, and image-identity opening
 // - Keeps the first message natural, complete, and free of exposed profile labels
@@ -492,7 +495,7 @@ async function createRoomFirstRoundCards(room) {
       messages:[
         {
           role:"system",
-          content:`Write five natural English search requests that behave like clear user inputs. Return one JSON object with exactly these string keys: news, shopping, place, jobs, real_estate. Each request must ask for exactly one real result. Keep the HUMAN Category as the mandatory subject. Naturally apply this influence: Category 50%, all three words together 20%, Bio 20%, image 10%. Every request must contain the exact Category and all three words. Use only one concise visible image detail. Make the result intent unmistakable: current news article, product, place, current job, and property listing. Do not mention percentages, weighting, prompts, cards, HUMAN, or automatic generation.`
+          content:`Write five natural English search requests that behave like clear user inputs. Return one JSON object with exactly these string keys: news, shopping, place, jobs, real_estate. Each request must ask for exactly one real result. Keep the HUMAN Category as the mandatory subject. Naturally apply this influence: Category 30%, all three words together 15%, Bio 15%, image identity 40%. Every request must contain the exact Category and all three words. Use only one concise visible image detail. Make the result intent unmistakable: current news article, product, place, current job, and property listing. Do not mention percentages, weighting, prompts, cards, HUMAN, or automatic generation.`
         },
         {
           role:"user",
@@ -2089,7 +2092,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nSearch signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- Automatic searches: Category 50%, three words 20%, Bio 20%, image 10%.\n- After user input: user request 50%, Category 20%, three words 10%, Bio 10%, image 10%.\n- Category is the mandatory professional domain for automatic cards.\n- Use all three words to refine query meaning, candidate ranking, and result selection inside Category.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity only as the supporting visual angle.\n- For later direct questions, never let Category, words, Bio, or image distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nSearch signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- Automatic searches: Category 30%, three words 15%, Bio 15%, image identity 40%.\n- After user input: user request 50%, Category 20%, three words 10%, Bio 10%, image 10%.\n- Category is the mandatory professional domain for automatic cards.\n- Use all three words to refine query meaning, candidate ranking, and result selection inside Category.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest automatic-search relevance signal.\n- For later direct questions, never let Category, words, Bio, or image distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
