@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.06 (2026-07-20)
+  - Formats result-card lead replies as one to three numbered points plus the Google closing sentence
+  - Keeps the boxed rejoin dots visible for at least one second before activating Ask
+
   v10.1.05 (2026-07-20)
   - Activates the Ask bar as soon as a HUMAN room successfully rejoins
   - Removes the boxed rejoin loader only after the Ask bar becomes active
@@ -5185,6 +5189,9 @@ html body .appStartupDots span:nth-child(3){animation-delay:.3s!important;}
   font-weight:600!important;
   cursor:pointer!important;
 }
+.humanContractResult > .chatBubble{
+  white-space:pre-line!important;
+}
 
 /* Connected/expired screens */
 body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{background:#fff!important;color:var(--final-text)!important;}
@@ -6991,6 +6998,8 @@ let publicReturnContext = "home";
 let activeSystemState = "";
 let rejoinRoomLoadingActive = false;
 let rejoinedRoomAskReady = false;
+let rejoinRoomLoadingStartedAt = 0;
+let rejoinAskActivationTimer = null;
 
 function clearSystemState(expectedState = ""){
   if(expectedState && activeSystemState !== expectedState) return;
@@ -7089,6 +7098,9 @@ function clearCurrentRoomState(){
   clearTimeout(beingFirstRoundStepTimer);
   beingFirstRoundStepTimer = null;
   rejoinedRoomAskReady = false;
+  rejoinRoomLoadingStartedAt = 0;
+  clearTimeout(rejoinAskActivationTimer);
+  rejoinAskActivationTimer = null;
   resetRoomDeliverySequence();
 }
 
@@ -8205,7 +8217,7 @@ if(data?.roomId && ignoredTransitionRoomIds.has(data.roomId)){
 setActiveRoomKind("human");
 
 clearSystemState("rejoiningRoom");
-rejoinedRoomAskReady = Boolean(data.rejoined);
+rejoinedRoomAskReady = false;
 if(!data.rejoined){
   hideRejoinLoading();
 }
@@ -8279,11 +8291,11 @@ gtag('event', 'page_view', {
 
 
 roomInput.style.display = "block";
-roomInput.disabled = !data.rejoined;
+roomInput.disabled = true;
 roomInput.readOnly = false;
 roomInput.placeholder = "Ask";
 if(data.rejoined){
-  hideRejoinLoading();
+  activateAskAfterRejoinDelay();
 }
 
 document.getElementById("shareRoomBtn").innerText = "Share card";
@@ -8551,6 +8563,20 @@ function compactRoomCopy(value,maxLength = 220){
   return `${text}${hasBelief ? " Google should buy this search idea today." : ""}`.trim();
 }
 
+function numberedResultCardLead(value){
+  const slogan = "Google should buy this search idea today.";
+  const text = String(value || "")
+    .replace(/Google should buy (?:me|this search idea today)\.?/gi,"")
+    .replace(/\s+/g," ")
+    .trim();
+  const points = (text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text])
+    .map(point => point.trim())
+    .filter(Boolean)
+    .slice(0,3)
+    .map((point,index) => `${index + 1}. ${/[.!?]$/.test(point) ? point : `${point}.`}`);
+  return `${points.join("\n")}\n${slogan}`.trim();
+}
+
 function compactFirstRoundSpeech(message){
   const text = message?.text || "";
   return message?.humanAcknowledgement || message?.humanExamplesNotice || message?.anchorTransition || message?.firstRoundComplete
@@ -8793,7 +8819,7 @@ function deliverFirstRoundDemo(){
 socket.on("roomFirstRoundCompleted",() => {
   hideSequenceTyping();
   hideAITyping();
-  hideRejoinLoading();
+  if(rejoinedRoomAskReady) hideRejoinLoading();
   firstRoundDemoPending = false;
   firstRoundDemoVisible = false;
   firstRoundDemoInsertionIndex = null;
@@ -8838,6 +8864,12 @@ function deliverBatchedRoomReplies(previousCount,totalCount){
 function syncFirstRoundInput(){
   roomInput.style.display = "block";
   roomInput.placeholder = "Ask";
+  if(rejoinRoomLoadingActive && !rejoinedRoomAskReady){
+    roomInput.disabled = true;
+    roomInput.readOnly = false;
+    humanSelectionPrompt.style.display = "none";
+    return;
+  }
   if(rejoinedRoomAskReady){
     roomInput.disabled = false;
     roomInput.readOnly = false;
@@ -9132,7 +9164,7 @@ Enable Notifications
 // longer change the speech or button family.
 if(m.resultType && m.resultTitle){
   const action = getRoomOpenAction(m);
-  const talk = compactRoomCopy(
+  const talk = numberedResultCardLead(
     m.humanReason ||
     `${m.resultTitle} caught my eye because it gives this image a useful ${m.resultType.replace("_"," ")} direction.`
   );
@@ -9148,7 +9180,7 @@ if(m.resultType && m.resultTitle){
 
   return `
     <div class="dailyNullCard geminiAiResponse humanContractResult" data-share-card data-share-read="true" data-link="${escapeBeingText(action.href || "")}">
-      <div class="chatBubble chatAiBubble">${escapeBeingText(withGoogleBelief(talk))}</div>
+      <div class="chatBubble chatAiBubble">${escapeBeingText(talk)}</div>
       <div class="humanResultBody" data-share-content>
         <div class="humanResultCategory">${getRoomResultCategoryLabel(m)}</div>
         ${resultImage ? `<img class="humanResultImage" src="${escapeBeingText(resultImage)}" alt="">` : ""}
@@ -10324,6 +10356,9 @@ function renderRejoinLoading(){
 
 function showRejoinLoading(){
   clearSystemState("rejoiningRoom");
+  clearTimeout(rejoinAskActivationTimer);
+  rejoinAskActivationTimer = null;
+  rejoinRoomLoadingStartedAt = Date.now();
   rejoinedRoomAskReady = false;
   rejoinRoomLoadingActive = true;
   document.body.classList.remove("systemBlockingState");
@@ -10336,9 +10371,26 @@ function showRejoinLoading(){
   renderRejoinLoading();
 }
 
+function activateAskAfterRejoinDelay(){
+  clearTimeout(rejoinAskActivationTimer);
+  const elapsed = Date.now() - rejoinRoomLoadingStartedAt;
+  const remaining = Math.max(0,1000 - elapsed);
+  rejoinAskActivationTimer = setTimeout(() => {
+    rejoinAskActivationTimer = null;
+    rejoinedRoomAskReady = true;
+    roomInput.style.display = "block";
+    roomInput.disabled = false;
+    roomInput.readOnly = false;
+    roomInput.placeholder = "Ask";
+    hideRejoinLoading();
+  },remaining);
+}
+
 function showRejoinFailure(){
   clearTimeout(rejoinTimeout);
   rejoinTimeout = null;
+  clearTimeout(rejoinAskActivationTimer);
+  rejoinAskActivationTimer = null;
   let status = document.getElementById("rejoinRoomStatus");
   if(!status){
     showRejoinLoading();
