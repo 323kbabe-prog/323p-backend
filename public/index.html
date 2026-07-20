@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.26 (2026-07-21)
+  - Adds the dream quote and Google line to the initial ASK.CAMERA startup loader
+
   v10.1.25 (2026-07-21)
   - Adds the dream quote to the home-screen text hierarchy
   - Adds the dream quote and Google line beneath the user-request loading state
@@ -2203,6 +2206,8 @@ html body #roomMessages.geminiThread .chatShareAction{
   <div class="appStartupDots" aria-hidden="true">
     <span></span><span></span><span></span>
   </div>
+  <div class="appStartupQuote">IF YOU DON'T EVEN HAVE DREAMS, WHAT'S THE DIFFERENCE BETWEEN YOU AND A SALTED FISH?</div>
+  <div class="appStartupGoogle">THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.</div>
 </div>
 
   
@@ -14809,6 +14814,24 @@ html body #closeRoom{
   font-weight:400;
   line-height:1.4;
   text-transform:uppercase;
+}
+#appStartupLoader .appStartupQuote{
+  width:min(560px,calc(100% - 48px));
+  margin-top:24px;
+  color:#57606a;
+  font-size:19px;
+  font-weight:400;
+  line-height:1.4;
+  text-align:center;
+}
+#appStartupLoader .appStartupGoogle{
+  width:min(560px,calc(100% - 48px));
+  margin-top:8px;
+  color:#8c959f;
+  font-size:15px;
+  font-weight:600;
+  line-height:1.35;
+  text-align:center;
 }
 </style>
 </body>
