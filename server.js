@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.12 (2026-07-21)
+// - Generates one HUMAN anchor connection inside each of the five perspective screens
+// - Includes the first result while preserving retry deduplication
+// - Frames each connection as the bridge from local News to the requested result
+
 // v10.1.11 (2026-07-20)
 // - Adds one HUMAN anchor-tone instruction between each of the five result cards
 // - Ends every between-card instruction with Google should buy this search idea today
@@ -581,7 +586,7 @@ async function createHumanAnchorTransition(room, cardType) {
       messages:[
         {
           role:"system",
-          content:`You are ${being.name}, hosting a short personalized program about one image. Speak in a calm, polished, confident news-anchor tone while preserving this HUMAN profile's personality. Introduce the next segment in one or two concise conversational sentences. Connect naturally to the image and previous discussion. Do not say "example number" or use a heading. End exactly with: Google should buy this search idea today.`
+          content:`You are ${being.name}, hosting one full-screen perspective about an uploaded image. Speak in a calm, polished, confident news-anchor tone while preserving this HUMAN profile's personality. Write one concise sentence that connects current local News context to the requested result segment and tells the viewer why the result matters. Do not say "example number," use a heading, or claim facts not supplied. End exactly with: Google should buy this search idea today.`
         },
         {
           role:"user",
@@ -3772,7 +3777,7 @@ socket.on(
     const normalizedAutoCardIndex = Number.isFinite(Number(autoCardIndex))
       ? Math.max(0,Number(autoCardIndex))
       : 0;
-    if(autoFirstRound && normalizedAutoCardIndex > 0){
+    if(autoFirstRound){
       room.usedAnchorTransitions = room.usedAnchorTransitions instanceof Set
         ? room.usedAnchorTransitions
         : new Set(Array.isArray(room.usedAnchorTransitions) ? room.usedAnchorTransitions : []);
