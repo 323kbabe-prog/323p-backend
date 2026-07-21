@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.18 (2026-07-22)
+  - Bottom-aligns the first HUMAN journey photo so its smartphone remains visible
+
   v10.2.17 (2026-07-22)
   - Replaces the four HUMAN journey photos with the approved free-stock set
   - Uses a smartphone view of Tokyo Tower for the Add an image step
@@ -16597,6 +16600,9 @@ html body #homeMainContent{
   filter:none;
   border:0!important;
   border-radius:0!important;
+}
+.homeHumanStep:first-child img{
+  object-position:center bottom;
 }
 .homeHumanStepNumber{
   margin:12px 12px 0;
