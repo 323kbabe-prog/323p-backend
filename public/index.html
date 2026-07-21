@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.33 (2026-07-21)
+  - Applies the purple-to-green ASK.CAMERA navigation gradient
+  - Separates and realigns the three equal top navigation buttons
+
   v10.1.32 (2026-07-21)
   - Locks ASK.CAMERA, Daily, and HUMAN to identical button dimensions and typography
 
@@ -15207,6 +15211,43 @@ html body #modeBar #aiBeingsBtn *{
   html body #modeBar #createNullBtn,
   html body #modeBar #dailyNullsBtn,
   html body #modeBar #aiBeingsBtn{font-size:10px!important;}
+}
+
+/* v10.1.33 — separated gradient navigation with no inherited segmented frame. */
+html body #modeBar{
+  gap:8px!important;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+html body #modeBar #createNullBtn,
+html body #modeBar #dailyNullsBtn,
+html body #modeBar #aiBeingsBtn{
+  margin:0!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+  overflow:hidden!important;
+  color:#fff!important;
+}
+html body #modeBar #createNullBtn{
+  background:linear-gradient(105deg,#3b0764 0%,#6d28d9 100%)!important;
+}
+html body #modeBar #dailyNullsBtn{
+  background:linear-gradient(105deg,#6d28d9 0%,#0891b2 100%)!important;
+}
+html body #modeBar #aiBeingsBtn{
+  background:linear-gradient(105deg,#0891b2 0%,#86efac 100%)!important;
+  color:#06281e!important;
+}
+html body #modeBar #humanCardsThumbs{
+  min-width:0!important;
+  max-width:44px!important;
+  overflow:hidden!important;
 }
 </style>
 </body>
