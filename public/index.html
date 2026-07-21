@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.51 (2026-07-21)
+  - Gives the room-header Share button and home HUMAN button one shared HUMAN gradient
+  - Keeps the Share icon and HUMAN label black without changing other controls
+
   v10.1.50 (2026-07-21)
   - Changes only the room-header Share button to white with a black icon
 
@@ -13888,6 +13892,7 @@ Close
 (function cleanBracketedButtonLabels(){
   const primarySelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,#changeHumanBtn,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
   const guidanceSelector = '#uploadBtn,#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,.beingShareButton,.beingQrShareButton,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
+  const humanGradientSelector = '#shareRoomBtn,#modeBar #aiBeingsBtn';
   const destructiveSelector = '.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
@@ -13899,7 +13904,11 @@ Close
       button.style.setProperty('box-shadow','none','important');
       button.style.setProperty('text-shadow','none','important');
       button.style.setProperty('border','0','important');
-      if(button.closest('#modeBar')){
+      if(button.matches(humanGradientSelector)){
+        button.style.setProperty('background','linear-gradient(135deg,#0969da 0%,#8250df 50%,#2da44e 100%)','important');
+        button.style.setProperty('color','#111','important');
+        button.style.setProperty('border-color','transparent','important');
+      }else if(button.closest('#modeBar')){
         button.style.setProperty('background','#111','important');
         button.style.setProperty('color','#fff','important');
         button.style.setProperty('border-color','#111','important');
@@ -15332,12 +15341,17 @@ html body .systemStateButtonPrimary{
   color:#fff!important;
 }
 
-/* v10.1.50 — room-header Share color only. */
-html body #roomHeader #shareRoomBtn{
-  background:#fff!important;
+/* v10.1.51 — shared HUMAN gradient for Share and the home HUMAN entry. */
+html body #roomHeader #shareRoomBtn,
+html body #modeBar #aiBeingsBtn{
+  background:linear-gradient(135deg,#0969da 0%,#8250df 50%,#2da44e 100%)!important;
   color:#111!important;
 }
 html body #roomHeader #shareRoomBtn::after{
+  color:#111!important;
+}
+html body #modeBar #aiBeingsBtn,
+html body #modeBar #aiBeingsBtn *{
   color:#111!important;
 }
 </style>
