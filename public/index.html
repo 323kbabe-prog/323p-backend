@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.3 (2026-07-21)
+  - Replaces background detection with one authoritative interactive-control palette
+  - Assigns every static and dynamic button, button-like label, and form field a visible fill role
+  - Prevents white-on-white controls from passing as visibly filled
+  - Preserves the HUMAN gradient, functional hierarchy, and home-thumbnail-only outline rule
+
   v10.2.2 (2026-07-21)
   - Guarantees a visible filled background for every button and form field
   - Fills legacy HUMAN-card and Share controls that could still inherit transparent styles
@@ -15890,34 +15896,84 @@ html body input[type="file"]::file-selector-button{
 
 <script>
 (function enforceFilledInteractiveControls(){
-  const controlsSelector = 'button,[role="button"],input,textarea,select,[contenteditable="true"]';
-  const hasVisibleFill = element => {
-    const style = getComputedStyle(element);
-    if(style.backgroundImage && style.backgroundImage !== 'none') return true;
-    const color = style.backgroundColor || '';
-    if(color === 'transparent') return false;
-    const rgba = color.match(/^rgba?\(([^)]+)\)$/i);
-    if(!rgba) return Boolean(color);
-    const values = rgba[1].split(',').map(value => value.trim());
-    return values.length < 4 || Number(values[3]) > 0;
+  const controlsSelector = 'button,[role="button"],input,textarea,select,[contenteditable="true"],label[for="beingPhoto"]';
+  const humanGradient = 'linear-gradient(135deg,#0969da 0%,#8250df 50%,#2da44e 100%)';
+  const selectors = {
+    human:'#aiBeingsBtn,#shareRoomBtn,#openCreateBeingBtn',
+    primary:'#takeCameraViewBtn,#createBeingSubmit,#addPublicImageBtn,#publishContinueButton,.beingOpenButton,#continueToBeing,.systemPerspectivePrimary,.systemStateButtonPrimary',
+    dark:'#createNullBtn,#dailyNullsBtn,#uploadBtn,#publicNullsBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,.chatOpenAction,.chatShareAction,.beingShareButton,.beingQrShareButton',
+    field:'input,textarea,select,[contenteditable="true"]',
+    upload:'label[for="beingPhoto"]'
+  };
+  const assign = control => {
+    if(!control.matches || control.matches('input[type="hidden"],input[type="file"]')) return;
+    let background = '#eaeef2';
+    let color = '#24292f';
+    let role = 'utility';
+    if(control.disabled || control.getAttribute('aria-disabled') === 'true'){
+      background = '#f6f8fa';
+      color = '#8c959f';
+      role = 'disabled';
+    }else if(control.matches(selectors.human)){
+      background = humanGradient;
+      color = '#111';
+      role = 'human';
+    }else if(control.matches(selectors.primary)){
+      background = '#0969da';
+      color = '#fff';
+      role = 'primary';
+    }else if(control.matches(selectors.dark)){
+      background = '#57606a';
+      color = '#fff';
+      role = 'secondary';
+    }else if(control.matches(selectors.field)){
+      background = '#eaeef2';
+      color = '#24292f';
+      role = 'field';
+    }else if(control.matches(selectors.upload)){
+      background = '#eaeef2';
+      color = '#0969da';
+      role = 'upload';
+    }
+    if(control.matches('input[type="checkbox"],input[type="radio"]')){
+      background = control.checked ? '#0969da' : '#eaeef2';
+      color = control.checked ? '#fff' : '#24292f';
+      role = control.checked ? 'selected' : 'field';
+    }
+    control.dataset.uiFill = role;
+    control.style.setProperty('background',background,'important');
+    if(control.matches('input[type="checkbox"]:checked')){
+      control.style.setProperty('background-image','linear-gradient(135deg,transparent 0 42%,#fff 42% 54%,transparent 54%),linear-gradient(45deg,transparent 0 48%,#fff 48% 60%,transparent 60%)','important');
+    }else if(control.matches('input[type="radio"]:checked')){
+      control.style.setProperty('background-image','radial-gradient(circle,#fff 0 3px,transparent 4px)','important');
+    }else if(control.matches('input[type="checkbox"],input[type="radio"]')){
+      control.style.setProperty('background-image','none','important');
+    }
+    control.style.setProperty('color',color,'important');
+    control.style.setProperty('outline','0','important');
+    if(control.matches('#publicNullsThumbs img,#humanCardsThumbs img')){
+      control.style.setProperty('border','1px solid #d0d7de','important');
+    }else{
+      control.style.setProperty('border','0','important');
+    }
   };
   const fill = root => {
     if(!root || root.nodeType !== 1) return;
     const controls = root.matches && root.matches(controlsSelector)
       ? [root]
       : Array.from(root.querySelectorAll ? root.querySelectorAll(controlsSelector) : []);
-    controls.forEach(control => {
-      if(control.matches('input[type="hidden"]')) return;
-      if(hasVisibleFill(control)) return;
-      const isDarkAction = control.matches('.chatShareAction,.chatOpenAction,.beingShareButton,.beingQrShareButton');
-      control.style.setProperty('background',isDarkAction ? '#57606a' : '#eaeef2','important');
-      control.style.setProperty('color',isDarkAction ? '#fff' : '#24292f','important');
-    });
+    controls.forEach(assign);
   };
   fill(document.body);
   new MutationObserver(records => {
-    records.forEach(record => record.addedNodes.forEach(node => fill(node)));
-  }).observe(document.body,{childList:true,subtree:true});
+    records.forEach(record => {
+      record.addedNodes.forEach(node => fill(node));
+      if(record.type === 'attributes') assign(record.target);
+    });
+  }).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','aria-disabled','checked']});
+  document.addEventListener('change',event => {
+    if(event.target && event.target.matches && event.target.matches(controlsSelector)) assign(event.target);
+  },true);
 })();
 </script>
 
