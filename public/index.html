@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.32 (2026-07-21)
+  - Locks ASK.CAMERA, Daily, and HUMAN to identical button dimensions and typography
+
   v10.1.31 (2026-07-21)
   - Removes plain user-message slides from the full-screen perspective feed
   - Keeps submitted questions inside the loading state instead of showing legacy chat bubbles
@@ -15171,6 +15174,39 @@ html body #closeRoom{
 #roomMessages .systemPerspectiveClosing{max-width:620px;margin-top:8px;color:#8c959f;font-size:12px;font-weight:600;line-height:1.35;}
 @media(max-width:520px){
   #roomMessages .systemPerspectiveActions{grid-template-columns:1fr;}
+}
+
+/* v10.1.32 — exact equality for the three top navigation buttons. */
+html body #modeBar{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  align-items:stretch!important;
+}
+html body #modeBar #createNullBtn,
+html body #modeBar #dailyNullsBtn,
+html body #modeBar #aiBeingsBtn{
+  width:100%!important;
+  min-width:0!important;
+  height:36px!important;
+  min-height:36px!important;
+  max-height:36px!important;
+  padding:0 5px!important;
+  box-sizing:border-box!important;
+  font-family:Arial,sans-serif!important;
+  font-size:12px!important;
+  font-weight:600!important;
+  line-height:1!important;
+}
+html body #modeBar #createNullBtn *,
+html body #modeBar #dailyNullsBtn *,
+html body #modeBar #aiBeingsBtn *{
+  font:inherit!important;
+  line-height:inherit!important;
+}
+@media(max-width:560px){
+  html body #modeBar #createNullBtn,
+  html body #modeBar #dailyNullsBtn,
+  html body #modeBar #aiBeingsBtn{font-size:10px!important;}
 }
 </style>
 </body>
