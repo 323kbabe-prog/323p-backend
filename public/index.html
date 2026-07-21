@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.13 (2026-07-22)
+  - Introduces the shareable HUMAN Card journey on the Home screen with four free-stock images
+  - Explains link and QR sharing, recipient image input, and answers through a HUMAN Perspective
+  - States clearly that HUMAN Cards are free and Funding HUMAN support is optional
+
   v10.2.12 (2026-07-22)
   - Adds name-based FIND HUMAN search at the top of HUMAN Cards
   - Shows every matching HUMAN and opens the selected card without a password
@@ -13704,6 +13709,57 @@ const HOME_HERO_HTML = `
   <div class="homeHeroDetail">Discover what this image connects you to.</div>
 `;
 
+const HOME_HUMAN_STEPS_HTML = `
+  <section id="homeHumanIntro" aria-labelledby="homeHumanIntroTitle">
+    <div class="homeHumanIntroEyebrow">HUMAN Cards</div>
+    <h2 id="homeHumanIntroTitle">Share your HUMAN Perspective.</h2>
+    <p class="homeHumanIntroLead">Create a HUMAN Card from your identity, personality, and meaningful connections. Share it by link or QR code so anyone can add an image and discover connections through your HUMAN Perspective.</p>
+    <div class="homeHumanSteps">
+      <article class="homeHumanStep">
+        <img src="https://images.pexels.com/photos/3585094/pexels-photo-3585094.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A smartphone displaying a profile interface" loading="lazy" referrerpolicy="no-referrer">
+        <div class="homeHumanStepNumber">01</div>
+        <h3>Create your HUMAN</h3>
+        <p>Build your HUMAN Perspective from who you are and what connects to you.</p>
+      </article>
+      <article class="homeHumanStep">
+        <img src="https://images.pexels.com/photos/2451622/pexels-photo-2451622.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A smartphone scanning a QR code" loading="lazy" referrerpolicy="no-referrer">
+        <div class="homeHumanStepNumber">02</div>
+        <h3>Share your HUMAN</h3>
+        <p>Send your HUMAN Card to anyone with its link or QR code.</p>
+      </article>
+      <article class="homeHumanStep">
+        <img src="https://images.pexels.com/photos/4483133/pexels-photo-4483133.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A person adding an image with a smartphone camera" loading="lazy" referrerpolicy="no-referrer">
+        <div class="homeHumanStepNumber">03</div>
+        <h3>Add an image</h3>
+        <p>The recipient points their camera or uploads an image.</p>
+      </article>
+      <article class="homeHumanStep">
+        <img src="https://images.pexels.com/photos/15103754/pexels-photo-15103754.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A smartphone showing a photographed subject" loading="lazy" referrerpolicy="no-referrer">
+        <div class="homeHumanStepNumber">04</div>
+        <h3>Discover connections</h3>
+        <p>ASK.CAMERA answers through the shared HUMAN Perspective.</p>
+      </article>
+    </div>
+    <div class="homeHumanIntroActions">
+      <button type="button" onclick="openCreateBeing()">CREATE A HUMAN CARD — FREE</button>
+      <button type="button" onclick="showAIBeings()">EXPLORE HUMAN CARDS</button>
+      <button type="button" onclick="openHomeHumanFinder()">FIND HUMAN</button>
+    </div>
+    <p class="homeHumanFundingNote"><strong>Optional Funding HUMAN:</strong> Creating, sharing, and using a HUMAN Card is free. Optional one-time funding levels support ASK.CAMERA.</p>
+    <a class="homeHumanPhotoCredit" href="https://www.pexels.com/license/" target="_blank" rel="noopener noreferrer">Free stock photography from Pexels</a>
+  </section>
+`;
+
+function openHomeHumanFinder(){
+  showAIBeings().then(() => {
+    const input = document.getElementById("findHumanName");
+    if(input){
+      input.focus();
+      input.scrollIntoView({block:"center",behavior:"smooth"});
+    }
+  });
+}
+
 let homeCaptureCardDismissed = false;
 
 async function openHomeFloatingCamera(event){
@@ -13858,6 +13914,10 @@ function ensureCanonicalHomeExperience(){
   // replacing the approved two-level hero with the legacy uppercase sentence.
   if(!instruction.querySelector(".homeHeroTitle")){
     instruction.innerHTML = HOME_HERO_HTML;
+  }
+
+  if(!main.querySelector("#homeHumanIntro")){
+    main.insertAdjacentHTML("beforeend",HOME_HUMAN_STEPS_HTML);
   }
 
   let layer = document.getElementById("homeStartupLayer");
@@ -16431,5 +16491,158 @@ html body #dailyNullsCards .dailySwipeCue{
   }))).observe(document.body,{childList:true,subtree:true});
 })();
 </script>
+<style>
+/* v10.2.13 — Home introduction to the shareable HUMAN Perspective journey */
+html body #helper{
+  justify-content:flex-start!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  padding-top:clamp(128px,18vh,190px)!important;
+  padding-bottom:56px!important;
+  box-sizing:border-box!important;
+}
+html body #homeMainContent{
+  flex:0 0 auto!important;
+  transform:none!important;
+}
+#homeHumanIntro{
+  width:100%;
+  margin:34px 0 0;
+  padding:22px;
+  box-sizing:border-box;
+  background:#fff;
+  color:#24292f;
+  text-align:left;
+  text-shadow:none;
+}
+.homeHumanIntroEyebrow{
+  color:#0969da;
+  font-size:11px;
+  font-weight:700;
+  line-height:1.2;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#homeHumanIntroTitle{
+  margin:6px 0 0;
+  color:#24292f;
+  font-size:clamp(24px,3vw,36px);
+  font-weight:700;
+  line-height:1.08;
+  letter-spacing:-.025em;
+  text-transform:none;
+}
+.homeHumanIntroLead{
+  max-width:650px;
+  margin:10px 0 0;
+  color:#57606a;
+  font-size:14px;
+  font-weight:400;
+  line-height:1.5;
+  letter-spacing:0;
+}
+.homeHumanSteps{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-top:20px;
+}
+.homeHumanStep{
+  min-width:0;
+  margin:0;
+  padding:0;
+  background:#f6f8fa;
+}
+.homeHumanStep img{
+  display:block;
+  width:100%;
+  height:150px;
+  object-fit:cover;
+  filter:grayscale(1);
+  border:0!important;
+  border-radius:0!important;
+}
+.homeHumanStepNumber{
+  margin:12px 12px 0;
+  color:#0969da;
+  font-size:11px;
+  font-weight:700;
+  line-height:1;
+}
+.homeHumanStep h3{
+  margin:6px 12px 0;
+  color:#24292f;
+  font-size:14px;
+  font-weight:600;
+  line-height:1.25;
+  letter-spacing:0;
+  text-transform:none;
+}
+.homeHumanStep p{
+  margin:6px 12px 14px;
+  color:#57606a;
+  font-size:12px;
+  font-weight:400;
+  line-height:1.4;
+  letter-spacing:0;
+}
+.homeHumanIntroActions{
+  display:grid;
+  grid-template-columns:1.5fr 1fr 1fr;
+  gap:8px;
+  margin-top:16px;
+}
+html body .homeHumanIntroActions button{
+  width:100%;
+  min-height:44px;
+  margin:0;
+  padding:0 12px;
+  border:0!important;
+  border-radius:0!important;
+  background:#57606a!important;
+  color:#fff!important;
+  font-size:11px;
+  font-weight:600;
+  line-height:1.2;
+  cursor:pointer;
+}
+html body .homeHumanIntroActions button:first-child{
+  background:#0969da!important;
+}
+.homeHumanFundingNote{
+  margin:14px 0 0;
+  padding:12px;
+  background:#eaeeef;
+  color:#57606a;
+  font-size:12px;
+  font-weight:400;
+  line-height:1.45;
+  letter-spacing:0;
+}
+.homeHumanFundingNote strong{color:#24292f;font-weight:600;}
+.homeHumanPhotoCredit{
+  display:inline-block;
+  margin-top:10px;
+  color:#57606a!important;
+  font-size:10px;
+  font-weight:400;
+  line-height:1.3;
+  text-decoration:underline;
+}
+@media(max-width:620px){
+  html body #helper{
+    padding-top:112px!important;
+    padding-bottom:36px!important;
+  }
+  #homeHumanIntro{margin-top:26px;padding:16px;}
+  .homeHumanSteps{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .homeHumanStep img{height:132px;}
+  .homeHumanIntroActions{grid-template-columns:1fr;}
+}
+@media(max-width:360px){
+  .homeHumanSteps{grid-template-columns:1fr;}
+  .homeHumanStep img{height:170px;}
+}
+</style>
 </body>
 </html>
