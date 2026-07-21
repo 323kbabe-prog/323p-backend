@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.16 (2026-07-21)
+// - Removes the legacy automatic room-expiry cleanup path
+// - Keeps rooms available until the user explicitly closes them
+
 // v10.1.15 (2026-07-21)
 // - Marks every query-producing System Swap resolution as an authoritative user takeover
 // - Stops in-flight automatic first-round work before the selected query resumes
@@ -1124,35 +1128,6 @@ setInterval(() => {
     }
   }
 
-  //////////////////////////////////////////////////
-  // ROOM CLEANUP
-  //////////////////////////////////////////////////
-
-  for(const roomId in rooms){
-
-    if(
-      !rooms[roomId].permanent &&
-      now > rooms[roomId].expiresAt
-    ){
-
-      io.to(roomId).emit(
-        "roomClosed"
-      );
-
-for(const id in deviceRooms){
-
-    if(deviceRooms[id] === roomId){
-
-        delete deviceRooms[id];
-
-    }
-
-}
-
-      delete rooms[roomId];
-    }
-  }
-
 }, 60 * 1000);
 
 //////////////////////////////////////////////////
@@ -1539,7 +1514,6 @@ io.on("connection", socket => {
 
         room.being = being;
         room.permanent = true;
-        room.expiresAt = null;
         room.topicMemory = {};
 
         let observation = "I notice a useful connection in this image";
@@ -2021,8 +1995,6 @@ socket.on("getRoomStatus", ({ deviceId }) => {
 
         displayName: room.displayName,
 
-        expiresAt: room.expiresAt,
-
         permanent: !!room.permanent,
 
         being: room.being || null,
@@ -2049,7 +2021,7 @@ console.log("ROOMS:", Object.keys(rooms));
       rooms[roomId];
 
 if (!room) {
-    socket.emit("roomExpired");
+    socket.emit("roomUnavailable");
     return;
 }
 
@@ -2092,8 +2064,6 @@ socket.emit("roomCreated", {
     imageDataUrl: null,
 
     messages: [],
-
-    expiresAt: room.expiresAt,
 
     isOwner,
 
@@ -2699,7 +2669,6 @@ nullCard: null,
 
         createdAt: Date.now(),
 
-        expiresAt: null
     };
 
     await trackEvent(
@@ -2744,12 +2713,10 @@ deviceRooms[deviceId] = roomId;
         coreTheme;
     room.topicMemory = {};
     room.permanent = true;
-    room.expiresAt = null;
 
     if (selectedBeing) {
       room.being = selectedBeing;
       room.permanent = true;
-      room.expiresAt = null;
     }
 
 }
@@ -2792,8 +2759,6 @@ socket.emit("roomCreated", {
     imageDataUrl: null,
 
     messages: rooms[roomId].messages,
-
-    expiresAt: rooms[roomId].expiresAt,
 
     isOwner,
 
