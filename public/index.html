@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.46 (2026-07-21)
+  - Removes legacy high-specificity borders after every screen render
+  - Replaces outlined room actions with darker-gray filled hierarchy
+
   v10.1.45 (2026-07-21)
   - Applies the final black, white, gray, and single-blue system across the app
   - Removes visible outlines and borders from interactive surfaces and cards
@@ -15422,6 +15426,58 @@ html body #publicNullsCards .loveIcon{
   filter:none!important;
 }
 
+/* v10.1.46 — filled hierarchy replaces every remaining outlined room surface. */
+html body #roomHeader{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:#f6f8fa!important;
+}
+html body #roomHeader button,
+html body #closeRoom,
+html body #shareRoomBtn{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+html body #roomMessages .unifiedResultActions .chatOpenAction,
+html body #roomMessages .humanResultActions .chatOpenAction,
+html body #roomMessages .chatOpenAction{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:#57606a!important;
+  color:#fff!important;
+}
+html body #roomMessages .systemPerspectiveActions button,
+html body .systemStateActions button{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:#57606a!important;
+  color:#fff!important;
+}
+html body #roomMessages .systemPerspectiveActions .systemPerspectivePrimary,
+html body .systemStateButtonPrimary{
+  background:#0969da!important;
+  color:#fff!important;
+}
 </style>
+<script>
+(function enforceCompletelyBorderlessApp(){
+  const clean = root => {
+    if(!root || root.nodeType !== 1) return;
+    const elements = [root,...Array.from(root.querySelectorAll ? root.querySelectorAll('*') : [])];
+    elements.forEach(element => {
+      element.style.setProperty('border','0','important');
+      element.style.setProperty('outline','0','important');
+    });
+  };
+  clean(document.body);
+  new MutationObserver(records => {
+    records.forEach(record => record.addedNodes.forEach(node => clean(node)));
+  }).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
 </body>
 </html>
