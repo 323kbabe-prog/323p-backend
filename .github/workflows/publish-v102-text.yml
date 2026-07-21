@@ -1,0 +1,34 @@
+name: Publish ASK.CAMERA v10.2.0 text copies
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-v102-text.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create complete text copies
+        run: |
+          mkdir -p release-files
+          cp public/index.html release-files/public-index-v10.2.0.txt
+          cp server.js release-files/server-v10.2.0.txt
+          cp supabase/migrations/20260721_add_human_connection_keywords.sql release-files/supabase-migration-v10.2.0.txt
+          test "$(tail -n 1 release-files/public-index-v10.2.0.txt)" = '</html>'
+      - name: Commit text copies
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release-files
+          git rm .github/workflows/publish-v102-text.yml
+          git commit -m 'Add complete v10.2.0 text downloads'
+          git push origin main
