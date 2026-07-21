@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.54 (2026-07-21)
+  - Gives Create a HUMAN Card the shared HUMAN gradient
+  - Gives the HUMAN Cards help button a light-gray background with a black question mark
+
   v10.1.53 (2026-07-21)
   - Extends the existing creator-type selector into a role sub-list for every HUMAN category
   - Preserves keyword suggestions, custom keywords, bio generation, and existing profile editing
@@ -2380,7 +2384,7 @@ ASK.CAMERA – AI Camera Search
 <div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:92px 16px 24px;box-sizing:border-box;flex-direction:column;">
   <button id="aiBeingsBackBtn" onclick="returnFromHumanCards()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span></button>
   <div style="flex:0 0 auto;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button id="humanCardsHelpBtn" onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#f6f8fa;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
     <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a HUMAN, then add an image to open their private room.</div>
     <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:none;margin:0 0 18px;height:56px;min-height:56px;max-height:56px;box-sizing:border-box;border:1px solid #0969da;border-radius:0;background:#0969da;color:#fff;font-size:15px;font-weight:600;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create a HUMAN Card</span></button>
   </div>
@@ -13955,7 +13959,8 @@ Close
 (function cleanBracketedButtonLabels(){
   const primarySelector = '#createNullBtn,#takeCameraViewBtn,#createBeingSubmit,#continueToBeing,#changeHumanBtn,.systemStateButtonPrimary,.beingOpenButton,#roomImageActions button:first-child,#publishDialog button:last-child,#humanCardsGuide button:last-child,.roomRecoveryActions button:last-child';
   const guidanceSelector = '#uploadBtn,#dailyNullsBtn,#aiBeingsBtn,#publicNullsBtn,#shareRoomBtn,#beingQrBtn,.beingShareButton,.beingQrShareButton,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn';
-  const humanGradientSelector = '#shareRoomBtn,#modeBar #aiBeingsBtn';
+  const humanGradientSelector = '#shareRoomBtn,#modeBar #aiBeingsBtn,#openCreateBeingBtn';
+  const humanHelpSelector = '#humanCardsHelpBtn';
   const destructiveSelector = '.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin';
   const clean = root => {
     if(!root || root.nodeType !== 1) return;
@@ -13969,6 +13974,10 @@ Close
       button.style.setProperty('border','0','important');
       if(button.matches(humanGradientSelector)){
         button.style.setProperty('background','linear-gradient(135deg,#0969da 0%,#8250df 50%,#2da44e 100%)','important');
+        button.style.setProperty('color','#111','important');
+        button.style.setProperty('border-color','transparent','important');
+      }else if(button.matches(humanHelpSelector)){
+        button.style.setProperty('background','#f6f8fa','important');
         button.style.setProperty('color','#111','important');
         button.style.setProperty('border-color','transparent','important');
       }else if(button.closest('#modeBar')){
@@ -15415,6 +15424,19 @@ html body #roomHeader #shareRoomBtn::after{
 }
 html body #modeBar #aiBeingsBtn,
 html body #modeBar #aiBeingsBtn *{
+  color:#111!important;
+}
+
+/* v10.1.54 — HUMAN Cards creation and help hierarchy. */
+html body #aiBeingsScreen #openCreateBeingBtn{
+  background:linear-gradient(135deg,#0969da 0%,#8250df 50%,#2da44e 100%)!important;
+  color:#111!important;
+}
+html body #aiBeingsScreen #openCreateBeingBtn *{
+  color:#111!important;
+}
+html body #aiBeingsScreen #humanCardsHelpBtn{
+  background:#f6f8fa!important;
   color:#111!important;
 }
 
