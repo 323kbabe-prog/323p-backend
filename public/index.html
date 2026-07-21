@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.9 (2026-07-22)
+  - Keeps one ASK.CAMERA title during startup instead of rendering it again on the Free Trial camera stage
+  - Prefixes each Daily perspective label with its category
+  - Uses one clear READ ARTICLE action and suppresses the legacy duplicate article label
+
   v10.2.8 (2026-07-22)
   - Aligns Daily card language with Image Connect and Meaningful Connections
   - Keeps each verified article headline unchanged while replacing the old internet-signal framing
@@ -1258,10 +1263,9 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeStartupTop{align-self:start!important;}
 #homeStartupProductRow{display:grid!important;grid-template-columns:minmax(0,1fr) 40px!important;align-items:start!important;gap:16px!important;}
 #homeStartupTextFrame{min-width:0!important;max-width:100%!important;}
-#homeStartupProductName{font-size:14px!important;line-height:1.2!important;font-weight:600!important;letter-spacing:.01em!important;color:#1f2328!important;}
 #homeStartupRefresh{flex:0 0 40px!important;width:40px!important;height:40px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid #f6f8fa!important;border-radius:0!important;background:#f6f8fa!important;color:#1f2328!important;box-shadow:none!important;}
 #homeStartupRefresh svg{width:19px!important;height:19px!important;fill:currentColor!important;}
-#homeStartupTitle{max-width:100%!important;margin-top:14px!important;font-size:clamp(22px,5.3vw,25px)!important;line-height:1.18!important;font-weight:600!important;letter-spacing:-.02em!important;color:#1f2328!important;overflow-wrap:anywhere!important;}
+#homeStartupTitle{max-width:100%!important;margin-top:0!important;font-size:clamp(22px,5.3vw,25px)!important;line-height:1.18!important;font-weight:600!important;letter-spacing:-.02em!important;color:#1f2328!important;overflow-wrap:anywhere!important;}
 #homeCaptureStage{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:hidden!important;}
 #homeCaptureCard{position:relative!important;z-index:1!important;display:block!important;width:100%!important;height:100%!important;max-height:680px!important;min-height:0!important;margin:0 auto!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:1px solid #f6f8fa!important;box-shadow:none!important;overflow:hidden!important;}
 #homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;z-index:0!important;}
@@ -1346,7 +1350,7 @@ body.appBackdropActive #capturePreview{display:none!important;}
 @media(max-height:650px){
   #homeStartupLayer{gap:9px!important;padding-top:max(10px,env(safe-area-inset-top))!important;padding-bottom:max(10px,env(safe-area-inset-bottom))!important;}
   #homeStartupBrand{padding-right:56px!important;}
-  #homeStartupTitle{margin-top:7px!important;font-size:18px!important;}
+  #homeStartupTitle{margin-top:0!important;font-size:18px!important;}
   #homeStartupRefresh{flex-basis:40px!important;width:40px!important;height:40px!important;}
   #homeCapturePrompt{bottom:8px!important;}
   #homeTakePicture{width:54px!important;height:54px!important;}
@@ -12455,7 +12459,7 @@ font-weight:900;
 opacity:.5;
 "
 >
-DAILY CAMERA PERSPECTIVE
+${String(card.category || "DAILY").toUpperCase()} · DAILY CAMERA PERSPECTIVE
 </div>
 
 <div
@@ -12502,7 +12506,7 @@ display:flex;
 justify-content:flex-end;
 "
 >
-Explore this connection
+READ ARTICLE
 </div>
 
 <img
@@ -13799,7 +13803,6 @@ function ensureCanonicalHomeExperience(){
       <header id="homeStartupTop" class="homeStartupRail">
         <div id="homeStartupProductRow">
           <div id="homeStartupTextFrame">
-            <div id="homeStartupProductName">ASK.CAMERA</div>
             <div id="homeStartupTitle">See where this image connects you.</div>
           </div>
           <button id="homeStartupRefresh" type="button" aria-label="Refresh camera" onclick="window.location.reload()">
@@ -15965,19 +15968,6 @@ html body img.uiThumbnail{
   border:2px solid #d0d7de!important;
   outline:0!important;
 }
-html body #homeStartupProductName{
-  margin:0!important;
-  padding:0!important;
-  color:#24292f!important;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
-  font-size:32px!important;
-  font-weight:900!important;
-  line-height:1!important;
-  letter-spacing:1px!important;
-  text-align:left!important;
-  -webkit-text-size-adjust:none!important;
-  text-size-adjust:none!important;
-}
 html body .scrollMoreHint{
   position:fixed!important;
   left:50%!important;
@@ -16127,6 +16117,10 @@ html body #dailyNullsCards .dailyCardRead{
   color:#0969da!important;
   font-size:10px!important;
   line-height:1.2!important;
+}
+html body #dailyNullsCards .dailyCardRead::after{
+  content:none!important;
+  display:none!important;
 }
 html body #dailyNullsCards .dailyCardImage{
   flex:1 1 0!important;
