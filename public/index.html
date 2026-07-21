@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.35 (2026-07-21)
+  - Places the selected image directly beside the HUMAN image with a balanced gap
+
   v10.1.34 (2026-07-21)
   - Keeps the three-button gradient navigation on the home screen only
 
@@ -15251,6 +15254,18 @@ html body #modeBar #humanCardsThumbs{
   min-width:0!important;
   max-width:44px!important;
   overflow:hidden!important;
+}
+
+/* v10.1.35 — keep arrival images together instead of dividing the full row in half. */
+#roomMessages.perspectiveSwipeThread .perspectiveArrivalMedia{
+  justify-content:flex-start!important;
+  gap:12px!important;
+}
+#roomMessages.perspectiveSwipeThread .perspectiveArrivalHuman,
+#roomMessages.perspectiveSwipeThread .perspectiveArrivalImage{
+  width:auto!important;
+  max-width:calc(50% - 6px)!important;
+  flex:0 1 auto!important;
 }
 </style>
 </body>
