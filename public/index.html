@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.55 (2026-07-21)
+  - Applies the approved centered startup typography and colors on the first browser paint
+  - Prevents the opening text from briefly appearing in the legacy/default style
+
   v10.1.54 (2026-07-21)
   - Gives Create a HUMAN Card the shared HUMAN gradient
   - Gives the HUMAN Cards help button a light-gray background with a black question mark
@@ -1608,8 +1612,8 @@ touch-action:manipulation;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  background:#000;
-  color:#fff;
+  background:#fff;
+  color:#24292f;
   opacity:1;
   visibility:visible;
   transition:opacity .28s ease, visibility .28s ease;
@@ -1638,13 +1642,33 @@ touch-action:manipulation;
   width:7px;
   height:7px;
   border-radius:50%;
-  background:#fff;
+  background:#57606a;
   opacity:.25;
   animation:appStartupPulse 1s infinite ease-in-out;
 }
 
 .appStartupDots span:nth-child(2){ animation-delay:.16s; }
 .appStartupDots span:nth-child(3){ animation-delay:.32s; }
+
+#appStartupLoader .appStartupQuote{
+  width:min(560px,calc(100% - 48px));
+  margin-top:24px;
+  color:#57606a;
+  font-size:19px;
+  font-weight:400;
+  line-height:1.4;
+  text-align:center;
+}
+
+#appStartupLoader .appStartupGoogle{
+  width:min(560px,calc(100% - 48px));
+  margin-top:8px;
+  color:#8c959f;
+  font-size:15px;
+  font-weight:600;
+  line-height:1.35;
+  text-align:center;
+}
 
 @keyframes appStartupPulse{
   0%, 70%, 100%{ opacity:.25; transform:scale(.8); }
