@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.58 (2026-07-21)
+  - Removes the startup three-dot box from the earliest browser paint
+  - Prevents legacy boxed-loader rules from appearing for even one frame
+
   v10.1.57 (2026-07-21)
   - Locks startup title, dots, quote, and Google line into fixed layout slots
   - Keeps every text element motionless while only the three dots animate
@@ -1653,6 +1657,18 @@ touch-action:manipulation;
   display:flex;
   gap:7px;
   margin-top:18px;
+}
+
+html body #appStartupLoader .appStartupDots{
+  width:max-content!important;
+  min-width:0!important;
+  height:7px!important;
+  min-height:7px!important;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
 }
 
 .appStartupDots span{
