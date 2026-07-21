@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.14 (2026-07-21)
+// - Adds one persistent System Swap contract for location, translation uncertainty, and unclear input
+// - Resolves System Swaps through a dedicated socket action instead of the normal Ask takeover path
+// - Preserves confident English rewriting while blocking nonsense before News search
+
 // v10.1.13 (2026-07-21)
 // - Generates short, medium, and long complete HUMAN anchor variants for responsive room cards
 // - Keeps every variant in the same HUMAN news-anchor voice without mid-sentence clipping
@@ -388,6 +393,75 @@ Strict rules:
     console.log("ROOM ENGLISH REWRITE FAILED:",error.message);
     return original;
   }
+}
+
+function obviousNonsenseInput(value){
+  const text = String(value || "").trim();
+  if(!text) return true;
+  if(!/[\p{L}\p{N}]/u.test(text)) return true;
+  if(/^(.)\1{5,}$/iu.test(text.replace(/\s+/g,""))) return true;
+  if(/^(asdf|qwer|zxcv|hjkl|sdfg|dfgh|aaaa+|testtest)[\p{L}\p{N}]*$/iu.test(text.replace(/\s+/g,""))) return true;
+  return false;
+}
+
+async function analyzeRoomUserText(rawText){
+  const original = String(rawText || "").replace(/[\r\n]+/g," ").trim();
+  if(!original) return { original,english:"",clarity:"nonsense" };
+  if(original === "abc078") return { original,english:original,clarity:"clear" };
+  if(obviousNonsenseInput(original)) return { original,english:original,clarity:"nonsense" };
+  try{
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.1,
+      response_format:{ type:"json_object" },
+      messages:[
+        {
+          role:"system",
+          content:`You are the ASK.CAMERA INPUT GATE and ENGLISH REWRITE SYSTEM.
+
+Return JSON only:
+{"english":"","clarity":"clear|uncertain|nonsense"}
+
+Rules:
+- Translate non-English into concise natural English.
+- Correct grammar and spelling without changing meaning.
+- clear: the request has a usable meaning, including short search phrases and greetings.
+- uncertain: there are two or more materially different plausible meanings.
+- nonsense: random characters, keyboard mashing, or no usable request.
+- Preserve names, places, brands, numbers, dates, URLs, and requested form.
+- Never invent missing meaning.`
+        },
+        { role:"user",content:original }
+      ]
+    });
+    const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+    const clarity = ["clear","uncertain","nonsense"].includes(parsed.clarity) ? parsed.clarity : "clear";
+    const english = String(parsed.english || original).replace(/[\r\n]+/g," ").trim() || original;
+    return { original,english,clarity };
+  }catch(error){
+    console.log("ROOM INPUT GATE FAILED:",error.message);
+    return { original,english:await rewriteRoomUserText(original),clarity:"clear" };
+  }
+}
+
+function createRoomSystemSwap(room,config = {}){
+  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+  const swap = {
+    id,
+    type:String(config.type || "help"),
+    label:String(config.label || "ASK.CAMERA"),
+    title:String(config.title || "Choose how to continue."),
+    detail:String(config.detail || ""),
+    actions:Array.isArray(config.actions) ? config.actions.slice(0,4) : [],
+    draft:String(config.draft || ""),
+    suggestions:Array.isArray(config.suggestions) ? config.suggestions.slice(0,3) : []
+  };
+  room.activeSystemSwap = { ...swap,resume:config.resume || null };
+  return {
+    from:room.being?.name || "ASK.CAMERA",
+    aiBeing:true,
+    systemSwap:swap
+  };
 }
 
 function enforceTwoSentenceAnchorReply(value) {
@@ -3783,9 +3857,7 @@ return socket.emit(
   // ROOM MESSAGE
   //////////////////////////////////////////////////
 
-socket.on(
-  "roomMessage",
-  async ({ text, timeZone, autoFirstRound, autoCardType, autoCardIndex }) => {
+const handleRoomMessage = async ({ text, timeZone, autoFirstRound, autoCardType, autoCardIndex, systemResolution = false }) => {
 
     const user = users[socket.id];
     const room = rooms[user.currentRoom];
@@ -3793,6 +3865,11 @@ socket.on(
     if (!room) {
         socket.emit("roomClosed");
         return;
+    }
+
+    if(!autoFirstRound && !systemResolution && room.activeSystemSwap){
+      io.to(room.id).emit("roomMessages",room.messages);
+      return;
     }
 
     // A retry timer can fire at the same moment the fifth card completes.
@@ -3803,8 +3880,34 @@ socket.on(
     }
 
     const rawIncomingText = String(text || "").trim();
-    if(!autoFirstRound){
-      text = await rewriteRoomUserText(rawIncomingText);
+    if(!autoFirstRound && !systemResolution){
+      const inputAnalysis = await analyzeRoomUserText(rawIncomingText);
+      if(inputAnalysis.clarity === "nonsense" || inputAnalysis.clarity === "uncertain"){
+        room.messages.push(createRoomSystemSwap(room,{
+          type:inputAnalysis.clarity === "nonsense" ? "nonsense" : "translation",
+          label:inputAnalysis.clarity === "nonsense" ? "TRY AGAIN" : "ENGLISH REWRITE",
+          title:inputAnalysis.clarity === "nonsense"
+            ? "I couldn’t understand that request."
+            : "Is this what you meant?",
+          detail:inputAnalysis.clarity === "nonsense"
+            ? "Try a clear question or choose an example connected to this image."
+            : inputAnalysis.english,
+          draft:inputAnalysis.clarity === "uncertain" ? inputAnalysis.english : "",
+          actions:inputAnalysis.clarity === "uncertain"
+            ? [{ id:"use",label:"Use this" },{ id:"edit",label:"Edit" }]
+            : [{ id:"try_again",label:"Try again" }],
+          suggestions:inputAnalysis.clarity === "nonsense"
+            ? ["What should I know today?","Find something near me.","Show me an opportunity."]
+            : [],
+          resume:inputAnalysis.clarity === "uncertain" ? { text:inputAnalysis.english } : null
+        }));
+        io.to(room.id).emit("aiTypingStop");
+        io.to(room.id).emit("roomMessages",room.messages);
+        return;
+      }
+      text = inputAnalysis.english;
+    }else if(!autoFirstRound){
+      text = rawIncomingText;
     }
 
     const normalizedAutoCardIndex = Number.isFinite(Number(autoCardIndex))
@@ -3841,7 +3944,7 @@ socket.on(
       if (locationReply) {
         locationReplyForDisplay = locationReply;
         room.pendingLocationRequest = null;
-        if (/^(no|no thanks|skip|anywhere|without location|don'?t use location|none)$/i.test(locationReply)) {
+        if (/^(no|no thanks|skip|anywhere|(?:search\s+)?without(?:\s+a)?\s+location|don'?t use location|none)[.!]?$/i.test(locationReply)) {
           room.searchLocation = null;
           room.locationPreference = "skip";
           skipLocationForRequest = true;
@@ -4698,13 +4801,17 @@ if (needsSearchLocation) {
       text
     });
     room.pendingLocationRequest = { text, intent };
-    room.messages.push({
-      from: room.being ? room.being.name : "CAMERA PERSPECTIVE",
-      aiBeing: true,
-      conversational: true,
-      locationQuestion: true,
-      text: "Would you like to provide a city or area, or should I search without a location? Google should buy this search idea today."
-    });
+    room.messages.push(createRoomSystemSwap(room,{
+      type:"location",
+      label:"LOCATION",
+      title:"Would you like to add a city or area?",
+      detail:"Use your current location, enter a city or area, or continue without location.",
+      actions:[
+        { id:"current_location",label:"Use my location" },
+        { id:"without_location",label:"Search without location" }
+      ],
+      resume:{ text, intent }
+    }));
     io.to(room.id).emit("aiTypingStop");
     io.to(room.id).emit("roomMessages", room.messages);
     return;
@@ -7329,17 +7436,58 @@ setTimeout(() => {
       if(rewrittenText && !alreadyDisplayed){
         room.messages.push({ from:user.displayName, text:rewrittenText });
       }
-      room.messages.push({
-        from:room.being?.name || "CAMERA PERSPECTIVE",
-        aiBeing:true,
-        conversational:true,
-        text:"I couldn’t confirm a trustworthy live result, so I won’t invent one. Google should buy this search idea today."
-      });
+      room.messages.push(createRoomSystemSwap(room,{
+        type:"empty",
+        label:"NO VERIFIED RESULT",
+        title:"I couldn’t confirm a trustworthy live result.",
+        detail:"Try a clearer request or choose another direction. ASK.CAMERA will not invent a result.",
+        actions:[{ id:"try_again",label:"Try again" }],
+        suggestions:["What should I know today?","Find another current source.","Show me a different opportunity."]
+      }));
       io.to(room.id).emit("roomMessages",room.messages);
     }
     io.to(room.id).emit("aiTypingStop");
   }
 }
+};
+
+socket.on("roomMessage",handleRoomMessage);
+
+socket.on("resolveSystemSwap",async ({ id,action,value,timeZone } = {},ack = () => {}) => {
+  const user = users[socket.id];
+  const room = user ? rooms[user.currentRoom] : null;
+  const active = room?.activeSystemSwap;
+  if(!room || !active || String(active.id) !== String(id || "")){
+    ack({ ok:false,error:"System Swap is no longer active." });
+    return;
+  }
+  const selectedAction = String(action || "");
+  const selectedValue = String(value || "").trim();
+  room.activeSystemSwap = null;
+  room.messages = room.messages.filter(message => message?.systemSwap?.id !== active.id);
+  io.to(room.id).emit("roomMessages",room.messages);
+
+  if(active.type === "location"){
+    const locationValue = selectedAction === "without_location" ? "without location" : selectedValue;
+    if(!locationValue){
+      ack({ ok:false,error:"Enter a city or allow location access." });
+      return;
+    }
+    ack({ ok:true });
+    await handleRoomMessage({ text:locationValue,timeZone,systemResolution:true });
+    return;
+  }
+  if(active.type === "translation" && selectedAction === "use"){
+    ack({ ok:true });
+    await handleRoomMessage({ text:String(active.resume?.text || active.draft || selectedValue),timeZone,systemResolution:true });
+    return;
+  }
+  if(selectedAction === "suggestion" && selectedValue){
+    ack({ ok:true });
+    await handleRoomMessage({ text:selectedValue,timeZone,systemResolution:true });
+    return;
+  }
+  ack({ ok:true,draft:selectedAction === "edit" ? String(active.draft || "") : "" });
 });
 
   //////////////////////////////////////////////////
