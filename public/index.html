@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.12 (2026-07-22)
+  - Adds name-based FIND HUMAN search at the top of HUMAN Cards
+  - Shows every matching HUMAN and opens the selected card without a password
+  - Keeps Management Password protection unchanged for editing and deleting
+
   v10.2.11 (2026-07-22)
   - Removes the separate startup ASK.CAMERA title so the Home hero is the only visible product title
   - Keeps the existing startup dots and initialization timing without a title-size transition
@@ -2505,6 +2510,11 @@ ASK.CAMERA — The AI That Connects Humans
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button id="humanCardsHelpBtn" onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#f6f8fa;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
     <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a HUMAN, then add an image to open their private room.</div>
+    <form id="findHumanForm" onsubmit="findHumanByName(event)" style="display:flex;width:100%;gap:8px;margin:0 0 10px;">
+      <input id="findHumanName" type="search" autocomplete="name" placeholder="Enter a HUMAN name" aria-label="Enter a HUMAN name" oninput="handleHumanNameSearch(this.value)" style="flex:1 1 auto;min-width:0;height:44px;border:0;border-radius:0;background:#eaeeef;color:#24292f;padding:0 12px;font-size:14px;">
+      <button id="findHumanBtn" type="submit" style="flex:0 0 auto;height:44px;border:0;border-radius:0;background:#57606a;color:#fff;padding:0 16px;font-size:13px;font-weight:600;">FIND HUMAN</button>
+    </form>
+    <div id="findHumanStatus" aria-live="polite" style="display:none;margin:-2px 0 10px;font-size:12px;line-height:1.35;color:#57606a;"></div>
     <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:none;margin:0 0 18px;height:56px;min-height:56px;max-height:56px;box-sizing:border-box;border:1px solid #0969da;border-radius:0;background:#0969da;color:#fff;font-size:15px;font-weight:600;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create a HUMAN Card</span></button>
   </div>
   <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
@@ -12827,6 +12837,7 @@ function closeHumanCardsGuide(){
 const AI_BEINGS_API = "https://three23p-backend.onrender.com";
 let humanCardsCanSelect = false;
 let humanCardsEntryMode = "home";
+let loadedHumanCards = [];
 
 function escapeBeingText(value){
   return String(value || "")
@@ -12905,7 +12916,26 @@ async function loadAIBeings(){
     const beings = await response.json();
     if(!response.ok) throw new Error(beings.error || "Could not load HUMAN.");
 
-    holder.innerHTML = beings.map(being => `
+    loadedHumanCards = Array.isArray(beings) ? beings : [];
+    renderHumanCards(loadedHumanCards);
+    const searchInput = document.getElementById("findHumanName");
+    if(searchInput) searchInput.value = "";
+    updateFindHumanStatus("");
+    loadHumanCardThumbnails();
+  }catch(error){
+    loadedHumanCards = [];
+    holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:850;">HUMAN Cards could not load</div><div style="margin-top:8px;font-size:13px;line-height:1.45;color:#666;">${escapeBeingText(error.message)}</div><button onclick="loadAIBeings()" style="width:100%;height:44px;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">Try again</button></div>`;
+  }
+}
+
+function renderHumanCards(beings){
+  const holder = document.getElementById("aiBeingsCards");
+  const canOpenHumanRoom = humanCardsCanSelect;
+  if(!beings.length){
+    holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:600;">No matching HUMAN found</div><div style="margin-top:6px;font-size:13px;line-height:1.45;color:#57606a;">Try the full name or a different spelling.</div></div>`;
+    return;
+  }
+  holder.innerHTML = beings.map(being => `
       <article class="beingCard beingCardV2">
         <div class="beingCardMain">
           <img class="beingCardPhoto" src="${being.photo}" alt="${escapeBeingText(being.name)}" onclick="showHumanPhoto(this.src,this.alt)">
@@ -12932,10 +12962,49 @@ async function loadAIBeings(){
         </div>
       </article>
     `).join("");
-    loadHumanCardThumbnails();
-  }catch(error){
-    holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:850;">HUMAN Cards could not load</div><div style="margin-top:8px;font-size:13px;line-height:1.45;color:#666;">${escapeBeingText(error.message)}</div><button onclick="loadAIBeings()" style="width:100%;height:44px;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">Try again</button></div>`;
+}
+
+function normalizedHumanName(value){
+  return String(value || "").trim().toLocaleLowerCase();
+}
+
+function updateFindHumanStatus(message){
+  const status = document.getElementById("findHumanStatus");
+  if(!status) return;
+  status.textContent = message;
+  status.style.display = message ? "block" : "none";
+}
+
+function filterHumansByName(value){
+  const query = normalizedHumanName(value);
+  if(!query) return loadedHumanCards;
+  return loadedHumanCards.filter(being => normalizedHumanName(being.name).includes(query));
+}
+
+function handleHumanNameSearch(value){
+  if(!String(value || "").trim()){
+    renderHumanCards(loadedHumanCards);
+    updateFindHumanStatus("");
+    return;
   }
+  const matches = filterHumansByName(value);
+  renderHumanCards(matches);
+  updateFindHumanStatus(`${matches.length} matching HUMAN${matches.length === 1 ? "" : "s"}`);
+}
+
+function findHumanByName(event){
+  if(event) event.preventDefault();
+  const input = document.getElementById("findHumanName");
+  const query = String(input?.value || "").trim();
+  if(!query){
+    renderHumanCards(loadedHumanCards);
+    updateFindHumanStatus("Enter the name used on the HUMAN Card.");
+    input?.focus();
+    return;
+  }
+  const matches = filterHumansByName(query);
+  renderHumanCards(matches);
+  updateFindHumanStatus(`${matches.length} matching HUMAN${matches.length === 1 ? "" : "s"}`);
 }
 
 async function shareHumanCard(id,name = "HUMAN"){
