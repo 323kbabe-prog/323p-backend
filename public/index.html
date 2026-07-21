@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.38 (2026-07-21)
+  - Replaces the home navigation gradients with solid black buttons
+
   v10.1.37 (2026-07-21)
   - Prevents button normalization from replacing the home navigation gradients
 
@@ -14049,14 +14052,9 @@ Close
       button.style.setProperty('text-shadow','none','important');
       button.style.setProperty('border','1px solid #8c959f','important');
       if(button.closest('#modeBar')){
-        const gradient = button.id === 'createNullBtn'
-          ? 'linear-gradient(105deg,#3b0764 0%,#6d28d9 100%)'
-          : button.id === 'dailyNullsBtn'
-            ? 'linear-gradient(105deg,#6d28d9 0%,#0891b2 100%)'
-            : 'linear-gradient(105deg,#0891b2 0%,#86efac 100%)';
-        button.style.setProperty('background',gradient,'important');
-        button.style.setProperty('color',button.id === 'aiBeingsBtn' ? '#06281e' : '#fff','important');
-        button.style.setProperty('border-color','transparent','important');
+        button.style.setProperty('background','#111','important');
+        button.style.setProperty('color','#fff','important');
+        button.style.setProperty('border-color','#111','important');
       }else if(button.matches(destructiveSelector)){
         button.style.setProperty('background','#fff','important');
         button.style.setProperty('color','#cf222e','important');
@@ -15255,15 +15253,11 @@ html body #modeBar #aiBeingsBtn{
   overflow:hidden!important;
   color:#fff!important;
 }
-html body #modeBar #createNullBtn{
-  background:linear-gradient(105deg,#3b0764 0%,#6d28d9 100%)!important;
-}
-html body #modeBar #dailyNullsBtn{
-  background:linear-gradient(105deg,#6d28d9 0%,#0891b2 100%)!important;
-}
+html body #modeBar #createNullBtn,
+html body #modeBar #dailyNullsBtn,
 html body #modeBar #aiBeingsBtn{
-  background:linear-gradient(105deg,#0891b2 0%,#86efac 100%)!important;
-  color:#06281e!important;
+  background:#111!important;
+  color:#fff!important;
 }
 html body #modeBar #humanCardsThumbs{
   min-width:0!important;
