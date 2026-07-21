@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.42 (2026-07-21)
+  - Makes the centered live-camera layer transparent so the page remains visible behind it
+
   v10.1.41 (2026-07-21)
   - Forces Public-card heart indicators to red
   - Darkens Public-card neutral gray surfaces and counters
@@ -15289,6 +15292,13 @@ html body #modeBar #humanCardsThumbs{
   border-radius:0!important;
   clip-path:none!important;
 }
+/* v10.1.42 — preserve the floating camera size while revealing the page behind it. */
+html body #roomFloatingCameraLayer{
+  background:transparent!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
 /* v10.1.41 — Public cards use a true red heart and stronger neutral grays. */
 html body #publicNullsCards .loveIcon,
 html body #publicNullsCards .loveBtn,
