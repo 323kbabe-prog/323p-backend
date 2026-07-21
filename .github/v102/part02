@@ -1,0 +1,41 @@
+:document.getElementById("beingWord2").value.trim(),
+    word3:document.getElementById("beingWord3").value.trim(),
+    connection1,
+    connection2,
+    connection3
+  };
+}'''
+front = replace_once(front, bio_old, bio_new, "bio inputs")
+
+front = front.replace('["beingName","beingChoice","beingCategory","beingCreatorType","beingCustomRole","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]', '["beingName","beingChoice","beingCategory","beingCreatorType","beingCustomRole","beingWord1","beingWord2","beingWord3","beingConnection1","beingConnection2","beingConnection3","beingPhone","beingPassword","beingPasswordConfirm"]')
+front = front.replace('    document.getElementById("beingWord3").value = being.word3 || "";\n    renderBeingKeywordSuggestions();', '    document.getElementById("beingWord3").value = being.word3 || "";\n    document.getElementById("beingConnection1").value = being.connection1 || "";\n    document.getElementById("beingConnection2").value = being.connection2 || "";\n    document.getElementById("beingConnection3").value = being.connection3 || "";\n    renderBeingKeywordSuggestions();')
+front = front.replace('    word3: document.getElementById("beingWord3").value.trim(),\n    phone:', '    word3: document.getElementById("beingWord3").value.trim(),\n    connection1: document.getElementById("beingConnection1").value.trim(),\n    connection2: document.getElementById("beingConnection2").value.trim(),\n    connection3: document.getElementById("beingConnection3").value.trim(),\n    phone:')
+front = front.replace('const requiredValues = [payload.name,payload.best_current_choice,payload.category,payload.word1,payload.word2,payload.word3];', 'const requiredValues = [payload.name,payload.best_current_choice,payload.category,payload.word1,payload.word2,payload.word3,payload.connection1,payload.connection2,payload.connection3];\n  const invalidConnection = [payload.connection1,payload.connection2,payload.connection3].find(value => !beingConnectionPhraseIsShort(value));\n  if(invalidConnection){ alert("Each Connection Keyword must be a short object or place name with up to four words."); return; }')
+front = front.replace('''        <div class="beingCardWords">
+          ${[being.word1,being.word2,being.word3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
+        </div>''', '''        <div class="beingCardWords">
+          ${[being.word1,being.word2,being.word3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
+        </div>
+        <div class="beingCardBioLabel" style="margin-top:10px;">Connections</div>
+        <div class="beingCardWords beingCardConnections">
+          ${[being.connection1,being.connection2,being.connection3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
+        </div>''')
+
+front = front.replace("Each HUMAN Card opens one private HUMAN room for images, questions, and five-part connection briefings.", "Each HUMAN Card opens a private room where Image Connect discovers connections through that HUMAN’s personality, objects, places, and perspective.")
+front = front.replace("Choose a HUMAN after adding an image. That HUMAN acknowledges the image, provides five discovered connections, and answers your questions.", "Choose a HUMAN after adding an image. The image stays alive in the experience while the HUMAN guides the direction of each discovered connection.")
+
+runtime_script = r'''
+<script>
+(function applyV102GlobalWording(){
+  const exact = new Map([
+    ["Results","Connections"],
+    ["Search Results","Discovered Connections"],
+    ["Upload Image","Start Image Connect"],
+    ["Open Camera","Open Image Connect"],
+    ["I found this...","This image connects to..."],
+    ["Generating your business introduction…","Building your HUMAN introduction…"]
+  ]);
+  const cleanText = root => {
+    if(!root) return;
+    const walker = document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  
