@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.4 (2026-07-21)
+  - Uses a visible 2px neutral border for approved thumbnails throughout the app
+  - Shows an automatic Scroll for more cue only while modal content remains below the viewport
+  - Locks both opening-stage ASK.CAMERA titles to identical typography
+  - Reapplies the blurred live-camera home background after every screen, room, camera, and tab return
+
   v10.2.3 (2026-07-21)
   - Replaces background detection with one authoritative interactive-control palette
   - Assigns every static and dynamic button, button-like label, and form field a visible fill role
@@ -7648,7 +7654,7 @@ function renderConnectedHome(){
         <div id="connectedRoomCountdown" style="display:flex;align-items:center;justify-content:center;min-height:34px;padding:0 16px;border-radius:999px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);">PRIVATE ROOM</div>
         <div style="font-size:26px;font-weight:800;line-height:1.12;">YOUR ROOM<br>IS ACTIVE</div>
         <button onclick="openHomeRoom(event)" style="display:flex;align-items:center;gap:8px;width:100%;max-width:350px;min-height:62px;box-sizing:border-box;overflow:hidden;padding:8px 10px;border:none;border-radius:20px;background:#fff;color:#111;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.12);">
-          <img src="${standardThumbnail}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex:0 0 auto;${standardThumbnail ? "" : "display:none;"}">
+          <img class="uiThumbnail" src="${standardThumbnail}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex:0 0 auto;${standardThumbnail ? "" : "display:none;"}">
           <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">${escapeBeingText(JSON.parse(localStorage.getItem("selectedBeing") || "{}").name || "HUMAN ROOM")}</span>
           <span style="flex:0 0 auto;margin-left:auto;padding:8px 10px;border-radius:999px;background:#000;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;">RETURN TO ROOM</span>
         </button>
@@ -15871,6 +15877,53 @@ html body input[type="file"]::file-selector-button{
   font:600 13px Arial,sans-serif!important;
 }
 
+/* v10.2.4 — visible thumbnail tone, matched startup title, and overflow cue. */
+html body #publicNullsThumbs img,
+html body #humanCardsThumbs img,
+html body #roomThumbnail,
+html body #roomCameraThumbnail,
+html body #publishThumbnail,
+html body #publishImageThumbnail,
+html body img.uiThumbnail{
+  box-sizing:border-box!important;
+  border:2px solid #d0d7de!important;
+  outline:0!important;
+}
+html body #homeStartupProductName{
+  margin:0!important;
+  padding:0!important;
+  color:#24292f!important;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  font-size:32px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  letter-spacing:1px!important;
+  text-align:left!important;
+  -webkit-text-size-adjust:none!important;
+  text-size-adjust:none!important;
+}
+html body .scrollMoreHint{
+  position:fixed!important;
+  left:50%!important;
+  bottom:max(18px,env(safe-area-inset-bottom,0px))!important;
+  z-index:2147483647!important;
+  width:max-content!important;
+  max-width:calc(100vw - 48px)!important;
+  min-height:34px!important;
+  padding:8px 14px!important;
+  box-sizing:border-box!important;
+  transform:translateX(-50%)!important;
+  background:#eaeef2!important;
+  color:#57606a!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  font:600 12px/18px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  letter-spacing:.01em!important;
+  text-align:center!important;
+  pointer-events:none!important;
+}
+
 </style>
 <script>
 (function enforceCompletelyBorderlessApp(){
@@ -15878,9 +15931,9 @@ html body input[type="file"]::file-selector-button{
     if(!root || root.nodeType !== 1) return;
     const elements = [root,...Array.from(root.querySelectorAll ? root.querySelectorAll('*') : [])];
     elements.forEach(element => {
-      const isHomeThumbnail = element.matches && element.matches('#publicNullsThumbs img, #humanCardsThumbs img');
-      if(isHomeThumbnail){
-        element.style.setProperty('border','1px solid #d0d7de','important');
+      const isApprovedThumbnail = element.matches && element.matches('#publicNullsThumbs img,#humanCardsThumbs img,#roomThumbnail,#roomCameraThumbnail,#publishThumbnail,#publishImageThumbnail,img.uiThumbnail');
+      if(isApprovedThumbnail){
+        element.style.setProperty('border','2px solid #d0d7de','important');
       }else{
         element.style.setProperty('border','0','important');
       }
@@ -15974,6 +16027,87 @@ html body input[type="file"]::file-selector-button{
   document.addEventListener('change',event => {
     if(event.target && event.target.matches && event.target.matches(controlsSelector)) assign(event.target);
   },true);
+})();
+</script>
+
+<script>
+(function installOverflowGuidance(){
+  const modalIds = ['guidePopup','humanCardsGuide','publishDialog','beingRecoveryOverlay','beingQrOverlay'];
+  const update = modal => {
+    if(!modal) return;
+    const panel = Array.from(modal.children).find(child => child.nodeType === 1 && !child.classList.contains('scrollMoreHint'));
+    const hint = Array.from(modal.children).find(child => child.classList?.contains('scrollMoreHint'));
+    if(!panel || !hint) return;
+    const modalVisible = getComputedStyle(modal).display !== 'none';
+    const moreBelow = panel.scrollHeight > panel.clientHeight + 3 && panel.scrollTop + panel.clientHeight < panel.scrollHeight - 3;
+    hint.hidden = !modalVisible || !moreBelow;
+  };
+  const install = modal => {
+    if(!modal || modal.dataset.scrollGuidanceReady === 'true') return;
+    const panel = Array.from(modal.children).find(child => child.nodeType === 1);
+    if(!panel) return;
+    const hint = document.createElement('div');
+    hint.className = 'scrollMoreHint';
+    hint.textContent = 'Scroll for more ↓';
+    hint.hidden = true;
+    hint.setAttribute('aria-hidden','true');
+    modal.appendChild(hint);
+    modal.dataset.scrollGuidanceReady = 'true';
+    panel.addEventListener('scroll',() => update(modal),{passive:true});
+    if(typeof ResizeObserver === 'function') new ResizeObserver(() => update(modal)).observe(panel);
+    new MutationObserver(() => requestAnimationFrame(() => update(modal))).observe(panel,{childList:true,subtree:true,characterData:true});
+    new MutationObserver(() => requestAnimationFrame(() => update(modal))).observe(modal,{attributes:true,attributeFilter:['style','class','hidden']});
+    requestAnimationFrame(() => update(modal));
+  };
+  const installAll = () => modalIds.map(id => document.getElementById(id)).forEach(install);
+  installAll();
+  window.addEventListener('resize',() => modalIds.forEach(id => update(document.getElementById(id))),{passive:true});
+  document.addEventListener('click',() => requestAnimationFrame(() => modalIds.forEach(id => update(document.getElementById(id)))),true);
+})();
+</script>
+
+<script>
+(function keepHomeCameraBackdropBlurred(){
+  const secondaryIds = ['dailyNullsScreen','publicNullsScreen','aiBeingsScreen','createBeingScreen'];
+  let frame = 0;
+  const homeIsVisible = () => {
+    const camera = document.getElementById('cameraWrap');
+    const room = document.getElementById('roomOverlay');
+    if(!camera || !room || getComputedStyle(camera).display === 'none' || getComputedStyle(room).display === 'flex') return false;
+    return !secondaryIds.some(id => {
+      const screen = document.getElementById(id);
+      return screen && getComputedStyle(screen).display !== 'none';
+    });
+  };
+  const enforce = () => {
+    frame = 0;
+    if(!homeIsVisible()) return;
+    const camera = document.getElementById('cameraWrap');
+    const liveVideo = document.getElementById('video');
+    document.body.classList.add('appBackdropActive');
+    camera.style.setProperty('display','block','important');
+    if(liveVideo){
+      liveVideo.style.setProperty('filter','blur(24px) brightness(.82) saturate(1.9)','important');
+      liveVideo.style.setProperty('transform','scale(1.12)','important');
+      if(!liveVideo.srcObject && typeof ensureCameraStream === 'function') ensureCameraStream();
+    }
+  };
+  const schedule = () => {
+    if(frame) cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => { frame = requestAnimationFrame(enforce); });
+  };
+  ['roomOverlay','dailyNullsScreen','publicNullsScreen','aiBeingsScreen','createBeingScreen','helper']
+    .map(id => document.getElementById(id))
+    .filter(Boolean)
+    .forEach(element => new MutationObserver(schedule).observe(element,{attributes:true,attributeFilter:['style','class','hidden']}));
+  const liveVideo = document.getElementById('video');
+  if(liveVideo){
+    liveVideo.addEventListener('play',schedule);
+    liveVideo.addEventListener('loadedmetadata',schedule);
+  }
+  window.addEventListener('pageshow',schedule);
+  document.addEventListener('visibilitychange',() => { if(!document.hidden) schedule(); });
+  schedule();
 })();
 </script>
 
