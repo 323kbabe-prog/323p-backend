@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.1 (2026-07-22)
+// - Hard-routes clear venue requests such as coffee shops, restaurants, and hotels to Place
+// - Makes Search without location apply only to the current request instead of the whole room
+
 // v10.2.0 (2026-07-21)
 // - Adds three validated object-or-place Connection Keywords to every HUMAN
 // - Persists the new fields and uses them in bio generation and HUMAN connection context
@@ -4329,6 +4333,22 @@ if (hasRealEstateLanguage) {
   intent = "real_estate";
 }
 
+const placeIntentText = String(text || "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "");
+const hasPlaceVenueLanguage =
+  !autoFirstRound &&
+  /\b(coffee shop|coffeehouse|cafe|restaurant|ramen|bar|pub|hotel|hostel|museum|gallery|park|hospital|clinic|bakery|store|shop|market|mall|theater|theatre|cinema|gym|spa|salon|library|landmark|attraction)\b/i
+    .test(placeIntentText);
+
+if (
+  hasPlaceVenueLanguage &&
+  !hasRealEstateLanguage &&
+  !["shopping","jobs","music","real_estate"].includes(intent)
+) {
+  intent = "place";
+}
+
 // Only intents that need an external result continue into the card/search pipeline.
 // Every other request becomes a normal personality-driven conversation reply.
 const structuredCardIntents = new Set([
@@ -4760,18 +4780,11 @@ if (needsSearchLocation) {
   if (translatedLocation) {
     room.searchLocation = translatedLocation;
     room.locationPreference = "provided";
-  } else if (room.searchLocation) {
+  } else if (locationReplyForDisplay && room.searchLocation) {
     nullInput.location = room.searchLocation;
-    originalUserRequest = `${originalUserRequest} in ${room.searchLocation}`;
-    text = originalUserRequest;
-    interpretedIntent = `${interpretedIntent} in ${room.searchLocation}`.trim();
   } else if (
     !autoFirstRound &&
-    !skipLocationForRequest &&
-    !(
-      room.locationPreference === "skip" &&
-      !/\b(local|near me|nearby|in my area|around me)\b/i.test(originalUserRequest)
-    )
+    !skipLocationForRequest
   ) {
     room.messages.push({
       from: user.displayName,
