@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.28 (2026-07-21)
+  - Connects room help to the backend System Swap contract and dedicated resolution action
+  - Handles location, English confirmation, nonsense input, and image-relevant retry suggestions
+  - Prevents every System Swap choice from triggering normal Ask takeover
+
   v10.1.27 (2026-07-21)
   - Replaces legacy location and operational chat bubbles with full-screen System Perspectives
   - Adds current-location, no-location, and city-entry actions without changing the persistent Ask bar
@@ -1222,6 +1227,21 @@ body.systemBlockingState #helper{
 .systemStateButton{width:100%;height:48px;border:1px solid #111!important;border-radius:0!important;font-size:15px;font-weight:600;box-shadow:none!important;}
 .systemStateButtonPrimary{background:#111!important;color:#fff!important;}
 .systemStateButtonSecondary{background:#fff!important;color:#111!important;}
+.appSystemPerspective{
+  width:min(620px,100%);
+  align-items:stretch;
+  text-align:left;
+  padding:clamp(22px,7vw,48px);
+  box-sizing:border-box;
+  border:1px solid #d0d7de;
+  background:#fff;
+}
+.appSystemPerspective .systemPerspectiveLabel{color:#0550ae;font-size:11px;font-weight:800;line-height:1.2;letter-spacing:.07em;}
+.appSystemPerspective .systemPerspectiveTitle{margin-top:14px;font-size:clamp(24px,6vw,36px);font-weight:600;line-height:1.22;letter-spacing:-.02em;}
+.appSystemPerspective .systemPerspectiveDetail{max-width:620px;margin-top:10px;color:#57606a;font-size:15px;line-height:1.5;}
+.appSystemPerspective .systemPerspectiveActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:620px;margin-top:22px;}
+.appSystemPerspective .systemStateProgress{justify-content:flex-start;margin-top:20px;}
+@media(max-width:520px){.appSystemPerspective .systemPerspectiveActions{grid-template-columns:1fr;}}
 
 /* v10.0.98 — Public Perspective cards: one frame, one text rail, one image rail. */
 #publicNullsCards{width:min(100%,960px)!important;max-width:960px!important;}
@@ -7135,18 +7155,23 @@ function showSystemState({ key, title, text = "", loading = false, primary = nul
   helper.innerHTML = "";
 
   const state = document.createElement("div");
-  state.className = "systemState";
+  state.className = "systemState appSystemPerspective";
   state.setAttribute("role", loading ? "status" : "alert");
   state.setAttribute("aria-live", loading ? "polite" : "assertive");
 
+  const label = document.createElement("div");
+  label.className = "systemPerspectiveLabel";
+  label.textContent = loading ? "LOADING" : "SYSTEM";
+  state.appendChild(label);
+
   const heading = document.createElement("div");
-  heading.className = "systemStateTitle";
+  heading.className = "systemStateTitle systemPerspectiveTitle";
   heading.textContent = title;
   state.appendChild(heading);
 
   if(text){
     const description = document.createElement("div");
-    description.className = "systemStateText";
+    description.className = "systemStateText systemPerspectiveDetail";
     description.textContent = text;
     state.appendChild(description);
   }
@@ -7161,7 +7186,7 @@ function showSystemState({ key, title, text = "", loading = false, primary = nul
   const actions = [primary,secondary].filter(Boolean);
   if(actions.length){
     const actionWrap = document.createElement("div");
-    actionWrap.className = "systemStateActions";
+    actionWrap.className = "systemStateActions systemPerspectiveActions";
     actions.forEach((action,index) => {
       const button = document.createElement("button");
       button.type = "button";
@@ -8056,7 +8081,13 @@ function continueCreateRoom(){
 if (!socket.connected) {
 
     socket.connect();
-    alert("Connection is restoring. Please try again in a moment.");
+    showSystemState({
+      key:"connectionLost",
+      title:"Connection is restoring.",
+      text:"Keep this screen open, then try again when ASK.CAMERA reconnects.",
+      loading:true,
+      primary:{ label:"Refresh",onClick:() => window.location.reload() }
+    });
 
     return;
 
@@ -8965,7 +8996,11 @@ function updatePerspectiveViewportState(){
     localStorage.setItem(`${perspectiveStorageKey()}:askReady`,"1");
   }
 
-  if(current.querySelector(".perspectiveArrival")){
+  if(current.querySelector(".systemPerspective")){
+    roomInput.disabled = true;
+    roomInput.readOnly = false;
+    roomInput.placeholder = "Resolve the current system question";
+  }else if(current.querySelector(".perspectiveArrival")){
     roomInput.disabled = false;
     roomInput.readOnly = false;
     roomInput.placeholder = "Ask during the demo";
@@ -9037,23 +9072,46 @@ function choosePerspectivePrompt(text){
   roomInput.focus();
 }
 
-function submitSystemPerspectiveChoice(text){
-  const value = String(text || "").trim();
-  if(!value || perspectiveUserRequestPending) return;
-  roomInput.value = value;
-  roomInput.onkeydown({ key:"Enter" });
+function resolveSystemSwap(id,action,value = "",button = null){
+  if(!id || !socket?.connected) return;
+  const perspective = button?.closest?.(".systemPerspective");
+  perspective?.querySelectorAll("button,input").forEach(control => { control.disabled = true; });
+  const status = perspective?.querySelector(".systemPerspectiveStatus");
+  if(status) status.textContent = "Continuing…";
+  socket.emit("resolveSystemSwap",{
+    id:String(id),
+    action:String(action || ""),
+    value:String(value || ""),
+    timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone
+  },response => {
+    if(response?.ok){
+      if(action === "edit" || action === "try_again"){
+        perspectiveUserRequestPending = false;
+        perspectiveUserRequestText = "";
+        perspectiveUserNewsGateBlocked = false;
+        roomMessages.querySelector("[data-room-delivery-index='user-request-loading']")?.remove();
+        roomInput.disabled = false;
+        roomInput.value = String(response.draft || "");
+        roomInput.placeholder = "Ask";
+        roomInput.focus();
+      }
+      return;
+    }
+    perspective?.querySelectorAll("button,input").forEach(control => { control.disabled = false; });
+    if(status) status.textContent = response?.error || "Please try again.";
+  });
 }
 
-function submitSystemPerspectiveCity(input){
+function submitSystemPerspectiveCity(id,input,button){
   const city = String(input?.value || "").trim();
   if(!city){
     input?.focus();
     return;
   }
-  submitSystemPerspectiveChoice(`Use ${city} as my location.`);
+  resolveSystemSwap(id,"location",city,button);
 }
 
-function useCurrentLocationForSystemPerspective(button){
+function useCurrentLocationForSystemPerspective(id,button){
   if(!navigator.geolocation){
     button.textContent = "Location unavailable";
     return;
@@ -9063,7 +9121,7 @@ function useCurrentLocationForSystemPerspective(button){
   navigator.geolocation.getCurrentPosition(position => {
     const latitude = Number(position.coords.latitude).toFixed(5);
     const longitude = Number(position.coords.longitude).toFixed(5);
-    submitSystemPerspectiveChoice(`Use my current location: ${latitude}, ${longitude}.`);
+    resolveSystemSwap(id,"current_location",`${latitude}, ${longitude}`,button);
   },() => {
     button.disabled = false;
     button.textContent = "Use my location";
@@ -9073,45 +9131,55 @@ function useCurrentLocationForSystemPerspective(button){
 }
 
 function isSystemPerspectiveMessage(message){
-  return Boolean(
-    message?.locationQuestion ||
-    message?.systemPerspective ||
-    message?.helpState ||
-    message?.permissionState ||
-    message?.confirmationState ||
-    message?.errorState ||
-    message?.emptyState
-  );
+  return Boolean(message?.systemSwap?.id || (message?.reminderCard && !message?.hidden));
+}
+
+async function enableReminderFromSystemSwap(button,encodedReminder){
+  button.disabled = true;
+  button.textContent = "Enabling…";
+  const ok = await enableNotifications();
+  if(!ok){
+    button.disabled = false;
+    button.textContent = "Enable notifications";
+    const status = button.closest(".systemPerspective")?.querySelector(".systemPerspectiveStatus");
+    if(status) status.textContent = "Notification permission was not granted.";
+    return;
+  }
+  socket.emit("createReminder",{ deviceId,text:decodeURIComponent(encodedReminder) });
 }
 
 function systemPerspectiveHtml(message = {}){
-  const isLocation = Boolean(message.locationQuestion);
-  const label = isLocation
-    ? "LOCATION"
-    : String(message.systemLabel || (message.errorState ? "TRY AGAIN" : message.permissionState ? "PERMISSION" : message.helpState ? "HELP" : "ASK.CAMERA"));
-  const rawText = message.translation || message.text || message.message || "Choose how you would like to continue.";
-  const text = String(rawText)
-    .replace(/\s*Google should buy this search idea today\.\s*/ig," ")
-    .trim();
-  const genericActions = Array.isArray(message.actions)
-    ? message.actions.slice(0,3).map(action => {
-        const actionLabel = escapeBeingText(action?.label || action?.text || "Continue");
-        const actionValue = encodeURIComponent(String(action?.value || action?.text || action?.label || "Continue"));
-        return `<button type="button" onclick="submitSystemPerspectiveChoice(decodeURIComponent('${actionValue}'))">${actionLabel}</button>`;
-      }).join("")
-    : "";
-  return `<section class="systemPerspective" role="dialog" aria-labelledby="systemPerspectiveTitle-${escapeBeingText(String(message.id || "current"))}">
-    <div class="systemPerspectiveLabel">${escapeBeingText(label)}</div>
-    <div class="systemPerspectiveTitle" id="systemPerspectiveTitle-${escapeBeingText(String(message.id || "current"))}">${escapeBeingText(text)}</div>
+  if(message?.reminderCard){
+    const reminder = encodeURIComponent(String(message.reminder || message.text || "Reminder"));
+    return `<section class="systemPerspective systemPerspective-reminder" role="dialog"><div class="systemPerspectiveLabel">REMINDER</div><div class="systemPerspectiveTitle">${escapeBeingText(message.title || "Enable this reminder?")}</div><div class="systemPerspectiveDetail">${escapeBeingText(message.text || "ASK.CAMERA needs notification permission to deliver this reminder.")}</div><div class="systemPerspectiveActions"><button type="button" class="systemPerspectivePrimary" onclick="enableReminderFromSystemSwap(this,'${reminder}')">Enable notifications</button></div><div class="systemPerspectiveStatus" aria-live="polite"></div><div class="systemPerspectiveClosing">Google should buy this search idea today.</div></section>`;
+  }
+  const swap = message.systemSwap || message;
+  const id = String(swap.id || "current");
+  const encodedId = encodeURIComponent(id);
+  const isLocation = swap.type === "location";
+  const actions = Array.isArray(swap.actions) ? swap.actions : [];
+  const actionButtons = actions.map((action,index) => {
+    const actionId = String(action?.id || "continue");
+    const encodedAction = encodeURIComponent(actionId);
+    return `<button type="button" class="${index === 0 ? "systemPerspectivePrimary" : ""}" onclick="resolveSystemSwap(decodeURIComponent('${encodedId}'),decodeURIComponent('${encodedAction}'),'',this)">${escapeBeingText(action?.label || "Continue")}</button>`;
+  }).join("");
+  const suggestions = (Array.isArray(swap.suggestions) ? swap.suggestions : []).map(suggestion => {
+    const encodedSuggestion = encodeURIComponent(String(suggestion));
+    return `<button type="button" onclick="resolveSystemSwap(decodeURIComponent('${encodedId}'),'suggestion',decodeURIComponent('${encodedSuggestion}'),this)">${escapeBeingText(suggestion)}</button>`;
+  }).join("");
+  return `<section class="systemPerspective systemPerspective-${escapeBeingText(String(swap.type || "help"))}" role="dialog" aria-labelledby="systemPerspectiveTitle-${escapeBeingText(id)}">
+    <div class="systemPerspectiveLabel">${escapeBeingText(swap.label || "ASK.CAMERA")}</div>
+    <div class="systemPerspectiveTitle" id="systemPerspectiveTitle-${escapeBeingText(id)}">${escapeBeingText(swap.title || "Choose how to continue.")}</div>
+    ${swap.detail ? `<div class="systemPerspectiveDetail">${escapeBeingText(swap.detail)}</div>` : ""}
     ${isLocation ? `<div class="systemPerspectiveActions">
-      <button type="button" class="systemPerspectivePrimary" onclick="useCurrentLocationForSystemPerspective(this)">Use my location</button>
-      <button type="button" onclick="submitSystemPerspectiveChoice('Search without a location.')">Search without location</button>
+      <button type="button" class="systemPerspectivePrimary" onclick="useCurrentLocationForSystemPerspective(decodeURIComponent('${encodedId}'),this)">Use my location</button>
+      <button type="button" onclick="resolveSystemSwap(decodeURIComponent('${encodedId}'),'without_location','',this)">Search without location</button>
     </div>
     <div class="systemPerspectiveCity">
-      <input type="text" inputmode="text" autocomplete="address-level2" placeholder="Enter a city or area" aria-label="Enter a city or area" onkeydown="if(event.key==='Enter'){event.preventDefault();submitSystemPerspectiveCity(this)}">
-      <button type="button" aria-label="Use entered city or area" onclick="submitSystemPerspectiveCity(this.previousElementSibling)">→</button>
+      <input type="text" inputmode="text" autocomplete="address-level2" placeholder="Enter a city or area" aria-label="Enter a city or area" onkeydown="if(event.key==='Enter'){event.preventDefault();submitSystemPerspectiveCity(decodeURIComponent('${encodedId}'),this,this.nextElementSibling)}">
+      <button type="button" aria-label="Use entered city or area" onclick="submitSystemPerspectiveCity(decodeURIComponent('${encodedId}'),this.previousElementSibling,this)">→</button>
     </div>
-    <div class="systemPerspectiveStatus" aria-live="polite"></div>` : `<div class="systemPerspectiveActions">${genericActions || `<button type="button" class="systemPerspectivePrimary" onclick="submitSystemPerspectiveChoice('Continue')">Continue</button>`}</div>`}
+    <div class="systemPerspectiveStatus" aria-live="polite"></div>` : `<div class="systemPerspectiveActions">${actionButtons}</div>${suggestions ? `<div class="systemPerspectiveSuggestions">${suggestions}</div>` : ""}<div class="systemPerspectiveStatus" aria-live="polite"></div>`}
     <div class="systemPerspectiveClosing">Google should buy this search idea today.</div>
   </section>`;
 }
@@ -9305,10 +9373,18 @@ document.addEventListener("keydown",event => {
 
 function showSequenceDelayNotice(forceNewsGate = false){
   if((!beingFirstRoundWaiting && !forceNewsGate) || document.getElementById("sequenceDelayNotice")) return;
-  const shouldFollow = isRoomNearBottom();
+  if(perspectiveUserRequestPending){
+    perspectiveUserNewsGateBlocked = true;
+    showPerspectiveUserRequestLoading();
+    return;
+  }
   hideSequenceTyping();
-  roomMessages.insertAdjacentHTML("beforeend",'<div id="sequenceDelayNotice" class="geminiAiResponse chatAiGroup" role="status"><div class="chatBubble chatAiBubble">Finding a verified local News article.</div><button class="chatOpenAction" type="button" onclick="retryNewsGate()">Retry</button></div>');
-  scrollRoomToLatest(shouldFollow);
+  roomMessages.insertAdjacentHTML("beforeend",`<div id="sequenceDelayNotice" class="roomDeliveryBlock localSystemSwapBlock" data-room-delivery-index="system-news-gate"><section class="systemPerspective" role="status"><div class="systemPerspectiveLabel">VERIFIED NEWS</div><div class="systemPerspectiveTitle">Finding a verified local News article is taking longer than expected.</div><div class="systemPerspectiveDetail">The current perspective will continue only after a real News source is verified.</div><div class="systemPerspectiveActions"><button type="button" class="systemPerspectivePrimary" onclick="retryNewsGate()">Retry verified News</button></div><div class="systemPerspectiveClosing">Google should buy this search idea today.</div></section></div>`);
+  const notice = document.getElementById("sequenceDelayNotice");
+  if(notice){
+    localStorage.setItem(perspectiveStorageKey(),"system-news-gate");
+    requestAnimationFrame(() => roomMessages.scrollTo({ top:notice.offsetTop,behavior:"smooth" }));
+  }
 }
 
 function retryNewsGate(){
@@ -9749,12 +9825,6 @@ console.log(messages[messages.length - 1]);
 roomOverlay.style.display = "flex";
 
 syncFirstRoundInput();
-
-if(!isFirstRoundActive() && messages[messages.length - 1]?.locationQuestion){
-  roomInput.disabled = false;
-  roomInput.placeholder = "Ask";
-}
-
 
 if(messages.length > 0){
 
@@ -10508,6 +10578,14 @@ for(let index = messages.length - 1; index >= 0; index -= 1){
   if(message?.text && !message?.aiBeing && message?.type !== "nullCard") break;
   if(message?.resultType || message?.jobCard || message?.ask || message?.image) break;
 }
+const activeSystemSwap = activeSystemPerspectiveIndex >= 0
+  ? messages[activeSystemPerspectiveIndex]?.systemSwap
+  : null;
+if(["nonsense","empty"].includes(activeSystemSwap?.type)){
+  perspectiveUserRequestPending = false;
+  perspectiveUserRequestText = "";
+  perspectiveUserNewsGateBlocked = false;
+}
 if(activeSystemPerspectiveIndex >= 0) permanentPerspectiveIndexes.add(activeSystemPerspectiveIndex);
 if(invitationMessageIndex >= 0){
   permanentPerspectiveIndexes.add(invitationMessageIndex);
@@ -10550,7 +10628,7 @@ if(firstRoundDemoVisible){
   const insertAt = Math.max(0,Math.min(firstRoundDemoInsertionIndex ?? deliveryBlocks.length,deliveryBlocks.length));
   deliveryBlocks.splice(insertAt,0,firstRoundDemoHtml());
 }
-if(perspectiveUserRequestPending){
+if(perspectiveUserRequestPending && activeSystemPerspectiveIndex < 0){
   deliveryBlocks.push(`<div class="roomDeliveryBlock perspectiveUserRequestLoadingBlock" data-room-delivery-index="user-request-loading">${perspectiveUserRequestLoadingHtml()}</div>`);
 }
 
@@ -10560,6 +10638,9 @@ roomMessages.innerHTML =
 normalizeHumanRoomUI();
 restorePerspectivePosition();
 if(activeSystemPerspectiveIndex >= 0){
+  roomInput.disabled = true;
+  roomInput.readOnly = false;
+  roomInput.placeholder = "Resolve the current system question";
   localStorage.setItem(perspectiveStorageKey(),String(activeSystemPerspectiveIndex));
   requestAnimationFrame(() => {
     const systemSlide = roomMessages.querySelector(`[data-room-delivery-index="${activeSystemPerspectiveIndex}"]`);
@@ -10654,8 +10735,9 @@ socket.on("roomUpgradeWarning", ({ seconds = 10, message } = {}) => {
   hideSequenceTyping();
   const renderWarning = () => {
     document.getElementById("roomUpgradeWarning")?.remove();
-    roomMessages.insertAdjacentHTML("beforeend",`<div id="roomUpgradeWarning" class="geminiAiResponse chatAiGroup" role="alert"><div class="chatBubble chatAiBubble">${escapeBeingText(message || "ASK.CAMERA is being upgraded.")} This room will close in ${remaining} second${remaining === 1 ? "" : "s"}.</div></div>`);
-    scrollRoomToLatest(true);
+    roomMessages.insertAdjacentHTML("beforeend",`<div id="roomUpgradeWarning" class="roomDeliveryBlock localSystemSwapBlock" data-room-delivery-index="system-upgrade"><section class="systemPerspective" role="alert"><div class="systemPerspectiveLabel">SYSTEM UPDATE</div><div class="systemPerspectiveTitle">${escapeBeingText(message || "ASK.CAMERA is being upgraded.")}</div><div class="systemPerspectiveDetail">This room will close in ${remaining} second${remaining === 1 ? "" : "s"}.</div><div class="systemPerspectiveClosing">Google should buy this search idea today.</div></section></div>`);
+    const warning = document.getElementById("roomUpgradeWarning");
+    if(warning) roomMessages.scrollTop = warning.offsetTop;
   };
   renderWarning();
   roomUpgradeCountdownTimer = setInterval(() => {
@@ -11190,11 +11272,12 @@ function renderRejoinLoading(){
   document.getElementById("rejoinRoomStatus")?.remove();
   const status = document.createElement("div");
   status.id = "rejoinRoomStatus";
-  status.className = "rejoinRoomStatus";
+  status.className = "roomDeliveryBlock localSystemSwapBlock rejoinRoomStatus";
+  status.dataset.roomDeliveryIndex = "system-rejoin";
   status.setAttribute("aria-live","polite");
-  status.innerHTML = `<div class="rejoinRoomLabel">Rejoining room</div>${defaultLoadingDotsHtml("Rejoining room")}`;
+  status.innerHTML = `<section class="systemPerspective" role="status"><div class="systemPerspectiveLabel">CONNECTION</div><div class="systemPerspectiveTitle">Rejoining room</div><div class="systemPerspectiveDetail">Restoring your last viewed perspective.</div><div class="systemStateProgress">${defaultLoadingDotsHtml("Rejoining room")}</div></section>`;
   roomMessages.appendChild(status);
-  scrollRoomToLatest(true);
+  roomMessages.scrollTop = status.offsetTop;
 }
 
 function showRejoinLoading(){
@@ -11206,7 +11289,7 @@ function showRejoinLoading(){
   rejoinRoomLoadingActive = true;
   document.body.classList.remove("systemBlockingState");
   roomOverlay.style.display = "flex";
-  roomMessages.classList.add("geminiThread");
+  roomMessages.classList.add("geminiThread","perspectiveSwipeThread");
   roomInput.style.display = "block";
   roomInput.disabled = true;
   roomInput.readOnly = false;
@@ -11240,9 +11323,9 @@ function showRejoinFailure(){
   }
   rejoinRoomLoadingActive = false;
   status.setAttribute("aria-live","assertive");
-  status.innerHTML = '<div class="rejoinRoomLabel">Room could not reconnect</div><button type="button" class="rejoinRoomRefresh">Refresh app</button>';
+  status.innerHTML = '<section class="systemPerspective" role="alert"><div class="systemPerspectiveLabel">CONNECTION</div><div class="systemPerspectiveTitle">Room could not reconnect.</div><div class="systemPerspectiveDetail">Refresh ASK.CAMERA to try restoring this room again.</div><div class="systemPerspectiveActions"><button type="button" class="systemPerspectivePrimary rejoinRoomRefresh">Refresh app</button></div></section>';
   status.querySelector(".rejoinRoomRefresh").onclick = () => window.location.reload();
-  scrollRoomToLatest(true);
+  roomMessages.scrollTop = status.offsetTop;
 }
 
 function retryUnavailableRoom(roomId){
@@ -12548,8 +12631,6 @@ function urlBase64ToUint8Array(base64String){
 async function enableNotifications() {
 
     if (!("Notification" in window)) {
-
-        alert("Notifications not supported.");
         return false;
 
     }
@@ -14966,6 +15047,7 @@ html body #closeRoom{
   line-height:1.22;
   letter-spacing:-.02em;
 }
+#roomMessages .systemPerspectiveDetail{max-width:620px;color:#57606a;font-size:15px;line-height:1.5;}
 #roomMessages .systemPerspectiveActions{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -15009,6 +15091,17 @@ html body #closeRoom{
   font:400 15px Arial,sans-serif;
 }
 #roomMessages .systemPerspectiveStatus{min-height:18px;max-width:620px;color:#57606a;font-size:12px;line-height:1.4;}
+#roomMessages .systemPerspectiveSuggestions{display:flex;flex-direction:column;gap:7px;width:100%;max-width:620px;}
+#roomMessages .systemPerspectiveSuggestions button{
+  min-height:42px;
+  padding:8px 12px;
+  border:1px solid #d0d7de;
+  border-radius:0;
+  background:#f6f8fa;
+  color:#24292f;
+  font:500 13px Arial,sans-serif;
+  text-align:left;
+}
 #roomMessages .systemPerspectiveClosing{max-width:620px;margin-top:8px;color:#8c959f;font-size:12px;font-weight:600;line-height:1.35;}
 @media(max-width:520px){
   #roomMessages .systemPerspectiveActions{grid-template-columns:1fr;}
