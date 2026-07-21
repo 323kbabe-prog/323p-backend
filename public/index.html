@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.45 (2026-07-21)
+  - Applies the final black, white, gray, and single-blue system across the app
+  - Removes visible outlines and borders from interactive surfaces and cards
+  - Restricts red strictly to heart emoji glyphs
+
   v10.1.44 (2026-07-21)
   - Makes the persistent Ask input a device-safe pill bar
 
@@ -14070,7 +14075,7 @@ Close
       button.style.setProperty('border-radius','0','important');
       button.style.setProperty('box-shadow','none','important');
       button.style.setProperty('text-shadow','none','important');
-      button.style.setProperty('border','1px solid #8c959f','important');
+      button.style.setProperty('border','0','important');
       if(button.closest('#modeBar')){
         button.style.setProperty('background','#111','important');
         button.style.setProperty('color','#fff','important');
@@ -14106,7 +14111,7 @@ Close
     actionLinks.forEach(action => {
       action.style.setProperty('background','#f6f8fa','important');
       action.style.setProperty('color','#0969da','important');
-      action.style.setProperty('border','1px solid #0969da','important');
+      action.style.setProperty('border','0','important');
       action.style.setProperty('border-radius','0','important');
       action.style.setProperty('box-shadow','none','important');
     });
@@ -15340,10 +15345,7 @@ html body #roomFloatingCameraLayer{
 }
 
 /* v10.1.41 — Public cards use a true red heart and stronger neutral grays. */
-html body #publicNullsCards .loveIcon,
-html body #publicNullsCards .loveBtn,
-html body #publicNullsCards [data-love],
-html body #publicNullsCards [aria-label*="love" i]{
+html body #publicNullsCards .loveIcon{
   color:#d93025!important;
   -webkit-text-fill-color:#d93025!important;
   filter:none!important;
@@ -15363,12 +15365,63 @@ html body #publicNullsCards .publicFeaturedSection{
 }
 
 /* v10.1.40 — the heart is the only non-blue UI color exception. */
-html body .loveIcon,
+html body .loveIcon{
+  color:#d93025!important;
+}
+/* v10.1.45 — final borderless app-wide visual authority. */
+html body *,
+html body *::before,
+html body *::after{
+  outline:0!important;
+}
+html body button,
+html body [role="button"],
+html body input,
+html body textarea,
+html body select,
+html body a.chatOpenAction,
+html body a.chatShareAction,
+html body [role="dialog"],
+html body section,
+html body article,
+html body [class*="Card"],
+html body [class*="card"]{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+html body input,
+html body textarea,
+html body select{
+  background:#f6f8fa!important;
+  color:#111!important;
+}
+html body #roomInput{
+  border:0!important;
+  background:#f6f8fa!important;
+  box-shadow:none!important;
+}
+html body #roomInput:focus,
+html body #roomInput:focus-visible{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+html body .loveCount,
+html body .loveNumber,
 html body .loveBtn,
 html body [data-love],
 html body [aria-label*="love" i]{
-  color:#d93025!important;
+  color:#24292f!important;
+  -webkit-text-fill-color:#24292f!important;
 }
+html body .loveIcon,
+html body #publicNullsCards .loveIcon{
+  color:#d93025!important;
+  -webkit-text-fill-color:#d93025!important;
+  filter:none!important;
+}
+
 </style>
 </body>
 </html>
