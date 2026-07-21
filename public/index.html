@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.39 (2026-07-21)
+  - Consolidates UI colors to black, white, gray, and one blue (#0969da)
+  - Removes all light-blue UI fills and secondary blue shades
+
   v10.1.38 (2026-07-21)
   - Replaces the home navigation gradients with solid black buttons
 
@@ -933,7 +937,7 @@ button,[role="button"],.chatOpenAction,.chatShareAction,
   text-shadow:none!important;
 }
 button:hover,[role="button"]:hover,.chatOpenAction:hover,.chatShareAction:hover{
-  background:#eaeef2!important;
+  background:#f6f8fa!important;
   color:#111!important;
   border-color:#57606a!important;
 }
@@ -942,9 +946,9 @@ button:focus-visible,[role="button"]:focus-visible,.chatOpenAction:focus-visible
   outline-offset:2px!important;
 }
 button:disabled,[role="button"][aria-disabled="true"]{
-  background:#eaeef2!important;
+  background:#f6f8fa!important;
   color:#8c959f!important;
-  border-color:#d0d7de!important;
+  border-color:#f6f8fa!important;
   opacity:1!important;
 }
 button svg{color:inherit!important;}
@@ -967,10 +971,10 @@ button svg[stroke]:not([stroke="none"]),button svg [stroke]:not([stroke="none"])
 }
 input:focus,textarea:focus,select:focus,.beingInput:focus,#roomInput:focus{
   border-color:#57606a!important;
-  outline:2px solid #d0d7de!important;
+  outline:2px solid #f6f8fa!important;
 }
 .loveCount{filter:none!important;color:#111!important;}
-.loveCount .loveIcon{color:#d93025!important;}
+.loveCount .loveIcon{color:#0969da!important;}
 .loveCount .loveNumber{color:#111!important;}
 .skeletonCount{filter:grayscale(1)!important;color:#57606a!important;}
 
@@ -988,7 +992,7 @@ body.appBackdropActive #capturePreview{display:none!important;}
 }
 
 /* Every selected image is a persistent, compact chapter in the chat. */
-.roomImageChapter{width:100%;margin:0 0 18px;padding-top:4px;border-top:1px solid #d0d7de;}
+.roomImageChapter{width:100%;margin:0 0 18px;padding-top:4px;border-top:1px solid #f6f8fa;}
 .roomImageChapter:first-child{border-top:0;}
 [data-opening-message][hidden]{display:none!important;}
 .roomImageChapter .humanChosenImageWrap{width:100%;display:flex;justify-content:flex-start;margin:8px 0 12px;}
@@ -1046,7 +1050,7 @@ body.appBackdropActive #capturePreview{display:none!important;}
   padding:18px!important;
   margin:0 0 16px!important;
   background:rgba(255,255,255,.94)!important;
-  border:1px solid #d0d7de!important;
+  border:1px solid #f6f8fa!important;
   box-shadow:none!important;
 }
 #publicNullsCards .publicPerspectiveCardV2>.publicNullImage{
@@ -1058,7 +1062,7 @@ body.appBackdropActive #capturePreview{display:none!important;}
   aspect-ratio:1/1!important;
   object-fit:cover!important;
   margin:0!important;
-  border:1px solid #d0d7de!important;
+  border:1px solid #f6f8fa!important;
   border-radius:0!important;
 }
 #publicNullsCards .publicPerspectiveCardV2>div:nth-of-type(1){
@@ -1126,11 +1130,11 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeStartupProductRow{display:grid!important;grid-template-columns:minmax(0,1fr) 40px!important;align-items:start!important;gap:16px!important;}
 #homeStartupTextFrame{min-width:0!important;max-width:100%!important;}
 #homeStartupProductName{font-size:14px!important;line-height:1.2!important;font-weight:600!important;letter-spacing:.01em!important;color:#1f2328!important;}
-#homeStartupRefresh{flex:0 0 40px!important;width:40px!important;height:40px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid #d0d7de!important;border-radius:0!important;background:#f6f8fa!important;color:#1f2328!important;box-shadow:none!important;}
+#homeStartupRefresh{flex:0 0 40px!important;width:40px!important;height:40px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid #f6f8fa!important;border-radius:0!important;background:#f6f8fa!important;color:#1f2328!important;box-shadow:none!important;}
 #homeStartupRefresh svg{width:19px!important;height:19px!important;fill:currentColor!important;}
 #homeStartupTitle{max-width:100%!important;margin-top:14px!important;font-size:clamp(22px,5.3vw,25px)!important;line-height:1.18!important;font-weight:600!important;letter-spacing:-.02em!important;color:#1f2328!important;overflow-wrap:anywhere!important;}
 #homeCaptureStage{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:hidden!important;}
-#homeCaptureCard{position:relative!important;z-index:1!important;display:block!important;width:100%!important;height:100%!important;max-height:680px!important;min-height:0!important;margin:0 auto!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:1px solid #d0d7de!important;box-shadow:none!important;overflow:hidden!important;}
+#homeCaptureCard{position:relative!important;z-index:1!important;display:block!important;width:100%!important;height:100%!important;max-height:680px!important;min-height:0!important;margin:0 auto!important;padding:0!important;box-sizing:border-box!important;background:#111!important;color:#fff!important;border:1px solid #f6f8fa!important;box-shadow:none!important;overflow:hidden!important;}
 #homeCaptureVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;z-index:0!important;}
 #homeCaptureShade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(0,0,0,.08),transparent 26%,transparent 70%,rgba(0,0,0,.16))!important;z-index:1!important;pointer-events:none!important;}
 #homeCapturePrompt{position:absolute!important;z-index:2!important;left:16px!important;right:16px!important;bottom:14px!important;text-align:center!important;color:#fff!important;text-shadow:0 1px 4px rgba(0,0,0,.8)!important;}
@@ -1138,7 +1142,7 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeTakePicture svg{display:block!important;width:36px!important;height:36px!important;fill:none!important;stroke:currentColor!important;}
 #homeCaptureTrial{margin-top:8px!important;font-size:17px!important;line-height:1.15!important;font-weight:700!important;letter-spacing:.01em!important;}
 #homeCaptureInstruction{margin-top:4px!important;font-size:13px!important;line-height:1.35!important;font-weight:500!important;}
-#homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:36px!important;height:36px!important;padding:0!important;background:#f6f8fa!important;color:#1f2328!important;border:1px solid #d0d7de!important;font-size:20px!important;font-weight:400!important;line-height:1!important;box-shadow:none!important;}
+#homeCaptureClose{position:absolute!important;z-index:3!important;top:10px!important;right:10px!important;width:36px!important;height:36px!important;padding:0!important;background:#f6f8fa!important;color:#1f2328!important;border:1px solid #f6f8fa!important;font-size:20px!important;font-weight:400!important;line-height:1!important;box-shadow:none!important;}
 #homeStartupBrand{align-self:end!important;padding-right:56px!important;}
 #homeStartupBrandLine{font-size:11px!important;line-height:1.35!important;font-weight:600!important;letter-spacing:.01em!important;color:#1f2328!important;text-transform:uppercase!important;overflow-wrap:anywhere!important;}
 
@@ -1270,10 +1274,10 @@ body.systemBlockingState #helper{
   text-align:left;
   padding:clamp(22px,7vw,48px);
   box-sizing:border-box;
-  border:1px solid #d0d7de;
+  border:1px solid #f6f8fa;
   background:#fff;
 }
-.appSystemPerspective .systemPerspectiveLabel{color:#0550ae;font-size:11px;font-weight:800;line-height:1.2;letter-spacing:.07em;}
+.appSystemPerspective .systemPerspectiveLabel{color:#0969da;font-size:11px;font-weight:800;line-height:1.2;letter-spacing:.07em;}
 .appSystemPerspective .systemPerspectiveTitle{margin-top:14px;font-size:clamp(24px,6vw,36px);font-weight:600;line-height:1.22;letter-spacing:-.02em;}
 .appSystemPerspective .systemPerspectiveDetail{max-width:620px;margin-top:10px;color:#57606a;font-size:15px;line-height:1.5;}
 .appSystemPerspective .systemPerspectiveActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:620px;margin-top:22px;}
@@ -1302,7 +1306,7 @@ body.systemBlockingState #helper{
 /* v10.0.119 — shared in-room floating live-camera card. */
 #roomFloatingCameraLayer{position:fixed!important;inset:0!important;z-index:2147483646!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:18px!important;box-sizing:border-box!important;background:#fff!important;}
 #roomFloatingCameraLayer[hidden]{display:none!important;}
-#roomFloatingCameraCard{position:relative!important;width:min(100%,480px)!important;height:min(78dvh,680px)!important;min-height:360px!important;background:#111!important;border:1px solid #d0d7de!important;overflow:hidden!important;}
+#roomFloatingCameraCard{position:relative!important;width:min(100%,480px)!important;height:min(78dvh,680px)!important;min-height:360px!important;background:#111!important;border:1px solid #f6f8fa!important;overflow:hidden!important;}
 #roomFloatingCameraVideo{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;filter:saturate(1.4) brightness(.9)!important;}
 #roomFloatingCameraClose{position:absolute!important;z-index:2!important;top:10px!important;right:10px!important;width:38px!important;height:38px!important;padding:0!important;border:1px solid #8c959f!important;border-radius:0!important;background:#fff!important;color:#111!important;font-size:22px!important;line-height:1!important;}
 #roomFloatingCameraShutter{position:absolute!important;z-index:2!important;left:50%!important;bottom:18px!important;transform:translateX(-50%)!important;width:66px!important;height:66px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:3px solid rgba(255,255,255,.75)!important;border-radius:50%!important;background:#fff!important;color:#111!important;box-shadow:0 2px 14px rgba(0,0,0,.28)!important;}
@@ -1320,7 +1324,7 @@ body.systemBlockingState #helper{
 </style>
 
 <style id="askCameraBlueHierarchyV122">
-:root{--guide-blue:#0969da;--guide-blue-dark:#0550ae;--guide-blue-soft:#ddf4ff;--guide-blue-border:#54aeff;}
+:root{--guide-blue:#0969da;--guide-blue-dark:#0969da;--guide-blue-soft:#f6f8fa;--guide-blue-border:#0969da;}
 #roomInput:focus,.beingInput:focus,#publishDialog input:focus-visible{border-color:var(--guide-blue)!important;outline:2px solid var(--guide-blue-border)!important;outline-offset:1px!important;box-shadow:none!important;}
 #publishDialog label:has(input:checked){background:var(--guide-blue-soft)!important;color:#1f2328!important;border-color:var(--guide-blue-border)!important;}
 #publishDialog input[type="radio"]{accent-color:var(--guide-blue)!important;}
@@ -1333,7 +1337,7 @@ body.systemBlockingState #helper{
 #takeCameraViewBtn{background:var(--guide-blue)!important;color:#fff!important;border:1px solid var(--guide-blue)!important;}
 #takeCameraViewBtn svg{flex:0 0 auto!important;}
 #uploadBtn,#publicNullsBtn{margin-top:8px!important;background:var(--guide-blue-soft)!important;color:var(--guide-blue-dark)!important;border:1px solid var(--guide-blue-border)!important;}
-.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin{color:#cf222e!important;border-color:#ff8182!important;background:#fff!important;}
+.beingEditButton,.beingManageButton,.publicPerspectiveCardV2 .publicPerspectiveAdmin{color:#0969da!important;border-color:#f6f8fa!important;background:#fff!important;}
 </style>
 
 <script>
@@ -2043,28 +2047,28 @@ margin-right:auto;
 <style id="askCameraHumanAnchorV139">
 :root{
   --ask-blue:#0969da;
-  --ask-blue-dark:#0550ae;
-  --ask-blue-soft:#ddf4ff;
+  --ask-blue-dark:#0969da;
+  --ask-blue-soft:#f6f8fa;
   --ask-text:#1f2328;
   --ask-muted:#57606a;
-  --ask-line:#d0d7de;
+  --ask-line:#f6f8fa;
   --ask-canvas:#f6f8fa;
   --ask-panel:#ffffff;
-  --ask-danger:#cf222e;
+  --ask-danger:#0969da;
 }
 #aiBeingsScreen{background:var(--ask-canvas)!important;color:var(--ask-text)!important;}
 #aiBeingsScreen .beingCard{background:var(--ask-panel)!important;color:var(--ask-text)!important;border:1px solid var(--ask-line)!important;border-radius:0!important;box-shadow:none!important;}
 #aiBeingsScreen button,#roomHeader button,#roomImageActions button,.beingCardActions button{border-radius:0!important;box-shadow:none!important;}
-#aiBeingsBackBtn{background:var(--ask-panel)!important;color:var(--ask-blue-dark)!important;border:1px solid #54aeff!important;}
+#aiBeingsBackBtn{background:var(--ask-panel)!important;color:var(--ask-blue-dark)!important;border:1px solid #0969da!important;}
 .beingOpenButton,#changeHumanBtn{background:var(--ask-blue)!important;color:#fff!important;border:1px solid var(--ask-blue)!important;}
-.beingShareButton,.beingQrShareButton,#shareRoomBtn,#beingQrBtn{background:var(--ask-blue-soft)!important;color:var(--ask-blue-dark)!important;border:1px solid #54aeff!important;}
+.beingShareButton,.beingQrShareButton,#shareRoomBtn,#beingQrBtn{background:var(--ask-blue-soft)!important;color:var(--ask-blue-dark)!important;border:1px solid #0969da!important;}
 .beingEditButton{background:#fff!important;color:#24292f!important;border:1px solid #8c959f!important;}
-.beingManageButton,#closeRoom{background:#fff!important;color:var(--ask-danger)!important;border:1px solid #ff8182!important;}
+.beingManageButton,#closeRoom{background:#fff!important;color:var(--ask-danger)!important;border:1px solid #f6f8fa!important;}
 .beingCardActions{display:flex!important;flex-wrap:wrap!important;gap:8px!important;}
 .beingCardActions button{min-height:40px!important;padding:0 12px!important;}
 .beingOpenButton{flex:1 1 100%!important;}
 .beingShareButton,.beingQrShareButton{flex:1 1 calc(50% - 4px)!important;}
-#roomUpgradeWarning .chatAiBubble{border-color:#ff8182!important;color:var(--ask-danger)!important;background:#fff8f8!important;}
+#roomUpgradeWarning .chatAiBubble{border-color:#f6f8fa!important;color:var(--ask-danger)!important;background:#f6f8fa!important;}
 </style>
 <style id="askCameraOneRoomHumanActionsV153">
 /* HUMAN room is the app's only conversational room. */
@@ -2092,7 +2096,7 @@ html body #roomMessages.geminiThread .geminiMediaResponse .chatShareAction,
 html body #roomMessages.geminiThread .chatShareAction{
   background:#f6f8fa!important;
   color:#24292f!important;
-  border:1px solid #d0d7de!important;
+  border:1px solid #f6f8fa!important;
 }
 </style>
 
@@ -2327,7 +2331,7 @@ ASK.CAMERA – AI Camera Search
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
     <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a HUMAN, then add an image to open their private room.</div>
-    <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:none;margin:0 0 18px;height:56px;min-height:56px;max-height:56px;box-sizing:border-box;border:1px solid #54aeff;border-radius:0;background:#0969da;color:#fff;font-size:15px;font-weight:600;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create a HUMAN Card</span></button>
+    <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:none;margin:0 0 18px;height:56px;min-height:56px;max-height:56px;box-sizing:border-box;border:1px solid #0969da;border-radius:0;background:#0969da;color:#fff;font-size:15px;font-weight:600;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create a HUMAN Card</span></button>
   </div>
   <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
 </div>
@@ -2389,7 +2393,7 @@ ASK.CAMERA – AI Camera Search
     <input id="beingWord3" placeholder="Keyword 3 — e.g. global" class="beingInput" oninput="handleBeingProfileInput()" onblur="generateBeingBio()">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 2px 8px;">
       <label for="beingChoice" style="font-size:12px;font-weight:700;">BUSINESS INTRODUCTION</label>
-      <button id="beingBioGenerate" type="button" onclick="generateBeingBio(true)" style="display:none;border:none;background:transparent;color:#1a73e8;padding:4px 0;font-size:12px;font-weight:700;">Regenerate bio</button>
+      <button id="beingBioGenerate" type="button" onclick="generateBeingBio(true)" style="display:none;border:none;background:transparent;color:#0969da;padding:4px 0;font-size:12px;font-weight:700;">Regenerate bio</button>
     </div>
     <textarea id="beingChoice" placeholder="Generated after category and three keywords" maxlength="160" class="beingInput" rows="3" oninput="markBeingBioEdited()"></textarea>
     <div id="beingBioStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Auto-generated and editable.</div>
@@ -2409,9 +2413,9 @@ ASK.CAMERA – AI Camera Search
 
 <style>
 .beingInput{width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:16px;padding:13px 14px;margin-bottom:12px;font:inherit;background:#fff;color:#111;}
-.beingPhotoUpload{width:100%;min-height:48px;box-sizing:border-box;border:1px solid #8c959f;border-radius:0;padding:12px 14px;margin-bottom:10px;background:#fff;color:#1a73e8;display:flex;align-items:center;justify-content:flex-start;gap:10px;font-size:14px;font-weight:600;cursor:pointer;}
+.beingPhotoUpload{width:100%;min-height:48px;box-sizing:border-box;border:1px solid #8c959f;border-radius:0;padding:12px 14px;margin-bottom:10px;background:#fff;color:#0969da;display:flex;align-items:center;justify-content:flex-start;gap:10px;font-size:14px;font-weight:600;cursor:pointer;}
 .beingKeywordChip{min-height:34px;border:1px solid #8c959f!important;border-radius:0!important;background:#fff!important;color:#111!important;padding:7px 10px;font-size:12px;font-weight:600;box-shadow:none!important;}
-.beingKeywordChip.isSelected{border-color:#1a73e8!important;background:#e8f0fe!important;color:#174ea6!important;}
+.beingKeywordChip.isSelected{border-color:#0969da!important;background:#f6f8fa!important;color:#0969da!important;}
 .beingCard{background:#fff;color:#111;border-radius:24px;padding:16px;margin:0 auto 16px;max-width:420px;}
 
 /* v10.0.61 — shared responsive UI system */
@@ -2428,7 +2432,7 @@ ASK.CAMERA – AI Camera Search
 button,input,textarea{font-family:inherit;}
 button{touch-action:manipulation;}
 button:focus-visible,input:focus-visible,textarea:focus-visible{
-  outline:3px solid #4da3ff;
+  outline:3px solid #0969da;
   outline-offset:3px;
 }
 
@@ -2654,18 +2658,18 @@ textarea.beingInput{min-height:96px;resize:vertical;}
 
 /* v10.0.63 — Google Material-inspired visual language */
 :root{
-  --md-primary:#0b57d0;
+  --md-primary:#0969da;
   --md-on-primary:#fff;
-  --md-primary-container:#d3e3fd;
-  --md-on-primary-container:#041e49;
-  --md-surface:#f8fafd;
+  --md-primary-container:#f6f8fa;
+  --md-on-primary-container:#0969da;
+  --md-surface:#f6f8fa;
   --md-surface-container:#f1f3f4;
-  --md-surface-container-high:#e9eef6;
+  --md-surface-container-high:#f6f8fa;
   --md-on-surface:#1f1f1f;
   --md-on-surface-variant:#444746;
   --md-outline:#747775;
   --md-outline-variant:#c4c7c5;
-  --md-error:#b3261e;
+  --md-error:#0969da;
   --md-elevation-1:0 1px 2px rgba(60,64,67,.18),0 1px 3px 1px rgba(60,64,67,.08);
   --md-elevation-2:0 1px 2px rgba(60,64,67,.2),0 2px 6px 2px rgba(60,64,67,.1);
 }
@@ -2971,7 +2975,7 @@ body{
   content:"✦  ASK.CAMERA";
   display:block;
   margin-bottom:14px;
-  color:#a8c7fa;
+  color:#f6f8fa;
   font-size:12px;
   line-height:1;
   font-weight:700;
@@ -3003,7 +3007,7 @@ body{
   text-align:left !important;
 }
 #roomMessages.geminiThread .geminiAiResponse [data-share-content] > div:first-child{
-  color:#a8c7fa !important;
+  color:#f6f8fa !important;
   font-size:12px !important;
   font-weight:600 !important;
   opacity:1 !important;
@@ -3019,7 +3023,7 @@ body{
   background:rgba(0,0,0,.16);
 }
 #roomMessages.geminiThread .geminiAiResponse a{
-  color:#a8c7fa !important;
+  color:#f6f8fa !important;
 }
 #roomMessages.geminiThread .geminiAiResponse [onclick*="shareCard"],
 #roomMessages.geminiThread .geminiAiResponse a[style*="background:#000"]{
@@ -3028,8 +3032,8 @@ body{
   justify-content:center;
   min-height:40px;
   padding:0 16px !important;
-  background:#a8c7fa !important;
-  color:#062e6f !important;
+  background:#f6f8fa !important;
+  color:#0969da !important;
   border:0 !important;
   border-radius:20px !important;
   text-decoration:none !important;
@@ -3048,8 +3052,8 @@ body{
 #roomMessages.geminiThread .geminiUserMessage > div{
   max-width:min(82%,440px) !important;
   padding:12px 16px !important;
-  background:rgba(211,227,253,.96) !important;
-  color:#041e49 !important;
+  background:rgba(246,248,250,.96) !important;
+  color:#0969da !important;
   border:0 !important;
   border-radius:20px 20px 4px 20px !important;
   box-shadow:none !important;
@@ -3179,7 +3183,7 @@ body{
   max-width:min(82%,480px) !important;
   margin-left:auto !important;
   padding:11px 15px !important;
-  background:#0b57d0 !important;
+  background:#0969da !important;
   color:#fff !important;
   border-radius:18px 4px 18px 18px !important;
   box-shadow:0 1px 2px rgba(0,0,0,.14) !important;
@@ -3296,7 +3300,7 @@ body{
   content:"Open source ↗";
   display:block;
   margin-top:6px;
-  color:#0b57d0;
+  color:#0969da;
   font-size:11px;
   font-weight:600;
 }
@@ -3314,7 +3318,7 @@ body{
   padding:0 14px !important;
   margin:0 !important;
   background:rgba(248,250,253,.97) !important;
-  color:#0b57d0 !important;
+  color:#0969da !important;
   border:0 !important;
   border-radius:17px !important;
   box-shadow:0 1px 2px rgba(0,0,0,.12);
@@ -3329,7 +3333,7 @@ body{
   border:0 !important;
   border-radius:18px !important;
   background:rgba(248,250,253,.97) !important;
-  color:#0b57d0 !important;
+  color:#0969da !important;
   font-size:12px !important;
   font-weight:600 !important;
   box-shadow:0 1px 2px rgba(0,0,0,.12) !important;
@@ -3351,11 +3355,11 @@ body{
 
 /* v10.0.67 — compact black, white, and blue application system */
 :root{
-  --app-blue:#0b57d0;
+  --app-blue:#0969da;
   --app-black:#111;
   --app-white:#fff;
-  --app-soft:#f3f6fc;
-  --app-line:#d8dde8;
+  --app-soft:#f6f8fa;
+  --app-line:#f6f8fa;
 }
 
 /* One-row navigation on every screen size. */
@@ -3725,12 +3729,12 @@ body.connectedHome #helper button[onclick*="openHomeRoom"]{
 
 /* v10.0.69 — contemporary OS finish */
 :root{
-  --os-blue:#0b57d0;
-  --os-blue-hover:#0842a0;
+  --os-blue:#0969da;
+  --os-blue-hover:#0969da;
   --os-ink:#171717;
   --os-surface:#fff;
-  --os-surface-soft:#f5f7fb;
-  --os-border:#d9dee8;
+  --os-surface-soft:#f6f8fa;
+  --os-border:#f6f8fa;
   --os-radius:10px;
   --os-shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
 }
@@ -3751,7 +3755,7 @@ button:disabled{opacity:.48;cursor:not-allowed;}
   -webkit-backdrop-filter:blur(18px) saturate(150%);
 }
 #modeBar button{border:0 !important;}
-#modeBar button:hover{background:#e8eef9 !important;}
+#modeBar button:hover{background:#f6f8fa !important;}
 #createNullBtn:hover{background:var(--os-blue-hover) !important;}
 
 /* OS-like surfaces remain flat and readable. */
@@ -3765,7 +3769,7 @@ button:disabled{opacity:.48;cursor:not-allowed;}
   box-shadow:var(--os-shadow) !important;
 }
 .dailyNullCard:hover,.beingCard:hover{
-  border-color:#b9c2d0 !important;
+  border-color:#f6f8fa !important;
 }
 
 /* Room chrome behaves like a compact floating window toolbar. */
@@ -3781,7 +3785,7 @@ button:disabled{opacity:.48;cursor:not-allowed;}
 #roomCountdown,#shareRoomBtn,#closeRoom,.roomActionIcon{box-shadow:none !important;}
 #roomInput:focus{
   border-color:var(--os-blue) !important;
-  outline:2px solid rgba(11,87,208,.22) !important;
+  outline:2px solid rgba(9,105,218,.22) !important;
   outline-offset:0;
 }
 
@@ -3793,13 +3797,13 @@ button:disabled{opacity:.48;cursor:not-allowed;}
 /* Small, OS-style scrollbars where the browser supports them. */
 #roomMessages,#aiBeingsCards,#dailyNullsScreen,#publicNullsScreen{
   scrollbar-width:thin;
-  scrollbar-color:#aeb6c3 transparent;
+  scrollbar-color:#f6f8fa transparent;
 }
 #roomMessages::-webkit-scrollbar,#aiBeingsCards::-webkit-scrollbar,
 #dailyNullsScreen::-webkit-scrollbar,#publicNullsScreen::-webkit-scrollbar{width:6px;}
 #roomMessages::-webkit-scrollbar-thumb,#aiBeingsCards::-webkit-scrollbar-thumb,
 #dailyNullsScreen::-webkit-scrollbar-thumb,#publicNullsScreen::-webkit-scrollbar-thumb{
-  background:#aeb6c3;
+  background:#f6f8fa;
   border-radius:999px;
 }
 
@@ -3887,13 +3891,13 @@ button:disabled{opacity:.48;cursor:not-allowed;}
 
 /* v10.0.71 — literal contemporary DOS interface */
 :root{
-  --dos-bg:#05070a;
-  --dos-panel:#0b0f16;
-  --dos-blue:#2f6bff;
-  --dos-cyan:#72a7ff;
-  --dos-white:#f5f7ff;
-  --dos-dim:#98a2b3;
-  --dos-line:#2f6bff;
+  --dos-bg:#0969da;
+  --dos-panel:#0969da;
+  --dos-blue:#0969da;
+  --dos-cyan:#f6f8fa;
+  --dos-white:#f6f8fa;
+  --dos-dim:#0969da;
+  --dos-line:#0969da;
 }
 
 html,body,button,input,textarea,a{
@@ -3916,7 +3920,7 @@ button{text-transform:uppercase;letter-spacing:.03em;}
   background:var(--dos-bg) !important;
   color:var(--dos-cyan) !important;
   border:0 !important;
-  border-right:1px solid #23314a !important;
+  border-right:1px solid #0969da !important;
   border-radius:0 !important;
   font-size:11px !important;
 }
@@ -3925,7 +3929,7 @@ button{text-transform:uppercase;letter-spacing:.03em;}
   background:var(--dos-blue) !important;
   color:#fff !important;
 }
-#modeBar button:hover{background:#13213a !important;color:#fff !important;}
+#modeBar button:hover{background:#0969da !important;color:#fff !important;}
 
 #homeRoomCard,#homeUtilityButtons button{
   background:var(--dos-panel) !important;
@@ -3972,18 +3976,18 @@ button{text-transform:uppercase;letter-spacing:.03em;}
 .dailyNullCard,.beingCard{
   background:var(--dos-panel) !important;
   color:var(--dos-white) !important;
-  border:1px solid #314364 !important;
+  border:1px solid #0969da !important;
   border-radius:0 !important;
   box-shadow:none !important;
 }
 .dailyNullCard *,.beingCard *{color:inherit;}
-.dailyNullCard img,.beingCard img{border-radius:0 !important;border:1px solid #314364;}
+.dailyNullCard img,.beingCard img{border-radius:0 !important;border:1px solid #0969da;}
 .beingCard > div:first-child > div > div:nth-child(2),
 .dailyNullCard [data-share-content] > div:first-child{color:var(--dos-cyan) !important;}
 .beingCard > div:nth-child(3) span{
-  background:#111a29 !important;
+  background:#0969da !important;
   color:var(--dos-cyan) !important;
-  border:1px solid #314364;
+  border:1px solid #0969da;
   border-radius:0 !important;
 }
 .beingCard > button:nth-of-type(1),#aiBeingsScreen > div:first-of-type > button{
@@ -3998,7 +4002,7 @@ button{text-transform:uppercase;letter-spacing:.03em;}
 .beingInput,#roomInput{
   background:var(--dos-bg) !important;
   color:var(--dos-white) !important;
-  border:1px solid #53627a !important;
+  border:1px solid #0969da !important;
   border-radius:0 !important;
   caret-color:var(--dos-cyan);
 }
@@ -4036,7 +4040,7 @@ button{text-transform:uppercase;letter-spacing:.03em;}
 #roomIdentityPanel{
   background:var(--dos-panel) !important;
   color:var(--dos-white) !important;
-  border:1px solid #314364 !important;
+  border:1px solid #0969da !important;
   border-radius:0 !important;
 }
 #roomThumbnail,#roomCameraThumbnail{border-radius:0 !important;border:1px solid var(--dos-cyan);}
@@ -4089,7 +4093,7 @@ button{text-transform:uppercase;letter-spacing:.03em;}
 #roomMessages.geminiThread .geminiMediaResponse .chatSourceTitle{
   background:var(--dos-panel) !important;
   color:var(--dos-white) !important;
-  border:1px solid #53627a !important;
+  border:1px solid #0969da !important;
   border-radius:0 !important;
   box-shadow:none !important;
 }
@@ -4130,7 +4134,7 @@ button{text-transform:uppercase;letter-spacing:.03em;}
   border-radius:0 !important;
   box-shadow:12px 12px 0 rgba(0,0,0,.45) !important;
 }
-#publishDialog label{background:#111a29 !important;color:var(--dos-white) !important;border-radius:0 !important;}
+#publishDialog label{background:#0969da !important;color:var(--dos-white) !important;border-radius:0 !important;}
 #publishDialog button:last-child,#humanCardsGuide button:last-child{
   background:var(--dos-blue) !important;
   color:#fff !important;
@@ -4422,14 +4426,14 @@ body.connectedHome #connectedRoomCountdown{
   --gh-canvas:#ffffff;
   --gh-subtle:#f6f8fa;
   --gh-muted:#57606a;
-  --gh-border:#d0d7de;
-  --gh-border-muted:#d8dee4;
+  --gh-border:#f6f8fa;
+  --gh-border-muted:#f6f8fa;
   --gh-fg:#1f2328;
   --gh-accent:#0969da;
-  --gh-accent-soft:#ddf4ff;
-  --gh-success:#1f883d;
-  --gh-success-hover:#1a7f37;
-  --gh-danger:#cf222e;
+  --gh-accent-soft:#f6f8fa;
+  --gh-success:#0969da;
+  --gh-success-hover:#0969da;
+  --gh-danger:#0969da;
   --gh-shadow:0 1px 0 rgba(31,35,40,.04);
 }
 
@@ -4449,7 +4453,7 @@ button{
   font-weight:600!important;
   text-transform:none!important;
 }
-button:hover{background:#f3f4f6!important;border-color:#b6bec7!important;}
+button:hover{background:#f6f8fa!important;border-color:#b6bec7!important;}
 button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   outline:2px solid var(--gh-accent)!important;
   outline-offset:2px!important;
@@ -4606,7 +4610,7 @@ body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
 #roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
   background:var(--gh-accent-soft)!important;
   color:var(--gh-fg)!important;
-  border:1px solid #54aeff!important;
+  border:1px solid #0969da!important;
   border-radius:6px!important;
 }
 #roomMessages.geminiThread .chatReplyImage{
@@ -4623,7 +4627,7 @@ body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
   padding:0 10px!important;
 }
 #roomMessages.geminiThread .chatOpenAction:hover,
-#roomMessages.geminiThread .geminiMediaResponse .chatShareAction:hover{background:#eef1f4!important;}
+#roomMessages.geminiThread .geminiMediaResponse .chatShareAction:hover{background:#f6f8fa!important;}
 #roomOverlay svg,#homeControlStack svg,#modeBar svg{filter:none!important;}
 #roomOverlay ::selection,#dailyNullsScreen ::selection,#publicNullsScreen ::selection,#aiBeingsScreen ::selection{
   background:var(--gh-accent-soft)!important;color:var(--gh-fg)!important;
@@ -4634,7 +4638,7 @@ body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
   --simple-bg:#fff;
   --simple-fg:#1f2328;
   --simple-muted:#656d76;
-  --simple-line:#d0d7de;
+  --simple-line:#f6f8fa;
   --simple-soft:#f6f8fa;
   --simple-blue:#0969da;
 }
@@ -4762,12 +4766,12 @@ button{min-height:30px!important;padding:0 10px!important;border-radius:6px!impo
   --ui-panel:#f6f8fa;
   --ui-text:#1f2328;
   --ui-muted:#656d76;
-  --ui-line:#d0d7de;
-  --ui-purple:#8250df;
+  --ui-line:#f6f8fa;
+  --ui-purple:#0969da;
   --ui-blue:#0969da;
-  --ui-orange:#bc4c00;
-  --ui-pink:#bf3989;
-  --ui-cyan:#1b7c83;
+  --ui-orange:#0969da;
+  --ui-pink:#0969da;
+  --ui-cyan:#0969da;
 }
 
 /* 1. Global canvas, typography, and geometry */
@@ -4809,8 +4813,8 @@ button,input,textarea,select,
   font-weight:600!important;
 }
 #modeBar #createNullBtn{background:var(--ui-purple)!important;color:#fff!important;border:1px solid var(--ui-purple)!important;}
-#modeBar #dailyNullsBtn{background:#f1f8ff!important;color:var(--ui-blue)!important;border:1px solid #b6d6f2!important;}
-#modeBar #aiBeingsBtn{background:#fff5fa!important;color:var(--ui-pink)!important;border:1px solid #e9b6d3!important;}
+#modeBar #dailyNullsBtn{background:#f6f8fa!important;color:var(--ui-blue)!important;border:1px solid #f6f8fa!important;}
+#modeBar #aiBeingsBtn{background:#f6f8fa!important;color:var(--ui-pink)!important;border:1px solid #f6f8fa!important;}
 #homeControlStack{gap:6px!important;}
 #homeRoomCard,#homeUtilityButtons button,#publicNullsBtn{
   background:#fff!important;color:var(--ui-text)!important;border:1px solid var(--ui-line)!important;box-shadow:none!important;
@@ -4832,16 +4836,16 @@ button,input,textarea,select,
 #roomCountdown{background:#24292f!important;color:#fff!important;border:1px solid #24292f!important;font-weight:600!important;}
 #roomIdentityPanel{background:transparent!important;border:0!important;}
 #roomTitle,#roomTitle *{font-weight:600!important;color:var(--ui-text)!important;}
-#shareRoomBtn{background:#fff5fa!important;color:var(--ui-pink)!important;border:1px solid #e9b6d3!important;}
-#beingQrBtn{background:#f0ffff!important;color:var(--ui-cyan)!important;border:1px solid #9ed8dc!important;}
+#shareRoomBtn{background:#f6f8fa!important;color:var(--ui-pink)!important;border:1px solid #f6f8fa!important;}
+#beingQrBtn{background:#f6f8fa!important;color:var(--ui-cyan)!important;border:1px solid #f6f8fa!important;}
 #closeRoom{background:#fff!important;color:var(--ui-text)!important;border:1px solid var(--ui-line)!important;}
 #roomImageActions{width:min(760px,100%)!important;gap:6px!important;}
 #roomImageActions button,#roomImageActions button:first-child,#roomImageActions button:not(:first-child){
   height:32px!important;min-height:32px!important;padding:0 10px!important;font-size:12px!important;font-weight:600!important;box-shadow:none!important;
 }
 #roomImageActions button:first-child{background:var(--ui-purple)!important;color:#fff!important;border:1px solid var(--ui-purple)!important;}
-#roomImageActions button:nth-child(2){background:#f1f8ff!important;color:var(--ui-blue)!important;border:1px solid #b6d6f2!important;}
-#roomImageActions button:nth-child(3){background:#fff8f2!important;color:var(--ui-orange)!important;border:1px solid #f0c7a6!important;}
+#roomImageActions button:nth-child(2){background:#f6f8fa!important;color:var(--ui-blue)!important;border:1px solid #f6f8fa!important;}
+#roomImageActions button:nth-child(3){background:#f6f8fa!important;color:var(--ui-orange)!important;border:1px solid #f6f8fa!important;}
 
 /* 5–8. HUMAN, create/edit, Daily, and Public screens */
 #aiBeingsScreen,#createBeingScreen,#dailyNullsScreen,#publicNullsScreen{
@@ -4907,12 +4911,12 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   border-radius:0!important;box-shadow:none!important;font-weight:400!important;
 }
 #roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
-  background:#ddf4ff!important;color:var(--ui-text)!important;border:1px solid #54aeff!important;border-radius:0!important;box-shadow:none!important;font-weight:400!important;
+  background:#f6f8fa!important;color:var(--ui-text)!important;border:1px solid #0969da!important;border-radius:0!important;box-shadow:none!important;font-weight:400!important;
 }
 #roomMessages.geminiThread .chatReplyImage{border:1px solid var(--ui-line)!important;border-radius:0!important;box-shadow:none!important;}
-#roomMessages.geminiThread .chatOpenAction{background:#f1f8ff!important;color:var(--ui-blue)!important;border:1px solid #b6d6f2!important;}
-#roomMessages.geminiThread .chatShareAction{background:#fff5fa!important;color:var(--ui-pink)!important;border:1px solid #e9b6d3!important;}
-#firstNextBtn{background:#f7f2ff!important;color:var(--ui-purple)!important;border:1px solid #d8c7f3!important;font-weight:600!important;}
+#roomMessages.geminiThread .chatOpenAction{background:#f6f8fa!important;color:var(--ui-blue)!important;border:1px solid #f6f8fa!important;}
+#roomMessages.geminiThread .chatShareAction{background:#f6f8fa!important;color:var(--ui-pink)!important;border:1px solid #f6f8fa!important;}
+#firstNextBtn{background:#f6f8fa!important;color:var(--ui-purple)!important;border:1px solid #f6f8fa!important;font-weight:600!important;}
 #roomInput{
   width:min(760px,calc(100% - 24px))!important;height:44px!important;min-height:44px!important;
   background:#fff!important;color:var(--ui-text)!important;border:1px solid #8c959f!important;border-radius:0!important;
@@ -4963,18 +4967,18 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   border:1px solid var(--rainbow-purple)!important;
 }
 #modeBar #dailyNullsBtn{
-  background:#f1f8ff!important;
+  background:#f6f8fa!important;
   color:var(--rainbow-blue)!important;
-  border:1px solid #b6d6f2!important;
+  border:1px solid #f6f8fa!important;
 }
 #modeBar #aiBeingsBtn{
-  background:#fff5fa!important;
+  background:#f6f8fa!important;
   color:var(--rainbow-pink)!important;
-  border:1px solid #e9b6d3!important;
+  border:1px solid #f6f8fa!important;
 }
-#modeBar #createNullBtn:hover{background:#6e40c9!important;}
-#modeBar #dailyNullsBtn:hover{background:#ddf4ff!important;}
-#modeBar #aiBeingsBtn:hover{background:#ffeff7!important;}
+#modeBar #createNullBtn:hover{background:#0969da!important;}
+#modeBar #dailyNullsBtn:hover{background:#f6f8fa!important;}
+#modeBar #aiBeingsBtn:hover{background:#f6f8fa!important;}
 
 @media(max-width:560px){
   #modeBar{gap:5px!important;}
@@ -4996,11 +5000,11 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
 
 /* v10.0.75 — unified simple chat and restrained rainbow navigation */
 :root{
-  --rainbow-purple:#8250df;
+  --rainbow-purple:#0969da;
   --rainbow-blue:#0969da;
-  --rainbow-orange:#bc4c00;
-  --rainbow-pink:#bf3989;
-  --rainbow-cyan:#1b7c83;
+  --rainbow-orange:#0969da;
+  --rainbow-pink:#0969da;
+  --rainbow-cyan:#0969da;
 }
 
 /* Simple text tabs instead of a heavy segmented control. */
@@ -5026,8 +5030,8 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   font-size:12px!important;
 }
 #modeBar #createNullBtn{background:var(--rainbow-purple)!important;color:#fff!important;}
-#dailyNullsBtn:hover{color:var(--rainbow-orange)!important;background:#fff1e5!important;}
-#aiBeingsBtn:hover{color:var(--rainbow-pink)!important;background:#ffeff7!important;}
+#dailyNullsBtn:hover{color:var(--rainbow-orange)!important;background:#f6f8fa!important;}
+#aiBeingsBtn:hover{color:var(--rainbow-pink)!important;background:#f6f8fa!important;}
 #homeControlStack{gap:5px!important;}
 #homeRoomCard{min-height:32px!important;height:32px!important;font-size:11px!important;border-radius:6px!important;}
 #homeUtilityButtons button{width:32px!important;height:32px!important;min-height:32px!important;}
@@ -5040,12 +5044,12 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   border-color:var(--rainbow-purple)!important;
 }
 #uploadBtn:hover,#createBeingSubmit:hover,
-.beingCard > button:nth-of-type(1):hover{background:#6e40c9!important;}
+.beingCard > button:nth-of-type(1):hover{background:#0969da!important;}
 #roomImageActions button:first-child{background:var(--rainbow-purple)!important;color:#fff!important;border-color:var(--rainbow-purple)!important;}
-#roomImageActions button:nth-child(2){color:var(--rainbow-blue)!important;border-color:#b6d6f2!important;background:#f1f8ff!important;}
-#roomImageActions button:nth-child(3){color:var(--rainbow-orange)!important;border-color:#f0c7a6!important;background:#fff8f2!important;}
-#shareRoomBtn{color:var(--rainbow-pink)!important;background:#fff5fa!important;border-color:#e9b6d3!important;}
-#beingQrBtn{color:var(--rainbow-cyan)!important;background:#f0ffff!important;border-color:#9ed8dc!important;}
+#roomImageActions button:nth-child(2){color:var(--rainbow-blue)!important;border-color:#f6f8fa!important;background:#f6f8fa!important;}
+#roomImageActions button:nth-child(3){color:var(--rainbow-orange)!important;border-color:#f6f8fa!important;background:#f6f8fa!important;}
+#shareRoomBtn{color:var(--rainbow-pink)!important;background:#f6f8fa!important;border-color:#f6f8fa!important;}
+#beingQrBtn{color:var(--rainbow-cyan)!important;background:#f6f8fa!important;border-color:#f6f8fa!important;}
 
 /* Every content card is centered and constrained. */
 .dailyNullCard,.beingCard{
@@ -5116,21 +5120,21 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   max-height:180px!important;
   margin:0 0 0 7px!important;
   object-fit:cover!important;
-  border:1px solid #d0d7de!important;
+  border:1px solid #f6f8fa!important;
   border-radius:14px!important;
   box-shadow:none!important;
 }
 #roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{
-  background:#ddf4ff!important;
+  background:#f6f8fa!important;
   color:#1f2328!important;
   border:0!important;
   border-radius:18px 4px 18px 18px!important;
   box-shadow:0 1px 2px rgba(31,35,40,.12)!important;
 }
 #roomMessages.geminiThread .geminiUserMessage::before{color:var(--rainbow-blue)!important;}
-#roomMessages.geminiThread .chatOpenAction{color:var(--rainbow-blue)!important;background:#f1f8ff!important;border-color:#b6d6f2!important;}
-#roomMessages.geminiThread .chatShareAction{color:var(--rainbow-pink)!important;background:#fff5fa!important;border-color:#e9b6d3!important;}
-#firstNextBtn{color:var(--rainbow-purple)!important;background:#f7f2ff!important;border-color:#d8c7f3!important;}
+#roomMessages.geminiThread .chatOpenAction{color:var(--rainbow-blue)!important;background:#f6f8fa!important;border-color:#f6f8fa!important;}
+#roomMessages.geminiThread .chatShareAction{color:var(--rainbow-pink)!important;background:#f6f8fa!important;border-color:#f6f8fa!important;}
+#firstNextBtn{color:var(--rainbow-purple)!important;background:#f6f8fa!important;border-color:#f6f8fa!important;}
 
 /* The Ask field has exactly one border and one focus state. */
 #roomInput{
@@ -5158,12 +5162,12 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
   --final-panel:#f6f8fa;
   --final-text:#1f2328;
   --final-muted:#656d76;
-  --final-line:#d0d7de;
-  --final-purple:#8250df;
+  --final-line:#f6f8fa;
+  --final-purple:#0969da;
   --final-blue:#0969da;
-  --final-orange:#bc4c00;
-  --final-pink:#bf3989;
-  --final-cyan:#1b7c83;
+  --final-orange:#0969da;
+  --final-pink:#0969da;
+  --final-cyan:#0969da;
   --final-width:760px;
 }
 
@@ -5185,8 +5189,8 @@ img,video{border-radius:0!important;}
 #modeBar{width:auto!important;max-width:calc(100% - 24px)!important;min-height:34px!important;padding:0!important;gap:6px!important;background:transparent!important;border:0!important;box-shadow:none!important;}
 #modeBar button,#modeBar button:first-child,#modeBar button:last-child{height:34px!important;min-height:34px!important;padding:0 11px!important;font-size:12px!important;border-radius:0!important;}
 #modeBar #createNullBtn{background:var(--final-purple)!important;color:#fff!important;border:1px solid var(--final-purple)!important;}
-#modeBar #dailyNullsBtn{background:#f1f8ff!important;color:var(--final-blue)!important;border:1px solid #b6d6f2!important;}
-#modeBar #aiBeingsBtn{background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;}
+#modeBar #dailyNullsBtn{background:#f6f8fa!important;color:var(--final-blue)!important;border:1px solid #f6f8fa!important;}
+#modeBar #aiBeingsBtn{background:#f6f8fa!important;color:var(--final-pink)!important;border:1px solid #f6f8fa!important;}
 #homeControlStack{gap:6px!important;}
 #homeRoomCard,#homeUtilityButtons button,#publicNullsBtn{background:#fff!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;box-shadow:none!important;}
 #homeInstruction{font-weight:600!important;letter-spacing:0!important;}
@@ -5237,14 +5241,14 @@ body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
 #roomIdentityPanel{background:transparent!important;color:var(--final-text)!important;border:0!important;box-shadow:none!important;}
 #roomThumbnail,#roomCameraThumbnail{border:1px solid var(--final-line)!important;box-shadow:none!important;}
 #roomTitle,#roomTitle *{color:var(--final-text)!important;font-weight:600!important;}
-#shareRoomBtn{background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;}
-#beingQrBtn{background:#f0ffff!important;color:var(--final-cyan)!important;border:1px solid #9ed8dc!important;}
+#shareRoomBtn{background:#f6f8fa!important;color:var(--final-pink)!important;border:1px solid #f6f8fa!important;}
+#beingQrBtn{background:#f6f8fa!important;color:var(--final-cyan)!important;border:1px solid #f6f8fa!important;}
 #closeRoom{background:#fff!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;}
 #roomImageActions{width:min(var(--final-width),100%)!important;height:32px!important;min-height:32px!important;gap:6px!important;justify-content:flex-start!important;}
 #roomImageActions button,#roomImageActions button:first-child,#roomImageActions button:not(:first-child){height:32px!important;min-height:32px!important;padding:0 10px!important;font-size:12px!important;}
 #roomImageActions button:first-child{background:var(--final-purple)!important;color:#fff!important;border:1px solid var(--final-purple)!important;}
-#roomImageActions button:nth-child(2){background:#f1f8ff!important;color:var(--final-blue)!important;border:1px solid #b6d6f2!important;}
-#roomImageActions button:nth-child(3){background:#fff8f2!important;color:var(--final-orange)!important;border:1px solid #f0c7a6!important;}
+#roomImageActions button:nth-child(2){background:#f6f8fa!important;color:var(--final-blue)!important;border:1px solid #f6f8fa!important;}
+#roomImageActions button:nth-child(3){background:#f6f8fa!important;color:var(--final-orange)!important;border:1px solid #f6f8fa!important;}
 
 /* HUMAN landing state rendered inside roomMessages */
 #roomMessages:not(.geminiThread) > div{width:100%!important;max-width:620px!important;box-sizing:border-box!important;color:var(--final-text)!important;}
@@ -5261,12 +5265,12 @@ body.connectedHome #cameraWrap,body.expiredHome #cameraWrap{
   background:var(--final-panel)!important;color:var(--final-text)!important;border:1px solid var(--final-line)!important;box-shadow:none!important;
   font-size:14px!important;line-height:1.5!important;font-weight:400!important;text-align:left!important;
 }
-#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{background:#ddf4ff!important;color:var(--final-text)!important;border:1px solid #54aeff!important;box-shadow:none!important;font-weight:400!important;}
+#roomMessages.geminiThread .geminiUserMessage > .chatUserBubble{background:#f6f8fa!important;color:var(--final-text)!important;border:1px solid #0969da!important;box-shadow:none!important;font-weight:400!important;}
 #roomMessages.geminiThread .chatReplyImage{width:min(180px,46vw)!important;max-width:180px!important;max-height:180px!important;object-fit:cover!important;border:1px solid var(--final-line)!important;box-shadow:none!important;}
 #roomMessages.geminiThread .geminiAiResponse img.humanAcknowledgementPhoto{display:block!important;width:96px!important;height:96px!important;min-width:96px!important;max-width:96px!important;min-height:96px!important;max-height:96px!important;object-fit:cover!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:0 0 10px!important;align-self:flex-start!important;}
-#roomMessages.geminiThread .chatOpenAction{background:#f1f8ff!important;color:var(--final-blue)!important;border:1px solid #b6d6f2!important;}
-#roomMessages.geminiThread .chatShareAction{background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;}
-#firstNextBtn{background:#f7f2ff!important;color:var(--final-purple)!important;border:1px solid #d8c7f3!important;font-weight:600!important;}
+#roomMessages.geminiThread .chatOpenAction{background:#f6f8fa!important;color:var(--final-blue)!important;border:1px solid #f6f8fa!important;}
+#roomMessages.geminiThread .chatShareAction{background:#f6f8fa!important;color:var(--final-pink)!important;border:1px solid #f6f8fa!important;}
+#firstNextBtn{background:#f6f8fa!important;color:var(--final-purple)!important;border:1px solid #f6f8fa!important;font-weight:600!important;}
 
 /* Composer */
 #roomInput{width:min(var(--final-width),calc(100% - 24px))!important;height:44px!important;min-height:44px!important;background:#fff!important;color:var(--final-text)!important;border:1px solid #8c959f!important;outline:0!important;box-shadow:none!important;font-size:14px!important;font-weight:400!important;}
@@ -5300,7 +5304,7 @@ html body .appStartupDots{
   width:fit-content!important;
   padding:8px 10px!important;
   background:var(--final-panel,#f6f8fa)!important;
-  border:1px solid var(--final-line,#d0d7de)!important;
+  border:1px solid var(--final-line,#f6f8fa)!important;
   box-sizing:border-box!important;
 }
 html body .defaultLoadingDot,
@@ -5356,7 +5360,7 @@ html body .appStartupDots span:nth-child(3){animation-delay:.3s!important;}
   border:1px solid var(--final-blue)!important;
   border-radius:0!important;
   color:var(--final-blue)!important;
-  background:#f1f8ff!important;
+  background:#f6f8fa!important;
   font:inherit!important;
   font-weight:600!important;
   cursor:pointer!important;
@@ -5487,7 +5491,7 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
 #dailyNullsCards .dailyNullCard > a > div{font-size:0!important;animation:none!important;justify-content:flex-start!important;padding:0 0 6px!important;color:var(--final-blue)!important;}
 #dailyNullsCards .dailyNullCard > a > div::after{content:"Read article";font-size:12px;font-weight:600;}
 #dailyNullsCards .dailyNullCard > div:last-child{grid-column:1;display:flex!important;gap:6px!important;margin-top:6px!important;}
-#dailyNullsCards .dailyNullCard > div:last-child span{padding:7px 10px!important;background:#fff5fa!important;color:var(--final-pink)!important;border:1px solid #e9b6d3!important;font-size:11px!important;font-weight:600!important;}
+#dailyNullsCards .dailyNullCard > div:last-child span{padding:7px 10px!important;background:#f6f8fa!important;color:var(--final-pink)!important;border:1px solid #f6f8fa!important;font-size:11px!important;font-weight:600!important;}
 
 /* Public screen and cards. */
 #publicNullsScreen{padding-top:74px!important;padding-bottom:48px!important;}
@@ -5537,17 +5541,17 @@ body.connectedHome #helper button,body.expiredHome #helper button,body.connected
 
 /* v10.0.82 — final whole-app button, spacing, and color system */
 :root{
-  --action-primary:#8250df;
-  --action-primary-hover:#6e40c9;
+  --action-primary:#0969da;
+  --action-primary-hover:#0969da;
   --action-blue:#0969da;
-  --action-blue-bg:#f1f8ff;
-  --action-blue-line:#b6d6f2;
-  --action-orange:#bc4c00;
-  --action-orange-bg:#fff8f2;
-  --action-orange-line:#f0c7a6;
-  --action-pink:#bf3989;
-  --action-pink-bg:#fff5fa;
-  --action-pink-line:#e9b6d3;
+  --action-blue-bg:#f6f8fa;
+  --action-blue-line:#f6f8fa;
+  --action-orange:#0969da;
+  --action-orange-bg:#f6f8fa;
+  --action-orange-line:#f6f8fa;
+  --action-pink:#0969da;
+  --action-pink-bg:#f6f8fa;
+  --action-pink-line:#f6f8fa;
   --action-neutral-bg:#f6f8fa;
 }
 
@@ -5658,24 +5662,24 @@ button:disabled{opacity:.55!important;cursor:not-allowed!important;}
 
 /* v10.0.83 — Google-inspired product system, with ASK.CAMERA square geometry */
 :root{
-  --google-blue:#1a73e8;
-  --google-blue-dark:#185abc;
-  --google-blue-soft:#e8f0fe;
-  --google-blue-line:#aecbfa;
-  --google-red:#d93025;
-  --google-red-soft:#fce8e6;
-  --google-red-line:#f6aea9;
-  --google-yellow:#e37400;
-  --google-yellow-soft:#fef7e0;
-  --google-yellow-line:#fdd663;
-  --google-green:#188038;
-  --google-green-soft:#e6f4ea;
-  --google-green-line:#a8dab5;
+  --google-blue:#0969da;
+  --google-blue-dark:#0969da;
+  --google-blue-soft:#f6f8fa;
+  --google-blue-line:#f6f8fa;
+  --google-red:#0969da;
+  --google-red-soft:#f6f8fa;
+  --google-red-line:#f6f8fa;
+  --google-yellow:#0969da;
+  --google-yellow-soft:#f6f8fa;
+  --google-yellow-line:#0969da;
+  --google-green:#0969da;
+  --google-green-soft:#f6f8fa;
+  --google-green-line:#f6f8fa;
   --google-text:#202124;
   --google-muted:#5f6368;
   --google-border:#dadce0;
   --google-surface:#fff;
-  --google-surface-2:#f8f9fa;
+  --google-surface-2:#f6f8fa;
   --final-bg:var(--google-surface);
   --final-panel:var(--google-surface-2);
   --final-text:var(--google-text);
@@ -6098,7 +6102,7 @@ html body #createBeingSubmit{
   gap:5px!important;
   box-sizing:border-box!important;
   background:#f6f8fa!important;
-  border:1px solid #d0d7de!important;
+  border:1px solid #f6f8fa!important;
   border-radius:18px!important;
 }
 .openingSequenceLoader .openingSequenceDot{
@@ -6117,7 +6121,7 @@ html body #createBeingSubmit{
 @media not all {
 /* v10.0.133 — disabled; v10.0.135 restores the v10.0.132 visual system. */
 :root{
-  --ui-button-1:#1a73e8;
+  --ui-button-1:#0969da;
   --ui-button-2:#202124;
   --ui-button-3:#3c4043;
   --ui-button-4:#5f6368;
@@ -6127,8 +6131,8 @@ html body #createBeingSubmit{
   --ui-text-3:#5f6368;
   --ui-text-4:#9aa0a6;
   --ui-line:#dadce0;
-  --ui-red:#d93025;
-  --ui-red-soft:#fce8e6;
+  --ui-red:#0969da;
+  --ui-red-soft:#f6f8fa;
 }
 
 /* Fifth level is the quiet default for utility and newly rendered controls. */
@@ -6214,7 +6218,7 @@ html body .beingManageButton,
 html body .publicPerspectiveAdmin{
   background:var(--ui-red-soft)!important;
   color:var(--ui-red)!important;
-  border-color:#f6aea9!important;
+  border-color:#f6f8fa!important;
 }
 html body .loveBtn,
 html body [data-love],
@@ -6459,13 +6463,13 @@ html body #roomMessages *{
 /* v10.0.162 — one sharp, type-safe HUMAN result component. */
 .humanContractResult{width:100%;max-width:680px;margin:0 0 22px!important;}
 .humanContractResult,.humanContractResult *{border-radius:0!important;box-sizing:border-box;}
-.humanResultBody{border:1px solid #d8dee4;background:#fff;padding:16px;display:grid;gap:10px;}
+.humanResultBody{border:1px solid #f6f8fa;background:#fff;padding:16px;display:grid;gap:10px;}
 .humanResultCategory{font-size:11px;font-weight:800;letter-spacing:.04em;color:#57606a;text-transform:uppercase;}
-.humanResultImage{width:112px;height:112px;object-fit:cover;border:1px solid #d8dee4;}
+.humanResultImage{width:112px;height:112px;object-fit:cover;border:1px solid #f6f8fa;}
 .humanResultTitle{font-size:19px;font-weight:750;line-height:1.3;color:#1f2328;overflow-wrap:anywhere;}
 .humanResultSource{font-size:14px;font-weight:650;color:#57606a;}
 .humanResultDetails{display:flex;flex-wrap:wrap;gap:6px;}
-.humanResultDetail{padding:6px 8px;border:1px solid #d8dee4;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.25;}
+.humanResultDetail{padding:6px 8px;border:1px solid #f6f8fa;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.25;}
 .humanResultActions{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin-top:8px;}
 .humanResultActions .chatOpenAction,.humanResultActions .chatShareAction{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:44px!important;padding:9px 14px!important;}
 .humanSecondaryAction{background:#fff!important;color:#0969da!important;}
@@ -6965,7 +6969,7 @@ ASK.CAMERA
 
 <button id="beingQrBtn" onclick="showBeingQR()" style="display:none;height:24px;padding:0 10px;border:none;border-radius:999px;background:#000;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">QR</button>
 
-<button id="changeHumanBtn" onclick="showAIBeings()" style="display:none;height:24px;padding:0 10px;border:1px solid #54aeff;background:#ddf4ff;color:#0550ae;font-size:11px;font-weight:700;cursor:pointer;">Change HUMAN</button>
+<button id="changeHumanBtn" onclick="showAIBeings()" style="display:none;height:24px;padding:0 10px;border:1px solid #0969da;background:#f6f8fa;color:#0969da;font-size:11px;font-weight:700;cursor:pointer;">Change HUMAN</button>
 
 <button
 id="shareRoomBtn"
@@ -10417,13 +10421,13 @@ if (m.jobCard) {
   const localContextCard = localContextNewsCardHtml(m.localContextNews);
   const jobDetails = [job.location,job.salary,job.type,job.posted]
     .filter(Boolean)
-    .map(value => `<span style="display:inline-block;padding:5px 8px;border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.2;">${escapeBeingText(value)}</span>`)
+    .map(value => `<span style="display:inline-block;padding:5px 8px;border:1px solid #f6f8fa;background:#f6f8fa;color:#57606a;font-size:12px;line-height:1.2;">${escapeBeingText(value)}</span>`)
     .join("");
 
   return `
     ${localContextCard}
     <div class="dailyNullCard geminiAiResponse modernJobResult" data-share-card data-share-read="true" data-link="${escapeBeingText(jobLink)}" style="margin-bottom:18px;">
-      <div data-share-content style="border:1px solid #d0d7de;background:#fff;padding:18px;">
+      <div data-share-content style="border:1px solid #f6f8fa;background:#fff;padding:18px;">
         <div style="font-size:11px;font-weight:800;letter-spacing:.04em;color:#57606a;">${getRoomResultCategoryLabel(m)}</div>
         <div style="margin-top:12px;font-size:20px;font-weight:700;line-height:1.25;color:#24292f;overflow-wrap:anywhere;">${escapeBeingText(job.title || "Current career opportunities")}</div>
         ${job.company ? `<div style="margin-top:8px;font-size:15px;font-weight:600;line-height:1.35;color:#24292f;">${escapeBeingText(job.company)}</div>` : ""}
@@ -10788,7 +10792,7 @@ typing.style.gap = "4px";
 typing.style.padding = "0 12px";
 
 typing.style.background = "#f6f8fa";
-typing.style.border = "1px solid #d0d7de";
+typing.style.border = "1px solid #f6f8fa";
 
 typing.style.borderRadius = "18px";
 
@@ -10916,7 +10920,7 @@ function showAITyping(){
   wrap.style.padding = "0 12px";
 
   wrap.style.background = "#f6f8fa";
-  wrap.style.border = "1px solid #d0d7de";
+  wrap.style.border = "1px solid #f6f8fa";
 
   wrap.style.borderRadius = "18px";
 
@@ -13042,9 +13046,9 @@ function syncBeingKeywordChips(){
   document.querySelectorAll("#beingKeywordChips .beingKeywordChip").forEach(chip => {
     const isSelected = selected.includes(chip.dataset.keyword.toLowerCase());
     chip.classList.toggle("isSelected",isSelected);
-    chip.style.setProperty("background",isSelected ? "#e8f0fe" : "#fff","important");
-    chip.style.setProperty("color",isSelected ? "#174ea6" : "#111","important");
-    chip.style.setProperty("border-color",isSelected ? "#1a73e8" : "#8c959f","important");
+    chip.style.setProperty("background",isSelected ? "#f6f8fa" : "#fff","important");
+    chip.style.setProperty("color",isSelected ? "#0969da" : "#111","important");
+    chip.style.setProperty("border-color",isSelected ? "#0969da" : "#8c959f","important");
   });
 }
 
@@ -14057,16 +14061,16 @@ Close
         button.style.setProperty('border-color','#111','important');
       }else if(button.matches(destructiveSelector)){
         button.style.setProperty('background','#fff','important');
-        button.style.setProperty('color','#cf222e','important');
-        button.style.setProperty('border-color','#ff8182','important');
+        button.style.setProperty('color','#0969da','important');
+        button.style.setProperty('border-color','#f6f8fa','important');
       }else if(button.matches(primarySelector)){
         button.style.setProperty('background','#0969da','important');
         button.style.setProperty('color','#fff','important');
         button.style.setProperty('border-color','#0969da','important');
       }else if(button.matches(guidanceSelector)){
-        button.style.setProperty('background','#ddf4ff','important');
-        button.style.setProperty('color','#0550ae','important');
-        button.style.setProperty('border-color','#54aeff','important');
+        button.style.setProperty('background','#f6f8fa','important');
+        button.style.setProperty('color','#0969da','important');
+        button.style.setProperty('border-color','#0969da','important');
       }else{
         button.style.setProperty('background','#fff','important');
         button.style.setProperty('color','#111','important');
@@ -14084,9 +14088,9 @@ Close
       ? [root]
       : Array.from(root.querySelectorAll ? root.querySelectorAll('.chatOpenAction,.chatShareAction') : []);
     actionLinks.forEach(action => {
-      action.style.setProperty('background','#ddf4ff','important');
-      action.style.setProperty('color','#0550ae','important');
-      action.style.setProperty('border','1px solid #54aeff','important');
+      action.style.setProperty('background','#f6f8fa','important');
+      action.style.setProperty('color','#0969da','important');
+      action.style.setProperty('border','1px solid #0969da','important');
       action.style.setProperty('border-radius','0','important');
       action.style.setProperty('box-shadow','none','important');
     });
@@ -14184,7 +14188,7 @@ Close
   height:100%!important;
   min-height:0!important;
   padding:8px!important;
-  border:1px solid #d0d7de!important;
+  border:1px solid #f6f8fa!important;
   background:#f6f8fa!important;
   overflow:hidden!important;
 }
@@ -14276,7 +14280,7 @@ Close
   flex-direction:column!important;
   justify-content:flex-start!important;
   padding:12px!important;
-  border:1px solid #d0d7de!important;
+  border:1px solid #f6f8fa!important;
   background:#fff!important;
   overflow:hidden!important;
 }
@@ -14423,7 +14427,7 @@ Close
 #roomMessages.perspectiveSwipeThread .perspectiveArrivalMedia .perspectiveArrivalImage:only-child{width:100%!important;}
 #roomMessages.perspectiveSwipeThread .perspectiveArrivalDemoLabel{
   margin-bottom:7px;
-  color:#0550ae;
+  color:#0969da;
   font-size:11px;
   font-weight:800;
   letter-spacing:.06em;
@@ -14437,7 +14441,7 @@ Close
   justify-content:space-between;
   gap:12px;
   padding:12px;
-  border:1px solid #d0d7de;
+  border:1px solid #f6f8fa;
   background:#f6f8fa;
   color:#24292f;
   font-size:13px;
@@ -14477,9 +14481,9 @@ Close
   width:100%;
   min-height:40px;
   padding:8px 12px;
-  border:1px solid #54aeff!important;
-  background:#ddf4ff!important;
-  color:#0550ae!important;
+  border:1px solid #0969da!important;
+  background:#f6f8fa!important;
+  color:#0969da!important;
   font:inherit;
   text-align:left;
   cursor:pointer;
@@ -14521,7 +14525,7 @@ html body #shareRoomBtn{
 html body #shareRoomBtn::after{
   content:"Share";
   display:block;
-  color:#0550ae;
+  color:#0969da;
   font-size:11px;
   font-weight:700;
   line-height:36px;
@@ -14546,7 +14550,7 @@ html body #shareRoomBtn::before{content:none!important;display:none!important;}
   width:min(100%,340px);
   padding:18px;
   box-sizing:border-box;
-  border:1px solid #d0d7de;
+  border:1px solid #f6f8fa;
   background:#fff;
 }
 #roomShareMenu .roomShareMenuTitle{margin-bottom:12px;font-size:17px;font-weight:700;line-height:1.25;overflow-wrap:anywhere;}
@@ -14554,14 +14558,14 @@ html body #shareRoomBtn::before{content:none!important;display:none!important;}
   width:100%;
   min-height:44px;
   margin-top:8px;
-  border:1px solid #54aeff!important;
+  border:1px solid #0969da!important;
   border-radius:0!important;
-  background:#ddf4ff!important;
-  color:#0550ae!important;
+  background:#f6f8fa!important;
+  color:#0969da!important;
   font-size:14px;
   font-weight:600;
 }
-#roomShareMenu .roomShareMenuCancel{border-color:#d0d7de!important;background:#fff!important;color:#24292f!important;}
+#roomShareMenu .roomShareMenuCancel{border-color:#f6f8fa!important;background:#fff!important;color:#24292f!important;}
 
 html body #roomImageActions,
 html body #roomOverlay.perspectiveDemoViewing #roomImageActions{
@@ -14642,7 +14646,7 @@ html body #shareRoomBtn{margin-left:auto!important;}
   padding:10px;
   box-sizing:border-box;
   overflow:hidden;
-  border:1px solid #d0d7de;
+  border:1px solid #f6f8fa;
   background:#fff;
 }
 #roomMessages.perspectiveSwipeThread .unifiedDailyRoomPerspective.result-news .unifiedDailyRoomCard{
@@ -14684,7 +14688,7 @@ html body #shareRoomBtn{margin-left:auto!important;}
 #roomMessages .unifiedNewsTitle{-webkit-line-clamp:2;}
 #roomMessages .unifiedNewsSource,
 #roomMessages .unifiedResultSource{margin-top:3px;color:#57606a;font-size:10px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-#roomMessages .unifiedNewsLink{position:absolute;right:0;top:0;color:#0550ae!important;font-size:10px;font-weight:700;text-decoration:none;}
+#roomMessages .unifiedNewsLink{position:absolute;right:0;top:0;color:#0969da!important;font-size:10px;font-weight:700;text-decoration:none;}
 #roomMessages .unifiedHumanConnection{
   grid-area:human;
   min-height:0;
@@ -14701,7 +14705,7 @@ html body #shareRoomBtn{margin-left:auto!important;}
 #roomMessages .unifiedResultSection{grid-area:result;min-height:0;padding:3px 0;overflow:hidden;}
 #roomMessages .unifiedResultTitle{-webkit-line-clamp:2;}
 #roomMessages .unifiedResultDetails{display:flex;gap:5px;margin-top:4px;overflow:hidden;}
-#roomMessages .unifiedResultDetails span{padding:3px 5px;border:1px solid #d0d7de;background:#f6f8fa;color:#57606a;font-size:9px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#roomMessages .unifiedResultDetails span{padding:3px 5px;border:1px solid #f6f8fa;background:#f6f8fa;color:#57606a;font-size:9px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 #roomMessages .unifiedResultActions{grid-area:actions;display:flex;gap:7px;min-height:36px;}
 #roomMessages .unifiedAction{
   flex:1 1 0;
@@ -14712,10 +14716,10 @@ html body #shareRoomBtn{margin-left:auto!important;}
   justify-content:center;
   padding:5px 8px;
   box-sizing:border-box;
-  border:1px solid #54aeff!important;
+  border:1px solid #0969da!important;
   border-radius:0!important;
-  background:#ddf4ff!important;
-  color:#0550ae!important;
+  background:#f6f8fa!important;
+  color:#0969da!important;
   font:inherit;
   font-size:11px!important;
   font-weight:650!important;
@@ -15022,12 +15026,12 @@ html body #closeRoom{
   gap:12px;
   padding:clamp(20px,6vw,42px);
   box-sizing:border-box;
-  border:1px solid #d0d7de;
+  border:1px solid #f6f8fa;
   background:#fff;
   color:#24292f;
 }
 #roomMessages .perspectiveUserRequestEyebrow{
-  color:#0550ae;
+  color:#0969da;
   font-size:11px;
   font-weight:800;
   letter-spacing:.06em;
@@ -15078,9 +15082,9 @@ html body #closeRoom{
 #roomMessages .perspectiveUserRequestLoading button{
   min-height:40px;
   padding:0 14px;
-  border:1px solid #54aeff;
-  background:#ddf4ff;
-  color:#0550ae;
+  border:1px solid #0969da;
+  background:#f6f8fa;
+  color:#0969da;
   font:600 13px Arial,sans-serif;
 }
 #homeInstruction .homeHeroQuote{
@@ -15121,12 +15125,12 @@ html body #closeRoom{
   gap:14px;
   padding:clamp(22px,7vw,48px);
   box-sizing:border-box;
-  border:1px solid #d0d7de;
+  border:1px solid #f6f8fa;
   background:#fff;
   color:#24292f;
 }
 #roomMessages .systemPerspectiveLabel{
-  color:#0550ae;
+  color:#0969da;
   font-size:11px;
   font-weight:800;
   line-height:1.2;
@@ -15187,7 +15191,7 @@ html body #closeRoom{
 #roomMessages .systemPerspectiveSuggestions button{
   min-height:42px;
   padding:8px 12px;
-  border:1px solid #d0d7de;
+  border:1px solid #f6f8fa;
   border-radius:0;
   background:#f6f8fa;
   color:#24292f;
