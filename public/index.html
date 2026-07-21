@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.0 (2026-07-21)
+  - Aligns user-facing wording with The Doc and locks the Image Connect foundation-tool language
+  - Adds three persistent object-or-place Connection Keywords to Create and Edit HUMAN
+  - Uses Connection Keywords in bio generation, HUMAN cards, and room context
+
   v10.1.61 (2026-07-21)
   - Locks the first ASK.CAMERA startup title to the same larger rendered size
   - Places the title dimensions directly on the startup element so later CSS cannot resize it
@@ -299,7 +304,7 @@ CHANGE LOG
   - Keeps room conversation, metadata, result titles, and actions on the sharp-corner UI system
 
   v10.0.159 (2026-07-20)
-  - Keeps the ASK bar visible while clearly showing when the five examples are still running
+  - Keeps the ASK bar visible while clearly showing when the five discovered connections are still running
   - Resumes only missing briefing cards when a live HUMAN room is rejoined
   - Prevents late automatic cards from appearing below the completion message
   - Distinguishes a real job link from an honest job-search fallback
@@ -2411,7 +2416,7 @@ width:1px;
 height:1px;
 overflow:hidden;
 ">
-ASK.CAMERA – AI Camera Search
+ASK.CAMERA — The AI That Connects Humans
 </h1>
 
 <div id="appBgLogo"></div>
@@ -2504,15 +2509,20 @@ ASK.CAMERA – AI Camera Search
       <option value="">Choose your role</option>
     </select>
     <input id="beingCustomRole" placeholder="Write your role" class="beingInput" style="display:none;" oninput="handleBeingProfileInput()">
-    <div style="font-size:12px;line-height:1.4;color:#666;margin:0 2px 8px;">Add three words that describe how you work, connect, or create opportunities.</div>
-    <input id="beingWord1" placeholder="Keyword 1 — e.g. strategic" class="beingInput" oninput="handleBeingProfileInput()">
-    <input id="beingWord2" placeholder="Keyword 2 — e.g. collaborative" class="beingInput" oninput="handleBeingProfileInput()">
-    <input id="beingWord3" placeholder="Keyword 3 — e.g. global" class="beingInput" oninput="handleBeingProfileInput()" onblur="generateBeingBio()">
+    <div style="font-size:12px;line-height:1.4;color:#666;margin:0 2px 8px;"><strong>Personality</strong><br>Add three descriptive words that shape how this HUMAN thinks, communicates, and connects.</div>
+    <input id="beingWord1" placeholder="Personality 1 — e.g. strategic" class="beingInput" oninput="handleBeingProfileInput()">
+    <input id="beingWord2" placeholder="Personality 2 — e.g. collaborative" class="beingInput" oninput="handleBeingProfileInput()">
+    <input id="beingWord3" placeholder="Personality 3 — e.g. curious" class="beingInput" oninput="handleBeingProfileInput()">
+    <div style="font-size:12px;line-height:1.45;color:#666;margin:4px 2px 8px;"><strong>Connection Keywords</strong><br>Add three objects or places. Short names such as Camera, New York, Starbucks, NTNU, or Taipei 101 are accepted.</div>
+    <input id="beingConnection1" maxlength="60" placeholder="Object or place 1 — e.g. Camera" class="beingInput" oninput="handleBeingConnectionInput(this)">
+    <input id="beingConnection2" maxlength="60" placeholder="Object or place 2 — e.g. New York" class="beingInput" oninput="handleBeingConnectionInput(this)">
+    <input id="beingConnection3" maxlength="60" placeholder="Object or place 3 — e.g. Parsons" class="beingInput" oninput="handleBeingConnectionInput(this)" onblur="generateBeingBio()">
+    <div id="beingConnectionStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Objects and places only · up to four words each · no sentences.</div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 2px 8px;">
       <label for="beingChoice" style="font-size:12px;font-weight:700;">BUSINESS INTRODUCTION</label>
       <button id="beingBioGenerate" type="button" onclick="generateBeingBio(true)" style="display:none;border:none;background:transparent;color:#0969da;padding:4px 0;font-size:12px;font-weight:700;">Regenerate bio</button>
     </div>
-    <textarea id="beingChoice" placeholder="Generated after category and three keywords" maxlength="160" class="beingInput" rows="3" oninput="markBeingBioEdited()"></textarea>
+    <textarea id="beingChoice" placeholder="Generated from category, role, personality, objects, and places" maxlength="160" class="beingInput" rows="3" oninput="markBeingBioEdited()"></textarea>
     <div id="beingBioStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Auto-generated and editable.</div>
     <input id="beingPhone" type="tel" inputmode="tel" placeholder="Public phone with country code (optional), e.g. +12125550123" class="beingInput">
     <div id="beingPasswordFields">
@@ -8784,7 +8794,7 @@ function renderRoomImageChapter(message = {}){
         <template data-opening-template="human-examples">
           <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
             <div class="chatBubble chatAiBubble">
-              Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy this search idea today.
+              Before you ask, I’ll show you five discovered connections of what I can provide from this image. Google should buy this search idea today.
             </div>
           </div>
         </template>
@@ -9806,7 +9816,7 @@ function getBeingFirstRoundLead(){
     </div>
     <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
       <div class="chatBubble chatAiBubble">
-        Before you ask, I’ll show you five examples of what I can provide from this image. Google should buy this search idea today.
+        Before you ask, I’ll show you five discovered connections of what I can provide from this image. Google should buy this search idea today.
       </div>
     </div>
   `;
@@ -10068,7 +10078,7 @@ if(m.firstRoundComplete){
   return humanInvitationPerspectiveHtml();
 }
 
-// v10.0.162: one authoritative renderer for all new HUMAN search results.
+// v10.0.162: one authoritative renderer for all new HUMAN discovered connections.
 // This intentionally runs before legacy image/job branches so an image can no
 // longer change the speech or button family.
 if(m.resultType && m.resultTitle){
@@ -11611,7 +11621,7 @@ margin-bottom:18px;
   text-transform:uppercase;
   -webkit-text-stroke:0.2px currentColor;
 ">
-  POINT YOUR CAMERA AT THE WORLD. OPEN THE CAMERA VIEW OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.
+  ASK.CAMERA. THE AI THAT CONNECTS HUMANS. FOUNDATION TOOL: IMAGE CONNECT. POINT YOUR CAMERA. DISCOVER WHAT THIS IMAGE CONNECTS YOU TO.
 </div>
 
 <div style="margin-top:16px;"></div>
@@ -12808,6 +12818,10 @@ async function loadAIBeings(){
         <div class="beingCardWords">
           ${[being.word1,being.word2,being.word3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
         </div>
+        <div class="beingCardBioLabel" style="margin-top:10px;">Connections</div>
+        <div class="beingCardWords beingCardConnections">
+          ${[being.connection1,being.connection2,being.connection3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
+        </div>
         <div class="beingCardActions">
           ${canOpenHumanRoom ? `<button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Open HUMAN Room</button>` : ""}
           <button class="beingShareButton" onclick="shareHumanCard('${being.id}')">Share card</button>
@@ -13043,12 +13057,37 @@ function beingCategoryValue(){
     : category;
 }
 
+function beingConnectionValues(){
+  return ["beingConnection1","beingConnection2","beingConnection3"].map(id => document.getElementById(id).value.trim());
+}
+
+function beingConnectionPhraseIsShort(value){
+  const clean = String(value || "").trim();
+  if(!clean || /[.!?;]/.test(clean)) return false;
+  return clean.split(/\s+/).filter(Boolean).length <= 4;
+}
+
+function handleBeingConnectionInput(input){
+  input.value = String(input.value || "").replace(/\s+/g," ").trimStart();
+  const invalid = beingConnectionValues().find(value => value && !beingConnectionPhraseIsShort(value));
+  const status = document.getElementById("beingConnectionStatus");
+  status.innerText = invalid
+    ? "Use a short object or place name with up to four words and no sentence punctuation."
+    : "Objects and places only · up to four words each · no sentences.";
+  status.style.color = invalid ? "#cf222e" : "#666";
+  handleBeingProfileInput();
+}
+
 function beingBioInputs(){
+  const [connection1,connection2,connection3] = beingConnectionValues();
   return {
     category:beingCategoryValue(),
     word1:document.getElementById("beingWord1").value.trim(),
     word2:document.getElementById("beingWord2").value.trim(),
-    word3:document.getElementById("beingWord3").value.trim()
+    word3:document.getElementById("beingWord3").value.trim(),
+    connection1,
+    connection2,
+    connection3
   };
 }
 
@@ -13144,7 +13183,7 @@ function resetBeingForm(){
   preview.removeAttribute("src");
   preview.style.display = "none";
   document.getElementById("beingPhoto").value = "";
-  ["beingName","beingChoice","beingCategory","beingCreatorType","beingCustomRole","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
+  ["beingName","beingChoice","beingCategory","beingCreatorType","beingCustomRole","beingWord1","beingWord2","beingWord3","beingConnection1","beingConnection2","beingConnection3","beingPhone","beingPassword","beingPasswordConfirm"]
     .forEach(id => document.getElementById(id).value = "");
   document.getElementById("beingCreatorType").style.display = "none";
   document.getElementById("beingCustomRole").style.display = "none";
@@ -13192,6 +13231,9 @@ async function changeAIBeingProfile(id){
     document.getElementById("beingWord1").value = being.word1 || "";
     document.getElementById("beingWord2").value = being.word2 || "";
     document.getElementById("beingWord3").value = being.word3 || "";
+    document.getElementById("beingConnection1").value = being.connection1 || "";
+    document.getElementById("beingConnection2").value = being.connection2 || "";
+    document.getElementById("beingConnection3").value = being.connection3 || "";
     renderBeingKeywordSuggestions();
     beingBioSignature = beingBioInputSignature();
     beingBioEdited = true;
@@ -13239,6 +13281,9 @@ async function createAIBeing(){
     word1: document.getElementById("beingWord1").value.trim(),
     word2: document.getElementById("beingWord2").value.trim(),
     word3: document.getElementById("beingWord3").value.trim(),
+    connection1: document.getElementById("beingConnection1").value.trim(),
+    connection2: document.getElementById("beingConnection2").value.trim(),
+    connection3: document.getElementById("beingConnection3").value.trim(),
     phone: document.getElementById("beingPhone").value.trim(),
     created_by: deviceId
   };
@@ -13253,7 +13298,9 @@ async function createAIBeing(){
     payload.management_credential = editingBeingPassword;
   }
 
-  const requiredValues = [payload.name,payload.best_current_choice,payload.category,payload.word1,payload.word2,payload.word3];
+  const requiredValues = [payload.name,payload.best_current_choice,payload.category,payload.word1,payload.word2,payload.word3,payload.connection1,payload.connection2,payload.connection3];
+  const invalidConnection = [payload.connection1,payload.connection2,payload.connection3].find(value => !beingConnectionPhraseIsShort(value));
+  if(invalidConnection){ alert("Each Connection Keyword must be a short object or place name with up to four words."); return; }
   const selectedRole = document.getElementById("beingCreatorType").value;
   const customRole = document.getElementById("beingCustomRole").value.trim();
   const roleMissing = !selectedRole || (selectedRole === CUSTOM_BEING_ROLE && !customRole);
@@ -13479,8 +13526,8 @@ function showBeingQR(){
 }
 
 const HOME_HERO_HTML = `
-  <div class="homeHeroTitle">POINT YOUR CAMERA AT ANYTHING.</div>
-  <div class="homeHeroSupport">Open the camera view to take a photo, or upload one. ASK.CAMERA turns what you see into new context and perspectives.</div>
+  <div class="homeHeroTitle">ASK.CAMERA</div>
+  <div class="homeHeroSupport"><strong>The AI That Connects Humans.</strong><br><br><span style="font-size:.78em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Foundation Tool</span><br><strong>Image Connect</strong><br><br>Point your camera.<br>Discover what this image connects you to.</div>
   <div class="homeHeroQuote">IF YOU DON'T EVEN HAVE DREAMS, WHAT'S THE DIFFERENCE BETWEEN YOU AND A SALTED FISH?</div>
 `;
 
@@ -13722,8 +13769,8 @@ if(directBeingMatch){
     <button onclick="closeHumanCardsGuide()" aria-label="Close HUMAN Cards guide" style="position:absolute;top:14px;right:14px;width:40px;height:40px;padding:0;border:none;border-radius:50%;background:#f2f2f2;color:#111;font-size:26px;line-height:1;cursor:pointer;">×</button>
     <div style="padding-right:48px;font-size:22px;font-weight:900;line-height:1.15;">What are HUMAN Cards?</div>
     <div style="margin-top:18px;font-size:14px;line-height:1.55;">
-      <p style="margin:0 0 12px;">Each HUMAN Card opens one private HUMAN room for images, questions, and five-part search briefings.</p>
-      <p style="margin:0 0 12px;">Choose a HUMAN after adding an image. That HUMAN acknowledges the image, provides five examples, and answers your questions.</p>
+      <p style="margin:0 0 12px;">Each HUMAN Card opens a private room where Image Connect discovers connections through that HUMAN’s personality, objects, places, and perspective.</p>
+      <p style="margin:0 0 12px;">Choose a HUMAN after adding an image. The image stays alive in the experience while the HUMAN guides the direction of each discovered connection.</p>
       <p style="margin:0 0 12px;">You can change HUMAN perspectives without losing the room, image, or earlier conversation.</p>
       <p style="margin:0;">A shared HUMAN link or QR is a HUMAN-room invitation. Each visitor adds their own image and starts a separate private conversation.</p>
     </div>
@@ -13937,7 +13984,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Choose a HUMAN perspective</b> for the image, then explore five examples.
+<b>Choose a HUMAN perspective</b> for the image, then explore five discovered connections.
 </div>
 
 </div>
@@ -13958,7 +14005,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Explore with the Camera Perspective Feed.</b>
+<b>Explore discovered connections through HUMAN perspectives.</b>
 </div>
 
 </div>
@@ -13988,9 +14035,9 @@ flex-shrink:0;
 <hr style="margin:20px 0;border:none;border-top:1px solid #eee;">
 
 <div style="text-align:center;">
-<b>POINT YOUR CAMERA AT THE WORLD. CHOOSE TAKE CAMERA VIEW OR UPLOAD AN IMAGE. ASK.CAMERA SEARCHES WHAT YOU SEE AND OPENS NEW CONTEXT AND PERSPECTIVES.</b><br><br>
+<b>ASK.CAMERA — THE AI THAT CONNECTS HUMANS. FOUNDATION TOOL: IMAGE CONNECT. POINT YOUR CAMERA. DISCOVER WHAT THIS IMAGE CONNECTS YOU TO.</b><br><br>
 
-<b>Capture. Ask. Discover.</b>
+<b>Image Connect. Ask. Discover.</b>
 </div>
 
 </div>
@@ -15640,6 +15687,34 @@ html body #appStartupLoader .appStartupGoogle{
   new MutationObserver(records => {
     records.forEach(record => record.addedNodes.forEach(node => clean(node)));
   }).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+
+<script>
+(function applyV102GlobalWording(){
+  const exact = new Map([
+    ["Results","Connections"],
+    ["Search Results","Discovered Connections"],
+    ["Upload Image","Start Image Connect"],
+    ["Open Camera","Open Image Connect"],
+    ["I found this...","This image connects to..."],
+    ["Generating your business introduction…","Building your HUMAN introduction…"]
+  ]);
+  const cleanText = root => {
+    if(!root) return;
+    const walker = document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+     const nodes = [];
+    while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      const value = node.nodeValue;
+      const trimmed = value.trim();
+      if(exact.has(trimmed)) node.nodeValue = value.replace(trimmed,exact.get(trimmed));
+    });
+  };
+  cleanText(document.body);
+  new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+    if(node.nodeType === 1) cleanText(node);
+  }))).observe(document.body,{childList:true,subtree:true});
 })();
 </script>
 </body>

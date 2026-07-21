@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.0 (2026-07-21)
+// - Adds three validated object-or-place Connection Keywords to every HUMAN
+// - Persists the new fields and uses them in bio generation and HUMAN connection context
+// - Aligns HUMAN-facing API errors and prompts with the ASK.CAMERA wording system
+
 // v10.1.16 (2026-07-21)
 // - Removes the legacy automatic room-expiry cleanup path
 // - Keeps rooms available until the user explicitly closes them
@@ -419,6 +424,8 @@ async function analyzeRoomUserText(rawText){
   if(original === "abc078") return { original,english:original,clarity:"clear" };
   if(obviousNonsenseInput(original)) return { original,english:original,clarity:"nonsense" };
   try{
+    const connectionCheck = await validateBeingConnections(required.slice(4));
+    if(!connectionCheck.valid) return res.status(400).json({ error:connectionCheck.error });
     const response = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.1,
@@ -2269,7 +2276,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nSearch signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- The user's requested result type and intent are mandatory and must never be changed.\n- Within that required intent, rank every automatic and chat result using: image identity 40%, HUMAN Category 15%, three words 15%, Bio 15%, and relevant local news 15%.\n- Use all three words to refine query meaning and candidate ranking.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest relevance signal.\n- Use local news for current context without turning a non-News request into a News result.\n- For later direct questions, never let Category, words, Bio, image, or news distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
+      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\nConnection objects and places: ${selectedBeing.connection1 || ""}, ${selectedBeing.connection2 || ""}, ${selectedBeing.connection3 || ""}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- The user's requested result type and intent are mandatory and must never be changed.\n- Within that required intent, rank every automatic and chat result using: image identity 40%, HUMAN Category 15%, three words 15%, Bio 15%, and relevant local news 15%.\n- Use all three personality words to refine voice and reasoning.\n- Use all three Connection Keywords as persistent object/place anchors when they meaningfully connect the image to the user’s request.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest relevance signal.\n- Use local news for current context without turning a non-News request into a News result.\n- For later direct questions, never let Category, words, Bio, image, or news distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
       : "HUMAN Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -7558,7 +7565,7 @@ app.get("/daily-nulls", (req,res) => {
 //////////////////////////////////////////////////
 
 const AI_BEING_PUBLIC_COLUMNS =
-  "id,photo,name,best_current_choice,category,word1,word2,word3,phone,created_by,created_at,followers,public";
+  "id,photo,name,best_current_choice,category,word1,word2,word3,connection1,connection2,connection3,phone,created_by,created_at,followers,public";
 
 function hashBeingCredential(value) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -7593,6 +7600,46 @@ function normalizeBeingPhone(value) {
 function isBeingAdminCredential(value) {
   const adminPassword = process.env.AI_BEINGS_ADMIN_PASSWORD;
   return Boolean(adminPassword) && String(value || "") === adminPassword;
+}
+
+function normalizeBeingConnection(value) {
+  const clean = String(value || "").replace(/\s+/g, " ").trim();
+  if (!clean || /[.!?;]/.test(clean)) return false;
+  if (clean.split(/\s+/).length > 4 || clean.length > 60) return false;
+  return clean;
+}
+
+async function validateBeingConnections(values) {
+  const normalized = values.map(normalizeBeingConnection);
+  if (normalized.some(value => value === false)) {
+    return { valid:false, error:"Each Connection Keyword must be a short object or place name with up to four words." };
+  }
+  try {
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0,
+      response_format:{ type:"json_object" },
+      messages:[
+        {
+          role:"system",
+          content:`Classify three short profile phrases. Each phrase must primarily name a physical object or a place.
+Places include cities, countries, neighborhoods, restaurants, schools, companies used as places, venues, buildings, landmarks, stores, parks, and institutions.
+Objects include physical products, tools, vehicles, foods, instruments, devices, clothing, and other tangible things.
+Reject personality traits, professions, activities, abstract topics, goals, sentences, and general concepts.
+Return JSON only: {"valid":true,"types":["object|place","object|place","object|place"]} or {"valid":false,"invalid":"exact phrase","reason":"brief reason"}.`
+        },
+        { role:"user", content:JSON.stringify(normalized) }
+      ]
+    });
+    const result = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+    if (!result.valid) {
+      return { valid:false, error:`"${result.invalid || "That entry"}" is not recognized as an object or place. Please enter an object or place name.` };
+    }
+    return { valid:true, values:normalized };
+  } catch (error) {
+    console.error("HUMAN connection validation failed:", error);
+    return { valid:false, error:"Could not validate the object or place names. Please try again." };
+  }
 }
 
 async function authorizeBeingManagement(id, credential) {
@@ -7636,10 +7683,10 @@ app.get("/ai-beings/:id", async (req, res) => {
 });
 
 app.post("/ai-beings/generate-bio", async (req, res) => {
-  const { category, word1, word2, word3 } = req.body || {};
-  const required = [category, word1, word2, word3].map(value => String(value || "").trim());
+  const { category, word1, word2, word3, connection1, connection2, connection3 } = req.body || {};
+  const required = [category, word1, word2, word3, connection1, connection2, connection3].map(value => String(value || "").trim());
   if(required.some(value => !value)){
-    return res.status(400).json({ error:"Choose a category and enter all three keywords first." });
+    return res.status(400).json({ error:"Choose a category, three personality words, and three Connection Keywords first." });
   }
 
   try{
@@ -7655,7 +7702,7 @@ Return JSON only with exactly one key: bio.
 The sentence must:
 - be natural English and no more than 160 characters including spaces;
 - explain who should connect with this person and/or what business opportunity they could explore together;
-- reflect the professional category and the spirit of all three keywords;
+- reflect the professional category, the spirit of all three personality words, and the supplied object/place connections;
 - use first person (for example, "I connect..." or "I build...");
 - sound credible, specific, warm, and concise;
 - avoid invented employers, achievements, locations, audience sizes, or other facts;
@@ -7664,7 +7711,7 @@ The sentence must:
         },
         {
           role:"user",
-          content:JSON.stringify({ category:required[0], word1:required[1], word2:required[2], word3:required[3] })
+          content:JSON.stringify({ category:required[0], word1:required[1], word2:required[2], word3:required[3], connection1:required[4], connection2:required[5], connection3:required[6] })
         }
       ]
     });
@@ -7687,15 +7734,18 @@ app.post("/ai-beings", async (req, res) => {
     word1,
     word2,
     word3,
+    connection1,
+    connection2,
+    connection3,
     phone,
     created_by,
     management_password
   } = req.body || {};
 
-  const required = [photo, name, best_current_choice, category, word1, word2, word3];
+  const required = [photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3];
 
   if (required.some(value => !String(value || "").trim())) {
-    return res.status(400).json({ error: "All AI Being fields are required." });
+    return res.status(400).json({ error: "Complete every required HUMAN field." });
   }
 
   if (String(management_password || "").length < 8 || String(management_password || "").length > 128) {
@@ -7706,6 +7756,9 @@ app.post("/ai-beings", async (req, res) => {
   if (normalizedPhone === false) {
     return res.status(400).json({ error: "Phone number must include a valid country code, such as +12125550123." });
   }
+
+  const connectionCheck = await validateBeingConnections([connection1,connection2,connection3]);
+  if(!connectionCheck.valid) return res.status(400).json({ error:connectionCheck.error });
 
   let englishBeing;
 
@@ -7725,7 +7778,7 @@ Translate and rewrite every descriptive field into clear, natural,
 grammatically correct English before it is saved.
 
 Return JSON only with exactly these keys:
-name, bio, category, word1, word2, word3
+name, bio, category, word1, word2, word3, connection1, connection2, connection3, connection1, connection2, connection3
 
 Rules:
 - Preserve the user's meaning. Never invent facts or change the personality.
@@ -7733,7 +7786,8 @@ Rules:
 - Bio must be exactly one concise, complete English sentence.
 - Bio must contain no more than 160 characters, including spaces.
 - Category must be a short English category.
-- word1, word2, and word3 must each be a short English word or phrase.
+- word1, word2, and word3 must each be a short English personality word or phrase.
+- connection1, connection2, and connection3 must preserve the supplied object or place names.
 - Correct grammar, spelling, punctuation, and sentence flow.
 - All descriptive output must be English.
           `.trim()
@@ -7746,7 +7800,10 @@ Rules:
             category: String(category).trim(),
             word1: String(word1).trim(),
             word2: String(word2).trim(),
-            word3: String(word3).trim()
+            word3: String(word3).trim(),
+            connection1: connectionCheck.values[0],
+            connection2: connectionCheck.values[1],
+            connection3: connectionCheck.values[2]
           })
         }
       ]
@@ -7762,7 +7819,10 @@ Rules:
       englishBeing.category,
       englishBeing.word1,
       englishBeing.word2,
-      englishBeing.word3
+      englishBeing.word3,
+      englishBeing.connection1,
+      englishBeing.connection2,
+      englishBeing.connection3
     ];
 
     if (rewrittenRequired.some(value => !String(value || "").trim())) {
@@ -7787,6 +7847,9 @@ Rules:
       word1: String(englishBeing.word1).trim().slice(0, 40),
       word2: String(englishBeing.word2).trim().slice(0, 40),
       word3: String(englishBeing.word3).trim().slice(0, 40),
+      connection1: String(englishBeing.connection1).trim().slice(0, 60),
+      connection2: String(englishBeing.connection2).trim().slice(0, 60),
+      connection3: String(englishBeing.connection3).trim().slice(0, 60),
       phone: normalizedPhone,
       created_by: created_by || null,
       followers: 0,
@@ -7802,7 +7865,7 @@ Rules:
 });
 
 app.put("/ai-beings/:id", async (req, res) => {
-  const { photo, name, best_current_choice, category, word1, word2, word3, phone, management_credential } = req.body || {};
+  const { photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3, phone, management_credential } = req.body || {};
   const authorization = await authorizeBeingManagement(req.params.id, management_credential);
   if (authorization.notFound) return res.status(404).json({ error: "AI Being not found." });
   if (!authorization.authorized) return res.status(403).json({ error: "Wrong management password or recovery code." });
@@ -7816,6 +7879,9 @@ app.put("/ai-beings/:id", async (req, res) => {
   if (normalizedPhone === false) {
     return res.status(400).json({ error: "Phone number must include a valid country code, such as +12125550123." });
   }
+
+  const connectionCheck = await validateBeingConnections([connection1,connection2,connection3]);
+  if(!connectionCheck.valid) return res.status(400).json({ error:connectionCheck.error });
 
   let englishBeing;
   try {
@@ -7848,14 +7914,17 @@ Rules:
             category: String(category).trim(),
             word1: String(word1).trim(),
             word2: String(word2).trim(),
-            word3: String(word3).trim()
+            word3: String(word3).trim(),
+            connection1: connectionCheck.values[0],
+            connection2: connectionCheck.values[1],
+            connection3: connectionCheck.values[2]
           })
         }
       ]
     });
 
     englishBeing = JSON.parse(rewriteResponse.choices?.[0]?.message?.content || "{}");
-    if ([englishBeing.name, englishBeing.bio, englishBeing.category, englishBeing.word1, englishBeing.word2, englishBeing.word3]
+    if ([englishBeing.name, englishBeing.bio, englishBeing.category, englishBeing.word1, englishBeing.word2, englishBeing.word3, englishBeing.connection1, englishBeing.connection2, englishBeing.connection3]
       .some(value => !String(value || "").trim())) {
       throw new Error("The English rewrite was incomplete.");
     }
@@ -7874,6 +7943,9 @@ Rules:
       word1: String(englishBeing.word1).trim().slice(0, 40),
       word2: String(englishBeing.word2).trim().slice(0, 40),
       word3: String(englishBeing.word3).trim().slice(0, 40),
+      connection1: String(englishBeing.connection1).trim().slice(0, 60),
+      connection2: String(englishBeing.connection2).trim().slice(0, 60),
+      connection3: String(englishBeing.connection3).trim().slice(0, 60),
       phone: normalizedPhone
     })
     .eq("id", req.params.id)
