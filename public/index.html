@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.29 (2026-07-21)
+  - Makes every query-producing System Swap action cancel all remaining automatic work
+  - Uses the selected System Swap query as the sole active loading and result request
+  - Prevents older automatic cards from appearing before or behind the selected query
+
   v10.1.28 (2026-07-21)
   - Connects room help to the backend System Swap contract and dedicated resolution action
   - Handles location, English confirmation, nonsense input, and image-relevant retry suggestions
@@ -9075,6 +9080,18 @@ function choosePerspectivePrompt(text){
 function resolveSystemSwap(id,action,value = "",button = null){
   if(!id || !socket?.connected) return;
   const perspective = button?.closest?.(".systemPerspective");
+  const queryActions = new Set(["suggestion","use","location","current_location","without_location"]);
+  if(queryActions.has(String(action || ""))){
+    const queryText = String(
+      value ||
+      (action === "use" ? perspective?.querySelector(".systemPerspectiveDetail")?.textContent : "") ||
+      perspectiveUserRequestText ||
+      button?.textContent ||
+      "Your request"
+    ).trim();
+    skipAutomaticPerspectivesForUserAsk(queryText);
+    perspectiveUserOverrideStartIndex = Math.max(0,lastRoomMessageCount - 1);
+  }
   perspective?.querySelectorAll("button,input").forEach(control => { control.disabled = true; });
   const status = perspective?.querySelector(".systemPerspectiveStatus");
   if(status) status.textContent = "Continuing…";
