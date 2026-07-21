@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.6 (2026-07-22)
+  - Uses neutral request-processing copy until the backend confirms News, Place, Jobs, or Real Estate intent
+  - Prevents Place requests from appearing to enter the News Gate before the location question
+
   v10.2.5 (2026-07-22)
   - Updates Connection Keyword examples to Coffee and Harvard University
 
@@ -8389,7 +8393,7 @@ roomInput.value = "";
 function perspectiveUserRequestLoadingHtml(){
   const status = perspectiveUserNewsGateBlocked
     ? "Verified News is taking longer than expected."
-    : "Finding verified News for your question…";
+    : "Understanding your request…";
   return `<section class="perspectiveUserRequestLoading" role="status" aria-live="polite">
     <div class="perspectiveUserRequestEyebrow">YOUR ASK</div>
     <div class="perspectiveUserRequestQuestion">${escapeBeingText(perspectiveUserRequestText || "Your question")}</div>
@@ -8444,7 +8448,7 @@ function skipAutomaticPerspectivesForUserAsk(text){
   document.getElementById("sequenceDelayNotice")?.remove();
   roomInput.disabled = true;
   roomInput.readOnly = false;
-  roomInput.placeholder = "Ask — finding verified News";
+  roomInput.placeholder = "Ask — understanding your request";
   showPerspectiveUserRequestLoading();
 }
 
@@ -9075,7 +9079,7 @@ function updatePerspectiveViewportState(){
     roomInput.disabled = perspectiveUserRequestPending;
     roomInput.readOnly = false;
     roomInput.placeholder = perspectiveUserRequestPending
-      ? "Ask — finding verified News"
+      ? "Ask — understanding your request"
       : "Ask";
   }
   updatePerspectiveDensity();
@@ -9748,7 +9752,7 @@ function syncFirstRoundInput(){
   if(perspectiveUserRequestPending){
     roomInput.disabled = true;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Ask — finding verified News";
+    roomInput.placeholder = "Ask — understanding your request";
     humanSelectionPrompt.style.display = "none";
     return;
   }
@@ -9895,7 +9899,7 @@ if(
   document.getElementById("sequenceDelayNotice")?.remove();
   hideSequenceTyping();
   roomInput.disabled = perspectiveUserRequestPending;
-  roomInput.placeholder = perspectiveUserRequestPending ? "Ask — finding verified News" : "Ask";
+  roomInput.placeholder = perspectiveUserRequestPending ? "Ask — understanding your request" : "Ask";
 }
 
 if (
