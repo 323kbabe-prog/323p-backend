@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.47 (2026-07-21)
+  - Removes every box and background from pure three-dot loaders
+  - Uses dark gray as the filled secondary-action and text-loader color
+
   v10.1.46 (2026-07-21)
   - Removes legacy high-specificity borders after every screen render
   - Replaces outlined room actions with darker-gray filled hierarchy
@@ -14093,9 +14097,9 @@ Close
         button.style.setProperty('color','#fff','important');
         button.style.setProperty('border-color','#0969da','important');
       }else if(button.matches(guidanceSelector)){
-        button.style.setProperty('background','#f6f8fa','important');
-        button.style.setProperty('color','#0969da','important');
-        button.style.setProperty('border-color','#0969da','important');
+        button.style.setProperty('background','#57606a','important');
+        button.style.setProperty('color','#fff','important');
+        button.style.setProperty('border-color','transparent','important');
       }else{
         button.style.setProperty('background','#fff','important');
         button.style.setProperty('color','#111','important');
@@ -15424,6 +15428,56 @@ html body #publicNullsCards .loveIcon{
   color:#d93025!important;
   -webkit-text-fill-color:#d93025!important;
   filter:none!important;
+}
+
+/* v10.1.47 — unboxed dots and a visible dark-gray secondary hierarchy. */
+html body .defaultLoadingDots,
+html body .openingSequenceLoader,
+html body .appStartupDots,
+html body #aiTyping.openingSequenceLoader,
+html body #sequenceTyping.openingSequenceLoader{
+  width:max-content!important;
+  min-width:0!important;
+  height:auto!important;
+  min-height:0!important;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+html body .defaultLoadingDot,
+html body .openingSequenceDot,
+html body .aiDot,
+html body .appStartupDots span{
+  background:#57606a!important;
+}
+html body #roomMessages .perspectiveArrivalLoading{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:#57606a!important;
+  color:#fff!important;
+}
+html body #roomMessages .perspectiveArrivalDots i{
+  background:#f6f8fa!important;
+}
+html body #uploadBtn,
+html body #dailyNullsBtn,
+html body #aiBeingsBtn,
+html body #publicNullsBtn,
+html body #shareRoomBtn,
+html body #beingQrBtn,
+html body .beingShareButton,
+html body .beingQrShareButton,
+html body #dailyBackBtn,
+html body #publicBackBtn,
+html body #aiBeingsBackBtn{
+  background:#57606a!important;
+  color:#fff!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
 }
 
 /* v10.1.46 — filled hierarchy replaces every remaining outlined room surface. */
