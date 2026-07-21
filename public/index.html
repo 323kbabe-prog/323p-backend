@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.53 (2026-07-21)
+  - Extends the existing creator-type selector into a role sub-list for every HUMAN category
+  - Preserves keyword suggestions, custom keywords, bio generation, and existing profile editing
+
   v10.1.52 (2026-07-21)
   - Aligns the three room utility buttons to the centered room rail on desktop
   - Adds desktop-only ↑ / ↓ keyboard guidance while preserving mobile swipe copy
@@ -2421,19 +2425,10 @@ ASK.CAMERA – AI Camera Search
       <div style="font-size:11px;line-height:1.4;color:#666;margin:0 2px 7px;">Choose up to three, or type your own.</div>
       <div id="beingKeywordChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
-    <select id="beingCreatorType" class="beingInput" style="display:none;" onchange="handleBeingProfileInput()">
-      <option value="">Choose a creator type</option>
-      <option>YouTuber</option>
-      <option>TikTok Creator</option>
-      <option>Instagram Creator</option>
-      <option>Podcaster</option>
-      <option>Streamer</option>
-      <option>Blogger / Writer</option>
-      <option>KOL</option>
-      <option>UGC Creator</option>
-      <option>Photographer</option>
-      <option>Other Creator</option>
+    <select id="beingCreatorType" class="beingInput" style="display:none;" onchange="handleBeingRoleChange()">
+      <option value="">Choose your role</option>
     </select>
+    <input id="beingCustomRole" placeholder="Write your role" class="beingInput" style="display:none;" oninput="handleBeingProfileInput()">
     <div style="font-size:12px;line-height:1.4;color:#666;margin:0 2px 8px;">Add three words that describe how you work, connect, or create opportunities.</div>
     <input id="beingWord1" placeholder="Keyword 1 — e.g. strategic" class="beingInput" oninput="handleBeingProfileInput()">
     <input id="beingWord2" placeholder="Keyword 2 — e.g. collaborative" class="beingInput" oninput="handleBeingProfileInput()">
@@ -12852,6 +12847,28 @@ const BEING_KEYWORD_SUGGESTIONS = {
   "Other":["strategic","creative","trusted","collaborative","ambitious","community-minded"]
 };
 
+const BEING_ROLE_OPTIONS = {
+  "Technology & AI":["AI Founder","Software Developer","Product Manager","Data Scientist","AI Researcher","AI Consultant","Cybersecurity Professional","Technology Executive"],
+  "Business & Entrepreneurship":["Founder","Entrepreneur","Executive","Business Consultant","Small Business Owner","Operations Leader","Sales Professional","Business Coach"],
+  "Investment & Finance":["Investor","Financial Advisor","Venture Capital Professional","Banking Professional","Fintech Founder","Accountant","Wealth Manager","Financial Analyst"],
+  "Real Estate":["Real Estate Agent","Broker","Property Developer","Real Estate Investor","Property Manager","Commercial Real Estate Professional","Interior Designer","Architect"],
+  "Marketing & Media":["Marketer","Brand Strategist","Public Relations Professional","Journalist","Media Producer","Social Media Manager","Advertising Professional","Communications Consultant"],
+  "Design & Creative":["Designer","Artist","Photographer","Architect","Creative Director","Illustrator","UX / UI Designer","Multidisciplinary Creative"],
+  "Creators & Influencers":["YouTuber","TikTok Creator","Instagram Creator","Podcaster","Streamer","Blogger / Writer","KOL","UGC Creator","Photographer"],
+  "Fashion & Beauty":["Fashion Designer","Stylist","Model","Makeup Artist","Beauty Creator","Hair Professional","Fashion Buyer","Beauty Founder"],
+  "Entertainment & Music":["Actor","Musician","Singer","DJ","Producer","Filmmaker","Songwriter","Entertainment Executive"],
+  "Food & Hospitality":["Chef","Restaurant Owner","Hotelier","Food Creator","Event Host","Hospitality Manager","Caterer","Beverage Professional"],
+  "Retail & E-commerce":["Retailer","Online Seller","Buyer","Merchandiser","E-commerce Founder","Marketplace Operator","Product Curator","Retail Consultant"],
+  "Education & Research":["Teacher","Professor","Researcher","Coach","Education Founder","Academic Leader","Instructional Designer","Student"],
+  "Health & Wellness":["Doctor","Therapist","Fitness Trainer","Nutritionist","Wellness Founder","Nurse","Health Coach","Mental Health Professional"],
+  "Travel & Tourism":["Travel Agent","Tour Guide","Hotelier","Airline Professional","Travel Creator","Tourism Consultant","Destination Manager","Travel Founder"],
+  "Sustainability":["Climate Founder","Environmentalist","Green Designer","ESG Consultant","Sustainability Manager","Conservation Professional","Clean Energy Professional","Circular Economy Founder"],
+  "Community & Social Impact":["Nonprofit Founder","Community Organizer","Social Worker","Advocate","Philanthropy Professional","Public Service Leader","Social Entrepreneur","Volunteer Leader"],
+  "Other":["Independent Professional","Multidisciplinary Professional","Student","Retired Professional"]
+};
+
+const CUSTOM_BEING_ROLE = "Other / Write your own";
+
 function handleBeingCategoryChange(select){
   const nextCategory = select.value;
   const hasKeywords = ["beingWord1","beingWord2","beingWord3"].some(id => document.getElementById(id).value.trim());
@@ -12868,7 +12885,37 @@ function handleBeingCategoryChange(select){
       : "Choose three keywords to generate your business introduction.";
   }
   beingLastCategory = nextCategory;
+  renderBeingRoleOptions();
   renderBeingKeywordSuggestions();
+  handleBeingProfileInput();
+}
+
+function renderBeingRoleOptions(selectedRole = ""){
+  const category = document.getElementById("beingCategory").value;
+  const roleSelect = document.getElementById("beingCreatorType");
+  const customRole = document.getElementById("beingCustomRole");
+  const roles = BEING_ROLE_OPTIONS[category] || [];
+  roleSelect.innerHTML = `<option value="">Choose your role</option>${roles.map(role => `<option>${role}</option>`).join("")}<option>${CUSTOM_BEING_ROLE}</option>`;
+  roleSelect.style.display = category ? "block" : "none";
+  if(selectedRole){
+    if(roles.includes(selectedRole)){
+      roleSelect.value = selectedRole;
+    }else{
+      roleSelect.value = CUSTOM_BEING_ROLE;
+      customRole.value = selectedRole;
+    }
+  }else{
+    roleSelect.value = "";
+    customRole.value = "";
+  }
+  customRole.style.display = roleSelect.value === CUSTOM_BEING_ROLE ? "block" : "none";
+}
+
+function handleBeingRoleChange(){
+  const roleSelect = document.getElementById("beingCreatorType");
+  const customRole = document.getElementById("beingCustomRole");
+  customRole.style.display = roleSelect.value === CUSTOM_BEING_ROLE ? "block" : "none";
+  if(roleSelect.value !== CUSTOM_BEING_ROLE) customRole.value = "";
   handleBeingProfileInput();
 }
 
@@ -12913,9 +12960,11 @@ function syncBeingKeywordChips(){
 
 function beingCategoryValue(){
   const category = document.getElementById("beingCategory").value.trim();
-  const creatorType = document.getElementById("beingCreatorType").value.trim();
-  return category === "Creators & Influencers" && creatorType
-    ? `${category} — ${creatorType}`
+  const selectedRole = document.getElementById("beingCreatorType").value.trim();
+  const customRole = document.getElementById("beingCustomRole").value.trim();
+  const role = selectedRole === CUSTOM_BEING_ROLE ? customRole : selectedRole;
+  return category && role
+    ? `${category} — ${role}`
     : category;
 }
 
@@ -12940,12 +12989,13 @@ function markBeingBioEdited(){
 
 function handleBeingProfileInput(){
   const category = document.getElementById("beingCategory").value;
-  const creatorSelect = document.getElementById("beingCreatorType");
-  creatorSelect.style.display = category === "Creators & Influencers" ? "block" : "none";
-  if(category !== "Creators & Influencers") creatorSelect.value = "";
+  const roleSelect = document.getElementById("beingCreatorType");
+  const customRole = document.getElementById("beingCustomRole").value.trim();
+  roleSelect.style.display = category ? "block" : "none";
   syncBeingKeywordChips();
 
-  const complete = Object.values(beingBioInputs()).every(Boolean);
+  const roleComplete = Boolean(roleSelect.value) && (roleSelect.value !== CUSTOM_BEING_ROLE || Boolean(customRole));
+  const complete = Object.values(beingBioInputs()).every(Boolean) && roleComplete;
   const changed = beingBioInputSignature() !== beingBioSignature;
   document.getElementById("beingBioGenerate").style.display = complete && (changed || beingBioEdited) ? "inline-block" : "none";
 }
@@ -12953,7 +13003,9 @@ function handleBeingProfileInput(){
 async function generateBeingBio(force = false){
   const inputs = beingBioInputs();
   if(!Object.values(inputs).every(Boolean)) return;
-  if(document.getElementById("beingCategory").value === "Creators & Influencers" && !document.getElementById("beingCreatorType").value) return;
+  const selectedRole = document.getElementById("beingCreatorType").value;
+  const customRole = document.getElementById("beingCustomRole").value.trim();
+  if(!selectedRole || (selectedRole === CUSTOM_BEING_ROLE && !customRole)) return;
   if(beingBioEdited && !force) return;
 
   const requestId = ++beingBioRequest;
@@ -13017,9 +13069,10 @@ function resetBeingForm(){
   preview.removeAttribute("src");
   preview.style.display = "none";
   document.getElementById("beingPhoto").value = "";
-  ["beingName","beingChoice","beingCategory","beingCreatorType","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
+  ["beingName","beingChoice","beingCategory","beingCreatorType","beingCustomRole","beingWord1","beingWord2","beingWord3","beingPhone","beingPassword","beingPasswordConfirm"]
     .forEach(id => document.getElementById(id).value = "");
   document.getElementById("beingCreatorType").style.display = "none";
+  document.getElementById("beingCustomRole").style.display = "none";
   document.getElementById("beingKeywordSuggestions").style.display = "none";
   document.getElementById("beingKeywordChips").innerHTML = "";
   document.getElementById("beingPhotoStatus").innerText = "No photo selected.";
@@ -13060,10 +13113,7 @@ async function changeAIBeingProfile(id){
     const knownCategory = Array.from(categorySelect.options).some(option => option.value === categoryParts[0]);
     categorySelect.value = knownCategory ? categoryParts[0] : "Other";
     beingLastCategory = categorySelect.value;
-    if(categoryParts[0] === "Creators & Influencers"){
-      document.getElementById("beingCreatorType").style.display = "block";
-      document.getElementById("beingCreatorType").value = categoryParts.slice(1).join(" — ");
-    }
+    renderBeingRoleOptions(categoryParts.slice(1).join(" — "));
     document.getElementById("beingWord1").value = being.word1 || "";
     document.getElementById("beingWord2").value = being.word2 || "";
     document.getElementById("beingWord3").value = being.word3 || "";
@@ -13129,7 +13179,10 @@ async function createAIBeing(){
   }
 
   const requiredValues = [payload.name,payload.best_current_choice,payload.category,payload.word1,payload.word2,payload.word3];
-  if(requiredValues.some(value => !value) || (!file && !editingBeing)){
+  const selectedRole = document.getElementById("beingCreatorType").value;
+  const customRole = document.getElementById("beingCustomRole").value.trim();
+  const roleMissing = !selectedRole || (selectedRole === CUSTOM_BEING_ROLE && !customRole);
+  if(requiredValues.some(value => !value) || roleMissing || (!file && !editingBeing)){
     alert(editingBeing ? "Please complete every field." : "Please complete every field and choose a profile photo.");
     return;
   }
