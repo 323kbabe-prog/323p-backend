@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.37 (2026-07-21)
+  - Prevents button normalization from replacing the home navigation gradients
+
   v10.1.36 (2026-07-21)
   - Removes inherited rounding from both arrival images
 
@@ -14045,7 +14048,16 @@ Close
       button.style.setProperty('box-shadow','none','important');
       button.style.setProperty('text-shadow','none','important');
       button.style.setProperty('border','1px solid #8c959f','important');
-      if(button.matches(destructiveSelector)){
+      if(button.closest('#modeBar')){
+        const gradient = button.id === 'createNullBtn'
+          ? 'linear-gradient(105deg,#3b0764 0%,#6d28d9 100%)'
+          : button.id === 'dailyNullsBtn'
+            ? 'linear-gradient(105deg,#6d28d9 0%,#0891b2 100%)'
+            : 'linear-gradient(105deg,#0891b2 0%,#86efac 100%)';
+        button.style.setProperty('background',gradient,'important');
+        button.style.setProperty('color',button.id === 'aiBeingsBtn' ? '#06281e' : '#fff','important');
+        button.style.setProperty('border-color','transparent','important');
+      }else if(button.matches(destructiveSelector)){
         button.style.setProperty('background','#fff','important');
         button.style.setProperty('color','#cf222e','important');
         button.style.setProperty('border-color','#ff8182','important');
