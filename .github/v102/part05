@@ -1,0 +1,38 @@
+ [photo, name, best_current_choice, category, word1, word2, word3];', 'const required = [photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3];', 1)
+back = back.replace('  let englishBeing;\n  try {', '  const connectionCheck = await validateBeingConnections([connection1,connection2,connection3]);\n  if(!connectionCheck.valid) return res.status(400).json({ error:connectionCheck.error });\n\n  let englishBeing;\n  try {', 1)
+idx = back.find('Return JSON only with exactly these keys:\nname, bio, category, word1, word2, word3')
+if idx != -1:
+    back = back[:idx] + back[idx:].replace('Return JSON only with exactly these keys:\nname, bio, category, word1, word2, word3', 'Return JSON only with exactly these keys:\nname, bio, category, word1, word2, word3, connection1, connection2, connection3', 1)
+back = back.replace('''            word3: String(word3).trim()
+          })''', '''            word3: String(word3).trim(),
+            connection1: connectionCheck.values[0],
+            connection2: connectionCheck.values[1],
+            connection3: connectionCheck.values[2]
+          })''', 1)
+back = back.replace('[englishBeing.name, englishBeing.bio, englishBeing.category, englishBeing.word1, englishBeing.word2, englishBeing.word3]', '[englishBeing.name, englishBeing.bio, englishBeing.category, englishBeing.word1, englishBeing.word2, englishBeing.word3, englishBeing.connection1, englishBeing.connection2, englishBeing.connection3]')
+back = back.replace('''      word3: String(englishBeing.word3).trim().slice(0, 40),
+      phone: normalizedPhone
+    })''', '''      word3: String(englishBeing.word3).trim().slice(0, 40),
+      connection1: String(englishBeing.connection1).trim().slice(0, 60),
+      connection2: String(englishBeing.connection2).trim().slice(0, 60),
+      connection3: String(englishBeing.connection3).trim().slice(0, 60),
+      phone: normalizedPhone
+    })''', 1)
+
+migration = Path("supabase/migrations/20260721_add_human_connection_keywords.sql")
+migration.parent.mkdir(parents=True, exist_ok=True)
+migration.write_text("""alter table if exists public.ai_beings
+  add column if not exists connection1 text,
+  add column if not exists connection2 text,
+  add column if not exists connection3 text;
+
+comment on column public.ai_beings.connection1 is 'First HUMAN object or place connection keyword.';
+comment on column public.ai_beings.connection2 is 'Second HUMAN object or place connection keyword.';
+comment on column public.ai_beings.connection3 is 'Third HUMAN object or place connection keyword.';
+""")
+
+if not front.rstrip().endswith("</html>"):
+    raise SystemExit("frontend no longer ends with </html>")
+front_path.write_text(front)
+back_path.write_text(back)
+print("patched", len(front), len(back))
