@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.57 (2026-07-21)
+  - Locks startup title, dots, quote, and Google line into fixed layout slots
+  - Keeps every text element motionless while only the three dots animate
+
   v10.1.56 (2026-07-21)
   - Locks the complete approved startup-screen design above every legacy style
   - Preserves the exact centered layout, round dots, typography, spacing, and colors
@@ -1629,6 +1633,15 @@ touch-action:manipulation;
   pointer-events:none;
 }
 
+.appStartupContent{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:min(560px,calc(100% - 48px));
+  height:206px;
+  transform:translate(-50%,-50%);
+}
+
 .appStartupName{
   font-size:28px;
   line-height:1;
@@ -2351,12 +2364,14 @@ html body #roomMessages.geminiThread .chatShareAction{
 <body>
 
 <div id="appStartupLoader" role="status" aria-label="ASK.CAMERA loading">
-  <div class="appStartupName">ASK.CAMERA</div>
-  <div class="appStartupDots" aria-hidden="true">
-    <span></span><span></span><span></span>
+  <div class="appStartupContent">
+    <div class="appStartupName">ASK.CAMERA</div>
+    <div class="appStartupDots" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="appStartupQuote">IF YOU DON'T EVEN HAVE DREAMS, WHAT'S THE DIFFERENCE BETWEEN YOU AND A SALTED FISH?</div>
+    <div class="appStartupGoogle">THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.</div>
   </div>
-  <div class="appStartupQuote">IF YOU DON'T EVEN HAVE DREAMS, WHAT'S THE DIFFERENCE BETWEEN YOU AND A SALTED FISH?</div>
-  <div class="appStartupGoogle">THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.</div>
 </div>
 
   
@@ -15572,6 +15587,55 @@ html body #appStartupLoader .appStartupGoogle{
   line-height:1.35!important;
   letter-spacing:0!important;
   text-align:center!important;
+}
+
+/* v10.1.57 — fixed startup slots; dot transforms cannot move adjacent text. */
+html body #appStartupLoader .appStartupContent{
+  position:absolute!important;
+  top:50%!important;
+  left:50%!important;
+  width:min(560px,calc(100% - 48px))!important;
+  height:206px!important;
+  margin:0!important;
+  padding:0!important;
+  transform:translate(-50%,-50%)!important;
+}
+html body #appStartupLoader .appStartupName{
+  position:absolute!important;
+  top:0!important;
+  left:0!important;
+  width:100%!important;
+  height:28px!important;
+}
+html body #appStartupLoader .appStartupDots{
+  position:absolute!important;
+  top:46px!important;
+  left:50%!important;
+  margin:0!important;
+  transform:translateX(-50%)!important;
+}
+html body #appStartupLoader .appStartupQuote{
+  position:absolute!important;
+  top:77px!important;
+  left:0!important;
+  width:100%!important;
+  height:80px!important;
+  margin:0!important;
+  overflow:hidden!important;
+}
+html body #appStartupLoader .appStartupGoogle{
+  position:absolute!important;
+  top:165px!important;
+  left:0!important;
+  width:100%!important;
+  height:41px!important;
+  margin:0!important;
+  overflow:hidden!important;
+}
+@media(min-width:521px){
+  html body #appStartupLoader .appStartupContent{height:160px!important;}
+  html body #appStartupLoader .appStartupQuote{height:54px!important;}
+  html body #appStartupLoader .appStartupGoogle{top:139px!important;height:21px!important;}
 }
 </style>
 <script>
