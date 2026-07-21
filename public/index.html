@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.34 (2026-07-21)
+  - Keeps the three-button gradient navigation on the home screen only
+
   v10.1.33 (2026-07-21)
   - Applies the purple-to-green ASK.CAMERA navigation gradient
   - Separates and realigns the three equal top navigation buttons
@@ -15182,7 +15185,7 @@ html body #closeRoom{
 
 /* v10.1.32 — exact equality for the three top navigation buttons. */
 html body #modeBar{
-  display:grid!important;
+  display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
   align-items:stretch!important;
 }
