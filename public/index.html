@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.61 (2026-07-21)
+  - Locks the first ASK.CAMERA startup title to the same larger rendered size
+  - Places the title dimensions directly on the startup element so later CSS cannot resize it
+
   v10.1.60 (2026-07-21)
   - Uses identical ASK.CAMERA title font metrics on the first and final startup paint
   - Prevents mobile text autosizing from changing the startup title size
@@ -1642,8 +1646,8 @@ touch-action:manipulation;
   justify-content:center;
   background:#fff;
   color:#24292f;
-  -webkit-text-size-adjust:100%;
-  text-size-adjust:100%;
+  -webkit-text-size-adjust:none;
+  text-size-adjust:none;
   opacity:1;
   visibility:visible;
   transition:opacity .28s ease, visibility .28s ease;
@@ -1657,7 +1661,7 @@ touch-action:manipulation;
 
 .appStartupName{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  font-size:28px;
+  font-size:32px;
   line-height:1;
   font-weight:900;
   letter-spacing:1px;
@@ -2390,7 +2394,7 @@ html body #roomMessages.geminiThread .chatShareAction{
 <body>
 
 <div id="appStartupLoader" role="status" aria-label="ASK.CAMERA loading">
-  <div class="appStartupName">ASK.CAMERA</div>
+  <div class="appStartupName" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:32px;font-weight:900;line-height:1;letter-spacing:1px;-webkit-text-size-adjust:none;text-size-adjust:none;">ASK.CAMERA</div>
   <div class="appStartupDots" aria-hidden="true">
     <span></span><span></span><span></span>
   </div>
@@ -15557,7 +15561,7 @@ html body #appStartupLoader .appStartupName{
   padding:0!important;
   color:#24292f!important;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
-  font-size:28px!important;
+  font-size:32px!important;
   font-weight:900!important;
   line-height:1!important;
   letter-spacing:1px!important;
