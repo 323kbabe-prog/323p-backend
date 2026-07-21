@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.44 (2026-07-21)
+  - Makes the persistent Ask input a device-safe pill bar
+
   v10.1.43 (2026-07-21)
   - Removes the white frame from both live-camera cards
 
@@ -15295,6 +15298,32 @@ html body #modeBar #humanCardsThumbs{
   border-radius:0!important;
   clip-path:none!important;
 }
+/* v10.1.44 — the Ask bar is the only pill-shaped interface element. */
+html body #roomInput{
+  height:52px!important;
+  min-height:52px!important;
+  max-height:52px!important;
+  padding:0 20px!important;
+  box-sizing:border-box!important;
+  border:1px solid #57606a!important;
+  border-radius:999px!important;
+  background:#fff!important;
+  color:#111!important;
+  font-size:15px!important;
+  line-height:52px!important;
+  box-shadow:none!important;
+}
+html body #roomInput::placeholder{
+  color:#57606a!important;
+  opacity:1!important;
+}
+html body #roomInput:focus,
+html body #roomInput:focus-visible{
+  border-color:#0969da!important;
+  outline:0!important;
+  box-shadow:0 0 0 1px #0969da!important;
+}
+
 /* v10.1.43 — both live-camera surfaces are frameless. */
 html body #homeCaptureCard,
 html body #roomFloatingCameraCard{
