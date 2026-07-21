@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.14 (2026-07-22)
+  - Reorganizes the Foundation Tool hero into a clear tool, proposition, action, and outcome hierarchy
+  - Places The search idea Google should buy today directly beneath Image Connect
+  - Uses full-color, happier HUMAN journey photography on the shared HUMAN gradient
+  - Adds the approved ASK.CAMERA copyright footer at the bottom of Home
+
   v10.2.13 (2026-07-22)
   - Introduces the shareable HUMAN Card journey on the Home screen with four free-stock images
   - Explains link and QR sharing, recipient image input, and answers through a HUMAN Perspective
@@ -13705,6 +13711,7 @@ const HOME_HERO_HTML = `
   <div class="homeHeroPurpose">The AI That Connects Humans.</div>
   <div class="homeHeroToolLabel">Foundation Tool</div>
   <div class="homeHeroToolName">Image Connect</div>
+  <div class="homeHeroGoogle">The search idea Google should buy today.</div>
   <div class="homeHeroAction">Point your camera.</div>
   <div class="homeHeroDetail">Discover what this image connects you to.</div>
 `;
@@ -13716,7 +13723,7 @@ const HOME_HUMAN_STEPS_HTML = `
     <p class="homeHumanIntroLead">Create a HUMAN Card from your identity, personality, and meaningful connections. Share it by link or QR code so anyone can add an image and discover connections through your HUMAN Perspective.</p>
     <div class="homeHumanSteps">
       <article class="homeHumanStep">
-        <img src="https://images.pexels.com/photos/3585094/pexels-photo-3585094.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A smartphone displaying a profile interface" loading="lazy" referrerpolicy="no-referrer">
+        <img src="https://images.pexels.com/photos/5982121/pexels-photo-5982121.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A happy person showing a smartphone" loading="lazy" referrerpolicy="no-referrer">
         <div class="homeHumanStepNumber">01</div>
         <h3>Create your HUMAN</h3>
         <p>Build your HUMAN Perspective from who you are and what connects to you.</p>
@@ -13734,7 +13741,7 @@ const HOME_HUMAN_STEPS_HTML = `
         <p>The recipient points their camera or uploads an image.</p>
       </article>
       <article class="homeHumanStep">
-        <img src="https://images.pexels.com/photos/15103754/pexels-photo-15103754.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A smartphone showing a photographed subject" loading="lazy" referrerpolicy="no-referrer">
+        <img src="https://images.pexels.com/photos/3183161/pexels-photo-3183161.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="Two people happily connecting through smartphones" loading="lazy" referrerpolicy="no-referrer">
         <div class="homeHumanStepNumber">04</div>
         <h3>Discover connections</h3>
         <p>ASK.CAMERA answers through the shared HUMAN Perspective.</p>
@@ -13746,8 +13753,12 @@ const HOME_HUMAN_STEPS_HTML = `
       <button type="button" onclick="openHomeHumanFinder()">FIND HUMAN</button>
     </div>
     <p class="homeHumanFundingNote"><strong>Optional Funding HUMAN:</strong> Creating, sharing, and using a HUMAN Card is free. Optional one-time funding levels support ASK.CAMERA.</p>
-    <a class="homeHumanPhotoCredit" href="https://www.pexels.com/license/" target="_blank" rel="noopener noreferrer">Free stock photography from Pexels</a>
   </section>
+  <footer id="homeAppFooter">
+    <div class="homeAppFooterName">ASK.CAMERA</div>
+    <div class="homeAppFooterGoogle">The search idea Google should buy today.</div>
+    <div class="homeAppFooterCopyright">© 2026 ASK.CAMERA. All rights reserved.</div>
+  </footer>
 `;
 
 function openHomeHumanFinder(){
@@ -16510,13 +16521,13 @@ html body #homeMainContent{
   margin:34px 0 0;
   padding:22px;
   box-sizing:border-box;
-  background:#fff;
-  color:#24292f;
+  background:linear-gradient(135deg,#0969da 0%,#8250df 50%,#2da44e 100%);
+  color:#fff;
   text-align:left;
   text-shadow:none;
 }
 .homeHumanIntroEyebrow{
-  color:#0969da;
+  color:rgba(255,255,255,.78);
   font-size:11px;
   font-weight:700;
   line-height:1.2;
@@ -16525,7 +16536,7 @@ html body #homeMainContent{
 }
 #homeHumanIntroTitle{
   margin:6px 0 0;
-  color:#24292f;
+  color:#fff;
   font-size:clamp(24px,3vw,36px);
   font-weight:700;
   line-height:1.08;
@@ -16535,7 +16546,7 @@ html body #homeMainContent{
 .homeHumanIntroLead{
   max-width:650px;
   margin:10px 0 0;
-  color:#57606a;
+  color:rgba(255,255,255,.86);
   font-size:14px;
   font-weight:400;
   line-height:1.5;
@@ -16558,7 +16569,7 @@ html body #homeMainContent{
   width:100%;
   height:150px;
   object-fit:cover;
-  filter:grayscale(1);
+  filter:none;
   border:0!important;
   border-radius:0!important;
 }
@@ -16612,7 +16623,7 @@ html body .homeHumanIntroActions button:first-child{
 .homeHumanFundingNote{
   margin:14px 0 0;
   padding:12px;
-  background:#eaeeef;
+  background:rgba(255,255,255,.9);
   color:#57606a;
   font-size:12px;
   font-weight:400;
@@ -16620,14 +16631,61 @@ html body .homeHumanIntroActions button:first-child{
   letter-spacing:0;
 }
 .homeHumanFundingNote strong{color:#24292f;font-weight:600;}
-.homeHumanPhotoCredit{
-  display:inline-block;
-  margin-top:10px;
-  color:#57606a!important;
+#homeAppFooter{
+  width:100%;
+  margin:0 0 20px;
+  padding:28px 18px;
+  box-sizing:border-box;
+  background:#fff;
+  color:#24292f;
+  text-align:center;
+  text-shadow:none;
+}
+.homeAppFooterName{
+  font-size:15px;
+  font-weight:600;
+  line-height:1.3;
+  letter-spacing:.02em;
+}
+.homeAppFooterGoogle{
+  margin-top:5px;
+  color:#57606a;
+  font-size:12px;
+  font-weight:400;
+  line-height:1.4;
+}
+.homeAppFooterCopyright{
+  margin-top:5px;
+  color:#8c959f;
   font-size:10px;
   font-weight:400;
-  line-height:1.3;
-  text-decoration:underline;
+  line-height:1.4;
+}
+
+/* Keep the Foundation Tool copy together as Tool → Proposition → Action → Outcome. */
+html body #homeInstruction .homeHeroToolLabel{
+  margin-top:28px!important;
+}
+html body #homeInstruction .homeHeroToolName{
+  margin-top:4px!important;
+}
+html body #homeInstruction .homeHeroGoogle{
+  max-width:560px!important;
+  margin-top:6px!important;
+  color:rgba(255,255,255,.74)!important;
+  font-size:clamp(13px,1.2vw,16px)!important;
+  font-weight:400!important;
+  line-height:1.35!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+html body #homeInstruction .homeHeroAction{
+  margin-top:20px!important;
+  font-size:clamp(17px,1.65vw,22px)!important;
+  font-weight:600!important;
+}
+html body #homeInstruction .homeHeroDetail{
+  margin-top:5px!important;
 }
 @media(max-width:620px){
   html body #helper{
@@ -16638,6 +16696,9 @@ html body .homeHumanIntroActions button:first-child{
   .homeHumanSteps{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
   .homeHumanStep img{height:132px;}
   .homeHumanIntroActions{grid-template-columns:1fr;}
+  html body #homeInstruction .homeHeroToolLabel{margin-top:22px!important;}
+  html body #homeInstruction .homeHeroGoogle{font-size:13px!important;}
+  html body #homeInstruction .homeHeroAction{margin-top:18px!important;font-size:17px!important;}
 }
 @media(max-width:360px){
   .homeHumanSteps{grid-template-columns:1fr;}
