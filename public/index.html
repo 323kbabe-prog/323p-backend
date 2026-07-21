@@ -1,11 +1,14 @@
-Warning: truncated output (original token count: 134807)
-Total output lines: 15346
+Warning: truncated output (original token count: 134885)
+Total output lines: 15358
 
 <!DOCTYPE html>
 <!--
 //////////////////////////////////////////////////
 CHANGE LOG
 //////////////////////////////////////////////////
+
+  v10.1.49 (2026-07-21)
+  - Changes only the room-header Share button to blue with a black icon
 
   v10.1.48 (2026-07-21)
   - Removes the home room timer block and all room countdown state
@@ -2902,18 +2905,7 @@ body{
   min-height:36px;
   padding:0 12px !important;
   background:transparent !important;
-  color:var(--md-primary) !important;
-  font-size:12px !important;
-  opacity:1 !important;
-}
-
-/* Form fields and dialogs…74807 tokens truncated…ue,
-    askMode: false,
-    publishMode: "private",
-    // A public image is only the image source. The selected HUMAN, if any,
-    // remains the identity of this same private HUMAN room.
-    beingId,
-    publicNullId,
+  color:var(--md-primar…74885 tokens truncated…lId,
     publicNullIdentity: pendingPublicNull.identity,
     publicNullIntro: pendingPublicNull.intro,
     roomId: localStorage.getItem("roomId")
@@ -6356,6 +6348,15 @@ html body #roomMessages .systemPerspectiveActions .systemPerspectivePrimary,
 html body .systemStateButtonPrimary{
   background:#0969da!important;
   color:#fff!important;
+}
+
+/* v10.1.49 — room-header Share color only. */
+html body #roomHeader #shareRoomBtn{
+  background:#0969da!important;
+  color:#111!important;
+}
+html body #roomHeader #shareRoomBtn::after{
+  color:#111!important;
 }
 </style>
 <script>
