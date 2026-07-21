@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.30 (2026-07-21)
+  - Routes every System Swap and direct user result through the full-screen image-driven perspective renderer
+  - Removes the remaining legacy chat-card delivery format from selected query results
+  - Infers News/article results correctly even when older result payloads omit resultType
+
   v10.1.29 (2026-07-21)
   - Makes every query-producing System Swap action cancel all remaining automatic work
   - Uses the selected System Swap query as the sole active loading and result request
@@ -9248,7 +9253,12 @@ function unifiedHumanConnectionHtml(anchor = {}){
 }
 
 function unifiedDailyPerspectiveHtml(message = {},anchor = {}){
-  const resultType = String(message.resultType || message.autoCardType || "result").toLowerCase();
+  const inferredNewsResult = /\b(news|article)\b/i.test(String(
+    message.primaryCategory || message.contextualCategory || message.searchLabel || ""
+  ));
+  const resultType = String(
+    message.resultType || message.autoCardType || (inferredNewsResult ? "news" : "result")
+  ).toLowerCase();
   const isNewsResult = resultType === "news";
   const news = isNewsResult ? message : (message.localContextNews || {});
   const resultAction = getRoomOpenAction(message);
@@ -9362,7 +9372,19 @@ function wrapPerspectiveMessage(message,html,messageIndex,anchor = {}){
     message?.localContextNews &&
     (message?.resultTitle || message?.ask || message?.jobCard)
   );
-  if(isAutomaticResult || isLaterRoomResult){
+  const isSelectedQueryResult = Boolean(
+    perspectiveUserOverrideActive &&
+    messageIndex >= perspectiveUserOverrideStartIndex &&
+    message?.aiBeing &&
+    (
+      message?.resultType ||
+      message?.resultTitle ||
+      message?.jobCard ||
+      message?.ask ||
+      (message?.image && (message?.link || message?.resultUrl))
+    )
+  );
+  if(isAutomaticResult || isLaterRoomResult || isSelectedQueryResult){
     return {
       skip:false,
       html:unifiedDailyPerspectiveHtml(message,anchor)
