@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.1.15 (2026-07-21)
+// - Marks every query-producing System Swap resolution as an authoritative user takeover
+// - Stops in-flight automatic first-round work before the selected query resumes
+// - Prevents automatic results from racing or appearing behind a System Swap query
+
 // v10.1.14 (2026-07-21)
 // - Adds one persistent System Swap contract for location, translation uncertainty, and unclear input
 // - Resolves System Swaps through a dedicated socket action instead of the normal Ask takeover path
@@ -7463,6 +7468,12 @@ socket.on("resolveSystemSwap",async ({ id,action,value,timeZone } = {},ack = () 
   }
   const selectedAction = String(action || "");
   const selectedValue = String(value || "").trim();
+  const queryActions = new Set(["suggestion","use","location","current_location","without_location"]);
+  if(queryActions.has(selectedAction)){
+    room.firstRoundComplete = true;
+    room.systemQueryGeneration = Number(room.systemQueryGeneration || 0) + 1;
+    socket.emit("roomFirstRoundCompleted");
+  }
   room.activeSystemSwap = null;
   room.messages = room.messages.filter(message => message?.systemSwap?.id !== active.id);
   io.to(room.id).emit("roomMessages",room.messages);
