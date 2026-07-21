@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.43 (2026-07-21)
+  - Removes the white frame from both live-camera cards
+
   v10.1.42 (2026-07-21)
   - Makes the centered live-camera layer transparent so the page remains visible behind it
 
@@ -15292,6 +15295,14 @@ html body #modeBar #humanCardsThumbs{
   border-radius:0!important;
   clip-path:none!important;
 }
+/* v10.1.43 — both live-camera surfaces are frameless. */
+html body #homeCaptureCard,
+html body #roomFloatingCameraCard{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+
 /* v10.1.42 — preserve the floating camera size while revealing the page behind it. */
 html body #roomFloatingCameraLayer{
   background:transparent!important;
