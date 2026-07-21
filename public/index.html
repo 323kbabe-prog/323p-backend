@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.31 (2026-07-21)
+  - Removes plain user-message slides from the full-screen perspective feed
+  - Keeps submitted questions inside the loading state instead of showing legacy chat bubbles
+  - Routes every non-automatic AI search result through the image-driven perspective renderer
+
   v10.1.30 (2026-07-21)
   - Routes every System Swap and direct user result through the full-screen image-driven perspective renderer
   - Removes the remaining legacy chat-card delivery format from selected query results
@@ -8286,7 +8291,7 @@ roomInput.onkeydown = e => {
 
     if (!text) return;
 
-    if(perspectiveTourStarted && !perspectiveInvitationViewed){
+    if(perspectiveTourStarted){
       skipAutomaticPerspectivesForUserAsk(text);
     }
 
@@ -9384,7 +9389,18 @@ function wrapPerspectiveMessage(message,html,messageIndex,anchor = {}){
       (message?.image && (message?.link || message?.resultUrl))
     )
   );
-  if(isAutomaticResult || isLaterRoomResult || isSelectedQueryResult){
+  const isDirectAiResult = Boolean(
+    !message?.autoCardType &&
+    message?.aiBeing &&
+    (
+      message?.resultType ||
+      message?.resultTitle ||
+      message?.jobCard ||
+      message?.ask ||
+      (message?.image && (message?.link || message?.resultUrl))
+    )
+  );
+  if(isAutomaticResult || isLaterRoomResult || isSelectedQueryResult || isDirectAiResult){
     return {
       skip:false,
       html:unifiedDailyPerspectiveHtml(message,anchor)
@@ -10629,8 +10645,19 @@ if(activeSystemPerspectiveIndex >= 0) permanentPerspectiveIndexes.add(activeSyst
 if(invitationMessageIndex >= 0){
   permanentPerspectiveIndexes.add(invitationMessageIndex);
   for(let index = invitationMessageIndex + 1; index < messages.length; index += 1){
-    if(isSystemPerspectiveMessage(messages[index]) && index !== activeSystemPerspectiveIndex) continue;
-    if(!messages[index]?.anchorTransition) permanentPerspectiveIndexes.add(index);
+    const message = messages[index];
+    if(isSystemPerspectiveMessage(message) && index !== activeSystemPerspectiveIndex) continue;
+    if(message?.anchorTransition) continue;
+    if(
+      message?.aiBeing ||
+      message?.resultType ||
+      message?.resultTitle ||
+      message?.jobCard ||
+      message?.ask ||
+      (message?.image && (message?.link || message?.resultUrl))
+    ){
+      permanentPerspectiveIndexes.add(index);
+    }
   }
 }
 if(perspectiveUserOverrideActive){
