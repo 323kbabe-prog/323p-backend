@@ -7678,7 +7678,7 @@ app.get("/ai-beings/:id", async (req, res) => {
     .eq("public", true)
     .single();
 
-  if (error || !data) return res.status(404).json({ error: "AI Being not found." });
+  if (error || !data) return res.status(404).json({ error: "HUMAN not found." });
   res.json(data);
 });
 
@@ -7690,6 +7690,8 @@ app.post("/ai-beings/generate-bio", async (req, res) => {
   }
 
   try{
+    const connectionCheck = await validateBeingConnections(required.slice(4));
+    if(!connectionCheck.valid) return res.status(400).json({ error:connectionCheck.error });
     const response = await openai.chat.completions.create({
       model:"gpt-4o-mini",
       temperature:0.65,
@@ -7778,7 +7780,7 @@ Translate and rewrite every descriptive field into clear, natural,
 grammatically correct English before it is saved.
 
 Return JSON only with exactly these keys:
-name, bio, category, word1, word2, word3, connection1, connection2, connection3, connection1, connection2, connection3
+name, bio, category, word1, word2, word3, connection1, connection2, connection3
 
 Rules:
 - Preserve the user's meaning. Never invent facts or change the personality.
@@ -7867,12 +7869,12 @@ Rules:
 app.put("/ai-beings/:id", async (req, res) => {
   const { photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3, phone, management_credential } = req.body || {};
   const authorization = await authorizeBeingManagement(req.params.id, management_credential);
-  if (authorization.notFound) return res.status(404).json({ error: "AI Being not found." });
+  if (authorization.notFound) return res.status(404).json({ error: "HUMAN not found." });
   if (!authorization.authorized) return res.status(403).json({ error: "Wrong management password or recovery code." });
-  const required = [photo, name, best_current_choice, category, word1, word2, word3];
+  const required = [photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3];
 
   if (required.some(value => !String(value || "").trim())) {
-    return res.status(400).json({ error: "All AI Being fields are required." });
+    return res.status(400).json({ error: "Complete every required HUMAN field." });
   }
 
   const normalizedPhone = normalizeBeingPhone(phone);
@@ -7896,10 +7898,11 @@ app.put("/ai-beings/:id", async (req, res) => {
 You are the ASK.CAMERA ENGLISH REWRITE SYSTEM.
 Translate and rewrite every descriptive field into clear, natural English.
 Return JSON only with exactly these keys:
-name, bio, category, word1, word2, word3
+name, bio, category, word1, word2, word3, connection1, connection2, connection3
 
 Rules:
 - Preserve meaning and proper names. Never invent facts.
+- Preserve connection1, connection2, and connection3 as short object or place names.
 - Bio must be exactly one concise, complete English sentence.
 - Bio must contain no more than 160 characters, including spaces.
 - Category and personality words must be short English words or phrases.
@@ -7930,7 +7933,7 @@ Rules:
     }
   } catch (rewriteError) {
     console.error("AI Being profile rewrite failed:", rewriteError);
-    return res.status(502).json({ error: "Could not rewrite the AI Being profile in English. Please try again." });
+    return res.status(502).json({ error: "Could not rewrite the HUMAN profile in English. Please try again." });
   }
 
   const { data, error } = await supabase
@@ -7953,14 +7956,14 @@ Rules:
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
-  if (!data) return res.status(404).json({ error: "AI Being not found." });
+  if (!data) return res.status(404).json({ error: "HUMAN not found." });
   res.json(data);
 });
 
 app.delete("/ai-beings/:id", async (req, res) => {
   const { management_credential } = req.body || {};
   const authorization = await authorizeBeingManagement(req.params.id, management_credential);
-  if (authorization.notFound) return res.status(404).json({ error: "AI Being not found." });
+  if (authorization.notFound) return res.status(404).json({ error: "HUMAN not found." });
   if (!authorization.authorized) return res.status(403).json({ error: "Wrong management password or recovery code." });
 
   const { error } = await supabase.from("ai_beings").delete().eq("id", req.params.id);
