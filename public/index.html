@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.2 (2026-07-21)
+  - Guarantees a visible filled background for every button and form field
+  - Fills legacy HUMAN-card and Share controls that could still inherit transparent styles
+  - Adds explicit filled checkbox, radio, and file-upload control states
+  - Preserves the borderless system with outlines only on home-button thumbnails
+
   v10.2.1 (2026-07-21)
   - Removes the salted-fish quote from every active screen
   - Reorganizes the home hero into a clear product, purpose, tool, action, and support hierarchy
@@ -15810,6 +15816,55 @@ html body #humanCardsThumbs img{
   #homeInstruction .homeHeroDetail{font-size:14px!important;}
 }
 
+/* v10.2.2 — no interactive control may render without a visible fill. */
+html body .beingCard > button:nth-of-type(n+2){
+  background:var(--ask-surface-strong)!important;
+  color:var(--ask-ink)!important;
+}
+html body #roomMessages .chatShareAction,
+html body [role="button"].chatShareAction{
+  background:var(--ask-dark)!important;
+  color:#fff!important;
+}
+html body input[type="checkbox"],
+html body input[type="radio"]{
+  width:18px!important;
+  min-width:18px!important;
+  height:18px!important;
+  min-height:18px!important;
+  margin:0!important;
+  padding:0!important;
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  background:var(--ask-surface-strong)!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  cursor:pointer!important;
+}
+html body input[type="checkbox"]:checked,
+html body input[type="radio"]:checked{
+  background:var(--ask-blue)!important;
+}
+html body input[type="checkbox"]:checked{
+  background-color:var(--ask-blue)!important;
+  background-image:linear-gradient(135deg,transparent 0 42%,#fff 42% 54%,transparent 54%),linear-gradient(45deg,transparent 0 48%,#fff 48% 60%,transparent 60%)!important;
+}
+html body input[type="radio"]:checked{
+  background-color:var(--ask-blue)!important;
+  box-shadow:inset 0 0 0 5px var(--ask-blue)!important;
+}
+html body input[type="file"]::file-selector-button{
+  min-height:36px!important;
+  margin-right:10px!important;
+  padding:0 12px!important;
+  border:0!important;
+  outline:0!important;
+  background:var(--ask-surface-strong)!important;
+  color:var(--ask-ink)!important;
+  font:600 13px Arial,sans-serif!important;
+}
+
 </style>
 <script>
 (function enforceCompletelyBorderlessApp(){
@@ -15829,6 +15884,39 @@ html body #humanCardsThumbs img{
   clean(document.body);
   new MutationObserver(records => {
     records.forEach(record => record.addedNodes.forEach(node => clean(node)));
+  }).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+
+<script>
+(function enforceFilledInteractiveControls(){
+  const controlsSelector = 'button,[role="button"],input,textarea,select,[contenteditable="true"]';
+  const hasVisibleFill = element => {
+    const style = getComputedStyle(element);
+    if(style.backgroundImage && style.backgroundImage !== 'none') return true;
+    const color = style.backgroundColor || '';
+    if(color === 'transparent') return false;
+    const rgba = color.match(/^rgba?\(([^)]+)\)$/i);
+    if(!rgba) return Boolean(color);
+    const values = rgba[1].split(',').map(value => value.trim());
+    return values.length < 4 || Number(values[3]) > 0;
+  };
+  const fill = root => {
+    if(!root || root.nodeType !== 1) return;
+    const controls = root.matches && root.matches(controlsSelector)
+      ? [root]
+      : Array.from(root.querySelectorAll ? root.querySelectorAll(controlsSelector) : []);
+    controls.forEach(control => {
+      if(control.matches('input[type="hidden"]')) return;
+      if(hasVisibleFill(control)) return;
+      const isDarkAction = control.matches('.chatShareAction,.chatOpenAction,.beingShareButton,.beingQrShareButton');
+      control.style.setProperty('background',isDarkAction ? '#57606a' : '#eaeef2','important');
+      control.style.setProperty('color',isDarkAction ? '#fff' : '#24292f','important');
+    });
+  };
+  fill(document.body);
+  new MutationObserver(records => {
+    records.forEach(record => record.addedNodes.forEach(node => fill(node)));
   }).observe(document.body,{childList:true,subtree:true});
 })();
 </script>
