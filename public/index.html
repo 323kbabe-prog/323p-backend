@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.15 (2026-07-22)
+  - Compacts the Foundation Tool hero into one continuous text block
+  - Matches the Google, action, and discovery lines to the HUMAN purpose typography
+  - Keeps the ASK.CAMERA copyright footer separate at the bottom of Home
+
   v10.2.14 (2026-07-22)
   - Reorganizes the Foundation Tool hero into a clear tool, proposition, action, and outcome hierarchy
   - Places The search idea Google should buy today directly beneath Image Connect
@@ -16662,30 +16667,34 @@ html body .homeHumanIntroActions button:first-child{
   line-height:1.4;
 }
 
-/* Keep the Foundation Tool copy together as Tool → Proposition → Action → Outcome. */
+/* Keep the Foundation Tool copy together as one compact hero. */
 html body #homeInstruction .homeHeroToolLabel{
   margin-top:28px!important;
 }
 html body #homeInstruction .homeHeroToolName{
-  margin-top:4px!important;
+  margin-top:0!important;
 }
 html body #homeInstruction .homeHeroGoogle{
   max-width:560px!important;
-  margin-top:6px!important;
+  margin-top:0!important;
   color:rgba(255,255,255,.74)!important;
-  font-size:clamp(13px,1.2vw,16px)!important;
-  font-weight:400!important;
-  line-height:1.35!important;
+  font-size:clamp(18px,2vw,26px)!important;
+  font-weight:600!important;
+  line-height:1.2!important;
   letter-spacing:0!important;
   text-transform:none!important;
 }
 html body #homeInstruction .homeHeroAction{
-  margin-top:20px!important;
-  font-size:clamp(17px,1.65vw,22px)!important;
+  margin-top:0!important;
+  font-size:clamp(18px,2vw,26px)!important;
   font-weight:600!important;
+  line-height:1.2!important;
 }
 html body #homeInstruction .homeHeroDetail{
-  margin-top:5px!important;
+  margin-top:0!important;
+  font-size:clamp(18px,2vw,26px)!important;
+  font-weight:600!important;
+  line-height:1.2!important;
 }
 @media(max-width:620px){
   html body #helper{
@@ -16697,8 +16706,9 @@ html body #homeInstruction .homeHeroDetail{
   .homeHumanStep img{height:132px;}
   .homeHumanIntroActions{grid-template-columns:1fr;}
   html body #homeInstruction .homeHeroToolLabel{margin-top:22px!important;}
-  html body #homeInstruction .homeHeroGoogle{font-size:13px!important;}
-  html body #homeInstruction .homeHeroAction{margin-top:18px!important;font-size:17px!important;}
+  html body #homeInstruction .homeHeroGoogle,
+  html body #homeInstruction .homeHeroAction,
+  html body #homeInstruction .homeHeroDetail{font-size:18px!important;}
 }
 @media(max-width:360px){
   .homeHumanSteps{grid-template-columns:1fr;}
