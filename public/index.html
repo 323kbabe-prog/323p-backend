@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.36 (2026-07-21)
+  - Removes inherited rounding from both arrival images
+
   v10.1.35 (2026-07-21)
   - Places the selected image directly beside the HUMAN image with a balanced gap
 
@@ -15266,6 +15269,8 @@ html body #modeBar #humanCardsThumbs{
   width:auto!important;
   max-width:calc(50% - 6px)!important;
   flex:0 1 auto!important;
+  border-radius:0!important;
+  clip-path:none!important;
 }
 </style>
 </body>
