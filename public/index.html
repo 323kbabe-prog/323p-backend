@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.17 (2026-07-22)
+  - Replaces the four HUMAN journey photos with the approved free-stock set
+  - Uses a smartphone view of Tokyo Tower for the Add an image step
+  - Removes the white footer panel while keeping the footer at the bottom of Home
+
   v10.2.16 (2026-07-22)
   - Moves the ASK.CAMERA copyright footer outside the Home content card
   - Keeps the footer as an independent Home-level element at the bottom of the site
@@ -13732,25 +13737,25 @@ const HOME_HUMAN_STEPS_HTML = `
     <p class="homeHumanIntroLead">Create a HUMAN Card from your identity, personality, and meaningful connections. Share it by link or QR code so anyone can add an image and discover connections through your HUMAN Perspective.</p>
     <div class="homeHumanSteps">
       <article class="homeHumanStep">
-        <img src="https://images.pexels.com/photos/5982121/pexels-photo-5982121.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A happy person showing a smartphone" loading="lazy" referrerpolicy="no-referrer">
+        <img src="https://images.pexels.com/photos/14900002/pexels-photo-14900002.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A happy person using a smartphone" loading="lazy" referrerpolicy="no-referrer">
         <div class="homeHumanStepNumber">01</div>
         <h3>Create your HUMAN</h3>
         <p>Build your HUMAN Perspective from who you are and what connects to you.</p>
       </article>
       <article class="homeHumanStep">
-        <img src="https://images.pexels.com/photos/2451622/pexels-photo-2451622.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A smartphone scanning a QR code" loading="lazy" referrerpolicy="no-referrer">
+        <img src="https://images.pexels.com/photos/5065220/pexels-photo-5065220.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="Friends sharing a smartphone" loading="lazy" referrerpolicy="no-referrer">
         <div class="homeHumanStepNumber">02</div>
         <h3>Share your HUMAN</h3>
         <p>Send your HUMAN Card to anyone with its link or QR code.</p>
       </article>
       <article class="homeHumanStep">
-        <img src="https://images.pexels.com/photos/4483133/pexels-photo-4483133.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A person adding an image with a smartphone camera" loading="lazy" referrerpolicy="no-referrer">
+        <img src="https://images.pexels.com/photos/6384181/pexels-photo-6384181.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A smartphone camera pointed at Tokyo Tower" loading="lazy" referrerpolicy="no-referrer">
         <div class="homeHumanStepNumber">03</div>
         <h3>Add an image</h3>
         <p>The recipient points their camera or uploads an image.</p>
       </article>
       <article class="homeHumanStep">
-        <img src="https://images.pexels.com/photos/3183161/pexels-photo-3183161.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="Two people happily connecting through smartphones" loading="lazy" referrerpolicy="no-referrer">
+        <img src="https://images.pexels.com/photos/6146961/pexels-photo-6146961.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="Happy friends connecting through smartphones" loading="lazy" referrerpolicy="no-referrer">
         <div class="homeHumanStepNumber">04</div>
         <h3>Discover connections</h3>
         <p>ASK.CAMERA answers through the shared HUMAN Perspective.</p>
@@ -16656,8 +16661,8 @@ html body .homeHumanIntroActions button:first-child{
   margin:0 0 20px;
   padding:28px 18px;
   box-sizing:border-box;
-  background:#fff;
-  color:#24292f;
+  background:transparent;
+  color:#fff;
   text-align:center;
   text-shadow:none;
 }
@@ -16669,14 +16674,14 @@ html body .homeHumanIntroActions button:first-child{
 }
 .homeAppFooterGoogle{
   margin-top:5px;
-  color:#57606a;
+  color:rgba(255,255,255,.78);
   font-size:12px;
   font-weight:400;
   line-height:1.4;
 }
 .homeAppFooterCopyright{
   margin-top:5px;
-  color:#8c959f;
+  color:rgba(255,255,255,.58);
   font-size:10px;
   font-weight:400;
   line-height:1.4;
