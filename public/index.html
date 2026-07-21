@@ -4,6 +4,9 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.1.40 (2026-07-21)
+  - Restores red as the single exception for heart and love indicators
+
   v10.1.39 (2026-07-21)
   - Consolidates UI colors to black, white, gray, and one blue (#0969da)
   - Removes all light-blue UI fills and secondary blue shades
@@ -15281,6 +15284,13 @@ html body #modeBar #humanCardsThumbs{
   flex:0 1 auto!important;
   border-radius:0!important;
   clip-path:none!important;
+}
+/* v10.1.40 — the heart is the only non-blue UI color exception. */
+html body .loveIcon,
+html body .loveBtn,
+html body [data-love],
+html body [aria-label*="love" i]{
+  color:#d93025!important;
 }
 </style>
 </body>
