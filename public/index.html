@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.17 (2026-07-22)
+  - Forces the selected HUMAN's saved profile bio into the opening BIO block
+  - Applies authoritative visible bio typography after the card renders
+  - Preserves the single-card, non-scrolling opening state
+
   v10.3.16 (2026-07-22)
   - Renders the selected HUMAN's saved profile bio directly in the opening card
   - Uses a visible compact bio block instead of the clipped paragraph treatment
@@ -13957,7 +13962,7 @@ async function openAIBeing(id){
             </div>
           </div>
           <div class="humanOpeningBioLabel">Bio</div>
-          <div class="humanOpeningBio">${escapeBeingText(humanBio)}</div>
+          <div id="humanOpeningBioText" class="humanOpeningBio" style="display:block!important;color:#57606a!important;font-size:14px!important;line-height:1.38!important;opacity:1!important;visibility:visible!important;white-space:normal!important;">${escapeBeingText(humanBio)}</div>
           <h3>Choose an image to begin.</h3>
           <p class="humanOpeningInstruction">Discover connections through this HUMAN Perspective.</p>
           <div class="humanOpeningActions">
@@ -13967,6 +13972,16 @@ async function openAIBeing(id){
           </div>
         </article>
       </section>`;
+    const openingBio = document.getElementById("humanOpeningBioText");
+    if(openingBio){
+      openingBio.textContent = humanBio;
+      openingBio.style.setProperty("display","block","important");
+      openingBio.style.setProperty("color","#57606a","important");
+      openingBio.style.setProperty("font-size","14px","important");
+      openingBio.style.setProperty("line-height","1.38","important");
+      openingBio.style.setProperty("opacity","1","important");
+      openingBio.style.setProperty("visibility","visible","important");
+    }
     roomInput.style.display = "block";
     roomInput.disabled = true;
     roomInput.placeholder = "Choose an image to begin";
