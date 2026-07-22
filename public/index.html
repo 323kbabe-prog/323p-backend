@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.24 (2026-07-23)
+  - Adds Public Image-style Love and Skeleton signals to every HUMAN card
+  - Adds three featured HUMAN thumbnails ranked by Love while retaining the complete HUMAN list
+  - Keeps HUMAN Profiles unlimited; the Public Image 50-item limit does not apply
+
   v10.3.23 (2026-07-22)
   - Keeps the HUMAN name visible once while showing one guidance sentence instead of image narration
   - Reads guidance without speaking the HUMAN name
@@ -2778,6 +2783,71 @@ html body #roomMessages.geminiThread .chatShareAction{
 }
 </style>
 
+<style id="askCameraHumanNetworkV10324">
+#aiBeingsCards .humanFeaturedSection{
+  width:100%!important;max-width:660px!important;margin:0 auto 14px!important;
+  padding:14px!important;box-sizing:border-box!important;background:#eaeef2!important;
+}
+#aiBeingsCards .humanFeaturedTitle{
+  margin:0 0 12px!important;color:#57606a!important;font-size:12px!important;
+  font-weight:700!important;line-height:1.3!important;
+}
+#aiBeingsCards .humanFeaturedHeart,#aiBeingsCards .humanLoveIcon{
+  color:#d93025!important;-webkit-text-fill-color:#d93025!important;
+}
+#aiBeingsCards .humanFeaturedGrid{
+  display:flex!important;align-items:flex-start!important;justify-content:center!important;gap:14px!important;
+}
+#aiBeingsCards .humanFeaturedItem{
+  width:96px!important;min-width:0!important;padding:0!important;display:flex!important;
+  flex-direction:column!important;align-items:center!important;gap:5px!important;
+  background:transparent!important;color:#24292f!important;
+}
+#aiBeingsCards .humanFeaturedItem img{
+  width:72px!important;height:72px!important;object-fit:cover!important;border-radius:0!important;
+}
+#aiBeingsCards .humanFeaturedName{
+  width:100%!important;overflow:hidden!important;color:#24292f!important;font-size:11px!important;
+  font-weight:700!important;line-height:1.2!important;text-align:center!important;
+  text-overflow:ellipsis!important;white-space:nowrap!important;
+}
+#aiBeingsCards .humanFeaturedMeta,#aiBeingsCards .humanReactionRow,
+#aiBeingsCards .humanLoveCount,#aiBeingsCards .humanSkeletonCount{
+  display:flex!important;align-items:center!important;
+}
+#aiBeingsCards .humanFeaturedMeta{
+  justify-content:center!important;gap:8px!important;color:#57606a!important;
+  font-size:11px!important;font-weight:700!important;
+}
+#aiBeingsCards .humanLoveCount,#aiBeingsCards .humanSkeletonCount{gap:4px!important;}
+#aiBeingsCards .humanReactionRow{
+  justify-content:flex-start!important;gap:12px!important;margin:12px 0 2px!important;
+}
+#aiBeingsCards .humanReactionButton{
+  width:auto!important;min-width:54px!important;height:38px!important;padding:0 12px!important;
+  justify-content:center!important;gap:5px!important;background:#eaeef2!important;
+  color:#24292f!important;font-size:16px!important;font-weight:700!important;
+}
+#aiBeingsCards .humanSkeletonIcon,#aiBeingsCards .humanSkeletonNumber,
+#aiBeingsCards .humanLoveNumber{
+  color:#57606a!important;-webkit-text-fill-color:#57606a!important;
+}
+@media(max-width:420px){
+  #aiBeingsCards .humanFeaturedGrid{gap:8px!important;}
+  #aiBeingsCards .humanFeaturedItem{width:84px!important;}
+  #aiBeingsCards .humanFeaturedItem img{width:64px!important;height:64px!important;}
+}
+</style>
+</head>
+
+<body>
+
+<div id="appStartupLoader" role="status" aria-label="ASK.CAMERA loading">
+  <div class="appStartupDots" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+  <div class="appStartupGoogle">ASK.CAMERA — THE AI THAT CONNECTS HUMANS.</div>
+</div>
 </head>
 
 <body>
@@ -13370,6 +13440,26 @@ async function loadAIBeings(){
   }
 }
 
+function humanReactionNumber(value){
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.floor(number) : 0;
+}
+
+function humanFeaturedCards(beings){
+  return [...beings]
+    .sort((a,b) =>
+      humanReactionNumber(b.love) - humanReactionNumber(a.love) ||
+      humanReactionNumber(a.skeleton) - humanReactionNumber(b.skeleton) ||
+      String(a.name || "").localeCompare(String(b.name || ""))
+    )
+    .slice(0,3);
+}
+
+function focusHumanCard(id){
+  const card = document.querySelector(`.beingCard[data-being-id="${CSS.escape(String(id))}"]`);
+  if(card) card.scrollIntoView({ behavior:"smooth", block:"center" });
+}
+
 function renderHumanCards(beings){
   const holder = document.getElementById("aiBeingsCards");
   const canOpenHumanRoom = humanCardsCanSelect;
@@ -13377,8 +13467,28 @@ function renderHumanCards(beings){
     holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:600;">No matching HUMAN found</div><div style="margin-top:6px;font-size:13px;line-height:1.45;color:#57606a;">Try the full name or a different spelling.</div></div>`;
     return;
   }
-  holder.innerHTML = beings.map(being => `
-      <article class="beingCard beingCardV2">
+
+  const featured = beings === loadedHumanCards ? humanFeaturedCards(beings) : [];
+  const featuredMarkup = featured.length ? `
+    <section class="humanFeaturedSection" aria-label="Featured HUMAN Perspectives">
+      <div class="humanFeaturedTitle"><span class="humanFeaturedHeart">♥</span> Featured HUMAN Perspectives</div>
+      <div class="humanFeaturedGrid">
+        ${featured.map(being => `
+          <button type="button" class="humanFeaturedItem" onclick="focusHumanCard('${being.id}')" aria-label="Find ${escapeBeingText(being.name)}">
+            <img src="${escapePublicAttribute(safePublicImageUrl(being.photo))}" alt="">
+            <span class="humanFeaturedName">${escapeBeingText(being.name)}</span>
+            <span class="humanFeaturedMeta">
+              <span class="humanLoveCount" data-being-id="${being.id}"><span class="humanLoveIcon" aria-hidden="true">♥</span> <span class="humanLoveNumber">${humanReactionNumber(being.love)}</span></span>
+              <span class="humanSkeletonCount" data-being-id="${being.id}"><span class="humanSkeletonIcon" aria-hidden="true">💀</span> <span class="humanSkeletonNumber">${humanReactionNumber(being.skeleton)}</span></span>
+            </span>
+          </button>
+        `).join("")}
+      </div>
+    </section>
+  ` : "";
+
+  holder.innerHTML = featuredMarkup + beings.map(being => `
+      <article class="beingCard beingCardV2" data-being-id="${being.id}">
         <div class="beingCardMain">
           <img class="beingCardPhoto" src="${being.photo}" alt="${escapeBeingText(being.name)}" onclick="showHumanPhoto(this.src,this.alt)">
           <div class="beingCardCopy">
@@ -13395,6 +13505,16 @@ function renderHumanCards(beings){
         <div class="beingCardWords beingCardConnections">
           ${[being.connection1,being.connection2,being.connection3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
         </div>
+        <div class="humanReactionRow" aria-label="HUMAN reactions">
+          <button type="button" class="humanReactionButton humanLoveCount" data-being-id="${being.id}" onclick="loveHumanCard('${being.id}')" aria-label="Love ${escapeBeingText(being.name)}">
+            <span class="humanLoveIcon" aria-hidden="true">♥</span>
+            <span class="humanLoveNumber">${humanReactionNumber(being.love)}</span>
+          </button>
+          <button type="button" class="humanReactionButton humanSkeletonCount" data-being-id="${being.id}" onclick="skeletonHumanCard('${being.id}')" aria-label="Skeleton ${escapeBeingText(being.name)}">
+            <span class="humanSkeletonIcon" aria-hidden="true">💀</span>
+            <span class="humanSkeletonNumber">${humanReactionNumber(being.skeleton)}</span>
+          </button>
+        </div>
         <div class="beingCardActions">
           ${canOpenHumanRoom ? `<button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Open HUMAN</button>` : ""}
           <button class="beingShareButton" onclick="shareHumanCard('${being.id}')">Share HUMAN</button>
@@ -13405,6 +13525,39 @@ function renderHumanCards(beings){
         </div>
       </article>
     `).join("");
+}
+
+async function reactToHumanCard(id,type){
+  const response = await fetch(`${AI_BEINGS_API}/ai-beings/${encodeURIComponent(id)}/${type}`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ deviceId })
+  });
+  const result = await response.json().catch(() => ({}));
+  if(!response.ok) throw new Error(result.error || "HUMAN reaction could not be saved.");
+  const human = loadedHumanCards.find(item => String(item.id) === String(id));
+  const count = humanReactionNumber(result[type]);
+  if(human) human[type] = count;
+  const countClass = type === "love" ? "humanLoveCount" : "humanSkeletonCount";
+  const numberClass = type === "love" ? "humanLoveNumber" : "humanSkeletonNumber";
+  document.querySelectorAll(`.${countClass}[data-being-id="${CSS.escape(String(id))}"] .${numberClass}`)
+    .forEach(element => { element.textContent = String(count); });
+}
+
+async function loveHumanCard(id){
+  try{
+    await reactToHumanCard(id,"love");
+  }catch(error){
+    alert(error.message);
+  }
+}
+
+async function skeletonHumanCard(id){
+  try{
+    await reactToHumanCard(id,"skeleton");
+  }catch(error){
+    alert(error.message);
+  }
 }
 
 function normalizedHumanName(value){
