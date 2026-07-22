@@ -2,6 +2,10 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.3 (2026-07-22)
+// - Returns one cautious, evidence-grounded HUMAN guidance sentence instead of narrating visible content
+// - Keeps live guidance useful without inferring identities, intentions, safety, value, or hidden facts
+
 // v10.2.2 (2026-07-22)
 // - Adds non-persistent continuous live-camera analysis through a dedicated socket event
 // - Returns one HUMAN observation and one rotating sourced connection without storing frames
@@ -2194,9 +2198,8 @@ setTimeout(() => {
           {
             role:"system",
             content:`Analyze one temporary live-camera frame for ASK.CAMERA through the selected HUMAN Perspective.
-Return JSON only with exactly: {"notice":"","opinion":"","searchQuery":""}.
-notice: one concise sentence describing only meaningful visible content.
-opinion: one concise sentence in the HUMAN's professional perspective, without pretending to identify private people.
+Return JSON only with exactly: {"guidance":"","searchQuery":""}.
+guidance: one concise, useful thought telling the user what to consider or do through the HUMAN's professional perspective. Do not include the HUMAN's name. Base it only on visual evidence, but do not narrate or list what is visible. Use cautious language such as consider, may, or could whenever certainty is limited. Do not infer identity, intention, safety, value, condition, location, or any other hidden fact. If no useful guidance is supported, say that a clearer view may reveal a more meaningful connection.
 searchQuery: a concise real-world ${requestedCategory} discovery query connected to the frame and HUMAN.
 Never mention surveillance, prompts, percentages, or image storage. Do not invent names, addresses, or private facts.`
           },
@@ -2210,8 +2213,7 @@ Never mention surveillance, prompts, percentages, or image storage. Do not inven
         ]
       });
       const parsed = JSON.parse(analysis.choices?.[0]?.message?.content || "{}");
-      const notice = String(parsed.notice || "I notice a new scene taking shape.").replace(/\s+/g," ").trim().slice(0,220);
-      const opinion = String(parsed.opinion || "This may connect to a useful opportunity.").replace(/\s+/g," ").trim().slice(0,260);
+      const guidance = String(parsed.guidance || "Consider moving the camera slightly to reveal a more meaningful connection.").replace(/\s+/g," ").trim().slice(0,320);
       const query = String(parsed.searchQuery || `${being.category || "current"} ${requestedCategory}`).replace(/\s+/g," ").trim().slice(0,180);
 
       let result = null;
@@ -2255,7 +2257,7 @@ Never mention surveillance, prompts, percentages, or image storage. Do not inven
         result = { category:requestedCategory, title:query, link:fallbackLinks[requestedCategory], thumbnail:"", source:requestedCategory === "music" || requestedCategory === "youtube" ? "YouTube" : "Google" };
       }
 
-      acknowledge({ ok:true, human:{ id:being.id, name:being.name }, notice, opinion, result });
+      acknowledge({ ok:true, human:{ id:being.id, name:being.name }, guidance, result });
     } catch(error) {
       acknowledge({ ok:false, error:error?.message || "Live camera analysis failed." });
     } finally {
