@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.4 (2026-07-22)
+  - Adds a four-scene startup story explaining how ASK.CAMERA goes beyond image identification
+  - Opens the existing floating live camera after the introduction
+  - Removes all title, trial, instruction, and branding text from the floating camera
+  - Keeps the camera shutter, Refresh, Close, and existing capture behavior unchanged
+
   v10.3.3 (2026-07-22)
   - Removes the obsolete absolute ASK.CAMERA branding from both Home render sources
   - Prevents legacy branding from overlapping the HUMAN introduction after state changes
@@ -1436,6 +1442,67 @@ body.appBackdropActive #capturePreview{display:none!important;}
   #homeCaptureTrial{margin-top:5px!important;font-size:14px!important;}
   #homeCaptureInstruction{margin-top:2px!important;font-size:10px!important;line-height:1.2!important;}
   #homeStartupBrandLine{font-size:9px!important;}
+}
+
+/* v10.3.4 — startup story followed by one clean, text-free floating camera. */
+#homeStartupLayer{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))!important;
+  background:rgba(255,255,255,.12)!important;
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+}
+#homeStartupBackground,#homeStartupVeil,#homeStartupTop,#homeStartupBrand,#homeCaptureShade{display:none!important;}
+#homeIntroStory{
+  position:relative!important;
+  width:min(92vw,980px)!important;
+  max-height:calc(100dvh - 32px)!important;
+  background:#fff!important;
+  color:#111!important;
+  overflow:hidden!important;
+}
+#homeIntroStory[hidden],#homeCaptureStage[hidden]{display:none!important;}
+#homeIntroViewport{width:100%!important;overflow:hidden!important;}
+#homeIntroTrack{display:flex!important;width:100%!important;transition:transform .42s ease!important;}
+.homeIntroScene{
+  flex:0 0 100%!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr)!important;
+  min-height:min(560px,72dvh)!important;
+}
+.homeIntroSceneImage{width:100%!important;height:100%!important;min-height:430px!important;object-fit:cover!important;display:block!important;}
+.homeIntroSceneCopy{display:flex!important;flex-direction:column!important;justify-content:center!important;padding:clamp(28px,4vw,54px)!important;box-sizing:border-box!important;text-align:left!important;}
+.homeIntroEyebrow{margin-bottom:12px!important;color:#0969da!important;font-size:12px!important;font-weight:800!important;line-height:1.2!important;letter-spacing:.08em!important;text-transform:uppercase!important;}
+.homeIntroScene h2{margin:0!important;font-size:clamp(30px,4vw,54px)!important;font-weight:700!important;line-height:1.04!important;letter-spacing:-.035em!important;}
+.homeIntroScene p{margin:18px 0 0!important;color:#57606a!important;font-size:clamp(16px,1.6vw,21px)!important;font-weight:400!important;line-height:1.45!important;}
+.homeIntroExamples{display:grid!important;gap:8px!important;margin-top:18px!important;}
+.homeIntroExamples span{display:block!important;padding:10px 12px!important;background:#f6f8fa!important;color:#24292f!important;font-size:14px!important;font-weight:600!important;line-height:1.35!important;}
+#homeIntroControls{display:grid!important;grid-template-columns:auto 1fr auto!important;align-items:center!important;gap:14px!important;padding:14px 18px!important;background:#f6f8fa!important;}
+#homeIntroBack,#homeIntroNext,#homeIntroSkip{height:44px!important;padding:0 18px!important;border-radius:0!important;font-size:13px!important;font-weight:800!important;cursor:pointer!important;}
+#homeIntroBack{background:#d0d7de!important;color:#24292f!important;}
+#homeIntroNext{background:#0969da!important;color:#fff!important;}
+#homeIntroSkip{position:absolute!important;z-index:2!important;top:12px!important;right:12px!important;background:rgba(255,255,255,.9)!important;color:#57606a!important;padding:0 12px!important;}
+#homeIntroDots{display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;}
+.homeIntroDot{width:7px!important;height:7px!important;padding:0!important;border-radius:50%!important;background:#afb8c1!important;}
+.homeIntroDot.isActive{background:#0969da!important;}
+#homeCaptureStage{width:min(92vw,724px)!important;height:min(78dvh,840px)!important;max-width:724px!important;}
+#homeCaptureCard{width:100%!important;height:100%!important;max-height:none!important;}
+#homeCapturePrompt{left:0!important;right:0!important;bottom:26px!important;}
+#homeTakePicture{margin:0 auto!important;}
+@media(max-width:720px){
+  #homeIntroStory{width:100%!important;}
+  .homeIntroScene{grid-template-columns:1fr!important;grid-template-rows:minmax(190px,38dvh) auto!important;min-height:0!important;}
+  .homeIntroSceneImage{min-height:0!important;height:100%!important;}
+  .homeIntroSceneCopy{justify-content:flex-start!important;padding:22px 20px 24px!important;}
+  .homeIntroScene h2{font-size:clamp(28px,9vw,42px)!important;}
+  .homeIntroScene p{margin-top:13px!important;font-size:15px!important;}
+  .homeIntroExamples{margin-top:13px!important;}
+  .homeIntroExamples span{padding:8px 10px!important;font-size:12px!important;}
+  #homeIntroControls{grid-template-columns:auto 1fr auto!important;padding:10px 12px!important;}
+  #homeIntroBack,#homeIntroNext{height:40px!important;padding:0 13px!important;font-size:11px!important;}
+  #homeCaptureStage{width:min(92vw,480px)!important;height:min(80dvh,760px)!important;}
 }
 
 /* v10.0.108 — one authoritative disconnected state. */
@@ -13828,6 +13895,48 @@ function openHomeHumanFinder(){
 }
 
 let homeCaptureCardDismissed = false;
+let homeIntroStoryDismissed = false;
+let homeIntroSceneIndex = 0;
+
+function updateHomeIntroStory(){
+  const story = document.getElementById("homeIntroStory");
+  const track = document.getElementById("homeIntroTrack");
+  const back = document.getElementById("homeIntroBack");
+  const next = document.getElementById("homeIntroNext");
+  if(!story || !track) return;
+  homeIntroSceneIndex = Math.max(0,Math.min(3,homeIntroSceneIndex));
+  track.style.transform = `translateX(-${homeIntroSceneIndex * 100}%)`;
+  story.querySelectorAll(".homeIntroDot").forEach((dot,index) => {
+    dot.classList.toggle("isActive",index === homeIntroSceneIndex);
+    dot.setAttribute("aria-current",index === homeIntroSceneIndex ? "step" : "false");
+  });
+  if(back){
+    back.style.visibility = homeIntroSceneIndex === 0 ? "hidden" : "visible";
+    back.tabIndex = homeIntroSceneIndex === 0 ? -1 : 0;
+  }
+  if(next) next.textContent = homeIntroSceneIndex === 3 ? "START IMAGE CONNECT" : "NEXT";
+}
+
+function moveHomeIntroScene(direction){
+  const nextIndex = homeIntroSceneIndex + direction;
+  if(nextIndex > 3){
+    startHomeIntroCamera();
+    return;
+  }
+  homeIntroSceneIndex = Math.max(0,nextIndex);
+  updateHomeIntroStory();
+}
+
+async function startHomeIntroCamera(){
+  homeIntroStoryDismissed = true;
+  const story = document.getElementById("homeIntroStory");
+  const stage = document.getElementById("homeCaptureStage");
+  if(story) story.hidden = true;
+  if(stage) stage.hidden = false;
+  if(!video.srcObject) await ensureCameraStream();
+  queueCanonicalHomeExperience();
+  requestAnimationFrame(() => document.getElementById("homeTakePicture")?.focus());
+}
 
 async function openHomeFloatingCamera(event){
   clearSystemState("camera");
@@ -13959,6 +14068,10 @@ function updateHomeCaptureCardVisibility(){
   const sharedRoomLink = new URLSearchParams(location.search).has("room");
   const normalAppOpening = !directHumanLink && !sharedRoomLink;
   layer.hidden = homeCaptureCardDismissed || !normalAppOpening || !main || !helperVisible || roomOpen || secondaryOpen;
+  const story = document.getElementById("homeIntroStory");
+  const stage = document.getElementById("homeCaptureStage");
+  if(story) story.hidden = homeIntroStoryDismissed;
+  if(stage) stage.hidden = !homeIntroStoryDismissed;
 }
 
 function enforceCircularHomeShutter(){
@@ -14008,27 +14121,60 @@ function ensureCanonicalHomeExperience(){
   if(!layer){
     layer = document.createElement("section");
     layer.id = "homeStartupLayer";
-    layer.setAttribute("aria-label", "ASK.CAMERA free trial camera");
+    layer.setAttribute("aria-label", "ASK.CAMERA introduction and camera");
     layer.innerHTML = `
-      <video id="homeStartupBackground" autoplay playsinline muted aria-hidden="true"></video>
-      <div id="homeStartupVeil" aria-hidden="true"></div>
-      <header id="homeStartupTop" class="homeStartupRail">
-        <div id="homeStartupProductRow">
-          <div id="homeStartupTextFrame">
-            <div id="homeStartupTitle">See where this image connects you.</div>
+      <section id="homeIntroStory" role="dialog" aria-modal="true" aria-label="How ASK.CAMERA works">
+        <div id="homeIntroViewport">
+          <div id="homeIntroTrack">
+            <article class="homeIntroScene">
+              <img class="homeIntroSceneImage" src="https://images.pexels.com/photos/6384181/pexels-photo-6384181.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1400" alt="A smartphone camera pointed at Tokyo Tower" loading="eager" referrerpolicy="no-referrer">
+              <div class="homeIntroSceneCopy">
+                <div class="homeIntroEyebrow">The Image</div>
+                <h2>The image is not the answer. It is the beginning.</h2>
+                <p>Point your camera at anything. ASK.CAMERA begins where image identification ends.</p>
+              </div>
+            </article>
+            <article class="homeIntroScene">
+              <img class="homeIntroSceneImage" src="https://images.pexels.com/photos/14900002/pexels-photo-14900002.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1400" alt="A person using a smartphone to explore connections" loading="lazy" referrerpolicy="no-referrer">
+              <div class="homeIntroSceneCopy">
+                <div class="homeIntroEyebrow">Image Connect</div>
+                <h2>Discover meaningful connections.</h2>
+                <p>Image Connect explores where the image could lead—across career, travel, opportunity, community, faith, and everyday life.</p>
+              </div>
+            </article>
+            <article class="homeIntroScene">
+              <img class="homeIntroSceneImage" src="https://images.pexels.com/photos/5065220/pexels-photo-5065220.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1400" alt="Friends sharing ideas through a smartphone" loading="lazy" referrerpolicy="no-referrer">
+              <div class="homeIntroSceneCopy">
+                <div class="homeIntroEyebrow">Your Life Question</div>
+                <h2>Your question provides intent.</h2>
+                <p>The image provides meaningful connections. You decide which connection matters to your life.</p>
+                <div class="homeIntroExamples"><span>Could I build my career here?</span><span>Should I travel here next?</span><span>What opportunity should I explore?</span></div>
+              </div>
+            </article>
+            <article class="homeIntroScene">
+              <img class="homeIntroSceneImage" src="https://images.pexels.com/photos/7489039/pexels-photo-7489039.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1400" alt="People discovering different perspectives together" loading="lazy" referrerpolicy="no-referrer">
+              <div class="homeIntroSceneCopy">
+                <div class="homeIntroEyebrow">HUMAN Perspective</div>
+                <h2>Different perspectives create different answers.</h2>
+                <p>ASK.CAMERA brings the image, meaningful connections, your life question, and a selected HUMAN Perspective together.</p>
+              </div>
+            </article>
           </div>
         </div>
-      </header>
-      <div id="homeCaptureStage">
+        <div id="homeIntroControls">
+          <button id="homeIntroBack" type="button" onclick="moveHomeIntroScene(-1)">BACK</button>
+          <button id="homeIntroSkip" type="button" onclick="startHomeIntroCamera()">SKIP</button>
+          <div id="homeIntroDots" aria-label="Introduction progress"><button class="homeIntroDot isActive" type="button" onclick="homeIntroSceneIndex=0;updateHomeIntroStory()" aria-label="Scene 1"></button><button class="homeIntroDot" type="button" onclick="homeIntroSceneIndex=1;updateHomeIntroStory()" aria-label="Scene 2"></button><button class="homeIntroDot" type="button" onclick="homeIntroSceneIndex=2;updateHomeIntroStory()" aria-label="Scene 3"></button><button class="homeIntroDot" type="button" onclick="homeIntroSceneIndex=3;updateHomeIntroStory()" aria-label="Scene 4"></button></div>
+          <button id="homeIntroNext" type="button" onclick="moveHomeIntroScene(1)">NEXT</button>
+        </div>
+      </section>
+      <div id="homeCaptureStage" hidden>
         <div id="homeCaptureCard" aria-label="Live camera">
           <video id="homeCaptureVideo" autoplay playsinline muted aria-hidden="true"></video>
-          <div id="homeCaptureShade" aria-hidden="true"></div>
           <div id="homeCapturePrompt">
             <button id="homeTakePicture" type="button" aria-label="Take picture" onclick="takeHomePicture(event)">
               <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke-width="1.8"/></svg>
             </button>
-            <div id="homeCaptureTrial">FREE TRIAL</div>
-            <div id="homeCaptureInstruction">Take a picture to discover today’s context and perspectives.</div>
           </div>
           <button id="homeStartupRefresh" type="button" aria-label="Refresh camera" onclick="window.location.reload()">
             <svg aria-hidden="true" viewBox="0 -960 960 960"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/></svg>
@@ -14036,11 +14182,17 @@ function ensureCanonicalHomeExperience(){
           <button id="homeCaptureClose" type="button" aria-label="Close camera and show home screen" onclick="closeHomeCaptureCard(event)">×</button>
         </div>
       </div>
-      <footer id="homeStartupBrand" class="homeStartupRail">
-        <div id="homeStartupBrandLine">THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.</div>
-      </footer>
     `;
     document.body.appendChild(layer);
+    let introTouchStartX = 0;
+    layer.querySelector("#homeIntroViewport")?.addEventListener("touchstart",event => {
+      introTouchStartX = event.changedTouches[0]?.clientX || 0;
+    },{passive:true});
+    layer.querySelector("#homeIntroViewport")?.addEventListener("touchend",event => {
+      const distance = (event.changedTouches[0]?.clientX || 0) - introTouchStartX;
+      if(Math.abs(distance) > 48) moveHomeIntroScene(distance < 0 ? 1 : -1);
+    },{passive:true});
+    updateHomeIntroStory();
     requestAnimationFrame(enforceCircularHomeShutter);
   }
 
