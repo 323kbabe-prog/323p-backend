@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.2 (2026-07-22)
+// - Adds non-persistent continuous live-camera analysis through a dedicated socket event
+// - Returns one HUMAN observation and one rotating sourced connection without storing frames
+// - Rate-limits temporary frames and discards them after each request
+
 // v10.2.1 (2026-07-22)
 // - Hard-routes clear venue requests such as coffee shops, restaurants, and hotels to Place
 // - Makes Search without location apply only to the current request instead of the whole room
@@ -1459,6 +1464,9 @@ io.on("connection", socket => {
 
     };
 
+    let liveCameraAnalysisBusy = false;
+    let liveCameraLastAnalysisAt = 0;
+
     // Register visitor
     socket.on("registerDevice", async ({ deviceId }) => {
 
@@ -2149,6 +2157,112 @@ setTimeout(() => {
   //////////////////////////////////////////////////
   // ADD PUBLIC IMAGE
   //////////////////////////////////////////////////
+
+  socket.on("liveCameraAnalyze", async ({ imageDataUrl, beingId, category } = {}, acknowledge = () => {}) => {
+    let temporaryImage = String(imageDataUrl || "");
+    let analysisLeaseAcquired = false;
+    try {
+      const now = Date.now();
+      if(liveCameraAnalysisBusy) return acknowledge({ ok:false, retry:true, error:"Live analysis is already running." });
+      if(now - liveCameraLastAnalysisAt < 7000) return acknowledge({ ok:false, retry:true, error:"Live analysis is cooling down." });
+      if(!/^data:image\/jpeg;base64,/i.test(temporaryImage)) throw new Error("Temporary camera frame is invalid.");
+      if(temporaryImage.length > 1_600_000) throw new Error("Temporary camera frame is too large.");
+
+      liveCameraAnalysisBusy = true;
+      analysisLeaseAcquired = true;
+      liveCameraLastAnalysisAt = now;
+
+      const fallbackBeingId = "5b903231-7571-4b82-a2af-615682f7555a";
+      const requestedBeingId = String(beingId || fallbackBeingId);
+      const { data: being, error: beingError } = await supabase
+        .from("ai_beings")
+        .select("id,name,best_current_choice,category,word1,word2,word3,connection1,connection2,connection3,public")
+        .eq("id",requestedBeingId)
+        .eq("public",true)
+        .single();
+      if(beingError || !being) throw new Error("HUMAN Perspective is unavailable.");
+
+      const allowedCategories = ["news","jobs","shopping","youtube","music"];
+      const requestedCategory = allowedCategories.includes(String(category || "").toLowerCase())
+        ? String(category).toLowerCase()
+        : "news";
+      const analysis = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.35,
+        response_format:{ type:"json_object" },
+        messages:[
+          {
+            role:"system",
+            content:`Analyze one temporary live-camera frame for ASK.CAMERA through the selected HUMAN Perspective.
+Return JSON only with exactly: {"notice":"","opinion":"","searchQuery":""}.
+notice: one concise sentence describing only meaningful visible content.
+opinion: one concise sentence in the HUMAN's professional perspective, without pretending to identify private people.
+searchQuery: a concise real-world ${requestedCategory} discovery query connected to the frame and HUMAN.
+Never mention surveillance, prompts, percentages, or image storage. Do not invent names, addresses, or private facts.`
+          },
+          {
+            role:"user",
+            content:[
+              { type:"text", text:`HUMAN: ${being.name}\nCATEGORY: ${being.category || ""}\nBIO: ${being.best_current_choice || ""}\nPERSONALITY: ${[being.word1,being.word2,being.word3].filter(Boolean).join(", ")}\nCONNECTIONS: ${[being.connection1,being.connection2,being.connection3].filter(Boolean).join(", ")}\nTARGET RESULT: ${requestedCategory}` },
+              { type:"image_url", image_url:{ url:temporaryImage, detail:"low" } }
+            ]
+          }
+        ]
+      });
+      const parsed = JSON.parse(analysis.choices?.[0]?.message?.content || "{}");
+      const notice = String(parsed.notice || "I notice a new scene taking shape.").replace(/\s+/g," ").trim().slice(0,220);
+      const opinion = String(parsed.opinion || "This may connect to a useful opportunity.").replace(/\s+/g," ").trim().slice(0,260);
+      const query = String(parsed.searchQuery || `${being.category || "current"} ${requestedCategory}`).replace(/\s+/g," ").trim().slice(0,180);
+
+      let result = null;
+      if(process.env.SERPAPI_KEY){
+        try {
+          let searchUrl = "";
+          if(requestedCategory === "news") searchUrl = `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(query)}&api_key=${process.env.SERPAPI_KEY}`;
+          else if(requestedCategory === "jobs") searchUrl = `https://serpapi.com/search.json?engine=google_jobs&q=${encodeURIComponent(query)}&api_key=${process.env.SERPAPI_KEY}`;
+          else if(requestedCategory === "shopping") searchUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(query)}&api_key=${process.env.SERPAPI_KEY}`;
+          else searchUrl = `https://serpapi.com/search.json?engine=youtube&search_query=${encodeURIComponent(requestedCategory === "music" ? `${query} music` : query)}&api_key=${process.env.SERPAPI_KEY}`;
+          const searchResponse = await fetch(searchUrl);
+          const searchData = searchResponse.ok ? await searchResponse.json() : {};
+          const item = requestedCategory === "news"
+            ? searchData.news_results?.[0]
+            : requestedCategory === "jobs"
+              ? searchData.jobs_results?.[0]
+              : requestedCategory === "shopping"
+                ? searchData.shopping_results?.[0]
+                : searchData.video_results?.[0];
+          if(item){
+            result = {
+              category:requestedCategory,
+              title:String(item.title || item.name || query).slice(0,180),
+              link:String(item.link || item.share_link || item.product_link || item.related_pages_link || ""),
+              thumbnail:String(item.thumbnail || item.image || item.company_logo || ""),
+              source:String(item.source?.name || item.source || item.company_name || (requestedCategory === "music" || requestedCategory === "youtube" ? "YouTube" : ""))
+            };
+          }
+        } catch(searchError) {
+          console.log("LIVE CAMERA RESULT SEARCH FAILED:",searchError.message);
+        }
+      }
+      if(!result?.link){
+        const fallbackLinks = {
+          news:`https://www.google.com/search?tbm=nws&q=${encodeURIComponent(query)}`,
+          jobs:`https://www.google.com/search?q=${encodeURIComponent(`${query} jobs`)}`,
+          shopping:`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`,
+          youtube:`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+          music:`https://www.youtube.com/results?search_query=${encodeURIComponent(`${query} music`)}`
+        };
+        result = { category:requestedCategory, title:query, link:fallbackLinks[requestedCategory], thumbnail:"", source:requestedCategory === "music" || requestedCategory === "youtube" ? "YouTube" : "Google" };
+      }
+
+      acknowledge({ ok:true, human:{ id:being.id, name:being.name }, notice, opinion, result });
+    } catch(error) {
+      acknowledge({ ok:false, error:error?.message || "Live camera analysis failed." });
+    } finally {
+      temporaryImage = "";
+      if(analysisLeaseAcquired) liveCameraAnalysisBusy = false;
+    }
+  });
 
   socket.on("addPublicImage", async ({ deviceId, imageDataUrl } = {}) => {
     try {
