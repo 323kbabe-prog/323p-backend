@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.21 (2026-07-22)
+  - Adds a real scannable Wang Vivian demo QR to the Home HUMAN introduction
+  - Adds an Open Test HUMAN link for people viewing the QR on the same phone
+
   v10.2.20 (2026-07-22)
   - Places the opening-camera Refresh control directly beside the Close control
   - Removes the excess Home spacing below the copyright footer
@@ -13772,6 +13776,15 @@ const HOME_HUMAN_STEPS_HTML = `
         <p>ASK.CAMERA answers through the shared HUMAN Perspective.</p>
       </article>
     </div>
+    <section id="homeHumanDemo" aria-labelledby="homeHumanDemoTitle">
+      <div id="homeHumanDemoQr" aria-label="QR code for the Wang Vivian demo HUMAN"></div>
+      <div class="homeHumanDemoCopy">
+        <div class="homeHumanDemoEyebrow">Try a HUMAN Perspective</div>
+        <h3 id="homeHumanDemoTitle">Demo HUMAN: Wang Vivian</h3>
+        <p>Scan this QR code or open the test HUMAN to add your own image and experience her perspective.</p>
+        <a class="homeHumanDemoOpen" href="https://ask.camera/being/5b903231-7571-4b82-a2af-615682f7555a">OPEN TEST HUMAN</a>
+      </div>
+    </section>
     <div class="homeHumanIntroActions">
       <button type="button" onclick="openCreateBeing()">CREATE A HUMAN CARD — FREE</button>
       <button type="button" onclick="showAIBeings()">EXPLORE HUMAN CARDS</button>
@@ -13788,6 +13801,30 @@ const HOME_APP_FOOTER_HTML = `
     <div class="homeAppFooterCopyright">© 2026 ASK.CAMERA. All rights reserved.</div>
   </footer>
 `;
+
+const HOME_DEMO_HUMAN_URL = "https://ask.camera/being/5b903231-7571-4b82-a2af-615682f7555a";
+
+function renderHomeDemoHumanQR(){
+  const holder = document.getElementById("homeHumanDemoQr");
+  if(!holder || holder.dataset.qrReady === "true") return;
+  if(typeof QRCode !== "function"){
+    const attempts = Number(holder.dataset.qrAttempts || 0);
+    if(attempts >= 20) return;
+    holder.dataset.qrAttempts = String(attempts + 1);
+    setTimeout(renderHomeDemoHumanQR,500);
+    return;
+  }
+  holder.innerHTML = "";
+  new QRCode(holder,{
+    text:HOME_DEMO_HUMAN_URL,
+    width:132,
+    height:132,
+    colorDark:"#000000",
+    colorLight:"#ffffff",
+    correctLevel:QRCode.CorrectLevel.H
+  });
+  holder.dataset.qrReady = "true";
+}
 
 function openHomeHumanFinder(){
   showAIBeings().then(() => {
@@ -13958,6 +13995,7 @@ function ensureCanonicalHomeExperience(){
   if(!main.querySelector("#homeHumanIntro")){
     main.insertAdjacentHTML("beforeend",HOME_HUMAN_STEPS_HTML);
   }
+  renderHomeDemoHumanQR();
 
   let homeFooter = document.getElementById("homeAppFooter");
   if(!homeFooter){
@@ -16636,6 +16674,66 @@ html body #homeMainContent{
   line-height:1.4;
   letter-spacing:0;
 }
+#homeHumanDemo{
+  display:grid;
+  grid-template-columns:132px minmax(0,1fr);
+  align-items:center;
+  gap:16px;
+  margin:16px 0 0;
+  padding:16px;
+  box-sizing:border-box;
+  background:#fff;
+  color:#24292f;
+}
+#homeHumanDemoQr{
+  width:132px;
+  height:132px;
+  background:#fff;
+}
+#homeHumanDemoQr img,
+#homeHumanDemoQr canvas{
+  display:block;
+  width:132px!important;
+  height:132px!important;
+}
+.homeHumanDemoCopy{min-width:0;}
+.homeHumanDemoEyebrow{
+  color:#0969da;
+  font-size:10px;
+  font-weight:700;
+  line-height:1.2;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#homeHumanDemoTitle{
+  margin:5px 0 0;
+  color:#24292f;
+  font-size:18px;
+  font-weight:600;
+  line-height:1.2;
+}
+.homeHumanDemoCopy p{
+  margin:7px 0 0;
+  color:#57606a;
+  font-size:12px;
+  font-weight:400;
+  line-height:1.4;
+}
+html body .homeHumanDemoOpen{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  margin-top:10px;
+  padding:0 14px;
+  box-sizing:border-box;
+  background:#0969da;
+  color:#fff;
+  font-size:11px;
+  font-weight:600;
+  line-height:1.2;
+  text-decoration:none;
+}
 .homeHumanIntroActions{
   display:grid;
   grid-template-columns:1.5fr 1fr 1fr;
@@ -16738,6 +16836,9 @@ html body #homeInstruction .homeHeroDetail{
   #homeHumanIntro{margin-top:26px;padding:16px;}
   .homeHumanSteps{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
   .homeHumanStep img{height:132px;}
+  #homeHumanDemo{grid-template-columns:1fr;justify-items:center;text-align:center;}
+  .homeHumanDemoCopy{width:100%;}
+  html body .homeHumanDemoOpen{width:100%;}
   .homeHumanIntroActions{grid-template-columns:1fr;}
   html body #homeInstruction .homeHeroToolLabel{margin-top:22px!important;}
   html body #homeInstruction .homeHeroGoogle,
