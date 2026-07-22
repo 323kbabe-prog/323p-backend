@@ -2,18 +2,22 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.5 (2026-07-23)
+// - Aligns user-facing API responses and AI instructions with USER Perspective terminology
+// - Preserves internal ai_beings routes, identifiers, tables, and reaction behavior
+//
 // v10.2.4 (2026-07-23)
-// - Persists HUMAN Love and Skeleton reactions through the existing site event network
-// - Returns reaction totals with every HUMAN without limiting the HUMAN directory
-// - Supports the frontend's three featured HUMAN thumbnails
+// - Persists USER Love and Skeleton reactions through the existing site event network
+// - Returns reaction totals with every USER without limiting the USER directory
+// - Supports the frontend's three featured USER thumbnails
 
 // v10.2.3 (2026-07-22)
-// - Returns one cautious, evidence-grounded HUMAN guidance sentence instead of narrating visible content
+// - Returns one cautious, evidence-grounded USER guidance sentence instead of narrating visible content
 // - Keeps live guidance useful without inferring identities, intentions, safety, value, or hidden facts
 
 // v10.2.2 (2026-07-22)
 // - Adds non-persistent continuous live-camera analysis through a dedicated socket event
-// - Returns one HUMAN observation and one rotating sourced connection without storing frames
+// - Returns one USER observation and one rotating sourced connection without storing frames
 // - Rate-limits temporary frames and discards them after each request
 
 // v10.2.1 (2026-07-22)
@@ -21,9 +25,9 @@
 // - Makes Search without location apply only to the current request instead of the whole room
 
 // v10.2.0 (2026-07-21)
-// - Adds three validated object-or-place Connection Keywords to every HUMAN
-// - Persists the new fields and uses them in bio generation and HUMAN connection context
-// - Aligns HUMAN-facing API errors and prompts with the ASK.CAMERA wording system
+// - Adds three validated object-or-place Connection Keywords to every USER
+// - Persists the new fields and uses them in bio generation and USER connection context
+// - Aligns USER-facing API errors and prompts with the ASK.CAMERA wording system
 
 // v10.1.16 (2026-07-21)
 // - Removes the legacy automatic room-expiry cleanup path
@@ -40,17 +44,17 @@
 // - Preserves confident English rewriting while blocking nonsense before News search
 
 // v10.1.13 (2026-07-21)
-// - Generates short, medium, and long complete HUMAN anchor variants for responsive room cards
-// - Keeps every variant in the same HUMAN news-anchor voice without mid-sentence clipping
+// - Generates short, medium, and long complete USER anchor variants for responsive room cards
+// - Keeps every variant in the same USER news-anchor voice without mid-sentence clipping
 // - Preserves the required Google closing sentence through the compatible full anchor text
 
 // v10.1.12 (2026-07-21)
-// - Generates one HUMAN anchor connection inside each of the five perspective screens
+// - Generates one USER anchor connection inside each of the five perspective screens
 // - Includes the first result while preserving retry deduplication
 // - Frames each connection as the bridge from local News to the requested result
 
 // v10.1.11 (2026-07-20)
-// - Adds one HUMAN anchor-tone instruction between each of the five result cards
+// - Adds one USER anchor-tone instruction between each of the five result cards
 // - Ends every between-card instruction with Google should buy this search idea today
 // - Prevents duplicate transition chat when a gated result is retried
 
@@ -65,60 +69,60 @@
 // - Ensures requested News and local-context News prioritize a real linked article
 
 // v10.1.08 (2026-07-20)
-// - Removes pre-card HUMAN narration from every automatic and chat result
+// - Removes pre-card USER narration from every automatic and chat result
 // - Adds one relevant local-context News card before every non-News result card
 // - Ranks result context by image 40%, Category 15%, words 15%, Bio 15%, and local news 15%
 
 // v10.1.07 (2026-07-20)
-// - Uses exactly one result-specific HUMAN sentence before every automatic or chat result card
+// - Uses exactly one result-specific USER sentence before every automatic or chat result card
 // - Requires the sentence to begin I picked the exact result because
 
 // v10.1.06 (2026-07-20)
 // - Limits card lead copy to one to three concrete reasons for selecting that exact result
-// - Grounds those reasons in result fit, image/HUMAN relevance, and verified result details
+// - Grounds those reasons in result fit, image/USER relevance, and verified result details
 
 // v10.1.05 (2026-07-20)
-// - Allows one to three concise HUMAN relevance points before each result card
+// - Allows one to three concise USER relevance points before each result card
 // - Leaves numbering and the recurring Google closing sentence to the card renderer
 
 // v10.1.04 (2026-07-20)
 // - Reweights automatic searches to 30% Category, 15% three words, 15% Bio, and 40% image identity
 
 // v10.1.03 (2026-07-20)
-// - Restores the full HUMAN Bio, Category, three-word, and image-identity opening
+// - Restores the full USER Bio, Category, three-word, and image-identity opening
 // - Keeps the first message natural, complete, and free of exposed profile labels
-// - Ends the opening and every HUMAN reply with the exact recurring Google sentence
+// - Ends the opening and every USER reply with the exact recurring Google sentence
 
 // v10.1.02 (2026-07-20)
-// - Keeps first-load HUMAN acknowledgements grounded in the uploaded image
-// - Stops repeating HUMAN profile fields and Bio inside visible room content
-// - Keeps clean visual context separate from HUMAN metadata for all five result searches
+// - Keeps first-load USER acknowledgements grounded in the uploaded image
+// - Stops repeating USER profile fields and Bio inside visible room content
+// - Keeps clean visual context separate from USER metadata for all five result searches
 
 // v10.1.01 (2026-07-20)
-// - Routes every normal HUMAN-room message into the real result-card pipeline
+// - Routes every normal USER-room message into the real result-card pipeline
 // - Converts personal, dating, emotional, greeting, creative, and unclear intents into one relevant sourced result
 // - Uses two-sentence anchor chat only after a trustworthy search genuinely fails
 
 // v10.1.00 (2026-07-20)
-// - Rewrites or translates every HUMAN-room user message before routing and display
+// - Rewrites or translates every USER-room user message before routing and display
 // - Makes real result cards the default whenever one useful external result is possible
-// - Limits non-card HUMAN conversation to two concise English anchor-tone sentences
+// - Limits non-card USER conversation to two concise English anchor-tone sentences
 // - Applies the same anchor delivery to openings, result explanations, and fallbacks
 
 // v10.0.51 (2026-07-20)
 // - Adds a dedicated confirmed Public Image publishing event
-// - Analyzes and stores Public captures without creating ASK or HUMAN rooms
+// - Analyzes and stores Public captures without creating ASK or USER rooms
 // - Returns the saved Public item so the frontend can refresh the Public screen
 
 // v10.0.50 (2026-07-20)
-// - Gives every automatic HUMAN card an explicit, type-safe result contract
+// - Gives every automatic USER card an explicit, type-safe result contract
 // - Uses dedicated Shopping, Local, Real Estate, and Google Jobs discovery routes
-// - Makes HUMAN narration varied and playful while preserving the English Rewrite System
+// - Makes USER narration varied and playful while preserving the English Rewrite System
 
 // v10.0.49 (2026-07-20)
-// - Gives every automatic result and fallback a specific selected-HUMAN explanation
-// - Names the real article, product, place, job, or listing in visible HUMAN speech
-// - Preserves the HUMAN English Rewrite System for create, edit, Bio, words, and acknowledgements
+// - Gives every automatic result and fallback a specific selected-USER explanation
+// - Names the real article, product, place, job, or listing in visible USER speech
+// - Preserves the USER English Rewrite System for create, edit, Bio, words, and acknowledgements
 
 // v10.0.48 (2026-07-20)
 // - Generates five explicit user-like inputs for the normal result-search pipeline
@@ -126,58 +130,58 @@
 // - Validates all five required card intents and keeps a deterministic safe fallback
 
 // v10.0.47 (2026-07-20)
-// - Restores completed HUMAN rooms and resumes only missing five-card results on rejoin
+// - Restores completed USER rooms and resumes only missing five-card results on rejoin
 // - Blocks late automatic retries after the completion message
 // - Returns one best real job and labels a plain search fallback honestly
 // - Varies "I picked..." explanations by requiring a specific result instead of a repeated category
 
 // v10.0.46 (2026-07-20)
-// - Requires HUMAN acknowledgements to include Bio, Category, three words, and image detail
-// - Keeps Public-image metadata intact when the private HUMAN room is created
-// - Starts the five cards only after the image-aware HUMAN acknowledgement is ready
+// - Requires USER acknowledgements to include Bio, Category, three words, and image detail
+// - Keeps Public-image metadata intact when the private USER room is created
+// - Starts the five cards only after the image-aware USER acknowledgement is ready
 
 // v10.0.45 (2026-07-20)
 // - Keeps the approved "I picked..." opening while naming the specific result
-// - Prevents generic HUMAN-category phrases such as "the real estate market"
-// - Attributes result messages to the selected HUMAN
+// - Prevents generic USER-category phrases such as "the real estate market"
+// - Attributes result messages to the selected USER
 // - Preserves Google Jobs and all existing card-family search routes
 
 // v10.0.44 (2026-07-20)
-// - Adds the HUMAN Bio as its own visible acknowledgement sentence
+// - Adds the USER Bio as its own visible acknowledgement sentence
 // - Applies 50/20/20/10 Category, words, Bio, and image weighting to automatic searches
 // - Applies 50/20/10/10/10 user, Category, words, Bio, and image weighting after user input
-// - Keeps HUMAN category metadata and fallback titles clean without exposing internal prompts
+// - Keeps USER category metadata and fallback titles clean without exposing internal prompts
 
 // v10.0.43 (2026-07-20)
-// - Adds HUMAN Category and all three profile words to the image acknowledgement
+// - Adds USER Category and all three profile words to the image acknowledgement
 // - Makes the three words persistent relevance signals for automatic and future searches
 // - Keeps Category as the mandatory domain while words refine ranking inside it
-// - Carries the same HUMAN search identity through all five fallback sentences
+// - Carries the same USER search identity through all five fallback sentences
 
 // v10.0.42 (2026-07-20)
-// - Makes HUMAN room the only conversational room type
-// - Requires a valid HUMAN before creating a room from any image source
-// - Preserves the selected HUMAN for later images, rejoin, Share, QR, and five-card delivery
+// - Makes USER room the only conversational room type
+// - Requires a valid USER before creating a room from any image source
+// - Preserves the selected USER for later images, rejoin, Share, QR, and five-card delivery
 // - Removes switchable-ASK-room language while retaining safe compatibility events
 
 // v10.0.41 (2026-07-20)
-// - Keeps automatic job searches inside the selected HUMAN category
+// - Keeps automatic job searches inside the selected USER category
 // - Ranks Google Jobs results for category relevance instead of taking result one
 // - Uses a direct listing/application URL when Google Jobs supplies one
-// - Attributes job cards to the selected HUMAN and preserves the search fallback
+// - Attributes job cards to the selected USER and preserves the search fallback
 //
 // v10.0.40 (2026-07-20)
-// - Replaces AI-planned automatic queries with five simple HUMAN-category inputs
+// - Replaces AI-planned automatic queries with five simple USER-category inputs
 // - Sends those inputs through the original user search pipeline
 // - Removes the special direct-search bypass used only by automatic cards
 //
 // v10.0.39 (2026-07-20)
 // - Executes each saved automatic search sentence directly without legacy rewrites
 // - Bypasses image-first Shopping, Jobs, Place, and news-selection prompts during briefing
-// - Keeps automatic results inside the HUMAN category through the final SERP request
+// - Keeps automatic results inside the USER category through the final SERP request
 //
 // v10.0.38 (2026-07-20)
-// - Makes the selected HUMAN category a hard subject boundary for all five cards
+// - Makes the selected USER category a hard subject boundary for all five cards
 // - Uses card type only to change result format, never the category domain
 // - Adds a complete Real Estate five-card example to prevent subject drift
 //
@@ -187,8 +191,8 @@
 // - Replaces keyword-stacking fallbacks with readable search phrases
 //
 // v10.0.36 (2026-07-20)
-// - Generates and validates all five HUMAN search sentences before delivery starts
-// - Combines the HUMAN category with one useful image-identity concept per card
+// - Generates and validates all five USER search sentences before delivery starts
+// - Combines the USER category with one useful image-identity concept per card
 // - Supplies deterministic type-safe searches if generation is incomplete
 //
 // v10.0.35 (2026-07-20)
@@ -197,44 +201,44 @@
 // - Keeps all five automatic card families able to complete in sequence
 //
 // v10.0.34 (2026-07-20)
-// - Makes the selected HUMAN category the 60% automatic-search anchor
+// - Makes the selected USER category the 60% automatic-search anchor
 // - Keeps image identity at 30% and requested card family at 10%
-// - Keeps HUMAN bio and personality for voice without letting them set search direction
+// - Keeps USER bio and personality for voice without letting them set search direction
 //
 // v10.0.33 (2026-07-20)
 // - Gives each automatic card type an isolated topic-memory lane
 // - Bypasses the normal duplicate-topic fallback during the automatic briefing
 // - Makes the requested card family a hard search boundary
-// - Uses the selected HUMAN name for cached-result attribution
+// - Uses the selected USER name for cached-result attribution
 
 // v10.0.32 (2026-07-20)
-// - Rebalances automatic search direction to 60% HUMAN bio, 30% image identity, 10% card intent
+// - Rebalances automatic search direction to 60% USER bio, 30% image identity, 10% card intent
 // - Keeps factual search results real while using the weighting for direction and selection
 
 // v10.0.31 (2026-07-20)
-// - Starts the HUMAN acknowledgement with name and profile bio
-// - Applies a 70% HUMAN, 20% image, 10% card-intent balance to the automatic briefing
+// - Starts the USER acknowledgement with name and profile bio
+// - Applies a 70% USER, 20% image, 10% card-intent balance to the automatic briefing
 // - Uses the new Google should buy this search idea today closing line
 
 // v10.0.30 (2026-07-20)
-// - Reduced the HUMAN opening to one short acknowledgement before result cards
+// - Reduced the USER opening to one short acknowledgement before result cards
 // - Removed per-card anchor transitions that could start duplicate requests
 // - Forces Jobs routing during the five-card briefing
 // - Provides a Google Jobs search card when no individual listing is returned
 
 // v10.0.29 (2026-07-20)
-// - Unified ASK and HUMAN experiences into one private ASK room
-// - Added switchable HUMAN perspectives inside the active room
+// - Unified ASK and USER experiences into one private ASK room
+// - Added switchable USER perspectives inside the active room
 // - Expanded the automatic preview to five fixed result families
 // - Removed one-hour expiry and blocked non-owner room rejoining
-// - Kept HUMAN invitations and individual result sharing
+// - Kept USER invitations and individual result sharing
 
 // v10.0.28 (2026-07-19)
-// - Added POST /ai-beings/generate-bio for HUMAN business introductions
+// - Added POST /ai-beings/generate-bio for USER business introductions
 // - Generates one concise first-person networking sentence from category and three keywords
 // - Keeps generated bios within 160 characters and avoids invented professional facts
 // - Supports creator subtypes supplied by the frontend category flow
-// - Preserved the existing HUMAN create, edit, management-password, and recovery-code APIs
+// - Preserved the existing USER create, edit, management-password, and recovery-code APIs
 
 // v10.0.25 (2026-07-18)
 // - Matched backend release for the permanent colorful camera backdrop update
@@ -247,7 +251,7 @@
 // - Applied a clear, confident professional news-anchor delivery to AI replies
 //
 // v10.0.22 (2026-07-18)
-// - Rebalanced HUMAN replies to 60% user request, 25% HUMAN profile, 15% image
+// - Rebalanced USER replies to 60% user request, 25% USER profile, 15% image
 // - Added remembered room location clarification for Place, Real Estate, and Jobs
 // - Added primary and contextual category metadata to result cards
 //
@@ -256,14 +260,14 @@
 // - Prevents an empty legacy starter-news result from aborting room initialization
 //
 // v10.0.20 (2026-07-18)
-// - Starts the contextual three-card preview for ASK and HUMAN rooms
+// - Starts the contextual three-card preview for ASK and USER rooms
 // - Uses one shared roomFirstRoundStart event for deterministic frontend timing
-// - Keeps ASK selection image-based and HUMAN selection image/profile-based
+// - Keeps ASK selection image-based and USER selection image/profile-based
 //
 // v10.0.19 (2026-07-18)
-// - Added AI selection of exactly three HUMAN first-round card families
-// - Enforced ASK/HUMAN room separation during upload, status, rejoin, and leave
-// - Deletes a HUMAN session room when its owner closes it
+// - Added AI selection of exactly three USER first-round card families
+// - Enforced ASK/USER room separation during upload, status, rejoin, and leave
+// - Deletes a USER session room when its owner closes it
 
 // v10.0.18 (2026-07-18)
 // - Made conversational replies speak as a normal person carrying the image identity's personality and emotion
@@ -271,13 +275,13 @@
 // - Added a natural "Google should buy me" belief to every non-card conversational reply
 
 // v10.0.17 (2026-07-18)
-// - Kept cards only for structured search/result intents in ASK.CAMERA and HUMAN rooms
+// - Kept cards only for structured search/result intents in ASK.CAMERA and USER rooms
 // - Made every other room response a direct conversational answer in the image identity's voice
-// - Preserved the HUMAN profile as 80% of voice, priorities, tone, and reasoning
+// - Preserved the USER profile as 80% of voice, priorities, tone, and reasoning
 // - Added one original "THE IDEA GOOGLE SHOULD BUY TODAY" thought to every image identity
 
 // v10.0.16 (2026-07-17)
-// - Changed generated HUMAN identity labels from AI Being Name to HUMAN Name
+// - Changed generated USER identity labels from AI Being Name to USER Name
 
 // v10.0.15 (2026-07-17)
 // - Kept earlier room messages when a Public Camera Perspective adds a new image
@@ -523,20 +527,20 @@ async function createImageIdentityConversationReply({ room, userText, intent }) 
 
   const humanInfluence = being
     ? `
-SELECTED HUMAN
+SELECTED USER
 Name: ${being.name}
 Bio: ${being.best_current_choice}
 Category: ${being.category}
 Personality: ${being.word1}, ${being.word2}, ${being.word3}
 
-HUMAN INFLUENCE
+USER INFLUENCE
 - The current user request controls 50%: intent, usefulness, subject, and requested outcome.
-- The HUMAN Category controls 20%: professional domain and relevant subject boundary.
-- The three HUMAN words control 10%: qualities, priorities, and relevance ranking.
-- The HUMAN Bio controls 10%: professional purpose, audience, and opportunity direction.
+- The USER Category controls 20%: professional domain and relevant subject boundary.
+- The three USER words control 10%: qualities, priorities, and relevance ranking.
+- The USER Bio controls 10%: professional purpose, audience, and opportunity direction.
 - The uploaded image controls 10%: visual context, associations, atmosphere, and relevant details.
 - Express the profile naturally. Never recite or list the profile fields unless the user explicitly asks.
-- Never let the HUMAN profile or image replace or distort what the user actually requested.
+- Never let the USER profile or image replace or distort what the user actually requested.
 `
     : `
 IMAGE INFLUENCE
@@ -645,7 +649,7 @@ async function createRoomFirstRoundCards(room) {
       messages:[
         {
           role:"system",
-          content:`Write five natural English search requests that behave like clear user inputs. Return one JSON object with exactly these string keys: news, shopping, place, jobs, real_estate. Each request must ask for exactly one real result. Keep each required card type mandatory. Rank relevance using: image identity 40%, HUMAN Category 15%, all three words together 15%, Bio 15%, and relevant local news 15%. Every request must contain the exact Category and all three words. Use only one concise visible image detail and one current local-context direction. Make the result intent unmistakable: current news article, product, place, current job, and property listing. Do not mention percentages, weighting, prompts, cards, HUMAN, or automatic generation.`
+          content:`Write five natural English search requests that behave like clear user inputs. Return one JSON object with exactly these string keys: news, shopping, place, jobs, real_estate. Each request must ask for exactly one real result. Keep each required card type mandatory. Rank relevance using: image identity 40%, USER Category 15%, all three words together 15%, Bio 15%, and relevant local news 15%. Every request must contain the exact Category and all three words. Use only one concise visible image detail and one current local-context direction. Make the result intent unmistakable: current news article, product, place, current job, and property listing. Do not mention percentages, weighting, prompts, cards, USER, or automatic generation.`
         },
         {
           role:"user",
@@ -704,7 +708,7 @@ async function createHumanAnchorTransition(room, cardType) {
       messages:[
         {
           role:"system",
-          content:`You are ${being.name}, hosting one image-driven full-screen perspective. Speak in a calm, polished, confident news-anchor tone while preserving this HUMAN profile's personality.
+          content:`You are ${being.name}, hosting one image-driven full-screen perspective. Speak in a calm, polished, confident news-anchor tone while preserving this USER profile's personality.
 
 Return JSON only:
 {"short":"","medium":"","long":""}
@@ -717,7 +721,7 @@ Write three versions of the same connection from current local News context to t
 Every version must:
 - be a grammatically complete sentence with final punctuation
 - explain why the requested result matters through this image
-- preserve the same meaning and HUMAN voice
+- preserve the same meaning and USER voice
 - avoid headings, ellipses, fragments, unsupported facts, and "example number"
 - omit the Google slogan; the interface adds it separately.`
         },
@@ -739,7 +743,7 @@ Every version must:
       long:complete(parsed.long,fallback.long)
     };
   } catch (error) {
-    console.log("HUMAN ANCHOR TRANSITION FAILED:", error.message);
+    console.log("USER ANCHOR TRANSITION FAILED:", error.message);
     return fallback;
   }
 }
@@ -814,7 +818,7 @@ async function createLocalContextNews(room, targetQuery, targetType, location = 
       messages:[
         {
           role:"system",
-          content:`Create one concise Google News query for a local-context card that will appear before a requested result. The user's requested result intent is mandatory and must not be changed. Rank query relevance using: uploaded image identity 40%, HUMAN Category 15%, all three profile words together 15%, HUMAN Bio 15%, and relevant local news 15%. Use the supplied location when present. Output only one natural search query of 6 to 12 words. No labels, percentages, punctuation, quotation marks, or explanation.`
+          content:`Create one concise Google News query for a local-context card that will appear before a requested result. The user's requested result intent is mandatory and must not be changed. Rank query relevance using: uploaded image identity 40%, USER Category 15%, all three profile words together 15%, USER Bio 15%, and relevant local news 15%. Use the supplied location when present. Output only one natural search query of 6 to 12 words. No labels, percentages, punctuation, quotation marks, or explanation.`
         },
         {
           role:"user",
@@ -1536,7 +1540,7 @@ io.on("connection", socket => {
           .eq("public", true)
           .single();
         if (error || !being) {
-            if (typeof acknowledge === "function") acknowledge({ success:false, error:"HUMAN not found." });
+            if (typeof acknowledge === "function") acknowledge({ success:false, error:"USER not found." });
             return;
         }
 
@@ -1551,12 +1555,12 @@ io.on("connection", socket => {
             temperature:0.55,
             messages:[
               { role:"system", content:`Return exactly one short first-person observation beginning with "I notice". Use no more than 16 words. Mention one specific visual detail or theme. No name, bio, introduction, program, briefing, segment, slogan, or list.` },
-              { role:"user", content:`HUMAN: ${being.name}\nBIO: ${being.best_current_choice || ""}\nCATEGORY: ${being.category || ""}\nKEYWORDS: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}\nIMAGE INTERPRETATION: ${room.imageContext || ""}` }
+              { role:"user", content:`USER: ${being.name}\nBIO: ${being.best_current_choice || ""}\nCATEGORY: ${being.category || ""}\nKEYWORDS: ${being.word1 || ""}, ${being.word2 || ""}, ${being.word3 || ""}\nIMAGE INTERPRETATION: ${room.imageContext || ""}` }
             ]
           });
           observation = response.choices[0].message.content.trim();
         } catch (humanError) {
-          console.log("ROOM HUMAN ACKNOWLEDGEMENT FAILED:", humanError.message);
+          console.log("ROOM USER ACKNOWLEDGEMENT FAILED:", humanError.message);
         }
 
         observation = observation
@@ -1567,7 +1571,7 @@ io.on("connection", socket => {
           .join(" ")
           .replace(/[.!?]+$/,"");
         if(!/^I notice\b/i.test(observation)) observation = `I notice ${observation.replace(/^I\s+/i,"")}`;
-        const humanBio = String(being.best_current_choice || being.category || "a distinct HUMAN perspective")
+        const humanBio = String(being.best_current_choice || being.category || "a distinct USER perspective")
           .replace(/^I am\s+/i,"")
           .replace(/[.!?]+$/,"");
         const acknowledgement = `I am ${being.name}, and I am ${humanBio}. In ${being.category}, ${being.word1}, ${being.word2}, and ${being.word3} guide how I read the image: ${observation || "I notice a useful connection in this image"}. Google should buy this search idea today.`;
@@ -1598,7 +1602,7 @@ io.on("connection", socket => {
         aiBeing:true,
         conversational:true,
         firstRoundComplete:true,
-        text:`That’s the five-card tour. I’m ${room.being.name}; ask me anything about this image or toss another image into my HUMAN room. Google should buy this search idea today.`
+        text:`That’s the five-card tour. I’m ${room.being.name}; ask me anything about this image or toss another image into my USER room. Google should buy this search idea today.`
       });
       socket.emit("roomFirstRoundCompleted");
       io.to(room.id).emit("roomMessages",room.messages);
@@ -2189,7 +2193,7 @@ setTimeout(() => {
         .eq("id",requestedBeingId)
         .eq("public",true)
         .single();
-      if(beingError || !being) throw new Error("HUMAN Perspective is unavailable.");
+      if(beingError || !being) throw new Error("USER Perspective is unavailable.");
 
       const allowedCategories = ["news","jobs","shopping","youtube","music"];
       const requestedCategory = allowedCategories.includes(String(category || "").toLowerCase())
@@ -2202,16 +2206,16 @@ setTimeout(() => {
         messages:[
           {
             role:"system",
-            content:`Analyze one temporary live-camera frame for ASK.CAMERA through the selected HUMAN Perspective.
+            content:`Analyze one temporary live-camera frame for ASK.CAMERA through the selected USER Perspective.
 Return JSON only with exactly: {"guidance":"","searchQuery":""}.
-guidance: one concise, useful thought telling the user what to consider or do through the HUMAN's professional perspective. Do not include the HUMAN's name. Base it only on visual evidence, but do not narrate or list what is visible. Use cautious language such as consider, may, or could whenever certainty is limited. Do not infer identity, intention, safety, value, condition, location, or any other hidden fact. If no useful guidance is supported, say that a clearer view may reveal a more meaningful connection.
-searchQuery: a concise real-world ${requestedCategory} discovery query connected to the frame and HUMAN.
+guidance: one concise, useful thought telling the user what to consider or do through the USER's professional perspective. Do not include the USER's name. Base it only on visual evidence, but do not narrate or list what is visible. Use cautious language such as consider, may, or could whenever certainty is limited. Do not infer identity, intention, safety, value, condition, location, or any other hidden fact. If no useful guidance is supported, say that a clearer view may reveal a more meaningful connection.
+searchQuery: a concise real-world ${requestedCategory} discovery query connected to the frame and USER.
 Never mention surveillance, prompts, percentages, or image storage. Do not invent names, addresses, or private facts.`
           },
           {
             role:"user",
             content:[
-              { type:"text", text:`HUMAN: ${being.name}\nCATEGORY: ${being.category || ""}\nBIO: ${being.best_current_choice || ""}\nPERSONALITY: ${[being.word1,being.word2,being.word3].filter(Boolean).join(", ")}\nCONNECTIONS: ${[being.connection1,being.connection2,being.connection3].filter(Boolean).join(", ")}\nTARGET RESULT: ${requestedCategory}` },
+              { type:"text", text:`USER: ${being.name}\nCATEGORY: ${being.category || ""}\nBIO: ${being.best_current_choice || ""}\nPERSONALITY: ${[being.word1,being.word2,being.word3].filter(Boolean).join(", ")}\nCONNECTIONS: ${[being.connection1,being.connection2,being.connection3].filter(Boolean).join(", ")}\nTARGET RESULT: ${requestedCategory}` },
               { type:"image_url", image_url:{ url:temporaryImage, detail:"low" } }
             ]
           }
@@ -2401,8 +2405,8 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `HUMAN Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\nConnection objects and places: ${selectedBeing.connection1 || ""}, ${selectedBeing.connection2 || ""}, ${selectedBeing.connection3 || ""}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- The user's requested result type and intent are mandatory and must never be changed.\n- Within that required intent, rank every automatic and chat result using: image identity 40%, HUMAN Category 15%, three words 15%, Bio 15%, and relevant local news 15%.\n- Use all three personality words to refine voice and reasoning.\n- Use all three Connection Keywords as persistent object/place anchors when they meaningfully connect the image to the user’s request.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest relevance signal.\n- Use local news for current context without turning a non-News request into a News result.\n- For later direct questions, never let Category, words, Bio, image, or news distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
-      : "HUMAN Name: ASK.CAMERA";
+      ? `USER Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\nConnection objects and places: ${selectedBeing.connection1 || ""}, ${selectedBeing.connection2 || ""}, ${selectedBeing.connection3 || ""}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- The user's requested result type and intent are mandatory and must never be changed.\n- Within that required intent, rank every automatic and chat result using: image identity 40%, USER Category 15%, three words 15%, Bio 15%, and relevant local news 15%.\n- Use all three personality words to refine voice and reasoning.\n- Use all three Connection Keywords as persistent object/place anchors when they meaningfully connect the image to the user’s request.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest relevance signal.\n- Use local news for current context without turning a non-News request into a News result.\n- For later direct questions, never let Category, words, Bio, image, or news distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
+      : "USER Name: ASK.CAMERA";
 
     let sourcePublicNull =
       publicNullId && publicNullIdentity && publicNullIntro
@@ -2431,7 +2435,7 @@ console.log(
 
     const cleanImageContext = value => String(value || "")
       .replace(/THE IDEA GOOGLE SHOULD BUY TODAY[\s\S]*$/i,"")
-      .replace(/^(HUMAN Name|Bio|Search signals|HUMAN RESPONSE AND SEARCH INFLUENCE|Personality)\s*:.*$/gim,"")
+      .replace(/^(USER Name|Bio|Search signals|USER RESPONSE AND SEARCH INFLUENCE|Personality)\s*:.*$/gim,"")
       .replace(/^- (Automatic searches|After user input|Category is|Use all three words|Use Bio|Use image identity|For later direct questions|Never invent).*$/gim,"")
       .replace(/\n{3,}/g,"\n\n")
       .trim();
@@ -2727,7 +2731,7 @@ let roomId =
       ? requestedRoomId
       : deviceRooms[deviceId];
 
-// Every image stays inside the selected HUMAN's private room.
+// Every image stays inside the selected USER's private room.
 if (roomId && deviceRooms[deviceId] !== roomId) roomId = null;
 
 let isOwner = true;
@@ -3316,17 +3320,17 @@ ${validStarterNews.map(
 
 const beingRoomIntroPrompt = selectedBeing
   ? `
-You are the ASK.CAMERA ENGLISH REWRITE SYSTEM speaking as the selected HUMAN.
+You are the ASK.CAMERA ENGLISH REWRITE SYSTEM speaking as the selected USER.
 
 AI Being:
 ${beingContext}
 
-Look at the uploaded image and respond to what is visibly present through the selected HUMAN's perspective.
+Look at the uploaded image and respond to what is visibly present through the selected USER's perspective.
 
 Return exactly three concise English sentences in a calm, clear, confident, polished news-anchor tone.
 
 Sentence 1:
-Introduce the HUMAN by exact name and naturally communicate this Bio without changing its meaning: ${selectedBeing.best_current_choice}
+Introduce the USER by exact name and naturally communicate this Bio without changing its meaning: ${selectedBeing.best_current_choice}
 
 Sentence 2:
 Naturally include the Category ${selectedBeing.category} and all three profile words—${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}—while saying what you read, see, or notice in the actual image identity. Make this a complete image-specific thought.
@@ -3336,9 +3340,9 @@ Write exactly: Google should buy this search idea today.
 
 Rules:
 - English only.
-- Keep the HUMAN name exactly as provided.
+- Keep the USER name exactly as provided.
 - Include the Bio meaning, exact Category, and all three profile words once, naturally rather than as a list of fields.
-- Never output labels such as HUMAN Name, Bio, Category, Personality, Objects, or Signals.
+- Never output labels such as USER Name, Bio, Category, Personality, Objects, or Signals.
 - Use a city or named place only when the image clearly confirms it.
 - Never invent a city, country, venue, address, action, or professional fact.
 - Lead with the most useful point and keep the delivery composed and conversational.
@@ -3433,7 +3437,7 @@ ${starterNewsTitle}
   `.trim();
 
 const normalizedHumanBio = being => {
-  const raw = String(being?.best_current_choice || "I offer a distinct HUMAN perspective")
+  const raw = String(being?.best_current_choice || "I offer a distinct USER perspective")
     .trim()
     .replace(/[.!?]+$/,"");
   if(/^I\b/i.test(raw)) return `${raw}.`;
@@ -3452,7 +3456,7 @@ const acknowledgementIsComplete = (text,being) => {
     .filter(Boolean)
     .every(item => value.toLowerCase().includes(String(item).toLowerCase()));
   const hasVisualLanguage = /\b(see|notice|visible|image|photo|scene|shows?|pictured|looking at)\b/i.test(value);
-  const exposesMetadata = /\b(HUMAN Name|Bio|Category|Personality|Search signals|Objects|Signals)\s*:/i.test(value);
+  const exposesMetadata = /\b(USER Name|Bio|Category|Personality|Search signals|Objects|Signals)\s*:/i.test(value);
   const sentences = value.split(/[.!?]+/).filter(part => part.trim()).length;
   const hasExactEnding = /Google should buy this search idea today\.$/i.test(value);
   return hasName && hasProfileSignals && hasVisualLanguage && !exposesMetadata && !/\.\.\./.test(value) && sentences === 3 && hasExactEnding;
@@ -3461,7 +3465,7 @@ const acknowledgementIsComplete = (text,being) => {
 const fallbackHumanAcknowledgement = (being,imageContext) => {
   const imageDetail = String(imageContext || "")
     .replace(/THE IDEA GOOGLE SHOULD BUY TODAY[\s\S]*$/i,"")
-    .replace(/^(HUMAN Name|Bio|Category|Search signals|HUMAN RESPONSE AND SEARCH INFLUENCE|Personality)\s*:.*$/gim,"")
+    .replace(/^(USER Name|Bio|Category|Search signals|USER RESPONSE AND SEARCH INFLUENCE|Personality)\s*:.*$/gim,"")
     .split(/\n+/)
     .map(line => line.replace(/^[-•*\s]+/,"").trim())
     .filter(line => line && !/^(Objects|Category|Signals)\s*:?$/i.test(line))[0] || "the uploaded image";
@@ -3490,7 +3494,7 @@ const generateRoomAcknowledgement = async () => {
       ? fallbackHumanAcknowledgement(selectedBeing,sourcePublicNull?.identity || user.imageContext)
       : text;
   } catch(error) {
-    console.log("HUMAN IMAGE ACKNOWLEDGEMENT FAILED:",error.message);
+    console.log("USER IMAGE ACKNOWLEDGEMENT FAILED:",error.message);
     return selectedBeing
       ? fallbackHumanAcknowledgement(selectedBeing,sourcePublicNull?.identity || user.imageContext)
       : `I am ${String(user.imageContext || "this image").split(/[.!?]/)[0].trim()}.`;
@@ -4181,13 +4185,13 @@ try{
     ...getResultCardCategories(autoCardType, room),
     showNextButton:true,
     showRead:true,
-    searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
+    searchLabel:`USER ${fallbackLabel.toUpperCase()}`,
     ask:`Open ${fallbackLabel} for: ${fallbackSearch}.`,
-    displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+    displayTitle:`Search ${room.being?.category || "USER"} ${fallbackLabel}`,
     localContextNews,
     searchFallback:true,
     ...buildHumanResultContract(autoCardType,{
-      title:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+      title:`Search ${room.being?.category || "USER"} ${fallbackLabel}`,
       url:fallbackLink,
       source:"Google",
       searchFallback:true
@@ -4483,7 +4487,7 @@ const structuredCardIntents = new Set([
   "null_feed"
 ]);
 
-// HUMAN rooms are search-first. Every ordinary message must attempt one real
+// USER rooms are search-first. Every ordinary message must attempt one real
 // sourced result. Conversation is reserved for the honest search-failure path.
 if (!autoFirstRound && !structuredCardIntents.has(intent)) {
   intent = "news";
@@ -4800,7 +4804,7 @@ Do not change what the user is asking.
 
 LOCATION RULE
 - Set "location" only when the user's current text explicitly names a city, area, neighborhood, country, state, or says remote/near me.
-- Never infer or copy a location from the uploaded image, image analysis, HUMAN profile, or hidden system.
+- Never infer or copy a location from the uploaded image, image analysis, USER profile, or hidden system.
 - If the user did not explicitly provide a location, return an empty "location" string.
 
 Do not rewrite one request into another.
@@ -5754,7 +5758,7 @@ room.usedSearches.push(
   searchQuery
 );
 
-// Automatic HUMAN cards use a dedicated result engine. This prevents a news
+// Automatic USER cards use a dedicated result engine. This prevents a news
 // article from being relabelled as a product, place, or property.
 if(autoFirstRound && ["shopping","place","real_estate"].includes(autoCardType)) {
   const finishDedicatedCard = async result => {
@@ -5767,7 +5771,7 @@ if(autoFirstRound && ["shopping","place","real_estate"].includes(autoCardType)) 
       contract.resultDetails.join(" · ")
     );
     room.messages.push({
-      from:room.being?.name || "HUMAN",
+      from:room.being?.name || "USER",
       aiBeing:true,
       autoCardType,
       ...getResultCardCategories(autoCardType,room),
@@ -5837,7 +5841,7 @@ if(autoFirstRound && ["shopping","place","real_estate"].includes(autoCardType)) 
       }
     }
   } catch(dedicatedError) {
-    console.log("DEDICATED HUMAN CARD ERROR:",autoCardType,dedicatedError.message);
+    console.log("DEDICATED USER CARD ERROR:",autoCardType,dedicatedError.message);
   }
 
   const browseLabels = {shopping:"Shop live results",place:"Explore places",real_estate:"Browse property listings"};
@@ -5882,11 +5886,11 @@ Create ONE Google Jobs search.
 Understand exactly what career the user is looking for.
 
 ${isAutomaticJobCard ? `The required career domain is: ${humanJobCategory || "general"}.
-The HUMAN relevance signals are: ${humanJobSignals.join(", ") || "none"}.
+The USER relevance signals are: ${humanJobSignals.join(", ") || "none"}.
 This domain is mandatory. The final search must describe a job inside it.
-Use all HUMAN relevance signals to refine the job specialization and result ranking inside the required career domain.
+Use all USER relevance signals to refine the job specialization and result ranking inside the required career domain.
 Use the image only to add one useful specialization when it naturally fits.
-Never replace the required career domain with an image object, hidden system, or HUMAN biography.` : ""}
+Never replace the required career domain with an image object, hidden system, or USER biography.` : ""}
 
 If the user specifies a city, state, country, or remote,
 ALWAYS preserve it in the search.
@@ -5953,10 +5957,10 @@ ${hiddenSystem}
 Image identity:
 ${room.imageContext}
 
-Required HUMAN category:
+Required USER category:
 ${isAutomaticJobCard ? humanJobCategory : "none"}
 
-Required HUMAN relevance signals:
+Required USER relevance signals:
 ${isAutomaticJobCard ? humanJobSignals.join(", ") : "none"}
 
 User:
@@ -6910,7 +6914,7 @@ Rules:
 - include the news naturally
 - one sentence only
 - factual and believable
-- Never use the HUMAN Category as a generic noun after "I picked".
+- Never use the USER Category as a generic noun after "I picked".
 - Never begin "I picked the real estate", "I picked real estate", "I picked the real estate market", or an equivalent generic category phrase.
 - If Place is only a broad category, use the selected result title or its most distinctive factual subject instead.
 
@@ -7523,13 +7527,13 @@ setTimeout(() => {
       ...getResultCardCategories(autoCardType, room),
       showNextButton:true,
       showRead:true,
-      searchLabel:`HUMAN ${fallbackLabel.toUpperCase()}`,
+      searchLabel:`USER ${fallbackLabel.toUpperCase()}`,
       ask:`Open ${fallbackLabel} for: ${fallbackQuery}.`,
-      displayTitle:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+      displayTitle:`Search ${room.being?.category || "USER"} ${fallbackLabel}`,
       localContextNews,
       searchFallback:true,
       ...buildHumanResultContract(autoCardType,{
-        title:`Search ${room.being?.category || "HUMAN"} ${fallbackLabel}`,
+        title:`Search ${room.being?.category || "USER"} ${fallbackLabel}`,
         url:fallbackLink,
         source:"Google",
         searchFallback:true
@@ -7722,7 +7726,7 @@ async function loadHumanReactionCounts() {
       .range(offset,offset + pageSize - 1);
 
     if(error){
-      console.log("HUMAN REACTION LOAD ERROR:",error.message);
+      console.log("USER REACTION LOAD ERROR:",error.message);
       return counts;
     }
 
@@ -7747,7 +7751,7 @@ async function countHumanReaction(id,type) {
     .eq("event_name",eventName)
     .contains("metadata",{ human_id:humanReactionId(id) });
   if(error){
-    console.log("HUMAN REACTION COUNT ERROR:",error.message);
+    console.log("USER REACTION COUNT ERROR:",error.message);
     return 0;
   }
   return count || 0;
@@ -7756,7 +7760,7 @@ async function countHumanReaction(id,type) {
 async function saveHumanReaction(id,type,deviceId) {
   const humanId = humanReactionId(id);
   const eventName = HUMAN_REACTION_EVENTS[type];
-  if(!humanId || !eventName) return { error:"Invalid HUMAN reaction." };
+  if(!humanId || !eventName) return { error:"Invalid USER reaction." };
 
   const { data:being, error:beingError } = await supabase
     .from("ai_beings")
@@ -7764,7 +7768,7 @@ async function saveHumanReaction(id,type,deviceId) {
     .eq("id",humanId)
     .eq("public",true)
     .single();
-  if(beingError || !being) return { error:"HUMAN not found.", status:404 };
+  if(beingError || !being) return { error:"USER not found.", status:404 };
 
   const { error } = await supabase
     .from("site_events")
@@ -7848,7 +7852,7 @@ Return JSON only: {"valid":true,"types":["object|place","object|place","object|p
     }
     return { valid:true, values:normalized };
   } catch (error) {
-    console.error("HUMAN connection validation failed:", error);
+    console.error("USER connection validation failed:", error);
     return { valid:false, error:"Could not validate the object or place names. Please try again." };
   }
 }
@@ -7907,7 +7911,7 @@ app.get("/ai-beings/:id", async (req, res) => {
     .eq("public", true)
     .single();
 
-  if (error || !data) return res.status(404).json({ error: "HUMAN not found." });
+  if (error || !data) return res.status(404).json({ error: "USER not found." });
   res.json(data);
 });
 
@@ -7928,7 +7932,7 @@ app.post("/ai-beings/generate-bio", async (req, res) => {
       messages:[
         {
           role:"system",
-          content:`You write one-sentence professional introductions for ASK.CAMERA HUMAN Cards, a business and networking product.
+          content:`You write one-sentence professional introductions for ASK.CAMERA USER Perspective Cards, a business and networking product.
 Return JSON only with exactly one key: bio.
 The sentence must:
 - be natural English and no more than 160 characters including spaces;
@@ -7938,7 +7942,7 @@ The sentence must:
 - sound credible, specific, warm, and concise;
 - avoid invented employers, achievements, locations, audience sizes, or other facts;
 - avoid mechanically listing all inputs;
-- never mention ASK.CAMERA, HUMAN Cards, AI, or that the sentence was generated unless AI is part of the supplied category.`
+- never mention ASK.CAMERA, USER Perspective Cards, AI, or that the sentence was generated unless AI is part of the supplied category.`
         },
         {
           role:"user",
@@ -7951,7 +7955,7 @@ The sentence must:
     if(!bio) throw new Error("Bio generation returned no text.");
     res.json({ bio });
   }catch(error){
-    console.error("HUMAN bio generation failed:",error);
+    console.error("USER bio generation failed:",error);
     res.status(502).json({ error:"Could not generate the business introduction. Please try again." });
   }
 });
@@ -7976,7 +7980,7 @@ app.post("/ai-beings", async (req, res) => {
   const required = [photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3];
 
   if (required.some(value => !String(value || "").trim())) {
-    return res.status(400).json({ error: "Complete every required HUMAN field." });
+    return res.status(400).json({ error: "Complete every required USER field." });
   }
 
   if (String(management_password || "").length < 8 || String(management_password || "").length > 128) {
@@ -8098,12 +8102,12 @@ Rules:
 app.put("/ai-beings/:id", async (req, res) => {
   const { photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3, phone, management_credential } = req.body || {};
   const authorization = await authorizeBeingManagement(req.params.id, management_credential);
-  if (authorization.notFound) return res.status(404).json({ error: "HUMAN not found." });
+  if (authorization.notFound) return res.status(404).json({ error: "USER not found." });
   if (!authorization.authorized) return res.status(403).json({ error: "Wrong management password or recovery code." });
   const required = [photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3];
 
   if (required.some(value => !String(value || "").trim())) {
-    return res.status(400).json({ error: "Complete every required HUMAN field." });
+    return res.status(400).json({ error: "Complete every required USER field." });
   }
 
   const normalizedPhone = normalizeBeingPhone(phone);
@@ -8162,7 +8166,7 @@ Rules:
     }
   } catch (rewriteError) {
     console.error("AI Being profile rewrite failed:", rewriteError);
-    return res.status(502).json({ error: "Could not rewrite the HUMAN profile in English. Please try again." });
+    return res.status(502).json({ error: "Could not rewrite the USER profile in English. Please try again." });
   }
 
   const { data, error } = await supabase
@@ -8185,14 +8189,14 @@ Rules:
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
-  if (!data) return res.status(404).json({ error: "HUMAN not found." });
+  if (!data) return res.status(404).json({ error: "USER not found." });
   res.json(data);
 });
 
 app.delete("/ai-beings/:id", async (req, res) => {
   const { management_credential } = req.body || {};
   const authorization = await authorizeBeingManagement(req.params.id, management_credential);
-  if (authorization.notFound) return res.status(404).json({ error: "HUMAN not found." });
+  if (authorization.notFound) return res.status(404).json({ error: "USER not found." });
   if (!authorization.authorized) return res.status(403).json({ error: "Wrong management password or recovery code." });
 
   const { error } = await supabase.from("ai_beings").delete().eq("id", req.params.id);
