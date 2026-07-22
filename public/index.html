@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.3 (2026-07-22)
+  - Removes the obsolete absolute ASK.CAMERA branding from both Home render sources
+  - Prevents legacy branding from overlapping the HUMAN introduction after state changes
+
   v10.3.2 (2026-07-22)
   - Adds Religion & Spirituality to Create HUMAN
   - Adds the approved faith-oriented subcategories and personality suggestions
@@ -7015,36 +7019,6 @@ margin-left:6px;
 
 </div>
 
-<div style="
-position:absolute;
-left:0;
-right:0;
-bottom:34px;
-text-align:center;
-line-height:1.4;
-pointer-events:none;
-">
-  <div style="
-    font-size:14px;
-    font-weight:900;
-    letter-spacing:1px;
-    opacity:.7;
-  ">
-    ASK.CAMERA
-  </div>
-
-  <div style="
-    margin-top:4px;
-    font-size:11px;
-    font-weight:700;
-    letter-spacing:.4px;
-    opacity:.45;
-    text-transform:uppercase;
-  ">
-    THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.
-  </div>
-</div>
-
 </div>
 </div>
 
@@ -11812,36 +11786,6 @@ margin-left:6px;
 
 </div>
 
-<div style="
-position:absolute;
-left:0;
-right:0;
-bottom:34px;
-text-align:center;
-line-height:1.4;
-pointer-events:none;
-">
-  <div style="
-    font-size:14px;
-    font-weight:900;
-    letter-spacing:1px;
-    opacity:.7;
-  ">
-    ASK.CAMERA
-  </div>
-
-  <div style="
-    margin-top:4px;
-    font-size:11px;
-    font-weight:700;
-    letter-spacing:.4px;
-    opacity:.45;
-    text-transform:uppercase;
-  ">
-    THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.
-  </div>
-</div>
-
 `;
 
 loadPublicNullThumbnails();
@@ -14036,7 +13980,7 @@ function ensureCanonicalHomeExperience(){
   Array.from(helper.children).forEach(element => {
     const style = element.getAttribute("style") || "";
     const text = element.textContent || "";
-    if(style.includes("position:absolute") && style.includes("bottom:34px") && text.includes("THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.")){
+    if(style.includes("position:absolute") && style.includes("bottom:34px") && text.includes("ASK.CAMERA")){
       element.remove();
     }
   });
