@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.7 (2026-07-22)
+  - Simplifies the fourth startup scene to its HUMAN headline and Wang Vivian demo
+  - Moves the ASK.CAMERA synthesis explanation into the preceding life-question scene
+  - Stops automatic progression on the fourth scene until the user chooses an action
+
   v10.3.6 (2026-07-22)
   - Reuses the Wang Vivian demo QR and HUMAN link in the fourth startup scene
   - Keeps Start Image Connect primary while offering the test HUMAN as a secondary path
@@ -13930,11 +13935,11 @@ let homeIntroAutoTimer = null;
 
 function scheduleHomeIntroAdvance(){
   clearTimeout(homeIntroAutoTimer);
-  if(homeIntroStoryDismissed) return;
+  if(homeIntroStoryDismissed || homeIntroSceneIndex === 3) return;
   homeIntroAutoTimer = setTimeout(() => {
     if(homeIntroStoryDismissed || document.getElementById("homeIntroStory")?.hidden) return;
     moveHomeIntroScene(1);
-  },homeIntroSceneIndex === 3 ? 10000 : 5500);
+  },5500);
 }
 
 function updateHomeIntroStory(){
@@ -14189,7 +14194,7 @@ function ensureCanonicalHomeExperience(){
               <div class="homeIntroSceneCopy">
                 <div class="homeIntroEyebrow">Your Life Question</div>
                 <h2>Your question provides intent.</h2>
-                <p>The image provides meaningful connections. You decide which connection matters to your life.</p>
+                <p>The image provides meaningful connections. You decide which connection matters to your life. ASK.CAMERA brings the image, your question, and a selected HUMAN Perspective together.</p>
                 <div class="homeIntroExamples"><span>Could I build my career here?</span><span>Should I travel here next?</span><span>What opportunity should I explore?</span></div>
               </div>
             </article>
@@ -14198,7 +14203,6 @@ function ensureCanonicalHomeExperience(){
               <div class="homeIntroSceneCopy">
                 <div class="homeIntroEyebrow">HUMAN Perspective</div>
                 <h2>Different perspectives create different answers.</h2>
-                <p>ASK.CAMERA brings the image, meaningful connections, your life question, and a selected HUMAN Perspective together.</p>
                 <div class="homeIntroHumanDemo">
                   <div id="homeIntroHumanQr" aria-label="QR code for the Wang Vivian demo HUMAN"></div>
                   <div class="homeIntroHumanDemoCopy"><strong>Try Wang Vivian’s HUMAN Perspective</strong>Scan the QR code to add your own image and experience her perspective.<br><a class="homeIntroHumanOpen" href="${HOME_DEMO_HUMAN_URL}">OPEN TEST HUMAN</a></div>
