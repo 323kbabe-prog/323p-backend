@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.22 (2026-07-22)
+  - Mounts continuous HUMAN analysis on the startup live-camera screen users actually see
+  - Shares the observation, rotating connection, restore, continue, and voice controls across both camera entry points
+  - Keeps temporary-frame disposal and the existing camera capture behavior unchanged
+
   v10.3.21 (2026-07-22)
   - Adds opt-in browser voice for HUMAN live-camera observations and opinions
   - Shows an immediate live-analysis status instead of an empty camera screen
@@ -14344,6 +14349,14 @@ async function startHomeIntroCamera(){
   if(story) story.hidden = true;
   if(stage) stage.hidden = false;
   if(!video.srcObject) await ensureCameraStream();
+  const cardVideo = document.getElementById("homeCaptureVideo");
+  if(cardVideo && video.srcObject){
+    cardVideo.srcObject = video.srcObject;
+    cardVideo.play().catch(() => {});
+  }
+  ensureRoomFloatingCamera();
+  mountRoomFloatingLiveControls(document.getElementById("homeCaptureCard"));
+  startRoomFloatingLiveAnalysis("home");
   queueCanonicalHomeExperience();
   requestAnimationFrame(() => document.getElementById("homeTakePicture")?.focus());
 }
@@ -14359,6 +14372,7 @@ function closeHomeCaptureCard(event){
   clearTimeout(homeIntroAutoTimer);
   const layer = document.getElementById("homeStartupLayer");
   if(layer) layer.hidden = true;
+  stopRoomFloatingLiveAnalysis();
 }
 
 function takeHomePicture(event){
@@ -14366,6 +14380,7 @@ function takeHomePicture(event){
   homeCaptureCardDismissed = true;
   const layer = document.getElementById("homeStartupLayer");
   if(layer) layer.hidden = true;
+  stopRoomFloatingLiveAnalysis();
   captureImage();
 }
 
@@ -14412,6 +14427,14 @@ function ensureRoomFloatingCamera(){
   return layer;
 }
 
+function mountRoomFloatingLiveControls(host){
+  if(!host) return;
+  ["roomFloatingLiveStack","roomFloatingLiveRestore","roomFloatingLiveContinue","roomFloatingVoiceToggle"]
+    .map(id => document.getElementById(id))
+    .filter(Boolean)
+    .forEach(element => host.appendChild(element));
+}
+
 const DEFAULT_LIVE_HUMAN_ID = "5b903231-7571-4b82-a2af-615682f7555a";
 const LIVE_CAMERA_CATEGORIES = ["news","jobs","shopping","youtube","music"];
 let roomFloatingLiveTimer = null;
@@ -14425,9 +14448,10 @@ let roomFloatingInsightDismissed = false;
 let roomFloatingResultDismissed = false;
 let roomFloatingLiveGeneration = 0;
 let roomFloatingLiveVoiceEnabled = false;
+let roomFloatingLiveSurface = "room";
 
 function captureTemporaryLiveCameraFrame(){
-  const source = document.getElementById("roomFloatingCameraVideo");
+  const source = document.getElementById(roomFloatingLiveSurface === "home" ? "homeCaptureVideo" : "roomFloatingCameraVideo");
   if(!source?.videoWidth || !source?.videoHeight) return null;
   const width = Math.min(480,source.videoWidth);
   const height = Math.max(1,Math.round(source.videoHeight * width / source.videoWidth));
@@ -14460,8 +14484,9 @@ function scheduleRoomFloatingLiveAnalysis(delay = 3000){
   roomFloatingLiveTimer = setTimeout(runRoomFloatingLiveAnalysis,delay);
 }
 
-function startRoomFloatingLiveAnalysis(){
+function startRoomFloatingLiveAnalysis(surface = "room"){
   stopRoomFloatingLiveAnalysis(true);
+  roomFloatingLiveSurface = surface;
   roomFloatingLiveStartedAt = Date.now();
   roomFloatingLiveLastSentAt = 0;
   roomFloatingLiveLastChangeAt = Date.now();
@@ -14594,8 +14619,10 @@ function renderRoomFloatingLiveAnalysis(response){
 }
 
 function runRoomFloatingLiveAnalysis(){
-  const layer = document.getElementById("roomFloatingCameraLayer");
-  if(!layer || layer.hidden || document.hidden) return stopRoomFloatingLiveAnalysis();
+  const cameraOpen = roomFloatingLiveSurface === "home"
+    ? !document.getElementById("homeStartupLayer")?.hidden && !document.getElementById("homeCaptureStage")?.hidden
+    : !document.getElementById("roomFloatingCameraLayer")?.hidden;
+  if(!cameraOpen || document.hidden) return stopRoomFloatingLiveAnalysis();
   if(Date.now() - roomFloatingLiveStartedAt >= 180000){
     const button = document.getElementById("roomFloatingLiveContinue");
     if(button) button.hidden = false;
@@ -14668,6 +14695,7 @@ async function openRoomFloatingCamera(event){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   roomCameraReturnFocus = document.activeElement;
   const layer = ensureRoomFloatingCamera();
+  mountRoomFloatingLiveControls(document.getElementById("roomFloatingCameraCard"));
   layer.hidden = false;
   if(!video.srcObject){
     await ensureCameraStream();
@@ -14681,7 +14709,7 @@ async function openRoomFloatingCamera(event){
     roomCameraVideo.srcObject = video.srcObject;
     roomCameraVideo.play().catch(() => {});
   }
-  startRoomFloatingLiveAnalysis();
+  startRoomFloatingLiveAnalysis("room");
   requestAnimationFrame(() => document.getElementById("roomFloatingCameraClose")?.focus());
 }
 
