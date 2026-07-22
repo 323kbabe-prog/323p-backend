@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.25 (2026-07-23)
+  - Removes the duplicated document opening and duplicate startup loader introduced in v10.3.24
+  - Restores the normal startup transition while preserving the HUMAN network update
+
   v10.3.24 (2026-07-23)
   - Adds Public Image-style Love and Skeleton signals to every HUMAN card
   - Adds three featured HUMAN thumbnails ranked by Love while retaining the complete HUMAN list
@@ -2838,16 +2842,6 @@ html body #roomMessages.geminiThread .chatShareAction{
   #aiBeingsCards .humanFeaturedItem img{width:64px!important;height:64px!important;}
 }
 </style>
-</head>
-
-<body>
-
-<div id="appStartupLoader" role="status" aria-label="ASK.CAMERA loading">
-  <div class="appStartupDots" aria-hidden="true">
-    <span></span><span></span><span></span>
-  </div>
-  <div class="appStartupGoogle">ASK.CAMERA — THE AI THAT CONNECTS HUMANS.</div>
-</div>
 </head>
 
 <body>
