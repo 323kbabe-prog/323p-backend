@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.9 (2026-07-22)
+  - Keeps Home HUMAN journey photos at their natural mobile proportions
+  - Removes empty image bands around horizontal journey photos
+
   v10.3.8 (2026-07-22)
   - Moves the ASK.CAMERA synthesis explanation from scene three to scene two
   - Restores the compact life-question scene so its content fits without scrolling
@@ -17112,6 +17116,13 @@ html body .foundingSupportLevel.isSelected{background:#f3e8ff!important;border-c
 .foundingSupportPurpose{margin:14px 0 0;color:#57606a;font-size:12px;line-height:1.5;}.foundingSupportSelection{min-height:20px;margin:16px 0 8px;text-align:center;color:#24292f;font-size:13px;font-weight:600;}
 html body #foundingSupportContinue{width:100%;min-height:48px;background:#8c959f!important;color:#fff!important;border:1px solid #8c959f!important;cursor:not-allowed!important;opacity:1!important;}
 @media(max-width:560px){.foundingSupportLevels{grid-template-columns:1fr}.foundingSupportPanel{padding:17px}.foundingSupportHeader h2{font-size:23px}}
+@media(max-width:640px){
+  html body .homeHumanStep img{
+    height:auto!important;
+    object-fit:contain!important;
+    background:transparent!important;
+  }
+}
 </style>
 
 <div id="foundingSupportOverlay" role="dialog" aria-modal="true" aria-labelledby="foundingSupportTitle" onclick="closeFoundingSupport(event)">
