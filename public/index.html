@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.16 (2026-07-22)
+  - Renders the selected HUMAN's saved profile bio directly in the opening card
+  - Uses a visible compact bio block instead of the clipped paragraph treatment
+  - Keeps the single-card, non-scrolling opening layout unchanged
+
   v10.3.15 (2026-07-22)
   - Adds an explicit Bio label to the single HUMAN opening card
   - Disables room-container scrolling while the compact opening card is visible
@@ -7010,14 +7015,16 @@ html body #roomMessages .humanOpeningCategory{
   text-transform:uppercase;
 }
 html body #roomMessages .humanOpeningBio{
-  display:-webkit-box;
+  display:block!important;
   margin:12px 0 0;
+  max-height:58px;
   overflow:hidden;
-  color:#57606a;
-  font-size:14px;
-  line-height:1.4;
-  -webkit-box-orient:vertical;
-  -webkit-line-clamp:3;
+  color:#57606a!important;
+  font-size:14px!important;
+  line-height:1.38!important;
+  opacity:1!important;
+  visibility:visible!important;
+  white-space:normal!important;
 }
 html body #roomMessages .humanOpeningBioLabel{
   margin-top:12px;
@@ -7073,7 +7080,7 @@ html body #roomMessages .humanOpeningAction:first-child{
   html body #roomMessages .humanOpeningCard{padding:10px 14px;}
   html body #roomMessages .humanOpeningPhoto{width:64px;height:64px;flex-basis:64px;}
   html body #roomMessages .humanOpeningName{font-size:24px;}
-  html body #roomMessages .humanOpeningBio{-webkit-line-clamp:2;}
+  html body #roomMessages .humanOpeningBio{max-height:39px;}
   html body #roomMessages .humanOpeningCard h3{margin-top:12px;padding-top:12px;font-size:20px;}
   html body #roomMessages .humanOpeningActions{gap:6px;margin-top:10px;}
   html body #roomMessages .humanOpeningAction{min-height:44px;padding-top:8px;padding-bottom:8px;}
@@ -13936,7 +13943,7 @@ async function openAIBeing(id){
       continueCreateRoom();
       return;
     }
-    const humanBio = being.best_current_choice || being.bio || "A HUMAN Perspective ready to discover meaningful connections.";
+    const humanBio = String(being.best_current_choice || being.bio || "").trim() || "A HUMAN Perspective ready to discover meaningful connections.";
     roomMessages.classList.add("humanOpeningActive");
     roomMessages.innerHTML = `
       <section class="humanOpeningState" aria-label="Meet ${escapeBeingText(being.name || "this HUMAN")} and start Image Connect">
@@ -13950,7 +13957,7 @@ async function openAIBeing(id){
             </div>
           </div>
           <div class="humanOpeningBioLabel">Bio</div>
-          <p class="humanOpeningBio">${escapeBeingText(humanBio)}</p>
+          <div class="humanOpeningBio">${escapeBeingText(humanBio)}</div>
           <h3>Choose an image to begin.</h3>
           <p class="humanOpeningInstruction">Discover connections through this HUMAN Perspective.</p>
           <div class="humanOpeningActions">
