@@ -4,6 +4,12 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.0 (2026-07-22)
+  - Aligns global product language with The Doc and the Image Connect platform story
+  - Simplifies Create HUMAN into Basic Information, Personality, Connection Keywords, Bio, and Management
+  - Adds the complete pre-Stripe Limited Founding Support experience and four support levels
+  - Reframes Help as About with Vision, Foundation Tool, and Founding HUMAN sections
+
   v10.2.22 (2026-07-22)
   - Fills the complete HUMAN-room Camera control with the primary blue
   - Restores the visible Open Test HUMAN label beneath the demo QR
@@ -2553,34 +2559,38 @@ ASK.CAMERA — The AI That Connects Humans
 <div id="aiBeingsScreen" style="display:none;position:fixed;inset:0;background:#000;color:#fff;z-index:998;overflow:hidden;padding:92px 16px 24px;box-sizing:border-box;flex-direction:column;">
   <button id="aiBeingsBackBtn" onclick="returnFromHumanCards()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span></button>
   <div style="flex:0 0 auto;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Cards</div><button id="humanCardsHelpBtn" onclick="openHumanCardsGuide()" aria-label="About HUMAN Cards" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#f6f8fa;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
-    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a HUMAN, then add an image to open their private room.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">HUMAN Profiles</div><button id="humanCardsHelpBtn" onclick="openHumanCardsGuide()" aria-label="About ASK.CAMERA" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#f6f8fa;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
+    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a HUMAN Perspective for the meaningful connections discovered from your image.</div>
     <form id="findHumanForm" onsubmit="findHumanByName(event)" style="display:flex;width:100%;gap:8px;margin:0 0 10px;">
       <input id="findHumanName" type="search" autocomplete="name" placeholder="Enter a HUMAN name" aria-label="Enter a HUMAN name" oninput="handleHumanNameSearch(this.value)" style="flex:1 1 auto;min-width:0;height:44px;border:0;border-radius:0;background:#eaeeef;color:#24292f;padding:0 12px;font-size:14px;">
       <button id="findHumanBtn" type="submit" style="flex:0 0 auto;height:44px;border:0;border-radius:0;background:#57606a;color:#fff;padding:0 16px;font-size:13px;font-weight:600;">FIND HUMAN</button>
     </form>
     <div id="findHumanStatus" aria-live="polite" style="display:none;margin:-2px 0 10px;font-size:12px;line-height:1.35;color:#57606a;"></div>
-    <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:none;margin:0 0 18px;height:56px;min-height:56px;max-height:56px;box-sizing:border-box;border:1px solid #0969da;border-radius:0;background:#0969da;color:#fff;font-size:15px;font-weight:600;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create a HUMAN Card</span></button>
+    <button id="openCreateBeingBtn" onclick="openCreateBeing()" style="display:flex;width:100%;max-width:none;margin:0 0 18px;height:56px;min-height:56px;max-height:56px;box-sizing:border-box;border:1px solid #0969da;border-radius:0;background:#0969da;color:#fff;font-size:15px;font-weight:600;align-items:center;justify-content:center;gap:9px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg><span>Create HUMAN</span></button>
   </div>
-  <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Loading...</div>
+  <div id="aiBeingsCards" style="flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:16px;">Preparing HUMAN Profiles...</div>
 </div>
 
 <div id="createBeingScreen" style="display:none;position:fixed;inset:0;background:#fff;color:#111;z-index:1002;overflow-y:auto;padding:28px 18px 50px;">
   <div style="max-width:460px;margin:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;">
-      <div id="beingFormTitle" style="font-size:24px;font-weight:900;">Create HUMAN Card</div>
+      <div id="beingFormTitle" style="font-size:24px;font-weight:900;">Create HUMAN</div>
       <button onclick="closeCreateBeing()" style="border:none;background:#f2f2f2;border-radius:50%;width:40px;height:40px;font-size:22px;">×</button>
     </div>
+    <div class="beingFormSectionTitle">Basic Information</div>
+    <div class="beingFormFieldLabel">Profile Photo</div>
     <img id="beingCurrentPhoto" alt="HUMAN profile preview" style="display:none;width:112px;height:112px;object-fit:cover;border-radius:22px;margin:0 auto 14px;box-shadow:0 8px 24px rgba(0,0,0,.14);">
     <input id="beingPhoto" type="file" accept="image/*" onchange="previewBeingPhoto(this)" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;clip-path:inset(50%);">
     <label for="beingPhoto" class="beingPhotoUpload">
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.8"/></svg>
-      <span>Upload profile photo</span>
+      <span>Upload Profile Photo</span>
     </label>
     <div id="beingPhotoStatus" style="font-size:11px;line-height:1.4;color:#666;margin:-6px 2px 12px;">No photo selected.</div>
+    <div class="beingFormFieldLabel">Name</div>
     <input id="beingName" placeholder="Name" class="beingInput">
+    <div class="beingFormFieldLabel">Category</div>
     <select id="beingCategory" class="beingInput" onchange="handleBeingCategoryChange(this)">
-      <option value="">Choose a business category</option>
+      <option value="">Choose a category</option>
       <option>Technology &amp; AI</option>
       <option>Business &amp; Entrepreneurship</option>
       <option>Investment &amp; Finance</option>
@@ -2603,26 +2613,30 @@ ASK.CAMERA — The AI That Connects Humans
       <div style="font-size:11px;line-height:1.4;color:#666;margin:0 2px 7px;">Choose up to three, or type your own.</div>
       <div id="beingKeywordChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
+    <div id="beingSubcategoryLabel" class="beingFormFieldLabel" style="display:none;">Subcategory</div>
     <select id="beingCreatorType" class="beingInput" style="display:none;" onchange="handleBeingRoleChange()">
-      <option value="">Choose your role</option>
+      <option value="">Choose a subcategory</option>
     </select>
     <input id="beingCustomRole" placeholder="Write your role" class="beingInput" style="display:none;" oninput="handleBeingProfileInput()">
-    <div style="font-size:12px;line-height:1.4;color:#666;margin:0 2px 8px;"><strong>Personality</strong><br>Add three descriptive words that shape how this HUMAN thinks, communicates, and connects.</div>
+    <div class="beingFormSectionTitle">Personality</div>
+    <div style="font-size:12px;line-height:1.4;color:#666;margin:0 2px 8px;">Add three descriptive words only. No sentences.</div>
     <input id="beingWord1" placeholder="Personality 1 — e.g. strategic" class="beingInput" oninput="handleBeingProfileInput()">
     <input id="beingWord2" placeholder="Personality 2 — e.g. collaborative" class="beingInput" oninput="handleBeingProfileInput()">
     <input id="beingWord3" placeholder="Personality 3 — e.g. curious" class="beingInput" oninput="handleBeingProfileInput()">
-    <div style="font-size:12px;line-height:1.45;color:#666;margin:4px 2px 8px;"><strong>Connection Keywords</strong><br>Add three objects or places. Short names such as Coffee, New York, Starbucks, NTNU, or Taipei 101 are accepted.</div>
+    <div class="beingFormSectionTitle">Connection Keywords</div>
+    <div style="font-size:12px;line-height:1.45;color:#666;margin:4px 2px 8px;">Add three objects or places. Use a short keyword or phrase with no more than four words.</div>
     <input id="beingConnection1" maxlength="60" placeholder="Object or place 1 — e.g. Coffee" class="beingInput" oninput="handleBeingConnectionInput(this)">
     <input id="beingConnection2" maxlength="60" placeholder="Object or place 2 — e.g. New York" class="beingInput" oninput="handleBeingConnectionInput(this)">
     <input id="beingConnection3" maxlength="60" placeholder="Object or place 3 — e.g. Harvard University" class="beingInput" oninput="handleBeingConnectionInput(this)" onblur="generateBeingBio()">
     <div id="beingConnectionStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Objects and places only · up to four words each · no sentences.</div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 2px 8px;">
-      <label for="beingChoice" style="font-size:12px;font-weight:700;">BUSINESS INTRODUCTION</label>
+      <label for="beingChoice" style="font-size:12px;font-weight:700;">BIO</label>
       <button id="beingBioGenerate" type="button" onclick="generateBeingBio(true)" style="display:none;border:none;background:transparent;color:#0969da;padding:4px 0;font-size:12px;font-weight:700;">Regenerate bio</button>
     </div>
-    <textarea id="beingChoice" placeholder="Generated from category, role, personality, objects, and places" maxlength="160" class="beingInput" rows="3" oninput="markBeingBioEdited()"></textarea>
+    <textarea id="beingChoice" placeholder="Generated from category, subcategory, personality, and Connection Keywords" maxlength="160" class="beingInput" rows="3" oninput="markBeingBioEdited()"></textarea>
     <div id="beingBioStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Auto-generated and editable.</div>
     <input id="beingPhone" type="tel" inputmode="tel" placeholder="Public phone with country code (optional), e.g. +12125550123" class="beingInput">
+    <div class="beingFormSectionTitle">Management</div>
     <div id="beingPasswordFields">
       <input id="beingPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Management password — minimum 8 characters" class="beingInput">
       <input id="beingPasswordConfirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Confirm management password" class="beingInput">
@@ -2632,7 +2646,8 @@ ASK.CAMERA — The AI That Connects Humans
       </label>
       <div style="font-size:11px;line-height:1.4;color:#666;margin:-3px 4px 14px;">Save this password and the recovery code shown after creation. ASK.CAMERA cannot reveal them later.</div>
     </div>
-    <button id="createBeingSubmit" onclick="createAIBeing()" style="width:100%;height:48px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;font-size:15px;">Create HUMAN Card</button>
+    <label id="beingFoundingInterest" class="beingFoundingInterest"><input id="showFoundingSupportAfterCreate" type="checkbox"> <span><strong>Limited Founding Support — optional</strong><small>Show the four one-time support levels after I create my HUMAN. Creating and using a HUMAN is free.</small></span></label>
+    <button id="createBeingSubmit" onclick="createAIBeing()" style="width:100%;height:48px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;font-size:15px;">Create HUMAN</button>
   </div>
 </div>
 
@@ -6734,7 +6749,7 @@ padding:140px 16px 40px 16px;
 
 
 <div id="publicNullsCards">
-Loading...
+Discovering meaningful connections...
 </div>
 
 
@@ -6793,7 +6808,7 @@ margin-bottom:20px;
 box-shadow:0 2px 10px rgba(0,0,0,.04);
 "
 >
-Loading...
+Preparing your question...
 </div>
 
 <div id="dailySwipePosition" aria-live="polite"></div>
@@ -7154,7 +7169,7 @@ ASK.CAMERA
 
 <button
 id="shareRoomBtn"
-aria-label="Share HUMAN card"
+aria-label="Share HUMAN Profile"
 onclick="openRoomShareMenu(event)"
 style="display:none;
 height:24px;
@@ -7299,7 +7314,7 @@ border:1px solid #111;
 
   <div id="humanSelectionPrompt" role="status" style="display:none;position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:1003;width:min(620px,calc(100% - 24px));box-sizing:border-box;background:#f6f8fa;border:1px solid #8c959f;padding:12px;box-shadow:0 8px 24px rgba(31,35,40,.18);">
     <div style="color:#24292f;font-size:13px;font-weight:600;line-height:1.4;margin:0 0 10px;">Choose a HUMAN perspective to continue this image.</div>
-    <button id="openHumanCardsButton" type="button" style="display:block;width:100%;min-height:46px;border:1px solid #0969da;background:#0969da;color:#fff;font:700 14px Arial,sans-serif;cursor:pointer;">Open HUMAN Cards</button>
+    <button id="openHumanCardsButton" type="button" style="display:block;width:100%;min-height:46px;border:1px solid #0969da;background:#0969da;color:#fff;font:700 14px Arial,sans-serif;cursor:pointer;">Open HUMAN Profiles</button>
   </div>
 
   <input
@@ -7739,7 +7754,7 @@ function renderConnectedHome(){
         <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your private HUMAN room stays active until you close it with X.</div>
         <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
           <button onclick="event.stopPropagation();showDailyNulls();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">Daily Camera Perspectives</button>
-          <button onclick="event.stopPropagation();showAIBeings();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">HUMAN Cards</button>
+          <button onclick="event.stopPropagation();showAIBeings();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">HUMAN Profiles</button>
           <button onclick="event.stopPropagation();openGuide();" aria-label="Help" style="align-self:center;width:46px;height:46px;padding:0;border:none;border-radius:50%;background:#fff;color:#111;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">?</button>
         </div>
       </div>
@@ -7847,7 +7862,7 @@ async function shareRoom(){
 
     await navigator.clipboard.writeText(url);
 
-    alert("HUMAN room invitation copied.");
+    alert("HUMAN invitation copied.");
 
 }
 
@@ -7868,7 +7883,7 @@ function openRoomShareMenu(event){
   overlay.setAttribute("aria-label","Share HUMAN");
   overlay.innerHTML = `<div class="roomShareMenuPanel" onclick="event.stopPropagation()">
     <div class="roomShareMenuTitle">Share ${escapeBeingText(being.name || "HUMAN")}</div>
-    <button type="button" onclick="closeRoomShareMenu();shareRoom()">Share HUMAN card</button>
+    <button type="button" onclick="closeRoomShareMenu();shareRoom()">Share HUMAN Profile</button>
     <button type="button" onclick="closeRoomShareMenu();showBeingQR()">Show QR</button>
     <button type="button" class="roomShareMenuCancel" onclick="closeRoomShareMenu()">Cancel</button>
   </div>`;
@@ -12163,7 +12178,7 @@ async function fetchWithTimeout(url,options = {},timeoutMs = 12000){
 
 async function loadPublicNulls(){
 
-  publicNullsCards.innerHTML = "Loading...";
+  publicNullsCards.innerHTML = "Discovering meaningful connections...";
 
   const res =
     await fetchWithTimeout(
@@ -12954,7 +12969,7 @@ function returnFromHumanCards(){
 async function loadAIBeings(){
   const holder = document.getElementById("aiBeingsCards");
   const canOpenHumanRoom = humanCardsCanSelect;
-  holder.innerHTML = '<div style="padding:36px 16px;text-align:center;font-size:14px;font-weight:700;opacity:.72;">Loading HUMAN Cards…</div>';
+  holder.innerHTML = '<div style="padding:36px 16px;text-align:center;font-size:14px;font-weight:700;opacity:.72;">Preparing HUMAN Profiles...</div>';
 
   try{
     const response = await fetchWithTimeout(`${AI_BEINGS_API}/ai-beings`);
@@ -12969,7 +12984,7 @@ async function loadAIBeings(){
     loadHumanCardThumbnails();
   }catch(error){
     loadedHumanCards = [];
-    holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:850;">HUMAN Cards could not load</div><div style="margin-top:8px;font-size:13px;line-height:1.45;color:#666;">${escapeBeingText(error.message)}</div><button onclick="loadAIBeings()" style="width:100%;height:44px;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">Try again</button></div>`;
+    holder.innerHTML = `<div class="beingCard" style="text-align:center;"><div style="font-size:16px;font-weight:850;">HUMAN Profiles could not load</div><div style="margin-top:8px;font-size:13px;line-height:1.45;color:#666;">${escapeBeingText(error.message)}</div><button onclick="loadAIBeings()" style="width:100%;height:44px;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;font-weight:800;">Try again</button></div>`;
   }
 }
 
@@ -12999,10 +13014,11 @@ function renderHumanCards(beings){
           ${[being.connection1,being.connection2,being.connection3].filter(Boolean).map(word => `<span>${escapeBeingText(word)}</span>`).join("")}
         </div>
         <div class="beingCardActions">
-          ${canOpenHumanRoom ? `<button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Open HUMAN Room</button>` : ""}
-          <button class="beingShareButton" onclick="shareHumanCard('${being.id}')">Share card</button>
-          <button class="beingQrShareButton" onclick="showHumanCardQR('${being.id}')">Card QR</button>
-          <button class="beingEditButton" onclick="changeAIBeingProfile('${being.id}')">Edit profile</button>
+          ${canOpenHumanRoom ? `<button class="beingOpenButton" onclick="openAIBeing('${being.id}')">Open HUMAN</button>` : ""}
+          <button class="beingShareButton" onclick="shareHumanCard('${being.id}')">Share HUMAN</button>
+          <button class="beingQrShareButton" onclick="showHumanCardQR('${being.id}')">HUMAN QR</button>
+          <button class="beingFoundingButton" onclick="openFoundingSupport('${being.id}')">Founding Support</button>
+          <button class="beingEditButton" onclick="changeAIBeingProfile('${being.id}')">Edit HUMAN Profile</button>
           <button class="beingManageButton" onclick="deleteAIBeing('${being.id}')">Manage</button>
         </div>
       </article>
@@ -13043,7 +13059,7 @@ function findHumanByName(event){
   const query = String(input?.value || "").trim();
   if(!query){
     renderHumanCards(loadedHumanCards);
-    updateFindHumanStatus("Enter the name used on the HUMAN Card.");
+    updateFindHumanStatus("Enter the name used on the HUMAN Profile.");
     input?.focus();
     return;
   }
@@ -13065,7 +13081,7 @@ async function shareHumanCard(id,name = "HUMAN"){
     }catch(error){}
   }
   await navigator.clipboard.writeText(url);
-  alert("HUMAN Card link copied.");
+  alert("HUMAN Profile link copied.");
 }
 
 function showHumanCardQR(id){
@@ -13186,7 +13202,7 @@ function handleBeingCategoryChange(select){
     if(!beingBioEdited) document.getElementById("beingChoice").value = "";
     document.getElementById("beingBioStatus").innerText = beingBioEdited
       ? "Your edited bio was kept. Regenerate when the new profile is ready."
-      : "Choose three keywords to generate your business introduction.";
+      : "Choose three keywords to generate your HUMAN bio.";
   }
   beingLastCategory = nextCategory;
   renderBeingRoleOptions();
@@ -13321,6 +13337,8 @@ function handleBeingProfileInput(){
   const roleSelect = document.getElementById("beingCreatorType");
   const customRole = document.getElementById("beingCustomRole").value.trim();
   roleSelect.style.display = category ? "block" : "none";
+  const subcategoryLabel = document.getElementById("beingSubcategoryLabel");
+  if(subcategoryLabel) subcategoryLabel.style.display = category ? "block" : "none";
   syncBeingKeywordChips();
 
   const roleComplete = Boolean(roleSelect.value) && (roleSelect.value !== CUSTOM_BEING_ROLE || Boolean(customRole));
@@ -13340,7 +13358,7 @@ async function generateBeingBio(force = false){
   const requestId = ++beingBioRequest;
   const status = document.getElementById("beingBioStatus");
   const button = document.getElementById("beingBioGenerate");
-  status.innerText = "Generating your business introduction…";
+  status.innerText = "Generating your HUMAN bio…";
   button.disabled = true;
   try{
     const response = await fetch(`${AI_BEINGS_API}/ai-beings/generate-bio`,{
@@ -13393,7 +13411,7 @@ function resetBeingForm(){
   beingBioSignature = "";
   beingBioRequest++;
   beingLastCategory = "";
-  document.getElementById("beingFormTitle").innerText = "Create HUMAN Card";
+  document.getElementById("beingFormTitle").innerText = "Create HUMAN";
   const preview = document.getElementById("beingCurrentPhoto");
   preview.removeAttribute("src");
   preview.style.display = "none";
@@ -13401,6 +13419,7 @@ function resetBeingForm(){
   ["beingName","beingChoice","beingCategory","beingCreatorType","beingCustomRole","beingWord1","beingWord2","beingWord3","beingConnection1","beingConnection2","beingConnection3","beingPhone","beingPassword","beingPasswordConfirm"]
     .forEach(id => document.getElementById(id).value = "");
   document.getElementById("beingCreatorType").style.display = "none";
+  document.getElementById("beingSubcategoryLabel").style.display = "none";
   document.getElementById("beingCustomRole").style.display = "none";
   document.getElementById("beingKeywordSuggestions").style.display = "none";
   document.getElementById("beingKeywordChips").innerHTML = "";
@@ -13408,9 +13427,10 @@ function resetBeingForm(){
   document.getElementById("beingBioGenerate").style.display = "none";
   document.getElementById("beingBioStatus").innerText = "Auto-generated and editable.";
   document.getElementById("beingShowPasswords").checked = false;
+  document.getElementById("showFoundingSupportAfterCreate").checked = false;
   toggleBeingPasswords(false);
   document.getElementById("beingPasswordFields").style.display = "block";
-  document.getElementById("createBeingSubmit").innerText = "Create HUMAN Card";
+  document.getElementById("createBeingSubmit").innerText = "Create HUMAN";
 }
 
 function openCreateBeing(){
@@ -13429,7 +13449,7 @@ async function changeAIBeingProfile(id){
 
     editingBeing = being;
     editingBeingPassword = password;
-    document.getElementById("beingFormTitle").innerText = "Edit HUMAN profile";
+    document.getElementById("beingFormTitle").innerText = "Edit HUMAN Profile";
     const preview = document.getElementById("beingCurrentPhoto");
     preview.src = being.photo;
     preview.style.display = "block";
@@ -13456,6 +13476,7 @@ async function changeAIBeingProfile(id){
     document.getElementById("beingBioStatus").innerText = "Existing bio. Edit it or regenerate from the profile.";
     document.getElementById("beingPhone").value = being.phone || "";
     document.getElementById("beingPasswordFields").style.display = "none";
+    document.getElementById("beingFoundingInterest").style.display = "none";
     document.getElementById("createBeingSubmit").innerText = "Save changes";
     document.getElementById("createBeingScreen").style.display = "block";
   }catch(error){
@@ -13464,6 +13485,7 @@ async function changeAIBeingProfile(id){
 }
 
 function closeCreateBeing(){
+  document.getElementById("beingFoundingInterest").style.display = "flex";
   document.getElementById("createBeingScreen").style.display = "none";
   resetBeingForm();
 }
@@ -13488,6 +13510,7 @@ async function beingPhotoDataUrl(file){
 
 async function createAIBeing(){
   const button = document.getElementById("createBeingSubmit");
+  const showFoundingSupport = document.getElementById("showFoundingSupportAfterCreate").checked;
   const file = document.getElementById("beingPhoto").files[0];
   const payload = {
     name: document.getElementById("beingName").value.trim(),
@@ -13525,7 +13548,7 @@ async function createAIBeing(){
   }
 
   button.disabled = true;
-    button.innerText = editingBeing ? "Saving…" : "Creating…";
+    button.innerText = editingBeing ? "Saving HUMAN…" : "Creating HUMAN…";
   try{
     payload.photo = file ? await beingPhotoDataUrl(file) : editingBeing.photo;
     const updateId = editingBeing?.id;
@@ -13543,17 +13566,17 @@ async function createAIBeing(){
     if(updateId){
       await loadAIBeings();
     }else{
-      showBeingRecoveryCode(being);
+      showBeingRecoveryCode(being,showFoundingSupport);
     }
   }catch(error){
     alert(error.message);
   }finally{
     button.disabled = false;
-    button.innerText = editingBeing ? "Save changes" : "Create HUMAN Card";
+    button.innerText = editingBeing ? "Save changes" : "Create HUMAN";
   }
 }
 
-function showBeingRecoveryCode(being){
+function showBeingRecoveryCode(being,showFoundingSupport = false){
   let overlay = document.getElementById("beingRecoveryOverlay");
   if(!overlay){
     overlay = document.createElement("div");
@@ -13562,7 +13585,7 @@ function showBeingRecoveryCode(being){
     document.body.appendChild(overlay);
   }
   const code = escapeBeingText(being.recovery_code || "");
-  overlay.innerHTML = `<div style="background:#fff;color:#111;width:100%;max-width:380px;border-radius:24px;padding:22px;text-align:center;"><div style="font-size:21px;font-weight:900;">SAVE YOUR RECOVERY CODE</div><div style="font-size:12px;line-height:1.45;color:#666;margin-top:8px;">This is shown only once. It can manage or delete this HUMAN if the password is forgotten.</div><div id="beingRecoveryCode" style="font:800 17px/1.3 monospace;letter-spacing:.5px;background:#f1f1f1;border-radius:14px;padding:14px 10px;margin-top:16px;word-break:break-all;">${code}</div><button id="copyBeingRecovery" style="margin-top:12px;border:none;border-radius:999px;background:#eee;color:#111;padding:10px 18px;font-weight:800;">COPY CODE</button><button id="continueToBeing" style="display:block;width:100%;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;padding:13px 18px;font-weight:900;">I SAVED IT — OPEN HUMAN</button></div>`;
+  overlay.innerHTML = `<div style="background:#fff;color:#111;width:100%;max-width:380px;border-radius:24px;padding:22px;text-align:center;"><div style="font-size:21px;font-weight:900;">SAVE YOUR RECOVERY CODE</div><div style="font-size:12px;line-height:1.45;color:#666;margin-top:8px;">This is shown only once. It can manage or delete this HUMAN if the password is forgotten.</div><div id="beingRecoveryCode" style="font:800 17px/1.3 monospace;letter-spacing:.5px;background:#f1f1f1;border-radius:14px;padding:14px 10px;margin-top:16px;word-break:break-all;">${code}</div><button id="copyBeingRecovery" style="margin-top:12px;border:none;border-radius:999px;background:#eee;color:#111;padding:10px 18px;font-weight:800;">COPY CODE</button><button id="continueToBeing" style="display:block;width:100%;margin-top:16px;border:none;border-radius:999px;background:#000;color:#fff;padding:13px 18px;font-weight:900;">I SAVED IT — OPEN HUMAN</button>${showFoundingSupport ? `<button id="recoveryFoundingSupport" style="display:block;width:100%;margin-top:8px;border:1px solid #0969da;background:#fff;color:#0969da;padding:13px 18px;font-weight:800;">VIEW LIMITED FOUNDING SUPPORT</button>` : ""}</div>`;
   overlay.style.display = "flex";
   document.getElementById("copyBeingRecovery").onclick = async () => {
     await navigator.clipboard.writeText(being.recovery_code || "");
@@ -13572,6 +13595,10 @@ function showBeingRecoveryCode(being){
     overlay.style.display = "none";
     await openAIBeing(being.id);
   };
+  document.getElementById("recoveryFoundingSupport")?.addEventListener("click",() => {
+    overlay.style.display = "none";
+    openFoundingSupport(being.id,being.name);
+  });
 }
 
 async function openAIBeing(id){
@@ -13615,12 +13642,12 @@ async function openAIBeing(id){
     roomMessages.innerHTML = `
       <div class="roomRecoveryState" style="margin-top:18px;">
         <img src="${escapeBeingText(being.photo || "")}" alt="${escapeBeingText(being.name)}" style="width:64px;height:64px;object-fit:cover;border-radius:0;">
-        <div style="font-size:16px;font-weight:700;">Open ${escapeBeingText(being.name)}’s HUMAN room</div>
+        <div style="font-size:16px;font-weight:700;">Open ${escapeBeingText(being.name)}’s HUMAN</div>
         <div style="font-size:13px;line-height:1.45;color:#57606a;">Take a photo, upload an image, or choose a Public Camera Perspective to begin.</div>
       </div>`;
     roomInput.style.display = "block";
     roomInput.disabled = true;
-    roomInput.placeholder = "Ask";
+    roomInput.placeholder = "Ask about my life...";
     document.getElementById("roomImageActions").style.display = "flex";
     document.getElementById("beingQrBtn").style.display = "inline-block";
     document.getElementById("shareRoomBtn").style.display = "inline-block";
@@ -13630,7 +13657,7 @@ async function openAIBeing(id){
   }
   roomInput.style.display = "block";
   roomInput.disabled = true;
-  roomInput.placeholder = "Ask";
+  roomInput.placeholder = "Ask about my life...";
   history.replaceState({},"",`/?room=${activeRoomId}`);
   showSequenceTyping();
   socket.emit("selectRoomHuman", { deviceId, beingId:being.id }, result => {
@@ -13706,7 +13733,7 @@ function renderBeingRoomHeader(being){
   document.getElementById("changeHumanBtn").style.display = "none";
   document.getElementById("beingQrBtn").style.display = "none";
   document.getElementById("shareRoomBtn").style.display = "inline-block";
-  document.getElementById("shareRoomBtn").setAttribute("aria-label","Share HUMAN card or show QR");
+  document.getElementById("shareRoomBtn").setAttribute("aria-label","Share HUMAN Profile or show QR");
   document.getElementById("roomCountdown").style.display = "none";
 }
 
@@ -13745,16 +13772,15 @@ const HOME_HERO_HTML = `
   <div class="homeHeroPurpose">The AI That Connects Humans.</div>
   <div class="homeHeroToolLabel">Foundation Tool</div>
   <div class="homeHeroToolName">Image Connect</div>
-  <div class="homeHeroGoogle">The search idea Google should buy today.</div>
   <div class="homeHeroAction">Point your camera.</div>
   <div class="homeHeroDetail">Discover what this image connects you to.</div>
 `;
 
 const HOME_HUMAN_STEPS_HTML = `
   <section id="homeHumanIntro" aria-labelledby="homeHumanIntroTitle">
-    <div class="homeHumanIntroEyebrow">HUMAN Cards</div>
+    <div class="homeHumanIntroEyebrow">HUMAN</div>
     <h2 id="homeHumanIntroTitle">Share your HUMAN Perspective.</h2>
-    <p class="homeHumanIntroLead">Create a HUMAN Card from your identity, personality, and meaningful connections. Share it by link or QR code so anyone can add an image and discover connections through your HUMAN Perspective.</p>
+    <p class="homeHumanIntroLead">Create HUMAN from your identity, personality, and meaningful connections. Share your HUMAN Profile by link or QR code so anyone can add an image and discover connections through your HUMAN Perspective.</p>
     <div class="homeHumanSteps">
       <article class="homeHumanStep">
         <img src="https://images.pexels.com/photos/14900002/pexels-photo-14900002.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A happy person using a smartphone" loading="lazy" referrerpolicy="no-referrer">
@@ -13766,7 +13792,7 @@ const HOME_HUMAN_STEPS_HTML = `
         <img src="https://images.pexels.com/photos/5065220/pexels-photo-5065220.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="Friends sharing a smartphone" loading="lazy" referrerpolicy="no-referrer">
         <div class="homeHumanStepNumber">02</div>
         <h3>Share your HUMAN</h3>
-        <p>Send your HUMAN Card to anyone with its link or QR code.</p>
+        <p>Send your HUMAN Profile to anyone with its link or QR code.</p>
       </article>
       <article class="homeHumanStep">
         <img src="https://images.pexels.com/photos/6384181/pexels-photo-6384181.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A smartphone camera pointed at Tokyo Tower" loading="lazy" referrerpolicy="no-referrer">
@@ -13791,18 +13817,23 @@ const HOME_HUMAN_STEPS_HTML = `
       </div>
     </section>
     <div class="homeHumanIntroActions">
-      <button type="button" onclick="openCreateBeing()">CREATE A HUMAN CARD — FREE</button>
-      <button type="button" onclick="showAIBeings()">EXPLORE HUMAN CARDS</button>
+      <button type="button" onclick="openCreateBeing()">CREATE HUMAN — FREE</button>
+      <button type="button" onclick="showAIBeings()">EXPLORE HUMANS</button>
       <button type="button" onclick="openHomeHumanFinder()">FIND HUMAN</button>
     </div>
-    <p class="homeHumanFundingNote"><strong>Optional Funding HUMAN:</strong> Creating, sharing, and using a HUMAN Card is free. Optional one-time funding levels support ASK.CAMERA.</p>
+    <section class="homeFoundingSupport" aria-labelledby="homeFoundingSupportTitle">
+      <div class="homeFoundingSupportEyebrow">Founding HUMAN</div>
+      <h3 id="homeFoundingSupportTitle">Limited Founding Support</h3>
+      <p>Become one of the first Founding HUMANS helping build the future of ASK.CAMERA. Creating, sharing, and using HUMAN is free.</p>
+      <button type="button" onclick="openFoundingSupport()">VIEW SUPPORT LEVELS</button>
+    </section>
   </section>
 `;
 
 const HOME_APP_FOOTER_HTML = `
   <footer id="homeAppFooter">
     <div class="homeAppFooterName">ASK.CAMERA</div>
-    <div class="homeAppFooterGoogle">The search idea Google should buy today.</div>
+    <div class="homeAppFooterGoogle">The AI That Connects Humans.</div>
     <div class="homeAppFooterCopyright">© 2026 ASK.CAMERA. All rights reserved.</div>
   </footer>
 `;
@@ -14096,15 +14127,15 @@ if(directBeingMatch){
 
 <div id="humanCardsGuide" onclick="closeHumanCardsGuide()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2147483647;align-items:center;justify-content:center;">
   <div onclick="event.stopPropagation()" style="position:relative;background:#fff;color:#111;border-radius:24px;padding:26px 22px 22px;box-sizing:border-box;text-align:left;">
-    <button onclick="closeHumanCardsGuide()" aria-label="Close HUMAN Cards guide" style="position:absolute;top:14px;right:14px;width:40px;height:40px;padding:0;border:none;border-radius:50%;background:#f2f2f2;color:#111;font-size:26px;line-height:1;cursor:pointer;">×</button>
-    <div style="padding-right:48px;font-size:22px;font-weight:900;line-height:1.15;">What are HUMAN Cards?</div>
-    <div style="margin-top:18px;font-size:14px;line-height:1.55;">
-      <p style="margin:0 0 12px;">Each HUMAN Card opens a private room where Image Connect discovers connections through that HUMAN’s personality, objects, places, and perspective.</p>
-      <p style="margin:0 0 12px;">Choose a HUMAN after adding an image. The image stays alive in the experience while the HUMAN guides the direction of each discovered connection.</p>
-      <p style="margin:0 0 12px;">You can change HUMAN perspectives without losing the room, image, or earlier conversation.</p>
-      <p style="margin:0;">A shared HUMAN link or QR is a HUMAN-room invitation. Each visitor adds their own image and starts a separate private conversation.</p>
+    <button onclick="closeHumanCardsGuide()" aria-label="Close About ASK.CAMERA" style="position:absolute;top:14px;right:14px;width:40px;height:40px;padding:0;border:none;border-radius:50%;background:#f2f2f2;color:#111;font-size:26px;line-height:1;cursor:pointer;">×</button>
+    <div style="padding-right:48px;font-size:22px;font-weight:900;line-height:1.15;">About ASK.CAMERA</div>
+    <div class="aboutDocSections">
+      <section><h3>Vision</h3><p>We envision a future where AI helps people discover meaningful human connections. Every image becomes the beginning of a new journey, every perspective creates new understanding, and every connection opens new opportunities.</p></section>
+      <section><h3>Foundation Tool</h3><h4>Image Connect</h4><p>Point your camera. Discover what this image connects you to.</p><p>The image is the beginning of discovery. Image Connect discovers meaningful connections. Those connections guide every conversation that follows.</p></section>
+      <section><h3>HUMAN</h3><p>The image provides meaningful connections. Your life question provides intent. ASK.CAMERA answers through the connections discovered by Image Connect and the selected HUMAN Perspective.</p><p>Ask about my career. Ask where to travel. Ask what I should know today. Ask what opportunity I should explore.</p></section>
+      <section><h3>Founding HUMAN</h3><h4>Limited Founding Support</h4><p>Become one of the first Founding HUMANS helping build the future of ASK.CAMERA.</p><button type="button" onclick="closeHumanCardsGuide();openFoundingSupport();">View Support Levels</button></section>
     </div>
-    <button onclick="closeHumanCardsGuide()" style="width:100%;height:46px;margin-top:20px;border:none;border-radius:999px;background:#000;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Got it</button>
+    <button onclick="closeHumanCardsGuide()" style="width:100%;height:46px;margin-top:20px;border:none;border-radius:999px;background:#000;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Close</button>
   </div>
 </div>
 
@@ -14357,7 +14388,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Share a HUMAN room or an individual result card.</b> A HUMAN invitation lets someone add their own image and start a separate private conversation.
+<b>Share a HUMAN Profile or an individual connection.</b> A HUMAN invitation lets someone add their own image and start a separate private conversation.
 </div>
 
 </div>
@@ -16404,7 +16435,7 @@ html body #dailyNullsCards .dailySwipeCue{
   const humanGradient = 'linear-gradient(135deg,#0969da 0%,#8250df 50%,#2da44e 100%)';
   const selectors = {
     human:'#aiBeingsBtn,#shareRoomBtn,#openCreateBeingBtn',
-    primary:'#takeCameraViewBtn,#createBeingSubmit,#addPublicImageBtn,#publishContinueButton,.beingOpenButton,#continueToBeing,.systemPerspectivePrimary,.systemStateButtonPrimary,#roomImageActions button:first-child',
+    primary:'#takeCameraViewBtn,#createBeingSubmit,#addPublicImageBtn,#publishContinueButton,.beingOpenButton,#continueToBeing,.systemPerspectivePrimary,.systemStateButtonPrimary,#roomImageActions button:first-child,.homeFoundingSupport button',
     dark:'#createNullBtn,#dailyNullsBtn,#uploadBtn,#publicNullsBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,.chatOpenAction,.chatShareAction,.beingShareButton,.beingQrShareButton,.dailyCardShare',
     field:'input,textarea,select,[contenteditable="true"]',
     upload:'label[for="beingPhoto"]'
@@ -16570,7 +16601,17 @@ html body #dailyNullsCards .dailySwipeCue{
     ["Upload Image","Start Image Connect"],
     ["Open Camera","Open Image Connect"],
     ["I found this...","This image connects to..."],
-    ["Generating your business introduction…","Building your HUMAN introduction…"]
+    ["Generating your business introduction…","Generating your HUMAN bio..."],
+    ["HUMAN Cards","HUMAN Profiles"],
+    ["Open HUMAN Cards","Open HUMAN Profiles"],
+    ["Create a HUMAN Card","Create HUMAN"],
+    ["Create HUMAN Card","Create HUMAN"],
+    ["Open HUMAN Room","Open HUMAN"],
+    ["Share card","Share HUMAN"],
+    ["Card QR","HUMAN QR"],
+    ["Loading...","Initializing Image Connect..."],
+    ["Loading…","Initializing Image Connect..."],
+    ["Choose three keywords to generate your business introduction.","Choose three keywords to generate your HUMAN bio."]
   ]);
   const cleanText = root => {
     if(!root) return;
@@ -16580,7 +16621,15 @@ html body #dailyNullsCards .dailySwipeCue{
     nodes.forEach(node => {
       const value = node.nodeValue;
       const trimmed = value.trim();
-      if(exact.has(trimmed)) node.nodeValue = value.replace(trimmed,exact.get(trimmed));
+      if(exact.has(trimmed)){
+        node.nodeValue = value.replace(trimmed,exact.get(trimmed));
+        return;
+      }
+      node.nodeValue = value
+        .replace(/THE SEARCH IDEA GOOGLE SHOULD BUY TODAY\./g,"THE AI THAT CONNECTS HUMANS.")
+        .replace(/Google should buy this search idea today\./gi,"The AI That Connects Humans.")
+        .replace(/Google should buy me\./gi,"The AI That Connects Humans.")
+        .replace(/future searches/gi,"meaningful connections");
     });
   };
   cleanText(document.body);
@@ -16866,6 +16915,104 @@ html body #homeInstruction .homeHeroDetail{
   .homeHumanSteps{grid-template-columns:1fr;}
   .homeHumanStep img{height:170px;}
 }
+.beingFormSectionTitle{
+  margin:20px 0 10px;
+  color:#24292f;
+  font-size:15px;
+  font-weight:700;
+  line-height:1.3;
+}
+.beingFormFieldLabel{margin:0 2px 6px;color:#57606a;font-size:11px;font-weight:600;line-height:1.3;}
+.beingFoundingInterest{display:flex;align-items:flex-start;gap:10px;margin:8px 0 16px;padding:14px;background:#f6f8fa;border:1px solid #d0d7de;color:#24292f;cursor:pointer;}
+.beingFoundingInterest input{width:18px;height:18px;margin:1px 0 0;flex:0 0 auto;accent-color:#0969da;}
+.beingFoundingInterest span{display:block;font-size:12px;line-height:1.4;}
+.beingFoundingInterest small{display:block;margin-top:4px;color:#57606a;font-size:11px;font-weight:400;}
+.beingFoundingButton{background:#f6f8fa!important;color:#8250df!important;border:1px solid #d8b9ff!important;}
+.homeFoundingSupport{margin-top:16px;padding:18px;background:rgba(255,255,255,.94);color:#24292f;border:0;text-align:left;}
+.homeFoundingSupportEyebrow{color:#0969da;font-size:11px;font-weight:700;text-transform:uppercase;line-height:1.3;}
+.homeFoundingSupport h3{margin:4px 0 0;font-size:19px;font-weight:600;line-height:1.25;}
+.homeFoundingSupport p{margin:7px 0 14px;color:#57606a;font-size:12px;line-height:1.45;}
+html body .homeFoundingSupport button{width:100%;min-height:42px;background:#0969da!important;color:#fff!important;border:1px solid #0969da!important;}
+.aboutDocSections{max-height:min(58vh,520px);overflow-y:auto;margin-top:18px;padding-right:4px;font-size:13px;line-height:1.5;}
+.aboutDocSections section{padding:0 0 14px;margin:0 0 14px;border-bottom:1px solid #d0d7de;}
+.aboutDocSections section:last-child{border-bottom:0;margin-bottom:0;}
+.aboutDocSections h3,.aboutDocSections h4,.aboutDocSections p{margin:0;}
+.aboutDocSections h3{font-size:16px;font-weight:700;}.aboutDocSections h4{margin-top:3px;font-size:14px;font-weight:600;}.aboutDocSections p{margin-top:6px;color:#57606a;}
+.aboutDocSections button{width:100%;min-height:40px;margin-top:10px;}
+#foundingSupportOverlay{display:none;position:fixed;inset:0;z-index:2147483647;align-items:center;justify-content:center;padding:18px;background:rgba(31,35,40,.72);box-sizing:border-box;}
+.foundingSupportPanel{width:min(720px,100%);max-height:calc(100vh - 36px);overflow-y:auto;background:#fff;color:#24292f;border:1px solid #d0d7de;padding:22px;box-sizing:border-box;}
+.foundingSupportHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}.foundingSupportHeader button{flex:0 0 40px;width:40px;height:40px;padding:0!important;}
+.foundingSupportEyebrow{color:#8250df;font-size:11px;font-weight:700;text-transform:uppercase;}.foundingSupportHeader h2{margin:3px 0 0;font-size:26px;line-height:1.15;}.foundingSupportIntro{margin:12px 0 0;color:#57606a;font-size:14px;line-height:1.5;}
+.foundingSupportLevels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px;}
+html body .foundingSupportLevel{display:block;width:100%;min-height:86px;padding:14px!important;text-align:left;background:#f6f8fa!important;color:#24292f!important;border:2px solid transparent!important;}
+html body .foundingSupportLevel.isSelected{background:#f3e8ff!important;border-color:#8250df!important;}.foundingSupportLevelName{display:block;font-size:15px;font-weight:700;}.foundingSupportLevelAmount{display:block;margin-top:5px;color:#57606a;font-size:13px;font-weight:600;}
+.foundingSupportBenefits{margin-top:18px;padding:16px;background:#f6f8fa;}.foundingSupportBenefits h3{margin:0;font-size:15px;}.foundingSupportBenefits ul{margin:10px 0 0;padding-left:20px;color:#57606a;font-size:12px;line-height:1.6;}
+.foundingSupportPurpose{margin:14px 0 0;color:#57606a;font-size:12px;line-height:1.5;}.foundingSupportSelection{min-height:20px;margin:16px 0 8px;text-align:center;color:#24292f;font-size:13px;font-weight:600;}
+html body #foundingSupportContinue{width:100%;min-height:48px;background:#8c959f!important;color:#fff!important;border:1px solid #8c959f!important;cursor:not-allowed!important;opacity:1!important;}
+@media(max-width:560px){.foundingSupportLevels{grid-template-columns:1fr}.foundingSupportPanel{padding:17px}.foundingSupportHeader h2{font-size:23px}}
 </style>
+
+<div id="foundingSupportOverlay" role="dialog" aria-modal="true" aria-labelledby="foundingSupportTitle" onclick="closeFoundingSupport(event)">
+  <div class="foundingSupportPanel" onclick="event.stopPropagation()">
+    <div class="foundingSupportHeader">
+      <div><div class="foundingSupportEyebrow">Founding HUMAN</div><h2 id="foundingSupportTitle">Limited Founding Support</h2></div>
+      <button type="button" onclick="closeFoundingSupport()" aria-label="Close Limited Founding Support">×</button>
+    </div>
+    <p class="foundingSupportIntro">Become one of the first Founding HUMANS helping build the future of ASK.CAMERA. All support levels are one-time. Creating and using HUMAN remains free.</p>
+    <div class="foundingSupportLevels" role="list" aria-label="One-time support levels">
+      <button type="button" class="foundingSupportLevel" data-name="Support HUMAN" data-amount="US$19.99" onclick="selectFoundingSupport(this)"><span class="foundingSupportLevelName">Support HUMAN</span><span class="foundingSupportLevelAmount">US$19.99 one time</span></button>
+      <button type="button" class="foundingSupportLevel" data-name="Early HUMAN" data-amount="US$49.99" onclick="selectFoundingSupport(this)"><span class="foundingSupportLevelName">Early HUMAN</span><span class="foundingSupportLevelAmount">US$49.99 one time</span></button>
+      <button type="button" class="foundingSupportLevel" data-name="Founding HUMAN" data-amount="US$99.99" onclick="selectFoundingSupport(this)"><span class="foundingSupportLevelName">Founding HUMAN</span><span class="foundingSupportLevelAmount">US$99.99 one time</span></button>
+      <button type="button" class="foundingSupportLevel" data-name="Visionary HUMAN" data-amount="US$199.99" onclick="selectFoundingSupport(this)"><span class="foundingSupportLevelName">Visionary HUMAN</span><span class="foundingSupportLevelAmount">US$199.99 one time</span></button>
+    </div>
+    <section class="foundingSupportBenefits"><h3>Every Founding HUMAN Receives</h3><ul><li>Founding HUMAN recognition</li><li>Exclusive supporter badge based on support level</li><li>Lifetime Founding HUMAN status</li><li>Early access to future Founding HUMAN benefits</li><li>Recognition as a supporter of ASK.CAMERA</li></ul></section>
+    <p class="foundingSupportPurpose">Your support helps grow ASK.CAMERA, expand future foundation tools, and continue developing Connection Intelligence.</p>
+    <div id="foundingSupportSelection" class="foundingSupportSelection" aria-live="polite">Choose a one-time support level.</div>
+    <button id="foundingSupportContinue" type="button" disabled>STRIPE CHECKOUT COMING SOON</button>
+  </div>
+</div>
+
+<script>
+let selectedFoundingSupport = null;
+let foundingSupportHumanId = "";
+function openFoundingSupport(humanId = "",humanName = ""){
+  foundingSupportHumanId = String(humanId || "");
+  if(!humanName && foundingSupportHumanId){
+    humanName = loadedHumanCards.find(human => String(human.id) === foundingSupportHumanId)?.name || "";
+  }
+  const intro = document.querySelector(".foundingSupportIntro");
+  if(intro) intro.textContent = `${humanName ? `Support ${humanName} as a Founding HUMAN. ` : "Become one of the first Founding HUMANS helping build the future of ASK.CAMERA. "}All support levels are one-time. Creating and using HUMAN remains free.`;
+  document.querySelectorAll(".foundingSupportLevel").forEach(button => {
+    button.classList.remove("isSelected");
+    button.setAttribute("aria-pressed","false");
+    button.style.setProperty("background","#f6f8fa","important");
+    button.style.setProperty("color","#24292f","important");
+  });
+  selectedFoundingSupport = null;
+  document.getElementById("foundingSupportSelection").textContent = "Choose a one-time support level.";
+  document.getElementById("foundingSupportContinue").textContent = "STRIPE CHECKOUT COMING SOON";
+  document.getElementById("foundingSupportOverlay").style.display = "flex";
+}
+function closeFoundingSupport(event){
+  if(event && event.target !== event.currentTarget) return;
+  document.getElementById("foundingSupportOverlay").style.display = "none";
+}
+function selectFoundingSupport(button){
+  document.querySelectorAll(".foundingSupportLevel").forEach(level => {
+    level.classList.remove("isSelected");
+    level.setAttribute("aria-pressed","false");
+    level.style.setProperty("background","#f6f8fa","important");
+    level.style.setProperty("color","#24292f","important");
+  });
+  button.classList.add("isSelected");
+  button.setAttribute("aria-pressed","true");
+  button.style.setProperty("background","#f3e8ff","important");
+  button.style.setProperty("color","#24292f","important");
+  selectedFoundingSupport = {name:button.dataset.name,amount:button.dataset.amount,humanId:foundingSupportHumanId};
+  document.getElementById("foundingSupportSelection").textContent = `${selectedFoundingSupport.name} · ${selectedFoundingSupport.amount} one-time support selected.`;
+  document.getElementById("foundingSupportContinue").textContent = `STRIPE CHECKOUT COMING SOON · ${selectedFoundingSupport.amount}`;
+}
+document.addEventListener("keydown",event => {if(event.key === "Escape" && document.getElementById("foundingSupportOverlay")?.style.display === "flex") closeFoundingSupport();});
+</script>
 </body>
 </html>
