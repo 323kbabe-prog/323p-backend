@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.2 (2026-07-22)
+  - Adds Religion & Spirituality to Create HUMAN
+  - Adds the approved faith-oriented subcategories and personality suggestions
+  - Keeps the category compatible with automatic HUMAN bio generation
+
   v10.3.1 (2026-07-22)
   - Removes the Founding Support checkbox from Create HUMAN
   - Keeps one compact free-and-optional support note in the form
@@ -2612,6 +2617,7 @@ ASK.CAMERA — The AI That Connects Humans
       <option>Travel &amp; Tourism</option>
       <option>Sustainability</option>
       <option>Community &amp; Social Impact</option>
+      <option>Religion &amp; Spirituality</option>
       <option>Other</option>
     </select>
     <div id="beingKeywordSuggestions" style="display:none;margin:-2px 0 12px;">
@@ -2622,7 +2628,7 @@ ASK.CAMERA — The AI That Connects Humans
     <select id="beingCreatorType" class="beingInput" style="display:none;" onchange="handleBeingRoleChange()">
       <option value="">Choose a subcategory</option>
     </select>
-    <input id="beingCustomRole" placeholder="Write your role" class="beingInput" style="display:none;" oninput="handleBeingProfileInput()">
+    <input id="beingCustomRole" placeholder="Write your subcategory" class="beingInput" style="display:none;" oninput="handleBeingProfileInput()">
     <div class="beingFormSectionTitle">Personality</div>
     <div style="font-size:12px;line-height:1.4;color:#666;margin:0 2px 8px;">Add three descriptive words only. No sentences.</div>
     <input id="beingWord1" placeholder="Personality 1 — e.g. strategic" class="beingInput" oninput="handleBeingProfileInput()">
@@ -13169,6 +13175,7 @@ const BEING_KEYWORD_SUGGESTIONS = {
   "Travel & Tourism":["global","adventurous","local","welcoming","cultural","experience-led"],
   "Sustainability":["responsible","innovative","long-term","community-led","practical","impact-driven"],
   "Community & Social Impact":["inclusive","empathetic","purpose-driven","collaborative","local","impact-focused"],
+  "Religion & Spirituality":["faithful","compassionate","thoughtful","welcoming","service-minded","community-focused"],
   "Other":["strategic","creative","trusted","collaborative","ambitious","community-minded"]
 };
 
@@ -13189,6 +13196,7 @@ const BEING_ROLE_OPTIONS = {
   "Travel & Tourism":["Travel Agent","Tour Guide","Hotelier","Airline Professional","Travel Creator","Tourism Consultant","Destination Manager","Travel Founder"],
   "Sustainability":["Climate Founder","Environmentalist","Green Designer","ESG Consultant","Sustainability Manager","Conservation Professional","Clean Energy Professional","Circular Economy Founder"],
   "Community & Social Impact":["Nonprofit Founder","Community Organizer","Social Worker","Advocate","Philanthropy Professional","Public Service Leader","Social Entrepreneur","Volunteer Leader"],
+  "Religion & Spirituality":["Pastor","Priest","Minister","Missionary","Theologian","Bible Teacher","Christian Leader","Church Staff","Worship Leader","Chaplain","Faith-Based Counselor","Religious Scholar","Spiritual Guide","Community Faith Leader","Other Faith Professional"],
   "Other":["Independent Professional","Multidisciplinary Professional","Student","Retired Professional"]
 };
 
@@ -13220,7 +13228,7 @@ function renderBeingRoleOptions(selectedRole = ""){
   const roleSelect = document.getElementById("beingCreatorType");
   const customRole = document.getElementById("beingCustomRole");
   const roles = BEING_ROLE_OPTIONS[category] || [];
-  roleSelect.innerHTML = `<option value="">Choose your role</option>${roles.map(role => `<option>${role}</option>`).join("")}<option>${CUSTOM_BEING_ROLE}</option>`;
+  roleSelect.innerHTML = `<option value="">Choose a subcategory</option>${roles.map(role => `<option>${role}</option>`).join("")}<option>${CUSTOM_BEING_ROLE}</option>`;
   roleSelect.style.display = category ? "block" : "none";
   if(selectedRole){
     if(roles.includes(selectedRole)){
