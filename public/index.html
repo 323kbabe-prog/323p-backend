@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.21 (2026-07-22)
+  - Adds opt-in browser voice for HUMAN live-camera observations and opinions
+  - Shows an immediate live-analysis status instead of an empty camera screen
+  - Surfaces analysis timeouts and connection errors inside the insight frame
+
   v10.3.20 (2026-07-22)
   - Adds continuous temporary analysis to the shared floating live camera
   - Shows a HUMAN observation with one rotating News, Jobs, Shopping, YouTube, or Music result below it
@@ -1771,6 +1776,8 @@ body.systemBlockingState #helper{
 #roomFloatingLiveRestore{position:absolute!important;z-index:4!important;left:10px!important;top:10px!important;display:flex!important;gap:6px!important;}
 #roomFloatingLiveRestore[hidden]{display:none!important;}
 #roomFloatingLiveRestore button,#roomFloatingLiveContinue{min-height:32px!important;padding:6px 9px!important;border:0!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
+#roomFloatingVoiceToggle{position:absolute!important;z-index:5!important;left:12px!important;bottom:18px!important;min-height:34px!important;padding:7px 10px!important;border:0!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
+#roomFloatingVoiceToggle[aria-pressed="true"]{background:#0969da!important;color:#fff!important;}
 #roomFloatingLiveContinue{position:absolute!important;z-index:5!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;min-width:190px!important;}
 #roomFloatingLiveContinue[hidden]{display:none!important;}
 @media(max-width:520px){.roomFloatingLiveBox{padding:10px 38px 10px 10px!important;}#roomFloatingInsightText{font-size:14px!important;}#roomFloatingInsightOpinion{font-size:12px!important;}#roomFloatingResultBody{grid-template-columns:48px minmax(0,1fr)!important;}#roomFloatingResultImage{width:48px!important;height:48px!important;}}
@@ -14386,6 +14393,7 @@ function ensureRoomFloatingCamera(){
         </div>
         <div id="roomFloatingLiveRestore" hidden><button type="button" onclick="restoreRoomFloatingLiveBox('insight')">INSIGHT</button><button type="button" onclick="restoreRoomFloatingLiveBox('result')">RESULT</button></div>
         <button id="roomFloatingLiveContinue" type="button" hidden onclick="continueRoomFloatingLiveAnalysis()">CONTINUE LIVE ANALYSIS</button>
+        <button id="roomFloatingVoiceToggle" type="button" aria-pressed="false" onclick="toggleRoomFloatingLiveVoice()">VOICE OFF</button>
         <button id="roomFloatingCameraClose" type="button" aria-label="Close camera" onclick="closeRoomFloatingCamera(event)">×</button>
         <button id="roomFloatingCameraShutter" type="button" aria-label="Take picture" onclick="takeRoomFloatingPicture(event)">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke-width="1.8"/></svg>
@@ -14416,6 +14424,7 @@ let roomFloatingLiveCategoryIndex = 0;
 let roomFloatingInsightDismissed = false;
 let roomFloatingResultDismissed = false;
 let roomFloatingLiveGeneration = 0;
+let roomFloatingLiveVoiceEnabled = false;
 
 function captureTemporaryLiveCameraFrame(){
   const source = document.getElementById("roomFloatingCameraVideo");
@@ -14463,6 +14472,7 @@ function startRoomFloatingLiveAnalysis(){
   const continueButton = document.getElementById("roomFloatingLiveContinue");
   if(continueButton) continueButton.hidden = true;
   document.getElementById("roomFloatingLiveRestore")?.setAttribute("hidden","");
+  showRoomFloatingLiveStatus("Initializing Image Connect...","Keep the camera steady while the first temporary frame is analyzed.");
   scheduleRoomFloatingLiveAnalysis(2000);
 }
 
@@ -14472,6 +14482,7 @@ function stopRoomFloatingLiveAnalysis(clearFrames = true){
   roomFloatingLiveTimer = null;
   roomFloatingLiveInFlight = false;
   roomFloatingLiveSignature = null;
+  window.speechSynthesis?.cancel();
   if(clearFrames){
     const insight = document.getElementById("roomFloatingInsight");
     const result = document.getElementById("roomFloatingResult");
@@ -14493,8 +14504,59 @@ function hideRoomFloatingLiveBox(kind){
   if(kind === "result") roomFloatingResultDismissed = true;
   const box = document.getElementById(kind === "insight" ? "roomFloatingInsight" : "roomFloatingResult");
   if(box) box.hidden = true;
+  if(kind === "insight") window.speechSynthesis?.cancel();
   const restore = document.getElementById("roomFloatingLiveRestore");
   if(restore) restore.hidden = false;
+}
+
+function currentRoomFloatingHumanName(){
+  try {
+    return JSON.parse(localStorage.getItem("selectedBeing") || "null")?.name || "Wang Vivian";
+  } catch(error) {
+    return "Wang Vivian";
+  }
+}
+
+function showRoomFloatingLiveStatus(message,detail = ""){
+  const insight = document.getElementById("roomFloatingInsight");
+  if(!insight) return;
+  document.getElementById("roomFloatingInsightName").textContent = `${currentRoomFloatingHumanName()}:`;
+  document.getElementById("roomFloatingInsightText").textContent = message;
+  document.getElementById("roomFloatingInsightOpinion").textContent = detail;
+  insight.dataset.ready = "true";
+  insight.hidden = roomFloatingInsightDismissed;
+}
+
+function speakRoomFloatingLiveAnalysis(name,notice,opinion){
+  if(!roomFloatingLiveVoiceEnabled || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(`${name}. ${notice} ${opinion}`.trim());
+  const voices = window.speechSynthesis.getVoices();
+  utterance.voice = voices.find(voice => /^en/i.test(voice.lang) && /natural|google|samantha|daniel/i.test(voice.name)) || voices.find(voice => /^en/i.test(voice.lang)) || null;
+  utterance.rate = 0.96;
+  utterance.pitch = 1;
+  window.speechSynthesis.speak(utterance);
+}
+
+function toggleRoomFloatingLiveVoice(){
+  const button = document.getElementById("roomFloatingVoiceToggle");
+  if(!button) return;
+  if(!("speechSynthesis" in window)){
+    button.textContent = "VOICE UNAVAILABLE";
+    button.disabled = true;
+    return;
+  }
+  roomFloatingLiveVoiceEnabled = !roomFloatingLiveVoiceEnabled;
+  button.setAttribute("aria-pressed",String(roomFloatingLiveVoiceEnabled));
+  button.textContent = roomFloatingLiveVoiceEnabled ? "VOICE ON" : "VOICE OFF";
+  window.speechSynthesis.cancel();
+  if(roomFloatingLiveVoiceEnabled && document.getElementById("roomFloatingInsight")?.dataset.ready === "true"){
+    speakRoomFloatingLiveAnalysis(
+      document.getElementById("roomFloatingInsightName")?.textContent || currentRoomFloatingHumanName(),
+      document.getElementById("roomFloatingInsightText")?.textContent || "",
+      document.getElementById("roomFloatingInsightOpinion")?.textContent || ""
+    );
+  }
 }
 
 function restoreRoomFloatingLiveBox(kind){
@@ -14514,6 +14576,7 @@ function renderRoomFloatingLiveAnalysis(response){
     document.getElementById("roomFloatingInsightOpinion").textContent = response.opinion || "";
     insight.dataset.ready = "true";
     insight.hidden = roomFloatingInsightDismissed;
+    if(!roomFloatingInsightDismissed) speakRoomFloatingLiveAnalysis(response.human?.name || "Wang Vivian",response.notice || "",response.opinion || "");
   }
   const result = document.getElementById("roomFloatingResult");
   if(result && response.result){
@@ -14537,6 +14600,10 @@ function runRoomFloatingLiveAnalysis(){
     const button = document.getElementById("roomFloatingLiveContinue");
     if(button) button.hidden = false;
     return;
+  }
+  if(!socket.connected){
+    showRoomFloatingLiveStatus("Live analysis is reconnecting.","The camera remains open and will retry automatically.");
+    return scheduleRoomFloatingLiveAnalysis();
   }
   if(roomFloatingLiveInFlight) return scheduleRoomFloatingLiveAnalysis();
   const frame = captureTemporaryLiveCameraFrame();
@@ -14565,6 +14632,7 @@ function runRoomFloatingLiveAnalysis(){
     frame.imageDataUrl = "";
     if(requestGeneration !== roomFloatingLiveGeneration) return;
     roomFloatingLiveInFlight = false;
+    showRoomFloatingLiveStatus("Live analysis is taking longer than expected.","The next temporary frame will try again automatically.");
     scheduleRoomFloatingLiveAnalysis();
   },30000);
   socket.emit("liveCameraAnalyze",payload,response => {
@@ -14578,6 +14646,8 @@ function runRoomFloatingLiveAnalysis(){
     if(response?.ok){
       renderRoomFloatingLiveAnalysis(response);
       roomFloatingLiveCategoryIndex = (roomFloatingLiveCategoryIndex + 1) % LIVE_CAMERA_CATEGORIES.length;
+    }else if(!response?.retry){
+      showRoomFloatingLiveStatus("Live analysis is reconnecting.",response?.error || "The next temporary frame will try again automatically.");
     }
     scheduleRoomFloatingLiveAnalysis();
   });
