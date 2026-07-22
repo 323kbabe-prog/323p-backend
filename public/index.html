@@ -4,6 +4,10 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.20 (2026-07-22)
+  - Places the opening-camera Refresh control directly beside the Close control
+  - Removes the excess Home spacing below the copyright footer
+
   v10.2.19 (2026-07-22)
   - Replaces the fourth HUMAN journey photo with a group using phones together
 
@@ -1305,9 +1309,9 @@ body.appBackdropActive #capturePreview{display:none!important;}
 .homeStartupRail,#homeCaptureStage{width:min(88vw,480px)!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important;}
 .homeStartupRail{text-align:left!important;}
 #homeStartupTop{align-self:start!important;}
-#homeStartupProductRow{display:grid!important;grid-template-columns:minmax(0,1fr) 40px!important;align-items:start!important;gap:16px!important;}
+#homeStartupProductRow{display:block!important;}
 #homeStartupTextFrame{min-width:0!important;max-width:100%!important;}
-#homeStartupRefresh{flex:0 0 40px!important;width:40px!important;height:40px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid #f6f8fa!important;border-radius:0!important;background:#f6f8fa!important;color:#1f2328!important;box-shadow:none!important;}
+#homeStartupRefresh{position:absolute!important;z-index:3!important;top:10px!important;right:56px!important;width:36px!important;height:36px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid #f6f8fa!important;border-radius:0!important;background:#f6f8fa!important;color:#1f2328!important;box-shadow:none!important;}
 #homeStartupRefresh svg{width:19px!important;height:19px!important;fill:currentColor!important;}
 #homeStartupTitle{max-width:100%!important;margin-top:0!important;font-size:clamp(22px,5.3vw,25px)!important;line-height:1.18!important;font-weight:600!important;letter-spacing:-.02em!important;color:#1f2328!important;overflow-wrap:anywhere!important;}
 #homeCaptureStage{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:hidden!important;}
@@ -1390,12 +1394,13 @@ body.appBackdropActive #capturePreview{display:none!important;}
   #homeTakePicture{width:62px!important;height:62px!important;}
   #homeTakePicture svg{width:33px!important;height:33px!important;}
   #homeCaptureClose{top:8px!important;right:8px!important;width:32px!important;height:32px!important;font-size:20px!important;}
+  #homeStartupRefresh{top:8px!important;right:48px!important;width:32px!important;height:32px!important;}
 }
 @media(max-height:650px){
   #homeStartupLayer{gap:9px!important;padding-top:max(10px,env(safe-area-inset-top))!important;padding-bottom:max(10px,env(safe-area-inset-bottom))!important;}
   #homeStartupBrand{padding-right:56px!important;}
   #homeStartupTitle{margin-top:0!important;font-size:18px!important;}
-  #homeStartupRefresh{flex-basis:40px!important;width:40px!important;height:40px!important;}
+  #homeStartupRefresh{width:32px!important;height:32px!important;}
   #homeCapturePrompt{bottom:8px!important;}
   #homeTakePicture{width:54px!important;height:54px!important;}
   #homeTakePicture svg{width:29px!important;height:29px!important;}
@@ -13975,9 +13980,6 @@ function ensureCanonicalHomeExperience(){
           <div id="homeStartupTextFrame">
             <div id="homeStartupTitle">See where this image connects you.</div>
           </div>
-          <button id="homeStartupRefresh" type="button" aria-label="Refresh camera" onclick="window.location.reload()">
-            <svg aria-hidden="true" viewBox="0 -960 960 960"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/></svg>
-          </button>
         </div>
       </header>
       <div id="homeCaptureStage">
@@ -13991,6 +13993,9 @@ function ensureCanonicalHomeExperience(){
             <div id="homeCaptureTrial">FREE TRIAL</div>
             <div id="homeCaptureInstruction">Take a picture to discover today’s context and perspectives.</div>
           </div>
+          <button id="homeStartupRefresh" type="button" aria-label="Refresh camera" onclick="window.location.reload()">
+            <svg aria-hidden="true" viewBox="0 -960 960 960"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 130.5 27.5T720-696v-104h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 137-42t87-110h84q-28 106-114 169t-194 63Z"/></svg>
+          </button>
           <button id="homeCaptureClose" type="button" aria-label="Close camera and show home screen" onclick="closeHomeCaptureCard(event)">×</button>
         </div>
       </div>
@@ -16540,7 +16545,7 @@ html body #helper{
   overflow-x:hidden!important;
   overflow-y:auto!important;
   padding-top:clamp(128px,18vh,190px)!important;
-  padding-bottom:56px!important;
+  padding-bottom:max(8px,env(safe-area-inset-bottom,0px))!important;
   box-sizing:border-box!important;
 }
 html body #homeMainContent{
@@ -16667,8 +16672,8 @@ html body .homeHumanIntroActions button:first-child{
 .homeHumanFundingNote strong{color:#24292f;font-weight:600;}
 #homeAppFooter{
   width:100%;
-  margin:0 0 20px;
-  padding:28px 18px;
+  margin:0;
+  padding:20px 18px 6px;
   box-sizing:border-box;
   background:transparent;
   color:#fff;
@@ -16728,7 +16733,7 @@ html body #homeInstruction .homeHeroDetail{
 @media(max-width:620px){
   html body #helper{
     padding-top:112px!important;
-    padding-bottom:36px!important;
+    padding-bottom:max(8px,env(safe-area-inset-bottom,0px))!important;
   }
   #homeHumanIntro{margin-top:26px;padding:16px;}
   .homeHumanSteps{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
