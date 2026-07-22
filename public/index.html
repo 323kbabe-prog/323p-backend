@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.2.22 (2026-07-22)
+  - Fills the complete HUMAN-room Camera control with the primary blue
+  - Restores the visible Open Test HUMAN label beneath the demo QR
+  - Removes the legacy absolute Home branding that overlapped the HUMAN introduction
+
   v10.2.21 (2026-07-22)
   - Adds a real scannable Wang Vivian demo QR to the Home HUMAN introduction
   - Adds an Open Test HUMAN link for people viewing the QR on the same phone
@@ -13986,6 +13991,14 @@ function ensureCanonicalHomeExperience(){
     return;
   }
 
+  Array.from(helper.children).forEach(element => {
+    const style = element.getAttribute("style") || "";
+    const text = element.textContent || "";
+    if(style.includes("position:absolute") && style.includes("bottom:34px") && text.includes("THE SEARCH IDEA GOOGLE SHOULD BUY TODAY.")){
+      element.remove();
+    }
+  });
+
   // One source of truth prevents camera, reconnect, and no-room states from
   // replacing the approved two-level hero with the legacy uppercase sentence.
   if(!instruction.querySelector(".homeHeroTitle")){
@@ -16391,7 +16404,7 @@ html body #dailyNullsCards .dailySwipeCue{
   const humanGradient = 'linear-gradient(135deg,#0969da 0%,#8250df 50%,#2da44e 100%)';
   const selectors = {
     human:'#aiBeingsBtn,#shareRoomBtn,#openCreateBeingBtn',
-    primary:'#takeCameraViewBtn,#createBeingSubmit,#addPublicImageBtn,#publishContinueButton,.beingOpenButton,#continueToBeing,.systemPerspectivePrimary,.systemStateButtonPrimary',
+    primary:'#takeCameraViewBtn,#createBeingSubmit,#addPublicImageBtn,#publishContinueButton,.beingOpenButton,#continueToBeing,.systemPerspectivePrimary,.systemStateButtonPrimary,#roomImageActions button:first-child',
     dark:'#createNullBtn,#dailyNullsBtn,#uploadBtn,#publicNullsBtn,#beingQrBtn,#dailyBackBtn,#publicBackBtn,#aiBeingsBackBtn,.chatOpenAction,.chatShareAction,.beingShareButton,.beingQrShareButton,.dailyCardShare',
     field:'input,textarea,select,[contenteditable="true"]',
     upload:'label[for="beingPhoto"]'
@@ -16728,11 +16741,15 @@ html body .homeHumanDemoOpen{
   padding:0 14px;
   box-sizing:border-box;
   background:#0969da;
-  color:#fff;
-  font-size:11px;
-  font-weight:600;
+  color:#fff!important;
+  font-size:11px!important;
+  font-weight:600!important;
   line-height:1.2;
   text-decoration:none;
+}
+html body #roomImageActions button:first-child .roomActionIcon{
+  background:transparent!important;
+  color:inherit!important;
 }
 .homeHumanIntroActions{
   display:grid;
