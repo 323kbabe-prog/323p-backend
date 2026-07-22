@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.5 (2026-07-22)
+  - Automatically advances the four startup story scenes while keeping manual navigation
+  - Keeps the startup navigation bar visible within every desktop and mobile viewport
+  - Shows complete uncropped stock images in the startup story and Home HUMAN journey
+
   v10.3.4 (2026-07-22)
   - Adds a four-scene startup story explaining how ASK.CAMERA goes beyond image identification
   - Opens the existing floating live camera after the introduction
@@ -1457,23 +1462,27 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeStartupBackground,#homeStartupVeil,#homeStartupTop,#homeStartupBrand,#homeCaptureShade{display:none!important;}
 #homeIntroStory{
   position:relative!important;
+  display:grid!important;
+  grid-template-rows:minmax(0,1fr) auto!important;
   width:min(92vw,980px)!important;
+  height:min(76dvh,640px)!important;
   max-height:calc(100dvh - 32px)!important;
   background:#fff!important;
   color:#111!important;
   overflow:hidden!important;
 }
 #homeIntroStory[hidden],#homeCaptureStage[hidden]{display:none!important;}
-#homeIntroViewport{width:100%!important;overflow:hidden!important;}
-#homeIntroTrack{display:flex!important;width:100%!important;transition:transform .42s ease!important;}
+#homeIntroViewport{width:100%!important;height:100%!important;min-height:0!important;overflow:hidden!important;}
+#homeIntroTrack{display:flex!important;width:100%!important;height:100%!important;transition:transform .42s ease!important;}
 .homeIntroScene{
   flex:0 0 100%!important;
   display:grid!important;
   grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr)!important;
-  min-height:min(560px,72dvh)!important;
+  height:100%!important;
+  min-height:0!important;
 }
-.homeIntroSceneImage{width:100%!important;height:100%!important;min-height:430px!important;object-fit:cover!important;display:block!important;}
-.homeIntroSceneCopy{display:flex!important;flex-direction:column!important;justify-content:center!important;padding:clamp(28px,4vw,54px)!important;box-sizing:border-box!important;text-align:left!important;}
+.homeIntroSceneImage{width:100%!important;height:100%!important;min-height:0!important;object-fit:contain!important;object-position:center!important;display:block!important;background:#eaeef2!important;}
+.homeIntroSceneCopy{display:flex!important;flex-direction:column!important;justify-content:center!important;padding:clamp(28px,4vw,54px)!important;box-sizing:border-box!important;text-align:left!important;overflow-y:auto!important;}
 .homeIntroEyebrow{margin-bottom:12px!important;color:#0969da!important;font-size:12px!important;font-weight:800!important;line-height:1.2!important;letter-spacing:.08em!important;text-transform:uppercase!important;}
 .homeIntroScene h2{margin:0!important;font-size:clamp(30px,4vw,54px)!important;font-weight:700!important;line-height:1.04!important;letter-spacing:-.035em!important;}
 .homeIntroScene p{margin:18px 0 0!important;color:#57606a!important;font-size:clamp(16px,1.6vw,21px)!important;font-weight:400!important;line-height:1.45!important;}
@@ -1492,8 +1501,8 @@ body.appBackdropActive #capturePreview{display:none!important;}
 #homeCapturePrompt{left:0!important;right:0!important;bottom:26px!important;}
 #homeTakePicture{margin:0 auto!important;}
 @media(max-width:720px){
-  #homeIntroStory{width:100%!important;}
-  .homeIntroScene{grid-template-columns:1fr!important;grid-template-rows:minmax(190px,38dvh) auto!important;min-height:0!important;}
+  #homeIntroStory{width:100%!important;height:calc(100dvh - 32px)!important;}
+  .homeIntroScene{grid-template-columns:1fr!important;grid-template-rows:minmax(180px,42%) minmax(0,1fr)!important;min-height:0!important;}
   .homeIntroSceneImage{min-height:0!important;height:100%!important;}
   .homeIntroSceneCopy{justify-content:flex-start!important;padding:22px 20px 24px!important;}
   .homeIntroScene h2{font-size:clamp(28px,9vw,42px)!important;}
@@ -13897,6 +13906,16 @@ function openHomeHumanFinder(){
 let homeCaptureCardDismissed = false;
 let homeIntroStoryDismissed = false;
 let homeIntroSceneIndex = 0;
+let homeIntroAutoTimer = null;
+
+function scheduleHomeIntroAdvance(){
+  clearTimeout(homeIntroAutoTimer);
+  if(homeIntroStoryDismissed) return;
+  homeIntroAutoTimer = setTimeout(() => {
+    if(homeIntroStoryDismissed || document.getElementById("homeIntroStory")?.hidden) return;
+    moveHomeIntroScene(1);
+  },5500);
+}
 
 function updateHomeIntroStory(){
   const story = document.getElementById("homeIntroStory");
@@ -13915,6 +13934,7 @@ function updateHomeIntroStory(){
     back.tabIndex = homeIntroSceneIndex === 0 ? -1 : 0;
   }
   if(next) next.textContent = homeIntroSceneIndex === 3 ? "START IMAGE CONNECT" : "NEXT";
+  scheduleHomeIntroAdvance();
 }
 
 function moveHomeIntroScene(direction){
@@ -13929,6 +13949,7 @@ function moveHomeIntroScene(direction){
 
 async function startHomeIntroCamera(){
   homeIntroStoryDismissed = true;
+  clearTimeout(homeIntroAutoTimer);
   const story = document.getElementById("homeIntroStory");
   const stage = document.getElementById("homeCaptureStage");
   if(story) story.hidden = true;
@@ -13946,6 +13967,7 @@ async function openHomeFloatingCamera(event){
 function closeHomeCaptureCard(event){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   homeCaptureCardDismissed = true;
+  clearTimeout(homeIntroAutoTimer);
   const layer = document.getElementById("homeStartupLayer");
   if(layer) layer.hidden = true;
 }
@@ -16811,13 +16833,15 @@ html body #homeMainContent{
   display:block;
   width:100%;
   height:150px;
-  object-fit:cover;
+  object-fit:contain;
+  object-position:center;
+  background:#eaeef2;
   filter:none;
   border:0!important;
   border-radius:0!important;
 }
 .homeHumanStep:first-child img{
-  object-position:center bottom;
+  object-position:center;
 }
 .homeHumanStepNumber{
   margin:12px 12px 0;
