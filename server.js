@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.4 (2026-07-23)
+// - Persists HUMAN Love and Skeleton reactions through the existing site event network
+// - Returns reaction totals with every HUMAN without limiting the HUMAN directory
+// - Supports the frontend's three featured HUMAN thumbnails
+
 // v10.2.3 (2026-07-22)
 // - Returns one cautious, evidence-grounded HUMAN guidance sentence instead of narrating visible content
 // - Keeps live guidance useful without inferring identities, intentions, safety, value, or hidden facts
@@ -7696,6 +7701,83 @@ app.get("/daily-nulls", (req,res) => {
 const AI_BEING_PUBLIC_COLUMNS =
   "id,photo,name,best_current_choice,category,word1,word2,word3,connection1,connection2,connection3,phone,created_by,created_at,followers,public";
 
+const HUMAN_REACTION_EVENTS = {
+  love:"human_love",
+  skeleton:"human_skeleton"
+};
+
+function humanReactionId(value) {
+  return String(value || "").trim();
+}
+
+async function loadHumanReactionCounts() {
+  const counts = Object.create(null);
+  const pageSize = 1000;
+  for(let offset = 0; ; offset += pageSize){
+    const { data, error } = await supabase
+      .from("site_events")
+      .select("event_name,metadata")
+      .in("event_name",Object.values(HUMAN_REACTION_EVENTS))
+      .order("created_at",{ ascending:false })
+      .range(offset,offset + pageSize - 1);
+
+    if(error){
+      console.log("HUMAN REACTION LOAD ERROR:",error.message);
+      return counts;
+    }
+
+    for(const event of data || []){
+      const id = humanReactionId(event?.metadata?.human_id);
+      if(!id) continue;
+      if(!counts[id]) counts[id] = { love:0, skeleton:0 };
+      if(event.event_name === HUMAN_REACTION_EVENTS.love) counts[id].love += 1;
+      if(event.event_name === HUMAN_REACTION_EVENTS.skeleton) counts[id].skeleton += 1;
+    }
+    if((data || []).length < pageSize) break;
+  }
+  return counts;
+}
+
+async function countHumanReaction(id,type) {
+  const eventName = HUMAN_REACTION_EVENTS[type];
+  if(!eventName) return 0;
+  const { count, error } = await supabase
+    .from("site_events")
+    .select("id",{ count:"exact", head:true })
+    .eq("event_name",eventName)
+    .contains("metadata",{ human_id:humanReactionId(id) });
+  if(error){
+    console.log("HUMAN REACTION COUNT ERROR:",error.message);
+    return 0;
+  }
+  return count || 0;
+}
+
+async function saveHumanReaction(id,type,deviceId) {
+  const humanId = humanReactionId(id);
+  const eventName = HUMAN_REACTION_EVENTS[type];
+  if(!humanId || !eventName) return { error:"Invalid HUMAN reaction." };
+
+  const { data:being, error:beingError } = await supabase
+    .from("ai_beings")
+    .select("id")
+    .eq("id",humanId)
+    .eq("public",true)
+    .single();
+  if(beingError || !being) return { error:"HUMAN not found.", status:404 };
+
+  const { error } = await supabase
+    .from("site_events")
+    .insert({
+      device_id:String(deviceId || "anonymous").slice(0,180),
+      event_name:eventName,
+      metadata:{ human_id:humanId }
+    });
+  if(error) return { error:error.message, status:500 };
+
+  return { count:await countHumanReaction(humanId,type) };
+}
+
 function hashBeingCredential(value) {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(String(value), salt, 64).toString("hex");
@@ -7796,7 +7878,25 @@ app.get("/ai-beings", async (req, res) => {
     .order("created_at", { ascending: false });
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
+
+  const reactionCounts = await loadHumanReactionCounts();
+  res.json((data || []).map(being => ({
+    ...being,
+    love:reactionCounts[String(being.id)]?.love || 0,
+    skeleton:reactionCounts[String(being.id)]?.skeleton || 0
+  })));
+});
+
+app.post("/ai-beings/:id/love", async (req,res) => {
+  const result = await saveHumanReaction(req.params.id,"love",req.body?.deviceId);
+  if(result.error) return res.status(result.status || 500).json({ error:result.error });
+  res.json({ success:true, love:result.count });
+});
+
+app.post("/ai-beings/:id/skeleton", async (req,res) => {
+  const result = await saveHumanReaction(req.params.id,"skeleton",req.body?.deviceId);
+  if(result.error) return res.status(result.status || 500).json({ error:result.error });
+  res.json({ success:true, skeleton:result.count });
 });
 
 app.get("/ai-beings/:id", async (req, res) => {
