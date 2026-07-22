@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.15 (2026-07-22)
+  - Adds an explicit Bio label to the single HUMAN opening card
+  - Disables room-container scrolling while the compact opening card is visible
+  - Keeps the opening state to one system-style card only
+
   v10.3.14 (2026-07-22)
   - Replaces the HUMAN swipe sequence with one compact opening card
   - Keeps the HUMAN introduction, next step, and three image actions together
@@ -6943,7 +6948,12 @@ html body #roomMessages .openingSequenceDot{
   html body #publicNullsBtn > span{font-size:14px!important;}
 }
 
-/* v10.3.14 — one compact HUMAN opening card. */
+/* v10.3.15 — one compact, non-scrolling HUMAN opening card. */
+html body #roomMessages.humanOpeningActive{
+  overflow-x:hidden!important;
+  overflow-y:hidden!important;
+  overscroll-behavior:none!important;
+}
 html body #roomMessages .humanOpeningState{
   width:min(100%,680px);
   height:min(520px,calc(100dvh - 226px));
@@ -7009,6 +7019,18 @@ html body #roomMessages .humanOpeningBio{
   -webkit-box-orient:vertical;
   -webkit-line-clamp:3;
 }
+html body #roomMessages .humanOpeningBioLabel{
+  margin-top:12px;
+  color:#57606a;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.03em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+html body #roomMessages .humanOpeningBioLabel + .humanOpeningBio{
+  margin-top:5px;
+}
 html body #roomMessages .humanOpeningCard h3{
   margin:18px 0 0;
   padding-top:16px;
@@ -7048,9 +7070,13 @@ html body #roomMessages .humanOpeningAction:first-child{
 }
 @media(max-width:520px){
   html body #roomMessages .humanOpeningState{height:calc(100dvh - 224px);min-height:350px;margin-top:6px!important;padding:0 8px;}
-  html body #roomMessages .humanOpeningCard{padding:12px 14px;}
+  html body #roomMessages .humanOpeningCard{padding:10px 14px;}
+  html body #roomMessages .humanOpeningPhoto{width:64px;height:64px;flex-basis:64px;}
   html body #roomMessages .humanOpeningName{font-size:24px;}
-  html body #roomMessages .humanOpeningCard h3{font-size:21px;}
+  html body #roomMessages .humanOpeningBio{-webkit-line-clamp:2;}
+  html body #roomMessages .humanOpeningCard h3{margin-top:12px;padding-top:12px;font-size:20px;}
+  html body #roomMessages .humanOpeningActions{gap:6px;margin-top:10px;}
+  html body #roomMessages .humanOpeningAction{min-height:44px;padding-top:8px;padding-bottom:8px;}
 }
 </style>
 
@@ -8546,6 +8572,7 @@ if (!socket.connected) {
 
 roomReady = true;
 document.getElementById("roomImageActions").style.display = "flex";
+roomMessages.classList.remove("humanOpeningActive");
 
     publishMode =
         document.querySelector(
@@ -13897,6 +13924,7 @@ async function openAIBeing(id){
   cameraWrap.style.display = "block";
   roomOverlay.style.display = "flex";
   renderBeingRoomHeader(being);
+  roomMessages.classList.remove("humanOpeningActive");
 
   if(pendingPublicNull?.image){
     await createRoomFromPublicNull(pendingPublicNull);
@@ -13909,6 +13937,7 @@ async function openAIBeing(id){
       return;
     }
     const humanBio = being.best_current_choice || being.bio || "A HUMAN Perspective ready to discover meaningful connections.";
+    roomMessages.classList.add("humanOpeningActive");
     roomMessages.innerHTML = `
       <section class="humanOpeningState" aria-label="Meet ${escapeBeingText(being.name || "this HUMAN")} and start Image Connect">
         <article class="humanOpeningCard">
@@ -13920,6 +13949,7 @@ async function openAIBeing(id){
               <div class="humanOpeningCategory">${escapeBeingText(being.category || "HUMAN")}</div>
             </div>
           </div>
+          <div class="humanOpeningBioLabel">Bio</div>
           <p class="humanOpeningBio">${escapeBeingText(humanBio)}</p>
           <h3>Choose an image to begin.</h3>
           <p class="humanOpeningInstruction">Discover connections through this HUMAN Perspective.</p>
