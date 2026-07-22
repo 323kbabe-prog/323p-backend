@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.13 (2026-07-22)
+  - Splits the HUMAN opening into three compact horizontal swipe cards
+  - Keeps every opening card within the mobile viewport without internal scrolling
+  - Removes repeated secondary copy from the HUMAN introduction
+
   v10.3.12 (2026-07-22)
   - Fully introduces the selected HUMAN before Image Connect begins
   - Replaces the empty opening state with a clear next-step layout
@@ -6933,16 +6938,44 @@ html body #roomMessages .openingSequenceDot{
   html body #publicNullsBtn > span{font-size:14px!important;}
 }
 
-/* v10.3.12 — selected HUMAN introduction and Image Connect next step. */
+/* v10.3.13 — compact swipe cards for the HUMAN opening. */
 html body #roomMessages .humanOpeningState{
   width:min(100%,680px);
-  margin:18px auto 24px!important;
-  padding:0 16px 22px;
+  margin:12px auto 18px!important;
+  padding:0 12px;
   box-sizing:border-box;
   color:#24292f;
 }
+html body #roomMessages .humanOpeningCarousel{
+  display:flex;
+  width:100%;
+  height:min(460px,calc(100dvh - 230px));
+  min-height:330px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scroll-snap-type:x mandatory;
+  scroll-behavior:smooth;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+  touch-action:pan-x;
+}
+html body #roomMessages .humanOpeningCarousel::-webkit-scrollbar{display:none;}
+html body #roomMessages .humanOpeningCard{
+  display:flex;
+  flex:0 0 100%;
+  flex-direction:column;
+  justify-content:center;
+  width:100%;
+  height:100%;
+  padding:18px;
+  overflow:hidden;
+  box-sizing:border-box;
+  scroll-snap-align:start;
+  scroll-snap-stop:always;
+  background:#fff;
+}
 html body #roomMessages .humanOpeningEyebrow{
-  margin-bottom:12px;
+  margin-bottom:10px;
   color:#0969da;
   font-size:12px;
   font-weight:800;
@@ -6955,15 +6988,15 @@ html body #roomMessages .humanOpeningIdentity{
   gap:14px;
 }
 html body #roomMessages .humanOpeningPhoto{
-  width:76px;
-  height:76px;
-  flex:0 0 76px;
+  width:72px;
+  height:72px;
+  flex:0 0 72px;
   object-fit:cover;
   border:1px solid #d8dee4;
 }
 html body #roomMessages .humanOpeningName{
   margin:0;
-  font-size:28px;
+  font-size:26px;
   font-weight:750;
   line-height:1.12;
 }
@@ -6975,28 +7008,22 @@ html body #roomMessages .humanOpeningCategory{
   line-height:1.35;
   text-transform:uppercase;
 }
-html body #roomMessages .humanOpeningPhone{
-  display:inline-block;
-  margin-top:4px;
-  color:#57606a;
-  font-size:13px;
-  line-height:1.35;
-  text-decoration:none;
-}
 html body #roomMessages .humanOpeningBio{
-  margin:16px 0 0;
+  display:-webkit-box;
+  margin:14px 0 0;
+  overflow:hidden;
   color:#57606a;
-  font-size:16px;
-  line-height:1.5;
+  font-size:15px;
+  line-height:1.45;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:4;
 }
 html body #roomMessages .humanOpeningDetails{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:12px;
-  margin-top:16px;
+  gap:10px;
 }
 html body #roomMessages .humanOpeningDetail{
-  padding:12px;
+  padding:14px;
   background:#f6f8fa;
 }
 html body #roomMessages .humanOpeningDetailLabel{
@@ -7012,35 +7039,30 @@ html body #roomMessages .humanOpeningDetailValue{
   font-weight:650;
   line-height:1.4;
 }
-html body #roomMessages .humanOpeningNext{
-  margin-top:24px;
-  padding-top:20px;
-  border-top:1px solid #d8dee4;
-}
-html body #roomMessages .humanOpeningNext h3{
-  margin:8px 0 0;
-  font-size:26px;
+html body #roomMessages .humanOpeningCard h3{
+  margin:6px 0 0;
+  font-size:24px;
   font-weight:750;
   line-height:1.18;
 }
-html body #roomMessages .humanOpeningNext p{
-  margin:10px 0 0;
+html body #roomMessages .humanOpeningInstruction{
+  margin:9px 0 0;
   color:#57606a;
-  font-size:15px;
-  line-height:1.5;
+  font-size:14px;
+  line-height:1.4;
 }
 html body #roomMessages .humanOpeningActions{
   display:grid;
-  gap:10px;
-  margin-top:18px;
+  gap:8px;
+  margin-top:14px;
 }
 html body #roomMessages .humanOpeningAction{
   display:flex;
   align-items:center;
   justify-content:center;
   width:100%;
-  min-height:54px;
-  padding:12px 16px;
+  min-height:48px;
+  padding:10px 14px;
   border:0;
   background:#f6f8fa;
   color:#24292f;
@@ -7052,18 +7074,29 @@ html body #roomMessages .humanOpeningAction:first-child{
   background:#0969da;
   color:#fff;
 }
-html body #roomMessages .humanOpeningTagline{
-  margin-top:22px;
-  color:#8c959f;
-  font-size:13px;
-  font-weight:650;
-  line-height:1.4;
+html body #roomMessages .humanOpeningDots{
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  padding:12px 0 0;
+}
+html body #roomMessages .humanOpeningDot{
+  width:7px;
+  height:7px;
+  border:0;
+  padding:0;
+  background:#d0d7de;
+  border-radius:50%!important;
+}
+html body #roomMessages .humanOpeningDot.isActive{
+  background:#0969da;
 }
 @media(max-width:520px){
-  html body #roomMessages .humanOpeningState{margin-top:16px!important;padding-left:12px;padding-right:12px;}
-  html body #roomMessages .humanOpeningName{font-size:25px;}
-  html body #roomMessages .humanOpeningDetails{grid-template-columns:1fr;gap:8px;}
-  html body #roomMessages .humanOpeningNext h3{font-size:23px;}
+  html body #roomMessages .humanOpeningState{margin-top:8px!important;padding:0 8px;}
+  html body #roomMessages .humanOpeningCarousel{height:calc(100dvh - 228px);min-height:320px;}
+  html body #roomMessages .humanOpeningCard{padding:14px;}
+  html body #roomMessages .humanOpeningName{font-size:24px;}
+  html body #roomMessages .humanOpeningCard h3{font-size:22px;}
 }
 </style>
 
@@ -13925,33 +13958,39 @@ async function openAIBeing(id){
     const connections = [being.connection1,being.connection2,being.connection3].filter(Boolean);
     const humanBio = being.best_current_choice || being.bio || "A HUMAN Perspective ready to discover meaningful connections.";
     roomMessages.innerHTML = `
-      <section class="humanOpeningState" aria-labelledby="humanOpeningTitle">
-        <div class="humanOpeningEyebrow">HUMAN Perspective</div>
-        <div class="humanOpeningIdentity">
-          ${being.photo ? `<img class="humanOpeningPhoto" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name)} profile photo">` : ""}
-          <div>
-            <h2 class="humanOpeningName" id="humanOpeningTitle">Meet ${escapeBeingText(being.name || "this HUMAN")}</h2>
-            <div class="humanOpeningCategory">${escapeBeingText(being.category || "HUMAN")}</div>
-            ${being.phone ? `<a class="humanOpeningPhone" href="tel:${escapeBeingText(being.phone)}">${escapeBeingText(being.phone)}</a>` : ""}
-          </div>
+      <section class="humanOpeningState" aria-label="Meet ${escapeBeingText(being.name || "this HUMAN")} and start Image Connect">
+        <div class="humanOpeningCarousel" onscroll="updateHumanOpeningDots(this)">
+          <article class="humanOpeningCard">
+            <div class="humanOpeningEyebrow">HUMAN</div>
+            <div class="humanOpeningIdentity">
+              ${being.photo ? `<img class="humanOpeningPhoto" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name)} profile photo">` : ""}
+              <div>
+                <h2 class="humanOpeningName">${escapeBeingText(being.name || "HUMAN")}</h2>
+                <div class="humanOpeningCategory">${escapeBeingText(being.category || "HUMAN")}</div>
+              </div>
+            </div>
+            <p class="humanOpeningBio">${escapeBeingText(humanBio)}</p>
+          </article>
+          <article class="humanOpeningCard">
+            <div class="humanOpeningEyebrow">HUMAN Perspective</div>
+            <h3>What connects to ${escapeBeingText(being.name || "this HUMAN")}.</h3>
+            <div class="humanOpeningDetails" style="margin-top:16px;">
+              ${personality.length ? `<div class="humanOpeningDetail"><div class="humanOpeningDetailLabel">Personality</div><div class="humanOpeningDetailValue">${personality.map(escapeBeingText).join(" · ")}</div></div>` : ""}
+              ${connections.length ? `<div class="humanOpeningDetail"><div class="humanOpeningDetailLabel">Connection Keywords</div><div class="humanOpeningDetailValue">${connections.map(escapeBeingText).join(" · ")}</div></div>` : ""}
+            </div>
+          </article>
+          <article class="humanOpeningCard">
+            <div class="humanOpeningEyebrow">Start Image Connect</div>
+            <h3>Choose an image to begin.</h3>
+            <p class="humanOpeningInstruction">Discover connections through this HUMAN Perspective.</p>
+            <div class="humanOpeningActions">
+              <button class="humanOpeningAction" type="button" onclick="openRoomFloatingCamera(event)">TAKE CAMERA VIEW</button>
+              <button class="humanOpeningAction" type="button" onclick="openRoomImageUpload()">UPLOAD AN IMAGE</button>
+              <button class="humanOpeningAction" type="button" onclick="openRoomPublicPerspectives()">CHOOSE A PUBLIC CAMERA PERSPECTIVE</button>
+            </div>
+          </article>
         </div>
-        <p class="humanOpeningBio">${escapeBeingText(humanBio)}</p>
-        ${(personality.length || connections.length) ? `
-          <div class="humanOpeningDetails">
-            ${personality.length ? `<div class="humanOpeningDetail"><div class="humanOpeningDetailLabel">Personality</div><div class="humanOpeningDetailValue">${personality.map(escapeBeingText).join(" · ")}</div></div>` : ""}
-            ${connections.length ? `<div class="humanOpeningDetail"><div class="humanOpeningDetailLabel">Connection Keywords</div><div class="humanOpeningDetailValue">${connections.map(escapeBeingText).join(" · ")}</div></div>` : ""}
-          </div>` : ""}
-        <div class="humanOpeningNext">
-          <div class="humanOpeningEyebrow">Start Image Connect</div>
-          <h3>Choose an image to begin.</h3>
-          <p>Take a photo, upload an image, or choose a Public Camera Perspective. Image Connect will discover meaningful connections through ${escapeBeingText(being.name || "this HUMAN")}’s perspective.</p>
-          <div class="humanOpeningActions">
-            <button class="humanOpeningAction" type="button" onclick="openRoomFloatingCamera(event)">TAKE CAMERA VIEW</button>
-            <button class="humanOpeningAction" type="button" onclick="openRoomImageUpload()">UPLOAD AN IMAGE</button>
-            <button class="humanOpeningAction" type="button" onclick="openRoomPublicPerspectives()">CHOOSE A PUBLIC CAMERA PERSPECTIVE</button>
-          </div>
-          <div class="humanOpeningTagline">ASK.CAMERA · The AI That Connects Humans.</div>
-        </div>
+        <div class="humanOpeningDots" aria-hidden="true"><span class="humanOpeningDot isActive"></span><span class="humanOpeningDot"></span><span class="humanOpeningDot"></span></div>
       </section>`;
     roomInput.style.display = "block";
     roomInput.disabled = true;
@@ -13975,6 +14014,13 @@ async function openAIBeing(id){
       showAIBeings();
     }
   });
+}
+
+function updateHumanOpeningDots(carousel){
+  const state = carousel?.closest(".humanOpeningState");
+  if(!state || !carousel.clientWidth) return;
+  const activeIndex = Math.max(0,Math.min(2,Math.round(carousel.scrollLeft / carousel.clientWidth)));
+  state.querySelectorAll(".humanOpeningDot").forEach((dot,index) => dot.classList.toggle("isActive",index === activeIndex));
 }
 
 async function returnToHumanCards(event){
