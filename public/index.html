@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.36 (2026-07-23)
+  - Extends the rounded interface into an all-pill visual edition
+  - Gives cards, panels, text areas, imagery, and camera containers the maximum pill radius
+  - Keeps full-screen surfaces and QR codes square for reliable display and scanning
+
   v10.3.35 (2026-07-23)
   - Applies one authoritative rounded UI system across ASK.CAMERA
   - Uses pill actions, circular icon controls, rounded cards and information boxes
@@ -18395,12 +18400,12 @@ html body #foundingSupportContinue{width:100%;min-height:48px;background:#8c959f
   }
 }
 
-/* v10.3.35 — authoritative rounded ASK.CAMERA interface */
+/* v10.3.36 — authoritative all-pill ASK.CAMERA interface */
 :root{
   --ask-radius-pill:999px;
-  --ask-radius-card:20px;
-  --ask-radius-box:16px;
-  --ask-radius-image:14px;
+  --ask-radius-card:999px;
+  --ask-radius-box:999px;
+  --ask-radius-image:999px;
   --ask-radius-screen:0;
 }
 
