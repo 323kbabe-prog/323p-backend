@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.29 (2026-07-23)
+  - Aligns active app wording with ASK.CAMERA — USER PERSPECTIVE NETWORK
+  - Removes remaining five-demo, AI Live Room, and Google-search-idea language
+  - Updates Help, USER Cards, image flow, and room guidance around choosing who helps you see
+
   v10.3.28 (2026-07-23)
   - Shows the selected image beside the USER photo on the question screen
   - Keeps both images visible after the five-perspective demo was removed
@@ -2922,7 +2927,7 @@ ASK.CAMERA — USER PERSPECTIVE NETWORK
   <button id="aiBeingsBackBtn" onclick="returnFromHumanCards()" style="position:fixed;top:18px;left:16px;right:16px;z-index:999;height:48px;border:none;border-radius:999px;background:#fff;color:#111;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back to ASK.CAMERA</span></button>
   <div style="flex:0 0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;"><div style="font-size:24px;font-weight:900;">USER Perspective Cards</div><button id="humanCardsHelpBtn" onclick="openHumanCardsGuide()" aria-label="About ASK.CAMERA" style="width:38px;height:38px;flex:0 0 auto;padding:0;border:none;border-radius:50%;background:#f6f8fa;color:#111;font-size:18px;font-weight:800;cursor:pointer;">?</button></div>
-    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose a USER Perspective for the meaningful connections discovered from your image.</div>
+    <div style="font-size:14px;line-height:1.4;opacity:.72;margin-bottom:16px;">Choose who helps you see your image differently.</div>
     <form id="findHumanForm" onsubmit="findHumanByName(event)" style="display:flex;width:100%;gap:8px;margin:0 0 10px;">
       <input id="findHumanName" type="search" autocomplete="name" placeholder="Enter a USER name" aria-label="Enter a USER name" oninput="handleHumanNameSearch(this.value)" style="flex:1 1 auto;min-width:0;height:44px;border:0;border-radius:0;background:#eaeeef;color:#24292f;padding:0 12px;font-size:14px;">
       <button id="findHumanBtn" type="submit" style="flex:0 0 auto;height:44px;border:0;border-radius:0;background:#57606a;color:#fff;padding:0 16px;font-size:13px;font-weight:600;">FIND USER</button>
@@ -7802,7 +7807,7 @@ border:1px solid #111;
 </div>
 
   <div id="humanSelectionPrompt" role="status" style="display:none;position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:1003;width:min(620px,calc(100% - 24px));box-sizing:border-box;background:#f6f8fa;border:1px solid #8c959f;padding:12px;box-shadow:0 8px 24px rgba(31,35,40,.18);">
-    <div style="color:#24292f;font-size:13px;font-weight:600;line-height:1.4;margin:0 0 10px;">Choose a USER perspective to continue this image.</div>
+    <div style="color:#24292f;font-size:13px;font-weight:600;line-height:1.4;margin:0 0 10px;">Choose who helps you see this image.</div>
     <button id="openHumanCardsButton" type="button" style="display:block;width:100%;min-height:46px;border:1px solid #0969da;background:#0969da;color:#fff;font:700 14px Arial,sans-serif;cursor:pointer;">Open USER Perspective Cards</button>
   </div>
 
@@ -8200,7 +8205,7 @@ function renderStandardRoomHeader(){
 
     if(savedThumbnail){
         thumbnail.src = savedThumbnail;
-        thumbnail.alt = "ASK.CAMERA room image";
+        thumbnail.alt = "ASK.CAMERA selected image";
         thumbnail.style.display = "block";
     }else{
         thumbnail.removeAttribute("src");
@@ -8240,7 +8245,7 @@ function renderConnectedHome(){
           <span style="min-width:0;font-size:14px;font-weight:900;white-space:nowrap;">${escapeBeingText(JSON.parse(localStorage.getItem("selectedBeing") || "{}").name || "USER ROOM")}</span>
           <span style="flex:0 0 auto;margin-left:auto;padding:8px 10px;border-radius:999px;background:#000;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;">RETURN TO ROOM</span>
         </button>
-        <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your private USER room stays active until you close it with X.</div>
+        <div style="font-size:13px;font-weight:600;line-height:1.45;opacity:.82;max-width:315px;">Your private USER Perspective stays active until you close it with X.</div>
         <div style="display:flex;flex-direction:column;gap:10px;width:min(100%,330px);">
           <button onclick="event.stopPropagation();showDailyNulls();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">Daily Camera Perspectives</button>
           <button onclick="event.stopPropagation();showAIBeings();" style="width:100%;min-height:46px;padding:0 16px;border:none;border-radius:999px;background:#fff;color:#111;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);">USER Perspective Cards</button>
@@ -8654,14 +8659,14 @@ function showPublishDialog(){
       publicOption.style.display = "none";
       privateOption.style.display = "flex";
       privateOption.querySelector('input').checked = true;
-      title.textContent = "Use in this private USER room";
-      support.textContent = "Your selected USER will interpret this image and keep it inside the private room.";
+      title.textContent = "Use with this USER Perspective";
+      support.textContent = "Your image stays private with the USER you selected.";
     }else{
       publicOption.style.display = "none";
       privateOption.style.display = "flex";
       privateOption.querySelector('input').checked = true;
-      title.textContent = "Choose a USER";
-      support.textContent = "Your image stays private. Choose the USER whose room will interpret it.";
+      title.textContent = "Choose Who Helps You See";
+      support.textContent = "Your image stays private. Choose a USER Perspective to continue.";
     }
     if(!publicImageAddMode && continueButton) continueButton.textContent = "Continue";
     activeModalReturnFocus = document.activeElement;
@@ -8709,7 +8714,7 @@ function showRoomLoadingScreen(){
 
   const loadingText = selectedBeing?.name
     ? `${escapeBeingText(selectedBeing.name)} is reading your image`
-    : "Creating AI Live Room";
+    : "Opening USER Perspective";
   showSystemState({ key:"creatingRoom", title:loadingText, text:"Please keep this screen open.", loading:true });
 }
 
@@ -8903,7 +8908,7 @@ closeRoom.onclick = () => {
       showCreateNull();
       return;
     }
-    if(!confirm("Close this private USER room permanently? You cannot return to this conversation.")) return;
+    if(!confirm("Close this private USER Perspective permanently? You cannot return to this conversation.")) return;
     endCurrentRoomAndRestart();
 };
 
@@ -9178,7 +9183,7 @@ roomOverlay.style.display = "flex";
 if(!data.rejoined) startRoomOpeningBootstrap();
 
 gtag('event', 'page_view', {
-  page_title: 'AI Live Room',
+  page_title: 'USER Perspective',
   page_path: '/room'
 });
 
@@ -9397,13 +9402,6 @@ function renderRoomImageChapter(message = {}){
         </template>
       ` : ""}
       ${hasHuman ? `
-        <template data-opening-template="human-examples">
-          <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
-            <div class="chatBubble chatAiBubble">
-              Before you ask, I’ll show you five discovered connections of what I can provide from this image. Google should buy this search idea today.
-            </div>
-          </div>
-        </template>
       ` : ""}
       <div data-opening-output></div>
     </div>
@@ -9438,24 +9436,26 @@ function getRoomImageSequenceKey(message = {},image = ""){
 }
 
 function withGoogleBelief(value){
-  const text = String(value || "").replace(/Google should buy me\./ig,"Google should buy this search idea today.").trim();
-  if(!text) return "Google should buy this search idea today.";
-  return /Google should buy this search idea today\./i.test(text)
+  const text = String(value || "")
+    .replace(/Google should buy (?:me|this search idea today)\./ig,"USER PERSPECTIVE NETWORK")
+    .trim();
+  if(!text) return "USER PERSPECTIVE NETWORK";
+  return /USER PERSPECTIVE NETWORK\.?/i.test(text)
     ? text
-    : `${text} Google should buy this search idea today.`;
+    : `${text} USER PERSPECTIVE NETWORK`;
 }
 
 function compactRoomCopy(value,maxLength = 220){
   const original = String(value || "").replace(/\s+/g," ").trim();
   if(!original) return "";
-  const hasBelief = /Google should buy (?:me|this search idea today)\./i.test(original);
-  let text = original.replace(/\s*Google should buy (?:me|this search idea today)\.\s*/ig," ").trim();
+  const hasBelief = /(?:Google should buy (?:me|this search idea today)\.|USER PERSPECTIVE NETWORK\.?)/i.test(original);
+  let text = original.replace(/\s*(?:Google should buy (?:me|this search idea today)\.|USER PERSPECTIVE NETWORK\.?)\s*/ig," ").trim();
   const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
   text = sentences.slice(0,2).join(" ").trim();
   if(text.length > maxLength){
     text = text.slice(0,maxLength + 1).replace(/\s+\S*$/,"").replace(/[,:;\s]+$/,"") + "…";
   }
-  return `${text}${hasBelief ? " Google should buy this search idea today." : ""}`.trim();
+  return `${text}${hasBelief ? " USER PERSPECTIVE NETWORK" : ""}`.trim();
 }
 
 function perspectiveFallbackImage(preferred = ""){
@@ -9644,7 +9644,7 @@ function updatePerspectiveViewportState(){
   }else if(current.querySelector(".perspectiveArrival")){
     roomInput.disabled = false;
     roomInput.readOnly = false;
-    roomInput.placeholder = "Ask during the demo";
+    roomInput.placeholder = "Ask through this USER Perspective";
   }else if(perspectiveTourStarted && !perspectiveInvitationViewed){
     const currentIndex = slides.indexOf(current);
     roomInput.disabled = false;
@@ -9804,7 +9804,7 @@ async function enableReminderFromSystemSwap(button,encodedReminder){
 function systemPerspectiveHtml(message = {}){
   if(message?.reminderCard){
     const reminder = encodeURIComponent(String(message.reminder || message.text || "Reminder"));
-    return `<section class="systemPerspective systemPerspective-reminder" role="dialog"><div class="systemPerspectiveLabel">REMINDER</div><div class="systemPerspectiveTitle">${escapeBeingText(message.title || "Enable this reminder?")}</div><div class="systemPerspectiveDetail">${escapeBeingText(message.text || "ASK.CAMERA needs notification permission to deliver this reminder.")}</div><div class="systemPerspectiveActions"><button type="button" class="systemPerspectivePrimary" onclick="enableReminderFromSystemSwap(this,'${reminder}')">Enable notifications</button></div><div class="systemPerspectiveStatus" aria-live="polite"></div><div class="systemPerspectiveClosing">Google should buy this search idea today.</div></section>`;
+    return `<section class="systemPerspective systemPerspective-reminder" role="dialog"><div class="systemPerspectiveLabel">REMINDER</div><div class="systemPerspectiveTitle">${escapeBeingText(message.title || "Enable this reminder?")}</div><div class="systemPerspectiveDetail">${escapeBeingText(message.text || "ASK.CAMERA needs notification permission to deliver this reminder.")}</div><div class="systemPerspectiveActions"><button type="button" class="systemPerspectivePrimary" onclick="enableReminderFromSystemSwap(this,'${reminder}')">Enable notifications</button></div><div class="systemPerspectiveStatus" aria-live="polite"></div><div class="systemPerspectiveClosing">USER PERSPECTIVE NETWORK</div></section>`;
   }
   const swap = message.systemSwap || message;
   const id = String(swap.id || "current");
@@ -9833,7 +9833,7 @@ function systemPerspectiveHtml(message = {}){
       <button type="button" aria-label="Use entered city or area" onclick="submitSystemPerspectiveCity(decodeURIComponent('${encodedId}'),this.previousElementSibling,this)">→</button>
     </div>
     <div class="systemPerspectiveStatus" aria-live="polite"></div>` : `<div class="systemPerspectiveActions">${actionButtons}</div>${suggestions ? `<div class="systemPerspectiveSuggestions">${suggestions}</div>` : ""}<div class="systemPerspectiveStatus" aria-live="polite"></div>`}
-    <div class="systemPerspectiveClosing">Google should buy this search idea today.</div>
+    <div class="systemPerspectiveClosing">USER PERSPECTIVE NETWORK</div>
   </section>`;
 }
 
@@ -9841,8 +9841,8 @@ function perspectiveHumanConnectionHtml(text){
   if(!text) return "";
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
-  const closing = "Google should buy this search idea today.";
-  const connection = String(text || "").replace(/\s*Google should buy this search idea today\.\s*/ig," ").trim();
+  const closing = "USER PERSPECTIVE NETWORK";
+  const connection = String(text || "").replace(/\s*(?:Google should buy this search idea today|USER PERSPECTIVE NETWORK)\.\s*/ig," ").trim();
   return `<div class="perspectiveHumanConnection">
     <div class="perspectiveHumanName">${escapeBeingText(being.name || "USER")}</div>
     <div class="perspectiveHumanText">${escapeBeingText(compactRoomCopy(connection,150))}</div>
@@ -9851,9 +9851,9 @@ function perspectiveHumanConnectionHtml(text){
 }
 
 function completeAnchorFallback(value){
-  const slogan = "Google should buy this search idea today.";
+  const slogan = "USER PERSPECTIVE NETWORK";
   let text = String(value || "")
-    .replace(/Google should buy this search idea today\.?/ig,"")
+    .replace(/(?:Google should buy this search idea today|USER PERSPECTIVE NETWORK)\.?/ig,"")
     .replace(/\s+/g," ")
     .trim();
   if(!text) text = "This image gives the next result a timely direction.";
@@ -9879,7 +9879,7 @@ function unifiedHumanConnectionHtml(anchor = {}){
     <div class="unifiedHumanCopy unifiedHumanCopyShort">${escapeBeingText(shortText)}</div>
     <div class="unifiedHumanCopy unifiedHumanCopyMedium">${escapeBeingText(mediumText)}</div>
     <div class="unifiedHumanCopy unifiedHumanCopyLong">${escapeBeingText(longText)}</div>
-    <div class="unifiedHumanClosing">Google should buy this search idea today.</div>
+    <div class="unifiedHumanClosing">USER PERSPECTIVE NETWORK</div>
   </section>`;
 }
 
@@ -9943,7 +9943,7 @@ function humanInvitationPerspectiveHtml(){
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   const words = [being.word1,being.word2,being.word3].filter(Boolean).join(" · ");
   const selectedImage = localStorage.getItem("roomThumbnail") || localStorage.getItem("askCameraRoomThumbnail") || "";
-  const invitation = `Ask me what you want to discover about this image through my perspective, or add another image to begin a new direction. Google should buy this search idea today.`;
+  const invitation = `Ask me what you want to discover about this image through my perspective, or add another image to begin a new direction. USER PERSPECTIVE NETWORK`;
   return `<section class="humanInvitationPerspective">
     <div class="humanInvitationMedia">
       ${being.photo ? `<img class="humanInvitationPhoto" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "USER")}">` : ""}
@@ -9959,7 +9959,7 @@ function humanInvitationPerspectiveHtml(){
       <button type="button" onclick="choosePerspectivePrompt('Find something near me.')">Find something near me</button>
       <button type="button" onclick="choosePerspectivePrompt('Show me another opportunity.')">Show me another opportunity</button>
     </div>
-    <div class="perspectiveSwipeCue">Ask me anything about this image.</div>
+    <div class="perspectiveSwipeCue">Ask anything. See it through this USER Perspective.</div>
   </section>`;
 }
 
@@ -10043,7 +10043,7 @@ function showSequenceDelayNotice(forceNewsGate = false){
     return;
   }
   hideSequenceTyping();
-  roomMessages.insertAdjacentHTML("beforeend",`<div id="sequenceDelayNotice" class="roomDeliveryBlock localSystemSwapBlock" data-room-delivery-index="system-news-gate"><section class="systemPerspective" role="status"><div class="systemPerspectiveLabel">VERIFIED NEWS</div><div class="systemPerspectiveTitle">Finding a verified local News article is taking longer than expected.</div><div class="systemPerspectiveDetail">The current perspective will continue only after a real News source is verified.</div><div class="systemPerspectiveActions"><button type="button" class="systemPerspectivePrimary" onclick="retryNewsGate()">Retry verified News</button></div><div class="systemPerspectiveClosing">Google should buy this search idea today.</div></section></div>`);
+  roomMessages.insertAdjacentHTML("beforeend",`<div id="sequenceDelayNotice" class="roomDeliveryBlock localSystemSwapBlock" data-room-delivery-index="system-news-gate"><section class="systemPerspective" role="status"><div class="systemPerspectiveLabel">VERIFIED NEWS</div><div class="systemPerspectiveTitle">Finding a verified local News article is taking longer than expected.</div><div class="systemPerspectiveDetail">The current perspective will continue only after a real News source is verified.</div><div class="systemPerspectiveActions"><button type="button" class="systemPerspectivePrimary" onclick="retryNewsGate()">Retry verified News</button></div><div class="systemPerspectiveClosing">USER PERSPECTIVE NETWORK</div></section></div>`);
   const notice = document.getElementById("sequenceDelayNotice");
   if(notice){
     localStorage.setItem(perspectiveStorageKey(),"system-news-gate");
@@ -10247,7 +10247,7 @@ function firstRoundDemoHtml(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   const name = escapeBeingText(being.name || "Your USER");
-  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">That’s the five-card tour. I’m ${name}; ask me anything about this image or toss another image into my USER room. Google should buy this search idea today.</div></div>`;
+  return `<div class="geminiAiResponse chatAiGroup firstRoundDemoMessage"><div class="chatBubble chatAiBubble">I’m ${name}. Ask what you want to discover through my perspective, or add another image. USER PERSPECTIVE NETWORK</div></div>`;
 }
 
 function deliverFirstRoundDemo(){
@@ -10390,7 +10390,7 @@ function getRoomCardTriggerInstruction(messages){
   return `
     <div class="geminiAiResponse chatAiGroup humanCardInstruction">
       <div class="chatBubble chatAiBubble">
-        Ask me what this image connects to today, what you could buy, where you could go, or where you could live. Google should buy this search idea today.
+        Ask what you want to discover through this USER Perspective. USER PERSPECTIVE NETWORK
       </div>
     </div>
   `;
@@ -10400,12 +10400,7 @@ function getBeingFirstRoundLead(){
   return `
     <div class="geminiAiResponse chatAiGroup humanCardInstruction">
       <div class="chatBubble chatAiBubble">
-        Ask a USER what this image connects to today, what you could buy, where you could go, what new job you could find, or where you could live. Google should buy this search idea today.
-      </div>
-    </div>
-    <div class="geminiAiResponse chatAiGroup humanFirstRoundNotice">
-      <div class="chatBubble chatAiBubble">
-        Before you ask, I’ll show you five discovered connections of what I can provide from this image. Google should buy this search idea today.
+        Choose who helps you see, then ask what you want to discover. USER PERSPECTIVE NETWORK
       </div>
     </div>
   `;
@@ -11410,7 +11405,7 @@ socket.on("roomUpgradeWarning", ({ seconds = 10, message } = {}) => {
   hideSequenceTyping();
   const renderWarning = () => {
     document.getElementById("roomUpgradeWarning")?.remove();
-    roomMessages.insertAdjacentHTML("beforeend",`<div id="roomUpgradeWarning" class="roomDeliveryBlock localSystemSwapBlock" data-room-delivery-index="system-upgrade"><section class="systemPerspective" role="alert"><div class="systemPerspectiveLabel">SYSTEM UPDATE</div><div class="systemPerspectiveTitle">${escapeBeingText(message || "ASK.CAMERA is being upgraded.")}</div><div class="systemPerspectiveDetail">This room will close in ${remaining} second${remaining === 1 ? "" : "s"}.</div><div class="systemPerspectiveClosing">Google should buy this search idea today.</div></section></div>`);
+    roomMessages.insertAdjacentHTML("beforeend",`<div id="roomUpgradeWarning" class="roomDeliveryBlock localSystemSwapBlock" data-room-delivery-index="system-upgrade"><section class="systemPerspective" role="alert"><div class="systemPerspectiveLabel">SYSTEM UPDATE</div><div class="systemPerspectiveTitle">${escapeBeingText(message || "ASK.CAMERA is being upgraded.")}</div><div class="systemPerspectiveDetail">This USER Perspective will close in ${remaining} second${remaining === 1 ? "" : "s"}.</div><div class="systemPerspectiveClosing">USER PERSPECTIVE NETWORK</div></section></div>`);
     const warning = document.getElementById("roomUpgradeWarning");
     if(warning) roomMessages.scrollTop = warning.offsetTop;
   };
@@ -11462,8 +11457,8 @@ clearTimeout(rejoinTimeout);
   
    showSystemState({
      key:"roomUnavailable",
-     title:"Room unavailable.",
-     text:"This room was closed or is no longer available.",
+     title:"USER Perspective unavailable.",
+     text:"This USER Perspective was closed or is no longer available.",
      primary:{ label:"Refresh", onClick:() => window.location.reload() }
    });
 
@@ -11909,7 +11904,7 @@ function renderRejoinLoading(){
   status.className = "roomDeliveryBlock localSystemSwapBlock rejoinRoomStatus";
   status.dataset.roomDeliveryIndex = "system-rejoin";
   status.setAttribute("aria-live","polite");
-  status.innerHTML = `<section class="systemPerspective" role="status"><div class="systemPerspectiveLabel">CONNECTION</div><div class="systemPerspectiveTitle">Rejoining room</div><div class="systemPerspectiveDetail">Restoring your last viewed perspective.</div><div class="systemStateProgress">${defaultLoadingDotsHtml("Rejoining room")}</div></section>`;
+  status.innerHTML = `<section class="systemPerspective" role="status"><div class="systemPerspectiveLabel">CONNECTION</div><div class="systemPerspectiveTitle">Rejoining USER Perspective</div><div class="systemPerspectiveDetail">Restoring your last viewed perspective.</div><div class="systemStateProgress">${defaultLoadingDotsHtml("Rejoining USER Perspective")}</div></section>`;
   roomMessages.appendChild(status);
   roomMessages.scrollTop = status.offsetTop;
 }
@@ -11983,8 +11978,8 @@ function showRoomUnavailable(roomId){
   document.body.classList.remove("connectedHome","expiredHome");
   showSystemState({
     key:"roomNotFound",
-    title:"Room not found.",
-    text:"This room was closed or is no longer available.",
+    title:"USER Perspective not found.",
+    text:"This USER Perspective was closed or is no longer available.",
     primary:{ label:"Retry", onClick:() => retryUnavailableRoom(roomId) },
     secondary:{ label:"Back to ASK.CAMERA", onClick:returnFromUnavailableRoom }
   });
@@ -13364,7 +13359,7 @@ async function showAIBeings(origin = ""){
   document.getElementById("aiBeingsScreen").style.display = "flex";
   const humanBackLabel = document.querySelector("#aiBeingsBackBtn span");
   if(humanBackLabel){
-    humanBackLabel.textContent = humanCardsEntryMode === "room" ? "Back to USER room" : "Back to ASK.CAMERA";
+    humanBackLabel.textContent = humanCardsEntryMode === "room" ? "Back to USER Perspective" : "Back to ASK.CAMERA";
   }
   syncHomeControlStack();
   await loadAIBeings();
@@ -14312,7 +14307,7 @@ function showBeingQR(){
     overlay.onclick = () => overlay.style.display = "none";
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:0;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:8px;">USER Room QR</div><div style="font-size:12px;line-height:1.4;margin-bottom:14px;color:#57606a;">Open this USER and add your own image.</div><div id="beingQrCode" style="width:240px;height:240px;max-width:100%;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:0;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
+  overlay.innerHTML = `<div onclick="event.stopPropagation()" style="background:#fff;color:#111;padding:22px;border-radius:0;text-align:center;max-width:320px;width:100%;"><div style="font-size:18px;font-weight:900;margin-bottom:8px;">USER Perspective QR</div><div style="font-size:12px;line-height:1.4;margin-bottom:14px;color:#57606a;">Open this USER Perspective and add your own image.</div><div id="beingQrCode" style="width:240px;height:240px;max-width:100%;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div><div style="font-size:11px;word-break:break-all;margin-top:12px;">${url}</div><button onclick="document.getElementById('beingQrOverlay').style.display='none'" style="margin-top:14px;border:none;border-radius:0;background:#000;color:#fff;padding:10px 20px;font-weight:800;">CLOSE</button></div>`;
   overlay.style.display = "flex";
 
   const qrHolder = document.getElementById("beingQrCode");
@@ -14367,8 +14362,8 @@ const HOME_HUMAN_STEPS_HTML = `
       <article class="homeHumanStep">
         <img src="https://images.pexels.com/photos/7489039/pexels-photo-7489039.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="A group of friends using smartphones together" loading="lazy" referrerpolicy="no-referrer">
         <div class="homeHumanStepNumber">04</div>
-        <h3>Discover connections</h3>
-        <p>ASK.CAMERA answers through the shared USER Perspective.</p>
+        <h3>Discover what matters</h3>
+        <p>Discover guidance, ideas, and opportunities through the shared USER Perspective.</p>
       </article>
     </div>
     <section id="homeHumanDemo" aria-labelledby="homeHumanDemoTitle">
@@ -15187,7 +15182,7 @@ font-weight:500;
 margin-bottom:6px;
 text-align:center;
 ">
-Create ASK.CAMERA Room
+Use This Image
 </div>
 
 <div id="publishDialogSupport" style="
@@ -15198,19 +15193,19 @@ text-align:center;
 opacity:.7;
 margin-bottom:10px;
 ">
-How would you like to publish your Camera Perspective?
+Choose how this image should be used.
 </div>
 
 <label id="publishPublicOption" style="display:flex;flex-direction:column;align-items:center;margin-bottom:12px;">
 <input type="radio" name="publishMode" value="public" checked>
 <b>Share publicly</b>
-<div>Your image and Camera Perspective can be discovered by others.</div>
+<div>Your image can be discovered through Public Camera Perspectives.</div>
 </label>
 
 <label id="publishPrivateOption" style="display:flex;flex-direction:column;align-items:center;margin-bottom:14px;">
 <input type="radio" name="publishMode" value="private">
-<b>Keep in this room</b>
-<div>Your image and Camera Perspective stay inside this live room.</div>
+<b>Keep with this USER</b>
+<div>Your image stays inside this private USER Perspective.</div>
 </label>
 
 <button
@@ -15303,7 +15298,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Choose Public or Private.</b>
+<b>Choose whether the image is public or private.</b>
 </div>
 
 </div>
@@ -15323,7 +15318,7 @@ flex-shrink:0;
 </svg>
 
 <div>
-<b>Choose a USER perspective</b> for the image, then explore five discovered connections.
+<b>Choose who helps you see.</b> Ask what you want to discover through that USER Perspective.
 </div>
 
 </div>
@@ -15374,9 +15369,9 @@ flex-shrink:0;
 <hr style="margin:20px 0;border:none;border-top:1px solid #eee;">
 
 <div style="text-align:center;">
-<b>ASK.CAMERA — USER PERSPECTIVE NETWORK FOUNDATION TOOL: IMAGE CONNECT. POINT YOUR CAMERA. DISCOVER WHAT THIS IMAGE CONNECTS YOU TO.</b><br><br>
+<b>ASK.CAMERA — USER PERSPECTIVE NETWORK</b><br><br>
 
-<b>Image Connect. Ask. Discover.</b>
+<b>Point your camera. Choose who helps you see. Discover guidance, ideas, and opportunities.</b>
 </div>
 
 </div>
