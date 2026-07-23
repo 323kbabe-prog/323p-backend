@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.28 (2026-07-23)
+  - Shows the selected image beside the USER photo on the question screen
+  - Keeps both images visible after the five-perspective demo was removed
+  - Clarifies that discovery happens through the selected USER's perspective
+
   v10.3.27 (2026-07-23)
   - Removes the automatic five-perspective demo from every USER room
   - Opens the existing USER question screen after image selection
@@ -9937,9 +9942,13 @@ function humanInvitationPerspectiveHtml(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   const words = [being.word1,being.word2,being.word3].filter(Boolean).join(" · ");
-  const invitation = `Ask me what you want to discover about this image, or add another image to begin a new direction. Google should buy this search idea today.`;
+  const selectedImage = localStorage.getItem("roomThumbnail") || localStorage.getItem("askCameraRoomThumbnail") || "";
+  const invitation = `Ask me what you want to discover about this image through my perspective, or add another image to begin a new direction. Google should buy this search idea today.`;
   return `<section class="humanInvitationPerspective">
-    ${being.photo ? `<img class="humanInvitationPhoto" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "USER")}">` : ""}
+    <div class="humanInvitationMedia">
+      ${being.photo ? `<img class="humanInvitationPhoto" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "USER")}">` : ""}
+      ${selectedImage ? `<img class="humanInvitationSelectedImage" src="${escapeBeingText(selectedImage)}" alt="Selected image">` : ""}
+    </div>
     <div class="humanInvitationIdentity">
       <div class="humanInvitationName">${escapeBeingText(being.name || "USER")}</div>
       <div class="humanInvitationCategory">${escapeBeingText(being.category || "USER")}${words ? ` · ${escapeBeingText(words)}` : ""}</div>
@@ -15833,13 +15842,30 @@ Close
   gap:12px;
   padding-top:16px;
 }
-#roomMessages.perspectiveSwipeThread .humanInvitationPhoto{
-  width:100%!important;
-  height:40%!important;
+#roomMessages.perspectiveSwipeThread .humanInvitationMedia{
+  display:flex;
+  align-items:stretch;
+  justify-content:center;
+  gap:12px;
+  width:100%;
+  height:40%;
   min-height:180px;
   max-height:36vh!important;
-  object-fit:contain!important;
   background:#f6f8fa;
+}
+#roomMessages.perspectiveSwipeThread .humanInvitationMedia img{
+  display:block!important;
+  width:calc(50% - 6px)!important;
+  height:100%!important;
+  min-width:0!important;
+  max-width:calc(50% - 6px)!important;
+  object-fit:contain!important;
+  background:#fff;
+  border:0!important;
+}
+#roomMessages.perspectiveSwipeThread .humanInvitationMedia img:only-child{
+  width:100%!important;
+  max-width:100%!important;
 }
 #roomMessages.perspectiveSwipeThread .humanInvitationIdentity{padding-top:2px;}
 #roomMessages.perspectiveSwipeThread .humanInvitationName{font-size:24px;font-weight:700;line-height:1.15;}
@@ -15874,7 +15900,7 @@ Close
   #roomMessages.perspectiveSwipeThread .perspectiveHumanConnection{padding:8px 10px;}
   #roomMessages.perspectiveSwipeThread .automaticPerspective .humanResultImage,
   #roomMessages.perspectiveSwipeThread .automaticPerspective .chatReplyImage{max-height:15vh!important;}
-  #roomMessages.perspectiveSwipeThread .humanInvitationPhoto{height:32%!important;min-height:130px;}
+  #roomMessages.perspectiveSwipeThread .humanInvitationMedia{height:32%!important;min-height:130px;}
   #roomMessages.perspectiveSwipeThread .perspectiveArrival{gap:8px;}
   #roomMessages.perspectiveSwipeThread .perspectiveArrivalHuman,
   #roomMessages.perspectiveSwipeThread .perspectiveArrivalImage{height:20vh!important;min-height:110px!important;}
