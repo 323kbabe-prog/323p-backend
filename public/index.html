@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.33 (2026-07-23)
+  - Adds PERSPECTIVE and PODCAST modes to the floating Live Camera
+  - Lets two automatically selected USERS discuss the temporary camera view
+  - Adds shared three-minute continuation controls and confirmation-only voice commands
+
   v10.3.32 (2026-07-23)
   - Adds Love usage for every intentional USER open with no time restriction
   - Allows repeat use from the same device to keep increasing the count
@@ -1815,6 +1820,9 @@ body.systemBlockingState #helper{
 #roomFloatingCameraShutter{position:absolute!important;z-index:2!important;left:50%!important;bottom:18px!important;transform:translateX(-50%)!important;width:66px!important;height:66px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:3px solid rgba(255,255,255,.75)!important;border-radius:50%!important;background:#fff!important;color:#111!important;box-shadow:0 2px 14px rgba(0,0,0,.28)!important;}
 #roomFloatingCameraShutter svg{width:34px!important;height:34px!important;fill:none!important;stroke:currentColor!important;}
 #roomFloatingLiveStack{position:absolute!important;z-index:3!important;left:14px!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;display:grid!important;gap:8px!important;pointer-events:none!important;}
+#roomFloatingModeSwitch{position:absolute!important;z-index:5!important;left:50%!important;top:12px!important;transform:translateX(-50%)!important;display:flex!important;gap:2px!important;padding:2px!important;background:rgba(255,255,255,.94)!important;}
+#roomFloatingModeSwitch button{min-height:30px!important;padding:6px 10px!important;border:0!important;background:#d0d7de!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
+#roomFloatingModeSwitch button[aria-pressed="true"]{background:#0969da!important;color:#fff!important;}
 .roomFloatingLiveBox{position:relative!important;width:100%!important;box-sizing:border-box!important;padding:12px 42px 12px 12px!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;border:0!important;box-shadow:0 4px 18px rgba(0,0,0,.2)!important;pointer-events:auto!important;}
 .roomFloatingLiveBox[hidden]{display:none!important;}
 .roomFloatingLiveClose{position:absolute!important;right:6px!important;top:6px!important;width:30px!important;height:30px!important;padding:0!important;border:0!important;background:#f6f8fa!important;color:#24292f!important;font-size:18px!important;line-height:30px!important;}
@@ -1827,13 +1835,31 @@ body.systemBlockingState #helper{
 #roomFloatingResultCategory{color:#0969da!important;font-size:10px!important;font-weight:800!important;text-transform:uppercase!important;}
 #roomFloatingResultTitle{display:block!important;margin-top:3px!important;color:#24292f!important;font-size:14px!important;font-weight:750!important;line-height:1.3!important;text-decoration:none!important;}
 #roomFloatingResultSource{margin-top:3px!important;color:#57606a!important;font-size:11px!important;}
+#roomFloatingPodcast{padding:12px!important;}
+#roomFloatingPodcastTopic{font-size:11px!important;font-weight:800!important;color:#0969da!important;text-transform:uppercase!important;}
+#roomFloatingPodcastHumans{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:8px!important;}
+.roomFloatingPodcastHuman{display:grid!important;grid-template-columns:38px minmax(0,1fr)!important;gap:7px!important;align-items:center!important;padding:7px!important;background:#f6f8fa!important;}
+.roomFloatingPodcastHuman.isSpeaking{background:#ddf4ff!important;}
+.roomFloatingPodcastHuman img{width:38px!important;height:38px!important;object-fit:cover!important;background:#d0d7de!important;}
+.roomFloatingPodcastHumanName{font-size:12px!important;font-weight:800!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+.roomFloatingPodcastHumanRole{margin-top:2px!important;font-size:9px!important;color:#57606a!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+#roomFloatingPodcastTranscript{margin-top:9px!important;font-size:13px!important;line-height:1.4!important;}
+#roomFloatingSessionPrompt{position:absolute!important;z-index:7!important;left:14px!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;padding:14px!important;background:rgba(255,255,255,.97)!important;color:#24292f!important;box-shadow:0 4px 18px rgba(0,0,0,.22)!important;}
+#roomFloatingSessionPrompt[hidden]{display:none!important;}
+#roomFloatingSessionTitle{font-size:16px!important;font-weight:800!important;}
+#roomFloatingSessionDetail{margin-top:4px!important;color:#57606a!important;font-size:12px!important;line-height:1.4!important;}
+#roomFloatingSessionActions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin-top:12px!important;}
+#roomFloatingSessionActions button{min-height:38px!important;padding:7px!important;border:0!important;background:#d0d7de!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
+#roomFloatingSessionActions button:first-child{background:#0969da!important;color:#fff!important;}
+#roomFloatingPodcastSessionActions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin-top:6px!important;}
+#roomFloatingPodcastSessionActions[hidden]{display:none!important;}
+#roomFloatingPodcastSessionActions button{min-height:36px!important;border:0!important;background:#57606a!important;color:#fff!important;font-size:10px!important;font-weight:800!important;}
+#roomFloatingVoiceAnswer{margin-top:8px!important;color:#57606a!important;font-size:10px!important;font-weight:700!important;}
 #roomFloatingLiveRestore{position:absolute!important;z-index:4!important;left:10px!important;top:10px!important;display:flex!important;gap:6px!important;}
 #roomFloatingLiveRestore[hidden]{display:none!important;}
-#roomFloatingLiveRestore button,#roomFloatingLiveContinue{min-height:32px!important;padding:6px 9px!important;border:0!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
+#roomFloatingLiveRestore button{min-height:32px!important;padding:6px 9px!important;border:0!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
 #roomFloatingVoiceToggle{position:absolute!important;z-index:5!important;left:12px!important;bottom:18px!important;min-height:34px!important;padding:7px 10px!important;border:0!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
 #roomFloatingVoiceToggle[aria-pressed="true"]{background:#0969da!important;color:#fff!important;}
-#roomFloatingLiveContinue{position:absolute!important;z-index:5!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;min-width:190px!important;}
-#roomFloatingLiveContinue[hidden]{display:none!important;}
 @media(max-width:520px){.roomFloatingLiveBox{padding:10px 38px 10px 10px!important;}#roomFloatingInsightText{font-size:14px!important;}#roomFloatingInsightOpinion{font-size:12px!important;}#roomFloatingResultBody{grid-template-columns:48px minmax(0,1fr)!important;}#roomFloatingResultImage{width:48px!important;height:48px!important;}}
 #addPublicImageBtn,#openCreateBeingBtn{display:flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;}
 #addPublicImageBtn{width:100%!important;min-height:48px!important;margin:18px 0 22px!important;background:#1f2328!important;color:#fff!important;border:1px solid #1f2328!important;border-radius:0!important;font-size:14px!important;font-weight:600!important;letter-spacing:.02em!important;}
@@ -14590,9 +14616,24 @@ function ensureRoomFloatingCamera(){
             <button class="roomFloatingLiveClose" type="button" aria-label="Hide live connection" onclick="hideRoomFloatingLiveBox('result')">×</button>
             <div id="roomFloatingResultBody"><img id="roomFloatingResultImage" alt=""><div><div id="roomFloatingResultCategory"></div><a id="roomFloatingResultTitle" target="_blank" rel="noopener noreferrer"></a><div id="roomFloatingResultSource"></div></div></div>
           </div>
+          <div id="roomFloatingPodcast" class="roomFloatingLiveBox" hidden>
+            <div id="roomFloatingPodcastTopic">LIVE PODCAST</div>
+            <div id="roomFloatingPodcastHumans"></div>
+            <div id="roomFloatingPodcastTranscript" aria-live="polite"></div>
+          </div>
+        </div>
+        <div id="roomFloatingModeSwitch" role="group" aria-label="Live Camera mode">
+          <button id="roomFloatingPerspectiveMode" type="button" aria-pressed="true" onclick="setRoomFloatingLiveMode('perspective')">PERSPECTIVE</button>
+          <button id="roomFloatingPodcastMode" type="button" aria-pressed="false" onclick="setRoomFloatingLiveMode('podcast')">PODCAST</button>
         </div>
         <div id="roomFloatingLiveRestore" hidden><button type="button" onclick="restoreRoomFloatingLiveBox('insight')">INSIGHT</button><button type="button" onclick="restoreRoomFloatingLiveBox('result')">RESULT</button></div>
-        <button id="roomFloatingLiveContinue" type="button" hidden onclick="continueRoomFloatingLiveAnalysis()">CONTINUE LIVE ANALYSIS</button>
+        <section id="roomFloatingSessionPrompt" hidden aria-live="polite">
+          <div id="roomFloatingSessionTitle">Would you like to continue?</div>
+          <div id="roomFloatingSessionDetail">The camera remains open. Continue for another three minutes or end this session.</div>
+          <div id="roomFloatingSessionActions"><button type="button" onclick="continueRoomFloatingLiveAnalysis()">CONTINUE</button><button type="button" onclick="endRoomFloatingLiveSession()">END</button></div>
+          <div id="roomFloatingPodcastSessionActions" hidden><button type="button" onclick="changeRoomFloatingPodcastUsers()">NEW USERS</button><button type="button" onclick="startRoomFloatingPodcastTopic()">NEW TOPIC</button></div>
+          <div id="roomFloatingVoiceAnswer">Say “Continue,” “End,” “Change users,” or “New topic.”</div>
+        </section>
         <button id="roomFloatingVoiceToggle" type="button" aria-pressed="false" onclick="toggleRoomFloatingLiveVoice()">VOICE OFF</button>
         <button id="roomFloatingCameraClose" type="button" aria-label="Close camera" onclick="closeRoomFloatingCamera(event)">×</button>
         <button id="roomFloatingCameraShutter" type="button" aria-label="Take picture" onclick="takeRoomFloatingPicture(event)">
@@ -14614,7 +14655,7 @@ function ensureRoomFloatingCamera(){
 
 function mountRoomFloatingLiveControls(host){
   if(!host) return;
-  ["roomFloatingLiveStack","roomFloatingLiveRestore","roomFloatingLiveContinue","roomFloatingVoiceToggle"]
+  ["roomFloatingLiveStack","roomFloatingModeSwitch","roomFloatingLiveRestore","roomFloatingSessionPrompt","roomFloatingVoiceToggle"]
     .map(id => document.getElementById(id))
     .filter(Boolean)
     .forEach(element => host.appendChild(element));
@@ -14636,6 +14677,47 @@ let roomFloatingLiveVoiceEnabled = false;
 let roomFloatingLiveSurface = "room";
 let roomFloatingLiveSpeechActive = false;
 let roomFloatingLivePendingSpeech = "";
+let roomFloatingLiveMode = "perspective";
+let roomFloatingPodcastBeingIds = [];
+let roomFloatingPodcastExcludedIds = [];
+let roomFloatingPodcastUsageCounted = false;
+let roomFloatingPodcastIntroductionSpoken = false;
+let roomFloatingPodcastSpeechQueue = [];
+let roomFloatingPodcastCurrentSpeakerId = "";
+let roomFloatingPodcastLastResponse = null;
+let roomFloatingConfirmationRecognition = null;
+let roomFloatingSessionPromptPending = false;
+
+function syncRoomFloatingLiveMode(){
+  const podcastMode = roomFloatingLiveMode === "podcast";
+  document.getElementById("roomFloatingPerspectiveMode")?.setAttribute("aria-pressed",String(!podcastMode));
+  document.getElementById("roomFloatingPodcastMode")?.setAttribute("aria-pressed",String(podcastMode));
+  const podcast = document.getElementById("roomFloatingPodcast");
+  if(podcast) podcast.hidden = !podcastMode || podcast.dataset.ready !== "true";
+  const insight = document.getElementById("roomFloatingInsight");
+  const result = document.getElementById("roomFloatingResult");
+  if(insight) insight.hidden = podcastMode || roomFloatingInsightDismissed;
+  if(result) result.hidden = podcastMode || roomFloatingResultDismissed || result.dataset.ready !== "true";
+  const podcastActions = document.getElementById("roomFloatingPodcastSessionActions");
+  if(podcastActions) podcastActions.hidden = !podcastMode;
+}
+
+function setRoomFloatingLiveMode(mode){
+  const nextMode = mode === "podcast" ? "podcast" : "perspective";
+  if(roomFloatingLiveMode === nextMode) return;
+  stopRoomFloatingConfirmationListening();
+  roomFloatingLiveMode = nextMode;
+  roomFloatingPodcastBeingIds = [];
+  roomFloatingPodcastExcludedIds = [];
+  roomFloatingPodcastUsageCounted = false;
+  roomFloatingPodcastIntroductionSpoken = false;
+  roomFloatingPodcastSpeechQueue = [];
+  roomFloatingPodcastCurrentSpeakerId = "";
+  roomFloatingPodcastLastResponse = null;
+  window.speechSynthesis?.cancel();
+  syncRoomFloatingLiveMode();
+  startRoomFloatingLiveAnalysis(roomFloatingLiveSurface);
+}
 
 function captureTemporaryLiveCameraFrame(){
   const source = document.getElementById(roomFloatingLiveSurface === "home" ? "homeCaptureVideo" : "roomFloatingCameraVideo");
@@ -14681,10 +14763,31 @@ function startRoomFloatingLiveAnalysis(surface = "room"){
   roomFloatingLiveCategoryIndex = 0;
   roomFloatingInsightDismissed = false;
   roomFloatingResultDismissed = false;
-  const continueButton = document.getElementById("roomFloatingLiveContinue");
-  if(continueButton) continueButton.hidden = true;
+  const previousResult = document.getElementById("roomFloatingResult");
+  if(previousResult){
+    previousResult.dataset.ready = "false";
+    previousResult.hidden = true;
+  }
+  const sessionPrompt = document.getElementById("roomFloatingSessionPrompt");
+  if(sessionPrompt) sessionPrompt.hidden = true;
   document.getElementById("roomFloatingLiveRestore")?.setAttribute("hidden","");
-  showRoomFloatingLiveStatus("Initializing Image Connect...","Keep the camera steady while the first temporary frame is analyzed.");
+  syncRoomFloatingLiveMode();
+  if(roomFloatingLiveMode === "podcast"){
+    roomFloatingPodcastBeingIds = [];
+    roomFloatingPodcastExcludedIds = [];
+    roomFloatingPodcastUsageCounted = false;
+    roomFloatingPodcastIntroductionSpoken = false;
+    roomFloatingPodcastSpeechQueue = [];
+    roomFloatingPodcastLastResponse = null;
+    const podcast = document.getElementById("roomFloatingPodcast");
+    if(podcast){
+      podcast.dataset.ready = "false";
+      podcast.hidden = true;
+    }
+    showRoomFloatingLiveStatus("Selecting two USER Perspectives...","The live podcast will begin after the first temporary frame is analyzed.");
+  }else{
+    showRoomFloatingLiveStatus("Initializing Image Connect...","Keep the camera steady while the first temporary frame is analyzed.");
+  }
   scheduleRoomFloatingLiveAnalysis(2000);
 }
 
@@ -14696,21 +14799,127 @@ function stopRoomFloatingLiveAnalysis(clearFrames = true){
   roomFloatingLiveSignature = null;
   roomFloatingLivePendingSpeech = "";
   roomFloatingLiveSpeechActive = false;
+  roomFloatingPodcastSpeechQueue = [];
+  roomFloatingPodcastCurrentSpeakerId = "";
+  roomFloatingSessionPromptPending = false;
+  stopRoomFloatingConfirmationListening();
   window.speechSynthesis?.cancel();
   if(clearFrames){
     const insight = document.getElementById("roomFloatingInsight");
     const result = document.getElementById("roomFloatingResult");
+    const podcast = document.getElementById("roomFloatingPodcast");
     if(insight) insight.hidden = true;
     if(result) result.hidden = true;
+    if(podcast) podcast.hidden = true;
   }
 }
 
 function continueRoomFloatingLiveAnalysis(){
-  const button = document.getElementById("roomFloatingLiveContinue");
-  if(button) button.hidden = true;
+  stopRoomFloatingConfirmationListening();
+  roomFloatingSessionPromptPending = false;
+  const prompt = document.getElementById("roomFloatingSessionPrompt");
+  if(prompt) prompt.hidden = true;
   roomFloatingLiveStartedAt = Date.now();
   roomFloatingLiveLastSentAt = 0;
+  roomFloatingLiveSignature = null;
   scheduleRoomFloatingLiveAnalysis(250);
+}
+
+function endRoomFloatingLiveSession(){
+  roomFloatingSessionPromptPending = false;
+  stopRoomFloatingConfirmationListening();
+  closeRoomFloatingCamera();
+}
+
+function changeRoomFloatingPodcastUsers(){
+  roomFloatingPodcastExcludedIds = [...roomFloatingPodcastBeingIds];
+  roomFloatingPodcastBeingIds = [];
+  roomFloatingPodcastUsageCounted = false;
+  roomFloatingPodcastIntroductionSpoken = false;
+  roomFloatingPodcastSpeechQueue = [];
+  roomFloatingPodcastLastResponse = null;
+  const podcast = document.getElementById("roomFloatingPodcast");
+  if(podcast){
+    podcast.dataset.ready = "false";
+    podcast.hidden = true;
+  }
+  showRoomFloatingLiveStatus("Selecting two new USER Perspectives...","The next temporary frame will begin a new live podcast.");
+  continueRoomFloatingLiveAnalysis();
+}
+
+function startRoomFloatingPodcastTopic(){
+  roomFloatingPodcastSpeechQueue = [];
+  continueRoomFloatingLiveAnalysis();
+}
+
+function stopRoomFloatingConfirmationListening(){
+  if(!roomFloatingConfirmationRecognition) return;
+  try { roomFloatingConfirmationRecognition.abort(); } catch(error) {}
+  roomFloatingConfirmationRecognition = null;
+}
+
+function handleRoomFloatingVoiceCommand(transcript){
+  const command = String(transcript || "").toLowerCase();
+  if(/\bcontinue\b/.test(command)) return continueRoomFloatingLiveAnalysis();
+  if(/\b(change|new)\s+users?\b/.test(command) && roomFloatingLiveMode === "podcast") return changeRoomFloatingPodcastUsers();
+  if(/\bnew\s+topic\b/.test(command) && roomFloatingLiveMode === "podcast") return startRoomFloatingPodcastTopic();
+  if(/\b(stop|end|close)\b/.test(command)) return endRoomFloatingLiveSession();
+}
+
+function startRoomFloatingConfirmationListening(){
+  stopRoomFloatingConfirmationListening();
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!Recognition) return;
+  const recognition = new Recognition();
+  roomFloatingConfirmationRecognition = recognition;
+  recognition.lang = "en-US";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.onresult = event => {
+    const transcript = Array.from(event.results || []).map(result => result[0]?.transcript || "").join(" ");
+    handleRoomFloatingVoiceCommand(transcript);
+  };
+  recognition.onend = () => {
+    if(roomFloatingConfirmationRecognition === recognition) roomFloatingConfirmationRecognition = null;
+  };
+  recognition.onerror = () => {
+    if(roomFloatingConfirmationRecognition === recognition) roomFloatingConfirmationRecognition = null;
+  };
+  try { recognition.start(); } catch(error) {}
+}
+
+function showRoomFloatingSessionPrompt(){
+  roomFloatingSessionPromptPending = false;
+  clearTimeout(roomFloatingLiveTimer);
+  roomFloatingLiveTimer = null;
+  roomFloatingLiveGeneration += 1;
+  roomFloatingLiveInFlight = false;
+  const prompt = document.getElementById("roomFloatingSessionPrompt");
+  if(prompt) prompt.hidden = false;
+  const podcastActions = document.getElementById("roomFloatingPodcastSessionActions");
+  if(podcastActions) podcastActions.hidden = roomFloatingLiveMode !== "podcast";
+  if(roomFloatingLiveVoiceEnabled && "speechSynthesis" in window){
+    roomFloatingLiveSpeechActive = true;
+    const utterance = new SpeechSynthesisUtterance("Would you like to continue?");
+    utterance.rate = 0.96;
+    const finish = () => {
+      roomFloatingLiveSpeechActive = false;
+      startRoomFloatingConfirmationListening();
+    };
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    window.speechSynthesis.speak(utterance);
+  }else{
+    startRoomFloatingConfirmationListening();
+  }
+}
+
+function requestRoomFloatingSessionPrompt(){
+  if(roomFloatingLiveSpeechActive || window.speechSynthesis?.speaking){
+    roomFloatingSessionPromptPending = true;
+    return;
+  }
+  showRoomFloatingSessionPrompt();
 }
 
 function hideRoomFloatingLiveBox(kind){
@@ -14738,7 +14947,9 @@ function currentRoomFloatingHumanName(){
 function showRoomFloatingLiveStatus(message,detail = ""){
   const insight = document.getElementById("roomFloatingInsight");
   if(!insight) return;
-  document.getElementById("roomFloatingInsightName").textContent = `${currentRoomFloatingHumanName()}:`;
+  document.getElementById("roomFloatingInsightName").textContent = roomFloatingLiveMode === "podcast"
+    ? "ASK.CAMERA PODCAST"
+    : `${currentRoomFloatingHumanName()}:`;
   document.getElementById("roomFloatingInsightText").textContent = message;
   document.getElementById("roomFloatingInsightOpinion").textContent = detail;
   insight.dataset.ready = "true";
@@ -14762,6 +14973,11 @@ function speakRoomFloatingLiveAnalysis(guidance){
   utterance.pitch = 1;
   const finish = () => {
     roomFloatingLiveSpeechActive = false;
+    if(roomFloatingSessionPromptPending){
+      roomFloatingLivePendingSpeech = "";
+      showRoomFloatingSessionPrompt();
+      return;
+    }
     if(!roomFloatingLiveVoiceEnabled) return;
     const pending = roomFloatingLivePendingSpeech;
     roomFloatingLivePendingSpeech = "";
@@ -14786,7 +15002,13 @@ function toggleRoomFloatingLiveVoice(){
   if(!roomFloatingLiveVoiceEnabled){
     roomFloatingLivePendingSpeech = "";
     roomFloatingLiveSpeechActive = false;
+    roomFloatingPodcastSpeechQueue = [];
+    stopRoomFloatingConfirmationListening();
     window.speechSynthesis.cancel();
+  }else if(!document.getElementById("roomFloatingSessionPrompt")?.hidden){
+    startRoomFloatingConfirmationListening();
+  }else if(roomFloatingLiveMode === "podcast" && roomFloatingPodcastLastResponse){
+    queueRoomFloatingPodcastSpeech(roomFloatingPodcastLastResponse);
   }else if(document.getElementById("roomFloatingInsight")?.dataset.speakable === "true"){
     speakRoomFloatingLiveAnalysis(document.getElementById("roomFloatingInsightText")?.textContent || "");
   }
@@ -14827,14 +15049,103 @@ function renderRoomFloatingLiveAnalysis(response){
   }
 }
 
+function setRoomFloatingPodcastSpeaker(speakerId = ""){
+  roomFloatingPodcastCurrentSpeakerId = String(speakerId || "");
+  document.querySelectorAll(".roomFloatingPodcastHuman").forEach(element => {
+    element.classList.toggle("isSpeaking",element.dataset.humanId === roomFloatingPodcastCurrentSpeakerId);
+  });
+}
+
+function speakRoomFloatingPodcastQueue(){
+  if(!roomFloatingLiveVoiceEnabled || !("speechSynthesis" in window) || roomFloatingLiveSpeechActive) return;
+  const next = roomFloatingPodcastSpeechQueue.shift();
+  if(!next){
+    setRoomFloatingPodcastSpeaker("");
+    return;
+  }
+  roomFloatingLiveSpeechActive = true;
+  setRoomFloatingPodcastSpeaker(next.speakerId);
+  const utterance = new SpeechSynthesisUtterance(next.text);
+  const voices = window.speechSynthesis.getVoices().filter(voice => /^en/i.test(voice.lang));
+  const speakerIndex = roomFloatingPodcastBeingIds.indexOf(next.speakerId);
+  utterance.voice = voices[(speakerIndex >= 0 ? speakerIndex : 0) % Math.max(voices.length,1)] || null;
+  utterance.rate = 0.96;
+  utterance.pitch = speakerIndex === 1 ? 1.06 : 0.96;
+  const finish = () => {
+    roomFloatingLiveSpeechActive = false;
+    if(roomFloatingSessionPromptPending){
+      roomFloatingPodcastSpeechQueue = [];
+      setRoomFloatingPodcastSpeaker("");
+      showRoomFloatingSessionPrompt();
+      return;
+    }
+    speakRoomFloatingPodcastQueue();
+  };
+  utterance.onend = finish;
+  utterance.onerror = finish;
+  window.speechSynthesis.speak(utterance);
+}
+
+function queueRoomFloatingPodcastSpeech(response){
+  if(!roomFloatingLiveVoiceEnabled) return;
+  roomFloatingPodcastSpeechQueue = [];
+  if(!roomFloatingPodcastIntroductionSpoken){
+    const names = (response.humans || []).map(human => human.name).filter(Boolean);
+    if(names.length === 2){
+      roomFloatingPodcastSpeechQueue.push({
+        speakerId:"",
+        text:`A live podcast with ${names[0]} and ${names[1]}.`
+      });
+    }
+    roomFloatingPodcastIntroductionSpoken = true;
+  }
+  (response.turns || []).forEach(turn => {
+    const text = String(turn.text || "").trim();
+    if(text) roomFloatingPodcastSpeechQueue.push({ speakerId:String(turn.speakerId || ""),text });
+  });
+  speakRoomFloatingPodcastQueue();
+}
+
+async function countRoomFloatingPodcastUsage(humans){
+  if(roomFloatingPodcastUsageCounted) return;
+  roomFloatingPodcastUsageCounted = true;
+  await Promise.all((humans || []).slice(0,2).map(human => countOpenHumanLove(human.id)));
+}
+
+function renderRoomFloatingPodcast(response){
+  const podcast = document.getElementById("roomFloatingPodcast");
+  const humans = Array.isArray(response.humans) ? response.humans.slice(0,2) : [];
+  const turns = Array.isArray(response.turns) ? response.turns : [];
+  if(!podcast || humans.length < 2) return;
+  roomFloatingPodcastLastResponse = response;
+  roomFloatingPodcastBeingIds = humans.map(human => String(human.id));
+  document.getElementById("roomFloatingPodcastTopic").textContent = response.topic || "LIVE PODCAST";
+  document.getElementById("roomFloatingPodcastHumans").innerHTML = humans.map(human => `
+    <div class="roomFloatingPodcastHuman" data-human-id="${escapeBeingText(human.id)}">
+      <img src="${escapeBeingText(human.photo || "")}" alt="">
+      <div><div class="roomFloatingPodcastHumanName">${escapeBeingText(human.name || "USER")}</div><div class="roomFloatingPodcastHumanRole">${escapeBeingText(human.category || "USER Perspective")}</div></div>
+    </div>`).join("");
+  document.getElementById("roomFloatingPodcastTranscript").innerHTML = turns.map(turn => {
+    const human = humans.find(item => String(item.id) === String(turn.speakerId));
+    return `<div><strong>${escapeBeingText(human?.name || "USER")}:</strong> ${escapeBeingText(turn.text || "")}</div>`;
+  }).join("");
+  podcast.dataset.ready = "true";
+  podcast.hidden = false;
+  const insight = document.getElementById("roomFloatingInsight");
+  const result = document.getElementById("roomFloatingResult");
+  if(insight) insight.hidden = true;
+  if(result) result.hidden = true;
+  countRoomFloatingPodcastUsage(humans);
+  queueRoomFloatingPodcastSpeech(response);
+}
+
 function runRoomFloatingLiveAnalysis(){
   const cameraOpen = roomFloatingLiveSurface === "home"
     ? !document.getElementById("homeStartupLayer")?.hidden && !document.getElementById("homeCaptureStage")?.hidden
     : !document.getElementById("roomFloatingCameraLayer")?.hidden;
   if(!cameraOpen || document.hidden) return stopRoomFloatingLiveAnalysis();
   if(Date.now() - roomFloatingLiveStartedAt >= 180000){
-    const button = document.getElementById("roomFloatingLiveContinue");
-    if(button) button.hidden = false;
+    requestRoomFloatingSessionPrompt();
     return;
   }
   if(!socket.connected){
@@ -14857,7 +15168,10 @@ function runRoomFloatingLiveAnalysis(){
   const payload = {
     imageDataUrl:frame.imageDataUrl,
     beingId:localStorage.getItem("selectedBeingId") || DEFAULT_LIVE_HUMAN_ID,
-    category:LIVE_CAMERA_CATEGORIES[roomFloatingLiveCategoryIndex % LIVE_CAMERA_CATEGORIES.length]
+    category:LIVE_CAMERA_CATEGORIES[roomFloatingLiveCategoryIndex % LIVE_CAMERA_CATEGORIES.length],
+    mode:roomFloatingLiveMode,
+    podcastBeingIds:roomFloatingLiveMode === "podcast" ? roomFloatingPodcastBeingIds : [],
+    podcastExcludeIds:roomFloatingLiveMode === "podcast" ? roomFloatingPodcastExcludedIds : []
   };
   const requestGeneration = roomFloatingLiveGeneration;
   let completed = false;
@@ -14880,8 +15194,12 @@ function runRoomFloatingLiveAnalysis(){
     if(requestGeneration !== roomFloatingLiveGeneration) return;
     roomFloatingLiveInFlight = false;
     if(response?.ok){
-      renderRoomFloatingLiveAnalysis(response);
-      roomFloatingLiveCategoryIndex = (roomFloatingLiveCategoryIndex + 1) % LIVE_CAMERA_CATEGORIES.length;
+      if(response.mode === "podcast"){
+        renderRoomFloatingPodcast(response);
+      }else{
+        renderRoomFloatingLiveAnalysis(response);
+        roomFloatingLiveCategoryIndex = (roomFloatingLiveCategoryIndex + 1) % LIVE_CAMERA_CATEGORIES.length;
+      }
     }else if(!response?.retry){
       showRoomFloatingLiveStatus("Live analysis is reconnecting.",response?.error || "The next temporary frame will try again automatically.");
     }
