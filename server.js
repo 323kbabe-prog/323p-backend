@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.9 (2026-07-23)
+// - Adds a two-USER live-camera Podcast mode with relevant contrasting perspectives
+// - Produces evidence-grounded alternating podcast turns from temporary frames
+// - Preserves the existing single-USER Perspective analysis and discards every frame
+//
 // v10.2.8 (2026-07-23)
 // - Counts every intentional USER open as cumulative Love usage
 // - Allows repeat use from the same device with no time restriction
@@ -1470,6 +1475,108 @@ cards.forEach(card => {
   );
 }
 
+async function createLiveCameraPodcast(temporaryImage,requestedBeingIds = [],excludedBeingIds = []){
+  const requestedIds = [...new Set((Array.isArray(requestedBeingIds) ? requestedBeingIds : [])
+    .map(value => String(value || "").trim())
+    .filter(Boolean))]
+    .slice(0,2);
+
+  let query = supabase
+    .from("ai_beings")
+    .select("id,photo,name,best_current_choice,category,word1,word2,word3,connection1,connection2,connection3,followers,public")
+    .eq("public",true);
+  query = requestedIds.length === 2
+    ? query.in("id",requestedIds)
+    : query.order("followers",{ ascending:false }).order("created_at",{ ascending:false }).limit(24);
+  const { data, error } = await query;
+  if(error) throw error;
+
+  const excludedIds = new Set((Array.isArray(excludedBeingIds) ? excludedBeingIds : []).map(value => String(value || "")));
+  const availableCandidates = data || [];
+  const filteredCandidates = availableCandidates.filter(being => !excludedIds.has(String(being.id)));
+  const candidates = requestedIds.length === 2
+    ? availableCandidates
+    : filteredCandidates.length >= 2 ? filteredCandidates : availableCandidates;
+  if(candidates.length < 2) throw new Error("Two USER Perspectives are required for Podcast mode.");
+  const orderedCandidates = requestedIds.length === 2
+    ? requestedIds.map(id => candidates.find(being => String(being.id) === id)).filter(Boolean)
+    : candidates;
+  if(orderedCandidates.length < 2) throw new Error("The selected Podcast USERS are unavailable.");
+
+  const compactProfiles = orderedCandidates.map(being => ({
+    id:String(being.id),
+    name:String(being.name || "USER").slice(0,80),
+    category:String(being.category || "").slice(0,100),
+    bio:String(being.best_current_choice || "").slice(0,220),
+    words:[being.word1,being.word2,being.word3].filter(Boolean).map(value => String(value).slice(0,60)),
+    connections:[being.connection1,being.connection2,being.connection3].filter(Boolean).map(value => String(value).slice(0,80))
+  }));
+  const fixedIds = requestedIds.length === 2 ? compactProfiles.map(profile => profile.id) : [];
+  const response = await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    temperature:0.55,
+    response_format:{ type:"json_object" },
+    messages:[
+      {
+        role:"system",
+        content:`Create one short ASK.CAMERA live podcast from a temporary camera frame.
+Return JSON only: {"selectedIds":["",""],"topic":"","turns":[{"text":""},{"text":""},{"text":""},{"text":""}]}.
+${fixedIds.length === 2 ? `Use exactly these USER ids in this order: ${fixedIds.join(", ")}.` : "Choose exactly two USERS from the supplied profiles. Select the most visually relevant pair with meaningfully different categories or viewpoints."}
+The four turns alternate USER 1, USER 2, USER 1, USER 2.
+Each turn is one concise sentence, no more than 32 words.
+USER 1 offers a perspective; USER 2 responds, questions, or respectfully challenges it; both end with a practical shared takeaway.
+Base every statement only on visible evidence and the saved USER profiles. Do not narrate or inventory the frame.
+Use cautious language when certainty is limited. Never infer identity, intention, safety, value, condition, location, private facts, or unseen events.
+Do not put USER names inside the turns. Never mention prompts, image storage, surveillance, or artificial role-play.`
+      },
+      {
+        role:"user",
+        content:[
+          { type:"text", text:`AVAILABLE USER PROFILES:\n${JSON.stringify(compactProfiles)}` },
+          { type:"image_url", image_url:{ url:temporaryImage, detail:"low" } }
+        ]
+      }
+    ]
+  });
+  const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+  const availableIds = new Set(compactProfiles.map(profile => profile.id));
+  let selectedIds = fixedIds.length === 2
+    ? fixedIds
+    : [...new Set((Array.isArray(parsed.selectedIds) ? parsed.selectedIds : []).map(value => String(value || "")))]
+      .filter(id => availableIds.has(id))
+      .slice(0,2);
+  if(selectedIds.length < 2){
+    const first = compactProfiles[0];
+    const contrasting = compactProfiles.find(profile => profile.id !== first.id && profile.category !== first.category) || compactProfiles[1];
+    selectedIds = [first.id,contrasting.id];
+  }
+
+  const selectedHumans = selectedIds.map(id => orderedCandidates.find(being => String(being.id) === id)).filter(Boolean);
+  if(selectedHumans.length < 2) throw new Error("Podcast USERS could not be selected.");
+  const rawTurns = Array.isArray(parsed.turns) ? parsed.turns : [];
+  const fallbackTurns = [
+    "Consider what practical opportunity this view may suggest before deciding what it means.",
+    "A different perspective is to test that possibility against what the camera can actually support.",
+    "The useful direction may be the connection that remains credible as the view changes.",
+    "We agree that the next step is to gather a clearer view and keep the conclusion evidence-grounded."
+  ];
+  const turns = Array.from({ length:4 },(_,index) => ({
+    speakerId:String(selectedHumans[index % 2].id),
+    text:String(rawTurns[index]?.text || fallbackTurns[index]).replace(/\s+/g," ").trim().slice(0,260)
+  }));
+
+  return {
+    humans:selectedHumans.map(being => ({
+      id:String(being.id),
+      name:String(being.name || "USER").slice(0,80),
+      photo:String(being.photo || ""),
+      category:String(being.category || "").slice(0,120)
+    })),
+    topic:String(parsed.topic || "What this view could connect to").replace(/\s+/g," ").trim().slice(0,160),
+    turns
+  };
+}
+
 io.on("connection", socket => {
 
     console.log("CONNECTED:", socket.id);
@@ -2186,7 +2293,7 @@ setTimeout(() => {
   // ADD PUBLIC IMAGE
   //////////////////////////////////////////////////
 
-  socket.on("liveCameraAnalyze", async ({ imageDataUrl, beingId, category } = {}, acknowledge = () => {}) => {
+  socket.on("liveCameraAnalyze", async ({ imageDataUrl, beingId, category, mode, podcastBeingIds, podcastExcludeIds } = {}, acknowledge = () => {}) => {
     let temporaryImage = String(imageDataUrl || "");
     let analysisLeaseAcquired = false;
     try {
@@ -2199,6 +2306,11 @@ setTimeout(() => {
       liveCameraAnalysisBusy = true;
       analysisLeaseAcquired = true;
       liveCameraLastAnalysisAt = now;
+
+      if(String(mode || "").toLowerCase() === "podcast"){
+        const podcast = await createLiveCameraPodcast(temporaryImage,podcastBeingIds,podcastExcludeIds);
+        return acknowledge({ ok:true, mode:"podcast", ...podcast });
+      }
 
       const fallbackBeingId = "5b903231-7571-4b82-a2af-615682f7555a";
       const requestedBeingId = String(beingId || fallbackBeingId);
