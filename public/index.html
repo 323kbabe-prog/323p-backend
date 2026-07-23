@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.37 (2026-07-23)
+  - Asks whether voice should be on before floating Live Camera guidance begins
+  - Applies the answer to both USER Perspective and Podcast modes
+  - Keeps the existing Voice On/Off control available throughout the session
+
   v10.3.34 (2026-07-23)
   - Adds required Voice Style selection to Create and Edit USER
   - Defaults existing and new USERS to Automatic distinct voice
@@ -1851,6 +1856,12 @@ body.systemBlockingState #helper{
 #roomFloatingPodcastTranscript{margin-top:9px!important;font-size:13px!important;line-height:1.4!important;}
 #roomFloatingSessionPrompt{position:absolute!important;z-index:7!important;left:14px!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;padding:14px!important;background:rgba(255,255,255,.97)!important;color:#24292f!important;box-shadow:0 4px 18px rgba(0,0,0,.22)!important;}
 #roomFloatingSessionPrompt[hidden]{display:none!important;}
+#roomFloatingVoicePrompt{position:absolute!important;z-index:8!important;left:14px!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;padding:14px!important;background:rgba(255,255,255,.97)!important;color:#24292f!important;box-shadow:0 4px 18px rgba(0,0,0,.22)!important;}
+#roomFloatingVoicePrompt[hidden]{display:none!important;}
+#roomFloatingVoicePromptTitle{font-size:16px!important;font-weight:800!important;}
+#roomFloatingVoicePromptActions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin-top:12px!important;}
+#roomFloatingVoicePromptActions button{min-height:38px!important;padding:7px!important;border:0!important;background:#d0d7de!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
+#roomFloatingVoicePromptActions button:first-child{background:#0969da!important;color:#fff!important;}
 #roomFloatingSessionTitle{font-size:16px!important;font-weight:800!important;}
 #roomFloatingSessionDetail{margin-top:4px!important;color:#57606a!important;font-size:12px!important;line-height:1.4!important;}
 #roomFloatingSessionActions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin-top:12px!important;}
@@ -14586,7 +14597,7 @@ async function startHomeIntroCamera(){
   }
   ensureRoomFloatingCamera();
   mountRoomFloatingLiveControls(document.getElementById("homeCaptureCard"));
-  startRoomFloatingLiveAnalysis("home");
+  promptRoomFloatingLiveVoice("home");
   queueCanonicalHomeExperience();
   requestAnimationFrame(() => document.getElementById("homeTakePicture")?.focus());
 }
@@ -14599,6 +14610,7 @@ async function openHomeFloatingCamera(event){
 function closeHomeCaptureCard(event){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   homeCaptureCardDismissed = true;
+  roomFloatingVoiceChoicePending = false;
   clearTimeout(homeIntroAutoTimer);
   const layer = document.getElementById("homeStartupLayer");
   if(layer) layer.hidden = true;
@@ -14608,6 +14620,7 @@ function closeHomeCaptureCard(event){
 function takeHomePicture(event){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   homeCaptureCardDismissed = true;
+  roomFloatingVoiceChoicePending = false;
   const layer = document.getElementById("homeStartupLayer");
   if(layer) layer.hidden = true;
   stopRoomFloatingLiveAnalysis();
@@ -14653,6 +14666,10 @@ function ensureRoomFloatingCamera(){
           <div id="roomFloatingPodcastSessionActions" hidden><button type="button" onclick="changeRoomFloatingPodcastUsers()">NEW USERS</button><button type="button" onclick="startRoomFloatingPodcastTopic()">NEW TOPIC</button></div>
           <div id="roomFloatingVoiceAnswer">Say “Continue,” “End,” “Change users,” or “New topic.”</div>
         </section>
+        <section id="roomFloatingVoicePrompt" hidden aria-live="polite">
+          <div id="roomFloatingVoicePromptTitle">VOICE ON FOR USER PERSPECTIVE AND PODCAST?</div>
+          <div id="roomFloatingVoicePromptActions"><button type="button" onclick="chooseRoomFloatingLiveVoice(true)">YES</button><button type="button" onclick="chooseRoomFloatingLiveVoice(false)">NO</button></div>
+        </section>
         <button id="roomFloatingVoiceToggle" type="button" aria-pressed="false" onclick="toggleRoomFloatingLiveVoice()">VOICE OFF</button>
         <button id="roomFloatingCameraClose" type="button" aria-label="Close camera" onclick="closeRoomFloatingCamera(event)">×</button>
         <button id="roomFloatingCameraShutter" type="button" aria-label="Take picture" onclick="takeRoomFloatingPicture(event)">
@@ -14674,7 +14691,7 @@ function ensureRoomFloatingCamera(){
 
 function mountRoomFloatingLiveControls(host){
   if(!host) return;
-  ["roomFloatingLiveStack","roomFloatingModeSwitch","roomFloatingLiveRestore","roomFloatingSessionPrompt","roomFloatingVoiceToggle"]
+  ["roomFloatingLiveStack","roomFloatingModeSwitch","roomFloatingLiveRestore","roomFloatingSessionPrompt","roomFloatingVoicePrompt","roomFloatingVoiceToggle"]
     .map(id => document.getElementById(id))
     .filter(Boolean)
     .forEach(element => host.appendChild(element));
@@ -14706,6 +14723,7 @@ let roomFloatingPodcastCurrentSpeakerId = "";
 let roomFloatingPodcastLastResponse = null;
 let roomFloatingConfirmationRecognition = null;
 let roomFloatingSessionPromptPending = false;
+let roomFloatingVoiceChoicePending = false;
 let roomFloatingPerspectiveVoiceStyle = "automatic";
 let roomFloatingPerspectiveHumanId = DEFAULT_LIVE_HUMAN_ID;
 let roomFloatingPodcastVoiceNames = Object.create(null);
@@ -14784,6 +14802,36 @@ function setRoomFloatingLiveMode(mode){
   roomFloatingPodcastVoiceNames = Object.create(null);
   window.speechSynthesis?.cancel();
   syncRoomFloatingLiveMode();
+  if(roomFloatingVoiceChoicePending) return;
+  startRoomFloatingLiveAnalysis(roomFloatingLiveSurface);
+}
+
+function promptRoomFloatingLiveVoice(surface = "room"){
+  stopRoomFloatingLiveAnalysis(true);
+  roomFloatingLiveSurface = surface;
+  roomFloatingVoiceChoicePending = true;
+  const prompt = document.getElementById("roomFloatingVoicePrompt");
+  if(prompt) prompt.hidden = false;
+  const sessionPrompt = document.getElementById("roomFloatingSessionPrompt");
+  if(sessionPrompt) sessionPrompt.hidden = true;
+  document.getElementById("roomFloatingLiveRestore")?.setAttribute("hidden","");
+  requestAnimationFrame(() => document.querySelector("#roomFloatingVoicePromptActions button")?.focus());
+}
+
+function chooseRoomFloatingLiveVoice(enabled){
+  roomFloatingVoiceChoicePending = false;
+  const prompt = document.getElementById("roomFloatingVoicePrompt");
+  if(prompt) prompt.hidden = true;
+  const supported = "speechSynthesis" in window;
+  roomFloatingLiveVoiceEnabled = Boolean(enabled) && supported;
+  const button = document.getElementById("roomFloatingVoiceToggle");
+  if(button){
+    button.setAttribute("aria-pressed",String(roomFloatingLiveVoiceEnabled));
+    button.textContent = supported
+      ? (roomFloatingLiveVoiceEnabled ? "VOICE ON" : "VOICE OFF")
+      : "VOICE UNAVAILABLE";
+    button.disabled = !supported;
+  }
   startRoomFloatingLiveAnalysis(roomFloatingLiveSurface);
 }
 
@@ -15312,7 +15360,7 @@ async function openRoomFloatingCamera(event){
     roomCameraVideo.srcObject = video.srcObject;
     roomCameraVideo.play().catch(() => {});
   }
-  startRoomFloatingLiveAnalysis("room");
+  promptRoomFloatingLiveVoice("room");
   requestAnimationFrame(() => document.getElementById("roomFloatingCameraClose")?.focus());
 }
 
@@ -15321,6 +15369,9 @@ function closeRoomFloatingCamera(event,keepStream = false){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   const layer = document.getElementById("roomFloatingCameraLayer");
   if(layer) layer.hidden = true;
+  roomFloatingVoiceChoicePending = false;
+  const voicePrompt = document.getElementById("roomFloatingVoicePrompt");
+  if(voicePrompt) voicePrompt.hidden = true;
   stopRoomFloatingLiveAnalysis();
   if(publicImageAddMode && !keepStream) publicImageAddMode = false;
   const returningToRoom = getComputedStyle(roomOverlay).display === "flex";
