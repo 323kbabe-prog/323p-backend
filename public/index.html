@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.34 (2026-07-23)
+  - Adds required Voice Style selection to Create and Edit USER
+  - Defaults existing and new USERS to Automatic distinct voice
+  - Applies saved Feminine, Masculine, Neutral, or Automatic voices without photo inference
+
   v10.3.33 (2026-07-23)
   - Adds PERSPECTIVE and PODCAST modes to the floating Live Camera
   - Lets two automatically selected USERS discuss the temporary camera view
@@ -3044,6 +3049,15 @@ ASK.CAMERA — USER PERSPECTIVE NETWORK
     </div>
     <textarea id="beingChoice" placeholder="Generated from category, subcategory, personality, and Connection Keywords" maxlength="160" class="beingInput" rows="3" oninput="markBeingBioEdited()"></textarea>
     <div id="beingBioStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Auto-generated and editable.</div>
+    <div class="beingFormSectionTitle">Voice</div>
+    <div class="beingFormFieldLabel">Voice Style</div>
+    <select id="beingVoiceStyle" class="beingInput" required>
+      <option value="automatic">Automatic distinct voice</option>
+      <option value="feminine">Feminine</option>
+      <option value="masculine">Masculine</option>
+      <option value="neutral">Neutral</option>
+    </select>
+    <div style="font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Always available when audio is enabled. Voice Style is never inferred from the profile photo.</div>
     <input id="beingPhone" type="tel" inputmode="tel" placeholder="Public phone with country code (optional), e.g. +12125550123" class="beingInput">
     <div class="beingFormSectionTitle">Management</div>
     <div id="beingPasswordFields">
@@ -14013,6 +14027,7 @@ function resetBeingForm(){
   document.getElementById("beingPhotoStatus").innerText = "No photo selected.";
   document.getElementById("beingBioGenerate").style.display = "none";
   document.getElementById("beingBioStatus").innerText = "Auto-generated and editable.";
+  document.getElementById("beingVoiceStyle").value = "automatic";
   document.getElementById("beingShowPasswords").checked = false;
   toggleBeingPasswords(false);
   document.getElementById("beingPasswordFields").style.display = "block";
@@ -14061,6 +14076,9 @@ async function changeAIBeingProfile(id){
     document.getElementById("beingBioGenerate").style.display = "inline-block";
     document.getElementById("beingBioStatus").innerText = "Existing bio. Edit it or regenerate from the profile.";
     document.getElementById("beingPhone").value = being.phone || "";
+    document.getElementById("beingVoiceStyle").value = ["automatic","feminine","masculine","neutral"].includes(being.voice_style)
+      ? being.voice_style
+      : "automatic";
     document.getElementById("beingPasswordFields").style.display = "none";
     document.getElementById("beingFoundingNote").style.display = "none";
     document.getElementById("createBeingSubmit").innerText = "Save changes";
@@ -14107,6 +14125,7 @@ async function createAIBeing(){
     connection1: document.getElementById("beingConnection1").value.trim(),
     connection2: document.getElementById("beingConnection2").value.trim(),
     connection3: document.getElementById("beingConnection3").value.trim(),
+    voice_style: document.getElementById("beingVoiceStyle").value,
     phone: document.getElementById("beingPhone").value.trim(),
     created_by: deviceId
   };
@@ -14121,7 +14140,7 @@ async function createAIBeing(){
     payload.management_credential = editingBeingPassword;
   }
 
-  const requiredValues = [payload.name,payload.best_current_choice,payload.category,payload.word1,payload.word2,payload.word3,payload.connection1,payload.connection2,payload.connection3];
+  const requiredValues = [payload.name,payload.best_current_choice,payload.category,payload.word1,payload.word2,payload.word3,payload.connection1,payload.connection2,payload.connection3,payload.voice_style];
   const invalidConnection = [payload.connection1,payload.connection2,payload.connection3].find(value => !beingConnectionPhraseIsShort(value));
   if(invalidConnection){ alert("Each Connection Keyword must be a short object or place name with up to four words."); return; }
   const selectedRole = document.getElementById("beingCreatorType").value;
@@ -14687,6 +14706,54 @@ let roomFloatingPodcastCurrentSpeakerId = "";
 let roomFloatingPodcastLastResponse = null;
 let roomFloatingConfirmationRecognition = null;
 let roomFloatingSessionPromptPending = false;
+let roomFloatingPerspectiveVoiceStyle = "automatic";
+let roomFloatingPerspectiveHumanId = DEFAULT_LIVE_HUMAN_ID;
+let roomFloatingPodcastVoiceNames = Object.create(null);
+
+const FEMININE_VOICE_NAME = /\b(samantha|victoria|karen|moira|tessa|zira|susan|ava|allison|serena|fiona|kate|female|woman)\b/i;
+const MASCULINE_VOICE_NAME = /\b(daniel|alex|fred|tom|david|mark|arthur|rishi|male|man)\b/i;
+
+function normalizedHumanVoiceStyle(value){
+  const style = String(value || "automatic").toLowerCase();
+  return ["automatic","feminine","masculine","neutral"].includes(style) ? style : "automatic";
+}
+
+function stableVoiceIndex(value,length){
+  if(!length) return 0;
+  let hash = 0;
+  for(const character of String(value || "")) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
+  return Math.abs(hash) % length;
+}
+
+function selectHumanSpeechVoice(style,humanId,excludedNames = []){
+  const englishVoices = window.speechSynthesis?.getVoices().filter(voice => /^en/i.test(voice.lang)) || [];
+  if(!englishVoices.length) return null;
+  const excluded = new Set(excludedNames.filter(Boolean));
+  const available = englishVoices.filter(voice => !excluded.has(voice.name));
+  const pool = available.length ? available : englishVoices;
+  const normalizedStyle = normalizedHumanVoiceStyle(style);
+  let preferred = pool;
+  if(normalizedStyle === "feminine") preferred = pool.filter(voice => FEMININE_VOICE_NAME.test(voice.name));
+  if(normalizedStyle === "masculine") preferred = pool.filter(voice => MASCULINE_VOICE_NAME.test(voice.name));
+  if(normalizedStyle === "neutral") preferred = pool.filter(voice => !FEMININE_VOICE_NAME.test(voice.name) && !MASCULINE_VOICE_NAME.test(voice.name));
+  if(!preferred.length) preferred = pool;
+  return preferred[stableVoiceIndex(humanId,preferred.length)] || preferred[0] || null;
+}
+
+function podcastSpeechVoice(human){
+  const id = String(human?.id || "");
+  const voices = window.speechSynthesis?.getVoices() || [];
+  const existingName = roomFloatingPodcastVoiceNames[id];
+  const existing = voices.find(voice => voice.name === existingName);
+  if(existing) return existing;
+  const voice = selectHumanSpeechVoice(
+    human?.voiceStyle,
+    id,
+    Object.values(roomFloatingPodcastVoiceNames)
+  );
+  if(voice) roomFloatingPodcastVoiceNames[id] = voice.name;
+  return voice;
+}
 
 function syncRoomFloatingLiveMode(){
   const podcastMode = roomFloatingLiveMode === "podcast";
@@ -14714,6 +14781,7 @@ function setRoomFloatingLiveMode(mode){
   roomFloatingPodcastSpeechQueue = [];
   roomFloatingPodcastCurrentSpeakerId = "";
   roomFloatingPodcastLastResponse = null;
+  roomFloatingPodcastVoiceNames = Object.create(null);
   window.speechSynthesis?.cancel();
   syncRoomFloatingLiveMode();
   startRoomFloatingLiveAnalysis(roomFloatingLiveSurface);
@@ -14779,6 +14847,7 @@ function startRoomFloatingLiveAnalysis(surface = "room"){
     roomFloatingPodcastIntroductionSpoken = false;
     roomFloatingPodcastSpeechQueue = [];
     roomFloatingPodcastLastResponse = null;
+    roomFloatingPodcastVoiceNames = Object.create(null);
     const podcast = document.getElementById("roomFloatingPodcast");
     if(podcast){
       podcast.dataset.ready = "false";
@@ -14838,6 +14907,7 @@ function changeRoomFloatingPodcastUsers(){
   roomFloatingPodcastIntroductionSpoken = false;
   roomFloatingPodcastSpeechQueue = [];
   roomFloatingPodcastLastResponse = null;
+  roomFloatingPodcastVoiceNames = Object.create(null);
   const podcast = document.getElementById("roomFloatingPodcast");
   if(podcast){
     podcast.dataset.ready = "false";
@@ -14967,10 +15037,11 @@ function speakRoomFloatingLiveAnalysis(guidance){
   }
   roomFloatingLiveSpeechActive = true;
   const utterance = new SpeechSynthesisUtterance(text);
-  const voices = window.speechSynthesis.getVoices();
-  utterance.voice = voices.find(voice => /^en/i.test(voice.lang) && /natural|google|samantha|daniel/i.test(voice.name)) || voices.find(voice => /^en/i.test(voice.lang)) || null;
+  utterance.voice = selectHumanSpeechVoice(roomFloatingPerspectiveVoiceStyle,roomFloatingPerspectiveHumanId);
   utterance.rate = 0.96;
-  utterance.pitch = 1;
+  utterance.pitch = roomFloatingPerspectiveVoiceStyle === "feminine"
+    ? 1.04
+    : roomFloatingPerspectiveVoiceStyle === "masculine" ? 0.96 : 1;
   const finish = () => {
     roomFloatingLiveSpeechActive = false;
     if(roomFloatingSessionPromptPending){
@@ -15024,6 +15095,8 @@ function restoreRoomFloatingLiveBox(kind){
 }
 
 function renderRoomFloatingLiveAnalysis(response){
+  roomFloatingPerspectiveVoiceStyle = normalizedHumanVoiceStyle(response.human?.voiceStyle);
+  roomFloatingPerspectiveHumanId = String(response.human?.id || DEFAULT_LIVE_HUMAN_ID);
   const insight = document.getElementById("roomFloatingInsight");
   if(insight){
     document.getElementById("roomFloatingInsightName").textContent = `${response.human?.name || "Wang Vivian"}:`;
@@ -15066,11 +15139,14 @@ function speakRoomFloatingPodcastQueue(){
   roomFloatingLiveSpeechActive = true;
   setRoomFloatingPodcastSpeaker(next.speakerId);
   const utterance = new SpeechSynthesisUtterance(next.text);
-  const voices = window.speechSynthesis.getVoices().filter(voice => /^en/i.test(voice.lang));
   const speakerIndex = roomFloatingPodcastBeingIds.indexOf(next.speakerId);
-  utterance.voice = voices[(speakerIndex >= 0 ? speakerIndex : 0) % Math.max(voices.length,1)] || null;
+  const human = roomFloatingPodcastLastResponse?.humans?.find(item => String(item.id) === String(next.speakerId));
+  utterance.voice = podcastSpeechVoice(human);
   utterance.rate = 0.96;
-  utterance.pitch = speakerIndex === 1 ? 1.06 : 0.96;
+  const style = normalizedHumanVoiceStyle(human?.voiceStyle);
+  utterance.pitch = style === "feminine"
+    ? 1.05
+    : style === "masculine" ? 0.95 : speakerIndex === 1 ? 1.03 : 0.98;
   const finish = () => {
     roomFloatingLiveSpeechActive = false;
     if(roomFloatingSessionPromptPending){
