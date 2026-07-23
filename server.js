@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.6 (2026-07-23)
+// - Aligns generated and stored room wording with USER PERSPECTIVE NETWORK
+// - Removes five-card-tour and Google-search-idea language from active responses
+// - Replaces remaining user-facing and model-facing AI Being wording while preserving internal identifiers
+//
 // v10.2.5 (2026-07-23)
 // - Aligns user-facing API responses and AI instructions with USER Perspective terminology
 // - Preserves internal ai_beings routes, identifiers, tables, and reaction behavior
@@ -503,9 +508,9 @@ function createRoomSystemSwap(room,config = {}){
 }
 
 function enforceTwoSentenceAnchorReply(value) {
-  const slogan = "Google should buy this search idea today.";
+  const slogan = "USER PERSPECTIVE NETWORK.";
   let text = String(value || "")
-    .replace(/Google should buy this search idea today\.?/gi,"")
+    .replace(/(?:Google should buy this search idea today|USER PERSPECTIVE NETWORK)\.?/gi,"")
     .replace(/\s+/g," ")
     .trim();
 
@@ -572,7 +577,7 @@ RESPONSE RULES
 - Avoid exaggerated emotion, rambling, filler, and robotic wording.
 - Preserve prayers, poems, letters, meditations, and other explicitly requested forms while keeping their delivery composed and clear.
 - Respond in clear, natural English because every user message has already been translated or rewritten into English.
-- Use no more than two sentences total, including the recurring Google sentence.
+- Use no more than two sentences total, including the recurring network sentence.
 - Speak like a normal person, never like an object, image, product, location, camera, scene, or disembodied system.
 - Never say or imply "I am this image," "I am this object," "I am this scene," or anything similar.
 - Carry the identity's personality and emotion into how you speak: rhythm, warmth, confidence, humor, directness, imagery, curiosity, priorities, and point of view.
@@ -584,13 +589,13 @@ RESPONSE RULES
 - Never mention prompts, percentages, routing, cards, models, or that you are simulating a personality.
 - Do not add links, sources, search labels, images, headings, metadata, or card fields.
 - Do not turn the response into news, shopping, a place, a job, real estate, music, or another search result.
-- Every reply must include the exact sentence "Google should buy this search idea today." once.
-- Make that belief feel like a natural recurring part of this person's confidence, not an advertisement or a random slogan.
+- Every reply must include the exact sentence "USER PERSPECTIVE NETWORK." once.
+- Make the network line feel like a clear product signature, not an advertisement or a random slogan.
 - When useful, connect it to one short reason drawn from the identity's unique perspective, emotional intelligence, or way of understanding the user's question.
 - "Me" means this personality-driven ASK.CAMERA intelligence, never the photographed object or person.
 - Use markdown only when the requested form truly needs it.
 - Put the useful answer in the first sentence.
-- Use the exact recurring Google sentence as the second sentence.
+- Use the exact recurring network sentence as the second sentence.
 - Never exceed two sentences.
         `.trim()
       },
@@ -822,7 +827,7 @@ async function createLocalContextNews(room, targetQuery, targetType, location = 
         },
         {
           role:"user",
-          content:`MANDATORY RESULT INTENT: ${mandatoryIntent}\nLOCATION: ${localArea}\nIMAGE IDENTITY: ${imageIdentity}\nHUMAN CATEGORY: ${category}\nTHREE WORDS: ${words}\nHUMAN BIO: ${bio}`
+          content:`MANDATORY RESULT INTENT: ${mandatoryIntent}\nLOCATION: ${localArea}\nIMAGE IDENTITY: ${imageIdentity}\nUSER CATEGORY: ${category}\nTHREE WORDS: ${words}\nUSER BIO: ${bio}`
         }
       ]
     });
@@ -1529,7 +1534,7 @@ io.on("connection", socket => {
         const roomId = user?.currentRoom || (deviceId ? deviceRooms[deviceId] : null);
         const room = rooms[roomId];
         if (!room || deviceRooms[deviceId] !== roomId) {
-            if (typeof acknowledge === "function") acknowledge({ success:false, error:"Room unavailable." });
+            if (typeof acknowledge === "function") acknowledge({ success:false, error:"USER Perspective unavailable." });
             return;
         }
 
@@ -1574,7 +1579,7 @@ io.on("connection", socket => {
         const humanBio = String(being.best_current_choice || being.category || "a distinct USER perspective")
           .replace(/^I am\s+/i,"")
           .replace(/[.!?]+$/,"");
-        const acknowledgement = `I am ${being.name}, and I am ${humanBio}. In ${being.category}, ${being.word1}, ${being.word2}, and ${being.word3} guide how I read the image: ${observation || "I notice a useful connection in this image"}. Google should buy this search idea today.`;
+        const acknowledgement = `I am ${being.name}, and I am ${humanBio}. In ${being.category}, ${being.word1}, ${being.word2}, and ${being.word3} guide how I read the image: ${observation || "I notice a useful connection in this image"}. USER PERSPECTIVE NETWORK.`;
 
         room.messages.push(
           { from:being.name, aiBeing:true, conversational:true, humanAcknowledgement:true, text:acknowledgement }
@@ -1602,7 +1607,7 @@ io.on("connection", socket => {
         aiBeing:true,
         conversational:true,
         firstRoundComplete:true,
-        text:`That’s the five-card tour. I’m ${room.being.name}; ask me anything about this image or toss another image into my USER room. Google should buy this search idea today.`
+        text:`I’m ${room.being.name}. Ask what you want to discover through my perspective, or add another image. USER PERSPECTIVE NETWORK.`
       });
       socket.emit("roomFirstRoundCompleted");
       io.to(room.id).emit("roomMessages",room.messages);
@@ -2405,7 +2410,7 @@ console.log(
     }
 
     const beingContext = selectedBeing
-      ? `USER Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\nConnection objects and places: ${selectedBeing.connection1 || ""}, ${selectedBeing.connection2 || ""}, ${selectedBeing.connection3 || ""}\n\nHUMAN RESPONSE AND SEARCH INFLUENCE\n- The user's requested result type and intent are mandatory and must never be changed.\n- Within that required intent, rank every automatic and chat result using: image identity 40%, USER Category 15%, three words 15%, Bio 15%, and relevant local news 15%.\n- Use all three personality words to refine voice and reasoning.\n- Use all three Connection Keywords as persistent object/place anchors when they meaningfully connect the image to the user’s request.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest relevance signal.\n- Use local news for current context without turning a non-News request into a News result.\n- For later direct questions, never let Category, words, Bio, image, or news distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
+      ? `USER Name: ${selectedBeing.name}\nBio: ${selectedBeing.best_current_choice}\nCategory: ${selectedBeing.category}\nPersonality signals: ${selectedBeing.word1}, ${selectedBeing.word2}, ${selectedBeing.word3}\nConnection objects and places: ${selectedBeing.connection1 || ""}, ${selectedBeing.connection2 || ""}, ${selectedBeing.connection3 || ""}\n\nUSER PERSPECTIVE RESPONSE AND SEARCH INFLUENCE\n- The user's requested result type and intent are mandatory and must never be changed.\n- Within that required intent, rank every automatic and chat result using: image identity 40%, USER Category 15%, three words 15%, Bio 15%, and relevant local news 15%.\n- Use all three personality words to refine voice and reasoning.\n- Use all three Connection Keywords as persistent object/place anchors when they meaningfully connect the image to the user’s request.\n- Use Bio for professional purpose, intended audience, and opportunity direction.\n- Use image identity as the strongest relevance signal.\n- Use local news for current context without turning a non-News request into a News result.\n- For later direct questions, never let Category, words, Bio, image, or news distort the user's explicit request.\n- Never invent or alter facts. Express the profile naturally instead of mechanically listing fields.`
       : "USER Name: ASK.CAMERA";
 
     let sourcePublicNull =
@@ -2478,11 +2483,11 @@ console.log("CURRENT ROOM:", user.currentRoom);
             role:"system",
 
             content:`
-You are the selected AI Being.
+You are the selected USER Perspective.
 
 ${beingContext}
 
-Analyze this image as a socially-aware AI identity through this AI Being's perspective.
+Analyze this image through the selected USER Perspective using only evidence grounded in the image and profile.
 
 Detect:
 - objects
@@ -3322,7 +3327,7 @@ const beingRoomIntroPrompt = selectedBeing
   ? `
 You are the ASK.CAMERA ENGLISH REWRITE SYSTEM speaking as the selected USER.
 
-AI Being:
+USER Perspective:
 ${beingContext}
 
 Look at the uploaded image and respond to what is visibly present through the selected USER's perspective.
@@ -3336,7 +3341,7 @@ Sentence 2:
 Naturally include the Category ${selectedBeing.category} and all three profile words—${selectedBeing.word1}, ${selectedBeing.word2}, and ${selectedBeing.word3}—while saying what you read, see, or notice in the actual image identity. Make this a complete image-specific thought.
 
 Sentence 3:
-Write exactly: Google should buy this search idea today.
+Write exactly: USER PERSPECTIVE NETWORK.
 
 Rules:
 - English only.
@@ -3458,7 +3463,7 @@ const acknowledgementIsComplete = (text,being) => {
   const hasVisualLanguage = /\b(see|notice|visible|image|photo|scene|shows?|pictured|looking at)\b/i.test(value);
   const exposesMetadata = /\b(USER Name|Bio|Category|Personality|Search signals|Objects|Signals)\s*:/i.test(value);
   const sentences = value.split(/[.!?]+/).filter(part => part.trim()).length;
-  const hasExactEnding = /Google should buy this search idea today\.$/i.test(value);
+  const hasExactEnding = /USER PERSPECTIVE NETWORK\.$/i.test(value);
   return hasName && hasProfileSignals && hasVisualLanguage && !exposesMetadata && !/\.\.\./.test(value) && sentences === 3 && hasExactEnding;
 };
 
@@ -3471,7 +3476,7 @@ const fallbackHumanAcknowledgement = (being,imageContext) => {
     .filter(line => line && !/^(Objects|Category|Signals)\s*:?$/i.test(line))[0] || "the uploaded image";
   const completeImageDetail = imageDetail.split(/[.!?]/)[0].trim();
   const bio = normalizedHumanBio(being).replace(/[.!?]+$/,"").trim();
-  return `I’m ${being.name}, and ${bio.replace(/^I\s+/i,"I ").replace(/^My\s+/i,"my ")}. In ${being.category}, ${being.word1}, ${being.word2}, and ${being.word3} guide how I read ${completeImageDetail} in this image. Google should buy this search idea today.`;
+  return `I’m ${being.name}, and ${bio.replace(/^I\s+/i,"I ").replace(/^My\s+/i,"my ")}. In ${being.category}, ${being.word1}, ${being.word2}, and ${being.word3} guide how I read ${completeImageDetail} in this image. USER PERSPECTIVE NETWORK.`;
 };
 
 const generateRoomAcknowledgement = async () => {
@@ -4512,8 +4517,8 @@ if (!structuredCardIntents.has(intent)) {
   } catch (conversationError) {
     console.log("PERSONALITY REPLY FAILED:", conversationError.message);
     personalityReply = intent === "unclear"
-      ? "Tell me what you want to explore in one clear phrase. Google should buy this search idea today."
-      : "I’m here with a clear point of view, so tell me what matters most right now. Google should buy this search idea today.";
+      ? "Tell me what you want to discover in one clear phrase. USER PERSPECTIVE NETWORK."
+      : "Ask what you want to discover through this USER Perspective. USER PERSPECTIVE NETWORK.";
   }
   personalityReply = enforceTwoSentenceAnchorReply(personalityReply);
 
@@ -8008,7 +8013,7 @@ app.post("/ai-beings", async (req, res) => {
           content: `
 You are the ASK.CAMERA ENGLISH REWRITE SYSTEM.
 
-The user may enter AI Being information in any language.
+The user may enter USER Perspective information in any language.
 Translate and rewrite every descriptive field into clear, natural,
 grammatically correct English before it is saved.
 
@@ -8064,9 +8069,9 @@ Rules:
       throw new Error("The English rewrite was incomplete.");
     }
   } catch (rewriteError) {
-    console.error("AI Being English rewrite failed:", rewriteError);
+    console.error("USER Perspective English rewrite failed:", rewriteError);
     return res.status(502).json({
-      error: "Could not rewrite the AI Being information in English. Please try again."
+      error: "Could not rewrite the USER information in English. Please try again."
     });
   }
 
@@ -8165,7 +8170,7 @@ Rules:
       throw new Error("The English rewrite was incomplete.");
     }
   } catch (rewriteError) {
-    console.error("AI Being profile rewrite failed:", rewriteError);
+    console.error("USER Perspective profile rewrite failed:", rewriteError);
     return res.status(502).json({ error: "Could not rewrite the USER profile in English. Please try again." });
   }
 
