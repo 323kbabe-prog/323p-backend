@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.30 (2026-07-23)
+  - Counts opening a USER as one Love per device
+  - Includes card, shared-link, and QR entry without counting refreshes or reopenings
+  - Keeps later Love taps from adding a duplicate count
+
   v10.3.29 (2026-07-23)
   - Aligns active app wording with ASK.CAMERA — USER PERSPECTIVE NETWORK
   - Removes remaining five-demo, AI Live Room, and Google-search-idea language
@@ -13524,6 +13529,23 @@ async function reactToHumanCard(id,type){
     .forEach(element => { element.textContent = String(count); });
 }
 
+async function countOpenHumanLove(id){
+  try{
+    const response = await fetch(`${AI_BEINGS_API}/ai-beings/${encodeURIComponent(id)}/open`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ deviceId })
+    });
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) return;
+    const count = humanReactionNumber(result.love);
+    const human = loadedHumanCards.find(item => String(item.id) === String(id));
+    if(human) human.love = count;
+    document.querySelectorAll(`.humanLoveCount[data-being-id="${CSS.escape(String(id))}"] .humanLoveNumber`)
+      .forEach(element => { element.textContent = String(count); });
+  }catch(_){}
+}
+
 async function loveHumanCard(id){
   try{
     await reactToHumanCard(id,"love");
@@ -14120,6 +14142,7 @@ async function openAIBeing(id){
   const response = await fetch(`${AI_BEINGS_API}/ai-beings/${id}`);
   const being = await response.json();
   if(!response.ok){ alert(being.error || "USER not found."); return; }
+  await countOpenHumanLove(being.id);
 
   const activeRoomId = localStorage.getItem("roomId");
 
