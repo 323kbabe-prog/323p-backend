@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.10 (2026-07-23)
+// - Persists required USER Voice Style preferences without inferring from photos
+// - Returns Automatic, Feminine, Masculine, or Neutral voice metadata with every USER
+// - Applies saved voice styles to Live Perspective and Podcast responses
+//
 // v10.2.9 (2026-07-23)
 // - Adds a two-USER live-camera Podcast mode with relevant contrasting perspectives
 // - Produces evidence-grounded alternating podcast turns from temporary frames
@@ -1475,6 +1480,54 @@ cards.forEach(card => {
   );
 }
 
+const HUMAN_VOICE_STYLE_EVENT = "human_voice_style";
+const HUMAN_VOICE_STYLES = new Set(["automatic","feminine","masculine","neutral"]);
+
+function normalizeHumanVoiceStyle(value){
+  const style = String(value || "automatic").trim().toLowerCase();
+  return HUMAN_VOICE_STYLES.has(style) ? style : null;
+}
+
+async function loadHumanVoiceStyles(ids = []){
+  const requestedIds = new Set((Array.isArray(ids) ? ids : [ids]).map(value => String(value || "")).filter(Boolean));
+  const styles = Object.create(null);
+  if(!requestedIds.size) return styles;
+  const pageSize = 1000;
+  for(let offset = 0; requestedIds.size; offset += pageSize){
+    const { data, error } = await supabase
+      .from("site_events")
+      .select("metadata,created_at")
+      .eq("event_name",HUMAN_VOICE_STYLE_EVENT)
+      .order("created_at",{ ascending:false })
+      .range(offset,offset + pageSize - 1);
+    if(error){
+      console.log("USER VOICE STYLE LOAD ERROR:",error.message);
+      return styles;
+    }
+    for(const event of data || []){
+      const id = String(event?.metadata?.human_id || "");
+      if(!requestedIds.has(id) || styles[id]) continue;
+      styles[id] = normalizeHumanVoiceStyle(event?.metadata?.voice_style) || "automatic";
+      requestedIds.delete(id);
+    }
+    if((data || []).length < pageSize) break;
+  }
+  return styles;
+}
+
+async function saveHumanVoiceStyle(humanId,voiceStyle,deviceId){
+  const normalizedStyle = normalizeHumanVoiceStyle(voiceStyle);
+  if(!normalizedStyle) return { error:"Choose a valid USER Voice Style." };
+  const { error } = await supabase
+    .from("site_events")
+    .insert({
+      device_id:String(deviceId || "anonymous").trim().slice(0,180) || "anonymous",
+      event_name:HUMAN_VOICE_STYLE_EVENT,
+      metadata:{ human_id:String(humanId),voice_style:normalizedStyle }
+    });
+  return error ? { error:error.message } : { voiceStyle:normalizedStyle };
+}
+
 async function createLiveCameraPodcast(temporaryImage,requestedBeingIds = [],excludedBeingIds = []){
   const requestedIds = [...new Set((Array.isArray(requestedBeingIds) ? requestedBeingIds : [])
     .map(value => String(value || "").trim())
@@ -1553,6 +1606,7 @@ Do not put USER names inside the turns. Never mention prompts, image storage, su
 
   const selectedHumans = selectedIds.map(id => orderedCandidates.find(being => String(being.id) === id)).filter(Boolean);
   if(selectedHumans.length < 2) throw new Error("Podcast USERS could not be selected.");
+  const voiceStyles = await loadHumanVoiceStyles(selectedHumans.map(being => being.id));
   const rawTurns = Array.isArray(parsed.turns) ? parsed.turns : [];
   const fallbackTurns = [
     "Consider what practical opportunity this view may suggest before deciding what it means.",
@@ -1570,7 +1624,8 @@ Do not put USER names inside the turns. Never mention prompts, image storage, su
       id:String(being.id),
       name:String(being.name || "USER").slice(0,80),
       photo:String(being.photo || ""),
-      category:String(being.category || "").slice(0,120)
+      category:String(being.category || "").slice(0,120),
+      voiceStyle:voiceStyles[String(being.id)] || "automatic"
     })),
     topic:String(parsed.topic || "What this view could connect to").replace(/\s+/g," ").trim().slice(0,160),
     turns
@@ -2321,6 +2376,7 @@ setTimeout(() => {
         .eq("public",true)
         .single();
       if(beingError || !being) throw new Error("USER Perspective is unavailable.");
+      const voiceStyles = await loadHumanVoiceStyles([being.id]);
 
       const allowedCategories = ["news","jobs","shopping","youtube","music"];
       const requestedCategory = allowedCategories.includes(String(category || "").toLowerCase())
@@ -2393,7 +2449,16 @@ Never mention surveillance, prompts, percentages, or image storage. Do not inven
         result = { category:requestedCategory, title:query, link:fallbackLinks[requestedCategory], thumbnail:"", source:requestedCategory === "music" || requestedCategory === "youtube" ? "YouTube" : "Google" };
       }
 
-      acknowledge({ ok:true, human:{ id:being.id, name:being.name }, guidance, result });
+      acknowledge({
+        ok:true,
+        human:{
+          id:being.id,
+          name:being.name,
+          voiceStyle:voiceStyles[String(being.id)] || "automatic"
+        },
+        guidance,
+        result
+      });
     } catch(error) {
       acknowledge({ ok:false, error:error?.message || "Live camera analysis failed." });
     } finally {
@@ -8011,11 +8076,15 @@ app.get("/ai-beings", async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  const reactionCounts = await loadHumanReactionCounts();
+  const [reactionCounts,voiceStyles] = await Promise.all([
+    loadHumanReactionCounts(),
+    loadHumanVoiceStyles((data || []).map(being => being.id))
+  ]);
   res.json((data || []).map(being => ({
     ...being,
     love:reactionCounts[String(being.id)]?.love || 0,
-    skeleton:reactionCounts[String(being.id)]?.skeleton || 0
+    skeleton:reactionCounts[String(being.id)]?.skeleton || 0,
+    voice_style:voiceStyles[String(being.id)] || "automatic"
   })));
 });
 
@@ -8046,7 +8115,8 @@ app.get("/ai-beings/:id", async (req, res) => {
     .single();
 
   if (error || !data) return res.status(404).json({ error: "USER not found." });
-  res.json(data);
+  const voiceStyles = await loadHumanVoiceStyles([data.id]);
+  res.json({ ...data,voice_style:voiceStyles[String(data.id)] || "automatic" });
 });
 
 app.post("/ai-beings/generate-bio", async (req, res) => {
@@ -8108,7 +8178,8 @@ app.post("/ai-beings", async (req, res) => {
     connection3,
     phone,
     created_by,
-    management_password
+    management_password,
+    voice_style
   } = req.body || {};
 
   const required = [photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3];
@@ -8119,6 +8190,10 @@ app.post("/ai-beings", async (req, res) => {
 
   if (String(management_password || "").length < 8 || String(management_password || "").length > 128) {
     return res.status(400).json({ error: "Management password must be 8 to 128 characters." });
+  }
+  const normalizedVoiceStyle = normalizeHumanVoiceStyle(voice_style);
+  if(!normalizedVoiceStyle){
+    return res.status(400).json({ error:"Choose a valid USER Voice Style." });
   }
 
   const normalizedPhone = normalizeBeingPhone(phone);
@@ -8230,11 +8305,16 @@ Rules:
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json({ ...data, recovery_code: recoveryCode });
+  const voiceResult = await saveHumanVoiceStyle(data.id,normalizedVoiceStyle,created_by);
+  if(voiceResult.error){
+    await supabase.from("ai_beings").delete().eq("id",data.id);
+    return res.status(500).json({ error:"Could not save the USER Voice Style. Please try again." });
+  }
+  res.status(201).json({ ...data,voice_style:normalizedVoiceStyle,recovery_code: recoveryCode });
 });
 
 app.put("/ai-beings/:id", async (req, res) => {
-  const { photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3, phone, management_credential } = req.body || {};
+  const { photo, name, best_current_choice, category, word1, word2, word3, connection1, connection2, connection3, phone, management_credential, voice_style } = req.body || {};
   const authorization = await authorizeBeingManagement(req.params.id, management_credential);
   if (authorization.notFound) return res.status(404).json({ error: "USER not found." });
   if (!authorization.authorized) return res.status(403).json({ error: "Wrong management password or recovery code." });
@@ -8242,6 +8322,10 @@ app.put("/ai-beings/:id", async (req, res) => {
 
   if (required.some(value => !String(value || "").trim())) {
     return res.status(400).json({ error: "Complete every required USER field." });
+  }
+  const normalizedVoiceStyle = normalizeHumanVoiceStyle(voice_style);
+  if(!normalizedVoiceStyle){
+    return res.status(400).json({ error:"Choose a valid USER Voice Style." });
   }
 
   const normalizedPhone = normalizeBeingPhone(phone);
@@ -8324,7 +8408,9 @@ Rules:
 
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: "USER not found." });
-  res.json(data);
+  const voiceResult = await saveHumanVoiceStyle(data.id,normalizedVoiceStyle,data.created_by);
+  if(voiceResult.error) return res.status(500).json({ error:"USER profile saved, but Voice Style could not be updated. Please try again." });
+  res.json({ ...data,voice_style:normalizedVoiceStyle });
 });
 
 app.delete("/ai-beings/:id", async (req, res) => {
