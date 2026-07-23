@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.8 (2026-07-23)
+// - Counts every intentional USER open as cumulative Love usage
+// - Allows repeat use from the same device with no time restriction
+// - Keeps Love and Skeleton taps cumulative instead of deduplicating by device
+//
 // v10.2.7 (2026-07-23)
 // - Counts opening a USER as Love once per device
 // - Prevents repeat opens, refreshes, and later Love taps from double-counting
@@ -7726,12 +7731,11 @@ function humanReactionId(value) {
 
 async function loadHumanReactionCounts() {
   const counts = Object.create(null);
-  const countedReactions = new Set();
   const pageSize = 1000;
   for(let offset = 0; ; offset += pageSize){
     const { data, error } = await supabase
       .from("site_events")
-      .select("event_name,device_id,metadata")
+      .select("event_name,metadata")
       .in("event_name",Object.values(HUMAN_REACTION_EVENTS))
       .order("created_at",{ ascending:false })
       .range(offset,offset + pageSize - 1);
@@ -7744,10 +7748,6 @@ async function loadHumanReactionCounts() {
     for(const event of data || []){
       const id = humanReactionId(event?.metadata?.human_id);
       if(!id) continue;
-      const deviceId = String(event?.device_id || "anonymous");
-      const reactionKey = `${event.event_name}:${id}:${deviceId}`;
-      if(countedReactions.has(reactionKey)) continue;
-      countedReactions.add(reactionKey);
       if(!counts[id]) counts[id] = { love:0, skeleton:0 };
       if(event.event_name === HUMAN_REACTION_EVENTS.love) counts[id].love += 1;
       if(event.event_name === HUMAN_REACTION_EVENTS.skeleton) counts[id].skeleton += 1;
@@ -7760,25 +7760,16 @@ async function loadHumanReactionCounts() {
 async function countHumanReaction(id,type) {
   const eventName = HUMAN_REACTION_EVENTS[type];
   if(!eventName) return 0;
-  const deviceIds = new Set();
-  const pageSize = 1000;
-  for(let offset = 0; ; offset += pageSize){
-    const { data, error } = await supabase
-      .from("site_events")
-      .select("device_id")
-      .eq("event_name",eventName)
-      .contains("metadata",{ human_id:humanReactionId(id) })
-      .range(offset,offset + pageSize - 1);
-    if(error){
-      console.log("USER REACTION COUNT ERROR:",error.message);
-      return 0;
-    }
-    for(const event of data || []){
-      deviceIds.add(String(event?.device_id || "anonymous"));
-    }
-    if((data || []).length < pageSize) break;
+  const { count, error } = await supabase
+    .from("site_events")
+    .select("id",{ count:"exact", head:true })
+    .eq("event_name",eventName)
+    .contains("metadata",{ human_id:humanReactionId(id) });
+  if(error){
+    console.log("USER REACTION COUNT ERROR:",error.message);
+    return 0;
   }
-  return deviceIds.size;
+  return count || 0;
 }
 
 async function saveHumanReaction(id,type,deviceId) {
@@ -7795,21 +7786,6 @@ async function saveHumanReaction(id,type,deviceId) {
     .single();
   if(beingError || !being) return { error:"USER not found.", status:404 };
 
-  const { data:existing, error:existingError } = await supabase
-    .from("site_events")
-    .select("id")
-    .eq("device_id",normalizedDeviceId)
-    .eq("event_name",eventName)
-    .contains("metadata",{ human_id:humanId })
-    .limit(1);
-  if(existingError) return { error:existingError.message, status:500 };
-  if((existing || []).length){
-    return {
-      count:await countHumanReaction(humanId,type),
-      alreadyCounted:true
-    };
-  }
-
   const { error } = await supabase
     .from("site_events")
     .insert({
@@ -7819,10 +7795,7 @@ async function saveHumanReaction(id,type,deviceId) {
     });
   if(error) return { error:error.message, status:500 };
 
-  return {
-    count:await countHumanReaction(humanId,type),
-    alreadyCounted:false
-  };
+  return { count:await countHumanReaction(humanId,type) };
 }
 
 function hashBeingCredential(value) {
@@ -7937,19 +7910,19 @@ app.get("/ai-beings", async (req, res) => {
 app.post("/ai-beings/:id/love", async (req,res) => {
   const result = await saveHumanReaction(req.params.id,"love",req.body?.deviceId);
   if(result.error) return res.status(result.status || 500).json({ error:result.error });
-  res.json({ success:true, love:result.count, alreadyCounted:result.alreadyCounted });
+  res.json({ success:true, love:result.count });
 });
 
 app.post("/ai-beings/:id/open", async (req,res) => {
   const result = await saveHumanReaction(req.params.id,"love",req.body?.deviceId);
   if(result.error) return res.status(result.status || 500).json({ error:result.error });
-  res.json({ success:true, love:result.count, alreadyCounted:result.alreadyCounted });
+  res.json({ success:true, love:result.count });
 });
 
 app.post("/ai-beings/:id/skeleton", async (req,res) => {
   const result = await saveHumanReaction(req.params.id,"skeleton",req.body?.deviceId);
   if(result.error) return res.status(result.status || 500).json({ error:result.error });
-  res.json({ success:true, skeleton:result.count, alreadyCounted:result.alreadyCounted });
+  res.json({ success:true, skeleton:result.count });
 });
 
 app.get("/ai-beings/:id", async (req, res) => {
