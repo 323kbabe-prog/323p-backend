@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.27 (2026-07-23)
+  - Removes the automatic five-perspective demo from every USER room
+  - Opens the existing USER question screen after image selection
+  - Preserves the existing screen design and suggested-question behavior
+
   v10.3.26 (2026-07-23)
   - Replaces the former profile wording system with USER Perspective terminology
   - Establishes ASK.CAMERA — USER PERSPECTIVE NETWORK — Choose who helps you see
@@ -9932,7 +9937,7 @@ function humanInvitationPerspectiveHtml(){
   let being = {};
   try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
   const words = [being.word1,being.word2,being.word3].filter(Boolean).join(" · ");
-  const invitation = `You’ve seen five ways I can connect this image to what is happening now. Ask me what you want to discover next, or add another image to begin a new direction. Google should buy this search idea today.`;
+  const invitation = `Ask me what you want to discover about this image, or add another image to begin a new direction. Google should buy this search idea today.`;
   return `<section class="humanInvitationPerspective">
     ${being.photo ? `<img class="humanInvitationPhoto" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(being.name || "USER")}">` : ""}
     <div class="humanInvitationIdentity">
@@ -9945,33 +9950,12 @@ function humanInvitationPerspectiveHtml(){
       <button type="button" onclick="choosePerspectivePrompt('Find something near me.')">Find something near me</button>
       <button type="button" onclick="choosePerspectivePrompt('Show me another opportunity.')">Show me another opportunity</button>
     </div>
-    <div class="perspectiveSwipeCue">Ask me anything, or swipe down to revisit the five perspectives.</div>
+    <div class="perspectiveSwipeCue">Ask me anything about this image.</div>
   </section>`;
 }
 
 function perspectiveArrivalHtml(messages = []){
-  let being = {};
-  try { being = JSON.parse(localStorage.getItem("selectedBeing") || "{}"); } catch(error) {}
-  const imageMessage = [...messages].reverse().find(message => message?.type === "nullCard");
-  const selectedImage = imageMessage?.image || localStorage.getItem("roomThumbnail") || localStorage.getItem("askCameraRoomThumbnail") || "";
-  const name = being.name || "USER";
-  const intro = compactRoomCopy(being.best_current_choice || being.bio || "I’m preparing five ways to connect this image to what is happening now.",150);
-  return `<section class="perspectiveArrival" role="status" aria-live="polite">
-    <div class="perspectiveArrivalMedia">
-      ${being.photo ? `<img class="perspectiveArrivalHuman" src="${escapeBeingText(being.photo)}" alt="${escapeBeingText(name)}">` : ""}
-      ${selectedImage ? `<img class="perspectiveArrivalImage" src="${escapeBeingText(selectedImage)}" alt="Image chosen by the user">` : ""}
-    </div>
-    <div class="perspectiveArrivalIdentity">
-      <div class="perspectiveArrivalDemoLabel">5-PERSPECTIVE DEMO</div>
-      <div class="perspectiveArrivalName">${escapeBeingText(name)}</div>
-      <div class="perspectiveArrivalIntro">${escapeBeingText(intro)}</div>
-      <div class="perspectiveArrivalGuide">I’ll show you five example perspectives from this image. When the first one is ready, swipe up to move through them one at a time.</div>
-    </div>
-    <div class="perspectiveArrivalLoading">
-      <span>Preparing demo 1 of 5</span>
-      <span class="perspectiveArrivalDots" aria-hidden="true"><i></i><i></i><i></i></span>
-    </div>
-  </section>`;
+  return humanInvitationPerspectiveHtml();
 }
 
 function isAutomaticPerspectiveMessage(message){
@@ -11721,30 +11705,23 @@ socket.on("roomFirstRoundStart", (data = {}) => {
   if(data.roomKind && data.roomKind !== activeKind) return;
   if(perspectiveUserOverrideActive) return;
 
-  beingFirstRoundQueue = selectBeingFirstRoundCards(data);
+  beingFirstRoundQueue = [];
   beingFirstRoundWaiting = false;
   beingFirstRoundExpectedType = "";
   beingFirstRoundCurrentCard = null;
   beingFirstRoundRetryCount = 0;
   beingFirstRoundCompletedCount = 0;
   perspectiveTourStarted = true;
-  perspectiveInvitationViewed = false;
-  localStorage.removeItem(`${perspectiveStorageKey()}:askReady`);
+  perspectiveInvitationViewed = true;
+  localStorage.setItem(`${perspectiveStorageKey()}:askReady`,"1");
   beingFirstRoundInsertionIndex = null;
-  firstRoundDemoPending = true;
+  firstRoundDemoPending = false;
   firstRoundDemoVisible = false;
   firstRoundDemoInsertionIndex = null;
+  hideSequenceTyping();
+  hideAITyping();
   syncFirstRoundInput();
-  scrollRoomToLatest(isRoomNearBottom());
-  const openingChapterExists = Boolean(roomMessages.querySelector("[data-room-image-chapter]"));
-  if(roomOpeningSequenceComplete && !roomReplyDeliveryActive){
-    showSequenceTyping();
-    setTimeout(runNextBeingFirstCard,700);
-  }else if(openingChapterExists){
-    startRoomOpeningSequence();
-  }else{
-    showSequenceTyping();
-  }
+  socket.emit("roomFirstRoundComplete",{ deviceId, skippedDemo:true });
 });
 
 function runNextBeingFirstCard(){
