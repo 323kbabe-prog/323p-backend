@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.32 (2026-07-23)
+  - Adds Love usage for every intentional USER open with no time restriction
+  - Allows repeat use from the same device to keep increasing the count
+  - Excludes browser refreshes and restored USER views from usage counting
+
   v10.3.31 (2026-07-23)
   - Refreshes USER Perspective Cards immediately after a new USER is created
   - Returns to the card directory after the recovery code is saved
@@ -12439,7 +12444,7 @@ async function returnFromPublicPerspectives(){
     }
 
     if(publicReturnContext === "humanRoom" && localStorage.getItem("selectedBeingId")){
-      await openAIBeing(localStorage.getItem("selectedBeingId"));
+      await openAIBeing(localStorage.getItem("selectedBeingId"),{ countUsage:false });
       return;
     }
 
@@ -14156,11 +14161,11 @@ function showBeingRecoveryCode(being){
   });
 }
 
-async function openAIBeing(id){
+async function openAIBeing(id,{ countUsage = true } = {}){
   const response = await fetch(`${AI_BEINGS_API}/ai-beings/${id}`);
   const being = await response.json();
   if(!response.ok){ alert(being.error || "USER not found."); return; }
-  await countOpenHumanLove(being.id);
+  if(countUsage) await countOpenHumanLove(being.id);
 
   const activeRoomId = localStorage.getItem("roomId");
 
@@ -15134,7 +15139,9 @@ queueCanonicalHomeExperience();
 
 const directBeingMatch = location.pathname.match(/^\/being\/([^/]+)$/);
 if(directBeingMatch){
-  setTimeout(() => openAIBeing(directBeingMatch[1]), 300);
+  const navigationEntry = performance.getEntriesByType("navigation")[0];
+  const directPageRefresh = navigationEntry?.type === "reload";
+  setTimeout(() => openAIBeing(directBeingMatch[1],{ countUsage:!directPageRefresh }), 300);
 }
   
 </script>
