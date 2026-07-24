@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.14 (2026-07-24)
+// - Adds a password-authorized complete Edit-profile response for every USER field
+// - Returns category and subcategory separately while preserving the stored combined category
+// - Resolves legacy missing Connection Keywords before the frontend opens the completed Edit form
+//
 // v10.2.13 (2026-07-24)
 // - Suggests three reviewable object-or-place Connection Keywords for legacy USER profiles
 // - Preserves every existing Connection Keyword and fills only missing positions
@@ -8168,26 +8173,28 @@ app.get("/ai-beings/:id", async (req, res) => {
   res.json({ ...data,voice_style:voiceStyles[String(data.id)] || "automatic" });
 });
 
-app.post("/ai-beings/suggest-connections",async (req,res) => {
-  const profile = {
-    name:String(req.body?.name || "").trim().slice(0,80),
-    category:String(req.body?.category || "").trim().slice(0,120),
-    bio:String(req.body?.bio || "").trim().slice(0,220),
-    words:[req.body?.word1,req.body?.word2,req.body?.word3].map(value => String(value || "").trim().slice(0,60)).filter(Boolean),
-    existing:[req.body?.connection1,req.body?.connection2,req.body?.connection3].map(value => String(value || "").trim().slice(0,60))
+function normalizeBeingSuggestionProfile(body = {}){
+  return {
+    name:String(body.name || "").trim().slice(0,80),
+    category:String(body.category || "").trim().slice(0,120),
+    bio:String(body.bio || body.best_current_choice || "").trim().slice(0,220),
+    words:[body.word1,body.word2,body.word3].map(value => String(value || "").trim().slice(0,60)).filter(Boolean),
+    existing:[body.connection1,body.connection2,body.connection3].map(value => String(value || "").trim().slice(0,60))
   };
+}
+
+async function suggestBeingConnectionValues(profile){
   if(!profile.name && !profile.category && !profile.bio && !profile.words.length){
-    return res.status(400).json({ error:"The USER profile needs enough information to suggest Connection Keywords." });
+    throw new Error("The USER profile needs enough information to suggest Connection Keywords.");
   }
-  try{
-    const response = await openai.chat.completions.create({
-      model:"gpt-4o-mini",
-      temperature:0.25,
-      response_format:{ type:"json_object" },
-      messages:[
-        {
-          role:"system",
-          content:`Suggest exactly three short Connection Keywords for a USER Perspective profile.
+  const response = await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    temperature:0.25,
+    response_format:{ type:"json_object" },
+    messages:[
+      {
+        role:"system",
+        content:`Suggest exactly three short Connection Keywords for a USER Perspective profile.
 
 Return JSON only:
 {"connections":["","",""]}
@@ -8200,21 +8207,80 @@ Rules:
 - Suggestions must be relevant to the supplied profile but must not claim the USER owns, visits, works at, or is affiliated with anything.
 - Do not output personality traits, professions, activities, abstract topics, goals, or sentences.
 - Make all three entries distinct.`
-        },
-        { role:"user",content:JSON.stringify(profile) }
-      ]
-    });
-    const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
-    const raw = Array.isArray(parsed.connections) ? parsed.connections.slice(0,3) : [];
-    const connections = profile.existing.map((existing,index) => existing || normalizeBeingConnection(raw[index]));
-    if(connections.length !== 3 || connections.some(value => !value)){
-      throw new Error("Incomplete Connection Keyword suggestions.");
-    }
+      },
+      { role:"user",content:JSON.stringify(profile) }
+    ]
+  });
+  const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+  const raw = Array.isArray(parsed.connections) ? parsed.connections.slice(0,3) : [];
+  const connections = profile.existing.map((existing,index) => existing || normalizeBeingConnection(raw[index]));
+  if(connections.length !== 3 || connections.some(value => !value)){
+    throw new Error("Incomplete Connection Keyword suggestions.");
+  }
+  return connections;
+}
+
+app.post("/ai-beings/suggest-connections",async (req,res) => {
+  try{
+    const connections = await suggestBeingConnectionValues(normalizeBeingSuggestionProfile(req.body || {}));
     return res.json({ connections });
   }catch(error){
     console.log("USER CONNECTION SUGGESTION FAILED:",error.message);
     return res.status(502).json({ error:"Could not suggest Connection Keywords. Please enter them manually." });
   }
+});
+
+app.post("/ai-beings/:id/edit-profile",async (req,res) => {
+  const authorization = await authorizeBeingManagement(req.params.id,req.body?.management_credential);
+  if(authorization.notFound) return res.status(404).json({ error:"USER not found." });
+  if(!authorization.authorized) return res.status(403).json({ error:"Wrong management password or recovery code." });
+
+  const { data,error } = await supabase
+    .from("ai_beings")
+    .select(AI_BEING_PUBLIC_COLUMNS)
+    .eq("id",req.params.id)
+    .single();
+  if(error || !data) return res.status(404).json({ error:"USER not found." });
+
+  const voiceStyles = await loadHumanVoiceStyles([data.id]);
+  const profile = {
+    ...data,
+    voice_style:voiceStyles[String(data.id)] || "automatic"
+  };
+  let connectionSuggestionsApplied = false;
+  const storedConnections = [profile.connection1,profile.connection2,profile.connection3]
+    .map(value => String(value || "").trim());
+  if(storedConnections.some(value => !value)){
+    try{
+      const suggested = await suggestBeingConnectionValues(normalizeBeingSuggestionProfile(profile));
+      [profile.connection1,profile.connection2,profile.connection3] = suggested;
+      connectionSuggestionsApplied = true;
+    }catch(error){
+      console.log("USER EDIT CONNECTION SUGGESTION FAILED:",error.message);
+    }
+  }
+
+  const categoryParts = String(profile.category || "").split(/\s+[—-]\s+/);
+  profile.category_base = categoryParts.shift() || "";
+  profile.subcategory = categoryParts.join(" — ");
+  return res.json({
+    profile,
+    connection_suggestions_applied:connectionSuggestionsApplied,
+    complete:Boolean(
+      profile.photo &&
+      profile.name &&
+      profile.best_current_choice &&
+      profile.category_base &&
+      profile.subcategory &&
+      profile.word1 &&
+      profile.word2 &&
+      profile.word3 &&
+      profile.connection1 &&
+      profile.connection2 &&
+      profile.connection3 &&
+      profile.voice_style
+    )
+  });
 });
 
 app.post("/ai-beings/generate-bio", async (req, res) => {
