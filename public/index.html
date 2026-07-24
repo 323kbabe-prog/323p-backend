@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.41 (2026-07-24)
+  - Loads one complete password-authorized USER profile before opening Edit
+  - Populates every editable field together, including category, subcategory, connections, phone, and Voice Style
+  - Resolves legacy missing Connection Keywords before the completed form becomes visible
+
   v10.3.40 (2026-07-24)
   - Suggests reviewable Connection Keywords when an older USER opens Edit with missing stored values
   - Adds an OpenAI Voice Style preview to Create and Edit USER without changing the saved selection
@@ -13957,48 +13962,6 @@ async function previewBeingVoice(){
   }
 }
 
-async function suggestMissingBeingConnections(being){
-  const inputs = ["beingConnection1","beingConnection2","beingConnection3"].map(id => document.getElementById(id));
-  if(inputs.every(input => input?.value.trim())) return;
-  const status = document.getElementById("beingConnectionStatus");
-  if(status){
-    status.innerText = "Suggesting missing Connection Keywords from the existing USER profile…";
-    status.style.color = "#57606a";
-  }
-  try{
-    const response = await fetch(`${AI_BEINGS_API}/ai-beings/suggest-connections`,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        name:being?.name || "",
-        category:being?.category || "",
-        bio:being?.best_current_choice || "",
-        word1:being?.word1 || "",
-        word2:being?.word2 || "",
-        word3:being?.word3 || "",
-        connection1:inputs[0]?.value.trim() || "",
-        connection2:inputs[1]?.value.trim() || "",
-        connection3:inputs[2]?.value.trim() || ""
-      })
-    });
-    const result = await response.json().catch(() => ({}));
-    if(!response.ok) throw new Error(result.error || "Could not suggest Connection Keywords.");
-    const suggestions = Array.isArray(result.connections) ? result.connections : [];
-    inputs.forEach((input,index) => {
-      if(input && !input.value.trim() && suggestions[index]) input.value = suggestions[index];
-    });
-    beingBioSignature = beingBioInputSignature();
-    if(status){
-      status.innerText = "Suggested from the existing profile. Review these Connection Keywords before saving.";
-      status.style.color = "#0969da";
-    }
-  }catch(error){
-    if(status){
-      status.innerText = "Add the missing objects or places before saving.";
-      status.style.color = "#cf222e";
-    }
-  }
-}
 
 function beingConnectionPhraseIsShort(value){
   const clean = String(value || "").trim();
@@ -14154,47 +14117,68 @@ async function changeAIBeingProfile(id){
   if(password === null) return;
 
   try{
-    const response = await fetch(`${AI_BEINGS_API}/ai-beings/${encodeURIComponent(id)}`);
-    const being = await response.json();
-    if(!response.ok) throw new Error(being.error || "USER not found.");
+    const response = await fetch(`${AI_BEINGS_API}/ai-beings/${encodeURIComponent(id)}/edit-profile`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ management_credential:password })
+    });
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || "Could not load the complete USER profile.");
+    const being = result.profile;
+    if(!being) throw new Error("The complete USER profile was not returned.");
 
+    resetBeingForm();
     editingBeing = being;
     editingBeingPassword = password;
     document.getElementById("beingFormTitle").innerText = "Edit USER Perspective Card";
+
     const preview = document.getElementById("beingCurrentPhoto");
-    preview.src = being.photo;
-    preview.style.display = "block";
-    document.getElementById("beingPhotoStatus").innerText = "Current profile photo retained.";
+    preview.src = being.photo || "";
+    preview.style.display = being.photo ? "block" : "none";
+    document.getElementById("beingPhotoStatus").innerText = being.photo
+      ? "Current profile photo retained."
+      : "Add a profile photo before saving.";
     document.getElementById("beingPhoto").value = "";
+
     document.getElementById("beingName").value = being.name || "";
     document.getElementById("beingChoice").value = being.best_current_choice || "";
-    const categoryParts = String(being.category || "").split(/\s+[—-]\s+/);
+
     const categorySelect = document.getElementById("beingCategory");
-    const knownCategory = Array.from(categorySelect.options).some(option => option.value === categoryParts[0]);
-    categorySelect.value = knownCategory ? categoryParts[0] : "Other";
+    const categoryBase = String(being.category_base || "").trim();
+    const knownCategory = Array.from(categorySelect.options).some(option => option.value === categoryBase);
+    categorySelect.value = knownCategory ? categoryBase : "Other";
     beingLastCategory = categorySelect.value;
-    renderBeingRoleOptions(categoryParts.slice(1).join(" — "));
+    const savedSubcategory = String(being.subcategory || (!knownCategory ? being.category || "" : "")).trim();
+    renderBeingRoleOptions(savedSubcategory);
+    const subcategoryLabel = document.getElementById("beingSubcategoryLabel");
+    if(subcategoryLabel) subcategoryLabel.style.display = "block";
+
     document.getElementById("beingWord1").value = being.word1 || "";
     document.getElementById("beingWord2").value = being.word2 || "";
     document.getElementById("beingWord3").value = being.word3 || "";
     document.getElementById("beingConnection1").value = being.connection1 || "";
     document.getElementById("beingConnection2").value = being.connection2 || "";
     document.getElementById("beingConnection3").value = being.connection3 || "";
+    document.getElementById("beingPhone").value = being.phone || "";
+    document.getElementById("beingVoiceStyle").value = ["automatic","feminine","masculine","neutral"].includes(being.voice_style)
+      ? being.voice_style
+      : "automatic";
+
     renderBeingKeywordSuggestions();
     beingBioSignature = beingBioInputSignature();
     beingBioEdited = true;
     document.getElementById("beingBioGenerate").style.display = "inline-block";
     document.getElementById("beingBioStatus").innerText = "Existing bio. Edit it or regenerate from the profile.";
-    document.getElementById("beingPhone").value = being.phone || "";
-    document.getElementById("beingVoiceStyle").value = ["automatic","feminine","masculine","neutral"].includes(being.voice_style)
-      ? being.voice_style
-      : "automatic";
+    const connectionStatus = document.getElementById("beingConnectionStatus");
+    connectionStatus.innerText = result.connection_suggestions_applied
+      ? "Missing legacy values were suggested from this profile. Review them before saving."
+      : "All saved Connection Keywords are loaded.";
+    connectionStatus.style.color = result.connection_suggestions_applied ? "#0969da" : "#57606a";
     resetBeingVoicePreview();
     document.getElementById("beingPasswordFields").style.display = "none";
     document.getElementById("beingFoundingNote").style.display = "none";
     document.getElementById("createBeingSubmit").innerText = "Save changes";
     document.getElementById("createBeingScreen").style.display = "block";
-    suggestMissingBeingConnections(being);
   }catch(error){
     alert(error.message);
   }
