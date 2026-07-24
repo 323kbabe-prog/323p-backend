@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.13 (2026-07-24)
+// - Suggests three reviewable object-or-place Connection Keywords for legacy USER profiles
+// - Preserves every existing Connection Keyword and fills only missing positions
+// - Leaves all suggestions unsaved until the creator explicitly saves the edited USER
+//
 // v10.2.12 (2026-07-24)
 // - Makes OpenAI speech generation independent of installed SDK feature versions
 // - Adds a bounded generation timeout and forwards only validated temporary MP3 audio
@@ -8161,6 +8166,55 @@ app.get("/ai-beings/:id", async (req, res) => {
   if (error || !data) return res.status(404).json({ error: "USER not found." });
   const voiceStyles = await loadHumanVoiceStyles([data.id]);
   res.json({ ...data,voice_style:voiceStyles[String(data.id)] || "automatic" });
+});
+
+app.post("/ai-beings/suggest-connections",async (req,res) => {
+  const profile = {
+    name:String(req.body?.name || "").trim().slice(0,80),
+    category:String(req.body?.category || "").trim().slice(0,120),
+    bio:String(req.body?.bio || "").trim().slice(0,220),
+    words:[req.body?.word1,req.body?.word2,req.body?.word3].map(value => String(value || "").trim().slice(0,60)).filter(Boolean),
+    existing:[req.body?.connection1,req.body?.connection2,req.body?.connection3].map(value => String(value || "").trim().slice(0,60))
+  };
+  if(!profile.name && !profile.category && !profile.bio && !profile.words.length){
+    return res.status(400).json({ error:"The USER profile needs enough information to suggest Connection Keywords." });
+  }
+  try{
+    const response = await openai.chat.completions.create({
+      model:"gpt-4o-mini",
+      temperature:0.25,
+      response_format:{ type:"json_object" },
+      messages:[
+        {
+          role:"system",
+          content:`Suggest exactly three short Connection Keywords for a USER Perspective profile.
+
+Return JSON only:
+{"connections":["","",""]}
+
+Rules:
+- Each entry must primarily name one physical object or one real place category, organization-as-place, city, country, neighborhood, venue, building, landmark, store, school, institution, tool, product, food, vehicle, device, clothing item, or other tangible thing.
+- Each entry must contain no more than four words and no sentence punctuation.
+- Preserve every non-empty existing entry exactly and in its original array position.
+- Fill only empty positions.
+- Suggestions must be relevant to the supplied profile but must not claim the USER owns, visits, works at, or is affiliated with anything.
+- Do not output personality traits, professions, activities, abstract topics, goals, or sentences.
+- Make all three entries distinct.`
+        },
+        { role:"user",content:JSON.stringify(profile) }
+      ]
+    });
+    const parsed = JSON.parse(response.choices?.[0]?.message?.content || "{}");
+    const raw = Array.isArray(parsed.connections) ? parsed.connections.slice(0,3) : [];
+    const connections = profile.existing.map((existing,index) => existing || normalizeBeingConnection(raw[index]));
+    if(connections.length !== 3 || connections.some(value => !value)){
+      throw new Error("Incomplete Connection Keyword suggestions.");
+    }
+    return res.json({ connections });
+  }catch(error){
+    console.log("USER CONNECTION SUGGESTION FAILED:",error.message);
+    return res.status(502).json({ error:"Could not suggest Connection Keywords. Please enter them manually." });
+  }
 });
 
 app.post("/ai-beings/generate-bio", async (req, res) => {
