@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.38 (2026-07-24)
+  - Uses OpenAI gpt-4o-mini-tts for device-independent Live Perspective and Podcast voices
+  - Assigns stable distinct OpenAI voices to the two Podcast USERS across computer, mobile, and tablet
+  - Keeps sequential playback, Voice On/Off, and browser speech as an automatic fallback
+
   v10.3.37 (2026-07-23)
   - Asks whether voice should be on before floating Live Camera guidance begins
   - Applies the answer to both USER Perspective and Podcast modes
@@ -14727,6 +14732,14 @@ let roomFloatingVoiceChoicePending = false;
 let roomFloatingPerspectiveVoiceStyle = "automatic";
 let roomFloatingPerspectiveHumanId = DEFAULT_LIVE_HUMAN_ID;
 let roomFloatingPodcastVoiceNames = Object.create(null);
+let roomFloatingOpenAIAudio = null;
+let roomFloatingOpenAIAudioUrl = "";
+let roomFloatingOpenAIAudioController = null;
+
+const OPENAI_FEMININE_VOICES = ["coral","nova","shimmer","sage"];
+const OPENAI_MASCULINE_VOICES = ["onyx","echo","ash","verse"];
+const OPENAI_NEUTRAL_VOICES = ["alloy","fable","ballad"];
+const OPENAI_ALL_VOICES = [...OPENAI_FEMININE_VOICES,...OPENAI_MASCULINE_VOICES,...OPENAI_NEUTRAL_VOICES];
 
 const FEMININE_VOICE_NAME = /\b(samantha|victoria|karen|moira|tessa|zira|susan|ava|allison|serena|fiona|kate|female|woman)\b/i;
 const MASCULINE_VOICE_NAME = /\b(daniel|alex|fred|tom|david|mark|arthur|rishi|male|man)\b/i;
@@ -14758,19 +14771,87 @@ function selectHumanSpeechVoice(style,humanId,excludedNames = []){
   return preferred[stableVoiceIndex(humanId,preferred.length)] || preferred[0] || null;
 }
 
-function podcastSpeechVoice(human){
+function openAIVoiceForHuman(style,humanId,excludedVoices = []){
+  const normalizedStyle = normalizedHumanVoiceStyle(style);
+  let preferred = normalizedStyle === "feminine"
+    ? OPENAI_FEMININE_VOICES
+    : normalizedStyle === "masculine"
+      ? OPENAI_MASCULINE_VOICES
+      : normalizedStyle === "neutral" ? OPENAI_NEUTRAL_VOICES : OPENAI_ALL_VOICES;
+  const excluded = new Set(excludedVoices.filter(Boolean));
+  const available = preferred.filter(voice => !excluded.has(voice));
+  if(!available.length) available = OPENAI_ALL_VOICES.filter(voice => !excluded.has(voice));
+  const pool = available.length ? available : preferred;
+  return pool[stableVoiceIndex(humanId,pool.length)] || "alloy";
+}
+
+function podcastOpenAIVoice(human){
   const id = String(human?.id || "");
-  const voices = window.speechSynthesis?.getVoices() || [];
-  const existingName = roomFloatingPodcastVoiceNames[id];
-  const existing = voices.find(voice => voice.name === existingName);
-  if(existing) return existing;
-  const voice = selectHumanSpeechVoice(
+  if(roomFloatingPodcastVoiceNames[id]) return roomFloatingPodcastVoiceNames[id];
+  const voice = openAIVoiceForHuman(
     human?.voiceStyle,
     id,
     Object.values(roomFloatingPodcastVoiceNames)
   );
-  if(voice) roomFloatingPodcastVoiceNames[id] = voice.name;
+  roomFloatingPodcastVoiceNames[id] = voice;
   return voice;
+}
+
+function stopRoomFloatingOpenAIAudio(){
+  if(roomFloatingOpenAIAudioController){
+    roomFloatingOpenAIAudioController.abort();
+    roomFloatingOpenAIAudioController = null;
+  }
+  if(roomFloatingOpenAIAudio){
+    roomFloatingOpenAIAudio.pause();
+    roomFloatingOpenAIAudio.removeAttribute("src");
+    roomFloatingOpenAIAudio.load();
+    roomFloatingOpenAIAudio = null;
+  }
+  if(roomFloatingOpenAIAudioUrl){
+    URL.revokeObjectURL(roomFloatingOpenAIAudioUrl);
+    roomFloatingOpenAIAudioUrl = "";
+  }
+}
+
+function playBrowserSpeechFallback(text,style,humanId,excludedNames = []){
+  return new Promise((resolve,reject) => {
+    if(!("speechSynthesis" in window)) return reject(new Error("Browser speech unavailable"));
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = selectHumanSpeechVoice(style,humanId,excludedNames);
+    utterance.rate = 0.96;
+    const normalizedStyle = normalizedHumanVoiceStyle(style);
+    utterance.pitch = normalizedStyle === "feminine" ? 1.04 : normalizedStyle === "masculine" ? 0.96 : 1;
+    utterance.onend = resolve;
+    utterance.onerror = reject;
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+async function playRoomFloatingOpenAIAudio(text,voice,instructions){
+  stopRoomFloatingOpenAIAudio();
+  const controller = new AbortController();
+  roomFloatingOpenAIAudioController = controller;
+  const response = await fetch("/api/openai-speech",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ text,voice,instructions }),
+    signal:controller.signal
+  });
+  if(!response.ok) throw new Error("OpenAI speech unavailable");
+  const audioBlob = await response.blob();
+  if(controller.signal.aborted) throw new DOMException("Aborted","AbortError");
+  roomFloatingOpenAIAudioController = null;
+  roomFloatingOpenAIAudioUrl = URL.createObjectURL(audioBlob);
+  const audio = new Audio(roomFloatingOpenAIAudioUrl);
+  roomFloatingOpenAIAudio = audio;
+  await new Promise((resolve,reject) => {
+    audio.onended = resolve;
+    audio.onerror = () => reject(new Error("OpenAI audio playback failed"));
+    const playPromise = audio.play();
+    if(playPromise?.catch) playPromise.catch(reject);
+  });
+  if(roomFloatingOpenAIAudio === audio) stopRoomFloatingOpenAIAudio();
 }
 
 function syncRoomFloatingLiveMode(){
@@ -14800,6 +14881,7 @@ function setRoomFloatingLiveMode(mode){
   roomFloatingPodcastCurrentSpeakerId = "";
   roomFloatingPodcastLastResponse = null;
   roomFloatingPodcastVoiceNames = Object.create(null);
+  stopRoomFloatingOpenAIAudio();
   window.speechSynthesis?.cancel();
   syncRoomFloatingLiveMode();
   if(roomFloatingVoiceChoicePending) return;
@@ -14822,7 +14904,7 @@ function chooseRoomFloatingLiveVoice(enabled){
   roomFloatingVoiceChoicePending = false;
   const prompt = document.getElementById("roomFloatingVoicePrompt");
   if(prompt) prompt.hidden = true;
-  const supported = "speechSynthesis" in window;
+  const supported = "fetch" in window && "Audio" in window;
   roomFloatingLiveVoiceEnabled = Boolean(enabled) && supported;
   const button = document.getElementById("roomFloatingVoiceToggle");
   if(button){
@@ -14920,6 +15002,7 @@ function stopRoomFloatingLiveAnalysis(clearFrames = true){
   roomFloatingPodcastCurrentSpeakerId = "";
   roomFloatingSessionPromptPending = false;
   stopRoomFloatingConfirmationListening();
+  stopRoomFloatingOpenAIAudio();
   window.speechSynthesis?.cancel();
   if(clearFrames){
     const insight = document.getElementById("roomFloatingInsight");
@@ -15016,24 +15099,24 @@ function showRoomFloatingSessionPrompt(){
   if(prompt) prompt.hidden = false;
   const podcastActions = document.getElementById("roomFloatingPodcastSessionActions");
   if(podcastActions) podcastActions.hidden = roomFloatingLiveMode !== "podcast";
-  if(roomFloatingLiveVoiceEnabled && "speechSynthesis" in window){
+  if(roomFloatingLiveVoiceEnabled){
     roomFloatingLiveSpeechActive = true;
-    const utterance = new SpeechSynthesisUtterance("Would you like to continue?");
-    utterance.rate = 0.96;
     const finish = () => {
       roomFloatingLiveSpeechActive = false;
       startRoomFloatingConfirmationListening();
     };
-    utterance.onend = finish;
-    utterance.onerror = finish;
-    window.speechSynthesis.speak(utterance);
+    playRoomFloatingOpenAIAudio(
+      "Would you like to continue?",
+      "alloy",
+      "Ask this brief continuation question clearly and neutrally."
+    ).catch(() => playBrowserSpeechFallback("Would you like to continue?","neutral","session")).then(finish,finish);
   }else{
     startRoomFloatingConfirmationListening();
   }
 }
 
 function requestRoomFloatingSessionPrompt(){
-  if(roomFloatingLiveSpeechActive || window.speechSynthesis?.speaking){
+  if(roomFloatingLiveSpeechActive || roomFloatingOpenAIAudio || window.speechSynthesis?.speaking){
     roomFloatingSessionPromptPending = true;
     return;
   }
@@ -15048,6 +15131,7 @@ function hideRoomFloatingLiveBox(kind){
   if(kind === "insight"){
     roomFloatingLivePendingSpeech = "";
     roomFloatingLiveSpeechActive = false;
+    stopRoomFloatingOpenAIAudio();
     window.speechSynthesis?.cancel();
   }
   const restore = document.getElementById("roomFloatingLiveRestore");
@@ -15076,20 +15160,18 @@ function showRoomFloatingLiveStatus(message,detail = ""){
 }
 
 function speakRoomFloatingLiveAnalysis(guidance){
-  if(!roomFloatingLiveVoiceEnabled || !("speechSynthesis" in window)) return;
+  if(!roomFloatingLiveVoiceEnabled) return;
   const text = String(guidance || "").trim();
   if(!text) return;
-  if(roomFloatingLiveSpeechActive || window.speechSynthesis.speaking){
+  if(roomFloatingLiveSpeechActive || roomFloatingOpenAIAudio || window.speechSynthesis?.speaking){
     roomFloatingLivePendingSpeech = text;
     return;
   }
   roomFloatingLiveSpeechActive = true;
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = selectHumanSpeechVoice(roomFloatingPerspectiveVoiceStyle,roomFloatingPerspectiveHumanId);
-  utterance.rate = 0.96;
-  utterance.pitch = roomFloatingPerspectiveVoiceStyle === "feminine"
-    ? 1.04
-    : roomFloatingPerspectiveVoiceStyle === "masculine" ? 0.96 : 1;
+  const style = roomFloatingPerspectiveVoiceStyle;
+  const humanId = roomFloatingPerspectiveHumanId;
+  const voice = openAIVoiceForHuman(style,humanId);
+  const instructions = `Speak as a ${style === "automatic" ? "distinct" : style} USER Perspective. Sound natural, thoughtful, concise, and conversational. Do not announce the USER name.`;
   const finish = () => {
     roomFloatingLiveSpeechActive = false;
     if(roomFloatingSessionPromptPending){
@@ -15102,15 +15184,18 @@ function speakRoomFloatingLiveAnalysis(guidance){
     roomFloatingLivePendingSpeech = "";
     if(pending && pending !== text) speakRoomFloatingLiveAnalysis(pending);
   };
-  utterance.onend = finish;
-  utterance.onerror = finish;
-  window.speechSynthesis.speak(utterance);
+  playRoomFloatingOpenAIAudio(text,voice,instructions)
+    .catch(error => {
+      if(error?.name === "AbortError") return;
+      return playBrowserSpeechFallback(text,style,humanId);
+    })
+    .then(finish,finish);
 }
 
 function toggleRoomFloatingLiveVoice(){
   const button = document.getElementById("roomFloatingVoiceToggle");
   if(!button) return;
-  if(!("speechSynthesis" in window)){
+  if(!("fetch" in window) || !("Audio" in window)){
     button.textContent = "VOICE UNAVAILABLE";
     button.disabled = true;
     return;
@@ -15123,7 +15208,8 @@ function toggleRoomFloatingLiveVoice(){
     roomFloatingLiveSpeechActive = false;
     roomFloatingPodcastSpeechQueue = [];
     stopRoomFloatingConfirmationListening();
-    window.speechSynthesis.cancel();
+    stopRoomFloatingOpenAIAudio();
+    window.speechSynthesis?.cancel();
   }else if(!document.getElementById("roomFloatingSessionPrompt")?.hidden){
     startRoomFloatingConfirmationListening();
   }else if(roomFloatingLiveMode === "podcast" && roomFloatingPodcastLastResponse){
@@ -15178,7 +15264,7 @@ function setRoomFloatingPodcastSpeaker(speakerId = ""){
 }
 
 function speakRoomFloatingPodcastQueue(){
-  if(!roomFloatingLiveVoiceEnabled || !("speechSynthesis" in window) || roomFloatingLiveSpeechActive) return;
+  if(!roomFloatingLiveVoiceEnabled || roomFloatingLiveSpeechActive) return;
   const next = roomFloatingPodcastSpeechQueue.shift();
   if(!next){
     setRoomFloatingPodcastSpeaker("");
@@ -15186,15 +15272,13 @@ function speakRoomFloatingPodcastQueue(){
   }
   roomFloatingLiveSpeechActive = true;
   setRoomFloatingPodcastSpeaker(next.speakerId);
-  const utterance = new SpeechSynthesisUtterance(next.text);
-  const speakerIndex = roomFloatingPodcastBeingIds.indexOf(next.speakerId);
   const human = roomFloatingPodcastLastResponse?.humans?.find(item => String(item.id) === String(next.speakerId));
-  utterance.voice = podcastSpeechVoice(human);
-  utterance.rate = 0.96;
-  const style = normalizedHumanVoiceStyle(human?.voiceStyle);
-  utterance.pitch = style === "feminine"
-    ? 1.05
-    : style === "masculine" ? 0.95 : speakerIndex === 1 ? 1.03 : 0.98;
+  const style = normalizedHumanVoiceStyle(human?.voiceStyle || "neutral");
+  const humanId = String(human?.id || next.speakerId || "podcast-introduction");
+  const voice = human ? podcastOpenAIVoice(human) : "alloy";
+  const instructions = human
+    ? `Speak as one participant in a live two-person podcast. Use a ${style === "automatic" ? "distinct" : style} voice. Sound natural, engaged, concise, and conversational. Do not announce the speaker name.`
+    : "Introduce this live podcast briefly, clearly, and neutrally.";
   const finish = () => {
     roomFloatingLiveSpeechActive = false;
     if(roomFloatingSessionPromptPending){
@@ -15205,9 +15289,17 @@ function speakRoomFloatingPodcastQueue(){
     }
     speakRoomFloatingPodcastQueue();
   };
-  utterance.onend = finish;
-  utterance.onerror = finish;
-  window.speechSynthesis.speak(utterance);
+  playRoomFloatingOpenAIAudio(next.text,voice,instructions)
+    .catch(error => {
+      if(error?.name === "AbortError") return;
+      return playBrowserSpeechFallback(
+        next.text,
+        style,
+        humanId,
+        Object.values(roomFloatingPodcastVoiceNames)
+      );
+    })
+    .then(finish,finish);
 }
 
 function queueRoomFloatingPodcastSpeech(response){
