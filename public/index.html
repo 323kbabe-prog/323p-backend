@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.43 (2026-07-25)
+  - Reveals each Podcast turn only when that USER begins speaking
+  - Shows the complete Podcast transcript immediately when Voice is off
+  - Makes every Perspective and Podcast switch explicit before new analysis begins
+
   v10.3.42 (2026-07-25)
   - Simplifies Live Camera to one mode switch, automatic guidance/results, and one compact voice control
   - Clears stale connections as soon as the visible scene changes and hides unverified results
@@ -1878,6 +1883,11 @@ body.systemBlockingState #helper{
 .roomFloatingPodcastHumanName{font-size:12px!important;font-weight:800!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
 .roomFloatingPodcastHumanRole{margin-top:2px!important;font-size:9px!important;color:#57606a!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
 #roomFloatingPodcastTranscript{margin-top:9px!important;font-size:13px!important;line-height:1.4!important;}
+.roomFloatingPodcastTurn+.roomFloatingPodcastTurn{margin-top:5px!important;}
+#roomFloatingModeNotice{position:absolute!important;z-index:6!important;left:14px!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;padding:14px!important;background:rgba(255,255,255,.97)!important;color:#24292f!important;box-shadow:0 4px 18px rgba(0,0,0,.22)!important;pointer-events:none!important;}
+#roomFloatingModeNotice[hidden]{display:none!important;}
+#roomFloatingModeNoticeTitle{color:#0969da!important;font-size:15px!important;font-weight:800!important;}
+#roomFloatingModeNoticeDetail{margin-top:5px!important;color:#57606a!important;font-size:12px!important;line-height:1.4!important;}
 #roomFloatingSessionPrompt{position:absolute!important;z-index:7!important;left:14px!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;padding:14px!important;background:rgba(255,255,255,.97)!important;color:#24292f!important;box-shadow:0 4px 18px rgba(0,0,0,.22)!important;}
 #roomFloatingSessionPrompt[hidden]{display:none!important;}
 #roomFloatingVoicePrompt{position:absolute!important;z-index:8!important;left:14px!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;padding:14px!important;background:rgba(255,255,255,.97)!important;color:#24292f!important;box-shadow:0 4px 18px rgba(0,0,0,.22)!important;}
@@ -14742,6 +14752,10 @@ function ensureRoomFloatingCamera(){
           <button id="roomFloatingPerspectiveMode" type="button" aria-pressed="true" onclick="setRoomFloatingLiveMode('perspective')">PERSPECTIVE</button>
           <button id="roomFloatingPodcastMode" type="button" aria-pressed="false" onclick="setRoomFloatingLiveMode('podcast')">PODCAST</button>
         </div>
+        <div id="roomFloatingModeNotice" hidden aria-live="polite">
+          <div id="roomFloatingModeNoticeTitle"></div>
+          <div id="roomFloatingModeNoticeDetail"></div>
+        </div>
         <section id="roomFloatingSessionPrompt" hidden aria-live="polite">
           <div id="roomFloatingSessionTitle">Would you like to continue?</div>
           <div id="roomFloatingSessionDetail">The camera remains open. Continue for another three minutes or end this session.</div>
@@ -14775,7 +14789,7 @@ function ensureRoomFloatingCamera(){
 
 function mountRoomFloatingLiveControls(host){
   if(!host) return;
-  ["roomFloatingLiveStack","roomFloatingModeSwitch","roomFloatingSessionPrompt","roomFloatingVoicePrompt","roomFloatingVoiceStatus","roomFloatingVoiceToggle"]
+  ["roomFloatingLiveStack","roomFloatingModeSwitch","roomFloatingModeNotice","roomFloatingSessionPrompt","roomFloatingVoicePrompt","roomFloatingVoiceStatus","roomFloatingVoiceToggle"]
     .map(id => document.getElementById(id))
     .filter(Boolean)
     .forEach(element => host.appendChild(element));
@@ -14815,6 +14829,7 @@ let roomFloatingAudioContext = null;
 let roomFloatingAudioSource = null;
 let roomFloatingAudioGeneration = 0;
 let roomFloatingSpeechRequestSerial = 0;
+let roomFloatingModeTransitionTimer = null;
 const roomFloatingSpeechControllers = new Set();
 
 const OPENAI_FEMININE_VOICES = ["coral","nova","shimmer","sage"];
@@ -14990,6 +15005,30 @@ function prepareRoomFloatingPodcastSpeechItem(item){
   return item.audioPromise;
 }
 
+function showRoomFloatingModeNotice(title,detail){
+  const notice = document.getElementById("roomFloatingModeNotice");
+  if(!notice) return;
+  document.getElementById("roomFloatingModeNoticeTitle").textContent = title || "";
+  document.getElementById("roomFloatingModeNoticeDetail").textContent = detail || "";
+  notice.hidden = false;
+}
+
+function hideRoomFloatingModeNotice(){
+  const notice = document.getElementById("roomFloatingModeNotice");
+  if(notice) notice.hidden = true;
+}
+
+function clearRoomFloatingModeContent(){
+  ["roomFloatingInsight","roomFloatingResult","roomFloatingPodcast"].forEach(id => {
+    const element = document.getElementById(id);
+    if(!element) return;
+    element.dataset.ready = "false";
+    element.hidden = true;
+  });
+  const transcript = document.getElementById("roomFloatingPodcastTranscript");
+  if(transcript) transcript.replaceChildren();
+}
+
 function syncRoomFloatingLiveMode(){
   const podcastMode = roomFloatingLiveMode === "podcast";
   document.getElementById("roomFloatingPerspectiveMode")?.setAttribute("aria-pressed",String(!podcastMode));
@@ -15017,11 +15056,26 @@ function setRoomFloatingLiveMode(mode){
   roomFloatingPodcastCurrentSpeakerId = "";
   roomFloatingPodcastLastResponse = null;
   roomFloatingPodcastVoiceNames = Object.create(null);
-  stopRoomFloatingOpenAIAudio();
-  window.speechSynthesis?.cancel();
+  clearTimeout(roomFloatingModeTransitionTimer);
+  stopRoomFloatingLiveAnalysis(true);
+  clearRoomFloatingModeContent();
   syncRoomFloatingLiveMode();
   if(roomFloatingVoiceChoicePending) return;
-  startRoomFloatingLiveAnalysis(roomFloatingLiveSurface);
+  showRoomFloatingModeNotice(
+    nextMode === "podcast" ? "PODCAST MODE" : "PERSPECTIVE MODE",
+    nextMode === "podcast"
+      ? "Two USER Perspectives will discuss what the camera sees."
+      : "Guidance will come from your selected USER."
+  );
+  roomFloatingModeTransitionTimer = setTimeout(() => {
+    startRoomFloatingLiveAnalysis(roomFloatingLiveSurface);
+    showRoomFloatingModeNotice(
+      nextMode === "podcast" ? "SELECTING TWO USERS…" : "ANALYZING…",
+      nextMode === "podcast"
+        ? "Preparing a new live-camera conversation."
+        : "Preparing guidance from the current camera view."
+    );
+  },900);
 }
 
 function promptRoomFloatingLiveVoice(surface = "room"){
@@ -15137,7 +15191,9 @@ function startRoomFloatingLiveAnalysis(surface = "room"){
 function stopRoomFloatingLiveAnalysis(clearFrames = true){
   roomFloatingLiveGeneration += 1;
   clearTimeout(roomFloatingLiveTimer);
+  clearTimeout(roomFloatingModeTransitionTimer);
   roomFloatingLiveTimer = null;
+  roomFloatingModeTransitionTimer = null;
   roomFloatingLiveInFlight = false;
   roomFloatingLiveSignature = null;
   roomFloatingLivePendingSpeech = "";
@@ -15155,6 +15211,7 @@ function stopRoomFloatingLiveAnalysis(clearFrames = true){
     if(insight) insight.hidden = true;
     if(result) result.hidden = true;
     if(podcast) podcast.hidden = true;
+    hideRoomFloatingModeNotice();
   }
 }
 
@@ -15314,7 +15371,9 @@ async function toggleRoomFloatingLiveVoice(){
   button.setAttribute("aria-label",roomFloatingLiveVoiceEnabled ? "Turn voice off" : "Turn voice on");
   if(!roomFloatingLiveVoiceEnabled){
     roomFloatingLivePendingSpeech="";roomFloatingLiveSpeechActive=false;roomFloatingPodcastSpeechQueue=[];
-    stopRoomFloatingConfirmationListening();stopRoomFloatingOpenAIAudio();window.speechSynthesis?.cancel();showRoomFloatingVoiceStatus("");return;
+    stopRoomFloatingConfirmationListening();stopRoomFloatingOpenAIAudio();window.speechSynthesis?.cancel();showRoomFloatingVoiceStatus("");
+    if(roomFloatingLiveMode==="podcast"&&roomFloatingPodcastLastResponse) renderCompleteRoomFloatingPodcastTranscript(roomFloatingPodcastLastResponse);
+    return;
   }
   showRoomFloatingVoiceStatus("PREPARING VOICES...");
   try{await unlockRoomFloatingAudio();showRoomFloatingVoiceStatus("");}
@@ -15325,6 +15384,7 @@ async function toggleRoomFloatingLiveVoice(){
 }
 
 function renderRoomFloatingLiveAnalysis(response){
+  hideRoomFloatingModeNotice();
   roomFloatingPerspectiveVoiceStyle = normalizedHumanVoiceStyle(response.human?.voiceStyle);
   roomFloatingPerspectiveHumanId = String(response.human?.id || DEFAULT_LIVE_HUMAN_ID);
   const insight = document.getElementById("roomFloatingInsight");
@@ -15366,11 +15426,19 @@ async function speakRoomFloatingPodcastQueue(){
   if(!roomFloatingLiveVoiceEnabled || roomFloatingLiveSpeechActive) return;
   const next = roomFloatingPodcastSpeechQueue.shift();
   if(!next){setRoomFloatingPodcastSpeaker("");showRoomFloatingVoiceStatus("");return;}
-  roomFloatingLiveSpeechActive=true;setRoomFloatingPodcastSpeaker(next.speakerId);showRoomFloatingVoiceStatus("PREPARING VOICES...");
+  roomFloatingLiveSpeechActive=true;showRoomFloatingVoiceStatus("PREPARING VOICES...");
   const currentAudio=prepareRoomFloatingPodcastSpeechItem(next);
   prepareRoomFloatingPodcastSpeechItem(roomFloatingPodcastSpeechQueue[0]);
-  try{const audio=await currentAudio;showRoomFloatingVoiceStatus("");await playRoomFloatingPreparedAudio(audio);}
-  catch(error){if(error?.name!=="AbortError") showRoomFloatingVoiceStatus("VOICE TEMPORARILY UNAVAILABLE");}
+  try{
+    const audio=await currentAudio;
+    setRoomFloatingPodcastSpeaker(next.speakerId);
+    appendRoomFloatingPodcastTurn(next);
+    await playRoomFloatingPreparedAudio(audio);
+  }
+  catch(error){
+    appendRoomFloatingPodcastTurn(next);
+    if(error?.name!=="AbortError") showRoomFloatingVoiceStatus("VOICE TEMPORARILY UNAVAILABLE");
+  }
   finally{
     roomFloatingLiveSpeechActive=false;
     if(roomFloatingSessionPromptPending){roomFloatingPodcastSpeechQueue=[];setRoomFloatingPodcastSpeaker("");showRoomFloatingSessionPrompt();return;}
@@ -15381,13 +15449,15 @@ async function speakRoomFloatingPodcastQueue(){
 function queueRoomFloatingPodcastSpeech(response){
   if(!roomFloatingLiveVoiceEnabled) return;
   roomFloatingPodcastSpeechQueue=[];
+  const transcript = document.getElementById("roomFloatingPodcastTranscript");
+  if(transcript) transcript.replaceChildren();
   assignRoomFloatingPodcastVoices(response.humans||[]);
   if(!roomFloatingPodcastIntroductionSpoken){
     const names=(response.humans||[]).map(human=>human.name).filter(Boolean);
-    if(names.length===2) roomFloatingPodcastSpeechQueue.push({speakerId:"",text:`A live podcast with ${names[0]} and ${names[1]}.`,audioPromise:null});
+    if(names.length===2) roomFloatingPodcastSpeechQueue.push({speakerId:"",text:`A live podcast with ${names[0]} and ${names[1]}.`,turnIndex:-1,audioPromise:null});
     roomFloatingPodcastIntroductionSpoken=true;
   }
-  (response.turns||[]).forEach(turn=>{const text=String(turn.text||"").trim();if(text)roomFloatingPodcastSpeechQueue.push({speakerId:String(turn.speakerId||""),text,audioPromise:null});});
+  (response.turns||[]).forEach((turn,turnIndex)=>{const text=String(turn.text||"").trim();if(text)roomFloatingPodcastSpeechQueue.push({speakerId:String(turn.speakerId||""),text,turnIndex,audioPromise:null});});
   prepareRoomFloatingPodcastSpeechItem(roomFloatingPodcastSpeechQueue[0]);
   prepareRoomFloatingPodcastSpeechItem(roomFloatingPodcastSpeechQueue[1]);
   speakRoomFloatingPodcastQueue();
@@ -15397,6 +15467,27 @@ async function countRoomFloatingPodcastUsage(humans){
   if(roomFloatingPodcastUsageCounted) return;
   roomFloatingPodcastUsageCounted = true;
   await Promise.all((humans || []).slice(0,2).map(human => countOpenHumanLove(human.id)));
+}
+
+function appendRoomFloatingPodcastTurn(turn,response = roomFloatingPodcastLastResponse){
+  if(!turn || Number(turn.turnIndex) < 0) return;
+  const transcript = document.getElementById("roomFloatingPodcastTranscript");
+  if(!transcript || transcript.querySelector(`[data-turn-index="${Number(turn.turnIndex)}"]`)) return;
+  const human = (response?.humans || []).find(item => String(item.id) === String(turn.speakerId));
+  const line = document.createElement("div");
+  line.className = "roomFloatingPodcastTurn";
+  line.dataset.turnIndex = String(Number(turn.turnIndex));
+  const name = document.createElement("strong");
+  name.textContent = `${human?.name || "USER"}: `;
+  line.append(name,document.createTextNode(turn.text || ""));
+  transcript.appendChild(line);
+}
+
+function renderCompleteRoomFloatingPodcastTranscript(response = roomFloatingPodcastLastResponse){
+  const transcript = document.getElementById("roomFloatingPodcastTranscript");
+  if(!transcript) return;
+  transcript.replaceChildren();
+  (response?.turns || []).forEach((turn,turnIndex) => appendRoomFloatingPodcastTurn({...turn,turnIndex},response));
 }
 
 function renderRoomFloatingPodcast(response){
@@ -15412,12 +15503,12 @@ function renderRoomFloatingPodcast(response){
       <img src="${escapeBeingText(human.photo || "")}" alt="">
       <div><div class="roomFloatingPodcastHumanName">${escapeBeingText(human.name || "USER")}</div><div class="roomFloatingPodcastHumanRole">${escapeBeingText(human.category || "USER Perspective")}</div></div>
     </div>`).join("");
-  document.getElementById("roomFloatingPodcastTranscript").innerHTML = turns.map(turn => {
-    const human = humans.find(item => String(item.id) === String(turn.speakerId));
-    return `<div><strong>${escapeBeingText(human?.name || "USER")}:</strong> ${escapeBeingText(turn.text || "")}</div>`;
-  }).join("");
+  const transcript = document.getElementById("roomFloatingPodcastTranscript");
+  if(transcript) transcript.replaceChildren();
+  if(!roomFloatingLiveVoiceEnabled) renderCompleteRoomFloatingPodcastTranscript(response);
   podcast.dataset.ready = "true";
   podcast.hidden = false;
+  hideRoomFloatingModeNotice();
   const insight = document.getElementById("roomFloatingInsight");
   const result = document.getElementById("roomFloatingResult");
   if(insight) insight.hidden = true;
