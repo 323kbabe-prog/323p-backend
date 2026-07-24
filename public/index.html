@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.42 (2026-07-25)
+  - Simplifies Live Camera to one mode switch, automatic guidance/results, and one compact voice control
+  - Clears stale connections as soon as the visible scene changes and hides unverified results
+  - Shows clear OpenAI voice states while preserving each USER card's saved Voice Style
+
   v10.3.41 (2026-07-24)
   - Loads one complete password-authorized USER profile before opening Edit
   - Populates every editable field together, including category, subcategory, connections, phone, and Voice Style
@@ -1850,12 +1855,11 @@ body.systemBlockingState #helper{
 #roomFloatingCameraShutter{position:absolute!important;z-index:2!important;left:50%!important;bottom:18px!important;transform:translateX(-50%)!important;width:66px!important;height:66px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:3px solid rgba(255,255,255,.75)!important;border-radius:50%!important;background:#fff!important;color:#111!important;box-shadow:0 2px 14px rgba(0,0,0,.28)!important;}
 #roomFloatingCameraShutter svg{width:34px!important;height:34px!important;fill:none!important;stroke:currentColor!important;}
 #roomFloatingLiveStack{position:absolute!important;z-index:3!important;left:14px!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;display:grid!important;gap:8px!important;pointer-events:none!important;}
-#roomFloatingModeSwitch{position:absolute!important;z-index:5!important;left:50%!important;top:12px!important;transform:translateX(-50%)!important;display:flex!important;gap:2px!important;padding:2px!important;background:rgba(255,255,255,.94)!important;}
+#roomFloatingModeSwitch{position:absolute!important;z-index:5!important;left:12px!important;top:12px!important;display:flex!important;gap:2px!important;padding:2px!important;background:rgba(255,255,255,.94)!important;}
 #roomFloatingModeSwitch button{min-height:30px!important;padding:6px 10px!important;border:0!important;background:#d0d7de!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
 #roomFloatingModeSwitch button[aria-pressed="true"]{background:#0969da!important;color:#fff!important;}
-.roomFloatingLiveBox{position:relative!important;width:100%!important;box-sizing:border-box!important;padding:12px 42px 12px 12px!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;border:0!important;box-shadow:0 4px 18px rgba(0,0,0,.2)!important;pointer-events:auto!important;}
+.roomFloatingLiveBox{position:relative!important;width:100%!important;box-sizing:border-box!important;padding:12px!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;border:0!important;box-shadow:0 4px 18px rgba(0,0,0,.2)!important;pointer-events:auto!important;}
 .roomFloatingLiveBox[hidden]{display:none!important;}
-.roomFloatingLiveClose{position:absolute!important;right:6px!important;top:6px!important;width:30px!important;height:30px!important;padding:0!important;border:0!important;background:#f6f8fa!important;color:#24292f!important;font-size:18px!important;line-height:30px!important;}
 #roomFloatingInsightName{color:#0969da!important;font-size:12px!important;font-weight:800!important;text-transform:uppercase!important;}
 #roomFloatingInsightText{margin-top:5px!important;font-size:15px!important;font-weight:700!important;line-height:1.35!important;}
 #roomFloatingInsightOpinion{margin-top:4px!important;color:#57606a!important;font-size:13px!important;line-height:1.35!important;}
@@ -1891,14 +1895,11 @@ body.systemBlockingState #helper{
 #roomFloatingPodcastSessionActions[hidden]{display:none!important;}
 #roomFloatingPodcastSessionActions button{min-height:36px!important;border:0!important;background:#57606a!important;color:#fff!important;font-size:10px!important;font-weight:800!important;}
 #roomFloatingVoiceAnswer{margin-top:8px!important;color:#57606a!important;font-size:10px!important;font-weight:700!important;}
-#roomFloatingLiveRestore{position:absolute!important;z-index:4!important;left:10px!important;top:10px!important;display:flex!important;gap:6px!important;}
-#roomFloatingLiveRestore[hidden]{display:none!important;}
-#roomFloatingLiveRestore button{min-height:32px!important;padding:6px 9px!important;border:0!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
 #roomFloatingVoiceToggle{position:absolute!important;z-index:5!important;left:12px!important;bottom:18px!important;min-height:34px!important;padding:7px 10px!important;border:0!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;}
 #roomFloatingVoiceToggle[aria-pressed="true"]{background:#0969da!important;color:#fff!important;}
 #roomFloatingVoiceStatus{position:absolute!important;z-index:5!important;left:12px!important;bottom:58px!important;max-width:calc(100% - 24px)!important;padding:6px 9px!important;background:rgba(255,255,255,.94)!important;color:#24292f!important;font-size:10px!important;font-weight:800!important;line-height:1.25!important;}
 #roomFloatingVoiceStatus[hidden]{display:none!important;}
-@media(max-width:520px){.roomFloatingLiveBox{padding:10px 38px 10px 10px!important;}#roomFloatingInsightText{font-size:14px!important;}#roomFloatingInsightOpinion{font-size:12px!important;}#roomFloatingResultBody{grid-template-columns:48px minmax(0,1fr)!important;}#roomFloatingResultImage{width:48px!important;height:48px!important;}}
+@media(max-width:520px){.roomFloatingLiveBox{padding:10px!important;}#roomFloatingInsightText{font-size:14px!important;}#roomFloatingInsightOpinion{font-size:12px!important;}#roomFloatingResultBody{grid-template-columns:48px minmax(0,1fr)!important;}#roomFloatingResultImage{width:48px!important;height:48px!important;}#roomFloatingModeSwitch button{padding:6px 8px!important;font-size:9px!important;}}
 #addPublicImageBtn,#openCreateBeingBtn{display:flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;}
 #addPublicImageBtn{width:100%!important;min-height:48px!important;margin:18px 0 22px!important;background:#1f2328!important;color:#fff!important;border:1px solid #1f2328!important;border-radius:0!important;font-size:14px!important;font-weight:600!important;letter-spacing:.02em!important;}
 #addPublicImageBtn svg,#openCreateBeingBtn svg{flex:0 0 auto!important;}
@@ -14726,11 +14727,9 @@ function ensureRoomFloatingCamera(){
         <video id="roomFloatingCameraVideo" autoplay playsinline muted aria-hidden="true"></video>
         <div id="roomFloatingLiveStack">
           <div id="roomFloatingInsight" class="roomFloatingLiveBox" hidden>
-            <button class="roomFloatingLiveClose" type="button" aria-label="Hide USER live insight" onclick="hideRoomFloatingLiveBox('insight')">×</button>
             <div id="roomFloatingInsightName"></div><div id="roomFloatingInsightText"></div><div id="roomFloatingInsightOpinion"></div>
           </div>
           <div id="roomFloatingResult" class="roomFloatingLiveBox" hidden>
-            <button class="roomFloatingLiveClose" type="button" aria-label="Hide live connection" onclick="hideRoomFloatingLiveBox('result')">×</button>
             <div id="roomFloatingResultBody"><img id="roomFloatingResultImage" alt=""><div><div id="roomFloatingResultCategory"></div><a id="roomFloatingResultTitle" target="_blank" rel="noopener noreferrer"></a><div id="roomFloatingResultSource"></div></div></div>
           </div>
           <div id="roomFloatingPodcast" class="roomFloatingLiveBox" hidden>
@@ -14743,7 +14742,6 @@ function ensureRoomFloatingCamera(){
           <button id="roomFloatingPerspectiveMode" type="button" aria-pressed="true" onclick="setRoomFloatingLiveMode('perspective')">PERSPECTIVE</button>
           <button id="roomFloatingPodcastMode" type="button" aria-pressed="false" onclick="setRoomFloatingLiveMode('podcast')">PODCAST</button>
         </div>
-        <div id="roomFloatingLiveRestore" hidden><button type="button" onclick="restoreRoomFloatingLiveBox('insight')">INSIGHT</button><button type="button" onclick="restoreRoomFloatingLiveBox('result')">RESULT</button></div>
         <section id="roomFloatingSessionPrompt" hidden aria-live="polite">
           <div id="roomFloatingSessionTitle">Would you like to continue?</div>
           <div id="roomFloatingSessionDetail">The camera remains open. Continue for another three minutes or end this session.</div>
@@ -14756,7 +14754,7 @@ function ensureRoomFloatingCamera(){
           <div id="roomFloatingVoicePromptActions"><button type="button" onclick="chooseRoomFloatingLiveVoice(true)">YES</button><button type="button" onclick="chooseRoomFloatingLiveVoice(false)">NO</button></div>
         </section>
         <div id="roomFloatingVoiceStatus" hidden aria-live="polite"></div>
-        <button id="roomFloatingVoiceToggle" type="button" aria-pressed="false" onclick="toggleRoomFloatingLiveVoice()">VOICE OFF</button>
+        <button id="roomFloatingVoiceToggle" type="button" aria-pressed="false" onclick="toggleRoomFloatingLiveVoice()" aria-label="Turn voice on">🔇 OFF</button>
         <button id="roomFloatingCameraClose" type="button" aria-label="Close camera" onclick="closeRoomFloatingCamera(event)">×</button>
         <button id="roomFloatingCameraShutter" type="button" aria-label="Take picture" onclick="takeRoomFloatingPicture(event)">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h4l1.5-2h5L16 7h4v12H4V7Z" stroke-width="1.8"/><circle cx="12" cy="13" r="3.5" stroke-width="1.8"/></svg>
@@ -14777,7 +14775,7 @@ function ensureRoomFloatingCamera(){
 
 function mountRoomFloatingLiveControls(host){
   if(!host) return;
-  ["roomFloatingLiveStack","roomFloatingModeSwitch","roomFloatingLiveRestore","roomFloatingSessionPrompt","roomFloatingVoicePrompt","roomFloatingVoiceStatus","roomFloatingVoiceToggle"]
+  ["roomFloatingLiveStack","roomFloatingModeSwitch","roomFloatingSessionPrompt","roomFloatingVoicePrompt","roomFloatingVoiceStatus","roomFloatingVoiceToggle"]
     .map(id => document.getElementById(id))
     .filter(Boolean)
     .forEach(element => host.appendChild(element));
@@ -14967,8 +14965,9 @@ async function playRoomFloatingPreparedAudio(audioBuffer){
       try { source.disconnect(); } catch(error) {}
       resolve();
     };
-    try { source.start(0); } catch(error) { reject(error); }
+    try { showRoomFloatingVoiceStatus("● SPEAKING"); source.start(0); } catch(error) { reject(error); }
   });
+  showRoomFloatingVoiceStatus("");
   if(generation !== roomFloatingAudioGeneration) throw new DOMException("Aborted","AbortError");
 }
 
@@ -15033,7 +15032,6 @@ function promptRoomFloatingLiveVoice(surface = "room"){
   if(prompt) prompt.hidden = false;
   const sessionPrompt = document.getElementById("roomFloatingSessionPrompt");
   if(sessionPrompt) sessionPrompt.hidden = true;
-  document.getElementById("roomFloatingLiveRestore")?.setAttribute("hidden","");
   requestAnimationFrame(() => document.querySelector("#roomFloatingVoicePromptActions button")?.focus());
 }
 
@@ -15046,7 +15044,8 @@ async function chooseRoomFloatingLiveVoice(enabled){
   const button = document.getElementById("roomFloatingVoiceToggle");
   if(button){
     button.setAttribute("aria-pressed",String(roomFloatingLiveVoiceEnabled));
-    button.textContent = supported ? (roomFloatingLiveVoiceEnabled ? "VOICE ON" : "VOICE OFF") : "VOICE UNAVAILABLE";
+    button.textContent = supported ? (roomFloatingLiveVoiceEnabled ? "🔊 ON" : "🔇 OFF") : "VOICE UNAVAILABLE";
+    button.setAttribute("aria-label",roomFloatingLiveVoiceEnabled ? "Turn voice off" : "Turn voice on");
     button.disabled = !supported;
   }
   if(roomFloatingLiveVoiceEnabled){
@@ -15056,7 +15055,7 @@ async function chooseRoomFloatingLiveVoice(enabled){
       showRoomFloatingVoiceStatus("");
     }catch(error){
       roomFloatingLiveVoiceEnabled = false;
-      if(button){button.setAttribute("aria-pressed","false");button.textContent = "VOICE UNAVAILABLE";}
+      if(button){button.setAttribute("aria-pressed","false");button.textContent = "VOICE UNAVAILABLE";button.setAttribute("aria-label","Voice unavailable");}
       showRoomFloatingVoiceStatus("VOICE TEMPORARILY UNAVAILABLE");
     }
   }else showRoomFloatingVoiceStatus("");
@@ -15114,7 +15113,6 @@ function startRoomFloatingLiveAnalysis(surface = "room"){
   }
   const sessionPrompt = document.getElementById("roomFloatingSessionPrompt");
   if(sessionPrompt) sessionPrompt.hidden = true;
-  document.getElementById("roomFloatingLiveRestore")?.setAttribute("hidden","");
   syncRoomFloatingLiveMode();
   if(roomFloatingLiveMode === "podcast"){
     roomFloatingPodcastBeingIds = [];
@@ -15263,21 +15261,6 @@ function requestRoomFloatingSessionPrompt(){
   showRoomFloatingSessionPrompt();
 }
 
-function hideRoomFloatingLiveBox(kind){
-  if(kind === "insight") roomFloatingInsightDismissed = true;
-  if(kind === "result") roomFloatingResultDismissed = true;
-  const box = document.getElementById(kind === "insight" ? "roomFloatingInsight" : "roomFloatingResult");
-  if(box) box.hidden = true;
-  if(kind === "insight"){
-    roomFloatingLivePendingSpeech = "";
-    roomFloatingLiveSpeechActive = false;
-    stopRoomFloatingOpenAIAudio();
-    window.speechSynthesis?.cancel();
-  }
-  const restore = document.getElementById("roomFloatingLiveRestore");
-  if(restore) restore.hidden = false;
-}
-
 function currentRoomFloatingHumanName(){
   try {
     return JSON.parse(localStorage.getItem("selectedBeing") || "null")?.name || "Wang Vivian";
@@ -15327,7 +15310,8 @@ async function toggleRoomFloatingLiveVoice(){
   if(!supported){button.textContent="VOICE UNAVAILABLE";button.disabled=true;showRoomFloatingVoiceStatus("VOICE TEMPORARILY UNAVAILABLE");return;}
   roomFloatingLiveVoiceEnabled = !roomFloatingLiveVoiceEnabled;
   button.setAttribute("aria-pressed",String(roomFloatingLiveVoiceEnabled));
-  button.textContent = roomFloatingLiveVoiceEnabled ? "VOICE ON" : "VOICE OFF";
+  button.textContent = roomFloatingLiveVoiceEnabled ? "🔊 ON" : "🔇 OFF";
+  button.setAttribute("aria-label",roomFloatingLiveVoiceEnabled ? "Turn voice off" : "Turn voice on");
   if(!roomFloatingLiveVoiceEnabled){
     roomFloatingLivePendingSpeech="";roomFloatingLiveSpeechActive=false;roomFloatingPodcastSpeechQueue=[];
     stopRoomFloatingConfirmationListening();stopRoomFloatingOpenAIAudio();window.speechSynthesis?.cancel();showRoomFloatingVoiceStatus("");return;
@@ -15338,15 +15322,6 @@ async function toggleRoomFloatingLiveVoice(){
   if(!document.getElementById("roomFloatingSessionPrompt")?.hidden) startRoomFloatingConfirmationListening();
   else if(roomFloatingLiveMode==="podcast"&&roomFloatingPodcastLastResponse) queueRoomFloatingPodcastSpeech(roomFloatingPodcastLastResponse);
   else if(document.getElementById("roomFloatingInsight")?.dataset.speakable==="true") speakRoomFloatingLiveAnalysis(document.getElementById("roomFloatingInsightText")?.textContent||"");
-}
-
-function restoreRoomFloatingLiveBox(kind){
-  if(kind === "insight") roomFloatingInsightDismissed = false;
-  if(kind === "result") roomFloatingResultDismissed = false;
-  const box = document.getElementById(kind === "insight" ? "roomFloatingInsight" : "roomFloatingResult");
-  if(box && box.dataset.ready === "true") box.hidden = false;
-  const restore = document.getElementById("roomFloatingLiveRestore");
-  if(restore) restore.hidden = !(roomFloatingInsightDismissed || roomFloatingResultDismissed);
 }
 
 function renderRoomFloatingLiveAnalysis(response){
@@ -15363,7 +15338,7 @@ function renderRoomFloatingLiveAnalysis(response){
     if(!roomFloatingInsightDismissed) speakRoomFloatingLiveAnalysis(response.guidance || "");
   }
   const result = document.getElementById("roomFloatingResult");
-  if(result && response.result){
+  if(result && response.result?.link){
     const image = document.getElementById("roomFloatingResultImage");
     image.src = response.result.thumbnail || "";
     image.alt = response.result.thumbnail ? `${response.result.title || "Connection"} thumbnail` : "";
@@ -15374,6 +15349,9 @@ function renderRoomFloatingLiveAnalysis(response){
     document.getElementById("roomFloatingResultSource").textContent = response.result.source || "";
     result.dataset.ready = "true";
     result.hidden = roomFloatingResultDismissed;
+  }else if(result){
+    result.dataset.ready = "false";
+    result.hidden = true;
   }
 }
 
@@ -15466,7 +15444,14 @@ function runRoomFloatingLiveAnalysis(){
   if(!frame) return scheduleRoomFloatingLiveAnalysis(1000);
   const now = Date.now();
   const changed = liveCameraSceneChanged(frame.signature);
-  if(changed) roomFloatingLiveLastChangeAt = now;
+  if(changed){
+    roomFloatingLiveLastChangeAt = now;
+    const staleResult = document.getElementById("roomFloatingResult");
+    if(staleResult){
+      staleResult.dataset.ready = "false";
+      staleResult.hidden = true;
+    }
+  }
   const unchangedRefreshDue = now - roomFloatingLiveLastSentAt >= 20000;
   const minimumGapReady = now - roomFloatingLiveLastSentAt >= 8000;
   if(!minimumGapReady || (!changed && !unchangedRefreshDue)) return scheduleRoomFloatingLiveAnalysis();
