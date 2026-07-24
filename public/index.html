@@ -4,6 +4,11 @@
 CHANGE LOG
 //////////////////////////////////////////////////
 
+  v10.3.40 (2026-07-24)
+  - Suggests reviewable Connection Keywords when an older USER opens Edit with missing stored values
+  - Adds an OpenAI Voice Style preview to Create and Edit USER without changing the saved selection
+  - Keeps suggestions unsaved until the creator reviews and saves the USER profile
+
   v10.3.39 (2026-07-24)
   - Rebuilds OpenAI voice playback around a mobile-unlocked persistent Web Audio engine
   - Prepares the next Podcast turn while the current USER speaks and enforces contrasting USER voices
@@ -3074,12 +3079,14 @@ ASK.CAMERA — USER PERSPECTIVE NETWORK
     <div id="beingBioStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Auto-generated and editable.</div>
     <div class="beingFormSectionTitle">Voice</div>
     <div class="beingFormFieldLabel">Voice Style</div>
-    <select id="beingVoiceStyle" class="beingInput" required>
+    <select id="beingVoiceStyle" class="beingInput" required onchange="resetBeingVoicePreview()">
       <option value="automatic">Automatic distinct voice</option>
       <option value="feminine">Feminine</option>
       <option value="masculine">Masculine</option>
       <option value="neutral">Neutral</option>
     </select>
+    <button id="beingVoicePreview" type="button" onclick="previewBeingVoice()" style="width:100%;min-height:40px;margin:-7px 0 7px;background:#57606a;color:#fff;border:0;font-size:11px;font-weight:700;">PREVIEW VOICE</button>
+    <div id="beingVoicePreviewStatus" aria-live="polite" style="min-height:16px;font-size:11px;line-height:1.4;color:#666;margin:0 2px 12px;">Preview the selected OpenAI Voice Style before saving.</div>
     <div style="font-size:11px;line-height:1.4;color:#666;margin:-7px 2px 12px;">Always available when audio is enabled. Voice Style is never inferred from the profile photo.</div>
     <input id="beingPhone" type="tel" inputmode="tel" placeholder="Public phone with country code (optional), e.g. +12125550123" class="beingInput">
     <div class="beingFormSectionTitle">Management</div>
@@ -13916,6 +13923,83 @@ function beingConnectionValues(){
   return ["beingConnection1","beingConnection2","beingConnection3"].map(id => document.getElementById(id).value.trim());
 }
 
+function resetBeingVoicePreview(){
+  stopRoomFloatingOpenAIAudio();
+  const status = document.getElementById("beingVoicePreviewStatus");
+  const button = document.getElementById("beingVoicePreview");
+  if(status) status.innerText = "Preview the selected OpenAI Voice Style before saving.";
+  if(button){ button.disabled = false; button.innerText = "PREVIEW VOICE"; }
+}
+
+async function previewBeingVoice(){
+  const button = document.getElementById("beingVoicePreview");
+  const status = document.getElementById("beingVoicePreviewStatus");
+  const style = normalizedHumanVoiceStyle(document.getElementById("beingVoiceStyle")?.value);
+  const seed = String(editingBeing?.id || document.getElementById("beingName")?.value || style || "new-user");
+  const voice = openAIVoiceForHuman(style,seed);
+  if(button){ button.disabled = true; button.innerText = "PREPARING VOICE..."; }
+  if(status) status.innerText = "Preparing the selected OpenAI voice…";
+  stopRoomFloatingOpenAIAudio();
+  try{
+    await unlockRoomFloatingAudio();
+    const audio = await requestRoomFloatingSpeechAudio(
+      "This is how my USER Perspective voice will sound.",
+      voice,
+      roomFloatingSpeechInstructions(style,"perspective")
+    );
+    if(status) status.innerText = "Playing the selected Voice Style.";
+    await playRoomFloatingPreparedAudio(audio);
+    if(status) status.innerText = "Voice preview complete. This style will be used in Perspective and Podcast.";
+  }catch(error){
+    if(error?.name !== "AbortError" && status) status.innerText = "VOICE TEMPORARILY UNAVAILABLE";
+  }finally{
+    if(button){ button.disabled = false; button.innerText = "PREVIEW VOICE"; }
+  }
+}
+
+async function suggestMissingBeingConnections(being){
+  const inputs = ["beingConnection1","beingConnection2","beingConnection3"].map(id => document.getElementById(id));
+  if(inputs.every(input => input?.value.trim())) return;
+  const status = document.getElementById("beingConnectionStatus");
+  if(status){
+    status.innerText = "Suggesting missing Connection Keywords from the existing USER profile…";
+    status.style.color = "#57606a";
+  }
+  try{
+    const response = await fetch(`${AI_BEINGS_API}/ai-beings/suggest-connections`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        name:being?.name || "",
+        category:being?.category || "",
+        bio:being?.best_current_choice || "",
+        word1:being?.word1 || "",
+        word2:being?.word2 || "",
+        word3:being?.word3 || "",
+        connection1:inputs[0]?.value.trim() || "",
+        connection2:inputs[1]?.value.trim() || "",
+        connection3:inputs[2]?.value.trim() || ""
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(result.error || "Could not suggest Connection Keywords.");
+    const suggestions = Array.isArray(result.connections) ? result.connections : [];
+    inputs.forEach((input,index) => {
+      if(input && !input.value.trim() && suggestions[index]) input.value = suggestions[index];
+    });
+    beingBioSignature = beingBioInputSignature();
+    if(status){
+      status.innerText = "Suggested from the existing profile. Review these Connection Keywords before saving.";
+      status.style.color = "#0969da";
+    }
+  }catch(error){
+    if(status){
+      status.innerText = "Add the missing objects or places before saving.";
+      status.style.color = "#cf222e";
+    }
+  }
+}
+
 function beingConnectionPhraseIsShort(value){
   const clean = String(value || "").trim();
   if(!clean || /[.!?;]/.test(clean)) return false;
@@ -14051,6 +14135,9 @@ function resetBeingForm(){
   document.getElementById("beingBioGenerate").style.display = "none";
   document.getElementById("beingBioStatus").innerText = "Auto-generated and editable.";
   document.getElementById("beingVoiceStyle").value = "automatic";
+  resetBeingVoicePreview();
+  document.getElementById("beingConnectionStatus").innerText = "Objects and places only · up to four words each · no sentences.";
+  document.getElementById("beingConnectionStatus").style.color = "#666";
   document.getElementById("beingShowPasswords").checked = false;
   toggleBeingPasswords(false);
   document.getElementById("beingPasswordFields").style.display = "block";
@@ -14102,10 +14189,12 @@ async function changeAIBeingProfile(id){
     document.getElementById("beingVoiceStyle").value = ["automatic","feminine","masculine","neutral"].includes(being.voice_style)
       ? being.voice_style
       : "automatic";
+    resetBeingVoicePreview();
     document.getElementById("beingPasswordFields").style.display = "none";
     document.getElementById("beingFoundingNote").style.display = "none";
     document.getElementById("createBeingSubmit").innerText = "Save changes";
     document.getElementById("createBeingScreen").style.display = "block";
+    suggestMissingBeingConnections(being);
   }catch(error){
     alert(error.message);
   }
