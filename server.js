@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.12 (2026-07-24)
+// - Makes OpenAI speech generation independent of installed SDK feature versions
+// - Adds a bounded generation timeout and forwards only validated temporary MP3 audio
+// - Keeps detailed provider failures server-side while returning a stable voice error contract
+//
 // v10.2.11 (2026-07-24)
 // - Generates Live Perspective and Podcast speech through OpenAI gpt-4o-mini-tts
 // - Returns device-independent MP3 audio while keeping the OpenAI API key server-side
@@ -425,37 +430,33 @@ const OPENAI_TTS_VOICES = new Set([
 ]);
 
 app.post("/api/openai-speech",async (req,res) => {
-  const input = String(req.body?.text || "").replace(/[\r\n]+/g," ").trim().slice(0,1600);
-  const requestedVoice = String(req.body?.voice || "alloy").toLowerCase();
-  const voice = OPENAI_TTS_VOICES.has(requestedVoice) ? requestedVoice : "alloy";
-  const instructions = String(req.body?.instructions || "Speak naturally, clearly, and conversationally.")
-    .replace(/[\r\n]+/g," ")
-    .trim()
-    .slice(0,500);
-
-  if(!input) return res.status(400).json({ error:"Speech text is required." });
-  if(!process.env.OPENAI_API_KEY) return res.status(503).json({ error:"OpenAI speech is unavailable." });
-
+  const input=String(req.body?.text||"").replace(/[\r\n]+/g," ").trim().slice(0,1600);
+  const requestedVoice=String(req.body?.voice||"alloy").toLowerCase();
+  const voice=OPENAI_TTS_VOICES.has(requestedVoice)?requestedVoice:"alloy";
+  const instructions=String(req.body?.instructions||"Speak naturally, clearly, and conversationally.").replace(/[\r\n]+/g," ").trim().slice(0,500);
+  if(!input)return res.status(400).json({error:"Speech text is required."});
+  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"OpenAI speech is unavailable."});
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),25000);
   try{
-    const speech = await openai.audio.speech.create({
-      model:"gpt-4o-mini-tts",
-      voice,
-      input,
-      instructions,
-      response_format:"mp3"
+    const speechResponse=await fetch("https://api.openai.com/v1/audio/speech",{
+      method:"POST",
+      headers:{"Authorization":`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},
+      body:JSON.stringify({model:"gpt-4o-mini-tts",voice,input,instructions,response_format:"mp3"}),
+      signal:controller.signal
     });
-    const audio = Buffer.from(await speech.arrayBuffer());
-    res.set({
-      "Content-Type":"audio/mpeg",
-      "Content-Length":String(audio.length),
-      "Cache-Control":"no-store, max-age=0",
-      "Pragma":"no-cache"
-    });
+    if(!speechResponse.ok){
+      const providerError=await speechResponse.text();
+      console.log("OPENAI SPEECH FAILED:",speechResponse.status,providerError.slice(0,500));
+      return res.status(502).json({error:"OpenAI speech generation failed."});
+    }
+    const audio=Buffer.from(await speechResponse.arrayBuffer());
+    res.set({"Content-Type":"audio/mpeg","Content-Length":String(audio.length),"Cache-Control":"no-store, max-age=0","Pragma":"no-cache"});
     return res.send(audio);
   }catch(error){
     console.log("OPENAI SPEECH FAILED:",error.message);
-    return res.status(502).json({ error:"OpenAI speech generation failed." });
-  }
+    return res.status(error?.name==="AbortError"?504:502).json({error:error?.name==="AbortError"?"OpenAI speech generation timed out.":"OpenAI speech generation failed."});
+  }finally{clearTimeout(timeout);}
 });
 
 
