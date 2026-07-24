@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.11 (2026-07-24)
+// - Generates Live Perspective and Podcast speech through OpenAI gpt-4o-mini-tts
+// - Returns device-independent MP3 audio while keeping the OpenAI API key server-side
+// - Validates voice requests and disables audio caching for temporary live guidance
+//
 // v10.2.10 (2026-07-23)
 // - Persists required USER Voice Style preferences without inferring from photos
 // - Returns Automatic, Feminine, Masculine, or Neutral voice metadata with every USER
@@ -413,6 +418,44 @@ const io = new Server(server, {
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   fetch: fetch
+});
+
+const OPENAI_TTS_VOICES = new Set([
+  "alloy","ash","ballad","coral","echo","fable","nova","onyx","sage","shimmer","verse"
+]);
+
+app.post("/api/openai-speech",async (req,res) => {
+  const input = String(req.body?.text || "").replace(/[\r\n]+/g," ").trim().slice(0,1600);
+  const requestedVoice = String(req.body?.voice || "alloy").toLowerCase();
+  const voice = OPENAI_TTS_VOICES.has(requestedVoice) ? requestedVoice : "alloy";
+  const instructions = String(req.body?.instructions || "Speak naturally, clearly, and conversationally.")
+    .replace(/[\r\n]+/g," ")
+    .trim()
+    .slice(0,500);
+
+  if(!input) return res.status(400).json({ error:"Speech text is required." });
+  if(!process.env.OPENAI_API_KEY) return res.status(503).json({ error:"OpenAI speech is unavailable." });
+
+  try{
+    const speech = await openai.audio.speech.create({
+      model:"gpt-4o-mini-tts",
+      voice,
+      input,
+      instructions,
+      response_format:"mp3"
+    });
+    const audio = Buffer.from(await speech.arrayBuffer());
+    res.set({
+      "Content-Type":"audio/mpeg",
+      "Content-Length":String(audio.length),
+      "Cache-Control":"no-store, max-age=0",
+      "Pragma":"no-cache"
+    });
+    return res.send(audio);
+  }catch(error){
+    console.log("OPENAI SPEECH FAILED:",error.message);
+    return res.status(502).json({ error:"OpenAI speech generation failed." });
+  }
 });
 
 
