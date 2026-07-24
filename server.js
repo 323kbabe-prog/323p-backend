@@ -2,6 +2,11 @@
 // CHANGE LOG
 //////////////////////////////////////////////////
 
+// v10.2.15 (2026-07-25)
+// - Requires concrete visual anchors before Live Camera can show an external connection
+// - Rejects search results whose title or source does not directly overlap the visible scene
+// - Returns guidance normally when no trustworthy external result is available
+//
 // v10.2.14 (2026-07-24)
 // - Adds a password-authorized complete Edit-profile response for every USER field
 // - Returns category and subcategory separately while preserving the stored combined category
@@ -2444,9 +2449,11 @@ setTimeout(() => {
           {
             role:"system",
             content:`Analyze one temporary live-camera frame for ASK.CAMERA through the selected USER Perspective.
-Return JSON only with exactly: {"guidance":"","searchQuery":""}.
+Return JSON only with exactly: {"guidance":"","searchQuery":"","resultSupported":false,"visualAnchors":[]}.
 guidance: one concise, useful thought telling the user what to consider or do through the USER's professional perspective. Do not include the USER's name. Base it only on visual evidence, but do not narrate or list what is visible. Use cautious language such as consider, may, or could whenever certainty is limited. Do not infer identity, intention, safety, value, condition, location, or any other hidden fact. If no useful guidance is supported, say that a clearer view may reveal a more meaningful connection.
-searchQuery: a concise real-world ${requestedCategory} discovery query connected to the frame and USER.
+searchQuery: a concise real-world ${requestedCategory} discovery query directly connected to concrete visible evidence and the USER. Leave it empty if that connection is weak.
+resultSupported: true only when the frame contains concrete visual evidence strong enough to support an external ${requestedCategory} result; otherwise false.
+visualAnchors: zero to five short, non-sensitive object or place terms visibly supported by the frame. Never include inferred identity, location, brand, condition, activity, or intent.
 Never mention surveillance, prompts, percentages, or image storage. Do not invent names, addresses, or private facts.`
           },
           {
@@ -2460,10 +2467,15 @@ Never mention surveillance, prompts, percentages, or image storage. Do not inven
       });
       const parsed = JSON.parse(analysis.choices?.[0]?.message?.content || "{}");
       const guidance = String(parsed.guidance || "Consider moving the camera slightly to reveal a more meaningful connection.").replace(/\s+/g," ").trim().slice(0,320);
-      const query = String(parsed.searchQuery || `${being.category || "current"} ${requestedCategory}`).replace(/\s+/g," ").trim().slice(0,180);
+      const query = String(parsed.searchQuery || "").replace(/\s+/g," ").trim().slice(0,180);
+      const visualAnchors = Array.isArray(parsed.visualAnchors)
+        ? parsed.visualAnchors.map(value => String(value || "").toLowerCase().replace(/[^a-z0-9\s-]/g," ").trim()).filter(Boolean).slice(0,5)
+        : [];
+      const resultSupported = parsed.resultSupported === true && Boolean(query) && visualAnchors.length > 0;
+      const anchorTokens = new Set(visualAnchors.flatMap(value => value.split(/\s+/)).filter(value => value.length >= 3));
 
       let result = null;
-      if(process.env.SERPAPI_KEY){
+      if(resultSupported && process.env.SERPAPI_KEY){
         try {
           let searchUrl = "";
           if(requestedCategory === "news") searchUrl = `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(query)}&api_key=${process.env.SERPAPI_KEY}`;
@@ -2472,13 +2484,17 @@ Never mention surveillance, prompts, percentages, or image storage. Do not inven
           else searchUrl = `https://serpapi.com/search.json?engine=youtube&search_query=${encodeURIComponent(requestedCategory === "music" ? `${query} music` : query)}&api_key=${process.env.SERPAPI_KEY}`;
           const searchResponse = await fetch(searchUrl);
           const searchData = searchResponse.ok ? await searchResponse.json() : {};
-          const item = requestedCategory === "news"
-            ? searchData.news_results?.[0]
+          const candidates = requestedCategory === "news"
+            ? searchData.news_results
             : requestedCategory === "jobs"
-              ? searchData.jobs_results?.[0]
+              ? searchData.jobs_results
               : requestedCategory === "shopping"
-                ? searchData.shopping_results?.[0]
-                : searchData.video_results?.[0];
+                ? searchData.shopping_results
+                : searchData.video_results;
+          const item = (Array.isArray(candidates) ? candidates : []).slice(0,8).find(candidate => {
+            const searchable = `${candidate?.title || candidate?.name || ""} ${candidate?.source?.name || candidate?.source || candidate?.company_name || ""}`.toLowerCase();
+            return [...anchorTokens].some(token => searchable.includes(token));
+          });
           if(item){
             result = {
               category:requestedCategory,
@@ -2492,17 +2508,6 @@ Never mention surveillance, prompts, percentages, or image storage. Do not inven
           console.log("LIVE CAMERA RESULT SEARCH FAILED:",searchError.message);
         }
       }
-      if(!result?.link){
-        const fallbackLinks = {
-          news:`https://www.google.com/search?tbm=nws&q=${encodeURIComponent(query)}`,
-          jobs:`https://www.google.com/search?q=${encodeURIComponent(`${query} jobs`)}`,
-          shopping:`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`,
-          youtube:`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-          music:`https://www.youtube.com/results?search_query=${encodeURIComponent(`${query} music`)}`
-        };
-        result = { category:requestedCategory, title:query, link:fallbackLinks[requestedCategory], thumbnail:"", source:requestedCategory === "music" || requestedCategory === "youtube" ? "YouTube" : "Google" };
-      }
-
       acknowledge({
         ok:true,
         human:{
